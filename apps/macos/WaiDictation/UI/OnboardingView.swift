@@ -187,6 +187,17 @@ struct OnboardingView: View {
             }
             .pickerStyle(.menu)
 
+            if let warning = state.hotkeyWarning {
+                Label {
+                    Text(warning)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+            }
+
             Text("Удерживайте \(state.hotkey.title), скажите что-нибудь и отпустите. Текст появится в поле ниже.")
                 .foregroundStyle(.secondary)
 

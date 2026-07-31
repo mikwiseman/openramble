@@ -35,6 +35,18 @@ settings:
     # сказать об этом пользователю.
     ARCHS: "arm64 x86_64"
     ONLY_ACTIVE_ARCH: NO
+  configs:
+    # Отладочная и тестовая сборка идёт только под ту архитектуру, на которой
+    # её запускают.
+    #
+    # Иначе `xcodebuild … -destination 'platform=macOS'` собирает цель
+    # приложения под обе архитектуры, а пакеты Xcode при конкретном назначении
+    # строит только под одну — и компиляция падает на «Unable to find module
+    # dependency: DictationCore» под x86_64. Универсальность нужна релизу, и он
+    # её получает: `scripts/build-dmg.sh` собирает с `generic/platform=macOS`,
+    # где пакеты строятся под обе.
+    Debug:
+      ONLY_ACTIVE_ARCH: YES
 
 targets:
   WaiDictation:
@@ -94,3 +106,64 @@ targets:
         # в репозитории. До этого выпустить релиз нельзя: scripts/release.sh
         # откажется работать. Порядок действий — в docs/release.md.
         # SUPublicEDKey: "…"
+
+  # Тесты цели приложения.
+  #
+  # Собираются БЕЗ приложения-хозяина (`TEST_HOST` не задан), а исходники
+  # приложения компилируются прямо в тестовый бандл. Причина не в удобстве:
+  # с хозяином `xcodebuild test` пришлось бы запускать само приложение, а оно
+  # живёт в строке меню (`LSUIElement`), поднимает таймеры, спрашивает
+  # разрешения и на первом запуске открывает окно онбординга. В сессии без
+  # графического сеанса такой прогон висит до таймаута вместо того, чтобы
+  # упасть с понятной ошибкой. Плюс внедрение бандла в приложение с включённым
+  # Hardened Runtime требует отдельного послабления подписи.
+  #
+  # Плата за это — исходники приложения компилируются дважды. Она заметна
+  # только на времени сборки и того стоит.
+  WaiDictationTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: WaiDictationTests
+      - path: WaiDictation
+        excludes:
+          # Точка входа: `@main` в тестовом бандле не нужен и мешает.
+          - "WaiDictationApp.swift"
+          - "Info.plist"
+    dependencies:
+      - package: DictationCore
+        product: DictationCore
+      - package: DictationCore
+        product: DictationAudio
+      - package: LocalASR
+        product: LocalASR
+      - package: Sparkle
+        product: Sparkle
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.tests
+        PRODUCT_NAME: WaiDictationTests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_STRICT_CONCURRENCY: complete
+        # Тестовый бандл грузится в чужой процесс (xctest), поэтому нужные ему
+        # фреймворки лежат внутри него самого.
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+          - "@loader_path/../Frameworks"
+
+schemes:
+  # Одна схема на всё: `xcodebuild build` собирает приложение, `xcodebuild test`
+  # гоняет тесты. Отдельная схема для тестов разошлась бы с той, которой
+  # пользуются человек и CI.
+  WaiDictation:
+    build:
+      targets:
+        WaiDictation: all
+        WaiDictationTests: [test]
+    test:
+      config: Debug
+      targets:
+        - WaiDictationTests
+    run:
+      config: Debug

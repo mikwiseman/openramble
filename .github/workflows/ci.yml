@@ -45,13 +45,15 @@ jobs:
         run: brew install xcodegen
 
       # Половина дефектов первого дня жила именно в цели приложения — в
-      # пакетах их не видно, потому что она в них не входит.
-      - name: Собрать
+      # пакетах их не видно, потому что она в них не входит. Гоняем тесты, а не
+      # только сборку: одиннадцать дефектов там нашлись именно тестами, а не
+      # компилятором.
+      - name: Собрать и прогнать тесты
         run: |
           cd apps/macos
           xcodegen generate
           xcodebuild -project WaiDictation.xcodeproj -scheme WaiDictation \
-            -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
+            -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test
 
   network-surface:
     name: Сетевая поверхность

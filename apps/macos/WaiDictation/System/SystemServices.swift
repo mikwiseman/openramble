@@ -1,3 +1,4 @@
+import AVFoundation
 import AppKit
 import DictationCore
 import Foundation
@@ -48,7 +49,22 @@ public enum Permissions {
     }
 }
 
-import AVFoundation
+/// Чтение разрешений.
+///
+/// За протоколом — потому что настоящие ответы зависят от того, что человек
+/// когда-то разрешил (в тесте — тестовому раннеру), а не от проверяемой логики.
+@MainActor
+public protocol PermissionReading {
+    var accessibilityGranted: Bool { get }
+    var microphoneGranted: Bool { get }
+}
+
+@MainActor
+public struct SystemPermissions: PermissionReading {
+    public init() {}
+    public var accessibilityGranted: Bool { Permissions.accessibility == .granted }
+    public var microphoneGranted: Bool { Permissions.microphone == .granted }
+}
 
 // MARK: - Звуки
 
@@ -82,21 +98,42 @@ public struct SystemSounds: Sounding {
 
 // MARK: - Пути приложения
 
-public enum AppPaths {
+/// Где приложение держит свои файлы.
+///
+/// Корень задаётся снаружи: тест обязан работать во временной папке, а не в
+/// настоящем Application Support человека, который в этот момент диктует.
+public struct AppPaths: Sendable {
+    private let root: URL
+
+    public init(root: URL) {
+        self.root = root
+    }
+
+    /// Обычное расположение — Application Support текущего пользователя.
+    ///
+    /// Сам каталог здесь не создаётся: его создаст первый же `support()` вместе
+    /// со своей папкой. Отказ файловой системы должен быть виден там, где мы
+    /// собираемся писать, а не при вычислении имени места.
+    public static func standard() -> AppPaths {
+        // Для Application Support в домене пользователя список всегда ровно из
+        // одного элемента. Запасного пути на этот случай нет намеренно:
+        // подставить сюда что-то другое значило бы писать данные не туда.
+        guard let base = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        else {
+            preconditionFailure("Система не сообщила расположение Application Support")
+        }
+        return AppPaths(root: base)
+    }
+
     /// Корень данных приложения.
-    public static func support() throws -> URL {
-        let base = try FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        let directory = base.appending(path: "WaiDictation", directoryHint: .isDirectory)
+    public func support() throws -> URL {
+        let directory = root.appending(path: "WaiDictation", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
     }
 
-    public static func models() throws -> URL {
+    public func models() throws -> URL {
         try support().appending(path: "Models", directoryHint: .isDirectory)
     }
 
@@ -104,10 +141,18 @@ public enum AppPaths {
     ///
     /// Файл живёт ровно до конца распознавания и сразу удаляется — голос
     /// пользователя не должен оставаться на диске.
-    public static func takes() throws -> URL {
+    public func takes() throws -> URL {
         let directory = try support().appending(path: "Takes", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        excludeFromBackup(directory)
+        try Self.excludeFromBackup(directory)
+        return directory
+    }
+
+    /// Куда складывается текст, который не удалось вставить.
+    public func recovery() throws -> URL {
+        let directory = try support().appending(path: "Recovered", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try Self.excludeFromBackup(directory)
         return directory
     }
 
@@ -116,32 +161,36 @@ public enum AppPaths {
     /// Обычно каталог пуст: запись удаляется сразу после распознавания. Но если
     /// приложение прервали посреди диктовки, файл останется — и без уборки
     /// пролежит там навсегда.
-    public static func sweepAbandonedTakes() {
+    ///
+    /// Возвращает число убранных файлов: вызывающему это нужно, чтобы отличить
+    /// «убирать было нечего» от «уборка не сработала».
+    @discardableResult
+    public func sweepAbandonedTakes() -> Int {
         guard let directory = try? takes(),
               let entries = try? FileManager.default.contentsOfDirectory(
                   at: directory,
                   includingPropertiesForKeys: nil
               )
-        else { return }
+        else { return 0 }
 
+        var removed = 0
         for entry in entries where entry.pathExtension == "wav" {
-            try? FileManager.default.removeItem(at: entry)
+            guard (try? FileManager.default.removeItem(at: entry)) != nil else { continue }
+            removed += 1
         }
+        return removed
     }
 
     /// Записи и восстановленные тексты — не то, что стоит хранить в резервных
     /// копиях: это содержимое речи пользователя.
-    private static func excludeFromBackup(_ url: URL) {
+    ///
+    /// Ошибка не проглатывается. Молча уехавшая в бэкап диктовка — ровно то,
+    /// чего человек от приватного продукта не ждёт, и узнать об этом ему было бы
+    /// неоткуда.
+    private static func excludeFromBackup(_ url: URL) throws {
         var target = url
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
-        try? target.setResourceValues(values)
-    }
-
-    public static func recovery() throws -> URL {
-        let directory = try support().appending(path: "Recovered", directoryHint: .isDirectory)
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        excludeFromBackup(directory)
-        return directory
+        try target.setResourceValues(values)
     }
 }

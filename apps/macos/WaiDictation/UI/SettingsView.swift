@@ -38,6 +38,21 @@ private struct GeneralSettings: View {
                 Text("Удерживайте клавишу и говорите. Двойное нажатие включает режим без удержания — тогда запись останавливается следующим нажатием.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                if let warning = state.hotkeyWarning {
+                    // Fn — единственная клавиша в списке, у которой есть своё
+                    // системное назначение и которой может не быть на внешней
+                    // клавиатуре. Молчать об этом значит оставить человека
+                    // выяснять самому, почему диктовка «иногда не работает».
+                    Label {
+                        Text(warning)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                    }
+                }
             }
 
             Section {
@@ -203,7 +218,22 @@ private struct DictionarySettings: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                if state.availableStarterCount > 0 {
+                if let problem = state.dictionaryProblem {
+                    // Словарь заблокирован на запись. Сказать об этом обязаны
+                    // здесь: человек стоит ровно на той странице, где собирается
+                    // его править, и должен узнать до того, как начнёт.
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("Словарь не изменяется", systemImage: "lock.fill")
+                            .foregroundStyle(.orange)
+                        Text(problem.message)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(10)
+                    .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+                }
+
+                if state.isDictionaryEditable, state.availableStarterCount > 0 {
                     HStack {
                         Text("Диктуете по-русски с английскими терминами? Модель пишет их кириллицей: «pull request» становится «пул реквест».")
                             .font(.caption)
@@ -232,6 +262,7 @@ private struct DictionarySettings: View {
                 }
                 .onDelete(perform: state.removeReplacements)
             }
+            .disabled(!state.isDictionaryEditable)
 
             HStack {
                 TextField("Слышится как", text: $spoken)
@@ -243,7 +274,7 @@ private struct DictionarySettings: View {
                     spoken = ""
                     written = ""
                 }
-                .disabled(spoken.isEmpty || written.isEmpty)
+                .disabled(spoken.isEmpty || written.isEmpty || !state.isDictionaryEditable)
             }
             .padding()
         }
