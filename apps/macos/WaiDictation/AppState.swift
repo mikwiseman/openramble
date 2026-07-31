@@ -19,6 +19,8 @@ public final class AppState: ObservableObject {
     @Published public private(set) var microphoneGranted = false
     @Published public private(set) var lastNotice: DictationNotice?
     @Published public private(set) var isPreparingEngine = false
+    /// Идёт ли запись без удержания клавиши — показывается в меню.
+    @Published public private(set) var isHandsFreeActive = false
 
     // Настройки.
     @Published public var hotkey: DictationHotkey {
@@ -111,6 +113,12 @@ public final class AppState: ObservableObject {
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
             }
+            controller.onHandsFreeChange = { [weak self] active in
+                // Монитору нужно знать режим: в нём одиночное нажатие означает
+                // «останови», а не «начни новую диктовку».
+                self?.hotkeyMonitor.isHandsFreeActive = active
+                self?.isHandsFreeActive = active
+            }
             self.controller = controller
         } catch {
             lastNotice = DictationNotice(
@@ -148,17 +156,25 @@ public final class AppState: ObservableObject {
         }
         hotkeyMonitor.onDoubleTap = { [weak self] in
             guard let self else { return }
-            // Второе быстрое нажатие включает режим громкой связи: клавишу
-            // можно отпустить, запись продолжится до следующего нажатия.
-            if self.dictationState == .listening {
-                self.controller?.stopHandsFree()
-            } else {
+
+            switch self.dictationState {
+            case .preparing, .listening:
+                // Сессия уже идёт — первое нажатие её запустило. Переводим её в
+                // режим без удержания вместо того, чтобы начинать новую: новая
+                // всё равно не началась бы, потому что эта ещё не закончилась.
+                self.controller?.promoteToHandsFree()
+            case .idle:
                 self.controller?.begin(
                     handsFree: true,
                     isEnabled: self.isDictationReady,
                     isModelReady: self.modelState.isReady
                 )
+            case .transcribing, .inserting:
+                break
             }
+        }
+        hotkeyMonitor.onSingleTapWhileHandsFree = { [weak self] in
+            self?.controller?.stopHandsFree()
         }
         hotkeyMonitor.onEscape = { [weak self] in
             // Escape отменяет только идущую диктовку. В остальное время это

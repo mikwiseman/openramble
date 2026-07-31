@@ -60,7 +60,15 @@ public final class GlobalHotkeyMonitor {
     public var onPress: (() -> Void)?
     public var onRelease: (() -> Void)?
     public var onDoubleTap: (() -> Void)?
+    /// Одиночное нажатие, когда идёт запись без удержания, — просьба остановить.
+    public var onSingleTapWhileHandsFree: (() -> Void)?
     public var onEscape: (() -> Void)?
+
+    /// Идёт ли сейчас запись без удержания.
+    ///
+    /// Монитор должен это знать, чтобы отличить «начать новую диктовку» от
+    /// «остановить текущую»: в обоих случаях жест один и тот же — нажатие.
+    public var isHandsFreeActive = false
 
     public private(set) var hotkey: DictationHotkey = .rightCommand
     public private(set) var isRunning = false
@@ -131,6 +139,14 @@ public final class GlobalHotkeyMonitor {
 
         if pressed, !isHeld {
             isHeld = true
+
+            // Идёт запись без удержания — нажатие означает «останови».
+            if isHandsFreeActive {
+                lastTapAt = nil
+                onSingleTapWhileHandsFree?()
+                return
+            }
+
             let now = Date()
             if let lastTapAt, now.timeIntervalSince(lastTapAt) < doubleTapWindow {
                 self.lastTapAt = nil
@@ -141,6 +157,9 @@ public final class GlobalHotkeyMonitor {
             }
         } else if !pressed, isHeld {
             isHeld = false
+            // В режиме без удержания отпускание ничего не значит: запись идёт
+            // до следующего нажатия.
+            guard !isHandsFreeActive else { return }
             onRelease?()
         }
     }

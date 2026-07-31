@@ -40,6 +40,17 @@ public final class DictationController {
 
     public var onStateChange: (@MainActor (DictationState) -> Void)?
     public var onNotice: (@MainActor (DictationNotice) -> Void)?
+    /// Сообщает, идёт ли запись без удержания: от этого зависит, как
+    /// истолковать следующее нажатие клавиши.
+    public var onHandsFreeChange: (@MainActor (Bool) -> Void)?
+
+    /// Идёт ли запись без удержания клавиши.
+    public private(set) var isHandsFreeActive = false {
+        didSet {
+            guard oldValue != isHandsFreeActive else { return }
+            onHandsFreeChange?(isHandsFreeActive)
+        }
+    }
 
     // MARK: - Зависимости
 
@@ -101,6 +112,7 @@ public final class DictationController {
         ) else { return }
 
         isHandsFree = handsFree
+        isHandsFreeActive = handsFree
         cancellationRequested = false
         deferredStopRequested = false
         lastError = nil
@@ -164,10 +176,26 @@ public final class DictationController {
         }
     }
 
-    /// Остановка в режиме громкой связи — вторым нажатием клавиши.
+    /// Остановка в режиме без удержания — вторым нажатием клавиши.
     public func stopHandsFree() {
         guard isHandsFree, state == .listening else { return }
         finish()
+    }
+
+    /// Перевести идущую сессию в режим без удержания.
+    ///
+    /// Двойное нажатие приходит уже после того, как первое запустило сессию, а
+    /// первое отпускание попыталось её закончить. Начать новую в этот момент
+    /// нельзя — она бы не прошла проверку на свободное состояние, и режим
+    /// оставался бы недостижимым. Поэтому переключаем текущую.
+    ///
+    /// Отложенное отпускание сбрасывается: оно относилось к прошлому жесту, а в
+    /// новом режиме клавишу и положено отпускать.
+    public func promoteToHandsFree() {
+        guard state == .preparing || state == .listening else { return }
+        isHandsFree = true
+        isHandsFreeActive = true
+        deferredStopRequested = false
     }
 
     private func finish() {
@@ -257,13 +285,38 @@ public final class DictationController {
 
         do {
             try await inserter.insert(output.text, into: targetApplication)
-            if output.command == .pressReturn {
-                try await inserter.pressReturn()
-            }
-            await cleanup()
         } catch {
             await handleInsertionFailure(error, text: output.text)
+            return
         }
+
+        // Нажатие разбирается отдельно от вставки намеренно. Это разные
+        // системные вызовы, и второй отказывает при живом первом — например,
+        // когда пользователь так и не отпустил модификатор.
+        if output.command == .pressReturn {
+            do {
+                try await inserter.pressReturn()
+            } catch {
+                await reportReturnFailure()
+                return
+            }
+        }
+        await cleanup()
+    }
+
+    /// Текст вставлен, а Return нажать не вышло.
+    ///
+    /// Общая ветка отказа здесь соврала бы дважды: сказала бы «текст не
+    /// вставлен», когда он на месте, и сохранила бы вторую копию продиктованного
+    /// на диск. Приватный инструмент не складывает сказанное без причины.
+    private func reportReturnFailure() async {
+        let notice = DictationNotice(
+            kind: .warning,
+            message: "Текст вставлен, но нажать Return не удалось."
+        )
+        onNotice?(notice)
+        await overlay.presentNotice(notice)
+        await cleanup()
     }
 
     /// Текст распознан, но вставить не удалось — сохраняем, чтобы он не пропал.
@@ -334,6 +387,7 @@ public final class DictationController {
         deferredStopRequested = false
         cancellationRequested = false
         isHandsFree = false
+        isHandsFreeActive = false
         targetApplication = nil
         recordingStartedAt = nil
         state = .idle
