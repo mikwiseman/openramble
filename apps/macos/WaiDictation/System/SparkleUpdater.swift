@@ -55,6 +55,24 @@ public final class SparkleUpdater: ObservableObject {
             MainActor.assumeIsolated { self?.canCheckForUpdates = updater.canCheckForUpdates }
         }
 
+        // Ключ проверяем сами, до запуска.
+        //
+        // Собственная проверка Sparkle здесь дырявая: при HTTPS-адресе фида и
+        // подписанном приложении она пропускает отсутствие ключа EdDSA, пишет
+        // предупреждение в лог и запускается — дальше обновления проверяются
+        // одной лишь подписью кода (`SPUUpdater.m`, ветка `!hasAnyPublicKey`).
+        // Это ровно тот случай, который у нас и будет на релизе, и ошибки при
+        // нём не возникает. Обещание «обновления подписаны нашим ключом» тихо
+        // ослабло бы, а узнать об этом было бы неоткуда.
+        let publicKey = Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") as? String
+        guard let publicKey, !publicKey.isEmpty else {
+            startupFailure = """
+                В сборке нет открытого ключа подписи обновлений (SUPublicEDKey). \
+                Обновления отключены: без него их нечем проверить.
+                """
+            return
+        }
+
         do {
             // `start()` — это `-[SPUUpdater startUpdater:]`, Swift срезает
             // с имени метода название типа. Запуск ничего не скачивает:
