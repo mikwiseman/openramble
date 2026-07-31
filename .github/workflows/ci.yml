@@ -12,22 +12,48 @@ concurrency:
 jobs:
   test:
     name: Тесты пакетов
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 
       - name: Версия Swift
         run: swift --version
 
+      # Предупреждения в этом проекте — ошибки: строгая конкурентность Swift 6
+      # ловит здесь ровно те гонки, которые в звуке проявляются раз в сто
+      # запусков и не воспроизводятся.
       - name: DictationCore
-        run: swift test --package-path Packages/DictationCore
+        run: |
+          swift build --package-path Packages/DictationCore -Xswiftc -warnings-as-errors
+          swift test --package-path Packages/DictationCore
 
       - name: LocalASR
-        run: swift test --package-path Packages/LocalASR
+        run: |
+          swift build --package-path Packages/LocalASR -Xswiftc -warnings-as-errors
+          swift test --package-path Packages/LocalASR
+
+  app:
+    name: Сборка приложения
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      # Проект собирается из project.yml и в репозитории не лежит.
+      - name: xcodegen
+        run: brew install xcodegen
+
+      # Половина дефектов первого дня жила именно в цели приложения — в
+      # пакетах их не видно, потому что она в них не входит.
+      - name: Собрать
+        run: |
+          cd apps/macos
+          xcodegen generate
+          xcodebuild -project WaiDictation.xcodeproj -scheme WaiDictation \
+            -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
 
   network-surface:
     name: Сетевая поверхность
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 
@@ -37,7 +63,7 @@ jobs:
 
   universal-build:
     name: Сборка под обе архитектуры
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 
