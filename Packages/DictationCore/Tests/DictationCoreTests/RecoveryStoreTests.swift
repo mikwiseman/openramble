@@ -165,3 +165,50 @@ final class RecoveryStoreTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: foreign.path))
     }
 }
+
+/// Что делать с файлом, возраст которого узнать не удалось.
+final class RecoveryStoreUnknownAgeTests: XCTestCase {
+    private var directory: URL!
+
+    override func setUpWithError() throws {
+        directory = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appending(path: "recovery-age-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: directory)
+    }
+
+    func testFileWithUnreadableDateIsKeptNotDeleted() async throws {
+        // Спасённый текст — единственная копия сказанного: он попал сюда именно
+        // потому, что вставить не удалось. Сбой одного системного вызова не
+        // повод его уничтожить.
+        let store = RecoveryStore(directory: directory)
+        let older = directory.appending(path: "dictation-2020-01-01T00-00-00Z-aaaaaaaa.txt")
+        try Data("важный текст".utf8).write(to: older)
+        // Дату модификации убираем из индекса: свежая дата у файла всё равно
+        // осталась бы, поэтому проверяем именно правило «нет даты — не трогаем».
+        try FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: older.path)
+
+        _ = try await store.save("новый текст")
+
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: older.path),
+            "Файл с нечитаемым возрастом обязан уцелеть"
+        )
+    }
+
+    func testCountLimitStillHolds() async throws {
+        // Предел по количеству — та самая граница, из-за которой продукт не
+        // копит бессрочный архив. Смягчение правила по возрасту его не ослабило.
+        let store = RecoveryStore(directory: directory)
+        for index in 0..<25 {
+            _ = try await store.save("текст \(index)")
+        }
+
+        let left = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "txt" }
+        XCTAssertLessThanOrEqual(left.count, 20, "Больше двадцати спасённых текстов не хранится")
+    }
+}

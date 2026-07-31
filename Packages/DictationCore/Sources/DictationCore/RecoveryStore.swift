@@ -51,11 +51,22 @@ public struct RecoveryStore: RecoveryStoring {
         ) else { return }
 
         let now = Date()
-        var survivors: [(url: URL, date: Date)] = []
+        var survivors: [(url: URL, date: Date?)] = []
 
         for entry in entries where entry.pathExtension == "txt" {
             let date = (try? entry.resourceValues(forKeys: [.contentModificationDateKey]))?
-                .contentModificationDate ?? .distantPast
+                .contentModificationDate
+
+            // Возраст неизвестен — файл остаётся. Раньше здесь стоял
+            // `.distantPast`, то есть сбой одного системного вызова означал
+            // «этому файлу вечность» и текст удалялся. А это единственная копия
+            // сказанного: она попала сюда потому, что вставить не удалось.
+            // Ошибаться в сторону уничтожения тут нельзя.
+            guard let date else {
+                survivors.append((entry, nil))
+                continue
+            }
+
             if now.timeIntervalSince(date) > maximumAge {
                 try? FileManager.default.removeItem(at: entry)
             } else {
@@ -64,7 +75,11 @@ public struct RecoveryStore: RecoveryStoring {
         }
 
         guard survivors.count > keepLast else { return }
-        for item in survivors.sorted(by: { $0.date > $1.date }).dropFirst(keepLast) {
+        // Предел по количеству остаётся жёстким: он и есть та граница, из-за
+        // которой продукт не копит бессрочный архив сказанного. Файлы с
+        // неизвестной датой уходят первыми — судить о них больше нечем.
+        let ordered = survivors.sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
+        for item in ordered.dropFirst(keepLast) {
             try? FileManager.default.removeItem(at: item.url)
         }
     }
