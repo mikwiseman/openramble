@@ -1,3 +1,4 @@
+import AppKit
 import DictationCore
 import SwiftUI
 
@@ -18,6 +19,16 @@ struct WaiDictationApp: App {
             )
         } label: {
             Image(systemName: menuIcon)
+                .task {
+                    // Первый запуск обязан сам показать настройку. Без этого
+                    // приложение молча уходит в строку меню: значка в доке нет,
+                    // окна нет, и человек, только что перетащивший его из
+                    // образа, не видит вообще ничего — ни разрешений, ни модели,
+                    // без которых диктовка не работает.
+                    guard !onboardingCompleted else { return }
+                    openWindow(id: "onboarding")
+                    NSApp.activate(ignoringOtherApps: true)
+                }
         }
 
         Window("Добро пожаловать", id: "onboarding") {

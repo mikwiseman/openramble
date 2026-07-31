@@ -10,7 +10,12 @@ struct OnboardingView: View {
     @ObservedObject var state: AppState
     let onFinish: () -> Void
 
+    @Environment(\.dismiss) private var dismiss
+
     @State private var step: Step = .welcome
+    /// Что человек продиктовал на пробу.
+    @State private var trial = ""
+    @FocusState private var trialFocused: Bool
 
     enum Step: Int, CaseIterable {
         case welcome
@@ -185,11 +190,16 @@ struct OnboardingView: View {
             Text("Удерживайте \(state.hotkey.title), скажите что-нибудь и отпустите. Текст появится в поле ниже.")
                 .foregroundStyle(.secondary)
 
-            // Поле для пробы: работает даже до того, как выдан универсальный
-            // доступ, потому что вставка идёт в собственное окно приложения.
-            TextEditor(text: .constant(""))
+            // Поле для пробы. Настоящее, с изменяемым текстом: раньше оно было
+            // привязано к константе, и продиктованное в нём не появлялось
+            // никогда — первая же попытка выглядела так, будто ничего не
+            // работает. Курсор ставится сюда сам, иначе текст уйдёт в то окно,
+            // которое было впереди до онбординга.
+            TextEditor(text: $trial)
                 .frame(height: 90)
+                .focused($trialFocused)
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
+                .onAppear { trialFocused = true }
 
             if state.dictationState == .listening {
                 Label("Слушаю…", systemImage: "waveform")
@@ -206,6 +216,11 @@ struct OnboardingView: View {
         Button(step == .tryIt ? "Готово" : "Дальше") {
             if step == .tryIt {
                 onFinish()
+                // Окно закрывается здесь же. Иначе на экране оставалась бы
+                // пустая рамка: содержимое исчезает вместе с флагом настройки,
+                // а сама рамка — нет, и последним действием установки человек
+                // закрывал бы её руками.
+                dismiss()
             } else {
                 forward()
             }
