@@ -1,3 +1,4 @@
+import DictationCore
 import AVFoundation
 import Foundation
 
@@ -104,20 +105,24 @@ public struct AudioFileReader: Sendable {
             }
             if inputBuffer.frameLength == 0 { reachedEnd = true }
 
-            var suppliedThisRound = false
+            // Замыкание помечено как параллельное, но вызывается синхронно
+            // здесь же — коробки нужны только чтобы это объяснить компилятору.
+            let supplied = UncheckedBox(false)
+            let input = UncheckedBox(inputBuffer)
+            let atEnd = reachedEnd
             var conversionError: NSError?
             outputBuffer.frameLength = 0
 
             let status = converter.convert(to: outputBuffer, error: &conversionError) { _, statusPointer in
                 // Конвертер просит данные по кускам; каждый входной буфер отдаём
                 // ровно один раз, иначе он зациклится на нём.
-                if suppliedThisRound || inputBuffer.frameLength == 0 {
-                    statusPointer.pointee = reachedEnd ? .endOfStream : .noDataNow
+                if supplied.value || input.value.frameLength == 0 {
+                    statusPointer.pointee = atEnd ? .endOfStream : .noDataNow
                     return nil
                 }
-                suppliedThisRound = true
+                supplied.value = true
                 statusPointer.pointee = .haveData
-                return inputBuffer
+                return input.value
             }
 
             if let conversionError {

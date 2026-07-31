@@ -36,7 +36,7 @@ public enum TranscriptPolisher {
         var result = ""
         result.reserveCapacity(text.count)
 
-        var characters = Array(text)
+        let characters = Array(text)
         var index = 0
         while index < characters.count {
             let character = characters[index]

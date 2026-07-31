@@ -172,16 +172,19 @@ public actor MicrophoneCapture: AudioCapturing {
         let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 512
         guard let output = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else { return [] }
 
-        var supplied = false
+        // Коробки объясняют компилятору то, что верно по факту: замыкание
+        // выполняется синхронно здесь же, а не в другом потоке.
+        let supplied = UncheckedBox(false)
+        let input = UncheckedBox(buffer)
         var error: NSError?
         converter.convert(to: output, error: &error) { _, status in
-            if supplied {
+            if supplied.value {
                 status.pointee = .noDataNow
                 return nil
             }
-            supplied = true
+            supplied.value = true
             status.pointee = .haveData
-            return buffer
+            return input.value
         }
 
         guard error == nil, let channel = output.floatChannelData?[0] else { return [] }
