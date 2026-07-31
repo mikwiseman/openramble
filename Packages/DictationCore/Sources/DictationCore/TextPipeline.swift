@@ -87,6 +87,10 @@ public struct TextPipeline: Sendable {
         /// Текст, готовый к вставке.
         public let text: String
         /// Что нажать после вставки, если пользователь об этом попросил.
+        ///
+        /// Перевод строки сюда не попадает: он уже в тексте. Нажатием его не
+        /// сделать — Return в чужом окне отправляет сообщение, а не переносит
+        /// строку.
         public let command: TrailingCommand?
     }
 
@@ -100,6 +104,15 @@ public struct TextPipeline: Sendable {
         let parsed = TrailingCommandParser.parse(recognized)
         let replaced = DictionaryReplacements.apply(replacements, to: parsed.text)
         let polished = TranscriptPolisher.polish(replaced)
-        return Output(text: polished, command: parsed.command)
+
+        guard parsed.command == .newLine, !polished.isEmpty else {
+            return Output(text: polished, command: parsed.command)
+        }
+
+        // «Новая строка» — команда, которую нельзя выполнить нажатием: Return
+        // отправил бы сообщение. Поэтому перенос уходит прямо в текст — он и
+        // вставляется вместе с ним. Раньше слова из текста вырезались, а взамен
+        // не происходило ничего: команда пропадала целиком.
+        return Output(text: polished + "\n", command: nil)
     }
 }

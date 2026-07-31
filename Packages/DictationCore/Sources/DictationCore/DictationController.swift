@@ -81,6 +81,15 @@ public final class DictationController {
     private var finalizationTask: Task<Void, Never>?
     private var recordingStartedAt: Date?
 
+    /// Номер текущей сессии — растёт на каждом старте.
+    ///
+    /// Отмена не прерывает уже начатое ожидание, а только помечает его:
+    /// распознавание дочитывает свой буфер и просыпается позже — когда человек
+    /// успел начать следующую диктовку. Без номера такой хвост доводил уборку до
+    /// конца и гасил ЧУЖУЮ, живую сессию: состояние показывало «свободно», а
+    /// микрофон оставался включённым, и выйти из этого было нечем.
+    private var currentSession = 0
+
     public init(
         capture: any AudioCapturing,
         transcribe: @escaping @Sendable (URL) async throws -> ASRResult,
@@ -111,6 +120,8 @@ public final class DictationController {
             isModelReady: isModelReady
         ) else { return }
 
+        currentSession += 1
+        let session = currentSession
         isHandsFree = handsFree
         isHandsFreeActive = handsFree
         cancellationRequested = false
@@ -120,29 +131,32 @@ public final class DictationController {
         targetApplication = inserter.frontmostApplication()
         state = .preparing
 
-        Task { await startCapture() }
+        Task { await startCapture(session: session) }
     }
 
-    private func startCapture() async {
+    private func startCapture(session: Int) async {
         // Вторая проверка того же условия: между синхронной частью и этой
         // строкой прошёл переход между задачами, за который сессию могли отменить.
-        guard state == .preparing, !cancellationRequested else {
-            await finishWithoutInsertion()
+        guard isCurrent(session), state == .preparing, !cancellationRequested else {
+            await finishWithoutInsertion(session: session)
             return
         }
 
         do {
             _ = try await capture.startRecording()
         } catch {
-            await fail(with: .capture(String(describing: error)))
+            await fail(session: session, with: .capture(String(describing: error)))
             return
         }
 
         // После ожидания состояние проверяется снова — отмена могла прийти
         // ровно в момент запуска движка.
-        guard state == .preparing, !cancellationRequested else {
+        guard isCurrent(session), state == .preparing, !cancellationRequested else {
+            // Запись успела пойти, а сессии уже нет. Свой микрофон гасим —
+            // иначе он останется включённым, и остановить его будет нечем, —
+            // но уборку не делаем: она принадлежит той сессии, что идёт сейчас.
             await capture.abortRecording()
-            await finishWithoutInsertion()
+            await finishWithoutInsertion(session: session)
             return
         }
 
@@ -178,8 +192,20 @@ public final class DictationController {
 
     /// Остановка в режиме без удержания — вторым нажатием клавиши.
     public func stopHandsFree() {
-        guard isHandsFree, state == .listening else { return }
-        finish()
+        guard isHandsFree else { return }
+
+        switch state {
+        case .listening:
+            finish()
+        case .preparing:
+            // То же самое, что и с отпусканием клавиши, только нажатием: второе
+            // нажатие успело прийти раньше, чем поднялся движок. Потерять его
+            // нельзя — в этом режиме клавишу не держат, и остановить запись
+            // больше нечем: микрофон работал бы до часового предела.
+            deferredStopRequested = true
+        case .idle, .transcribing, .inserting:
+            break
+        }
     }
 
     /// Перевести идущую сессию в режим без удержания.
@@ -202,28 +228,42 @@ public final class DictationController {
         // Финализация запускается ровно один раз: иначе текст вставится дважды.
         guard finalizationTask == nil, state == .listening else { return }
 
+        let session = currentSession
         state = .transcribing
         let task = Task { [weak self] in
-            await self?.finalize()
-            await MainActor.run { self?.finalizationTask = nil }
+            await self?.finalize(session: session)
+            await MainActor.run { self?.forgetFinalization(session: session) }
         }
         finalizationTask = task
     }
 
-    private func finalize() async {
+    /// Забыть завершившуюся задачу — но только если это всё ещё наша сессия.
+    private func forgetFinalization(session: Int) {
+        guard isCurrent(session) else { return }
+        finalizationTask = nil
+    }
+
+    private func finalize(session: Int) async {
         await overlay.present(.transcribing, elapsed: elapsedSeconds())
 
         let recording: (url: URL, duration: TimeInterval)
         do {
             recording = try await capture.stopRecording()
         } catch {
-            await fail(with: .capture(String(describing: error)))
+            await fail(session: session, with: .capture(String(describing: error)))
             return
         }
+
+        // Запись удаляется, чем бы дело ни кончилось, — поэтому удаление стоит
+        // сразу за её получением, до всех проверок. Она нужна только на время
+        // распознавания: хранить голос пользователя дольше — и лишний расход
+        // диска, и совсем не то, чего от приватного продукта ждут.
+        defer { discard(recording.url) }
+
         await sounds.playStop()
 
-        guard shouldContinue() else {
-            await finishWithoutInsertion()
+        guard shouldContinue(session) else {
+            await finishWithoutInsertion(session: session)
             return
         }
 
@@ -231,62 +271,57 @@ public final class DictationController {
         // записях отказывается работать, но показывать из-за этого ошибку
         // неправильно: человек просто передумал.
         guard DictationDurationPolicy.isWorthTranscribing(duration: recording.duration) else {
-            await finishWithoutInsertion()
+            await finishWithoutInsertion(session: session)
             return
         }
-
-        // Запись удаляется, чем бы дело ни кончилось. Она нужна только на время
-        // распознавания: хранить голос пользователя дольше — и лишний расход
-        // диска, и совсем не то, чего от приватного продукта ждут.
-        defer { discard(recording.url) }
 
         let recognized: ASRResult
         do {
             recognized = try await transcribe(recording.url)
         } catch is CancellationError {
-            await finishWithoutInsertion()
+            await finishWithoutInsertion(session: session)
             return
         } catch let error as ASREngineError where error == .cancelled {
             // Отмена, дошедшая через движок: это не сбой, сообщать не о чем.
-            await finishWithoutInsertion()
+            await finishWithoutInsertion(session: session)
             return
         } catch {
-            await fail(with: .recognition(String(describing: error)))
+            await fail(session: session, with: .recognition(String(describing: error)))
             return
         }
 
         // Проверка после каждого ожидания: пока шло распознавание, пользователь
         // мог нажать отмену.
-        guard shouldContinue() else {
-            await finishWithoutInsertion()
+        guard shouldContinue(session) else {
+            await finishWithoutInsertion(session: session)
             return
         }
 
         let processed = pipeline().process(recognized.text)
         guard !processed.text.isEmpty else {
             // Пустой результат — не ошибка: человек мог передумать и промолчать.
-            await finishWithoutInsertion()
+            await finishWithoutInsertion(session: session)
             return
         }
 
-        await insert(processed)
+        await insert(processed, session: session)
     }
 
-    private func insert(_ output: TextPipeline.Output) async {
+    private func insert(_ output: TextPipeline.Output, session: Int) async {
         state = .inserting
         await overlay.present(.inserting, elapsed: elapsedSeconds())
 
         // Последняя точка, где отмена ещё возможна. Дальше событие уходит в
         // чужое приложение и не отзывается.
-        guard shouldContinue() else {
-            await finishWithoutInsertion()
+        guard shouldContinue(session) else {
+            await finishWithoutInsertion(session: session)
             return
         }
 
         do {
             try await inserter.insert(output.text, into: targetApplication)
         } catch {
-            await handleInsertionFailure(error, text: output.text)
+            await handleInsertionFailure(error, text: output.text, session: session)
             return
         }
 
@@ -297,11 +332,11 @@ public final class DictationController {
             do {
                 try await inserter.pressReturn()
             } catch {
-                await reportReturnFailure()
+                await reportReturnFailure(session: session)
                 return
             }
         }
-        await cleanup()
+        await cleanup(session: session)
     }
 
     /// Текст вставлен, а Return нажать не вышло.
@@ -309,18 +344,18 @@ public final class DictationController {
     /// Общая ветка отказа здесь соврала бы дважды: сказала бы «текст не
     /// вставлен», когда он на месте, и сохранила бы вторую копию продиктованного
     /// на диск. Приватный инструмент не складывает сказанное без причины.
-    private func reportReturnFailure() async {
+    private func reportReturnFailure(session: Int) async {
         let notice = DictationNotice(
             kind: .warning,
             message: "Текст вставлен, но нажать Return не удалось."
         )
         onNotice?(notice)
         await overlay.presentNotice(notice)
-        await cleanup()
+        await cleanup(session: session)
     }
 
     /// Текст распознан, но вставить не удалось — сохраняем, чтобы он не пропал.
-    private func handleInsertionFailure(_ error: Error, text: String) async {
+    private func handleInsertionFailure(_ error: Error, text: String, session: Int) async {
         let file = try? await recovery.save(text)
         pendingRecovery = RecoveredDictation(text: text, file: file)
 
@@ -335,7 +370,7 @@ public final class DictationController {
         let notice = DictationNotice(kind: .warning, message: message, recoveryFile: file)
         onNotice?(notice)
         await overlay.presentNotice(notice)
-        await cleanup()
+        await cleanup(session: session)
     }
 
     // MARK: - Отмена
@@ -349,9 +384,10 @@ public final class DictationController {
         cancellationRequested = true
         finalizationTask?.cancel()
 
+        let session = currentSession
         Task { [weak self] in
             await self?.capture.abortRecording()
-            await self?.finishWithoutInsertion()
+            await self?.finishWithoutInsertion(session: session)
         }
     }
 
@@ -369,34 +405,43 @@ public final class DictationController {
         let notice = DictationNotice(kind: .failure, message: message)
         onNotice?(notice)
 
+        let session = currentSession
         Task { [weak self] in
             guard let self else { return }
             await self.overlay.presentNotice(notice)
             await self.capture.abortRecording()
-            await self.finishWithoutInsertion()
+            await self.finishWithoutInsertion(session: session)
         }
     }
 
     // MARK: - Завершение
 
-    private func shouldContinue() -> Bool {
-        DictationFinalizationPolicy.shouldContinue(
+    /// Идёт ли ещё та сессия, ради которой начиналось ожидание.
+    private func isCurrent(_ session: Int) -> Bool { session == currentSession }
+
+    private func shouldContinue(_ session: Int) -> Bool {
+        guard isCurrent(session) else { return false }
+        return DictationFinalizationPolicy.shouldContinue(
             state: state,
             cancellationRequested: cancellationRequested,
             taskCancelled: Task.isCancelled
         )
     }
 
-    private func fail(with error: DictationError) async {
+    private func fail(session: Int, with error: DictationError) async {
+        // Сбой отменённой сессии показывать не за что: человек её уже закрыл, а
+        // сообщение упало бы поверх той, что идёт сейчас.
+        guard isCurrent(session) else { return }
+
         lastError = error
         let notice = DictationNotice(kind: .failure, message: error.userMessage)
         onNotice?(notice)
         await overlay.presentNotice(notice)
-        await cleanup()
+        await cleanup(session: session)
     }
 
-    private func finishWithoutInsertion() async {
-        await cleanup()
+    private func finishWithoutInsertion(session: Int) async {
+        await cleanup(session: session)
     }
 
     /// Уборка после сессии — в строгом порядке.
@@ -404,7 +449,12 @@ public final class DictationController {
     /// Микрофон гасится здесь и только здесь: обещание «индикатор записи не
     /// горит, пока мы не слушаем» держится на том, что этот метод вызывается
     /// на каждом пути завершения, включая ошибки и отмену.
-    private func cleanup() async {
+    ///
+    /// Убирать разрешено только за собственной сессией: хвост предыдущей,
+    /// проснувшийся после отмены, иначе погасил бы уже идущую новую.
+    private func cleanup(session: Int) async {
+        guard isCurrent(session) else { return }
+
         finalizationTask = nil
         deferredStopRequested = false
         cancellationRequested = false

@@ -36,6 +36,42 @@ final class TranscriptPolisherTests: XCTestCase {
         }
     }
 
+    func testSeparatesWordsGluedToAComma() {
+        // Модель регулярно склеивает перечисление: «первое,второе». Заглавной
+        // дальше нет, и раньше пробел не появлялся — текст оставался слипшимся.
+        XCTAssertEqual(TranscriptPolisher.polish("первое,второе"), "Первое, второе")
+        XCTAssertEqual(TranscriptPolisher.polish("раз, два,три,четыре"), "Раз, два, три, четыре")
+        XCTAssertEqual(TranscriptPolisher.polish("стоп!поехали"), "Стоп! поехали")
+        XCTAssertEqual(TranscriptPolisher.polish("что?ничего"), "Что? ничего")
+        XCTAssertEqual(TranscriptPolisher.polish("раз;два"), "Раз; два")
+    }
+
+    func testDecimalCommaSurvivesTheSameRule() {
+        // Единственное место, где запятая стоит вплотную к следующему знаку по
+        // делу, — десятичная дробь. Отличается тем, что дальше идёт цифра.
+        let untouched = [
+            "Ставка 3,14 процента",
+            "Цена 1,500 рублей",
+            "Координаты 55,7558 и 37,6173",
+        ]
+        for input in untouched {
+            XCTAssertEqual(TranscriptPolisher.polish(input), input, "Не должно измениться: \(input)")
+        }
+    }
+
+    func testColonAndPeriodStayConservative() {
+        // Двоеточие и точка живут внутри ссылок, времени и сокращений, поэтому
+        // им пробел по строчной букве не добавляется — цена ошибки выше выгоды.
+        let untouched = [
+            "Открой https://wai.computer/api",
+            "Встреча в 12:30",
+            "Это т.д. и т.п.",
+        ]
+        for input in untouched {
+            XCTAssertEqual(TranscriptPolisher.polish(input), input, "Не должно измениться: \(input)")
+        }
+    }
+
     func testCollapsesRepeatedSpaces() {
         XCTAssertEqual(
             TranscriptPolisher.polish("слишком   много    пробелов"),
@@ -185,6 +221,25 @@ final class TextPipelineTests: XCTestCase {
         let output = TextPipeline().process("   ")
 
         XCTAssertEqual(output.text, "")
+        XCTAssertNil(output.command)
+    }
+
+    func testNewLineCommandActuallyBreaksTheLine() {
+        // «Новая строка» в конце фразы — единственная команда, которую нельзя
+        // выполнить нажатием: Return в чужом окне отправит сообщение, а не
+        // перенесёт строку. Поэтому перевод строки уходит прямо в текст.
+        // Раньше слова из текста вырезались, а не происходило ничего.
+        let output = TextPipeline().process("запушил в гитхаб новая строка")
+
+        XCTAssertEqual(output.text, "Запушил в гитхаб\n")
+        XCTAssertNil(output.command, "Нажимать тут нечего — перенос уже в тексте")
+    }
+
+    func testNewLineWithoutTextInsertsNothing() {
+        // Одна команда без текста — это просто слово, и переносить нечего.
+        let output = TextPipeline().process("новая строка")
+
+        XCTAssertEqual(output.text, "Новая строка")
         XCTAssertNil(output.command)
     }
 }

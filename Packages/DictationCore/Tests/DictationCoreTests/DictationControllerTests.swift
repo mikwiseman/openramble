@@ -328,6 +328,21 @@ final class DictationControllerTests: XCTestCase {
         XCTAssertEqual(presses, 1, "Команда «отправь» должна нажать Return")
     }
 
+    func testNewLineCommandArrivesAsTextNotAsKeypress() async throws {
+        // «Новая строка» обязана дойти до поля ввода переносом. Нажимать Return
+        // здесь нельзя: в мессенджере это отправит сообщение.
+        let controller = makeController(recognized: "первая строка новая строка")
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        let inserted = await inserter.insertedTexts
+        let presses = await inserter.returnPresses
+        XCTAssertEqual(inserted, ["Первая строка\n"])
+        XCTAssertEqual(presses, 0, "Return отправил бы сообщение вместо переноса строки")
+    }
+
     // MARK: Пустой результат
 
     func testEmptyRecognitionInsertsNothingAndDoesNotError() async throws {

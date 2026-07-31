@@ -143,6 +143,53 @@ final class WAVWriterRobustnessTests: XCTestCase {
         }
     }
 
+    // MARK: - Кончилось место
+
+    func testDiskFullIsReportedInsteadOfSilentlyLosingSound() throws {
+        // «Место на диске кончилось» посреди диктовки. Настоящий отказ записи
+        // воспроизводится лимитом на размер файла: ядро отвечает ровно тем же
+        // отказом, что и заполненный диск.
+        //
+        // Проверяется главное: отказ виден. Молча потерянные байты — это
+        // обрезанная фраза, которую человек заметит не сразу и спишет на
+        // распознавание.
+        var saved = rlimit()
+        XCTAssertEqual(getrlimit(RLIMIT_FSIZE, &saved), 0)
+        // Без этого превышение лимита убивает процесс сигналом, а не ошибкой.
+        signal(SIGXFSZ, SIG_IGN)
+        var limited = saved
+        limited.rlim_cur = 8192
+        XCTAssertEqual(setrlimit(RLIMIT_FSIZE, &limited), 0)
+        defer { setrlimit(RLIMIT_FSIZE, &saved) }
+
+        let writer = makeWriter()
+        try writer.open()
+
+        // Влезает: 44 байта заголовка плюс 2000 отсчётов по два байта.
+        try writer.append(Array(repeating: 0.1, count: 2000))
+        let survivedDuration = writer.duration
+
+        XCTAssertThrowsError(try writer.append(Array(repeating: 0.1, count: 100_000))) { error in
+            guard case .writeFailed = error as? WAVWriter.Failure else {
+                return XCTFail("Ожидался отказ записи, получено: \(error)")
+            }
+        }
+
+        XCTAssertEqual(
+            writer.duration,
+            survivedDuration,
+            "Длительность обязана считать только то, что действительно легло на диск"
+        )
+
+        // Файл после отказа остаётся честным: заголовок описывает ровно те
+        // отсчёты, которые записались, а не те, что были отданы.
+        let url = try writer.close()
+        setrlimit(RLIMIT_FSIZE, &saved)
+
+        let file = try AVAudioFile(forReading: url)
+        XCTAssertEqual(file.length, 2000)
+    }
+
     // MARK: - Крайние размеры
 
     func testEmptyChunkChangesNothing() throws {
