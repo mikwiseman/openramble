@@ -285,4 +285,18 @@ public final class AppState: ObservableObject {
     public func removeReplacements(at offsets: IndexSet) {
         replacements.remove(atOffsets: offsets)
     }
+
+    /// Сколько заготовленных терминов ещё не добавлено.
+    public var availableStarterCount: Int {
+        StarterDictionary.missing(from: replacements).count
+    }
+
+    /// Добавить готовый набор терминов разработчика.
+    ///
+    /// Модель пишет англицизмы так, как слышит их в русской речи: «pull request»
+    /// становится «пул реквест». Набор возвращает им обычный вид. Уже заведённые
+    /// пользователем замены не трогаем — своё важнее заготовки.
+    public func addStarterDictionary() {
+        replacements.append(contentsOf: StarterDictionary.missing(from: replacements))
+    }
 }

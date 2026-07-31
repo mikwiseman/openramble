@@ -171,10 +171,26 @@ private struct DictionarySettings: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Замены применяются к распознанному тексту. Полезно для названий, которые модель слышит иначе.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding()
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Замены применяются к распознанному тексту. Полезно для названий, которые модель слышит иначе.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if state.availableStarterCount > 0 {
+                    HStack {
+                        Text("Диктуете по-русски с английскими терминами? Модель пишет их кириллицей: «pull request» становится «пул реквест».")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Добавить \(state.availableStarterCount)") {
+                            state.addStarterDictionary()
+                        }
+                    }
+                    .padding(10)
+                    .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+                }
+            }
+            .padding()
 
             List {
                 ForEach(state.replacements) { replacement in

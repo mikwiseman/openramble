@@ -199,6 +199,14 @@ public final class DictationController {
             return
         }
 
+        // Нажал и сразу отпустил — распознавать нечего. Движок на таких
+        // записях отказывается работать, но показывать из-за этого ошибку
+        // неправильно: человек просто передумал.
+        guard DictationDurationPolicy.isWorthTranscribing(duration: recording.duration) else {
+            await finishWithoutInsertion()
+            return
+        }
+
         let recognized: ASRResult
         do {
             recognized = try await transcribe(recording.url)
