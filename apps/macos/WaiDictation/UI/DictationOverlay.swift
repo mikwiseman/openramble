@@ -16,7 +16,7 @@ public final class DictationOverlay: OverlayPresenting {
     nonisolated public func present(_ state: DictationState, elapsed: TimeInterval) async {
         await MainActor.run {
             model.state = state
-            model.elapsed = elapsed
+            model.setElapsed(elapsed, ticking: state == .listening)
             model.notice = nil
             showPanel()
         }
@@ -24,6 +24,7 @@ public final class DictationOverlay: OverlayPresenting {
 
     nonisolated public func dismiss() async {
         await MainActor.run {
+            model.setElapsed(model.elapsed, ticking: false)
             // Сообщение остаётся на экране: пользователь должен успеть его прочесть.
             guard model.notice == nil else { return }
             hidePanel()
@@ -32,6 +33,7 @@ public final class DictationOverlay: OverlayPresenting {
 
     nonisolated public func presentNotice(_ notice: DictationNotice) async {
         await MainActor.run {
+            model.setElapsed(model.elapsed, ticking: false)
             model.notice = notice
             showPanel()
             Task { @MainActor in
@@ -95,6 +97,35 @@ final class OverlayModel: ObservableObject {
     @Published var state: DictationState = .idle
     @Published var elapsed: TimeInterval = 0
     @Published var notice: DictationNotice?
+
+    private var timer: Timer?
+    private var startedAt: Date?
+
+    /// Показать прошедшее время.
+    ///
+    /// Пока идёт запись, счётчик ведёт сам оверлей. Иначе он показывал бы «0 с»
+    /// всю диктовку: ядро сообщает о начале записи один раз и следующий раз
+    /// выходит на связь уже после её конца — то есть ровно тогда, когда счётчик
+    /// уже не нужен. Секунды здесь единственный признак, что запись правда идёт.
+    func setElapsed(_ value: TimeInterval, ticking: Bool) {
+        elapsed = value
+
+        guard ticking else {
+            timer?.invalidate()
+            timer = nil
+            startedAt = nil
+            return
+        }
+
+        guard timer == nil else { return }
+        startedAt = Date().addingTimeInterval(-value)
+        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let startedAt = self.startedAt else { return }
+                self.elapsed = Date().timeIntervalSince(startedAt)
+            }
+        }
+    }
 }
 
 private struct OverlayView: View {

@@ -93,6 +93,11 @@ public final class WAVWriter: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         guard let handle else { throw Failure.notOpen }
+        // Дескриптор освобождается в любом случае. Иначе неудачное закрытие
+        // оставляло бы файл открытым навсегда: writer после этого недоступен, а
+        // закрыть его больше некому — за день диктовки так вычерпывается лимит
+        // открытых файлов процесса.
+        defer { self.handle = nil }
 
         do {
             try handle.synchronize()
@@ -102,9 +107,9 @@ public final class WAVWriter: @unchecked Sendable {
             try handle.synchronize()
             try handle.close()
         } catch {
+            try? handle.close()
             throw Failure.writeFailed(error.localizedDescription)
         }
-        self.handle = nil
         return url
     }
 

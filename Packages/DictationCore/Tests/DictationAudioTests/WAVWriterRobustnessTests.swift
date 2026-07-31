@@ -181,3 +181,43 @@ final class WAVWriterRobustnessTests: XCTestCase {
         XCTAssertEqual(file.length, Int64(60 * 16_000))
     }
 }
+
+/// Дескриптор файла после неудачного закрытия.
+final class WAVWriterHandleReleaseTests: XCTestCase {
+    func testFailedCloseStillReleasesTheHandle() throws {
+        // Файл удаляют из-под записи — так бывает при чистке диска.
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appending(path: "handle-\(UUID().uuidString).wav")
+        let writer = WAVWriter(url: url, sampleRate: 16_000, channels: 1)
+        try writer.open()
+        try writer.append(Array(repeating: 0.1, count: 1000))
+        try? writer.close()
+
+        // Второе закрытие обязано сказать «не открыт», а не пытаться писать в
+        // уже закрытый дескриптор.
+        XCTAssertThrowsError(try writer.close()) { error in
+            XCTAssertEqual(error as? WAVWriter.Failure, .notOpen)
+        }
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    func testProcessDoesNotRunOutOfFileDescriptors() throws {
+        // Тысяча диктовок подряд: при утечке дескрипторов процесс упрётся в
+        // лимит и перестанет открывать файлы вообще.
+        let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appending(path: "fd-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        for index in 0..<1000 {
+            let writer = WAVWriter(url: directory.appending(path: "take-\(index).wav"))
+            try writer.open()
+            try writer.append([0.1, 0.2, 0.3])
+            _ = try writer.close()
+        }
+
+        let last = WAVWriter(url: directory.appending(path: "final.wav"))
+        XCTAssertNoThrow(try last.open(), "Дескрипторы должны освобождаться")
+        _ = try last.close()
+    }
+}
