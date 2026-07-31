@@ -72,7 +72,7 @@ struct OnboardingView: View {
                     Image(systemName: "airplane").foregroundStyle(.blue)
                 }
                 Label {
-                    Text("Приложение выходит в сеть один раз — чтобы скачать модель по вашей команде.")
+                    Text("В сеть приложение выходит только по вашей команде: скачать модель и, если включите, проверить обновления.")
                 } icon: {
                     Image(systemName: "arrow.down.circle").foregroundStyle(.blue)
                 }

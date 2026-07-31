@@ -87,15 +87,24 @@ public final class GlobalHotkeyMonitor {
     /// монитору события только после того, как пользователь дал доступ, и
     /// зарегистрироваться нужно уже после этого. Без повторного запуска
     /// клавиша молчала бы до перезапуска приложения.
+    ///
+    /// Но если слежение уже идёт, перезапускать его нельзя. Проверка разрешений
+    /// тикает раз в секунду, а перезапуск сбрасывал бы память о зажатой клавише —
+    /// и отпускание, случившееся после тика, терялось бы. Диктовка при этом
+    /// оставалась бы включённой: микрофон горит, запись идёт, остановить нечем.
     public func start() {
-        stop()
+        guard !isRunning else { return }
         guard AXIsProcessTrusted() else { return }
 
+        // Обработчики вызываются на главном потоке, поэтому входим в него
+        // напрямую. Обёртка в отдельные задачи не гарантировала бы порядок:
+        // нажатие и отпускание могли прийти в обратной последовательности, и
+        // диктовка осталась бы включённой.
         flagsMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.flagsChanged]) { [weak self] event in
-            Task { @MainActor in self?.handleFlagsChanged(event) }
+            MainActor.assumeIsolated { self?.handleFlagsChanged(event) }
         }
         keyMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
-            Task { @MainActor in self?.handleKeyDown(event) }
+            MainActor.assumeIsolated { self?.handleKeyDown(event) }
         }
         isRunning = flagsMonitor != nil
     }

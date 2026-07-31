@@ -53,78 +53,32 @@ import AVFoundation
 // MARK: - Звуки
 
 /// Короткие сигналы начала и конца записи.
+///
+/// Тип целиком привязан к главному потоку намеренно. Методы протокола
+/// `Sounding` асинхронные и не наследуют исполнителя вызывающего: без этой
+/// пометки тело выполнялось бы на общем пуле, а обращение к состоянию главного
+/// потока оттуда роняет приложение при первом же нажатии клавиши.
+@MainActor
 public struct SystemSounds: Sounding {
-    private let enabled: @Sendable () -> Bool
+    private let enabled: @MainActor () -> Bool
 
-    public init(enabled: @escaping @Sendable () -> Bool = { true }) {
+    public init(enabled: @escaping @MainActor () -> Bool = { true }) {
         self.enabled = enabled
     }
 
     public func playStart() async {
         guard enabled() else { return }
-        await MainActor.run { NSSound(named: "Morse")?.play() }
+        NSSound(named: "Morse")?.play()
     }
 
     public func playStop() async {
         guard enabled() else { return }
-        await MainActor.run { NSSound(named: "Pop")?.play() }
+        NSSound(named: "Pop")?.play()
     }
 }
 
-// MARK: - Сохранение несостоявшейся вставки
-
-/// Складывает текст, который не удалось вставить.
-///
-/// Это последняя страховка: распознанное нельзя терять из-за того, что
-/// приложение-получатель оказалось недоступно.
-public struct RecoveryStore: RecoveryStoring {
-    private let directory: URL
-    /// Сколько файлов держать. Приватный продукт не должен копить бессрочный
-    /// архив всего, что было сказано.
-    private let keepLast = 20
-    private let maximumAge: TimeInterval = 7 * 24 * 3600
-
-    public init(directory: URL) {
-        self.directory = directory
-    }
-
-    public func save(_ text: String) async throws -> URL {
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-
-        let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
-        let url = directory.appending(path: "dictation-\(stamp).txt", directoryHint: .notDirectory)
-        try Data(text.utf8).write(to: url, options: .atomic)
-
-        prune()
-        return url
-    }
-
-    /// Убрать старые записи: и по возрасту, и по количеству.
-    private func prune() {
-        guard let entries = try? FileManager.default.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: [.contentModificationDateKey]
-        ) else { return }
-
-        let now = Date()
-        var survivors: [(url: URL, date: Date)] = []
-
-        for entry in entries where entry.pathExtension == "txt" {
-            let date = (try? entry.resourceValues(forKeys: [.contentModificationDateKey]))?
-                .contentModificationDate ?? .distantPast
-            if now.timeIntervalSince(date) > maximumAge {
-                try? FileManager.default.removeItem(at: entry)
-            } else {
-                survivors.append((entry, date))
-            }
-        }
-
-        guard survivors.count > keepLast else { return }
-        for item in survivors.sorted(by: { $0.date > $1.date }).dropFirst(keepLast) {
-            try? FileManager.default.removeItem(at: item.url)
-        }
-    }
-}
+// Сохранение несостоявшейся вставки — `RecoveryStore` — живёт в DictationCore:
+// это чистая работа с файлами, и правила ротации там покрыты тестами.
 
 // MARK: - Пути приложения
 
@@ -146,14 +100,48 @@ public enum AppPaths {
         try support().appending(path: "Models", directoryHint: .isDirectory)
     }
 
-    /// Куда пишутся записи во время диктовки. Файл живёт до успешной вставки.
+    /// Куда пишутся записи во время диктовки.
+    ///
+    /// Файл живёт ровно до конца распознавания и сразу удаляется — голос
+    /// пользователя не должен оставаться на диске.
     public static func takes() throws -> URL {
         let directory = try support().appending(path: "Takes", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        excludeFromBackup(directory)
         return directory
     }
 
+    /// Подмести записи, уцелевшие после падения или отключения питания.
+    ///
+    /// Обычно каталог пуст: запись удаляется сразу после распознавания. Но если
+    /// приложение прервали посреди диктовки, файл останется — и без уборки
+    /// пролежит там навсегда.
+    public static func sweepAbandonedTakes() {
+        guard let directory = try? takes(),
+              let entries = try? FileManager.default.contentsOfDirectory(
+                  at: directory,
+                  includingPropertiesForKeys: nil
+              )
+        else { return }
+
+        for entry in entries where entry.pathExtension == "wav" {
+            try? FileManager.default.removeItem(at: entry)
+        }
+    }
+
+    /// Записи и восстановленные тексты — не то, что стоит хранить в резервных
+    /// копиях: это содержимое речи пользователя.
+    private static func excludeFromBackup(_ url: URL) {
+        var target = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? target.setResourceValues(values)
+    }
+
     public static func recovery() throws -> URL {
-        try support().appending(path: "Recovered", directoryHint: .isDirectory)
+        let directory = try support().appending(path: "Recovered", directoryHint: .isDirectory)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        excludeFromBackup(directory)
+        return directory
     }
 }

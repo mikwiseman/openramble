@@ -61,6 +61,29 @@ while IFS= read -r hit; do
   echo "  $hit"
 done < <(grep -rn 'clearContents()' Packages/*/Sources apps 2>/dev/null || true)
 
+# Обновления обязаны молчать, пока их не включили. Это не косметика:
+# без SUEnableAutomaticChecks=false Sparkle на втором запуске сам спросит
+# разрешение и по умолчанию включит проверки — приложение пойдёт в сеть без
+# команды, и обещание на главной странице станет неправдой.
+echo "Проверяю настройки обновлений…"
+PROJECT_YML="apps/macos/project.yml"
+declare -a REQUIRED_UPDATE_KEYS=(
+  "SUEnableAutomaticChecks: false"
+  "SUSendProfileInfo: false"
+  "SUAllowsAutomaticUpdates: false"
+)
+for required in "${REQUIRED_UPDATE_KEYS[@]}"; do
+  if grep -qF "$required" "$PROJECT_YML"; then
+    continue
+  fi
+  if [[ $status -eq 0 ]]; then
+    echo ""
+    echo "НАРУШЕНИЕ: обновления настроены не так, как обещано пользователю."
+    status=1
+  fi
+  echo "  в $PROJECT_YML нет строки «$required»"
+done
+
 # Логирование самого текста диктовки — то, чего пользователь точно не ждёт.
 echo "Проверяю логирование текста…"
 while IFS= read -r hit; do
@@ -75,6 +98,6 @@ done < <(grep -rnE 'log(ger)?\.(info|debug|error|warning|notice)\(.*(transcript|
 
 if [[ $status -eq 0 ]]; then
   echo ""
-  echo "Сетевая поверхность в порядке: загрузка модели и обновления, больше ничего."
+  echo "Сетевая поверхность в порядке: загрузка модели и обновления (по умолчанию выключенные), больше ничего."
 fi
 exit $status

@@ -7,7 +7,7 @@ struct SettingsView: View {
 
     var body: some View {
         TabView {
-            GeneralSettings(state: state)
+            GeneralSettings(state: state, updater: state.updater)
                 .tabItem { Label("Основное", systemImage: "gearshape") }
             ModelSettings(state: state)
                 .tabItem { Label("Модель", systemImage: "waveform") }
@@ -24,6 +24,8 @@ struct SettingsView: View {
 
 private struct GeneralSettings: View {
     @ObservedObject var state: AppState
+    // Sparkle сообщает о своих изменениях сам, через AppState они бы не дошли.
+    @ObservedObject var updater: SparkleUpdater
 
     var body: some View {
         Form {
@@ -40,6 +42,31 @@ private struct GeneralSettings: View {
 
             Section {
                 Toggle("Звук начала и конца записи", isOn: $state.soundsEnabled)
+            }
+
+            Section("Обновления") {
+                Toggle("Проверять обновления автоматически", isOn: $updater.automaticChecksEnabled)
+                Text("По умолчанию выключено. Если включить, приложение раз в сутки будет скачивать с GitHub маленький файл со списком версий. Это единственный выход в сеть, кроме загрузки модели: туда уходит ваш IP-адрес и номер версии, больше ничего — ни данных о компьютере, ни того, что вы диктовали.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                HStack {
+                    Button("Проверить сейчас", action: updater.checkForUpdates)
+                        .disabled(!updater.canCheckForUpdates)
+                    Spacer()
+                }
+
+                if let failure = updater.startupFailure {
+                    // Молчать нельзя: иначе человек будет считать, что
+                    // обновления приходят, а они не приходят.
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("Обновления не работают", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text(failure)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
 
             Section("Разрешения") {
@@ -238,7 +265,7 @@ private struct AboutView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Что уходит в сеть")
                     .font(.headline)
-                Text("Только загрузка модели по вашей команде. Речь, текст и нажатия клавиш никуда не отправляются и нигде не сохраняются, кроме вашего компьютера.")
+                Text("Загрузка модели по вашей команде и проверка обновлений, если вы её включили. Больше ничего: речь, текст и нажатия клавиш никуда не отправляются и нигде не сохраняются, кроме вашего компьютера.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

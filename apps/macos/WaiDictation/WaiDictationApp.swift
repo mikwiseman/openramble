@@ -11,7 +11,11 @@ struct WaiDictationApp: App {
         // Приложение живёт в строке меню: у диктовки нет своего окна, она
         // работает поверх того, где сейчас пользователь.
         MenuBarExtra {
-            MenuContent(state: state, showOnboarding: { onboardingCompleted = false })
+            MenuContent(
+                state: state,
+                updater: state.updater,
+                showOnboarding: { onboardingCompleted = false }
+            )
         } label: {
             Image(systemName: menuIcon)
         }
@@ -39,6 +43,9 @@ struct WaiDictationApp: App {
 
 private struct MenuContent: View {
     @ObservedObject var state: AppState
+    // Отдельная подписка: Sparkle сообщает о своих изменениях сам, через
+    // AppState они бы не дошли.
+    @ObservedObject var updater: SparkleUpdater
     let showOnboarding: () -> Void
     @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
@@ -56,6 +63,9 @@ private struct MenuContent: View {
         }
 
         Divider()
+
+        Button("Проверить обновления…") { updater.checkForUpdates() }
+            .disabled(!updater.canCheckForUpdates)
 
         Button("Настройки…") { openSettings() }
             .keyboardShortcut(",", modifiers: .command)

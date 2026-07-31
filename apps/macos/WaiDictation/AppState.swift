@@ -50,6 +50,10 @@ public final class AppState: ObservableObject {
     private let hotkeyMonitor = GlobalHotkeyMonitor()
     private let overlay = DictationOverlay()
 
+    /// Обновления. Отдельный объект со своими подписчиками: галочка
+    /// автопроверки живёт в настройках Sparkle, а не в наших `defaults`.
+    public let updater = SparkleUpdater()
+
     private var store: ModelStore?
     private var transcriber: LocalTranscriber?
     private var controller: DictationController?
@@ -72,9 +76,7 @@ public final class AppState: ObservableObject {
     // MARK: - Сборка
 
     private func setUp() {
-        let sounds = SystemSounds(enabled: { [weak self] in
-            MainActor.assumeIsolated { self?.soundsEnabled ?? true }
-        })
+        let sounds = SystemSounds(enabled: { [weak self] in self?.soundsEnabled ?? true })
 
         do {
             let capture = MicrophoneCapture(directory: try AppPaths.takes())
@@ -119,6 +121,9 @@ public final class AppState: ObservableObject {
 
         wireHotkey()
         refreshPermissions()
+        // Записи, уцелевшие после падения приложения: обычно каталог пуст, но
+        // без уборки такой файл пролежал бы там навсегда.
+        AppPaths.sweepAbandonedTakes()
         Task { await refreshModelState() }
 
         // Разрешения выдаются в системных настройках, без уведомления приложению,

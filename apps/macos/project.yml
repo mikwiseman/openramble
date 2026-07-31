@@ -11,6 +11,12 @@ packages:
     path: ../../Packages/DictationCore
   LocalASR:
     path: ../../Packages/LocalASR
+  # Обновления. Версия пришпилена точно, а не `from:`: Sparkle приезжает
+  # готовым бинарным фреймворком внутрь приложения, и подниматься эта версия
+  # должна осознанно, а не сама при следующей сборке.
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.9.4
 
 settings:
   base:
@@ -43,6 +49,8 @@ targets:
         product: DictationAudio
       - package: LocalASR
         product: LocalASR
+      - package: Sparkle
+        product: Sparkle
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation
@@ -63,3 +71,26 @@ targets:
           Микрофон нужен, чтобы записать вашу речь. Запись обрабатывается
           на этом компьютере и никуда не отправляется.
         NSHumanReadableCopyright: "© 2026 Mik Wiseman. MIT."
+
+        # --- Обновления (Sparkle) ---
+        #
+        # Где лежит список версий. Обычный статический файл на GitHub Pages,
+        # никакого сервера у продукта нет.
+        SUFeedURL: https://mikwiseman.github.io/wai-dictation/appcast.xml
+        # Автопроверка выключена. Ключ обязателен именно в таком виде: без него
+        # Sparkle на втором запуске сам спросит «проверять обновления?» и по
+        # умолчанию включит проверки. Продукт обещает «сеть только по вашей
+        # команде» — приложение, которое ходит в сеть при старте, это обещание
+        # нарушает. Пользователь включает проверки сам, в настройках.
+        SUEnableAutomaticChecks: false
+        # Не отправлять отчёт о системе (модель Mac, версия ОС, язык, ЦП).
+        # Вместе с запросом обновления уходит только IP и версия приложения.
+        SUSendProfileInfo: false
+        # Фоновая загрузка и установка недоступны даже как опция: обновление
+        # ставится тогда, когда человек нажал кнопку, и никак иначе.
+        SUAllowsAutomaticUpdates: false
+        # Публичный ключ EdDSA, которым проверяется подпись обновления.
+        # Появится здесь после `generate_keys` — он публичный, и его место
+        # в репозитории. До этого выпустить релиз нельзя: scripts/release.sh
+        # откажется работать. Порядок действий — в docs/release.md.
+        # SUPublicEDKey: "…"

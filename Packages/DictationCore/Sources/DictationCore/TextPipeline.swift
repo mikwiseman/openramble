@@ -47,21 +47,31 @@ public enum TrailingCommandParser {
                     guard preceding == " " else { continue }
                 }
 
-                let remaining = String(trimmed.prefix(while: { _ in true }))
-                let withoutCommand = stripSuffix(phrase, from: remaining)
-                return Result(
-                    text: withoutCommand.trimmingCharacters(in: CharacterSet(charactersIn: " ,;:")),
-                    command: command
-                )
+                let withoutCommand = stripSuffix(phrase, from: trimmed)
+                    .trimmingCharacters(in: CharacterSet(charactersIn: " ,;:"))
+
+                // Команда, сказанная в одиночку, — это просто слово.
+                //
+                // Текста для вставки не осталось, а нажимать Return в чужом окне
+                // по одной догадке нельзя: отправленное сообщение не отзывается.
+                // Раньше такая диктовка проваливалась в никуда — пустой текст
+                // отменял и вставку, и само нажатие.
+                guard !withoutCommand.isEmpty else { return Result(text: trimmed, command: nil) }
+
+                return Result(text: withoutCommand, command: command)
             }
         }
         return Result(text: trimmed, command: nil)
     }
 
     private static func stripSuffix(_ phrase: String, from text: String) -> String {
-        // Ищем фразу с конца без учёта регистра и финальной пунктуации.
-        let lowered = text.lowercased()
-        guard let range = lowered.range(of: phrase, options: [.backwards]) else { return text }
+        // Ищем в самой строке, а не в её копии, приведённой к нижнему регистру.
+        // У приведения своя длина: турецкая «İ» превращается в два символа, и
+        // позиции, найденные в копии, режут оригинал не там — вплоть до падения
+        // на выходе за границы строки.
+        guard let range = text.range(of: phrase, options: [.backwards, .caseInsensitive]) else {
+            return text
+        }
         return String(text[text.startIndex..<range.lowerBound])
     }
 }

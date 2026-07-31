@@ -207,10 +207,19 @@ public final class DictationController {
             return
         }
 
+        // Запись удаляется, чем бы дело ни кончилось. Она нужна только на время
+        // распознавания: хранить голос пользователя дольше — и лишний расход
+        // диска, и совсем не то, чего от приватного продукта ждут.
+        defer { discard(recording.url) }
+
         let recognized: ASRResult
         do {
             recognized = try await transcribe(recording.url)
         } catch is CancellationError {
+            await finishWithoutInsertion()
+            return
+        } catch let error as ASREngineError where error == .cancelled {
+            // Отмена, дошедшая через движок: это не сбой, сообщать не о чем.
             await finishWithoutInsertion()
             return
         } catch {
@@ -334,6 +343,15 @@ public final class DictationController {
     private func elapsedSeconds() -> TimeInterval {
         guard let recordingStartedAt else { return 0 }
         return Date().timeIntervalSince(recordingStartedAt)
+    }
+
+    /// Убрать запись с диска.
+    ///
+    /// Отдельным методом, чтобы удаление нельзя было случайно пропустить на
+    /// одной из веток завершения: голос пользователя не должен оставаться в
+    /// файлах после того, как текст распознан.
+    private func discard(_ url: URL) {
+        try? FileManager.default.removeItem(at: url)
     }
 
     /// Достигнут ли предел длительности — проверяется таймером снаружи.

@@ -24,5 +24,13 @@
 	<string>© 2026 Mik Wiseman. MIT.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Микрофон нужен, чтобы записать вашу речь. Запись обрабатывается на этом компьютере и никуда не отправляется.</string>
+	<key>SUAllowsAutomaticUpdates</key>
+	<false/>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
+	<key>SUFeedURL</key>
+	<string>https://mikwiseman.github.io/wai-dictation/appcast.xml</string>
+	<key>SUSendProfileInfo</key>
+	<false/>
 </dict>
 </plist>

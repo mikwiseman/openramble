@@ -92,8 +92,13 @@ public struct ModelInstallLayout: Sendable {
     /// один барьер.
     public func destination(for file: ModelManifest.File, inside directory: URL) throws -> URL {
         let resolved = directory.appending(path: file.path, directoryHint: .notDirectory)
-        let base = directory.standardizedFileURL.path
-        guard resolved.standardizedFileURL.path.hasPrefix(base) else {
+        // Сравниваем по компонентам пути, а не по префиксу строки. Префикс
+        // строки пропускает соседнюю директорию с тем же началом имени:
+        // «…/parakeet» — префикс «…/parakeet-подделка», и путь вида
+        // «../parakeet-подделка/файл» прошёл бы проверку, оставаясь снаружи.
+        let base = directory.standardizedFileURL.pathComponents
+        let target = resolved.standardizedFileURL.pathComponents
+        guard target.count > base.count, Array(target.prefix(base.count)) == base else {
             throw ModelInstallError.unsafePath(file.path)
         }
         return resolved
