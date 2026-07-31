@@ -21,12 +21,26 @@ public actor MicrophoneCapture: AudioCapturing {
     private var converter: AVAudioConverter?
     private var writeFailure: (any Error)?
 
+    /// Очередь кадров между звуковым потоком и записью на диск.
+    private let sink = FrameSink()
+    private var isStopping = false
+
     /// Время прихода первого кадра — по нему меряется задержка старта.
     private var firstBufferAt: ContinuousClock.Instant?
     private var startedAt: ContinuousClock.Instant?
 
-    public init(directory: URL) {
+    /// Запись сорвалась прямо во время речи.
+    ///
+    /// Молчать до остановки нельзя: закончившееся место на диске человек иначе
+    /// обнаружит через пять минут говорения — и текста уже не будет.
+    private let onFailure: @Sendable (AudioCaptureError) -> Void
+
+    public init(
+        directory: URL,
+        onFailure: @escaping @Sendable (AudioCaptureError) -> Void = { _ in }
+    ) {
         self.directory = directory
+        self.onFailure = onFailure
     }
 
     /// Сколько прошло от запуска движка до первого реального кадра звука.
@@ -83,16 +97,18 @@ public actor MicrophoneCapture: AudioCapturing {
             ? nil
             : AVAudioConverter(from: inputFormat, to: targetFormat)
 
+        let enqueue = await sink.start { [weak self] samples in
+            await self?.consume(samples)
+        }
+
         let converter = self.converter
-        input.installTap(onBus: 0, bufferSize: 2048, format: inputFormat) { [weak self] buffer, _ in
-            // Колбэк приходит на потоке звукового движка — уносим данные в актор
+        input.installTap(onBus: 0, bufferSize: 2048, format: inputFormat) { buffer, _ in
+            // Колбэк приходит на потоке звукового движка — уносим данные в очередь
             // как обычный массив, а не как буфер, который нельзя передавать между
-            // изоляциями.
+            // изоляциями. Кладём синхронно: очередь и есть гарантия порядка.
             let samples = Self.extractSamples(from: buffer, using: converter, target: targetFormat)
             guard !samples.isEmpty else { return }
-            Task { [weak self] in
-                await self?.consume(samples)
-            }
+            enqueue(samples)
         }
 
         do {
@@ -100,6 +116,7 @@ public actor MicrophoneCapture: AudioCapturing {
             try engine.start()
         } catch {
             input.removeTap(onBus: 0)
+            await sink.cancel()
             writer.discard()
             self.writer = nil
             self.converter = nil
@@ -116,20 +133,33 @@ public actor MicrophoneCapture: AudioCapturing {
         do {
             try writer.append(samples)
         } catch {
-            // Диск кончился или файл недоступен — запись дальше бессмысленна,
-            // но остановку инициирует владелец, а не колбэк звукового потока.
+            // Диск кончился или файл недоступен — запись дальше бессмысленна.
+            // Останавливает диктовку владелец, но узнать об этом он должен
+            // сейчас, а не когда человек договорит.
             writeFailure = error
             logger.error("Запись прервана: \(String(describing: error), privacy: .public)")
+            onFailure(.writeFailed(String(describing: error)))
         }
     }
 
     public func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
-        guard let engine, let writer else { throw AudioCaptureError.notRecording }
+        guard let engine, writer != nil, !isStopping else { throw AudioCaptureError.notRecording }
+        isStopping = true
+        defer { isStopping = false }
 
-        engine.inputNode.removeTap(onBus: 0)
+        // Сначала глушим движок, потом снимаем отвод: кадр, уже вышедший из
+        // железа, успевает дойти до очереди.
         engine.stop()
+        engine.inputNode.removeTap(onBus: 0)
         self.engine = nil
         self.converter = nil
+
+        // Здесь дописывается хвост записи. Без ожидания файл закрылся бы раньше
+        // последних кадров — из фразы пропадало бы последнее слово, а именно на
+        // нём человек и отпускает клавишу.
+        await sink.finish()
+
+        guard let writer else { throw AudioCaptureError.notRecording }
 
         if let writeFailure {
             writer.discard()
@@ -142,6 +172,7 @@ public actor MicrophoneCapture: AudioCapturing {
         do {
             url = try writer.close()
         } catch {
+            self.writer = nil
             throw AudioCaptureError.writeFailed(String(describing: error))
         }
         self.writer = nil
@@ -149,10 +180,11 @@ public actor MicrophoneCapture: AudioCapturing {
     }
 
     public func abortRecording() async {
-        engine?.inputNode.removeTap(onBus: 0)
         engine?.stop()
+        engine?.inputNode.removeTap(onBus: 0)
         engine = nil
         converter = nil
+        await sink.cancel()
         writer?.discard()
         writer = nil
     }

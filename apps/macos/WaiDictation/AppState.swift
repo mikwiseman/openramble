@@ -81,7 +81,15 @@ public final class AppState: ObservableObject {
         let sounds = SystemSounds(enabled: { [weak self] in self?.soundsEnabled ?? true })
 
         do {
-            let capture = MicrophoneCapture(directory: try AppPaths.takes())
+            let capture = MicrophoneCapture(directory: try AppPaths.takes()) { [weak self] _ in
+                // Диск кончился или файл стал недоступен посреди речи. Ждать
+                // остановки нельзя — человек говорит в пустоту.
+                Task { @MainActor in
+                    self?.controller?.interrupt(
+                        reason: "Не удалось записать звук — проверьте свободное место на диске."
+                    )
+                }
+            }
             let recovery = RecoveryStore(directory: try AppPaths.recovery())
 
             let manifest = try ModelManifest.bundled()

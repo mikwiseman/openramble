@@ -355,6 +355,28 @@ public final class DictationController {
         }
     }
 
+    /// Запись сорвалась сама — например, на диске кончилось место.
+    ///
+    /// Это не отмена: пользователь ничего не нажимал и продолжает говорить.
+    /// Поэтому останавливаемся сразу и объясняем причину, а не ждём, пока он
+    /// договорит фразу, которую уже некуда записывать.
+    public func interrupt(reason message: String) {
+        guard state == .preparing || state == .listening else { return }
+
+        cancellationRequested = true
+        finalizationTask?.cancel()
+
+        let notice = DictationNotice(kind: .failure, message: message)
+        onNotice?(notice)
+
+        Task { [weak self] in
+            guard let self else { return }
+            await self.overlay.presentNotice(notice)
+            await self.capture.abortRecording()
+            await self.finishWithoutInsertion()
+        }
+    }
+
     // MARK: - Завершение
 
     private func shouldContinue() -> Bool {
