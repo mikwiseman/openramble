@@ -6,8 +6,12 @@ import XCTest
 /// и умеет падать. Настоящая сеть в тестах не участвует.
 actor FakeDownloader: ModelDownloading {
     private var contents: [String: Data]
+    private var contentsByHost: [String: [String: Data]] = [:]
     private var failure: ModelDownloadError?
+    private var failuresByHost: [String: ModelDownloadError] = [:]
     private(set) var requestedPaths: [String] = []
+    /// Хосты в порядке обращения — по ним видно, дошло ли дело до запасного адреса.
+    private(set) var requestedHosts: [String] = []
 
     init(contents: [String: Data]) {
         self.contents = contents
@@ -15,17 +19,32 @@ actor FakeDownloader: ModelDownloading {
 
     func setFailure(_ error: ModelDownloadError?) { failure = error }
 
+    /// Заставить конкретный источник отказать: так проверяется переход к следующему.
+    func setFailure(_ error: ModelDownloadError, forHost host: String) {
+        failuresByHost[host] = error
+    }
+
+    /// Подсунуть источнику другое содержимое: суммы обязаны ловить это независимо
+    /// от того, откуда файл пришёл.
+    func setContents(_ contents: [String: Data], forHost host: String) {
+        contentsByHost[host] = contents
+    }
+
     func download(
         from url: URL,
         expectedBytes: Int64,
         onProgress: @escaping @Sendable (Int64) -> Void
     ) async throws -> URL {
         requestedPaths.append(url.lastPathComponent)
+        let host = url.host() ?? ""
+        requestedHosts.append(host)
         if let failure { throw failure }
+        if let hostFailure = failuresByHost[host] { throw hostFailure }
 
         // Ключ ищем по хвосту адреса — так тест не зависит от формы ссылки.
-        let key = contents.keys.first { url.absoluteString.hasSuffix($0) }
-        guard let key, let data = contents[key] else {
+        let table = contentsByHost[host] ?? contents
+        let key = table.keys.first { url.absoluteString.hasSuffix($0) }
+        guard let key, let data = table[key] else {
             throw ModelDownloadError.httpStatus(404)
         }
 

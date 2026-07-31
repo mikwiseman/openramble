@@ -33,6 +33,8 @@ public enum ModelStoreError: Error, Sendable, Equatable {
     case download(String)
     case verification(String)
     case install(String)
+    /// Папка, из которой пользователь просил взять модель, не подходит.
+    case importSource(String)
     case notEnoughDiskSpace(requiredBytes: Int64, availableBytes: Int64)
     case cancelled
 }
@@ -154,7 +156,44 @@ public actor ModelStore {
         activeTask?.cancel()
     }
 
+    /// Взять модель из готовой папки, не заходя в сеть.
+    ///
+    /// Второй независимый путь к модели: человек скачал её на другой машине или
+    /// получил от коллеги. Проверка ровно та же, что и после загрузки, — все
+    /// суммы SHA-256 из манифеста, — поэтому доверия к папке не требуется.
+    ///
+    /// Ожидается папка, в которой пути из манифеста лежат прямо: `Encoder.mlmodelc/…`,
+    /// `parakeet_vocab.json` и так далее. Это та самая папка, которую отдаёт
+    /// `ModelInstallLayout.engineDirectory` на машине, где модель уже стоит.
+    public func importModel(from directory: URL) async {
+        guard activeTask == nil else { return }
+        if case .ready = state { return }
+
+        let task = Task { await performImport(from: directory) }
+        activeTask = task
+        await task.value
+        activeTask = nil
+    }
+
     private func performInstall() async {
+        await runInstall { staging in
+            try await self.downloadAll(into: staging)
+        }
+    }
+
+    private func performImport(from source: URL) async {
+        await runInstall { staging in
+            try self.copyAll(from: source, into: staging)
+        }
+    }
+
+    /// Общий скелет установки: собрать в staging, проверить, переехать.
+    ///
+    /// Загрузка и импорт отличаются только тем, откуда берутся файлы. Всё
+    /// остальное — проверка сумм, атомарный переезд, уборка за собой на любой
+    /// ошибке — обязано совпадать, иначе один из путей рано или поздно окажется
+    /// слабее другого.
+    private func runInstall(collect: (URL) async throws -> Void) async {
         let attempt = UUID()
         let staging = layout.stagingDirectory(attempt: attempt)
 
@@ -163,7 +202,7 @@ public actor ModelStore {
             try fileManager.createDirectory(at: staging, withIntermediateDirectories: true)
             defer { try? fileManager.removeItem(at: staging) }
 
-            try await downloadAll(into: staging)
+            try await collect(staging)
             try Task.checkCancellation()
             try verifyAll(inside: staging)
             try Task.checkCancellation()
@@ -180,6 +219,66 @@ public actor ModelStore {
         } catch {
             try? fileManager.removeItem(at: staging)
             setState(.failed(.install(error.localizedDescription)))
+        }
+    }
+
+    /// Скопировать файлы манифеста из чужой папки в staging.
+    ///
+    /// Копируем, а не переносим: папка чужая, забирать из неё файлы нельзя.
+    private func copyAll(from source: URL, into staging: URL) throws {
+        let total = manifest.totalByteCount
+        var completed: Int64 = 0
+        setState(.downloading(receivedBytes: 0, totalBytes: total))
+
+        for file in manifest.files {
+            try Task.checkCancellation()
+
+            // Барьер путей — тот же самый и такой же строгий: файл, пришедший
+            // снаружи, доверия не имеет ничуть не больше скачанного. Проверяются
+            // обе стороны: и откуда берём, и куда кладём.
+            let origin: URL
+            let destination: URL
+            do {
+                origin = try layout.destination(for: file, inside: source)
+                destination = try layout.destination(
+                    for: file,
+                    inside: layout.engineDirectory(inside: staging)
+                )
+            } catch {
+                throw ModelStoreError.importSource("путь \(file.path) ведёт за пределы папки")
+            }
+            try checkImportable(origin, path: file.path)
+
+            try fileManager.createDirectory(
+                at: destination.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            do {
+                try fileManager.copyItem(at: origin, to: destination)
+            } catch {
+                throw ModelStoreError.importSource("не скопировался \(file.path): \(error.localizedDescription)")
+            }
+
+            completed += file.byteCount
+            setState(.downloading(receivedBytes: completed, totalBytes: total))
+        }
+    }
+
+    /// Годится ли файл из чужой папки к копированию.
+    ///
+    /// Символическая ссылка отвергается отдельно: её содержимое можно подменить
+    /// после проверки суммы, и в установленной модели остался бы указатель
+    /// наружу вместо файла.
+    private func checkImportable(_ url: URL, path: String) throws {
+        let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        guard let values else {
+            throw ModelStoreError.importSource("в папке нет файла \(path)")
+        }
+        if values.isSymbolicLink == true {
+            throw ModelStoreError.importSource("\(path) — символическая ссылка, а нужен файл")
+        }
+        guard values.isRegularFile == true else {
+            throw ModelStoreError.importSource("\(path) — не обычный файл")
         }
     }
 
@@ -207,7 +306,8 @@ public actor ModelStore {
         for file in manifest.files {
             try Task.checkCancellation()
 
-            guard let url = manifest.downloadURL(for: file) else {
+            let sources = manifest.downloadURLs(for: file)
+            guard !sources.isEmpty else {
                 throw ModelStoreError.manifest("не построился адрес для \(file.path)")
             }
             let destination = try layout.destination(for: file, inside: layout.engineDirectory(inside: staging))
@@ -217,9 +317,37 @@ public actor ModelStore {
             )
 
             let alreadyDone = completed
-            let temporary: URL
+            let temporary = try await downloadFromAnySource(
+                sources,
+                file: file,
+                alreadyDone: alreadyDone,
+                total: total
+            )
+
+            try? fileManager.removeItem(at: destination)
+            try fileManager.moveItem(at: temporary, to: destination)
+            completed += file.byteCount
+            setState(.downloading(receivedBytes: completed, totalBytes: total))
+        }
+    }
+
+    /// Пройти по адресам сверху вниз, пока файл не скачается.
+    ///
+    /// Отказ источника и отказ пользователя — разные вещи. Нет файла, нет
+    /// доступа, нет хоста — повод взять следующий адрес. Отмена — повод
+    /// остановиться совсем: перебирать зеркала после нажатия «отмена» значит
+    /// продолжать качать 483 МБ вопреки прямой команде.
+    private func downloadFromAnySource(
+        _ sources: [URL],
+        file: ModelManifest.File,
+        alreadyDone: Int64,
+        total: Int64
+    ) async throws -> URL {
+        var failures: [String] = []
+
+        for (index, url) in sources.enumerated() {
             do {
-                temporary = try await downloader.download(
+                return try await downloader.download(
                     from: url,
                     expectedBytes: file.byteCount,
                     onProgress: { [weak self] received in
@@ -231,14 +359,17 @@ public actor ModelStore {
             } catch ModelDownloadError.cancelled {
                 throw CancellationError()
             } catch let error as ModelDownloadError {
-                throw ModelStoreError.download("\(file.path): \(error)")
+                failures.append("\(url.host() ?? url.absoluteString): \(error)")
+                // Прогресс мог уйти вперёд на неудачной попытке — возвращаем
+                // его назад, иначе индикатор поедет и обгонит сам себя.
+                reportDownloadProgress(alreadyDone, total: total)
+                if index == sources.count - 1 {
+                    throw ModelStoreError.download("\(file.path): \(failures.joined(separator: "; "))")
+                }
             }
-
-            try? fileManager.removeItem(at: destination)
-            try fileManager.moveItem(at: temporary, to: destination)
-            completed += file.byteCount
-            setState(.downloading(receivedBytes: completed, totalBytes: total))
         }
+
+        throw ModelStoreError.download("\(file.path): не осталось источников")
     }
 
     private func reportDownloadProgress(_ received: Int64, total: Int64) {

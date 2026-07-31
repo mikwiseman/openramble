@@ -20,7 +20,27 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     /// ошибку, поэтому хранится опционально.
     private var decoderState: TdtDecoderState?
 
-    public init() {}
+    /// Приклеивать ли 80 мс предыдущего окна к следующему.
+    ///
+    /// У библиотеки этот флаг включён по умолчанию: на английской речи он лечит
+    /// пустые предсказания на стыке окон. На многоязычной v3 он делает обратное,
+    /// и об этом написано в самой библиотеке (issue #594): сдвиг распределения
+    /// первого кадра уводит декодер к английскому приору, и текст на стыке
+    /// **молча пропадает**.
+    ///
+    /// Здесь он выключен, потому что это измерено: на восьми записях с
+    /// переключением языка внутри фразы включённый флаг съедал 47 слов из 1038,
+    /// выключенный — 17. Обрыв виден в тексте буквально: «The recovery pass
+    /// reads.» — и конец предложения исчезает без ошибки. Параметр оставлен,
+    /// чтобы замер можно было повторить (`WAI_ASR_MEL_CONTEXT` в asr-bench).
+    private let melChunkContext: Bool
+
+    public init(melChunkContext: Bool = false) {
+        self.melChunkContext = melChunkContext
+    }
+
+    /// Для теста, который сторожит выбранное значение флага.
+    var usesMelChunkContext: Bool { melChunkContext }
 
     /// Загрузить модель из подготовленной директории.
     ///
@@ -46,7 +66,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
                 version: .v3,
                 encoderPrecision: .int8
             )
-            let manager = AsrManager(config: .default)
+            let manager = AsrManager(config: ASRConfig(melChunkContext: melChunkContext))
             try await manager.loadModels(loaded)
 
             self.models = loaded

@@ -31,12 +31,22 @@ let package = Package(
         // Инструмент фазы P0: скачать, проверить, распознать, замерить.
         .executableTarget(
             name: "asr-bench",
-            dependencies: ["LocalASR"],
+            dependencies: [
+                "LocalASR",
+                .product(name: "DictationCore", package: "DictationCore"),
+            ],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .testTarget(
             name: "LocalASRTests",
             dependencies: ["LocalASR"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        // Скорер WER/CER живёт в инструменте замеров, но считать он обязан
+        // честно — иначе цифры в отчётах ничего не значат.
+        .testTarget(
+            name: "ASRBenchTests",
+            dependencies: ["asr-bench"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
     ]

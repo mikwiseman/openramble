@@ -1,3 +1,4 @@
+import DictationCore
 import Foundation
 import LocalASR
 
@@ -14,12 +15,17 @@ func usage() -> Never {
     Команды:
       status                    что установлено и где
       install                   скачать и установить модель (~483 МБ)
+      import <папка>            взять модель из готовой папки, без сети
       delete                    удалить установленную модель
       transcribe <файл>...      распознать файлы
       bench <файл>...           распознать и замерить скорость и память
+      timings <файл>...         распознать и напечатать тайминги слов
+      eval <манифест.json>      прогнать корпус и посчитать WER/CER
 
     Переменные окружения:
       WAI_MODELS_ROOT           корень установки (по умолчанию Application Support)
+      WAI_ASR_MEL_CONTEXT=on    вернуть mel-контекст FluidAudio на стыке окон
+                                (только чтобы повторить замер потери речи)
     """)
     exit(64)
 }
@@ -72,6 +78,10 @@ func printState(_ state: ModelState, layout: ModelInstallLayout, manifest: Model
     }
 }
 
+func isOn(_ name: String) -> Bool {
+    ProcessInfo.processInfo.environment[name]?.lowercased() == "on"
+}
+
 func prepareTranscriber() async throws -> LocalTranscriber {
     let (store, layout, _) = try makeStore()
     let state = await store.refreshState()
@@ -80,7 +90,12 @@ func prepareTranscriber() async throws -> LocalTranscriber {
         exit(69)
     }
 
-    let transcriber = LocalTranscriber()
+    // Переключатель существует ради повторяемости замера: именно он показал,
+    // что текст на стыке окон теряет включённый mel-контекст, а не длина куска.
+    let melChunkContext = isOn("WAI_ASR_MEL_CONTEXT")
+    if melChunkContext { print("Mel-контекст на стыке окон включён (замер, не рабочий режим)") }
+
+    let transcriber = LocalTranscriber(engine: FluidAudioAdapter(melChunkContext: melChunkContext))
     let started = ContinuousClock.now
     try await transcriber.prepare(modelDirectory: layout.engineDirectory)
     print(String(format: "Модель загружена за %.2f с", seconds(started.duration(to: .now))))
@@ -134,10 +149,70 @@ case "install":
     printState(finalState, layout: layout, manifest: manifest)
     exit(finalState.isReady ? 0 : 70)
 
+case "import":
+    guard let sourcePath = operands.first else { usage() }
+    let (store, layout, manifest) = try makeStore()
+    if await store.refreshState().isReady {
+        print("Модель уже установлена: \(layout.installedDirectory.path)")
+        exit(0)
+    }
+
+    let source = URL(fileURLWithPath: sourcePath, isDirectory: true)
+    print("Беру модель из \(source.path)")
+    print("Проверю все \(manifest.files.count) контрольных сумм — источник доверия не меняется")
+
+    await store.importModel(from: source)
+    let importedState = await store.currentState()
+    printState(importedState, layout: layout, manifest: manifest)
+    exit(importedState.isReady ? 0 : 70)
+
 case "delete":
     let (store, layout, _) = try makeStore()
     await store.delete()
     print("Удалено: \(layout.modelDirectory.path)")
+
+case "eval":
+    guard let manifestPath = operands.first else { usage() }
+    let items = try Evaluation.loadManifest(at: manifestPath)
+    let transcriber = try await prepareTranscriber()
+
+    var outcomes: [EvalOutcome] = []
+    for item in items {
+        let started = ContinuousClock.now
+        let result: ASRResult
+        do {
+            result = try await transcriber.transcribe(fileURL: URL(fileURLWithPath: item.file))
+        } catch {
+            print("\n=== \(URL(fileURLWithPath: item.file).lastPathComponent) ===")
+            print("Ошибка: \(error)")
+            continue
+        }
+        let outcome = EvalOutcome(
+            item: item,
+            report: TranscriptScorer.score(reference: item.reference, hypothesis: result.text),
+            result: result,
+            wallClock: seconds(started.duration(to: .now)),
+            peakMemory: peakMemoryBytes()
+        )
+        outcomes.append(outcome)
+        print(Evaluation.describe(outcome, showDifferences: true))
+        fflush(stdout)
+    }
+
+    print(Evaluation.summary(outcomes))
+    print("\nпиковая память процесса: \(formatBytes(peakMemoryBytes()))")
+
+case "timings":
+    guard !operands.isEmpty else { usage() }
+    let transcriber = try await prepareTranscriber()
+    for path in operands {
+        let result = try await transcriber.transcribe(fileURL: URL(fileURLWithPath: path))
+        print("\n=== \(URL(fileURLWithPath: path).lastPathComponent) ===")
+        print(String(format: "аудио %.2f с, слов %d", result.audioDuration, result.words.count))
+        for word in result.words {
+            print(String(format: "%8.2f %8.2f  %@", word.start, word.end, word.text))
+        }
+    }
 
 case "transcribe", "bench":
     guard !operands.isEmpty else { usage() }

@@ -81,6 +81,19 @@ final class FluidAudioAdapterTests: XCTestCase {
         }
     }
 
+    /// Значение флага — не мелочь настройки, а вывод замера: с включённым
+    /// mel-контекстом на записях с переключением языка пропадали концы
+    /// предложений, без предупреждения и без ошибки. Тест держит выбор на месте,
+    /// потому что вернуть значение по умолчанию библиотеки — одна строка, а
+    /// заметить потерю можно только по пропавшему тексту.
+    func testMelChunkContextIsOffByDefault() async {
+        let adapter = FluidAudioAdapter()
+
+        let enabled = await adapter.usesMelChunkContext
+
+        XCTAssertFalse(enabled, "Включённый mel-контекст молча съедает текст на стыке окон")
+    }
+
     func testMixedRussianEnglishKeepsLatinIntact() {
         // Главный сценарий продукта: английские термины внутри русской речи
         // не должны склеиваться с соседними словами.

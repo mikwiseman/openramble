@@ -39,6 +39,45 @@ public struct ModelManifest: Codable, Sendable, Equatable {
     /// Лицензия весов.
     public let license: String
     public let files: [File]
+    /// Запасной источник. Может отсутствовать — тогда путь к модели один.
+    public let mirror: Mirror?
+
+    /// Второй адрес тех же файлов.
+    ///
+    /// Единственный источник — единственная точка отказа: репозиторий на
+    /// Hugging Face могут удалить, переименовать или закрыть для целого региона,
+    /// и тогда новый пользователь не запустит приложение вообще. Для проекта,
+    /// который ставят и через год после релиза, это обычный сценарий.
+    ///
+    /// Запасной адрес ничего не ослабляет: доверие к файлам держится не на том,
+    /// откуда они пришли, а на SHA-256 из этого же манифеста — они проверяются
+    /// одинаково для любого источника.
+    public struct Mirror: Codable, Sendable, Equatable {
+        /// «владелец/репозиторий» на GitHub.
+        public let repository: String
+        /// Тег релиза, к которому приложены файлы.
+        public let releaseTag: String
+
+        public init(repository: String, releaseTag: String) {
+            self.repository = repository
+            self.releaseTag = releaseTag
+        }
+
+        /// Имя вложения релиза для файла модели.
+        ///
+        /// GitHub не разрешает косые черты в именах вложений, поэтому путь
+        /// внутри модели уплощается. Разделитель двойной: одиночное
+        /// подчёркивание встречается в самих именах файлов.
+        ///
+        /// Что выложить в релиз с тегом `releaseTag`: каждый файл манифеста
+        /// отдельным вложением с этим именем. Например
+        /// `Encoder.mlmodelc/weights/weight.bin` становится
+        /// `Encoder.mlmodelc__weights__weight.bin`. Ни архивов, ни вложенных
+        /// папок — приложение забирает файлы по одному и сверяет их суммы.
+        public func assetName(for file: File) -> String {
+            file.path.replacingOccurrences(of: "/", with: "__")
+        }
+    }
 
     public init(
         modelID: String,
@@ -47,7 +86,8 @@ public struct ModelManifest: Codable, Sendable, Equatable {
         fluidAudioVersion: String,
         quantization: String,
         license: String,
-        files: [File]
+        files: [File],
+        mirror: Mirror? = nil
     ) {
         self.modelID = modelID
         self.repository = repository
@@ -56,6 +96,7 @@ public struct ModelManifest: Codable, Sendable, Equatable {
         self.quantization = quantization
         self.license = license
         self.files = files
+        self.mirror = mirror
     }
 
     /// Суммарный вес загрузки — показывается пользователю до нажатия кнопки.
@@ -70,6 +111,21 @@ public struct ModelManifest: Codable, Sendable, Equatable {
         components.host = "huggingface.co"
         components.path = "/\(repository)/resolve/\(revision)/\(file.path)"
         return components.url
+    }
+
+    /// Адрес того же файла в релизе на GitHub.
+    public func mirrorURL(for file: File) -> URL? {
+        guard let mirror else { return nil }
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "github.com"
+        components.path = "/\(mirror.repository)/releases/download/\(mirror.releaseTag)/\(mirror.assetName(for: file))"
+        return components.url
+    }
+
+    /// Все адреса файла в порядке обращения: сначала основной, потом запасной.
+    public func downloadURLs(for file: File) -> [URL] {
+        [downloadURL(for: file), mirrorURL(for: file)].compactMap { $0 }
     }
 }
 
@@ -120,6 +176,22 @@ extension ModelManifest {
                   !file.path.isEmpty
             else {
                 throw ModelManifestError.invalid("недопустимый путь: \(file.path)")
+            }
+        }
+
+        if let mirror = manifest.mirror {
+            // Запасной адрес — тоже корень доверия: из него строится URL,
+            // и мусор в нём должен ловиться на старте, а не при отказе основного
+            // источника, когда чинить уже некогда.
+            let parts = mirror.repository.split(separator: "/", omittingEmptySubsequences: false)
+            guard parts.count == 2, parts.allSatisfy({ !$0.isEmpty }) else {
+                throw ModelManifestError.invalid("запасной репозиторий должен быть «владелец/имя»")
+            }
+            guard !mirror.releaseTag.isEmpty else {
+                throw ModelManifestError.invalid("у запасного источника пустой тег релиза")
+            }
+            guard manifest.files.allSatisfy({ manifest.mirrorURL(for: $0) != nil }) else {
+                throw ModelManifestError.invalid("из запасного источника не строится адрес")
             }
         }
         return manifest
