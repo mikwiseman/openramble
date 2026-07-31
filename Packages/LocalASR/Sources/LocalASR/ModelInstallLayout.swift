@@ -91,17 +91,26 @@ public struct ModelInstallLayout: Sendable {
     /// это проверяется повторно: слишком дорогая ошибка, чтобы полагаться на
     /// один барьер.
     public func destination(for file: ModelManifest.File, inside directory: URL) throws -> URL {
-        let resolved = directory.appending(path: file.path, directoryHint: .notDirectory)
-        // Сравниваем по компонентам пути, а не по префиксу строки. Префикс
-        // строки пропускает соседнюю директорию с тем же началом имени:
-        // «…/parakeet» — префикс «…/parakeet-подделка», и путь вида
-        // «../parakeet-подделка/файл» прошёл бы проверку, оставаясь снаружи.
-        let base = directory.standardizedFileURL.pathComponents
-        let target = resolved.standardizedFileURL.pathComponents
-        guard target.count > base.count, Array(target.prefix(base.count)) == base else {
+        // Проверяется сам путь из манифеста, а не результат склейки.
+        //
+        // Склеенный путь пришлось бы приводить к каноническому виду через
+        // файловую систему, а она отвечает по-разному для существующего и ещё
+        // не созданного: у первого «/tmp», у второго «/private/tmp» — то же
+        // место, разные строки. Барьер начинал зависеть от того, что уже лежит
+        // на диске, и отвергал совершенно законные файлы, ломая установку
+        // целиком. Разбор относительного пути от диска не зависит вовсе.
+        //
+        // Наружу ведут ровно три вещи: «..», ведущий слэш и пустой путь.
+        let components = file.path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+        guard !components.isEmpty,
+              !components.contains(where: { $0.isEmpty || $0 == "." || $0 == ".." })
+        else {
             throw ModelInstallError.unsafePath(file.path)
         }
-        return resolved
+
+        return components.reduce(directory) { partial, component in
+            partial.appending(path: component, directoryHint: .notDirectory)
+        }
     }
 }
 

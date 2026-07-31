@@ -252,6 +252,15 @@ public final class AppState: ObservableObject {
 
     public func deleteModel() {
         guard let store else { return }
+        // Идёт диктовка — модель сейчас в работе. Удалять её из-под себя значит
+        // потерять уже сказанное и показать вместо этого ошибку загрузки.
+        guard dictationState == .idle else {
+            lastNotice = DictationNotice(
+                kind: .warning,
+                message: "Сейчас идёт диктовка. Дождитесь её окончания."
+            )
+            return
+        }
         Task {
             await transcriber?.unload()
             await store.delete()

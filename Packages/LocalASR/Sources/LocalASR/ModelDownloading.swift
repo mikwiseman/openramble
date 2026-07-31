@@ -26,12 +26,16 @@ public enum ModelDownloadError: Error, Sendable, Equatable {
 ///
 /// Единственное место в проекте — вместе с обёрткой Sparkle — где вообще
 /// допустим сетевой вызов. Это проверяется в CI.
+///
+/// Файл пишет на диск сама система, большими кусками и не держа его в памяти.
+/// Раньше здесь был цикл по одному байту: на энкодере модели это 445 миллионов
+/// проходов асинхронного цикла, и загрузка упиралась не в сеть, а в него.
 public final class URLSessionModelDownloader: NSObject, ModelDownloading, @unchecked Sendable {
-    private let session: URLSession
+    private let configuration: URLSessionConfiguration
 
-    public init(session: URLSession? = nil) {
-        if let session {
-            self.session = session
+    public init(configuration: URLSessionConfiguration? = nil) {
+        if let configuration {
+            self.configuration = configuration
         } else {
             let configuration = URLSessionConfiguration.default
             // Загрузка идёт по явной команде пользователя, ждать «удобного момента»
@@ -40,7 +44,7 @@ public final class URLSessionModelDownloader: NSObject, ModelDownloading, @unche
             configuration.allowsExpensiveNetworkAccess = false
             configuration.allowsConstrainedNetworkAccess = false
             configuration.timeoutIntervalForResource = 3600
-            self.session = URLSession(configuration: configuration)
+            self.configuration = configuration
         }
         super.init()
     }
@@ -50,45 +54,109 @@ public final class URLSessionModelDownloader: NSObject, ModelDownloading, @unche
         expectedBytes: Int64,
         onProgress: @escaping @Sendable (Int64) -> Void
     ) async throws -> URL {
+        // Делегат ставится на сессию, а не на задачу. Разница не косметическая:
+        // задаче система отдаёт лишь округлённую долю (замер — два обновления
+        // с числом «100» на файл), а сессии — настоящие байты (89 обновлений на
+        // тех же 23 МБ). Индикатор без этого замирает на самом большом файле,
+        // а он — 92% всей установки.
+        let observer = DownloadObserver(onProgress: onProgress)
+        let session = URLSession(configuration: configuration, delegate: observer, delegateQueue: nil)
+        defer { session.finishTasksAndInvalidate() }
+
+        let task = session.downloadTask(with: url)
+
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                observer.attach(continuation)
+                task.resume()
+            }
+        } onCancel: {
+            task.cancel()
+        }
+    }
+}
+
+/// Приёмник событий одной загрузки.
+private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
+    private let onProgress: @Sendable (Int64) -> Void
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<URL, any Error>?
+
+    init(onProgress: @escaping @Sendable (Int64) -> Void) {
+        self.onProgress = onProgress
+    }
+
+    func attach(_ continuation: CheckedContinuation<URL, any Error>) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.continuation = continuation
+    }
+
+    /// Отдать результат ровно один раз.
+    ///
+    /// Событий приходит два — «файл скачан» и «задача завершилась», — и на
+    /// успешной загрузке они оба успешные. Возобновить ожидание дважды значит
+    /// уронить процесс.
+    private func finish(_ result: Result<URL, any Error>) {
+        lock.lock()
+        let continuation = self.continuation
+        self.continuation = nil
+        lock.unlock()
+        continuation?.resume(with: result)
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        downloadTask: URLSessionDownloadTask,
+        didWriteData bytesWritten: Int64,
+        totalBytesWritten: Int64,
+        totalBytesExpectedToWrite: Int64
+    ) {
+        onProgress(totalBytesWritten)
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        downloadTask: URLSessionDownloadTask,
+        didFinishDownloadingTo location: URL
+    ) {
+        // Ответ с ошибкой тоже приезжает файлом — со страницей ошибки внутри.
+        // Без проверки статуса она уехала бы в установку и провалила бы уже
+        // сверку контрольных сумм, но с невнятной причиной.
+        if let http = downloadTask.response as? HTTPURLResponse,
+           !(200...299).contains(http.statusCode) {
+            finish(.failure(ModelDownloadError.httpStatus(http.statusCode)))
+            return
+        }
+
+        // Система удаляет файл, как только этот метод вернёт управление, —
+        // переносим здесь же.
+        let destination = FileManager.default.temporaryDirectory
+            .appending(path: "wai-model-\(UUID().uuidString)", directoryHint: .notDirectory)
         do {
-            let (bytes, response) = try await session.bytes(from: url)
-
-            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-                throw ModelDownloadError.httpStatus(http.statusCode)
-            }
-
-            let temporary = FileManager.default.temporaryDirectory
-                .appending(path: "wai-model-\(UUID().uuidString)", directoryHint: .notDirectory)
-            FileManager.default.createFile(atPath: temporary.path, contents: nil)
-            let handle = try FileHandle(forWritingTo: temporary)
-            defer { try? handle.close() }
-
-            var buffer = Data()
-            buffer.reserveCapacity(1024 * 1024)
-            var received: Int64 = 0
-
-            for try await byte in bytes {
-                buffer.append(byte)
-                if buffer.count >= 1024 * 1024 {
-                    try handle.write(contentsOf: buffer)
-                    received += Int64(buffer.count)
-                    buffer.removeAll(keepingCapacity: true)
-                    onProgress(received)
-                }
-            }
-            if !buffer.isEmpty {
-                try handle.write(contentsOf: buffer)
-                received += Int64(buffer.count)
-                onProgress(received)
-            }
-
-            return temporary
-        } catch let error as ModelDownloadError {
-            throw error
-        } catch is CancellationError {
-            throw ModelDownloadError.cancelled
+            try FileManager.default.moveItem(at: location, to: destination)
+            finish(.success(destination))
         } catch {
-            throw ModelDownloadError.network(error.localizedDescription)
+            finish(.failure(ModelDownloadError.network(error.localizedDescription)))
+        }
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didCompleteWithError error: (any Error)?
+    ) {
+        guard let error else {
+            // Успех уже отдан выше; сюда попадаем только если файла так и не
+            // случилось — молча повиснуть на этом нельзя.
+            finish(.failure(ModelDownloadError.network("загрузка завершилась без файла")))
+            return
+        }
+
+        if (error as? URLError)?.code == .cancelled {
+            finish(.failure(ModelDownloadError.cancelled))
+        } else {
+            finish(.failure(ModelDownloadError.network(error.localizedDescription)))
         }
     }
 }

@@ -119,7 +119,13 @@ public actor ModelStore {
     }
 
     /// Убрать брошенные staging-директории от прерванных попыток.
+    ///
+    /// Пока установка идёт, не трогаем ничего: осмотр диска вызывается из
+    /// интерфейса и легко приходится на середину закачки — иначе он сносил бы
+    /// папку, в которую как раз пишет установка, и та падала бы посреди дела.
     private func sweepStaleStaging() {
+        guard activeTask == nil else { return }
+
         guard let entries = try? fileManager.contentsOfDirectory(
             at: layout.modelDirectory,
             includingPropertiesForKeys: nil
@@ -285,7 +291,18 @@ public actor ModelStore {
 
     // MARK: - Удаление
 
-    public func delete() {
+    /// Удалить установленную модель.
+    ///
+    /// Если в этот момент идёт закачка, сначала останавливаем её и дожидаемся
+    /// конца. Иначе удаление снесло бы папку из-под живой установки: та
+    /// продолжила бы писать в никуда и закончилась бы невнятной ошибкой вместо
+    /// понятного «модель удалена».
+    public func delete() async {
+        if let activeTask {
+            activeTask.cancel()
+            await activeTask.value
+        }
+
         setState(.deleting)
         try? fileManager.removeItem(at: layout.modelDirectory)
         setState(.notInstalled)
