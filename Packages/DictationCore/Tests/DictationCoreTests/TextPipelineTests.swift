@@ -9,11 +9,31 @@ final class TranscriptPolisherTests: XCTestCase {
         )
     }
 
-    func testAddsSpaceAfterPunctuationWhenMissing() {
+    func testAddsSpaceOnlyBeforeNewSentence() {
+        // Заглавная буква после точки означает новое предложение — там пробел
+        // действительно нужен.
         XCTAssertEqual(
-            TranscriptPolisher.polish("первое,второе.третье"),
-            "Первое, второе. третье"
+            TranscriptPolisher.polish("Готово.Пойдём дальше"),
+            "Готово. Пойдём дальше"
         )
+    }
+
+    func testDoesNotBreakNumbersVersionsDomainsAndAbbreviations() {
+        // Всё перечисленное реально приходит из модели: она сама превращает
+        // «три и четырнадцать сотых» в «3.14». Раньше обработка ставила пробел
+        // после любой точки и разваливала числа, версии, домены и сокращения.
+        let untouched = [
+            "Testing numbers like 3.14 and dates like January 5.",
+            "Версия 2.0.1 вышла",
+            "Смотри на wai.computer",
+            "Это т.д. и т.п.",
+            "Цена 1,500 рублей",
+        ]
+
+        for input in untouched {
+            let output = TranscriptPolisher.polish(input)
+            XCTAssertEqual(output, input, "Текст не должен был измениться: \(input)")
+        }
     }
 
     func testCollapsesRepeatedSpaces() {

@@ -30,7 +30,18 @@ public enum TranscriptPolisher {
             .joined(separator: "\n")
     }
 
-    /// Убрать пробел перед знаком препинания и поставить после него.
+    /// Убрать пробел перед знаком препинания и поставить после него там,
+    /// где его точно не хватает.
+    ///
+    /// Вставка пробела намеренно осторожная. Модель сама превращает
+    /// «три и четырнадцать сотых» в «3.14», а точка встречается в версиях
+    /// («2.0.1»), доменах («wai.computer») и сокращениях («т.д.»). Раньше
+    /// пробел ставился после любой точки, и всё перечисленное разваливалось —
+    /// проверено на настоящем выходе модели.
+    ///
+    /// Поэтому пробел добавляется, только если дальше идёт заглавная буква,
+    /// то есть началось новое предложение. Слипшиеся строчные оставляем как
+    /// есть: испортить число хуже, чем не поправить редкий артефакт.
     static func fixSpacingAroundPunctuation(in text: String) -> String {
         let closing: Set<Character> = [",", ".", "!", "?", ";", ":", "…"]
         var result = ""
@@ -46,15 +57,8 @@ public enum TranscriptPolisher {
                 while result.last == " " { result.removeLast() }
                 result.append(character)
 
-                // После знака нужен пробел, если дальше сразу идёт буква.
-                let next = index + 1 < characters.count ? characters[index + 1] : nil
-                if let next,
-                   next != " ",
-                   next != "\n",
-                   !closing.contains(next),
-                   next != ")",
-                   next != "\"",
-                   next != "»" {
+                if let next = index + 1 < characters.count ? characters[index + 1] : nil,
+                   next.isUppercase {
                     result.append(" ")
                 }
                 index += 1
