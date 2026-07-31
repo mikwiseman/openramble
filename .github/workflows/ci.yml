@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Тесты пакетов
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Версия Swift
+        run: swift --version
+
+      - name: DictationCore
+        run: swift test --package-path Packages/DictationCore
+
+      - name: LocalASR
+        run: swift test --package-path Packages/LocalASR
+
+  network-surface:
+    name: Сетевая поверхность
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Главное обещание продукта проверяется автоматически, а не на слово.
+      - name: Проверить, что сеть только там, где разрешено
+        run: ./scripts/check-network-surface.sh
+
+  universal-build:
+    name: Сборка под обе архитектуры
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Приложение распространяется universal-бинарём: локальное распознавание
+      # доступно только на Apple Silicon, но собираться обязано и под Intel.
+      - name: arm64
+        run: swift build --package-path Packages/LocalASR --arch arm64
+
+      - name: x86_64
+        run: swift build --package-path Packages/LocalASR --arch x86_64

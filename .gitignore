@@ -1,0 +1,24 @@
+# Swift / SPM
+.build/
+.swiftpm/
+Package.resolved.backup
+*.xcodeproj
+*.xcworkspace
+DerivedData/
+xcuserdata/
+
+# macOS
+.DS_Store
+
+# Артефакты сборки и релиза
+artifacts/
+*.dmg
+*.zip
+
+# Приватный набор для замеров качества: голос владельца в публичный репозиторий
+# не попадает. Путь к нему передаётся через WAI_EVAL_DIR (см. docs/benchmarks.md).
+eval-private/
+
+# Модель скачивается пользователем, в репозитории её нет
+Models/
+*.mlmodelc
