@@ -1,0 +1,65 @@
+name: WaiDictation
+
+options:
+  bundleIdPrefix: is.waiwai
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+packages:
+  DictationCore:
+    path: ../../Packages/DictationCore
+  LocalASR:
+    path: ../../Packages/LocalASR
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    # Песочница выключена намеренно: диктовка обязана вставлять текст в чужие
+    # приложения, а из песочницы это невозможно.
+    ENABLE_APP_SANDBOX: NO
+    ENABLE_HARDENED_RUNTIME: YES
+    # Собираем под обе архитектуры: распознавание работает только на Apple
+    # Silicon, но приложение должно запускаться и на Intel, чтобы честно
+    # сказать об этом пользователю.
+    ARCHS: "arm64 x86_64"
+    ONLY_ACTIVE_ARCH: NO
+
+targets:
+  WaiDictation:
+    type: application
+    platform: macOS
+    sources:
+      - path: WaiDictation
+    dependencies:
+      - package: DictationCore
+        product: DictationCore
+      - package: DictationCore
+        product: DictationAudio
+      - package: LocalASR
+        product: LocalASR
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation
+        PRODUCT_NAME: Wai Dictation
+        INFOPLIST_FILE: WaiDictation/Info.plist
+        SWIFT_STRICT_CONCURRENCY: complete
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.dev
+    info:
+      path: WaiDictation/Info.plist
+      properties:
+        CFBundleName: Wai Dictation
+        CFBundleShortVersionString: "0.1.0"
+        # Приложение живёт в строке меню и не показывается в Dock.
+        LSUIElement: true
+        NSMicrophoneUsageDescription: >-
+          Микрофон нужен, чтобы записать вашу речь. Запись обрабатывается
+          на этом компьютере и никуда не отправляется.
+        NSHumanReadableCopyright: "© 2026 Mik Wiseman. MIT."
