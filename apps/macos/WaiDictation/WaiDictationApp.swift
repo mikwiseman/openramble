@@ -4,15 +4,24 @@ import SwiftUI
 @main
 struct WaiDictationApp: App {
     @StateObject private var state = AppState()
+    @AppStorage("onboardingCompleted") private var onboardingCompleted = false
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
         // Приложение живёт в строке меню: у диктовки нет своего окна, она
         // работает поверх того, где сейчас пользователь.
         MenuBarExtra {
-            MenuContent(state: state)
+            MenuContent(state: state, showOnboarding: { onboardingCompleted = false })
         } label: {
             Image(systemName: menuIcon)
         }
+
+        Window("Добро пожаловать", id: "onboarding") {
+            if !onboardingCompleted {
+                OnboardingView(state: state) { onboardingCompleted = true }
+            }
+        }
+        .windowResizability(.contentSize)
 
         Settings {
             SettingsView(state: state)
@@ -30,7 +39,9 @@ struct WaiDictationApp: App {
 
 private struct MenuContent: View {
     @ObservedObject var state: AppState
+    let showOnboarding: () -> Void
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         statusLine
@@ -38,6 +49,10 @@ private struct MenuContent: View {
         if !state.isDictationReady {
             Divider()
             setupHints
+            Button("Пройти настройку заново") {
+                showOnboarding()
+                openWindow(id: "onboarding")
+            }
         }
 
         Divider()
