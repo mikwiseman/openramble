@@ -21,15 +21,17 @@ jobs:
 
       # Предупреждения в этом проекте — ошибки: строгая конкурентность Swift 6
       # ловит здесь ровно те гонки, которые в звуке проявляются раз в сто
-      # запусков и не воспроизводятся.
+      # запусков и не воспроизводятся. Тесты собираются тем же гейтом: три
+      # нарушения изоляции прятались именно в них, а тест, читающий не оттуда,
+      # куда пишет, проходит зелёным и не проверяет ничего.
       - name: DictationCore
         run: |
-          swift build --package-path Packages/DictationCore -Xswiftc -warnings-as-errors
+          swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors
           swift test --package-path Packages/DictationCore
 
       - name: LocalASR
         run: |
-          swift build --package-path Packages/LocalASR -Xswiftc -warnings-as-errors
+          swift build --package-path Packages/LocalASR --build-tests -Xswiftc -warnings-as-errors
           swift test --package-path Packages/LocalASR
 
   app:

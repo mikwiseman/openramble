@@ -48,13 +48,17 @@ final class RecordingCleanupTests: XCTestCase {
         }
     }
 
-    override func setUpWithError() throws {
+    // Асинхронные варианты, а не `setUpWithError`: тот вызывается вне главного
+    // актора, а класс к нему привязан — обращение к `directory` пересекало бы
+    // границу изоляции. Сейчас это предупреждение, но каталог при этом уже
+    // читается не оттуда, откуда пишется.
+    override func setUp() async throws {
         directory = URL(fileURLWithPath: NSTemporaryDirectory())
             .appending(path: "takes-\(UUID().uuidString)", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         try? FileManager.default.removeItem(at: directory)
     }
 

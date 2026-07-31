@@ -238,7 +238,7 @@ final class WAVWriterHandleReleaseTests: XCTestCase {
         let writer = WAVWriter(url: url, sampleRate: 16_000, channels: 1)
         try writer.open()
         try writer.append(Array(repeating: 0.1, count: 1000))
-        try? writer.close()
+        _ = try? writer.close()
 
         // Второе закрытие обязано сказать «не открыт», а не пытаться писать в
         // уже закрытый дескриптор.
