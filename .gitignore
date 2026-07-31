@@ -10,6 +10,10 @@ xcuserdata/
 # macOS
 .DS_Store
 
+# Python
+__pycache__/
+*.pyc
+
 # Артефакты сборки и релиза
 artifacts/
 *.dmg

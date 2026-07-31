@@ -1,5 +1,8 @@
 # Сторонние компоненты
 
+Приложение раздаётся собранным образом, внутри которого едет чужой код и чужие
+веса. Здесь перечислено всё, что в нём есть, и на каких условиях.
+
 ## Модель распознавания речи
 
 **Parakeet TDT 0.6B v3**
@@ -10,18 +13,63 @@
 **Изменения относительно оригинала** (требование раздела 3(a) лицензии CC BY):
 модель сконвертирована в формат Core ML и энкодер квантизован 6-битной
 палитризацией со смешанной точностью. Конвертация выполнена проектом
-FluidInference, дистрибутив: https://huggingface.co/FluidInference/parakeet-tdt-0.6b-v3-coreml
+FluidInference, дистрибутив:
+https://huggingface.co/FluidInference/parakeet-tdt-0.6b-v3-coreml
 
-Приложение скачивает конкретную ревизию `aed02740059203c4a87495924f685de3722ae9ce`
-и проверяет контрольные суммы каждого файла.
+Сам дистрибутив FluidInference заявлен под Apache 2.0; на веса это условий
+CC BY 4.0 не отменяет, поэтому атрибуция NVIDIA обязательна и приводится выше.
+
+Приложение скачивает конкретную ревизию `aed02740059203c4a87495924f685de3722ae9ce`,
+берёт из неё 21 файл общим весом 483 105 645 байт и проверяет SHA-256 каждого.
+Веса в репозиторий Wai Dictation не входят и в образ приложения не вкомпилированы —
+их скачивает пользователь по кнопке.
 
 Эта же атрибуция продублирована в приложении: Настройки → О программе.
 
-## Библиотеки
+## Библиотеки внутри приложения
 
-| Компонент | Лицензия | Назначение |
-|---|---|---|
-| [FluidAudio](https://github.com/FluidInference/FluidAudio) | Apache 2.0 | Запуск Parakeet через Core ML |
-| [Sparkle](https://sparkle-project.org) | MIT | Обновления приложения |
+| Компонент | Версия | Лицензия | Назначение |
+|---|---|---|---|
+| [FluidAudio](https://github.com/FluidInference/FluidAudio) | 0.15.5 | Apache 2.0 | Запуск Parakeet через Core ML |
+| [Sparkle](https://sparkle-project.org) | 2.9.4 | MIT | Обновления приложения |
 
-Полные тексты лицензий поставляются вместе с зависимостями в их репозиториях.
+Версии зафиксированы точно, а не диапазоном: FluidAudio — в
+`Packages/LocalASR/Package.swift` (`exact: "0.15.5"`), Sparkle — в
+`apps/macos/project.yml` (`exactVersion: 2.9.4`).
+
+### Sparkle
+
+```
+Copyright (c) 2006-2013 Andy Matuschak.
+Copyright (c) 2009-2013 Elgato Systems GmbH.
+Copyright (c) 2011-2014 Kornel Lesiński.
+Copyright (c) 2015-2017 Mayur Pawashe.
+Copyright (c) 2014 C.W. Betts.
+Copyright (c) 2014 Petroules Corporation.
+Copyright (c) 2014 Big Nerd Ranch.
+All rights reserved.
+```
+
+Лицензия MIT, полный текст: https://github.com/sparkle-project/Sparkle/blob/2.9.4/LICENSE
+
+### FluidAudio
+
+Лицензия Apache 2.0, полный текст:
+https://github.com/FluidInference/FluidAudio/blob/v0.15.5/LICENSE
+
+FluidAudio поставляется одной библиотекой, и вместе с ней в образ попадает
+код, который она включает в себя:
+
+- **fastcluster** — © 2011 Daniel Müllner; изменения с версии 1.1.24 © Google Inc.
+  Лицензия BSD (2 пункта). Текст:
+  https://github.com/FluidInference/FluidAudio/blob/v0.15.5/ThirdPartyLicenses/fastcluster-LICENSE.md
+- **VBx** — © 2021–2024 BUT Speech@FIT. Лицензия Apache 2.0. Текст:
+  https://github.com/FluidInference/FluidAudio/blob/v0.15.5/ThirdPartyLicenses/vbx-LICENSE.md
+
+Ни то, ни другое Wai Dictation не использует — это части разделения дикторов,
+которое нам не нужно. Но код едет в образе, поэтому упомянут здесь.
+
+## Что не покрыто
+
+Название «Wai Dictation» и иконка приложения под лицензию исходного кода
+не подпадают.

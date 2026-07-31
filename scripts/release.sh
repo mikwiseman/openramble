@@ -111,6 +111,50 @@ fi
 
 # --- Проверки перед сборкой --------------------------------------------------
 
+# Версию берём из project.yml до сборки. Дальше её же проверим по собранному
+# Info.plist, но описание изменений нужно потребовать раньше: сборка с
+# нотаризацией идёт минуты, и упираться в отсутствующий текстовый файл после
+# них — потерянное время на каждом релизе.
+PROJECT_YML="apps/macos/project.yml"
+yml_value() {
+  sed -n "s/^ *$1: *\"\{0,1\}\([^\"]*\)\"\{0,1\} *$/\1/p" "$PROJECT_YML" | head -1
+}
+
+MARKETING_VERSION=$(yml_value MARKETING_VERSION)
+SHORT_VERSION=$(yml_value CFBundleShortVersionString)
+
+[[ -n "$MARKETING_VERSION" ]] || fail "В $PROJECT_YML не нашёлся MARKETING_VERSION"
+
+# Две строки об одной версии обязаны совпадать: Sparkle показывает человеку
+# CFBundleShortVersionString, а имя образа берётся из него же.
+if [[ "$MARKETING_VERSION" != "$SHORT_VERSION" ]]; then
+  fail "Версии в $PROJECT_YML разошлись:
+  MARKETING_VERSION           = $MARKETING_VERSION
+  CFBundleShortVersionString  = $SHORT_VERSION
+Обе строки должны быть одинаковыми."
+fi
+
+NOTES_PATH="$NOTES_DIR/$MARKETING_VERSION.md"
+if [[ ! -f "$NOTES_PATH" ]]; then
+  mkdir -p "$NOTES_DIR"
+  LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+  {
+    if [[ -n "$LAST_TAG" ]]; then
+      git log --no-merges --pretty=format:'- %s' "$LAST_TAG..HEAD"
+    else
+      git log --no-merges --pretty=format:'- %s'
+    fi
+  } | grep -vE '^- (chore|docs|test|refactor|wip|ci)[(:]' > "$NOTES_PATH" || true
+  echo "" >> "$NOTES_PATH"
+
+  fail "Нет описания изменений — я набросал черновик из коммитов:
+  $NOTES_PATH
+
+Перепишите его человеческим языком (это увидят все, кому предложат
+обновление) и запустите скрипт заново. Останавливаюсь до сборки, чтобы
+не гонять нотаризацию впустую."
+fi
+
 echo "→ Проверяю сетевую поверхность"
 ./scripts/check-network-surface.sh >/dev/null
 
@@ -155,25 +199,12 @@ echo "  версия $VERSION, сборка $BUILD, минимум macOS $MIN_OS
 
 # --- Что нового --------------------------------------------------------------
 
-NOTES_PATH="$NOTES_DIR/$VERSION.md"
-if [[ ! -f "$NOTES_PATH" ]]; then
-  mkdir -p "$NOTES_DIR"
-  LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
-  {
-    if [[ -n "$LAST_TAG" ]]; then
-      git log --no-merges --pretty=format:'- %s' "$LAST_TAG..HEAD"
-    else
-      git log --no-merges --pretty=format:'- %s'
-    fi
-  } | grep -vE '^- (chore|docs|test|refactor|wip|ci)[(:]' > "$NOTES_PATH" || true
-  echo "" >> "$NOTES_PATH"
-
-  fail "Нет описания изменений — я набросал черновик из коммитов:
-  $NOTES_PATH
-
-Перепишите его человеческим языком (это увидят все, кому предложат
-обновление) и запустите скрипт заново. Образ уже собран, второй раз это
-будет быстро."
+# Описание уже потребовали до сборки. Здесь только сверяем, что собралось ровно
+# то, на что оно написано: расхождение значило бы, что xcodegen взял версию не
+# из project.yml.
+if [[ "$VERSION" != "$MARKETING_VERSION" ]]; then
+  fail "Собранная версия $VERSION не совпадает с $MARKETING_VERSION из $PROJECT_YML.
+Перегенерируйте проект: cd apps/macos && xcodegen generate"
 fi
 
 # --- Подпись обновления ------------------------------------------------------

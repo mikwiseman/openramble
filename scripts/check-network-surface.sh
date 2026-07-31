@@ -59,7 +59,13 @@ while IFS= read -r hit; do
     status=1
   fi
   echo "  $hit"
-done < <(grep -rn 'clearContents()' Packages/*/Sources apps 2>/dev/null || true)
+  # Комментарии исключаются так же, как в проверке сетевых символов. Без этого
+  # гейт падал на строке, которая сама объясняет, почему так писать нельзя, —
+  # а ложное срабатывание тут дороже пропуска: его начинают обходить, и
+  # однажды обойдут настоящее.
+done < <(grep -rn 'clearContents()' Packages/*/Sources apps 2>/dev/null \
+  | grep -vE ':[0-9]+: *//' \
+  || true)
 
 # Обновления обязаны молчать, пока их не включили. Это не косметика:
 # без SUEnableAutomaticChecks=false Sparkle на втором запуске сам спросит
