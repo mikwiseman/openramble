@@ -1,0 +1,14 @@
+Wai Dictation
+Copyright (c) 2026 Mik Wiseman
+
+Примечание. Лицензия MIT покрывает только исходный код.
+Note: this MIT license covers the source code only. The name "Wai Dictation",
+the application icon, and associated marks are not licensed for reuse.
+
+Third-party components ship under their own licenses — see
+THIRD_PARTY_LICENSES.md.
+
+Эта приписка живёт отдельно от LICENSE намеренно. Файл лицензии должен
+содержать текст MIT и ничего кроме: по нему лицензию определяют автоматически —
+и GitHub, и сборщики зависимостей, и юристы тех, кто захочет взять код. Любое
+добавление сбивает распознавание, и проект выглядит как «лицензия не указана».
