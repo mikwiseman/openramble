@@ -318,3 +318,72 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: orphan.path))
     }
 }
+
+/// Адрес спасённого текста.
+///
+/// «Он сохранён» без ответа на «где» почти бесполезно: файл лежит в служебной
+/// папке, а это единственная копия сказанного. Проверяется настоящим путём —
+/// вставка отказывает, ядро само сохраняет текст и называет файл.
+@MainActor
+final class RecoveredFileTests: XCTestCase {
+    private var harness: AppHarness!
+
+    override func setUpWithError() throws {
+        harness = try AppHarness()
+    }
+
+    override func tearDownWithError() throws {
+        harness.tearDown()
+    }
+
+    private func settle(_ iterations: Int = 30) async {
+        for _ in 0..<iterations {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
+    func testПослеНеудачнойВставкиАдресФайлаИзвестен() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        XCTAssertNil(state.recoveredFile, "Пока ничего не спасали, показывать нечего")
+
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+
+        let file = try XCTUnwrap(
+            state.recoveredFile,
+            "Текст сохранён — значит человеку надо сказать, где именно"
+        )
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: file.path),
+            "Пункт меню поведёт в Finder по этому адресу: файл обязан существовать"
+        )
+    }
+
+    func testНоваяДиктовкаУбираетПрошлыйАдрес() async throws {
+        // Иначе пункт меню остался бы навсегда и указывал на всё более старый
+        // файл.
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+        XCTAssertNotNil(state.recoveredFile)
+
+        await harness.inserter.setError(nil)
+        harness.monitor.onPress?()
+        await settle()
+
+        XCTAssertNil(state.recoveredFile, "Новая диктовка — прошлая беда позади")
+    }
+}

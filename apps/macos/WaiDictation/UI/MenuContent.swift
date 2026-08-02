@@ -35,6 +35,17 @@ struct MenuContent: View {
             }
         }
 
+        // Текст, который не удалось вставить, сохраняется на диск — и до сих
+        // пор человеку сообщали только сам факт. «Он сохранён» без ответа на
+        // «где» почти бесполезно: файл лежит в служебной папке, которую в
+        // Finder ещё надо суметь открыть. А это единственная копия сказанного.
+        if let file = state.recoveredFile {
+            Divider()
+            Button("Показать спасённый текст") {
+                NSWorkspace.shared.activateFileViewerSelecting([file])
+            }
+        }
+
         Divider()
 
         Button("Проверить обновления…") { updater.checkForUpdates() }

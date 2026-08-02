@@ -241,8 +241,10 @@ final class AppStateIdleTests: XCTestCase {
     /// У сессии одна причина конца, а не две: своё объяснение поверх чужого
     /// затёрло бы важное — например, что распознать речь не вышло вовсе.
     func testСобственноеОбъяснениеНеЗатираетСообщениеЯдра() async throws {
-        // Записи хватает на распознавание, а модели на диске нет — сессия
-        // закончится настоящим сбоем ядра.
+        // Записи хватает на распознавание, но оно сорвётся — сессия закончится
+        // настоящим сбоем ядра. Раньше сбой брался сам собой (модели на диске
+        // нет), и тест зависел от обстоятельства, а не от собственного условия.
+        harness.transcription.error = ASREngineError.modelsNotLoaded
         let state = try await makeReadyState(recordingDuration: 2)
         monitor.onPress?()
         try await waitFor("началась запись") { state.dictationState == .listening }

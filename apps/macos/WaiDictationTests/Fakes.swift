@@ -227,8 +227,14 @@ actor FakeInserter: TextInserting {
     private(set) var insertedTexts: [String] = []
     private(set) var returnPresses = 0
     nonisolated(unsafe) var frontmost: TargetApplication?
+    /// Чем отказать. Отказ вставки — не редкость: защищённый ввод, отозванный
+    /// доступ, закрывшееся окно получателя.
+    private var error: TextInsertionError?
+
+    func setError(_ error: TextInsertionError?) { self.error = error }
 
     func insert(_ text: String, into target: TargetApplication?) async throws {
+        if let error { throw error }
         insertedTexts.append(text)
     }
 
@@ -355,6 +361,10 @@ final class AppHarness {
         try? FileManager.default.removeItem(at: root)
     }
 
+    /// Что «услышит» распознавание. Настоящей модели в тесте нет, а без ответа
+    /// диктовка обрывалась бы на полпути и путь до вставки остался бы непроверенным.
+    let transcription = FakeTranscription()
+
     func makeState() -> AppState {
         AppState(
             environment: AppEnvironment(
@@ -365,6 +375,16 @@ final class AppHarness {
                 inserter: inserter,
                 overlay: overlay,
                 makeCapture: { [capture] _, _ in capture },
+                transcribe: { [transcription] _ in
+                    { _ in
+                        if let error = transcription.error { throw error }
+                        return ASRResult(
+                            text: transcription.text,
+                            audioDuration: 2,
+                            processingDuration: 0.05
+                        )
+                    }
+                },
                 permissionPollInterval: permissionPollInterval,
                 modelDownloader: downloader,
                 workspaceNotifications: workspaceNotifications,
@@ -467,4 +487,11 @@ final class FakeHotkeyMonitor: HotkeyMonitoring {
         stopCount += 1
         isRunning = false
     }
+}
+
+
+/// Заранее известный ответ распознавания.
+final class FakeTranscription: @unchecked Sendable {
+    var text = "Проверка связи"
+    var error: (any Error)?
 }

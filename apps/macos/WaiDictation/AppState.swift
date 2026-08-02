@@ -20,6 +20,11 @@ public struct AppEnvironment {
     public var inserter: any TextInserting
     public var overlay: any OverlayPresenting
     public var makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing
+    /// Чем распознавать. Такой же край системы, как микрофон и вставка: в
+    /// приложении это модель на диске, в тесте — заранее известный ответ. Без
+    /// этого шва путь диктовки целиком в приложении нельзя было проверить
+    /// вовсе — тесты доходили только до начала записи.
+    public var transcribe: (URL) -> @Sendable (URL) async throws -> ASRResult
     /// Как часто опрашивать разрешения в самом занятом режиме. Ноль — не опрашивать.
     public var permissionPollInterval: TimeInterval
     /// Чем скачивать модель. Единственная сеть, которая есть у приложения.
@@ -37,6 +42,7 @@ public struct AppEnvironment {
         inserter: any TextInserting,
         overlay: any OverlayPresenting,
         makeCapture: @escaping (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing,
+        transcribe: @escaping (URL) -> @Sendable (URL) async throws -> ASRResult,
         permissionPollInterval: TimeInterval,
         modelDownloader: any ModelDownloading,
         workspaceNotifications: NotificationCenter,
@@ -49,6 +55,7 @@ public struct AppEnvironment {
         self.inserter = inserter
         self.overlay = overlay
         self.makeCapture = makeCapture
+        self.transcribe = transcribe
         self.permissionPollInterval = permissionPollInterval
         self.modelDownloader = modelDownloader
         self.workspaceNotifications = workspaceNotifications
@@ -65,6 +72,13 @@ public struct AppEnvironment {
             inserter: TextInserter(),
             overlay: DictationOverlay(),
             makeCapture: { MicrophoneCapture(directory: $0, onFailure: $1) },
+            transcribe: { engineDirectory in
+                let transcriber = LocalTranscriber()
+                return { url in
+                    try await transcriber.prepare(modelDirectory: engineDirectory)
+                    return try await transcriber.transcribe(fileURL: url)
+                }
+            },
             permissionPollInterval: 1,
             modelDownloader: URLSessionModelDownloader(),
             workspaceNotifications: NSWorkspace.shared.notificationCenter,
@@ -87,6 +101,13 @@ public final class AppState: ObservableObject {
     @Published public private(set) var microphoneGranted = false
     @Published public private(set) var lastNotice: DictationNotice?
     @Published public private(set) var isPreparingEngine = false
+
+    /// Последний текст, который не удалось вставить и пришлось сохранить.
+    ///
+    /// Живёт дольше самого сообщения: оно исчезает с экрана через несколько
+    /// секунд, а найти файл человек захочет позже — когда разберётся, почему
+    /// вставка не прошла. Сбрасывается следующей удачной диктовкой.
+    @Published public private(set) var recoveredFile: URL?
     /// Идёт ли запись без удержания клавиши — показывается в меню.
     @Published public private(set) var isHandsFreeActive = false
 
@@ -128,6 +149,7 @@ public final class AppState: ObservableObject {
     private let inserter: any TextInserting
     private let overlay: any OverlayPresenting
     private let makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing
+    private let transcribe: (URL) -> @Sendable (URL) async throws -> ASRResult
     private let permissionPollInterval: TimeInterval
     private let modelDownloader: any ModelDownloading
     private let workspaceNotifications: NotificationCenter
@@ -188,6 +210,7 @@ public final class AppState: ObservableObject {
         inserter = environment.inserter
         overlay = environment.overlay
         makeCapture = environment.makeCapture
+        transcribe = environment.transcribe
         permissionPollInterval = environment.permissionPollInterval
         modelDownloader = environment.modelDownloader
         workspaceNotifications = environment.workspaceNotifications
@@ -251,10 +274,7 @@ public final class AppState: ObservableObject {
             let engineDirectory = layout.engineDirectory
             let controller = DictationController(
                 capture: capture,
-                transcribe: { url in
-                    try await transcriber.prepare(modelDirectory: engineDirectory)
-                    return try await transcriber.transcribe(fileURL: url)
-                },
+                transcribe: transcribe(engineDirectory),
                 inserter: inserter,
                 overlay: overlay,
                 sounds: sounds,
@@ -267,9 +287,17 @@ public final class AppState: ObservableObject {
                 self?.dictationState = state
                 self?.updateDurationTimer(for: state)
                 self?.flushNoticeAfterSession(state)
+                // Новая диктовка началась — прошлая беда позади. Иначе пункт
+                // «показать спасённый текст» остался бы в меню навсегда и
+                // указывал бы на всё более старый файл.
+                if state == .listening { self?.recoveredFile = nil }
             }
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
+                // Адрес спасённого файла запоминаем отдельно: сообщение уйдёт
+                // с экрана через несколько секунд, а искать текст человек
+                // станет позже.
+                if let file = notice.recoveryFile { self?.recoveredFile = file }
                 // Ядро само объяснилось. Своё объяснение поверх его слов было бы
                 // хуже молчания: у сессии одна причина конца, а не две.
                 self?.noticeAfterSession = nil
