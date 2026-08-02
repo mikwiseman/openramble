@@ -1,3 +1,4 @@
+import LocalASR
 import DictationCore
 import XCTest
 
@@ -63,5 +64,47 @@ final class MenuBarStatusTests: XCTestCase {
             MenuBarStatus.statusLine(state: .listening, isDictationReady: true, hotkeyTitle: "Fn (🌐)"),
             "Слушаю"
         )
+    }
+}
+
+/// Меню в строке меню: что оно предлагает про модель.
+///
+/// Раньше меню знало про модель один булев и предлагало «Скачать» даже посреди
+/// загрузки: нажатие уходило в никуда, а строка состояния говорила «Нужна
+/// настройка», ни словом не упоминая идущую загрузку. Теперь меню берёт те же
+/// шесть состояний, что и оба экрана.
+@MainActor
+final class MenuModelOfferTests: XCTestCase {
+    private func status(for state: ModelState) -> ModelStatus {
+        ModelStatus.make(state: state, isPreparingEngine: false, place: .settings)
+    }
+
+    func testПосредиЗагрузкиНеПредлагаетСкачать() {
+        let model = status(for: .downloading(receivedBytes: 200_000_000, totalBytes: 483_105_645))
+
+        XCTAssertFalse(
+            model.actions.contains(.install),
+            "Пока идёт загрузка, предлагать начать её заново нечестно: нажатие ничего не сделает"
+        )
+        XCTAssertNotNil(model.progressLabel, "Человек должен видеть, что загрузка идёт")
+    }
+
+    func testПосредиПроверкиТожеНеПредлагает() {
+        let model = status(for: .verifying(checked: 8, total: 21))
+
+        XCTAssertFalse(model.actions.contains(.install))
+        XCTAssertNotNil(model.progressLabel)
+    }
+
+    func testПослеОшибкиПредлагаетПовторить() {
+        let model = status(for: .failed(.download("сеть недоступна")))
+
+        XCTAssertTrue(model.actions.contains(.retry), "Из ошибки должен быть выход")
+    }
+
+    func testКогдаМоделиНетПредлагаетСкачать() {
+        let model = status(for: .notInstalled)
+
+        XCTAssertTrue(model.actions.contains(.install))
     }
 }

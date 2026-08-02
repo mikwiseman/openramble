@@ -54,8 +54,26 @@ struct MenuContent: View {
         if !state.microphoneGranted {
             Button("Разрешить микрофон") { state.requestMicrophone() }
         }
+        // Через тот же тип, что и оба экрана. Раньше меню знало про модель один
+        // булев «готова или нет» и предлагало «Скачать» даже посреди загрузки —
+        // нажатие уходило в никуда, а первая строка меню при этом говорила
+        // «Нужна настройка», ни словом не упоминая, что загрузка идёт.
+        let model = ModelStatus.make(
+            state: state.modelState,
+            isPreparingEngine: state.isPreparingEngine,
+            place: .settings
+        )
         if !state.modelState.isReady {
-            Button("Скачать модель (483 МБ)") { state.installModel() }
+            Text(model.progressLabel.map { "\(model.title) — \($0)" } ?? model.title)
+
+            ForEach(model.actions.filter { $0 != .delete }, id: \.self) { action in
+                Button(action.title) {
+                    switch action {
+                    case .install, .retry: state.installModel()
+                    case .delete: break
+                    }
+                }
+            }
         }
     }
 }
