@@ -93,12 +93,21 @@ final class OverlayModelTests: XCTestCase {
     /// Отложенное скрытие первого узнавало «своё» сообщение по тексту и уносило
     /// с экрана второе — то показывалось втрое короче положенного.
     func testВтороеТакоеЖеСообщениеПолучаетСвоёВремя() async throws {
+        // Своя панель с длинным сроком показа. У общей он 120 мс, и проверка
+        // упиралась в тридцать миллисекунд запаса: на загруженной машине сон
+        // перелетает, сообщение честно истекает, и падает тест, а не продукт.
+        // Здесь важно не «сколько именно», а «второй показ начинает отсчёт
+        // заново» — значит запас должен быть таким, чтобы разница была видна
+        // при любом перелёте.
+        let announcer = FakeAnnouncer()
+        let model = OverlayModel(announcer: announcer, noticeDuration: .seconds(5))
         let notice = DictationNotice(kind: .warning, message: "Сейчас идёт диктовка. Дождитесь её окончания.")
-        model.showNotice(notice)
-        try await Task.sleep(for: .milliseconds(90))
 
         model.showNotice(notice)
-        try await Task.sleep(for: .milliseconds(90))
+        try await Task.sleep(for: .milliseconds(50))
+
+        model.showNotice(notice)
+        try await Task.sleep(for: .milliseconds(50))
 
         XCTAssertNotNil(model.notice, "второе сообщение исчезло раньше своего срока")
         XCTAssertTrue(model.isVisible)
