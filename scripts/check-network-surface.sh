@@ -50,11 +50,19 @@ done < <(grep -rnE "$FORBIDDEN" Packages/*/Sources apps 2>/dev/null \
 # Буфер обмена — отдельная история. Голый clearContents() отдаёт продиктованный
 # текст в Universal Clipboard, то есть на все устройства Apple ID через iCloud.
 # Писать в буфер можно только через prepareForNewContents(with: .currentHostOnly).
+#
+# declareTypes(_:owner:) — то же самое другими словами. Это легаси-способ начать
+# новую запись: он так же сбрасывает буфер и так же не ставит ограничения
+# текущим компьютером. Проверка на одно clearContents() ловила бы только
+# современное написание, а обещание пользователю сформулировано не про имя
+# метода.
+FORBIDDEN_PASTEBOARD='clearContents\(\)|declareTypes\('
 echo "Проверяю запись в буфер обмена…"
 while IFS= read -r hit; do
   if [[ $status -eq 0 ]]; then
     echo ""
-    echo "НАРУШЕНИЕ: голый clearContents() уносит диктовку в Universal Clipboard."
+    echo "НАРУШЕНИЕ: сброс буфера мимо .currentHostOnly уносит диктовку"
+    echo "в Universal Clipboard — на все устройства Apple ID."
     echo "Используйте prepareForNewContents(with: .currentHostOnly)."
     status=1
   fi
@@ -63,7 +71,8 @@ while IFS= read -r hit; do
   # гейт падал на строке, которая сама объясняет, почему так писать нельзя, —
   # а ложное срабатывание тут дороже пропуска: его начинают обходить, и
   # однажды обойдут настоящее.
-done < <(grep -rn 'clearContents()' Packages/*/Sources apps 2>/dev/null \
+done < <(grep -rnE "$FORBIDDEN_PASTEBOARD" Packages/*/Sources apps 2>/dev/null \
+  | grep -v '^Binary' \
   | grep -vE ':[0-9]+: *//' \
   || true)
 
