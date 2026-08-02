@@ -20,7 +20,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Версия Swift
         run: swift --version
@@ -48,7 +48,7 @@ jobs:
     # вернётся, прогон повиснет до конца лимита GitHub, а не упадёт.
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Проект собирается из project.yml и в репозитории не лежит.
       - name: xcodegen
@@ -70,7 +70,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Главное обещание продукта проверяется автоматически, а не на слово.
       - name: Проверить, что сеть только там, где разрешено
@@ -81,7 +81,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Приложение распространяется universal-бинарём: локальное распознавание
       # доступно только на Apple Silicon, но собираться обязано и под Intel.
@@ -96,7 +96,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: xcodegen
         run: brew install xcodegen
@@ -162,7 +162,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # docs/appcast.xml — единственный файл, который приложение скачивает
       # само. Сломанный XML тут означает, что обновления не приедут никому и
