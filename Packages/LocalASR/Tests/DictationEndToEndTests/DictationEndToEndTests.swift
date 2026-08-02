@@ -93,7 +93,7 @@ final class DictationEndToEndTests: EndToEndScenario {
                 "Термин «\(term)» в косвенном падеже не заменился. Пришло: \(text)"
             )
         }
-        for spoken in ["питон", "свифт", "даунтайм"] {
+        for spoken in ["свифт", "билд", "даунтайм"] {
             XCTAssertFalse(
                 text.containsInsensitive(spoken),
                 "Кириллическое написание «\(spoken)» осталось: \(text)"

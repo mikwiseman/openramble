@@ -10,11 +10,30 @@ public struct DictionaryReplacement: Codable, Sendable, Equatable, Identifiable 
     public var spoken: String
     /// Что должно оказаться в тексте.
     public var written: String
+    /// Ждать ли у записи падежные окончания.
+    ///
+    /// Свойство записи, а не вывод из её букв. «Деплой» — слово, у него есть
+    /// «деплоя» и «деплою». «Комет» — не слово, а огрех распознавания: у него
+    /// нет падежей, зато есть «комета», которую склоняемая основа «комет-»
+    /// съедала вместе с термином. Замер этого стоил: настоящих русских слов в
+    /// радиусе поражения набора было 89, из них четыре семьи — обычная речь.
+    public var inflects: Bool
 
-    public init(id: UUID = UUID(), spoken: String, written: String) {
+    public init(id: UUID = UUID(), spoken: String, written: String, inflects: Bool = true) {
         self.id = id
         self.spoken = spoken
         self.written = written
+        self.inflects = inflects
+    }
+
+    /// Свой разбор нужен ровно из-за `inflects`: в словарях, записанных до его
+    /// появления, ключа нет. Отсутствие ключа — это «склоняется», как и было.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        spoken = try container.decode(String.self, forKey: .spoken)
+        written = try container.decode(String.self, forKey: .written)
+        inflects = try container.decodeIfPresent(Bool.self, forKey: .inflects) ?? true
     }
 }
 
@@ -25,6 +44,12 @@ public enum DictionaryReplacements {
     /// Границы обязательны: без них замена «код» → «code» превратила бы
     /// «кодировка» в «codeировка». Регистр входа игнорируется, потому что
     /// распознавание не гарантирует его стабильность.
+    ///
+    /// Проходов два, и порядок важен. Сначала точное совпадение с падежами —
+    /// оно отвечает за всё, что записано в словаре буквально. Потом
+    /// фонетический добор: он ловит те написания термина, которых в словаре
+    /// нет и быть не может, потому что модель пишет одно и то же слово
+    /// по-разному в разных фразах. Замер обоих проходов — в docs/benchmarks.md.
     public static func apply(_ replacements: [DictionaryReplacement], to text: String) -> String {
         guard !replacements.isEmpty, !text.isEmpty else { return text }
 
@@ -33,13 +58,24 @@ public enum DictionaryReplacements {
         for replacement in replacements.sorted(by: { $0.spoken.count > $1.spoken.count }) {
             let spoken = replacement.spoken.trimmingCharacters(in: .whitespaces)
             guard !spoken.isEmpty else { continue }
-            result = replaceWholeWords(of: spoken, with: replacement.written, in: result)
+            result = replaceWholeWords(
+                of: spoken,
+                with: replacement.written,
+                inflected: replacement.inflects,
+                in: result
+            )
         }
-        return result
+        return PhoneticMatching.apply(replacements, to: result)
     }
 
-    static func replaceWholeWords(of needle: String, with replacement: String, in text: String) -> String {
-        guard let regex = try? NSRegularExpression(pattern: pattern(for: needle), options: [.caseInsensitive]) else {
+    static func replaceWholeWords(
+        of needle: String,
+        with replacement: String,
+        inflected: Bool,
+        in text: String
+    ) -> String {
+        let expression = pattern(for: needle, inflected: inflected)
+        guard let regex = try? NSRegularExpression(pattern: expression, options: [.caseInsensitive]) else {
             return text
         }
         let range = NSRange(text.startIndex..<text.endIndex, in: text)
@@ -66,12 +102,12 @@ public enum DictionaryReplacements {
     ///
     /// Латинских замен это не касается: английские термины в русской речи не
     /// склоняются, а лишний хвост там означал бы другое слово.
-    static func pattern(for needle: String) -> String {
+    static func pattern(for needle: String, inflected: Bool = true) -> String {
         let leading = "(?<![\\p{L}\\p{N}])"
         let trailing = "(?![\\p{L}\\p{N}])"
 
         let words = needle.split(separator: " ").map(String.init)
-        guard let last = words.last, isInflectable(needle) else {
+        guard let last = words.last, inflected, isInflectable(needle) else {
             return leading + NSRegularExpression.escapedPattern(for: needle) + trailing
         }
 
@@ -102,8 +138,9 @@ public enum DictionaryReplacements {
     /// Чтобы их поймать, пришлось бы отрезать конечную гласную — а тогда
     /// «центри» превратится в основу «центр», и «в центре города» станет
     /// «в Sentry города». Ровно этот случай мы бережём отдельным тестом. Цена —
-    /// пользовательскую замену на гласную приходится заводить в двух формах;
-    /// в поставляемом наборе таких слов нет.
+    /// такая замена ловится только в той форме, в какой записана; в
+    /// поставляемом наборе на гласную кончаются шесть записей: «ревью»,
+    /// «код ревью», «кот ревью», «сентри», «центри», «линти».
     private static func isInflectable(_ needle: String) -> Bool {
         guard let last = needle.split(separator: " ").last, last.count >= 4 else { return false }
         return needle.allSatisfy { character in

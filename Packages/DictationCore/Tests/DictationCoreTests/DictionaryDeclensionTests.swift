@@ -97,18 +97,87 @@ final class DictionaryDeclensionTests: XCTestCase {
     }
 }
 
+/// Склоняемость — свойство записи, а не вывод из её букв.
+final class DictionaryInflectionFlagTests: XCTestCase {
+    func testReplacementMarkedLiteralTakesNoCaseEndings() {
+        // «Комет» — не слово, а огрех распознавания. Падежей у него нет, зато
+        // склоняемая основа «комет-» съедала «комету».
+        let literal = [DictionaryReplacement(spoken: "комет", written: "commit", inflects: false)]
+        XCTAssertEqual(
+            DictionaryReplacements.apply(literal, to: "смотрели на комету"),
+            "смотрели на комету"
+        )
+        XCTAssertEqual(
+            DictionaryReplacements.apply(literal, to: "сделай комет"),
+            "сделай commit"
+        )
+    }
+
+    func testReplacementsInflectByDefault() {
+        // Молчаливое изменение поведения всех пользовательских словарей было бы
+        // хуже исходной беды.
+        let usual = [DictionaryReplacement(spoken: "деплой", written: "deploy")]
+        XCTAssertTrue(usual[0].inflects)
+        XCTAssertEqual(
+            DictionaryReplacements.apply(usual, to: "после деплоя"),
+            "после deploy"
+        )
+    }
+
+    func testDictionariesSavedBeforeTheFlagExistedStillInflect() throws {
+        // На диске у людей лежат словари без этого ключа. Его отсутствие
+        // означает «склоняется» — ровно то, как эти словари и работали.
+        let saved = Data("""
+            [{"id":"E621E1F8-C36C-495A-93FC-0C247A3E6E5F","spoken":"релиз","written":"release"}]
+            """.utf8)
+
+        let decoded = try JSONDecoder().decode([DictionaryReplacement].self, from: saved)
+
+        XCTAssertEqual(decoded.count, 1)
+        XCTAssertTrue(decoded[0].inflects)
+        XCTAssertEqual(
+            DictionaryReplacements.apply(decoded, to: "перед релизом"),
+            "перед release"
+        )
+    }
+
+    func testFlagSurvivesSavingAndLoading() throws {
+        let original = [DictionaryReplacement(spoken: "комет", written: "commit", inflects: false)]
+        let restored = try JSONDecoder().decode(
+            [DictionaryReplacement].self,
+            from: JSONEncoder().encode(original)
+        )
+        XCTAssertEqual(restored, original)
+        XCTAssertFalse(restored[0].inflects)
+    }
+}
+
 /// Чего словарь сделать не может — и не должен пытаться.
 final class DictionaryAmbiguityTests: XCTestCase {
     func testOrdinaryRussianWordsAreNotSacrificedForTerms() {
         // Модель пишет «Сентри» как «центре», но «центр» — обычное русское
         // слово. Заменять его на Sentry значит ломать нормальную речь ради
-        // одного термина; в замере это единственный случай, который словарь
-        // честно не берёт.
+        // одного термина.
         let result = DictionaryReplacements.apply(
             StarterDictionary.developer,
             to: "встретимся в центре города"
         )
 
         XCTAssertEqual(result, "встретимся в центре города")
+    }
+
+    func testStarterSetShipsNoReplacementThatIsAnOrdinaryRussianWord() {
+        // Заготовка предлагается всем и без разбора, поэтому запись, совпадающая
+        // с обычным словом, ломает речь у каждого. Свою такую замену человек
+        // заводит сам и знает, на что идёт.
+        //
+        // Список получен перебором: для каждой записи построены все написания с
+        // тем же фонетическим ключом и отобраны настоящие русские слова.
+        let ordinary = ["питон", "редис", "докер", "бранч"]
+        let shipped = Set(StarterDictionary.developer.map { $0.spoken.lowercased() })
+
+        for word in ordinary {
+            XCTAssertFalse(shipped.contains(word), "«\(word)» — обычное русское слово")
+        }
     }
 }

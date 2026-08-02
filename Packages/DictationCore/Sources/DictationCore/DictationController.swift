@@ -35,7 +35,6 @@ public final class DictationController {
         }
     }
 
-    public private(set) var lastError: DictationError?
     public private(set) var pendingRecovery: RecoveredDictation?
 
     public var onStateChange: (@MainActor (DictationState) -> Void)?
@@ -126,7 +125,6 @@ public final class DictationController {
         isHandsFreeActive = handsFree
         cancellationRequested = false
         deferredStopRequested = false
-        lastError = nil
         // Цель запоминаем сразу: потом фокус уйдёт.
         targetApplication = inserter.frontmostApplication()
         state = .preparing
@@ -433,7 +431,6 @@ public final class DictationController {
         // сообщение упало бы поверх той, что идёт сейчас.
         guard isCurrent(session) else { return }
 
-        lastError = error
         let notice = DictationNotice(kind: .failure, message: error.userMessage)
         onNotice?(notice)
         await overlay.presentNotice(notice)
@@ -496,10 +493,14 @@ public final class DictationController {
 }
 
 /// Ошибки, которые видит пользователь.
+///
+/// Отказ вставки сюда не входит намеренно: текст в этот момент уже распознан и
+/// сохранён, и человеку надо сказать не «не удалось», а куда он делся. Это
+/// делает `handleInsertionFailure` — своим сообщением и с файлом спасённого
+/// текста в уведомлении.
 public enum DictationError: Error, Sendable, Equatable {
     case capture(String)
     case recognition(String)
-    case insertion(String)
 
     public var userMessage: String {
         switch self {
@@ -507,8 +508,6 @@ public enum DictationError: Error, Sendable, Equatable {
             return "Не удалось записать звук."
         case .recognition:
             return "Не удалось распознать речь."
-        case .insertion:
-            return "Не удалось вставить текст."
         }
     }
 }

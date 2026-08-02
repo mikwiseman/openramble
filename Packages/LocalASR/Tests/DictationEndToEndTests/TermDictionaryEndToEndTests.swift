@@ -39,11 +39,7 @@ final class TermDictionaryEndToEndTests: EndToEndScenario {
                 converted: ["Swift", "TypeScript"]
             ),
             Probe("Этот PR я посмотрю после обеда.", converted: ["PR"]),
-            Probe(
-                "Выкати rollback без downtime.",
-                converted: ["downtime"],
-                gaps: [("rollback", "роллбык")]
-            ),
+            Probe("Выкати rollback без downtime.", converted: ["rollback", "downtime"]),
             Probe(
                 "Включи feature flag на staging.",
                 converted: ["staging"],
@@ -51,13 +47,14 @@ final class TermDictionaryEndToEndTests: EndToEndScenario {
             ),
             Probe(
                 "Я поправил backend на Python, добавил endpoint и написал hotfix.",
-                converted: ["hotfix"],
+                converted: ["backend", "endpoint", "hotfix"],
                 gaps: [
-                    ("backend", "бэкэнд"),
                     // Не дыра словаря, а потеря слова: вместо термина модель
-                    // услышала другое русское слово. Заменой это не чинится.
+                    // услышала другое русское слово — «написан». Заменой это не
+                    // чинится, а запись «питон» из набора убрана: на свежих
+                    // записях она не срабатывала ни разу, зато превращала
+                    // «питон сжал добычу» в «Python сжал добычу».
                     ("Python", "написан"),
-                    ("endpoint", "энд поинт"),
                 ]
             ),
             Probe(
@@ -72,11 +69,12 @@ final class TermDictionaryEndToEndTests: EndToEndScenario {
             ),
             Probe(
                 "Сделай commit в branch, потом rebase и merge.",
+                converted: ["commit", "rebase", "merge"],
                 gaps: [
-                    ("commit", "комит"),
+                    // «Бранч» из набора убран: это обычное русское слово в
+                    // творительном падеже — «бранч» от «брань». Модель к тому же
+                    // пишет «брандж».
                     ("branch", "брандж"),
-                    ("rebase", "ребейс"),
-                    ("merge", "мордж"),
                 ]
             ),
             Probe(
