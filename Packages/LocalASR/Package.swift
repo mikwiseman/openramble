@@ -49,5 +49,21 @@ let package = Package(
             dependencies: ["asr-bench"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
+        // Сквозные тесты: контроллер диктовки, настоящая модель и настоящий
+        // текстовый конвейер соединены друг с другом. Живут здесь, а не в
+        // DictationCore, потому что это единственный пакет, который видит и
+        // чистую логику, и загруженную модель.
+        //
+        // Цель отдельная, чтобы её было чем отделить: без установленной модели
+        // тесты пропускаются, а `--filter DictationEndToEndTests` даёт прогнать
+        // только их.
+        .testTarget(
+            name: "DictationEndToEndTests",
+            dependencies: [
+                "LocalASR",
+                .product(name: "DictationCore", package: "DictationCore"),
+            ],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
     ]
 )
