@@ -21,6 +21,7 @@ struct MenuContent: View {
             MenuBarStatus.statusLine(
                 state: state.dictationState,
                 isDictationReady: state.isDictationReady,
+                isHandsFreeActive: state.isHandsFreeActive,
                 hotkeyTitle: state.hotkey.title
             )
         )

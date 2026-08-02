@@ -33,6 +33,7 @@ enum MenuBarStatus {
     static func statusLine(
         state: DictationState,
         isDictationReady: Bool,
+        isHandsFreeActive: Bool,
         hotkeyTitle: String
     ) -> String {
         switch state {
@@ -41,7 +42,13 @@ enum MenuBarStatus {
                 ? "Удерживайте \(hotkeyTitle) и говорите"
                 : "Нужна настройка"
         case .preparing: return "Включаю микрофон…"
-        case .listening: return "Слушаю"
+        case .listening:
+            // В режиме без удержания клавишу отпускают, а запись продолжается.
+            // Не сказать об этом — значит оставить человека с включённым
+            // микрофоном и уверенностью, что он уже выключен.
+            return isHandsFreeActive
+                ? "Слушаю — нажмите \(hotkeyTitle), чтобы закончить"
+                : "Слушаю"
         case .transcribing: return "Распознаю…"
         case .inserting: return "Вставляю текст"
         }

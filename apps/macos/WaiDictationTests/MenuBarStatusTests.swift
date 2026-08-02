@@ -53,15 +53,15 @@ final class MenuBarStatusTests: XCTestCase {
 
     func testПерваяСтрокаМенюГоворитЧтоДелать() {
         XCTAssertEqual(
-            MenuBarStatus.statusLine(state: .idle, isDictationReady: true, hotkeyTitle: "Правый Command"),
+            MenuBarStatus.statusLine(state: .idle, isDictationReady: true, isHandsFreeActive: false, hotkeyTitle: "Правый Command"),
             "Удерживайте Правый Command и говорите"
         )
         XCTAssertEqual(
-            MenuBarStatus.statusLine(state: .idle, isDictationReady: false, hotkeyTitle: "Правый Command"),
+            MenuBarStatus.statusLine(state: .idle, isDictationReady: false, isHandsFreeActive: false, hotkeyTitle: "Правый Command"),
             "Нужна настройка"
         )
         XCTAssertEqual(
-            MenuBarStatus.statusLine(state: .listening, isDictationReady: true, hotkeyTitle: "Fn (🌐)"),
+            MenuBarStatus.statusLine(state: .listening, isDictationReady: true, isHandsFreeActive: false, hotkeyTitle: "Fn (🌐)"),
             "Слушаю"
         )
     }
@@ -106,5 +106,34 @@ final class MenuModelOfferTests: XCTestCase {
         let model = status(for: .notInstalled)
 
         XCTAssertTrue(model.actions.contains(.install))
+    }
+}
+
+/// Режим без удержания в строке меню.
+@MainActor
+final class MenuHandsFreeLineTests: XCTestCase {
+    func testВРежимеБезУдержанияСказаноКакЗакончить() {
+        let line = MenuBarStatus.statusLine(
+            state: .listening,
+            isDictationReady: true,
+            isHandsFreeActive: true,
+            hotkeyTitle: "Правый Command"
+        )
+
+        XCTAssertTrue(
+            line.contains("Правый Command"),
+            "Клавишу отпустили, а запись идёт — человек обязан узнать, чем её закончить: \(line)"
+        )
+    }
+
+    func testВОбычномРежимеЛишнегоНеГоворит() {
+        let line = MenuBarStatus.statusLine(
+            state: .listening,
+            isDictationReady: true,
+            isHandsFreeActive: false,
+            hotkeyTitle: "Правый Command"
+        )
+
+        XCTAssertEqual(line, "Слушаю", "Клавиша зажата — объяснять нечего")
     }
 }

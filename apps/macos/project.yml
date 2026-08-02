@@ -69,6 +69,11 @@ targets:
         PRODUCT_NAME: Wai Dictation
         INFOPLIST_FILE: WaiDictation/Info.plist
         SWIFT_STRICT_CONCURRENCY: complete
+        # Предупреждения — ошибки, как и в пакетах. Раньше это было правдой
+        # только для них, а CI утверждал, что для всего проекта: цель
+        # приложения собиралась без гейта, и три нарушения изоляции когда-то
+        # уже прятались ровно за такой дырой.
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
       configs:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.dev

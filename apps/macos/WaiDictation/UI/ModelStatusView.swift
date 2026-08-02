@@ -7,6 +7,11 @@ struct ModelStatusView: View {
     let status: ModelStatus
     let install: () -> Void
     let delete: () -> Void
+    var announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer()
+
+    /// Что уже сказано вслух. Доля загрузки меняется десятки раз в секунду —
+    /// без этой памяти VoiceOver забил бы собой всё остальное.
+    @State private var announced: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -34,6 +39,14 @@ struct ModelStatusView: View {
             ForEach(status.actions, id: \.self) { action in
                 button(for: action)
             }
+        }
+        // Установка модели — единственное место, где человек ждёт минутами.
+        // Незрячему без объявлений остаётся молчащее окно: индикатор он не
+        // видит, а под фокусом ничего не меняется.
+        .onChange(of: status.announcement, initial: true) { _, announcement in
+            guard announced != announcement else { return }
+            announced = announcement
+            announcer.announce(announcement, urgent: status.tone == .failure)
         }
     }
 
