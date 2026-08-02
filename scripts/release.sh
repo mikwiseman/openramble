@@ -217,6 +217,46 @@ SIGNATURE=$("$SIGN_UPDATE" -p --ed-key-file "$SPARKLE_KEY_PATH" "$DMG_PATH")
 "$SIGN_UPDATE" --verify --ed-key-file "$SPARKLE_KEY_PATH" "$DMG_PATH" "$SIGNATURE" >/dev/null \
   || fail "Подпись не сходится с ключом $SPARKLE_KEY_PATH"
 
+# А теперь то, чего предыдущая проверка не делает вовсе.
+#
+# Она сверяет подпись с тем же приватным ключом, которым только что подписала, —
+# то есть не может не сойтись. Настоящий вопрос другой: соответствует ли
+# ПУБЛИЧНЫЙ ключ, зашитый в приложение, этому приватному. Разошлись — релиз
+# проходит зелёным, лента публикуется, а обновление не устанавливается ни у
+# кого и никогда: приложение проверяет подпись своим ключом, а он чужой.
+#
+# Файл ключа Sparkle — это base64 от 32-байтового зерна ed25519, поэтому
+# публичный выводится из него напрямую. Проверено перекрёстно: выведенный так
+# ключ подтверждает подпись, сделанную самим sign_update.
+echo "→ Сверяю публичный ключ в приложении с ключом подписи"
+DERIVED_KEY=$(swift - "$SPARKLE_KEY_PATH" <<'SWIFT'
+import CryptoKit
+import Foundation
+
+let path = CommandLine.arguments[1]
+guard let text = try? String(contentsOfFile: path, encoding: .utf8),
+      let seed = Data(base64Encoded: text.trimmingCharacters(in: .whitespacesAndNewlines)),
+      seed.count == 32,
+      let key = try? Curve25519.Signing.PrivateKey(rawRepresentation: seed)
+else {
+    FileHandle.standardError.write(Data("ключ подписи не читается как зерно ed25519\n".utf8))
+    exit(1)
+}
+print(key.publicKey.rawRepresentation.base64EncodedString())
+SWIFT
+) || fail "Не удалось вывести публичный ключ из $SPARKLE_KEY_PATH"
+
+if [[ "$DERIVED_KEY" != "$PUBLIC_KEY" ]]; then
+  fail "Публичный ключ в приложении не от того приватного, которым подписан образ.
+
+В Info.plist:        $PUBLIC_KEY
+Соответствует ключу: $DERIVED_KEY
+
+Выпускать так нельзя: обновление не установится ни у кого. Впишите в
+apps/macos/project.yml правильный ключ и пересоберите:
+  SUPublicEDKey: \"$DERIVED_KEY\""
+fi
+
 LENGTH=$(stat -f%z "$DMG_PATH")
 DMG_URL="$DOWNLOAD_BASE/v$VERSION/$(basename "$DMG_PATH")"
 
