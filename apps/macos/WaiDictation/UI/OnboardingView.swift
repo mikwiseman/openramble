@@ -12,17 +12,10 @@ struct OnboardingView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    @State private var step: Step = .welcome
+    @State private var step: OnboardingStep = .welcome
     /// Что человек продиктовал на пробу.
     @State private var trial = ""
     @FocusState private var trialFocused: Bool
-
-    enum Step: Int, CaseIterable {
-        case welcome
-        case permissions
-        case model
-        case tryIt
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,16 +25,30 @@ struct OnboardingView: View {
 
             Divider()
 
-            HStack {
-                if step != .welcome {
-                    Button("Назад") { back() }
+            VStack(spacing: 6) {
+                HStack {
+                    if step.hasPrevious {
+                        Button("Назад") { back() }
+                            .accessibilityHint("Вернуться к шагу \(step.rawValue)")
+                    }
+                    Spacer()
+                    Text(step.progressText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel(step.progressAccessibilityLabel)
+                    Spacer()
+                    nextButton
                 }
-                Spacer()
-                Text("\(step.rawValue + 1) из \(Step.allCases.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                nextButton
+
+                // Почему кнопка погашена. Без этой строки человек видит мёртвую
+                // «Дальше» и не знает, чего от него ждут, — а для незрячего
+                // установка на этом просто заканчивается.
+                if let reason = blockReason {
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
             .padding()
         }
@@ -64,6 +71,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Диктовка, которая никуда не отправляет вашу речь")
                 .font(.title2.bold())
+                .accessibilityAddTraits(.isHeader)
 
             Text("Нажали клавишу, сказали, отпустили — текст появился там, где стоял курсор. В любом приложении.")
                 .foregroundStyle(.secondary)
@@ -97,21 +105,26 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Два разрешения")
                 .font(.title2.bold())
+                .accessibilityAddTraits(.isHeader)
 
             Text("Оба выдаются в системных настройках. Мы подскажем, где именно.")
                 .foregroundStyle(.secondary)
 
             VStack(spacing: 12) {
                 OnboardingPermission(
-                    title: "Микрофон",
-                    detail: "Чтобы услышать вашу речь.",
-                    granted: state.microphoneGranted,
+                    status: PermissionStatus(
+                        title: "Микрофон",
+                        detail: "Чтобы услышать вашу речь.",
+                        granted: state.microphoneGranted
+                    ),
                     action: state.requestMicrophone
                 )
                 OnboardingPermission(
-                    title: "Универсальный доступ",
-                    detail: "Чтобы услышать горячую клавишу и вставить готовый текст.",
-                    granted: state.accessibilityGranted,
+                    status: PermissionStatus(
+                        title: "Универсальный доступ",
+                        detail: "Чтобы услышать горячую клавишу и вставить готовый текст.",
+                        granted: state.accessibilityGranted
+                    ),
                     action: state.requestAccessibility
                 )
             }
@@ -128,48 +141,17 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Модель распознавания")
                 .font(.title2.bold())
+                .accessibilityAddTraits(.isHeader)
 
-            switch state.modelState {
-            case .notInstalled:
-                Text("Около 483 МБ. Скачивается один раз, дальше интернет не нужен.")
-                    .foregroundStyle(.secondary)
-                Button("Скачать модель") { state.installModel() }
-                    .buttonStyle(.borderedProminent)
-
-            case let .downloading(received, total):
-                Text("Скачиваю…").foregroundStyle(.secondary)
-                ProgressView(value: Double(received), total: Double(max(total, 1)))
-                Text("\(received / 1_000_000) из \(total / 1_000_000) МБ")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("Можно продолжать — загрузка не прервётся.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-
-            case let .verifying(checked, total):
-                Text("Проверяю целостность…").foregroundStyle(.secondary)
-                ProgressView(value: Double(checked), total: Double(max(total, 1)))
-
-            case .ready:
-                Label("Модель готова", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                if state.isPreparingEngine {
-                    Text("Готовлю к первому запуску — это занимает несколько секунд и только один раз.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-            case let .failed(error):
-                Label("Не получилось", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                Text(String(describing: error))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Button("Попробовать снова") { state.installModel() }
-
-            case .deleting:
-                Text("Удаление…")
-            }
+            ModelStatusView(
+                status: ModelStatus.make(
+                    state: state.modelState,
+                    isPreparingEngine: state.isPreparingEngine,
+                    place: .onboarding
+                ),
+                install: state.installModel,
+                delete: state.deleteModel
+            )
 
             Spacer()
         }
@@ -179,6 +161,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Попробуйте")
                 .font(.title2.bold())
+                .accessibilityAddTraits(.isHeader)
 
             Picker("Горячая клавиша", selection: $state.hotkey) {
                 ForEach(DictationHotkey.allCases, id: \.self) { key in
@@ -186,6 +169,7 @@ struct OnboardingView: View {
                 }
             }
             .pickerStyle(.menu)
+            .accessibilityHint("Клавиша, которую надо удерживать во время диктовки")
 
             if let warning = state.hotkeyWarning {
                 Label {
@@ -196,6 +180,8 @@ struct OnboardingView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Предупреждение о клавише. \(warning)")
             }
 
             Text("Удерживайте \(state.hotkey.title), скажите что-нибудь и отпустите. Текст появится в поле ниже.")
@@ -211,10 +197,12 @@ struct OnboardingView: View {
                 .focused($trialFocused)
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
                 .onAppear { trialFocused = true }
+                .accessibilityLabel("Поле для пробной диктовки")
 
             if state.dictationState == .listening {
                 Label("Слушаю…", systemImage: "waveform")
                     .foregroundStyle(.red)
+                    .accessibilityLabel("Идёт запись")
             }
 
             Spacer()
@@ -224,8 +212,8 @@ struct OnboardingView: View {
     // MARK: - Навигация
 
     private var nextButton: some View {
-        Button(step == .tryIt ? "Готово" : "Дальше") {
-            if step == .tryIt {
+        Button(step.nextButtonTitle) {
+            if step.isLast {
                 onFinish()
                 // Окно закрывается здесь же. Иначе на экране оставалась бы
                 // пустая рамка: содержимое исчезает вместе с флагом настройки,
@@ -237,22 +225,21 @@ struct OnboardingView: View {
             }
         }
         .buttonStyle(.borderedProminent)
-        .disabled(!canAdvance)
+        .disabled(blockReason != nil)
+        .accessibilityHint(blockReason ?? "")
     }
 
-    private var canAdvance: Bool {
-        switch step {
-        case .welcome: return true
-        // Дальше пускаем только когда разрешения выданы: без них следующий шаг
-        // ничего не покажет, а человек решит, что приложение сломано.
-        case .permissions: return state.microphoneGranted && state.accessibilityGranted
-        case .model: return state.modelState.isReady
-        case .tryIt: return true
-        }
+    private var blockReason: String? {
+        OnboardingGate.blockReason(
+            step: step,
+            microphoneGranted: state.microphoneGranted,
+            accessibilityGranted: state.accessibilityGranted,
+            modelState: state.modelState
+        )
     }
 
     private func forward() {
-        guard let next = Step(rawValue: step.rawValue + 1) else { return }
+        guard let next = step.next else { return }
         withAnimation { step = next }
         // Загрузку запускаем сразу при переходе к шагу модели, чтобы она шла,
         // пока человек читает.
@@ -262,34 +249,39 @@ struct OnboardingView: View {
     }
 
     private func back() {
-        guard let previous = Step(rawValue: step.rawValue - 1) else { return }
+        guard let previous = step.previous else { return }
         withAnimation { step = previous }
     }
 }
 
 private struct OnboardingPermission: View {
-    let title: String
-    let detail: String
-    let granted: Bool
+    let status: PermissionStatus
     let action: () -> Void
 
     var body: some View {
         HStack {
-            Image(systemName: granted ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(granted ? .green : .secondary)
+            Image(systemName: status.granted ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(status.granted ? .green : .secondary)
                 .font(.title3)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                Text(detail)
+                Text(status.title)
+                Text(status.detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            // Название, пояснение и галочка — про одно и то же. По отдельности
+            // VoiceOver читает их тремя элементами, и «выдано» повисает без
+            // хозяина.
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(status.accessibilityLabel)
+            .accessibilityValue(status.accessibilityValue)
 
             Spacer()
 
-            if !granted {
-                Button("Выдать", action: action)
+            if let title = status.actionTitle {
+                Button(title, action: action)
+                    .accessibilityLabel(status.actionAccessibilityLabel ?? title)
             }
         }
         .padding(12)

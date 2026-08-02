@@ -35,6 +35,8 @@ private struct GeneralSettings: View {
                         Text(key.title).tag(key)
                     }
                 }
+                .accessibilityHint("Клавиша, которую надо удерживать во время диктовки")
+
                 Text("Удерживайте клавишу и говорите. Двойное нажатие включает режим без удержания — тогда запись останавливается следующим нажатием.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -52,15 +54,19 @@ private struct GeneralSettings: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Предупреждение о клавише. \(warning)")
                 }
             }
 
             Section {
                 Toggle("Звук начала и конца записи", isOn: $state.soundsEnabled)
+                    .accessibilityHint("Короткий сигнал, когда запись началась и когда закончилась")
             }
 
             Section("Обновления") {
                 Toggle("Проверять обновления автоматически", isOn: $updater.automaticChecksEnabled)
+                    .accessibilityHint("Единственный выключатель, который меняет сетевое поведение приложения")
                 Text("По умолчанию выключено. Если включить, приложение раз в сутки будет скачивать с GitHub маленький файл со списком версий. Это единственный выход в сеть, кроме загрузки модели: туда уходит ваш IP-адрес и номер версии, больше ничего — ни данных о компьютере, ни того, что вы диктовали.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -81,50 +87,65 @@ private struct GeneralSettings: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Обновления не работают. \(failure)")
                 }
             }
 
             Section("Разрешения") {
                 PermissionRow(
-                    title: "Универсальный доступ",
-                    explanation: "Нужен, чтобы услышать горячую клавишу и вставить текст.",
-                    granted: state.accessibilityGranted,
+                    status: PermissionStatus(
+                        title: "Универсальный доступ",
+                        detail: "Нужен, чтобы услышать горячую клавишу и вставить текст.",
+                        granted: state.accessibilityGranted
+                    ),
                     action: state.requestAccessibility
                 )
                 PermissionRow(
-                    title: "Микрофон",
-                    explanation: "Нужен, чтобы записать вашу речь.",
-                    granted: state.microphoneGranted,
+                    status: PermissionStatus(
+                        title: "Микрофон",
+                        detail: "Нужен, чтобы записать вашу речь.",
+                        granted: state.microphoneGranted
+                    ),
                     action: state.requestMicrophone
                 )
             }
         }
         .formStyle(.grouped)
+        // Разрешения выдаются в системных настройках, и вернувшийся сюда
+        // человек должен увидеть свежее состояние, а не то, что было до ухода.
+        .task { state.refreshPermissions() }
     }
 }
 
 private struct PermissionRow: View {
-    let title: String
-    let explanation: String
-    let granted: Bool
+    let status: PermissionStatus
     let action: () -> Void
 
     var body: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                Text(explanation)
+                Text(status.title)
+                Text(status.detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(status.accessibilityLabel)
+            .accessibilityValue(status.accessibilityValue)
+
             Spacer()
-            if granted {
+            if let title = status.actionTitle {
+                Button(title, action: action)
+                    .accessibilityLabel(status.actionAccessibilityLabel ?? title)
+            } else {
                 Label("Выдан", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                     .labelStyle(.iconOnly)
                     .font(.title3)
-            } else {
-                Button("Выдать", action: action)
+                    // Галочка уже прочитана как значение строки: второй раз
+                    // «выдан» без хозяина только мешает.
+                    .accessibilityHidden(true)
             }
         }
     }
@@ -138,59 +159,15 @@ private struct ModelSettings: View {
     var body: some View {
         Form {
             Section {
-                switch state.modelState {
-                case .notInstalled:
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Модель не установлена")
-                        Text("Загрузка занимает около 483 МБ. После неё распознавание работает без интернета.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Button("Скачать модель", action: state.installModel)
-                    }
-
-                case let .downloading(received, total):
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Загрузка модели")
-                        ProgressView(value: Double(received), total: Double(max(total, 1)))
-                        Text("\(received / 1_000_000) из \(total / 1_000_000) МБ")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                case let .verifying(checked, total):
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Проверка целостности")
-                        ProgressView(value: Double(checked), total: Double(max(total, 1)))
-                        Text("Файл \(checked) из \(total)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                case .ready:
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Модель готова", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        if state.isPreparingEngine {
-                            Text("Готовлю к первому запуску…")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Button("Удалить модель", role: .destructive, action: state.deleteModel)
-                    }
-
-                case let .failed(error):
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Не удалось установить", systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                        Text(String(describing: error))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Button("Попробовать снова", action: state.installModel)
-                    }
-
-                case .deleting:
-                    Text("Удаление…")
-                }
+                ModelStatusView(
+                    status: ModelStatus.make(
+                        state: state.modelState,
+                        isPreparingEngine: state.isPreparingEngine,
+                        place: .settings
+                    ),
+                    install: state.installModel,
+                    delete: state.deleteModel
+                )
             }
 
             Section {
@@ -231,6 +208,8 @@ private struct DictionarySettings: View {
                     }
                     .padding(10)
                     .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Словарь не изменяется. \(problem.message)")
                 }
 
                 if state.isDictionaryEditable, state.availableStarterCount > 0 {
@@ -242,6 +221,8 @@ private struct DictionarySettings: View {
                         Button("Добавить \(state.availableStarterCount)") {
                             state.addStarterDictionary()
                         }
+                        // Без имени это просто «добавить сорок два».
+                        .accessibilityLabel("Добавить \(state.availableStarterCount) готовых замен для английских терминов")
                     }
                     .padding(10)
                     .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
@@ -259,22 +240,39 @@ private struct DictionarySettings: View {
                             .foregroundStyle(.tertiary)
                         Text(replacement.written)
                     }
+                    // Строка читается целиком: «сентри», стрелка и «Sentry»
+                    // по отдельности не значат ничего.
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Слышится как «\(replacement.spoken)», писать как «\(replacement.written)»")
                 }
                 .onDelete(perform: state.removeReplacements)
             }
             .disabled(!state.isDictionaryEditable)
+            .accessibilityLabel("Список замен")
 
             HStack {
+                // Подпись у полей только в виде подсказки внутри рамки: пустое
+                // поле VoiceOver прочитает, а заполненное — уже нет, и человек
+                // потеряет, в каком из двух полей он стоит.
                 TextField("Слышится как", text: $spoken)
+                    .accessibilityLabel("Слышится как")
                 Image(systemName: "arrow.right")
                     .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
                 TextField("Писать как", text: $written)
+                    .accessibilityLabel("Писать как")
                 Button("Добавить") {
                     state.addReplacement(spoken: spoken, written: written)
                     spoken = ""
                     written = ""
                 }
                 .disabled(spoken.isEmpty || written.isEmpty || !state.isDictionaryEditable)
+                .accessibilityLabel("Добавить замену")
+                .accessibilityHint(
+                    state.isDictionaryEditable
+                        ? "Заполните оба поля"
+                        : "Словарь не изменяется, пока прежние данные не прочитались"
+                )
             }
             .padding()
         }
@@ -288,6 +286,7 @@ private struct AboutView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Wai Dictation")
                 .font(.title2.bold())
+                .accessibilityAddTraits(.isHeader)
             Text("Диктовка, которая работает целиком на вашем Mac.")
                 .foregroundStyle(.secondary)
 
@@ -296,6 +295,7 @@ private struct AboutView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Что уходит в сеть")
                     .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
                 Text("Загрузка модели по вашей команде и проверка обновлений, если вы её включили. Больше ничего: речь, текст и нажатия клавиш никуда не отправляются и нигде не сохраняются, кроме вашего компьютера.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -306,6 +306,7 @@ private struct AboutView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Модель распознавания")
                     .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
                 Text("Parakeet TDT 0.6B v3 © NVIDIA, лицензия CC BY 4.0. Конвертирована в Core ML и квантизована шестибитной палитрой проектом FluidInference.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

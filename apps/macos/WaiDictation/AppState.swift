@@ -1,3 +1,4 @@
+import AVFoundation
 import AppKit
 import DictationAudio
 import DictationCore
@@ -19,8 +20,14 @@ public struct AppEnvironment {
     public var inserter: any TextInserting
     public var overlay: any OverlayPresenting
     public var makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing
-    /// Как часто опрашивать разрешения. Ноль — не опрашивать.
+    /// Как часто опрашивать разрешения в самом занятом режиме. Ноль — не опрашивать.
     public var permissionPollInterval: TimeInterval
+    /// Чем скачивать модель. Единственная сеть, которая есть у приложения.
+    public var modelDownloader: any ModelDownloading
+    /// Уведомления рабочего стола: сон и пробуждение.
+    public var workspaceNotifications: NotificationCenter
+    /// Общий центр уведомлений: оттуда приходит смена аудиоустройства.
+    public var notifications: NotificationCenter
 
     public init(
         defaults: UserDefaults,
@@ -30,7 +37,10 @@ public struct AppEnvironment {
         inserter: any TextInserting,
         overlay: any OverlayPresenting,
         makeCapture: @escaping (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing,
-        permissionPollInterval: TimeInterval
+        permissionPollInterval: TimeInterval,
+        modelDownloader: any ModelDownloading,
+        workspaceNotifications: NotificationCenter,
+        notifications: NotificationCenter
     ) {
         self.defaults = defaults
         self.paths = paths
@@ -40,6 +50,9 @@ public struct AppEnvironment {
         self.overlay = overlay
         self.makeCapture = makeCapture
         self.permissionPollInterval = permissionPollInterval
+        self.modelDownloader = modelDownloader
+        self.workspaceNotifications = workspaceNotifications
+        self.notifications = notifications
     }
 
     /// Настоящие края — то, из чего собирается работающее приложение.
@@ -52,7 +65,10 @@ public struct AppEnvironment {
             inserter: TextInserter(),
             overlay: DictationOverlay(),
             makeCapture: { MicrophoneCapture(directory: $0, onFailure: $1) },
-            permissionPollInterval: 1
+            permissionPollInterval: 1,
+            modelDownloader: URLSessionModelDownloader(),
+            workspaceNotifications: NSWorkspace.shared.notificationCenter,
+            notifications: .default
         )
     }
 }
@@ -113,6 +129,9 @@ public final class AppState: ObservableObject {
     private let overlay: any OverlayPresenting
     private let makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing
     private let permissionPollInterval: TimeInterval
+    private let modelDownloader: any ModelDownloading
+    private let workspaceNotifications: NotificationCenter
+    private let notifications: NotificationCenter
     private let replacementsStore: ReplacementsStore
 
     /// Обновления. Отдельный объект со своими подписчиками: галочка
@@ -122,12 +141,32 @@ public final class AppState: ObservableObject {
     private var store: ModelStore?
     private var transcriber: LocalTranscriber?
     private var controller: DictationController?
-    private var permissionTimer: Timer?
-    private var durationTimer: Timer?
+    /// Идёт ли установка модели прямо сейчас.
+    private var isInstalling = false
+    /// Сообщение, которое ждёт конца сессии.
+    private var noticeAfterSession: DictationNotice?
+
+    // Таймеры и подписки помечены `nonisolated(unsafe)`, потому что их снимает
+    // `deinit`, а он у изолированного класса — вне изоляции. Трогают их только
+    // с главного потока: приложение целиком живёт на нём.
+    nonisolated(unsafe) private var permissionTimer: Timer?
+    nonisolated(unsafe) private var durationTimer: Timer?
+    nonisolated(unsafe) private var systemObservers: [(center: NotificationCenter, token: any NSObjectProtocol)] = []
 
     public var isDictationReady: Bool {
         accessibilityGranted && microphoneGranted && modelState.isReady
     }
+
+    /// Как часто сейчас опрашиваются разрешения. Ноль — опрос не идёт.
+    ///
+    /// Наружу видно намеренно: обещание «в покое приложение ничего не делает»
+    /// проверяется именно этим числом.
+    public private(set) var permissionPollingInterval: TimeInterval = 0
+
+    public var isPollingPermissions: Bool { permissionTimer != nil }
+
+    /// Идёт ли проверка предела длительности. В покое её быть не должно.
+    public var isCountingDuration: Bool { durationTimer != nil }
 
     /// Предупреждение о выбранной клавише, если оно есть.
     public var hotkeyWarning: String? {
@@ -150,6 +189,9 @@ public final class AppState: ObservableObject {
         overlay = environment.overlay
         makeCapture = environment.makeCapture
         permissionPollInterval = environment.permissionPollInterval
+        modelDownloader = environment.modelDownloader
+        workspaceNotifications = environment.workspaceNotifications
+        notifications = environment.notifications
         replacementsStore = ReplacementsStore(
             defaults: environment.defaults,
             key: Keys.replacements
@@ -168,6 +210,17 @@ public final class AppState: ObservableObject {
         // Сообщаем уже после сборки: до неё показывать сообщение было бы некуда.
         if let problem = loaded.problem {
             notify(DictationNotice(kind: .warning, message: problem.message))
+        }
+    }
+
+    deinit {
+        // Таймер, оставленный в цикле выполнения, продолжает будить процесс и
+        // после смерти владельца: слабая ссылка внутри спасает от падения, но
+        // не от пробуждений.
+        permissionTimer?.invalidate()
+        durationTimer?.invalidate()
+        for observer in systemObservers {
+            observer.center.removeObserver(observer.token)
         }
     }
 
@@ -190,7 +243,7 @@ public final class AppState: ObservableObject {
 
             let manifest = try ModelManifest.bundled()
             let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
-            let store = ModelStore(manifest: manifest, layout: layout)
+            let store = ModelStore(manifest: manifest, layout: layout, downloader: modelDownloader)
             let transcriber = LocalTranscriber()
             self.store = store
             self.transcriber = transcriber
@@ -213,9 +266,13 @@ public final class AppState: ObservableObject {
             controller.onStateChange = { [weak self] state in
                 self?.dictationState = state
                 self?.updateDurationTimer(for: state)
+                self?.flushNoticeAfterSession(state)
             }
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
+                // Ядро само объяснилось. Своё объяснение поверх его слов было бы
+                // хуже молчания: у сессии одна причина конца, а не две.
+                self?.noticeAfterSession = nil
             }
             controller.onHandsFreeChange = { [weak self] active in
                 // Монитору нужно знать режим: в нём одиночное нажатие означает
@@ -234,20 +291,108 @@ public final class AppState: ObservableObject {
         }
 
         wireHotkey()
+        observeSystemEvents()
         refreshPermissions()
         // Записи, уцелевшие после падения приложения: обычно каталог пуст, но
         // без уборки такой файл пролежал бы там навсегда.
         paths.sweepAbandonedTakes()
         Task { await refreshModelState() }
+    }
 
-        // Разрешения выдаются в системных настройках, без уведомления приложению,
-        // поэтому состояние приходится опрашивать.
-        guard permissionPollInterval > 0 else { return }
-        permissionTimer = Timer.scheduledTimer(
-            withTimeInterval: permissionPollInterval,
-            repeats: true
-        ) { [weak self] _ in
-            Task { @MainActor in self?.refreshPermissions() }
+    /// Подписаться на то, что происходит с компьютером помимо нас.
+    ///
+    /// Обе подписки существуют ради одного и того же: диктовка не должна
+    /// оставаться включённой, когда слушать уже нечем.
+    private func observeSystemEvents() {
+        observe(workspaceNotifications, NSWorkspace.willSleepNotification) { $0.handleSleep() }
+        observe(workspaceNotifications, NSWorkspace.didWakeNotification) { $0.handleWake() }
+        observe(notifications, .AVAudioEngineConfigurationChange) { $0.handleAudioConfigurationChange() }
+    }
+
+    private func observe(
+        _ center: NotificationCenter,
+        _ name: Notification.Name,
+        handler: @escaping @MainActor (AppState) -> Void
+    ) {
+        let token = center.addObserver(forName: name, object: nil, queue: nil) { [weak self] _ in
+            // Смена аудиоустройства приходит с потока звукового движка, сон —
+            // с главного. Общий переход на главный поток дешевле, чем разбор,
+            // откуда именно нас позвали.
+            Task { @MainActor in
+                guard let self else { return }
+                handler(self)
+            }
+        }
+        systemObservers.append((center, token))
+    }
+
+    /// Компьютер уходит в сон.
+    ///
+    /// Отпускание клавиши, случившееся во сне, до нас не дойдёт: система не
+    /// присылает событий спящей машины. Без остановки сессия осталась бы в
+    /// «слушаю» навсегда — с включённым микрофоном и горящим индикатором
+    /// записи, и выйти из этого можно было бы только через Escape.
+    private func handleSleep() {
+        switch dictationState {
+        case .listening:
+            // Сказанное до сна уже записано. Распознаём его, а не выбрасываем.
+            noticeAfterSession = DictationNotice(
+                kind: .info,
+                message: "Компьютер уходил в сон — запись пришлось остановить."
+            )
+            stopCurrentRecording()
+        case .preparing:
+            // Записать ещё ничего не успели — терять нечего.
+            controller?.cancel()
+        case .idle, .transcribing, .inserting:
+            break
+        }
+    }
+
+    /// Компьютер проснулся.
+    ///
+    /// Клавишу за время сна успели отпустить, а события об этом не было:
+    /// монитор до сих пор считает её зажатой и следующее нажатие проглотит.
+    /// Перезапуск слежения — единственное, что стирает память о начатом жесте.
+    private func handleWake() {
+        hotkeyMonitor.stop()
+        refreshPermissions()
+    }
+
+    /// Аудиоустройство сменилось посреди записи.
+    ///
+    /// Наушники вынули, монитор с микрофоном отключили — движок остаётся
+    /// запущенным, но кадры в него больше не приходят. Человек говорит в
+    /// тишину и узнаёт об этом только по пустому результату.
+    private func handleAudioConfigurationChange() {
+        guard dictationState == .listening else { return }
+        noticeAfterSession = DictationNotice(
+            kind: .warning,
+            message: "Микрофон сменился — запись остановлена на этом месте."
+        )
+        stopCurrentRecording()
+    }
+
+    /// Сказать то, что ждало конца сессии.
+    ///
+    /// Сразу сказать нельзя: следом за остановкой ядро перерисовывает панель
+    /// под «распознаю», и объяснение живёт на экране доли секунды. А сказать
+    /// надо — иначе непонятно, почему запись оборвалась на полуслове.
+    private func flushNoticeAfterSession(_ state: DictationState) {
+        guard state == .idle, let pending = noticeAfterSession else { return }
+        noticeAfterSession = nil
+        notify(pending)
+    }
+
+    /// Закончить идущую запись так, как её закончил бы человек.
+    ///
+    /// В режиме без удержания отпускание клавиши ничего не значит, и обычная
+    /// остановка была бы проигнорирована — запись продолжалась бы в никуда.
+    private func stopCurrentRecording() {
+        if isHandsFreeActive {
+            controller?.stopHandsFree()
+        } else {
+            controller?.stop()
         }
     }
 
@@ -309,8 +454,8 @@ public final class AppState: ObservableObject {
         let accessibility = permissions.accessibilityGranted
         let microphone = permissions.microphoneGranted
 
-        // Проверяем на изменение: интерфейс подписан на эти поля, а опрос идёт
-        // раз в секунду.
+        // Проверяем на изменение: интерфейс подписан на эти поля, а сюда
+        // приходят и по таймеру, и с каждым открытием настроек.
         if accessibility != accessibilityGranted { accessibilityGranted = accessibility }
         if microphone != microphoneGranted { microphoneGranted = microphone }
 
@@ -321,6 +466,35 @@ public final class AppState: ObservableObject {
             hotkeyMonitor.start()
         } else {
             hotkeyMonitor.stop()
+        }
+
+        reschedulePermissionPolling()
+    }
+
+    /// Подобрать частоту опроса под текущее положение дел.
+    ///
+    /// Пока чего-то не хватает, человек стоит в системных настройках и ждёт
+    /// отклика — спрашиваем часто. Когда всё выдано, ждать больше нечего:
+    /// приложение неделями сидит в строке меню, и будить процесс каждую секунду
+    /// ради ответа, который не изменится, незачем.
+    private func reschedulePermissionPolling() {
+        let interval = PermissionPollPolicy.interval(
+            accessibilityGranted: accessibilityGranted,
+            microphoneGranted: microphoneGranted,
+            base: permissionPollInterval
+        )
+        guard interval != permissionPollingInterval else { return }
+
+        permissionPollingInterval = interval
+        permissionTimer?.invalidate()
+        permissionTimer = nil
+        guard interval > 0 else { return }
+
+        permissionTimer = Timer.scheduledTimer(
+            withTimeInterval: interval,
+            repeats: true
+        ) { [weak self] _ in
+            Task { @MainActor in self?.refreshPermissions() }
         }
     }
 
@@ -340,11 +514,20 @@ public final class AppState: ObservableObject {
 
     public func refreshModelState() async {
         guard let store else { return }
+        // Пока идёт установка, осмотр диска сбрасывал бы состояние в «модель не
+        // установлена»: метки готовности ещё нет. Прогресс с экрана пропадал бы
+        // ровно тогда, когда человек открыл настройки на него посмотреть.
+        guard !isInstalling else { return }
         modelState = await store.refreshState()
     }
 
     public func installModel() {
-        guard let store else { return }
+        // Повторное нажатие во время загрузки ничего не начинает: кнопка на
+        // экране живёт до первого пришедшего состояния, и успеть нажать её
+        // дважды проще, чем кажется.
+        guard let store, !isInstalling else { return }
+        isInstalling = true
+
         Task {
             let states = await store.states()
             let monitor = Task { @MainActor in
@@ -352,6 +535,7 @@ public final class AppState: ObservableObject {
             }
             await store.install()
             monitor.cancel()
+            isInstalling = false
             await refreshModelState()
 
             // Первая загрузка компилирует модель под нейромодуль и занимает

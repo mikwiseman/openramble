@@ -63,6 +63,27 @@ final class GlobalHotkeyMonitorTests: XCTestCase {
         XCTAssertEqual(releases, 1)
     }
 
+    /// Клавишу отпустили, пока Mac спал.
+    ///
+    /// Событий спящей машины система не присылает: монитор так и остаётся с
+    /// памятью о зажатой клавише, и первое нажатие после пробуждения не
+    /// считается нажатием вовсе. Стереть эту память может только полная
+    /// остановка слежения — на неё и опирается обработка пробуждения.
+    func testОстановкаСтираетПамятьОЗажатойКлавише() {
+        var presses = 0
+        monitor.onPress = { presses += 1 }
+        monitor.start()
+        source.sendFlags(pressedRightCommand)
+        XCTAssertEqual(presses, 1)
+
+        // Уснули с зажатой клавишей, проснулись с отпущенной.
+        monitor.stop()
+        monitor.start()
+        source.sendFlags(pressedRightCommand)
+
+        XCTAssertEqual(presses, 2, "первое нажатие после пробуждения потерялось")
+    }
+
     /// Система отдала один монитор и отказала во втором.
     ///
     /// Оставленная без пары подписка никем не снимается, а `start()` зовётся раз

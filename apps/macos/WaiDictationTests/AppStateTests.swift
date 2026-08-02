@@ -5,66 +5,26 @@ import XCTest
 /// Проводка приложения: что происходит на краях, где всё обычно и ломается.
 @MainActor
 final class AppStateTests: XCTestCase {
-    private var root: URL!
-    private var suiteName: String!
-    private var defaults: UserDefaults!
-    private var permissions: FakePermissions!
-    private var monitor: FakeHotkeyMonitor!
-    private var overlay: FakeOverlay!
-    private var capture: FakeCapture!
-    private var inserter: FakeInserter!
+    private var harness: AppHarness!
+
+    private var root: URL { harness.root }
+    private var defaults: UserDefaults { harness.defaults }
+    private var permissions: FakePermissions { harness.permissions }
+    private var monitor: FakeHotkeyMonitor { harness.monitor }
+    private var overlay: FakeOverlay { harness.overlay }
+    private var capture: FakeCapture { harness.capture }
 
     override func setUpWithError() throws {
-        root = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appending(path: "wai-dictation-appstate-\(UUID().uuidString)", directoryHint: .isDirectory)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-
-        suiteName = "is.waiwai.dictation.tests.\(UUID().uuidString)"
-        defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        permissions = FakePermissions()
-        monitor = FakeHotkeyMonitor()
-        overlay = FakeOverlay()
-        capture = FakeCapture()
-        inserter = FakeInserter()
+        harness = try AppHarness()
     }
 
     override func tearDownWithError() throws {
-        defaults.removePersistentDomain(forName: suiteName)
-        try? FileManager.default.removeItem(at: root)
+        harness.tearDown()
     }
 
-    private func makeState() -> AppState {
-        AppState(
-            environment: AppEnvironment(
-                defaults: defaults,
-                paths: AppPaths(root: root),
-                permissions: permissions,
-                hotkeyMonitor: monitor,
-                inserter: inserter,
-                overlay: overlay,
-                makeCapture: { [capture] _, _ in capture! },
-                // Опрос по расписанию в тесте только мешает: разрешения здесь
-                // меняются не системой, а нами.
-                permissionPollInterval: 0
-            )
-        )
-    }
+    private func makeState() -> AppState { harness.makeState() }
 
-    /// Разложить на диске метку готовой модели.
-    ///
-    /// Настоящая установка — это 483 МБ по сети. Готовность же определяется
-    /// одним файлом, и его достаточно, чтобы пройти путь «модель на месте».
-    private func installModelMarker() throws {
-        let paths = AppPaths(root: root)
-        let manifest = try ModelManifest.bundled()
-        let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
-        try FileManager.default.createDirectory(
-            at: layout.installedDirectory,
-            withIntermediateDirectories: true
-        )
-        let marker = ModelReadyMarker(manifest: manifest, verifiedAt: Date())
-        try JSONEncoder().encode(marker).write(to: layout.readyMarker)
-    }
+    private func installModelMarker() throws { try harness.installModelMarker() }
 
     // MARK: - Разрешения
 

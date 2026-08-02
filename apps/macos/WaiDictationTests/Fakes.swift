@@ -2,6 +2,7 @@ import AppKit
 import DictationAudio
 import DictationCore
 import Foundation
+import LocalASR
 
 // Подставные края системы.
 //
@@ -189,19 +190,37 @@ actor FakeCapture: AudioCapturing {
     private(set) var startCount = 0
     private(set) var stopCount = 0
     private(set) var abortCount = 0
+    /// Слышит ли микрофон прямо сейчас.
+    ///
+    /// На этом держится обещание «индикатор записи гаснет, когда мы не слушаем»:
+    /// проверять его надо не по состоянию на экране, а по тому, закрыт ли захват.
+    private(set) var isRecording = false
+    /// Что вернуть как длительность записи.
+    ///
+    /// Короче предела — и сессия закончится без распознавания. Так проверяется
+    /// полный круг диктовки, не трогая настоящую модель.
+    private var duration: TimeInterval = 2.0
+
     private let file = URL(fileURLWithPath: "/tmp/wai-dictation-test-take.wav")
+
+    func setDuration(_ value: TimeInterval) { duration = value }
 
     func startRecording() async throws -> URL {
         startCount += 1
+        isRecording = true
         return file
     }
 
     func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
         stopCount += 1
-        return (file, 2.0)
+        isRecording = false
+        return (file, duration)
     }
 
-    func abortRecording() async { abortCount += 1 }
+    func abortRecording() async {
+        abortCount += 1
+        isRecording = false
+    }
 }
 
 actor FakeInserter: TextInserting {
@@ -242,6 +261,184 @@ final class FakePermissions: PermissionReading {
     init(accessibility: Bool = true, microphone: Bool = true) {
         accessibilityGranted = accessibility
         microphoneGranted = microphone
+    }
+}
+
+// MARK: - Приложение целиком
+
+/// Подставное окружение приложения.
+///
+/// Собрано в одном месте, чтобы разные наборы проверок не разъезжались в том,
+/// каким приложение видит компьютер. Центры уведомлений здесь свои, не
+/// системные: проверка не должна ни слышать настоящий сон машины, ни будить
+/// чужих подписчиков.
+@MainActor
+final class AppHarness {
+    let root: URL
+    let suiteName: String
+    let defaults: UserDefaults
+    let permissions = FakePermissions()
+    let monitor = FakeHotkeyMonitor()
+    let overlay = FakeOverlay()
+    let capture = FakeCapture()
+    let inserter = FakeInserter()
+    let workspaceNotifications = NotificationCenter()
+    let notifications = NotificationCenter()
+    let downloader = BlockingModelDownloader()
+
+    /// Ноль — опрос разрешений выключен: в проверке они меняются нами, а не
+    /// системой.
+    var permissionPollInterval: TimeInterval = 0
+
+    init() throws {
+        root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appending(
+                path: "wai-dictation-harness-\(UUID().uuidString)",
+                directoryHint: .isDirectory
+            )
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+
+        suiteName = "is.waiwai.dictation.tests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        self.defaults = defaults
+
+        Self.sweepStaleTestDomains(except: suiteName)
+    }
+
+    /// Подмести файлы настроек, оставшиеся от прошлых прогонов.
+    ///
+    /// Уборка в конце теста забирает не всё: служба настроек выписывает
+    /// опустевший файл на диск уже после того, как тест закончился, и успеть за
+    /// ней нельзя. Поэтому подметаем в начале — к этому моменту всё прошлое уже
+    /// дописано. Без этого каждый прогон оставлял по паре десятков файлов в
+    /// личной папке разработчика, и за время работы их накопилось под тысячу.
+    private static func sweepStaleTestDomains(except current: String) {
+        guard let library = try? FileManager.default.url(
+            for: .libraryDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: false
+        ) else { return }
+
+        let preferences = library.appending(path: "Preferences", directoryHint: .isDirectory)
+        guard let entries = try? FileManager.default.contentsOfDirectory(
+            at: preferences,
+            includingPropertiesForKeys: nil
+        ) else { return }
+
+        let prefix = "is.waiwai.dictation.tests."
+        for entry in entries
+        where entry.lastPathComponent.hasPrefix(prefix)
+            && entry.lastPathComponent != "\(current).plist" {
+            try? FileManager.default.removeItem(at: entry)
+        }
+    }
+
+    func tearDown() {
+        defaults.removePersistentDomain(forName: suiteName)
+        // Домен убран из настроек, но файл остаётся: служба настроек всё равно
+        // выпишет опустевший plist на диск. Один прогон — один файл; за время
+        // работы над проектом их накопилось под тысячу. Убираем и файл тоже.
+        if let preferences = try? FileManager.default.url(
+            for: .libraryDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: false
+        ) {
+            let file = preferences
+                .appending(path: "Preferences", directoryHint: .isDirectory)
+                .appending(path: "\(suiteName).plist", directoryHint: .notDirectory)
+            try? FileManager.default.removeItem(at: file)
+        }
+        try? FileManager.default.removeItem(at: root)
+    }
+
+    func makeState() -> AppState {
+        AppState(
+            environment: AppEnvironment(
+                defaults: defaults,
+                paths: AppPaths(root: root),
+                permissions: permissions,
+                hotkeyMonitor: monitor,
+                inserter: inserter,
+                overlay: overlay,
+                makeCapture: { [capture] _, _ in capture },
+                permissionPollInterval: permissionPollInterval,
+                modelDownloader: downloader,
+                workspaceNotifications: workspaceNotifications,
+                notifications: notifications
+            )
+        )
+    }
+
+    /// Разложить на диске метку готовой модели.
+    ///
+    /// Настоящая установка — это 483 МБ по сети. Готовность же определяется
+    /// одним файлом, и его достаточно, чтобы пройти путь «модель на месте».
+    func installModelMarker() throws {
+        let paths = AppPaths(root: root)
+        let manifest = try ModelManifest.bundled()
+        let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
+        try FileManager.default.createDirectory(
+            at: layout.installedDirectory,
+            withIntermediateDirectories: true
+        )
+        let marker = ModelReadyMarker(manifest: manifest, verifiedAt: Date())
+        try JSONEncoder().encode(marker).write(to: layout.readyMarker)
+    }
+}
+
+// MARK: - Голос интерфейса
+
+/// Подставной VoiceOver.
+///
+/// Настоящие объявления уходят в систему и обратно не возвращаются: без этой
+/// подмены нельзя проверить ни одного из них, а для незрячего человека они и
+/// есть весь интерфейс диктовки.
+@MainActor
+final class FakeAnnouncer: AccessibilityAnnouncing {
+    private(set) var announcements: [(message: String, urgent: Bool)] = []
+
+    var messages: [String] { announcements.map(\.message) }
+
+    func announce(_ message: String, urgent: Bool) {
+        announcements.append((message, urgent))
+    }
+}
+
+// MARK: - Загрузка модели
+
+/// Загрузчик, который никуда не идёт и не отпускает, пока не разрешат.
+///
+/// Нужен, чтобы поймать приложение в состоянии «идёт загрузка» и посмотреть,
+/// что с ним в этот момент делают другие экраны.
+final class BlockingModelDownloader: ModelDownloading, @unchecked Sendable {
+    private let lock = NSLock()
+    private var started = false
+    private var released = false
+
+    var hasStarted: Bool { lock.withLock { started } }
+
+    func release() { lock.withLock { released = true } }
+
+    func download(
+        from url: URL,
+        expectedBytes: Int64,
+        onProgress: @escaping @Sendable (Int64) -> Void
+    ) async throws -> URL {
+        lock.withLock { started = true }
+
+        onProgress(expectedBytes / 2)
+
+        while !lock.withLock({ released }) {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        // Отпущенная загрузка заканчивается отменой: доводить установку до
+        // проверки сумм здесь не на чем — настоящих файлов модели нет.
+        throw ModelDownloadError.cancelled
     }
 }
 
