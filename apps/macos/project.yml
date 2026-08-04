@@ -53,6 +53,8 @@ targets:
         buildPhase: resources
       - path: ../../Packages/LocalASR/Sources/LocalASR/Resources/vocabulary-manifest.json
         buildPhase: resources
+      - path: WaiDictation/Resources/AppIcon.icns
+        buildPhase: resources
     dependencies:
       - package: DictationCore
         product: DictationCore
@@ -85,6 +87,7 @@ targets:
         CFBundleDisplayName: "$(PRODUCT_NAME)"
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleIconFile: AppIcon
         # Приложение живёт в строке меню и не показывается в Dock.
         LSUIElement: true
         NSMicrophoneUsageDescription: >-
