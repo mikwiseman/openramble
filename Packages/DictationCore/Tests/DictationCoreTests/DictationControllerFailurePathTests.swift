@@ -211,17 +211,28 @@ final class DictationControllerFailurePathTests: XCTestCase {
         // Отмена, нажатая в момент вставки, приходит слишком поздно: событие
         // уже ушло в чужое приложение. Важно, что сессия при этом закрывается
         // корректно, а не остаётся висеть в «вставляю».
-        await inserter.setInsertDelay(.milliseconds(120))
+        //
+        // Момент «вставка идёт» ловится опросом, а не фиксированным сном:
+        // на перегруженном CI-runner `Task.sleep(30ms)` спит и две секунды,
+        // за которые вставка успевает закончиться целиком.
+        await inserter.setInsertDelay(.milliseconds(800))
         let controller = makeController()
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()
         controller.stop()
-        try await Task.sleep(for: .milliseconds(30))
+        for _ in 0..<400 where controller.state != .inserting {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(2))
+        }
         XCTAssertEqual(controller.state, .inserting)
 
         controller.cancel()
         await settle(40)
+        for _ in 0..<400 where controller.state != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
 
         let inserted = await inserter.insertedTexts
         XCTAssertEqual(inserted, ["Привет мир"])
