@@ -207,15 +207,24 @@ final class DictationControllerTests: XCTestCase {
 
     func testCancelDuringTranscriptionNeverInserts() async throws {
         // Распознавание идёт заметное время — успеваем отменить в середине.
-        let controller = makeController(transcribeDelay: .milliseconds(120))
+        // Момент «распознавание идёт» ловится опросом: фиксированный сон на
+        // перегруженном CI-runner спит дольше всего распознавания целиком.
+        let controller = makeController(transcribeDelay: .milliseconds(800))
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()
         controller.stop()
-        try await Task.sleep(for: .milliseconds(20))
+        for _ in 0..<400 where controller.state != .transcribing {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(2))
+        }
         XCTAssertEqual(controller.state, .transcribing)
 
         controller.cancel()
-        await settle(30)
+        for _ in 0..<400 where controller.state != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(controller.state, .idle)
 
         let inserted = await inserter.insertedTexts
         XCTAssertTrue(inserted.isEmpty, "Отмена во время распознавания обязана предотвратить вставку")

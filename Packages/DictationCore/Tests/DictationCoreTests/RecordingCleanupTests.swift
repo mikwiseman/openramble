@@ -176,16 +176,29 @@ final class RecordingCleanupTests: XCTestCase {
         // Отмена приходит, когда запись уже закрыта и лежит на диске: прервать
         // тут нечего, а удалить — обязательно.
         let capture = FileCapture(directory: directory)
-        let controller = makeController(capture: capture, transcribeDelay: .milliseconds(80))
+        let controller = makeController(capture: capture, transcribeDelay: .milliseconds(800))
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()
         controller.stop()
-        try await Task.sleep(for: .milliseconds(20))
+        // Момент «распознавание идёт» ловится опросом: фиксированный сон на
+        // перегруженном CI-runner спит дольше всего распознавания целиком.
+        for _ in 0..<400 where controller.state != .transcribing {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(2))
+        }
         XCTAssertEqual(controller.state, .transcribing)
 
         controller.cancel()
-        await settle(30)
+        for _ in 0..<400 {
+            let entries = try FileManager.default.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: nil
+            )
+            if entries.isEmpty, controller.state == .idle { break }
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
 
         let leftovers = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
         XCTAssertTrue(leftovers.isEmpty, "Отмена во время распознавания не оставляет голос на диске: \(leftovers)")
