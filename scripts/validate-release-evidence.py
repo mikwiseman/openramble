@@ -35,8 +35,14 @@ actual_dmg_sha = digest.hexdigest()
 if str(report.get("dmgSHA256", "")).lower() != actual_dmg_sha:
     fail("manual evidence DMG SHA-256 does not match the release artifact")
 
-if report.get("positioning") != "Russian-UI safe beta":
-    fail("release positioning must remain Russian-UI safe beta")
+# Поле обязано быть заполнено осмысленно, но с точным текстом не сверяется.
+# Прежде здесь была прибита строка «Russian-UI safe beta» — интерфейс стал
+# английским, и валидатор начал требовать неправду. Валидатор, падающий на
+# правде, учит подгонять evidence под проверку, а это ровно обратное тому,
+# зачем evidence существует.
+positioning = str(report.get("positioning", "")).strip()
+if len(positioning) < 8:
+    fail("release positioning must be stated in the evidence file")
 
 for field in ("m1MacOS14", "currentAppleSiliconMacOS26", "sparkleFromPreviousInstalledBuild"):
     item = report.get(field, {})
