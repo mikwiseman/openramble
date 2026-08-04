@@ -124,8 +124,11 @@ else
 fi
 
 ARCHIVE_LOG=$(mktemp)
-CC_LICENSE=""
-trap 'rm -f "$ARCHIVE_LOG" ${CC_LICENSE:+"$CC_LICENSE"}' EXIT
+# В ловушке — только временные файлы. Здесь однажды побывала переменная,
+# которую ниже переиспользовали под путь В РЕПОЗИТОРИИ, — и каждая репетиция
+# сборки молча удаляла licenses/CC-BY-4.0.txt, после чего release.sh падал
+# на «грязном дереве» без намёка на причину.
+trap 'rm -f "$ARCHIVE_LOG"' EXIT
 set +e
 xcodebuild archive \
   -project "$PROJECT" \
@@ -191,13 +194,13 @@ cp "$SPARKLE_LICENSES/LICENSE" "$RESOURCES/Sparkle-LICENSE.txt"
 
 # Текст CC BY 4.0 завендорен в репозиторий: сборка не должна требовать сети.
 # Checksum остаётся — файл юридический, молчаливая подмена недопустима.
-CC_LICENSE="licenses/CC-BY-4.0.txt"
-CC_SHA=$(shasum -a 256 "$CC_LICENSE" | awk '{print $1}')
+CC_SOURCE="licenses/CC-BY-4.0.txt"
+CC_SHA=$(shasum -a 256 "$CC_SOURCE" | awk '{print $1}')
 if [[ "$CC_SHA" != "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411" ]]; then
   echo "CC BY 4.0 legalcode checksum mismatch: $CC_SHA" >&2
   exit 1
 fi
-cp "$CC_LICENSE" "$RESOURCES/Parakeet-CC-BY-4.0.txt"
+cp "$CC_SOURCE" "$RESOURCES/Parakeet-CC-BY-4.0.txt"
 
 # Каждый Mach-O в artifact обязан быть arm64-only: включая Sparkle helpers.
 echo "→ Проверяю arm64-only"

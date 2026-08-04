@@ -71,18 +71,28 @@ SUPublicEDKey: "<44 символа base64, ровно то, что напеча�
 ослабло бы. Практический вывод один: версия, выпущенная без ключа в
 `Info.plist`, не обновится никогда и ничем.
 
-Ключ в `project.yml` обязан соответствовать файлу из пункта 1. `release.sh`
-проверяет только то, что ключ вообще есть; совпадение — на вас. Сверить после
-любой сборки:
+Ключ в `project.yml` обязан соответствовать **файлу** из пункта 1 — именно им
+`release.sh` подписывает образ, а не тем, что лежит в связке ключей. Расхождение
+связки и файла ничего не значит; расхождение файла и `project.yml` значит, что
+обновление не установится ни у кого.
+
+`release.sh` эту пару сверяет сам и останавливается на расхождении. Сверить
+заранее, до сборки и без связки ключей, — тем же способом, каким это делает он:
 
 ```bash
-diff <($BIN/generate_keys -p) \
-     <(/usr/libexec/PlistBuddy -c "Print :SUPublicEDKey" \
-       "artifacts/build/WaiDictation.xcarchive/Products/Applications/Wai Dictation.app/Contents/Info.plist")
+swift - ~/.wai-dictation/sparkle-key <<'SWIFT'
+import CryptoKit
+import Foundation
+let text = try String(contentsOfFile: CommandLine.arguments[1], encoding: .utf8)
+let seed = Data(base64Encoded: text.trimmingCharacters(in: .whitespacesAndNewlines))!
+print(try Curve25519.Signing.PrivateKey(rawRepresentation: seed)
+    .publicKey.rawRepresentation.base64EncodedString())
+SWIFT
+grep SUPublicEDKey apps/macos/project.yml
 ```
 
-Пусто — сошлось. Разошлось — образ подпишется одним ключом, а проверяться
-будет другим, и обновление не установится ни у кого.
+Строки совпали — круг замкнут. Печатается только публичный ключ, приватный
+никуда не попадает.
 
 ### 3. Сертификат и нотаризация
 
@@ -101,39 +111,45 @@ diff <($BIN/generate_keys -p) \
   `project.yml`: `https://mikwiseman.github.io/wai-dictation/appcast.xml`.
   Рядом лежит `docs/.nojekyll`, чтобы файлы отдавались как есть.
 
-### 5. Запасной источник модели
+### 5. Запасной источник моделей
 
-Модель приложение берёт с Hugging Face, а если тот недоступен — из релиза на
-GitHub. Адреса собираются из `mirror` в
-`Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json`:
+Модели приложение берёт с Hugging Face, а если тот недоступен — из релизов на
+GitHub. Моделей **две**, и у каждой свой манифест со своим `mirror`:
 
-```
-repository: mikwiseman/wai-dictation
-releaseTag: models-aed02740
-```
+| Манифест | Тег зеркала | Файлов | Байт |
+|---|---|---|---|
+| `Resources/model-manifest.json` (распознавание) | `models-aed02740` | 21 | 483 105 645 |
+| `Resources/vocabulary-manifest.json` (подсказчик терминов) | `models-accdafd8` | 16 | 102 803 869 |
 
-Такого релиза пока нет. Пока его нет, запасного источника тоже нет: упадёт
-Hugging Face или исчезнет ревизия — и новый пользователь не сможет поставить
-модель вообще, то есть приложение для него не заработает.
-
-Выложить надо 21 файл, 483,1 МБ, каждый отдельным ассетом. Имя ассета — путь
-файла, где `/` заменён на `__` (`Encoder.mlmodelc/weights/weight.bin` →
-`Encoder.mlmodelc__weights__weight.bin`). Ни архивов, ни вложенных папок:
-приложение забирает файлы по одному и сверяет sha256 каждого.
-
-Список имён и размеров печатает манифест:
+Оба релиза выложены. Проверять надо не «есть ли релиз», а сходятся ли ассеты с
+манифестом по именам и по байтам — иначе половина зеркала молча не работает:
 
 ```bash
 python3 - <<'PY'
-import json
-m = json.load(open("Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json"))
-for f in m["files"]:
-    print(f["path"].replace("/", "__"), f["byteCount"])
+import json, subprocess
+for tag, path in (
+    ("models-aed02740", "Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json"),
+    ("models-accdafd8", "Packages/LocalASR/Sources/LocalASR/Resources/vocabulary-manifest.json"),
+):
+    want = {f["path"].replace("/", "__"): f["byteCount"] for f in json.load(open(path))["files"]}
+    rows = subprocess.run(
+        ["gh", "release", "view", tag, "--json", "assets", "--jq", ".assets[]|[.name,.size]|@tsv"],
+        capture_output=True, text=True).stdout.split()
+    have = dict(zip(rows[0::2], map(int, rows[1::2]))) if rows else {}
+    missing = [k for k in want if have.get(k) != want[k]]
+    print(tag, "ок" if not missing and len(have) == len(want) else f"РАСХОЖДЕНИЕ: {missing[:5]}")
 PY
 ```
 
-Тег привязан к ревизии модели. Сменится ревизия в манифесте — понадобится
-новый релиз с новым тегом, старый удалять не нужно.
+Каждый файл — отдельный ассет. Имя ассета это путь файла, где `/` заменён на
+`__` (`Encoder.mlmodelc/weights/weight.bin` →
+`Encoder.mlmodelc__weights__weight.bin`). Ни архивов, ни вложенных папок:
+приложение забирает файлы по одному и сверяет sha256 каждого.
+
+Тег привязан к ревизии модели. Сменится ревизия в любом из двух манифестов —
+понадобится новый релиз с новым тегом, старый удалять не нужно. Пропадёт
+зеркало — упадёт Hugging Face, и новый пользователь не сможет поставить модель
+вообще, то есть приложение для него не заработает.
 
 ---
 
@@ -270,12 +286,15 @@ swift verify.swift "$KEY" "$DMG" "$SIG"
 ### 2. Прогнать то, чего не проверяет CI
 
 ```bash
-./scripts/check-network-surface.sh    # сеть только там, где обещано (доли секунды)
-./scripts/test-zero-network.sh        # распознавание работает без сети
+./scripts/check-network-surface.sh     # сеть только там, где обещано (доли секунды)
+./scripts/test-zero-network.sh         # распознавание работает в песочнице без сети
+./scripts/test-zero-network-trace.sh   # tracer: ноль DNS/connect/send без песочницы
 ```
 
-Второму нужна уже установленная модель — он проверяет то, что происходит
-после загрузки. Без неё выйдет с кодом 69 и скажет об этом. Прогон целиком —
+Статический scan гоняет и CI; оба runtime-гейта — нет, и `release.sh` требует
+именно все три. Двум последним нужна уже установленная модель — они проверяют
+то, что происходит после загрузки. Без неё выйдет с кодом 69 и скажет об этом.
+Прогон целиком —
 **0,6 с** на M4 Pro с собранным `asr-bench` и до ~2,6 с, когда SwiftPM заново
 разбирает манифест. Первый запуск в чистом дереве дольше на сборку самого
 инструмента.
@@ -299,18 +318,52 @@ NOTARY_PROFILE="имя профиля notarytool" \
 
 Что делает скрипт по порядку:
 
-1. требует файл с приватным ключом и сертификат — без них останавливается
-   сразу, до всего остального;
-2. сверяет `MARKETING_VERSION` и `CFBundleShortVersionString` в `project.yml`
+1. требует **чистое дерево, ветку `main`, `HEAD` = `origin/main` и зелёный
+   завершённый прогон CI ровно на этом SHA** (через `gh`) — это самая первая
+   проверка, до ключа и до сертификата. Отсюда правило: сначала запушить и
+   дождаться CI, только потом запускать релиз;
+2. требует файл с приватным ключом и сертификат;
+3. сверяет `MARKETING_VERSION` и `CFBundleShortVersionString` в `project.yml`
    и требует описание изменений: если файла `docs/release-notes/<версия>.md`
    нет, набрасывает черновик из коммитов и останавливается;
-3. проверяет сетевую поверхность и гоняет тесты обоих пакетов;
-4. собирает, подписывает и нотаризует образ (`scripts/build-dmg.sh`);
-5. убеждается, что в `Info.plist` есть `SUFeedURL` и `SUPublicEDKey`, а версия
-   совпадает с той, на которую написано описание;
-6. подписывает образ ключом EdDSA и тут же проверяет подпись;
-7. дописывает версию в `docs/appcast.xml` — свежая первой, старые ниже, не
-   больше десяти.
+4. проверяет сетевую поверхность;
+5. требует `quality/live-benchmark-report.json` и сверяет его
+   `scripts/validate-live-benchmark.py` — это гейт живого голоса, см.
+   [quality/README.md](../quality/README.md);
+6. гоняет тесты обоих пакетов **и тесты приложения** (`xcodebuild … test`);
+7. гоняет оба runtime-гейта без сети — песочницу и tracer;
+8. собирает, подписывает и нотаризует образ (`scripts/build-dmg.sh`);
+9. прогоняет `scripts/smoke-installed-artifact.sh` по собранному бандлу:
+   arm64-only, minOS 14.0, entitlement на микрофон, обязательные лицензии
+   и манифесты внутри `Contents/Resources`;
+10. убеждается, что в `Info.plist` есть `SUFeedURL` и `SUPublicEDKey`, версия
+    совпадает с той, на которую написано описание, приложение подписано именно
+    `Developer ID Application`, ticket пристеплен и Gatekeeper принимает образ;
+11. требует `quality/release-evidence.json` — заполненную вручную матрицу
+    [quality/manual-release-matrix.md](../quality/manual-release-matrix.md)
+    ровно для этого SHA и этого sha256 образа — и сверяет её
+    `scripts/validate-release-evidence.py`;
+12. подписывает образ ключом EdDSA, проверяет подпись **и отдельно сверяет,
+    что публичный ключ в `Info.plist` выведен из этого же приватного** —
+    расхождение здесь означало бы зелёный релиз, который не установится ни у
+    кого;
+13. дописывает версию в `docs/appcast.xml` — свежая первой, старые ниже, не
+    больше десяти.
+
+Пункт 11 — единственный, который нельзя выполнить заранее: матрица
+заполняется по **уже подписанному и нотаризованному** образу. Поэтому порядок
+такой: первый запуск доходит до пункта 11 и останавливается; вы проверяете
+образ руками, заполняете `quality/release-evidence.json` (файл в `.gitignore`,
+шаблон — `quality/release-evidence-template.json`); второй запуск идёт без
+пересборки и без повторной нотаризации:
+
+```bash
+SPARKLE_KEY_PATH=~/.wai-dictation/sparkle-key \
+DEVELOPER_ID="Developer ID Application: Имя (TEAMID)" \
+NOTARY_PROFILE="имя профиля notarytool" \
+REUSE_VERIFIED_ARTIFACT=1 \
+./scripts/release.sh
+```
 
 Первый запуск на новой версии всегда останавливается на черновике описания.
 Это нормально: перепишите его человеческим языком (это увидят все, кому
