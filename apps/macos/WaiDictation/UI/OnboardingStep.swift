@@ -24,15 +24,15 @@ enum OnboardingStep: Int, CaseIterable, Sendable {
     var isLast: Bool { next == nil }
 
     /// Подпись кнопки перехода.
-    var nextButtonTitle: String { isLast ? "Готово" : "Дальше" }
+    var nextButtonTitle: String { isLast ? "Done" : "Continue" }
 
-    var progressText: String { "\(rawValue + 1) из \(Self.allCases.count)" }
+    var progressText: String { "\(rawValue + 1) of \(Self.allCases.count)" }
 
     /// То же самое словами.
     ///
     /// «1 из 4» без слова «шаг» VoiceOver читает как пару чисел ниоткуда.
     var progressAccessibilityLabel: String {
-        "Шаг \(rawValue + 1) из \(Self.allCases.count)"
+        "Step \(rawValue + 1) of \(Self.allCases.count)"
     }
 }
 
@@ -58,27 +58,27 @@ enum OnboardingGate {
         case .tryIt:
             return trialSucceeded
                 ? nil
-                : "Сначала попробуйте диктовку или нажмите «Пропустить пробу»."
+                : "Try dictation first, or press “Skip the try-out”."
 
         case .permissions:
             // Дальше пускаем только когда оба разрешения выданы: следующий шаг
             // без них ничего не покажет, а человек решит, что всё сломано.
             switch (microphoneGranted, accessibilityGranted) {
             case (true, true): return nil
-            case (false, false): return "Осталось выдать оба разрешения — микрофон и универсальный доступ."
-            case (false, true): return "Остался микрофон."
-            case (true, false): return "Остался универсальный доступ."
+            case (false, false): return "Two permissions left to grant — Microphone and Accessibility."
+            case (false, true): return "Microphone is still needed."
+            case (true, false): return "Accessibility is still needed."
             }
 
         case .model:
             switch modelState {
-            case .ready: return engineReady ? nil : "Дождитесь подготовки модели к первому запуску."
-            case .notInstalled: return "Сначала скачайте модель — без неё распознавать нечем."
-            case .downloading: return "Дождитесь конца загрузки."
-            case .verifying: return "Идёт проверка скачанного."
-            case .repairRequired: return "Модель повреждена. Скачайте её заново по явной команде."
-            case .failed: return "Загрузка не удалась. Попробуйте ещё раз."
-            case .deleting: return "Модель удаляется."
+            case .ready: return engineReady ? nil : "Wait for the model to finish preparing for first use."
+            case .notInstalled: return "Download the model first — without it there is nothing to recognize with."
+            case .downloading: return "Wait for the download to finish."
+            case .verifying: return "The download is being verified."
+            case .repairRequired: return "The model is damaged. Redownload it explicitly."
+            case .failed: return "The download failed. Try again."
+            case .deleting: return "The model is being deleted."
             }
         }
     }

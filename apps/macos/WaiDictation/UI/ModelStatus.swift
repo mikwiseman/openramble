@@ -24,22 +24,22 @@ struct ModelStatus: Equatable {
         /// только остаток — когда после обновления доскачивается подсказчик.
         func title(downloadMegabytes: Int) -> String {
             switch self {
-            case .install: return "Скачать модель — \(downloadMegabytes) МБ"
-            case .retry: return "Попробовать снова"
-            case .repair: return "Скачать модель заново — \(downloadMegabytes) МБ"
-            case .cancel: return "Отменить загрузку"
-            case .delete: return "Удалить модель"
+            case .install: return "Download model — \(downloadMegabytes) MB"
+            case .retry: return "Try again"
+            case .repair: return "Redownload model — \(downloadMegabytes) MB"
+            case .cancel: return "Cancel download"
+            case .delete: return "Delete model"
             }
         }
 
         /// Подсказка для VoiceOver: что случится по нажатию.
         func hint(downloadMegabytes: Int) -> String {
             switch self {
-            case .install: return "Скачает около \(downloadMegabytes) МБ. Это единственная загрузка приложения."
-            case .retry: return "Повторит загрузку модели с начала."
-            case .repair: return "Скачает и проверит новую копию модели. Повреждённая копия не используется."
-            case .cancel: return "Остановит загрузку и удалит недокачанные файлы."
-            case .delete: return "Освободит место на диске. Диктовка перестанет работать, пока модель не скачана заново."
+            case .install: return "Downloads about \(downloadMegabytes) MB. This is the app's only download."
+            case .retry: return "Restarts the model download from the beginning."
+            case .repair: return "Downloads and verifies a fresh copy of the model. The damaged copy is not used."
+            case .cancel: return "Stops the download and deletes the partially downloaded files."
+            case .delete: return "Frees up disk space. Dictation stops working until the model is downloaded again."
             }
         }
     }
@@ -91,65 +91,65 @@ struct ModelStatus: Equatable {
         switch state {
         case .notInstalled:
             return ModelStatus(
-                title: "Модель не установлена",
-                detail: "\(downloadMegabytes) МБ с Hugging Face CDN; при недоступности — зеркало GitHub. После проверки распознавание работает без сети.",
+                title: "Model not installed",
+                detail: "\(downloadMegabytes) MB from the Hugging Face CDN; a GitHub mirror if it's unavailable. After verification, recognition works without the network.",
                 progress: nil,
                 progressLabel: nil,
                 actions: [.install],
                 tone: .neutral,
-                announcement: "Модель не установлена"
+                announcement: "Model not installed"
             )
 
         case let .downloading(received, total):
-            let label = "\(megabytes(received)) из \(megabytes(total)) МБ"
+            let label = "\(megabytes(received)) of \(megabytes(total)) MB"
             return ModelStatus(
-                title: "Скачиваю модель…",
-                detail: "Можно продолжать — загрузка не прервётся.",
+                title: "Downloading model…",
+                detail: "You can keep working — the download won't be interrupted.",
                 progress: state.progress,
                 progressLabel: label,
                 actions: [.cancel],
                 tone: .neutral,
-                announcement: "Скачиваю модель, \(label)"
+                announcement: "Downloading model, \(label)"
             )
 
         case let .verifying(checked, total):
-            let label = "Файл \(checked) из \(total)"
+            let label = "File \(checked) of \(total)"
             return ModelStatus(
-                title: "Проверяю скачанное…",
-                detail: "Сверяю контрольные суммы всех файлов.",
+                title: "Verifying download…",
+                detail: "Checking every file against its checksum.",
                 progress: state.progress,
                 progressLabel: label,
                 actions: [],
                 tone: .neutral,
-                announcement: "Проверяю скачанное, \(label)"
+                announcement: "Verifying download, \(label)"
             )
 
         case .ready:
             return ModelStatus(
-                title: "Модель готова",
+                title: "Model ready",
                 // Пока идёт первая загрузка в нейромодуль, человек видит
                 // «готова», но диктовка ещё подумает. Молчать об этом — значит
                 // получить жалобу на медленный первый раз.
                 detail: isPreparingEngine
-                    ? "Готовлю к первому запуску — это занимает несколько секунд и только один раз."
+                    ? "Preparing for first use — this takes a few seconds and happens only once."
                     : nil,
                 progress: nil,
                 progressLabel: nil,
                 actions: place == .settings ? [.delete] : [],
                 tone: .success,
-                announcement: isPreparingEngine ? "Модель готова, готовлю к первому запуску" : "Модель готова"
+                announcement: isPreparingEngine ? "Model ready, preparing for first use" : "Model ready"
             )
 
         case let .repairRequired(detail):
             let reason = message(for: .repairRequired(detail))
             return ModelStatus(
-                title: "Модель требует восстановления",
+                title: "Model needs repair",
                 detail: reason,
                 progress: nil,
                 progressLabel: nil,
                 actions: [.repair],
                 tone: .failure,
-                announcement: "Модель требует восстановления. \(reason)"
+                announcement: "Model needs repair. \(reason)"
             )
 
         case let .failed(error):
@@ -161,26 +161,26 @@ struct ModelStatus: Equatable {
                 requiresRepair = false
             }
             return ModelStatus(
-                title: requiresRepair ? "Модель требует восстановления" : "Не удалось установить модель",
+                title: requiresRepair ? "Model needs repair" : "Model installation failed",
                 detail: reason,
                 progress: nil,
                 progressLabel: nil,
                 actions: [requiresRepair ? .repair : .retry],
                 tone: .failure,
                 announcement: requiresRepair
-                    ? "Модель требует восстановления. \(reason)"
-                    : "Не удалось установить модель. \(reason)"
+                    ? "Model needs repair. \(reason)"
+                    : "Model installation failed. \(reason)"
             )
 
         case .deleting:
             return ModelStatus(
-                title: "Удаляю модель…",
+                title: "Deleting model…",
                 detail: nil,
                 progress: nil,
                 progressLabel: nil,
                 actions: [],
                 tone: .neutral,
-                announcement: "Удаляю модель"
+                announcement: "Deleting model"
             )
         }
     }
@@ -194,23 +194,23 @@ struct ModelStatus: Equatable {
         switch error {
         case let .notEnoughDiskSpace(required, available):
             return """
-                На диске не хватает места: нужно \(megabytes(required)) МБ, \
-                свободно \(megabytes(available)) МБ.
+                Not enough disk space: \(megabytes(required)) MB needed, \
+                \(megabytes(available)) MB free.
                 """
         case let .download(detail):
-            return "Не удалось скачать: \(detail)"
+            return "Download failed: \(detail)"
         case let .verification(detail):
-            return "Скачанное не сошлось с контрольными суммами: \(detail)"
+            return "The download didn't match its checksums: \(detail)"
         case let .install(detail):
-            return "Не удалось разложить файлы: \(detail)"
+            return "Couldn't put the files in place: \(detail)"
         case let .repairRequired(detail):
-            return "Модель повреждена или неполна: \(detail). Скачайте её заново по явной команде."
+            return "The model is damaged or incomplete: \(detail). Redownload it explicitly."
         case let .manifest(detail):
-            return "Испорчен список файлов модели: \(detail)"
+            return "The model's file list is corrupted: \(detail)"
         case let .importSource(detail):
-            return "Папка не подошла: \(detail)"
+            return "That folder didn't work: \(detail)"
         case .cancelled:
-            return "Загрузка отменена."
+            return "Download cancelled."
         }
     }
 

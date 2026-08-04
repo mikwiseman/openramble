@@ -44,7 +44,7 @@ struct WaiDictationApp: App {
             }
         }
 
-        Window("Добро пожаловать", id: "onboarding") {
+        Window("Welcome", id: "onboarding") {
             if !onboardingCompleted {
                 OnboardingView(state: state) { onboardingCompleted = true }
             }

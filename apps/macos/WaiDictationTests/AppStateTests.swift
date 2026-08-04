@@ -7,12 +7,12 @@ import XCTest
 final class AppStateTests: XCTestCase {
     func testОшибкаАудиоконвертераНеМаскируетсяПодНехваткуМеста() {
         let message = AppState.captureFailureMessage(
-            .unsupportedAudioFormat("48 кГц stereo не преобразовались")
+            .unsupportedAudioFormat("48 kHz stereo couldn't be converted")
         )
 
-        XCTAssertTrue(message.contains("аудиоформат"))
-        XCTAssertTrue(message.contains("48 кГц stereo"))
-        XCTAssertFalse(message.contains("свободное место"))
+        XCTAssertTrue(message.contains("audio format"))
+        XCTAssertTrue(message.contains("48 kHz stereo"))
+        XCTAssertFalse(message.contains("disk space"))
     }
 
     private var harness: AppHarness!
@@ -236,7 +236,7 @@ final class AppStateTests: XCTestCase {
         permissions.accessibilityGranted = false
         state.refreshPermissions()
 
-        XCTAssertEqual(state.lastNotice?.message.contains("Отозван Универсальный доступ"), true)
+        XCTAssertEqual(state.lastNotice?.message.contains("Accessibility access was revoked"), true)
     }
 
     func testБезМикрофонаДиктовкаНеГотова() {
@@ -309,7 +309,7 @@ final class AppStateTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(5))
         }
 
-        XCTAssertEqual(state.lastNotice?.message, "Диктовка отменена. Запись удалена.")
+        XCTAssertEqual(state.lastNotice?.message, "Dictation cancelled. The recording was deleted.")
         XCTAssertEqual(state.successfulDictationCount, 0)
     }
 
@@ -343,7 +343,7 @@ final class AppStateTests: XCTestCase {
         // оно задачей, поэтому даём ей дойти до оверлея.
         try await Task.sleep(for: .milliseconds(100))
         let notices = await overlay.notices
-        XCTAssertTrue(notices.contains { $0.message.contains("Дождитесь") })
+        XCTAssertTrue(notices.contains { $0.message.contains("Wait for it to finish") })
     }
 
     func testВПокоеМодельУдаляется() async throws {
@@ -566,7 +566,7 @@ final class AppStateTests: XCTestCase {
         try? await Task.sleep(for: .milliseconds(100))
 
         let notices = await overlay.notices
-        XCTAssertTrue(notices.contains { $0.message.contains("Словарь") })
+        XCTAssertTrue(notices.contains { $0.message.contains("replacement dictionary") })
     }
 
     func testСловарьИзБудущегоНеТрогается() {

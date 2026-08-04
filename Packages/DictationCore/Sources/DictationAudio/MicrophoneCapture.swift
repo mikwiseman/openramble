@@ -56,7 +56,7 @@ public actor MicrophoneCapture: AudioCapturing {
     }
 
     public func startRecording() async throws -> URL {
-        guard engine == nil else { throw AudioCaptureError.engineUnavailable("запись уже идёт") }
+        guard engine == nil else { throw AudioCaptureError.engineUnavailable("recording is already in progress") }
 
         startedAt = .now
         firstBufferAt = nil
@@ -81,7 +81,7 @@ public actor MicrophoneCapture: AudioCapturing {
         guard inputFormat.sampleRate > 0 else {
             writer.discard()
             self.writer = nil
-            throw AudioCaptureError.engineUnavailable("микрофон недоступен")
+            throw AudioCaptureError.engineUnavailable("microphone unavailable")
         }
 
         guard let targetFormat = AVAudioFormat(
@@ -92,7 +92,7 @@ public actor MicrophoneCapture: AudioCapturing {
         ) else {
             writer.discard()
             self.writer = nil
-            throw AudioCaptureError.engineUnavailable("не построился формат записи")
+            throw AudioCaptureError.engineUnavailable("couldn't create the recording format")
         }
 
         // Ресемплинг нужен почти всегда: встроенный микрофон отдаёт 44,1 или 48 кГц,
@@ -128,7 +128,7 @@ public actor MicrophoneCapture: AudioCapturing {
                 conversionFailure.run {
                     failureHandler(
                         .unsupportedAudioFormat(
-                            "ошибка преобразования звука: \(error.localizedDescription)"
+                            "audio conversion failed: \(error.localizedDescription)"
                         )
                     )
                 }
@@ -161,7 +161,7 @@ public actor MicrophoneCapture: AudioCapturing {
             // Останавливает диктовку владелец, но узнать об этом он должен
             // сейчас, а не когда человек договорит.
             writeFailure = error
-            logger.error("Запись прервана: \(String(describing: error), privacy: .public)")
+            logger.error("Recording interrupted: \(String(describing: error), privacy: .public)")
             onFailure(.writeFailed(String(describing: error)))
         }
     }
@@ -221,7 +221,7 @@ public actor MicrophoneCapture: AudioCapturing {
     ) throws -> [Float] {
         guard let converter else {
             guard let channel = buffer.floatChannelData?[0] else {
-                throw AudioCaptureError.unsupportedAudioFormat("микрофон не отдал Float32 PCM")
+                throw AudioCaptureError.unsupportedAudioFormat("the microphone didn't provide Float32 PCM")
             }
             return Array(UnsafeBufferPointer(start: channel, count: Int(buffer.frameLength)))
         }
@@ -229,7 +229,7 @@ public actor MicrophoneCapture: AudioCapturing {
         let ratio = target.sampleRate / buffer.format.sampleRate
         let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 512
         guard let output = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else {
-            throw AudioCaptureError.unsupportedAudioFormat("не создался буфер 16 кГц mono")
+            throw AudioCaptureError.unsupportedAudioFormat("couldn't create a 16 kHz mono buffer")
         }
 
         // Коробки объясняют компилятору то, что верно по факту: замыкание
@@ -251,10 +251,10 @@ public actor MicrophoneCapture: AudioCapturing {
             throw AudioCaptureError.unsupportedAudioFormat(error.localizedDescription)
         }
         guard status != .error else {
-            throw AudioCaptureError.unsupportedAudioFormat("конвертер отклонил аудиокадр")
+            throw AudioCaptureError.unsupportedAudioFormat("the converter rejected an audio frame")
         }
         guard let channel = output.floatChannelData?[0] else {
-            throw AudioCaptureError.unsupportedAudioFormat("конвертер не вернул Float32 PCM")
+            throw AudioCaptureError.unsupportedAudioFormat("the converter didn't return Float32 PCM")
         }
         return Array(UnsafeBufferPointer(start: channel, count: Int(output.frameLength)))
     }
@@ -271,7 +271,7 @@ public actor MicrophoneCapture: AudioCapturing {
         guard needsConversion else { return nil }
         guard let converter = factory(source, target) else {
             throw AudioCaptureError.unsupportedAudioFormat(
-                "не удалось преобразовать \(Int(source.sampleRate)) Гц / \(source.channelCount) кан. в 16 кГц mono"
+                "couldn't convert \(Int(source.sampleRate)) Hz / \(source.channelCount) ch to 16 kHz mono"
             )
         }
         return converter

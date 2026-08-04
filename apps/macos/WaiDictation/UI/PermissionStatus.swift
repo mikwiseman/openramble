@@ -15,7 +15,7 @@ struct PermissionStatus: Equatable {
         self.detail = detail
         self.granted = granted
         explicitValue = nil
-        explicitActionTitle = granted ? nil : "Выдать"
+        explicitActionTitle = granted ? nil : "Grant"
     }
 
     private init(
@@ -39,58 +39,58 @@ struct PermissionStatus: Equatable {
         switch state {
         case .denied:
             return .init(
-                title: "Универсальный доступ",
+                title: "Accessibility",
                 detail: detail,
                 granted: false,
-                value: "Разрешение не выдано",
-                actionTitle: "Выдать"
+                value: "Permission not granted",
+                actionTitle: "Grant"
             )
         case .waitingForSettings:
             return .init(
-                title: "Универсальный доступ",
-                detail: "Включите Wai Dictation в открытых Системных настройках и вернитесь сюда.",
+                title: "Accessibility",
+                detail: "Turn on Wai Dictation in the System Settings window that just opened, then come back here.",
                 granted: false,
-                value: "Ожидаем разрешение в Системных настройках",
-                actionTitle: "Открыть настройки"
+                value: "Waiting for permission in System Settings",
+                actionTitle: "Open System Settings"
             )
         case .restartRequired:
             return .init(
-                title: "Универсальный доступ",
-                detail: "Если Wai Dictation уже включён, перезапустите приложение, чтобы macOS применила доступ к новому процессу.",
+                title: "Accessibility",
+                detail: "If Wai Dictation is already turned on, relaunch the app so macOS applies the access to the new process.",
                 granted: false,
-                value: "Требуется перезапуск приложения",
-                actionTitle: "Перезапустить"
+                value: "App relaunch required",
+                actionTitle: "Relaunch"
             )
         case .repairRequired:
             return .init(
-                title: "Универсальный доступ",
-                detail: "macOS хранит старую или дублирующую запись Wai Dictation. Удалите только её и выдайте доступ заново.",
+                title: "Accessibility",
+                detail: "macOS keeps an old or duplicate entry for Wai Dictation. Remove just that entry and grant access again.",
                 granted: false,
-                value: "Нужно восстановить системную запись разрешения",
-                actionTitle: "Исправить"
+                value: "The system permission entry needs repair",
+                actionTitle: "Repair"
             )
         case .repairing:
             return .init(
-                title: "Универсальный доступ",
-                detail: "Удаляем старую запись и перезапускаем Wai Dictation.",
+                title: "Accessibility",
+                detail: "Removing the old entry and relaunching Wai Dictation.",
                 granted: false,
-                value: "Восстанавливаем разрешение",
+                value: "Repairing the permission",
                 actionTitle: nil
             )
         case let .failed(message):
             return .init(
-                title: "Универсальный доступ",
-                detail: "Восстановление не удалось: \(message)",
+                title: "Accessibility",
+                detail: "Repair failed: \(message)",
                 granted: false,
-                value: "Ошибка восстановления разрешения",
-                actionTitle: "Исправить"
+                value: "Permission repair failed",
+                actionTitle: "Repair"
             )
         case .granted:
             return .init(
-                title: "Универсальный доступ",
+                title: "Accessibility",
                 detail: detail,
                 granted: true,
-                value: "Разрешение выдано",
+                value: "Permission granted",
                 actionTitle: nil
             )
         }
@@ -101,7 +101,7 @@ struct PermissionStatus: Equatable {
 
     /// Галочка словами: картинка сама по себе VoiceOver ничего не говорит.
     var accessibilityValue: String {
-        explicitValue ?? (granted ? "Разрешение выдано" : "Разрешение не выдано")
+        explicitValue ?? (granted ? "Permission granted" : "Permission not granted")
     }
 
     /// Кнопка есть только там, где ещё есть что выдавать.
@@ -109,7 +109,7 @@ struct PermissionStatus: Equatable {
 
     var actionAccessibilityLabel: String? {
         actionTitle.map { action in
-            action == "Выдать" ? "Выдать разрешение: \(title)" : "\(action): \(title)"
+            action == "Grant" ? "Grant access: \(title)" : "\(action): \(title)"
         }
     }
 }

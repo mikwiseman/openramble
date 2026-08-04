@@ -69,13 +69,13 @@ final class ModelPairStateTests: XCTestCase {
     }
 
     func testRepairЛюбойИзМоделейТребуетRepairОбщий() {
-        let state = combined(.ready(directory: directory), .repairRequired("суммы не сошлись"))
+        let state = combined(.ready(directory: directory), .repairRequired("checksums didn't match"))
 
         guard case let .repairRequired(detail) = state else {
             return XCTFail("Ожидался repairRequired, пришло: \(state)")
         }
-        XCTAssertTrue(detail.contains("подсказчик"), "Причина обязана назвать виновника: \(detail)")
-        XCTAssertTrue(detail.contains("суммы не сошлись"))
+        XCTAssertTrue(detail.contains("vocabulary helper"), "Причина обязана назвать виновника: \(detail)")
+        XCTAssertTrue(detail.contains("checksums didn't match"))
     }
 
     func testУдалениеЛюбойВидноКакУдаление() {

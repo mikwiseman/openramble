@@ -67,8 +67,8 @@ public final class SparkleUpdater: ObservableObject {
         let publicKey = Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") as? String
         guard let publicKey, !publicKey.isEmpty else {
             startupFailure = """
-                В сборке нет открытого ключа подписи обновлений (SUPublicEDKey). \
-                Обновления отключены: без него их нечем проверить.
+                This build has no public update-signing key (SUPublicEDKey). \
+                Updates are disabled: without it there is no way to verify them.
                 """
             return
         }

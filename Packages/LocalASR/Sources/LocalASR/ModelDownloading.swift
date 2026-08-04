@@ -175,7 +175,7 @@ private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unc
         completionHandler: @escaping (URLRequest?) -> Void
     ) {
         guard let url = request.url, policy.allows(url) else {
-            finish(.failure(ModelDownloadError.unapprovedURL(request.url?.host() ?? "неизвестный адрес")))
+            finish(.failure(ModelDownloadError.unapprovedURL(request.url?.host() ?? "unknown address")))
             completionHandler(nil)
             return
         }
@@ -235,7 +235,7 @@ private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unc
         guard let error else {
             // Успех уже отдан выше; сюда попадаем только если файла так и не
             // случилось — молча повиснуть на этом нельзя.
-            finish(.failure(ModelDownloadError.network("загрузка завершилась без файла")))
+            finish(.failure(ModelDownloadError.network("the download finished without a file")))
             return
         }
 

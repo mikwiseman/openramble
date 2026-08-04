@@ -98,10 +98,10 @@ public enum AccessibilityRecoveryError: LocalizedError, Equatable {
     public var errorDescription: String? {
         switch self {
         case .missingBundleIdentifier:
-            return "У приложения нет bundle identifier."
+            return "The app has no bundle identifier."
         case let .resetFailed(status, output):
             let suffix = output.isEmpty ? "" : " \(output)"
-            return "tccutil завершился с кодом \(status).\(suffix)"
+            return "tccutil exited with code \(status).\(suffix)"
         }
     }
 }
@@ -225,7 +225,7 @@ public struct AppPaths: Sendable {
         guard let base = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask).first
         else {
-            preconditionFailure("Система не сообщила расположение Application Support")
+            preconditionFailure("The system did not report the Application Support location")
         }
         return AppPaths(root: base)
     }

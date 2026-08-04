@@ -38,7 +38,7 @@ public struct AudioFileReader: Sendable {
             channels: 1,
             interleaved: false
         ) else {
-            throw Failure.conversionFailed("не построился целевой формат")
+            throw Failure.conversionFailed("couldn't create the target format")
         }
 
         // Если файл уже в нужном формате, конвертация не нужна.
@@ -56,7 +56,7 @@ public struct AudioFileReader: Sendable {
             pcmFormat: format,
             frameCapacity: AVAudioFrameCount(file.length)
         ) else {
-            throw Failure.conversionFailed("не выделился буфер чтения")
+            throw Failure.conversionFailed("couldn't allocate the read buffer")
         }
         do {
             try file.read(into: buffer)
@@ -64,7 +64,7 @@ public struct AudioFileReader: Sendable {
             throw Failure.unreadable(error.localizedDescription)
         }
         guard let channel = buffer.floatChannelData?[0] else {
-            throw Failure.conversionFailed("нет данных канала")
+            throw Failure.conversionFailed("no channel data")
         }
         return Array(UnsafeBufferPointer(start: channel, count: Int(buffer.frameLength)))
     }
@@ -75,7 +75,7 @@ public struct AudioFileReader: Sendable {
         to targetFormat: AVAudioFormat
     ) throws -> [Float] {
         guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
-            throw Failure.conversionFailed("не создался конвертер \(sourceFormat) → \(targetFormat)")
+            throw Failure.conversionFailed("couldn't create a converter \(sourceFormat) → \(targetFormat)")
         }
 
         var output: [Float] = []
@@ -84,11 +84,11 @@ public struct AudioFileReader: Sendable {
 
         let chunkFrames: AVAudioFrameCount = 16_384
         guard let inputBuffer = AVAudioPCMBuffer(pcmFormat: sourceFormat, frameCapacity: chunkFrames) else {
-            throw Failure.conversionFailed("не выделился входной буфер")
+            throw Failure.conversionFailed("couldn't allocate the input buffer")
         }
         let outputCapacity = AVAudioFrameCount(Double(chunkFrames) * ratio) + 1024
         guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: outputCapacity) else {
-            throw Failure.conversionFailed("не выделился выходной буфер")
+            throw Failure.conversionFailed("couldn't allocate the output buffer")
         }
 
         var reachedEnd = false
@@ -129,7 +129,7 @@ public struct AudioFileReader: Sendable {
                 throw Failure.conversionFailed(conversionError.localizedDescription)
             }
             if status == .error {
-                throw Failure.conversionFailed("конвертер вернул ошибку")
+                throw Failure.conversionFailed("the converter returned an error")
             }
 
             if outputBuffer.frameLength > 0, let channel = outputBuffer.floatChannelData?[0] {

@@ -127,14 +127,14 @@ public actor ModelStore {
         do {
             try recoverInterruptedPromotion()
         } catch {
-            setState(.repairRequired("не удалось восстановить прерванное обновление модели"))
+            setState(.repairRequired("couldn't recover an interrupted model update"))
             return state
         }
         sweepStaleStaging()
 
         guard fileManager.fileExists(atPath: layout.readyMarker.path) else {
             if fileManager.fileExists(atPath: layout.installedDirectory.path) {
-                setState(.repairRequired("отсутствует marker готовности модели"))
+                setState(.repairRequired("the model's ready marker is missing"))
                 return state
             }
             setState(.notInstalled)
@@ -146,13 +146,13 @@ public actor ModelStore {
             let data = try LocalFile.read(layout.readyMarker)
             marker = try JSONDecoder().decode(ModelReadyMarker.self, from: data)
             guard marker.matches(manifest) else {
-                throw ModelStoreError.repairRequired("marker модели несовместим с этой версией приложения")
+                throw ModelStoreError.repairRequired("the model marker is incompatible with this app version")
             }
         } catch let error as ModelStoreError {
             setRefreshFailure(error)
             return state
         } catch {
-            setState(.repairRequired("marker модели повреждён"))
+            setState(.repairRequired("the model marker is damaged"))
             return state
         }
 
@@ -189,7 +189,7 @@ public actor ModelStore {
         let expectedPaths = Set(manifest.files.map(\.path))
         let engine = layout.engineDirectory
         guard fileManager.fileExists(atPath: engine.path) else {
-            throw ModelStoreError.repairRequired("папка модели отсутствует")
+            throw ModelStoreError.repairRequired("the model folder is missing")
         }
 
         guard let enumerator = fileManager.enumerator(
@@ -197,7 +197,7 @@ public actor ModelStore {
             includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey, .contentModificationDateKey],
             options: []
         ) else {
-            throw ModelStoreError.repairRequired("не удалось прочитать файлы модели")
+            throw ModelStoreError.repairRequired("couldn't read the model files")
         }
 
         var actualPaths = Set<String>()
@@ -209,7 +209,7 @@ public actor ModelStore {
                 .isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey, .contentModificationDateKey,
             ])
             guard values.isSymbolicLink != true else {
-                throw ModelStoreError.repairRequired("\(url.lastPathComponent) — символическая ссылка")
+                throw ModelStoreError.repairRequired("\(url.lastPathComponent) is a symbolic link")
             }
             guard values.isRegularFile == true else { continue }
 
@@ -223,17 +223,17 @@ public actor ModelStore {
 
             let prefix = engine.standardizedFileURL.path + "/"
             guard url.standardizedFileURL.path.hasPrefix(prefix) else {
-                throw ModelStoreError.repairRequired("файл модели вышел за пределы установки")
+                throw ModelStoreError.repairRequired("a model file escaped the install directory")
             }
             let path = String(url.standardizedFileURL.path.dropFirst(prefix.count))
             actualPaths.insert(path)
 
             guard let expected = manifest.files.first(where: { $0.path == path }) else {
-                throw ModelStoreError.repairRequired("неожиданный файл \(path)")
+                throw ModelStoreError.repairRequired("unexpected file \(path)")
             }
             let byteCount = Int64(values.fileSize ?? -1)
             guard byteCount == expected.byteCount else {
-                throw ModelStoreError.repairRequired("неверный размер \(path)")
+                throw ModelStoreError.repairRequired("wrong size for \(path)")
             }
 
             let item = ModelReadyMarker.InstalledFile(
@@ -245,7 +245,7 @@ public actor ModelStore {
                 do {
                     try verifier.verify(file: expected, at: url)
                 } catch {
-                    throw ModelStoreError.repairRequired("повреждён \(path)")
+                    throw ModelStoreError.repairRequired("\(path) is damaged")
                 }
             }
             metadata.append(item)
@@ -253,7 +253,7 @@ public actor ModelStore {
 
         guard actualPaths == expectedPaths else {
             let missing = expectedPaths.subtracting(actualPaths).sorted().joined(separator: ", ")
-            throw ModelStoreError.repairRequired("не хватает файлов: \(missing)")
+            throw ModelStoreError.repairRequired("missing files: \(missing)")
         }
         return metadata.sorted { $0.path < $1.path }
     }
@@ -383,7 +383,7 @@ public actor ModelStore {
                 try removeStaging(staging)
                 setState(.notInstalled)
             } catch {
-                setState(.failed(.install("загрузка отменена, но partial не удалён: \(error.localizedDescription)")))
+                setState(.failed(.install("download cancelled, but the partial files weren't deleted: \(error.localizedDescription)")))
             }
         } catch let error as ModelStoreError {
             let primary = String(describing: error)
@@ -391,7 +391,7 @@ public actor ModelStore {
                 try removeStaging(staging)
                 setState(.failed(error))
             } catch {
-                setState(.failed(.install("\(primary); staging не удалён: \(error.localizedDescription)")))
+                setState(.failed(.install("\(primary); staging wasn't deleted: \(error.localizedDescription)")))
             }
         } catch {
             let primary = error.localizedDescription
@@ -399,7 +399,7 @@ public actor ModelStore {
                 try removeStaging(staging)
                 setState(.failed(.install(primary)))
             } catch {
-                setState(.failed(.install("\(primary); staging не удалён: \(error.localizedDescription)")))
+                setState(.failed(.install("\(primary); staging wasn't deleted: \(error.localizedDescription)")))
             }
         }
     }
@@ -432,7 +432,7 @@ public actor ModelStore {
                     inside: layout.engineDirectory(inside: staging)
                 )
             } catch {
-                throw ModelStoreError.importSource("путь \(file.path) ведёт за пределы папки")
+                throw ModelStoreError.importSource("the path \(file.path) leads outside the folder")
             }
             try checkImportable(origin, path: file.path)
 
@@ -443,7 +443,7 @@ public actor ModelStore {
             do {
                 try fileManager.copyItem(at: origin, to: destination)
             } catch {
-                throw ModelStoreError.importSource("не скопировался \(file.path): \(error.localizedDescription)")
+                throw ModelStoreError.importSource("couldn't copy \(file.path): \(error.localizedDescription)")
             }
 
             completed += file.byteCount
@@ -459,13 +459,13 @@ public actor ModelStore {
     private func checkImportable(_ url: URL, path: String) throws {
         let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
         guard let values else {
-            throw ModelStoreError.importSource("в папке нет файла \(path)")
+            throw ModelStoreError.importSource("the folder has no file \(path)")
         }
         if values.isSymbolicLink == true {
-            throw ModelStoreError.importSource("\(path) — символическая ссылка, а нужен файл")
+            throw ModelStoreError.importSource("\(path) is a symbolic link, but a regular file is required")
         }
         guard values.isRegularFile == true else {
-            throw ModelStoreError.importSource("\(path) — не обычный файл")
+            throw ModelStoreError.importSource("\(path) is not a regular file")
         }
     }
 
@@ -495,7 +495,7 @@ public actor ModelStore {
 
             let sources = manifest.downloadURLs(for: file)
             guard !sources.isEmpty else {
-                throw ModelStoreError.manifest("не построился адрес для \(file.path)")
+                throw ModelStoreError.manifest("couldn't build a URL for \(file.path)")
             }
             let destination = try layout.destination(for: file, inside: layout.engineDirectory(inside: staging))
             try fileManager.createDirectory(
@@ -558,7 +558,7 @@ public actor ModelStore {
             }
         }
 
-        throw ModelStoreError.download("\(file.path): не осталось источников")
+        throw ModelStoreError.download("\(file.path): no sources left")
     }
 
     private func reportDownloadProgress(_ received: Int64, total: Int64) {
@@ -666,7 +666,7 @@ public actor ModelStore {
             }
             setState(.notInstalled)
         } catch {
-            setState(.failed(.install("не удалось удалить модель: \(error.localizedDescription)")))
+            setState(.failed(.install("couldn't delete the model: \(error.localizedDescription)")))
         }
     }
 }

@@ -39,10 +39,10 @@ enum FnKeyUsage: Sendable, Equatable {
         switch self {
         case .doNothing: return nil
         case .systemDefault: return nil
-        case .changeInputSource: return "сменой раскладки"
-        case .showEmoji: return "панелью эмодзи"
-        case .startDictation: return "встроенной диктовкой Apple"
-        case .unknown: return "своим действием"
+        case .changeInputSource: return "input source switching"
+        case .showEmoji: return "the emoji panel"
+        case .startDictation: return "Apple's built-in dictation"
+        case .unknown: return "a system action"
         }
     }
 }
@@ -57,22 +57,22 @@ enum HotkeyAdvice {
     static func warning(for hotkey: DictationHotkey, fnUsage: FnKeyUsage) -> String? {
         guard hotkey == .fn else { return nil }
 
-        let external = "На внешней клавиатуре без клавиши 🌐 диктовка не запустится вовсе."
+        let external = "On an external keyboard without a 🌐 key, dictation won't start at all."
 
         guard fnUsage.isTakenBySystem else { return external }
 
         if let action = fnUsage.systemAction {
             return """
-                Нажатие 🌐 занято в системе \(action) — диктовка и это действие \
-                будут срабатывать вместе. Поменять: Системные настройки → \
-                Клавиатура → Нажатие клавиши 🌐. \(external)
+                Pressing 🌐 already triggers \(action) — dictation and that \
+                action will fire together. To change this: System Settings → \
+                Keyboard → “Press 🌐 key”. \(external)
                 """
         }
 
         return """
-            Проверьте, что нажатие 🌐 в системе ни на что не назначено: \
-            Системные настройки → Клавиатура → Нажатие клавиши 🌐. Иначе \
-            диктовка будет срабатывать вместе с системным действием. \(external)
+            Make sure pressing 🌐 is not assigned to anything in the system: \
+            System Settings → Keyboard → “Press 🌐 key”. Otherwise dictation \
+            will fire together with the system action. \(external)
             """
     }
 }

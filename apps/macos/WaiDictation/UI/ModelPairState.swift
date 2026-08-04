@@ -25,10 +25,10 @@ enum ModelPairState {
         if case let .failed(error) = vocabulary { return .failed(error) }
 
         if case let .repairRequired(detail) = main {
-            return .repairRequired("распознавание: \(detail)")
+            return .repairRequired("recognition model: \(detail)")
         }
         if case let .repairRequired(detail) = vocabulary {
-            return .repairRequired("подсказчик терминов: \(detail)")
+            return .repairRequired("vocabulary helper: \(detail)")
         }
 
         if case .deleting = main { return .deleting }

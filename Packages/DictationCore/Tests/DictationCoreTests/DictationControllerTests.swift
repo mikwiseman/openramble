@@ -281,7 +281,7 @@ final class DictationControllerTests: XCTestCase {
 
         let notices = await overlay.notices
         XCTAssertTrue(
-            notices.contains { $0.message.contains("защищённый ввод") },
+            notices.contains { $0.message.contains("secure input") },
             "Пользователю нужно объяснить, почему текст не вставился"
         )
     }
@@ -297,7 +297,7 @@ final class DictationControllerTests: XCTestCase {
 
         let notices = await overlay.notices
         XCTAssertNil(controller.pendingRecovery)
-        XCTAssertTrue(notices.contains { $0.message.contains("Текст вставлен") })
+        XCTAssertTrue(notices.contains { $0.message.contains("The text was inserted") })
     }
 
     // MARK: Цель вставки

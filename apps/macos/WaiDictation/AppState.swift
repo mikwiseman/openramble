@@ -399,7 +399,7 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .failure,
-                    message: "Не удалось подготовить рабочие папки: \(error.localizedDescription)"
+                    message: "Couldn't prepare the app's working folders: \(error.localizedDescription)"
                 )
             )
         }
@@ -428,8 +428,8 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .warning,
-                    message: "Не удалось удалить тексты recovery старой версии. "
-                        + "Удалите вручную: ~/Library/Application Support/WaiDictation/Recovered"
+                    message: "Couldn't delete the old version's recovery texts. "
+                        + "Delete them manually: ~/Library/Application Support/WaiDictation/Recovered"
                 )
             )
         }
@@ -438,17 +438,17 @@ public final class AppState: ObservableObject {
     static func captureFailureMessage(_ error: AudioCaptureError) -> String {
         switch error {
         case .unsupportedAudioFormat(let detail):
-            return "Не удалось обработать аудиоформат выбранного микрофона: \(detail)"
+            return "Couldn't handle the selected microphone's audio format: \(detail)"
         case .microphonePermissionDenied:
-            return "Нет доступа к микрофону. Откройте Системные настройки."
+            return "No microphone access. Open System Settings."
         case .engineUnavailable(let detail):
-            return "Микрофон перестал отвечать: \(detail)"
+            return "The microphone stopped responding: \(detail)"
         case .diskFull:
-            return "Не удалось записать звук: на диске нет свободного места."
+            return "Couldn't record audio: no free disk space."
         case .writeFailed(let detail):
-            return "Не удалось записать звук: \(detail)"
+            return "Couldn't record audio: \(detail)"
         case .notRecording:
-            return "Запись неожиданно остановилась."
+            return "Recording stopped unexpectedly."
         }
     }
 
@@ -462,8 +462,8 @@ public final class AppState: ObservableObject {
                     DictationNotice(
                         kind: result.discardedCorruptCount == 0 ? .warning : .failure,
                         message: result.discardedCorruptCount == 0
-                            ? "После прерывания найдена локальная запись — можно повторить распознавание или удалить."
-                            : "Одна запись сохранена для повтора. Повреждённый фрагмент восстановить нельзя, он удалён.",
+                            ? "A local recording was found after an interruption — you can retry transcription or delete it."
+                            : "One recording was saved for retry. A damaged fragment couldn't be recovered and was deleted.",
                         recoveryAudio: recoveredRecording
                     )
                 )
@@ -471,7 +471,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Незавершённая запись была повреждена: восстановить её нельзя, фрагмент удалён."
+                        message: "An unfinished recording was damaged: it can't be recovered, the fragment was deleted."
                     )
                 )
             }
@@ -479,7 +479,7 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .failure,
-                    message: "Не удалось подготовить восстановление записи: \(error.localizedDescription)"
+                    message: "Couldn't prepare recording recovery: \(error.localizedDescription)"
                 )
             )
         }
@@ -491,9 +491,9 @@ public final class AppState: ObservableObject {
         guard let recoveredText else { return }
         do {
             try HostOnlyPasteboard().copyHostOnly(recoveredText)
-            notify(DictationNotice(kind: .info, message: "Текст скопирован только на этот Mac."))
+            notify(DictationNotice(kind: .info, message: "Text copied to this Mac only."))
         } catch {
-            notify(DictationNotice(kind: .failure, message: "Не удалось скопировать текст."))
+            notify(DictationNotice(kind: .failure, message: "Couldn't copy the text."))
         }
     }
 
@@ -520,7 +520,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .warning,
-                        message: "Повторная вставка не выполнена — текст всё ещё доступен через Copy/Retry.",
+                        message: "Retry insert failed — the text is still available via Copy and Retry.",
                         recoverableText: recoveredText
                     )
                 )
@@ -561,13 +561,13 @@ public final class AppState: ObservableObject {
                     }
                 )(url)
                 let output = TextPipeline(replacements: replacements).process(result.text)
-                guard !output.text.isEmpty else { throw ASREngineError.inferenceFailed("пустой результат") }
+                guard !output.text.isEmpty else { throw ASREngineError.inferenceFailed("empty result") }
                 recognizedText = output.text
             } catch {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Повторное распознавание не удалось. Запись сохранена локально.",
+                        message: "Retry transcription failed. The recording is still saved locally.",
                         recoveryAudio: url
                     )
                 )
@@ -586,7 +586,7 @@ public final class AppState: ObservableObject {
                     notify(
                         DictationNotice(
                             kind: .warning,
-                            message: "Запись распознана, но текст не вставлен — доступны Copy и Retry.",
+                            message: "The recording was transcribed, but the text wasn't inserted — Copy and Retry are in the menu.",
                             recoverableText: recognizedText
                         )
                     )
@@ -595,7 +595,7 @@ public final class AppState: ObservableObject {
                     notify(
                         DictationNotice(
                             kind: .failure,
-                            message: "Текст доступен через Copy/Retry, но локальную WAV удалить не удалось: \(error.localizedDescription)",
+                            message: "The text is available via Copy and Retry, but the local WAV couldn't be deleted: \(error.localizedDescription)",
                             recoverableText: recognizedText,
                             recoveryAudio: url
                         )
@@ -613,7 +613,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Текст вставлен, но локальную WAV удалить не удалось: \(error.localizedDescription)",
+                        message: "The text was inserted, but the local WAV couldn't be deleted: \(error.localizedDescription)",
                         recoveryAudio: url
                     )
                 )
@@ -631,7 +631,7 @@ public final class AppState: ObservableObject {
                 try await recordingRecovery?.delete(url)
                 recoveredRecording = try await recordingRecovery?.recordings().first
             } catch {
-                notify(DictationNotice(kind: .failure, message: "Не удалось удалить локальную запись."))
+                notify(DictationNotice(kind: .failure, message: "Couldn't delete the local recording."))
             }
         }
     }
@@ -687,7 +687,7 @@ public final class AppState: ObservableObject {
             // Сказанное до сна уже записано. Распознаём его, а не выбрасываем.
             noticeAfterSession = DictationNotice(
                 kind: .info,
-                message: "Компьютер уходил в сон — запись пришлось остановить."
+                message: "The Mac went to sleep — recording had to stop."
             )
             stopCurrentRecording()
         case .preparing:
@@ -716,7 +716,7 @@ public final class AppState: ObservableObject {
     private func handleAudioConfigurationChange() {
         guard dictationState == .listening else { return }
         controller?.preserveActiveRecording(
-            reason: "Микрофон или аудиоустройство отключено. Диктовка остановлена."
+            reason: "The microphone or audio device was disconnected. Dictation stopped."
         )
     }
 
@@ -755,7 +755,7 @@ public final class AppState: ObservableObject {
     public func cancelCurrentDictation() {
         guard !isRecoveryOperationActive, dictationState != .idle else { return }
         controller?.cancel()
-        notify(DictationNotice(kind: .info, message: "Диктовка отменена. Запись удалена."))
+        notify(DictationNotice(kind: .info, message: "Dictation cancelled. The recording was deleted."))
     }
 
     private func wireHotkey() {
@@ -843,33 +843,33 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .warning,
-                        message: "Диктовка выключена: выдайте Универсальный доступ и доступ к микрофону в Системных настройках."
+                        message: "Dictation is off: grant Accessibility and Microphone access in System Settings."
                     )
                 )
             }
         } else if previousAccessibility, !accessibility {
             if dictationState == .preparing || dictationState == .listening {
                 controller?.preserveActiveRecording(
-                    reason: "Отозван Универсальный доступ. Диктовка остановлена; откройте Системные настройки."
+                    reason: "Accessibility access was revoked. Dictation stopped; open System Settings."
                 )
             } else {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Отозван Универсальный доступ. Откройте Системные настройки."
+                        message: "Accessibility access was revoked. Open System Settings."
                     )
                 )
             }
         } else if previousMicrophone, !microphone {
             if dictationState == .preparing || dictationState == .listening {
                 controller?.preserveActiveRecording(
-                    reason: "Отозван доступ к микрофону. Диктовка остановлена; откройте Системные настройки."
+                    reason: "Microphone access was revoked. Dictation stopped; open System Settings."
                 )
             } else {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Отозван доступ к микрофону. Может потребоваться перезапуск приложения."
+                        message: "Microphone access was revoked. The app may need a relaunch."
                     )
                 )
             }
@@ -941,7 +941,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Не удалось перезапустить Wai Dictation: \(error.localizedDescription)"
+                        message: "Couldn't relaunch Wai Dictation: \(error.localizedDescription)"
                     )
                 )
             }
@@ -969,7 +969,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Не удалось восстановить Универсальный доступ: \(error.localizedDescription)"
+                        message: "Couldn't repair Accessibility access: \(error.localizedDescription)"
                     )
                 )
             }
@@ -1117,7 +1117,7 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .warning,
-                    message: "Сейчас идёт диктовка. Дождитесь её окончания."
+                    message: "Dictation is in progress. Wait for it to finish."
                 )
             )
             return
@@ -1157,14 +1157,14 @@ public final class AppState: ObservableObject {
             engineLoadFailure = nil
         } catch {
             let detail =
-                "файлы прошли проверку, но Core ML не загрузил модель: \(error.localizedDescription)"
+                "the files passed verification, but Core ML couldn't load the model: \(error.localizedDescription)"
             engineLoadFailure = detail
             modelState = .repairRequired(detail)
             notify(
                 DictationNotice(
                     kind: .failure,
-                    message: "Модель не загрузилась. Требуется явное восстановление "
-                        + "\(remainingDownloadMegabytes == 0 ? 586 : remainingDownloadMegabytes) МБ."
+                    message: "The model didn't load. An explicit repair will redownload "
+                        + "\(remainingDownloadMegabytes == 0 ? 586 : remainingDownloadMegabytes) MB."
                 )
             )
         }
@@ -1228,7 +1228,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Словарь не сохранён: \(error.localizedDescription)"
+                        message: "The dictionary wasn't saved: \(error.localizedDescription)"
                     )
                 )
                 return

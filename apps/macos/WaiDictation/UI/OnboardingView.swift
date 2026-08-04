@@ -32,8 +32,8 @@ struct OnboardingView: View {
             VStack(spacing: 6) {
                 HStack {
                     if step.hasPrevious {
-                        Button("Назад") { back() }
-                            .accessibilityHint("Вернуться к шагу \(step.rawValue)")
+                        Button("Back") { back() }
+                            .accessibilityHint("Go back to step \(step.rawValue)")
                     }
                     Spacer()
                     Text(step.progressText)
@@ -60,16 +60,16 @@ struct OnboardingView: View {
         }
         .frame(width: 560, height: 420)
         .confirmationDialog(
-            "Восстановить Универсальный доступ?",
+            "Repair Accessibility access?",
             isPresented: $showAccessibilityRepairConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Сбросить доступ Wai Dictation и перезапустить", role: .destructive) {
+            Button("Reset Wai Dictation's access and relaunch", role: .destructive) {
                 state.repairAccessibility()
             }
-            Button("Отмена", role: .cancel) {}
+            Button("Cancel", role: .cancel) {}
         } message: {
-            Text("macOS удалит только Accessibility-записи Wai Dictation. После перезапуска доступ нужно будет выдать заново.")
+            Text("macOS will remove only Wai Dictation's Accessibility entries. After the relaunch you will need to grant access again.")
         }
     }
 
@@ -87,36 +87,36 @@ struct OnboardingView: View {
 
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Диктовка, которая никуда не отправляет вашу речь")
+            Text("Dictation that never sends your speech anywhere")
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Нажали клавишу, сказали, отпустили — текст появился там, где стоял курсор. В любом приложении.")
+            Text("Press a key, speak, release — the text appears where your cursor was. In any app.")
                 .foregroundStyle(.secondary)
 
             Divider()
 
             VStack(alignment: .leading, spacing: 10) {
                 Label {
-                    Text("Речь распознаётся моделью на вашем диске. Работает в самолёте.")
+                    Text("Speech is recognized by a model on your disk. Works on a plane.")
                         .fixedSize(horizontal: false, vertical: true)
                 } icon: {
                     Image(systemName: "airplane").foregroundStyle(.blue)
                 }
                 Label {
-                    Text("В сеть приложение выходит только по вашей команде: скачать модель и, если включите, проверить обновления.")
+                    Text("The app goes online only on your command: to download the model and, if you turn it on, to check for updates.")
                         .fixedSize(horizontal: false, vertical: true)
                 } icon: {
                     Image(systemName: "arrow.down.circle").foregroundStyle(.blue)
                 }
                 Label {
-                    Text("Ни аккаунтов, ни аналитики, ни отчётов. Код открыт — это можно проверить.")
+                    Text("No accounts, no analytics, no reports. The code is open — you can check.")
                         .fixedSize(horizontal: false, vertical: true)
                 } icon: {
                     Image(systemName: "lock.open").foregroundStyle(.blue)
                 }
                 Label {
-                    Text("Safe beta требует Mac на Apple Silicon и macOS 14 или новее.")
+                    Text("Safe beta requires a Mac with Apple Silicon and macOS 14 or later.")
                         .fixedSize(horizontal: false, vertical: true)
                 } icon: {
                     Image(systemName: "cpu").foregroundStyle(.blue)
@@ -130,18 +130,18 @@ struct OnboardingView: View {
 
     private var permissions: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Два разрешения")
+            Text("Two permissions")
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Оба выдаются в системных настройках. Мы подскажем, где именно.")
+            Text("Both are granted in System Settings. We'll show you exactly where.")
                 .foregroundStyle(.secondary)
 
             VStack(spacing: 12) {
                 OnboardingPermission(
                     status: PermissionStatus(
-                        title: "Микрофон",
-                        detail: "Чтобы услышать вашу речь.",
+                        title: "Microphone",
+                        detail: "To hear your speech.",
                         granted: state.microphoneGranted
                     ),
                     action: state.requestMicrophone
@@ -149,7 +149,7 @@ struct OnboardingView: View {
                 OnboardingPermission(
                     status: PermissionStatus.accessibility(
                         state: state.accessibilityState,
-                        detail: "Чтобы услышать горячую клавишу и вставить готовый текст.",
+                        detail: "To hear the hotkey and insert the finished text.",
                     ),
                     action: performAccessibilityAction
                 )
@@ -157,17 +157,17 @@ struct OnboardingView: View {
 
             if needsAccessibilityRepair {
                 HStack {
-                    Button("Показать приложение в Finder") {
+                    Button("Show the app in Finder") {
                         state.revealApplicationForAccessibility()
                     }
-                    Button("Открыть Системные настройки") {
+                    Button("Open System Settings") {
                         state.openAccessibilitySettings()
                     }
                 }
                 .font(.caption)
             }
 
-            Text("Отдельное разрешение «Мониторинг ввода» не нужно. Приложение не запоминает и не передаёт нажатия — оно ищет только вашу горячую клавишу.")
+            Text("A separate “Input Monitoring” permission is not needed. The app doesn't store or transmit keystrokes — it only looks for your hotkey.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -201,7 +201,7 @@ struct OnboardingView: View {
 
     private var model: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Модель распознавания")
+            Text("Recognition model")
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
 
@@ -223,17 +223,17 @@ struct OnboardingView: View {
 
     private var tryIt: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Попробуйте")
+            Text("Try it")
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
 
-            Picker("Горячая клавиша", selection: $state.hotkey) {
+            Picker("Hotkey", selection: $state.hotkey) {
                 ForEach(DictationHotkey.allCases, id: \.self) { key in
                     Text(key.title).tag(key)
                 }
             }
             .pickerStyle(.menu)
-            .accessibilityHint("Клавиша, которую надо удерживать во время диктовки")
+            .accessibilityHint("The key you hold down while dictating")
 
             if let warning = state.hotkeyWarning {
                 Label {
@@ -245,10 +245,10 @@ struct OnboardingView: View {
                         .foregroundStyle(.orange)
                 }
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Предупреждение о клавише. \(warning)")
+                .accessibilityLabel("Key warning. \(warning)")
             }
 
-            Text("Удерживайте \(state.hotkey.title), скажите что-нибудь и отпустите. Текст появится в поле ниже.")
+            Text("Hold \(state.hotkey.title), say something, and release. The text will appear in the field below.")
                 .foregroundStyle(.secondary)
 
             // Поле для пробы. Настоящее, с изменяемым текстом: раньше оно было
@@ -261,19 +261,19 @@ struct OnboardingView: View {
                 .focused($trialFocused)
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
                 .onAppear { trialFocused = true }
-                .accessibilityLabel("Поле для пробной диктовки")
+                .accessibilityLabel("Trial dictation field")
 
             if state.dictationState == .listening {
-                Label("Слушаю…", systemImage: "waveform")
+                Label("Listening…", systemImage: "waveform")
                     .foregroundStyle(.red)
-                    .accessibilityLabel("Идёт запись")
+                    .accessibilityLabel("Recording")
             }
 
             if trialSucceeded {
-                Label("Готово — диктовка работает", systemImage: "checkmark.circle.fill")
+                Label("Done — dictation works", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
             } else {
-                Button("Пропустить пробу") { finishOnboarding() }
+                Button("Skip the try-out") { finishOnboarding() }
                     .buttonStyle(.link)
             }
 

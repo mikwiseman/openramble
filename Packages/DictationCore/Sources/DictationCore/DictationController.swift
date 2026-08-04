@@ -286,11 +286,11 @@ public final class DictationController {
             do {
                 saved = try await recordingRecovery.preserve(recording.url)
                 suffix = saved == nil
-                    ? " Не удалось подготовить запись для повтора."
-                    : " Запись сохранена локально — можно повторить или удалить."
+                    ? " Couldn't save the recording for retry."
+                    : " The recording is saved locally — you can retry or delete it."
             } catch {
                 saved = nil
-                suffix = " Запись осталась локально, но подготовить Retry/Delete не удалось: \(error.localizedDescription)"
+                suffix = " The recording is still on disk, but preparing Retry/Delete failed: \(error.localizedDescription)"
             }
             let notice = DictationNotice(
                 kind: .failure,
@@ -364,7 +364,7 @@ public final class DictationController {
     private func reportReturnFailure(session: Int) async {
         let notice = DictationNotice(
             kind: .warning,
-            message: "Текст вставлен, но нажать Return не удалось."
+            message: "The text was inserted, but pressing Return failed."
         )
         onNotice?(notice)
         await overlay.presentNotice(notice)
@@ -377,7 +377,7 @@ public final class DictationController {
            insertion == .insertedButClipboardRestoreFailed {
             let notice = DictationNotice(
                 kind: .warning,
-                message: "Текст вставлен, но прежний clipboard восстановить не удалось."
+                message: "The text was inserted, but the previous clipboard couldn't be restored."
             )
             onNotice?(notice)
             await overlay.presentNotice(notice)
@@ -389,13 +389,13 @@ public final class DictationController {
         let message: String
         if let insertion = error as? TextInsertionError, insertion == .secureInputActive {
             // Не сбой, а нормальная ситуация: активно поле пароля.
-            message = "Текст не вставлен: активен защищённый ввод. Доступны Copy и Retry."
+            message = "Text not inserted: secure input is active. Copy and Retry are in the menu."
         } else if let insertion = error as? TextInsertionError, insertion == .protectedClipboard {
             // После перехода на снимок «любые байты как есть» сюда попадают
             // только пароль из менеджера, file promise и буфер больше 16 МиБ.
-            message = "В буфере пароль или файл — вставка его не тронула. Текст: Copy и Retry."
+            message = "Your clipboard holds a password or a file — it was left untouched. Your text: Copy and Retry in the menu."
         } else {
-            message = "Текст не удалось вставить. Доступны Copy и Retry."
+            message = "The text couldn't be inserted. Copy and Retry are in the menu."
         }
 
         let notice = DictationNotice(kind: .warning, message: message, recoverableText: text)
@@ -474,8 +474,8 @@ public final class DictationController {
             let notice = DictationNotice(
                 kind: .failure,
                 message: saved == nil
-                    ? message + " Не удалось подготовить запись для повтора."
-                    : message + " Запись сохранена локально — можно повторить или удалить.",
+                    ? message + " Couldn't save the recording for retry."
+                    : message + " The recording is saved locally — you can retry or delete it.",
                 recoveryAudio: saved
             )
             self.onNotice?(notice)
@@ -553,7 +553,7 @@ public final class DictationController {
         } catch {
             let notice = DictationNotice(
                 kind: .failure,
-                message: "Не удалось удалить локальную запись: \(error.localizedDescription)"
+                message: "Couldn't delete the local recording: \(error.localizedDescription)"
             )
             onNotice?(notice)
             await overlay.presentNotice(notice)
@@ -567,7 +567,7 @@ public final class DictationController {
             onNotice?(
                 DictationNotice(
                     kind: .info,
-                    message: "Достигнут предел в час. Распознаю записанное."
+                    message: "Reached the one-hour limit. Transcribing what was recorded."
                 )
             )
             finish()
@@ -587,9 +587,9 @@ public enum DictationError: Error, Sendable, Equatable {
     public var userMessage: String {
         switch self {
         case .capture:
-            return "Не удалось записать звук."
+            return "Couldn't record audio."
         case .recognition:
-            return "Не удалось распознать речь."
+            return "Couldn't transcribe speech."
         }
     }
 }

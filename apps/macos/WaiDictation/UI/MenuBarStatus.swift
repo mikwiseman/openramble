@@ -18,14 +18,14 @@ enum MenuBarStatus {
     /// и «идёт запись» без хозяина ничего не говорит.
     static func accessibilityLabel(state: DictationState, isDictationReady: Bool) -> String {
         switch state {
-        case .listening: return "Wai Dictation: идёт запись"
-        case .transcribing: return "Wai Dictation: распознаю речь"
-        case .inserting: return "Wai Dictation: вставляю текст"
-        case .preparing: return "Wai Dictation: включаю микрофон"
+        case .listening: return "Wai Dictation: recording"
+        case .transcribing: return "Wai Dictation: transcribing speech"
+        case .inserting: return "Wai Dictation: inserting text"
+        case .preparing: return "Wai Dictation: turning on the microphone"
         case .idle:
             return isDictationReady
-                ? "Wai Dictation: готово к диктовке"
-                : "Wai Dictation: нужна настройка"
+                ? "Wai Dictation: ready to dictate"
+                : "Wai Dictation: setup needed"
         }
     }
 
@@ -39,18 +39,18 @@ enum MenuBarStatus {
         switch state {
         case .idle:
             return isDictationReady
-                ? "Удерживайте \(hotkeyTitle) и говорите"
-                : "Нужна настройка"
-        case .preparing: return "Включаю микрофон…"
+                ? "Hold \(hotkeyTitle) and speak"
+                : "Setup needed"
+        case .preparing: return "Turning on the microphone…"
         case .listening:
             // В режиме без удержания клавишу отпускают, а запись продолжается.
             // Не сказать об этом — значит оставить человека с включённым
             // микрофоном и уверенностью, что он уже выключен.
             return isHandsFreeActive
-                ? "Слушаю — нажмите \(hotkeyTitle), чтобы закончить"
-                : "Слушаю"
-        case .transcribing: return "Распознаю…"
-        case .inserting: return "Вставляю текст"
+                ? "Listening — press \(hotkeyTitle) to finish"
+                : "Listening"
+        case .transcribing: return "Transcribing…"
+        case .inserting: return "Inserting text"
         }
     }
 }

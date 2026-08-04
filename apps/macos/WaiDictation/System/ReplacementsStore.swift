@@ -29,13 +29,13 @@ public struct ReplacementsStore {
             switch self {
             case .unreadable:
                 return """
-                    Словарь замен не прочитался и поэтому не изменяется. \
-                    Прежние данные сохранены — ничего не потеряно.
+                    The replacement dictionary couldn't be read, so it can't be edited. \
+                    The previous data is preserved — nothing is lost.
                     """
             case let .writtenByNewerVersion(version):
                 return """
-                    Словарь замен записан более новой версией приложения \
-                    (формат \(version)). Он не изменяется, чтобы её данные не пропали.
+                    The replacement dictionary was written by a newer version of the app \
+                    (format \(version)). It can't be edited so that version's data isn't lost.
                     """
             }
         }

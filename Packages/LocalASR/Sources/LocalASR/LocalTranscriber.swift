@@ -39,7 +39,7 @@ public actor LocalTranscriber {
     /// узнаются на уровне звука, а не пост-обработкой.
     public func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {
         guard let capable = engine as? VocabularyBoostCapable else {
-            throw ASREngineError.modelsUnavailable("движок не поддерживает подсказки терминов")
+            throw ASREngineError.modelsUnavailable("the engine doesn't support vocabulary hints")
         }
         try await capable.loadVocabularyModels(from: modelDirectory, boost: boost)
     }
@@ -76,7 +76,7 @@ public actor LocalTranscriber {
     public func transcribe(samples: [Float], languageHint: String? = nil) async throws -> ASRResult {
         guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
         guard !samples.isEmpty else {
-            throw ASREngineError.unsupportedAudioFormat("пустая запись")
+            throw ASREngineError.unsupportedAudioFormat("empty recording")
         }
 
         try Task.checkCancellation()

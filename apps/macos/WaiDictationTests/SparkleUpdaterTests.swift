@@ -18,6 +18,6 @@ final class SparkleUpdaterTests: XCTestCase {
             "без ключа подписи обновления обязаны отказать вслух, а не молча ослабнуть"
         )
         XCTAssertTrue(failure.contains("SUPublicEDKey"), "«\(failure)» не называет, чего не хватает")
-        XCTAssertTrue(failure.contains("Обновления отключены"))
+        XCTAssertTrue(failure.contains("Updates are disabled"))
     }
 }

@@ -28,18 +28,18 @@ final class FnKeyUsageTests: XCTestCase {
     /// Fn занята системой — диктовка и системное действие сработают вместе.
     func testFnЗанятаяСистемойДаётПредупреждениеСНазваниемДействия() throws {
         let warning = try XCTUnwrap(HotkeyAdvice.warning(for: .fn, fnUsage: .changeInputSource))
-        XCTAssertTrue(warning.contains("сменой раскладки"))
+        XCTAssertTrue(warning.contains("input source switching"))
 
         let dictation = try XCTUnwrap(HotkeyAdvice.warning(for: .fn, fnUsage: .startDictation))
-        XCTAssertTrue(dictation.contains("встроенной диктовкой Apple"))
+        XCTAssertTrue(dictation.contains("Apple's built-in dictation"))
 
         let emoji = try XCTUnwrap(HotkeyAdvice.warning(for: .fn, fnUsage: .showEmoji))
-        XCTAssertTrue(emoji.contains("панелью эмодзи"))
+        XCTAssertTrue(emoji.contains("the emoji panel"))
     }
 
     func testБезНастройкиПросимПроверитьЕё() throws {
         let warning = try XCTUnwrap(HotkeyAdvice.warning(for: .fn, fnUsage: .systemDefault))
-        XCTAssertTrue(warning.contains("Клавиатура"))
+        XCTAssertTrue(warning.contains("Keyboard"))
     }
 
     /// Даже со свободной Fn предупреждение остаётся.
@@ -48,6 +48,6 @@ final class FnKeyUsageTests: XCTestCase {
     /// Studio — диктовка не запустится вовсе, и понять почему будет неоткуда.
     func testСвободнаяFnВсёРавноПредупреждаетПроВнешнююКлавиатуру() throws {
         let warning = try XCTUnwrap(HotkeyAdvice.warning(for: .fn, fnUsage: .doNothing))
-        XCTAssertTrue(warning.contains("внешней клавиатуре"))
+        XCTAssertTrue(warning.contains("external keyboard"))
     }
 }

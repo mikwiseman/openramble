@@ -8,13 +8,13 @@ struct SettingsView: View {
     var body: some View {
         TabView {
             GeneralSettings(state: state, updater: state.updater)
-                .tabItem { Label("Основное", systemImage: "gearshape") }
+                .tabItem { Label("General", systemImage: "gearshape") }
             ModelSettings(state: state)
-                .tabItem { Label("Модель", systemImage: "waveform") }
+                .tabItem { Label("Model", systemImage: "waveform") }
             DictionarySettings(state: state)
-                .tabItem { Label("Словарь", systemImage: "character.book.closed") }
+                .tabItem { Label("Dictionary", systemImage: "character.book.closed") }
             AboutView()
-                .tabItem { Label("О программе", systemImage: "info.circle") }
+                .tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 520, height: 400)
     }
@@ -31,14 +31,14 @@ private struct GeneralSettings: View {
     var body: some View {
         Form {
             Section {
-                Picker("Горячая клавиша", selection: $state.hotkey) {
+                Picker("Hotkey", selection: $state.hotkey) {
                     ForEach(DictationHotkey.allCases, id: \.self) { key in
                         Text(key.title).tag(key)
                     }
                 }
-                .accessibilityHint("Клавиша, которую надо удерживать во время диктовки")
+                .accessibilityHint("The key you hold down while dictating")
 
-                Text("Удерживайте клавишу и говорите. Двойное нажатие включает режим без удержания — тогда запись останавливается следующим нажатием.")
+                Text("Hold the key and speak. Double-press to dictate without holding — recording then stops on the next press.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -56,13 +56,13 @@ private struct GeneralSettings: View {
                             .foregroundStyle(.orange)
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Предупреждение о клавише. \(warning)")
+                    .accessibilityLabel("Key warning. \(warning)")
                 }
             }
 
             Section {
-                Toggle("Звук начала и конца записи", isOn: $state.soundsEnabled)
-                    .accessibilityHint("Короткий сигнал, когда запись началась и когда закончилась")
+                Toggle("Play sounds when recording starts and stops", isOn: $state.soundsEnabled)
+                    .accessibilityHint("A short tone when recording starts and when it stops")
             }
 
             Section {
@@ -78,27 +78,27 @@ private struct GeneralSettings: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section("Приватная вставка") {
-                Text("Перед ⌘V прежнее содержимое clipboard снимается в память байт-в-байт и возвращается не позже чем через две секунды. Не трогаются только пароль из менеджера паролей, file promises и содержимое больше 16 МиБ — тогда вставки не будет, текст останется через Copy/Retry. В beta непрерывность предыдущего элемента Universal Clipboard не гарантируется.")
+            Section("Private paste") {
+                Text("Before ⌘V, the previous clipboard contents are captured to memory byte-for-byte and put back within two seconds. The only exceptions are a password from a password manager, file promises, and contents over 16 MiB — then nothing is pasted, and your text stays available via Copy and Retry. In beta, continuity of the previous Universal Clipboard item is not guaranteed.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section("Обновления") {
+            Section("Updates") {
                 // Переключатель гаснет вместе с механизмом обновлений. Иначе
                 // получалось молчаливое враньё: рядом написано «обновления не
                 // работают», человек щёлкает переключатель, текст под ним
                 // обещает ежесуточную проверку — а настройка уходит в
                 // незапущенный механизм и не делает ничего.
-                Toggle("Проверять обновления автоматически", isOn: $updater.automaticChecksEnabled)
-                    .accessibilityHint("Единственный выключатель, который меняет сетевое поведение приложения")
+                Toggle("Check for updates automatically", isOn: $updater.automaticChecksEnabled)
+                    .accessibilityHint("The only switch that changes the app's network behavior")
                     .disabled(updater.startupFailure != nil)
-                Text("По умолчанию выключено. Если включить, приложение раз в сутки будет скачивать с GitHub маленький файл со списком версий. Кроме загрузки модели и самого обновления, других выходов в сеть нет: туда уходит ваш IP-адрес и номер версии, больше ничего — ни данных о компьютере, ни того, что вы диктовали.")
+                Text("Off by default. When on, the app downloads a small version list from GitHub once a day. Apart from the model download and the update itself, there are no other network requests: only your IP address and the app version are sent — no details about your computer, and nothing you dictated.")
                     .font(.caption)
                     .foregroundStyle(updater.startupFailure == nil ? .secondary : .tertiary)
 
                 HStack {
-                    Button("Проверить сейчас", action: updater.checkForUpdates)
+                    Button("Check now", action: updater.checkForUpdates)
                         .disabled(!updater.canCheckForUpdates)
                     Spacer()
                 }
@@ -107,39 +107,39 @@ private struct GeneralSettings: View {
                     // Молчать нельзя: иначе человек будет считать, что
                     // обновления приходят, а они не приходят.
                     VStack(alignment: .leading, spacing: 2) {
-                        Label("Обновления не работают", systemImage: "exclamationmark.triangle.fill")
+                        Label("Updates are not working", systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
                         Text(failure)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Обновления не работают. \(failure)")
+                    .accessibilityLabel("Updates are not working. \(failure)")
                 }
             }
 
-            Section("Разрешения") {
+            Section("Permissions") {
                 PermissionRow(
                     status: PermissionStatus.accessibility(
                         state: state.accessibilityState,
-                        detail: "Нужен, чтобы услышать горячую клавишу и вставить текст.",
+                        detail: "Needed to hear the hotkey and insert text.",
                     ),
                     action: performAccessibilityAction
                 )
                 if needsAccessibilityRepair {
                     HStack {
-                        Button("Показать в Finder") {
+                        Button("Show in Finder") {
                             state.revealApplicationForAccessibility()
                         }
-                        Button("Открыть настройки") {
+                        Button("Open System Settings") {
                             state.openAccessibilitySettings()
                         }
                     }
                 }
                 PermissionRow(
                     status: PermissionStatus(
-                        title: "Микрофон",
-                        detail: "Нужен, чтобы записать вашу речь.",
+                        title: "Microphone",
+                        detail: "Needed to record your speech.",
                         granted: state.microphoneGranted
                     ),
                     action: state.requestMicrophone
@@ -151,16 +151,16 @@ private struct GeneralSettings: View {
         // человек должен увидеть свежее состояние, а не то, что было до ухода.
         .task { state.refreshPermissions() }
         .confirmationDialog(
-            "Восстановить Универсальный доступ?",
+            "Repair Accessibility access?",
             isPresented: $showAccessibilityRepairConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Сбросить доступ Wai Dictation и перезапустить", role: .destructive) {
+            Button("Reset Wai Dictation's access and relaunch", role: .destructive) {
                 state.repairAccessibility()
             }
-            Button("Отмена", role: .cancel) {}
+            Button("Cancel", role: .cancel) {}
         } message: {
-            Text("macOS удалит только Accessibility-записи Wai Dictation. После перезапуска доступ нужно будет выдать заново.")
+            Text("macOS will remove only Wai Dictation's Accessibility entries. After the relaunch you will need to grant access again.")
         }
     }
 
@@ -210,7 +210,7 @@ private struct PermissionRow: View {
                 Button(title, action: action)
                     .accessibilityLabel(status.actionAccessibilityLabel ?? title)
             } else {
-                Label("Выдан", systemImage: "checkmark.circle.fill")
+                Label("Granted", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                     .labelStyle(.iconOnly)
                     .font(.title3)
@@ -244,7 +244,7 @@ private struct ModelSettings: View {
             }
 
             Section {
-                Text("Parakeet TDT 0.6B v3 — локальная beta для русского и английского. Английские термины внутри русской речи узнаёт акустический подсказчик; его промахи чинит словарь замен.")
+                Text("Parakeet TDT 0.6B v3 — a local beta for Russian and English. English terms inside Russian speech are recognized by the acoustic vocabulary helper; the replacement dictionary fixes what it misses.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -264,7 +264,7 @@ private struct DictionarySettings: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Замены применяются к распознанному тексту. Полезно для названий, которые модель слышит иначе.")
+                Text("Replacements apply to the recognized text. Useful for names the model hears differently.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -273,7 +273,7 @@ private struct DictionarySettings: View {
                     // здесь: человек стоит ровно на той странице, где собирается
                     // его править, и должен узнать до того, как начнёт.
                     VStack(alignment: .leading, spacing: 2) {
-                        Label("Словарь не изменяется", systemImage: "lock.fill")
+                        Label("Dictionary can't be edited", systemImage: "lock.fill")
                             .foregroundStyle(.orange)
                         Text(problem.message)
                             .font(.caption)
@@ -282,20 +282,20 @@ private struct DictionarySettings: View {
                     .padding(10)
                     .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Словарь не изменяется. \(problem.message)")
+                    .accessibilityLabel("Dictionary can't be edited. \(problem.message)")
                 }
 
                 if state.isDictionaryEditable, state.availableStarterCount > 0 {
                     HStack {
-                        Text("Диктуете по-русски с английскими терминами? Модель пишет их кириллицей: «pull request» становится «пул реквест».")
+                        Text("Dictating in Russian with English terms? The model writes them in Cyrillic: “pull request” becomes “пул реквест”.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Button("Добавить \(state.availableStarterCount)") {
+                        Button("Add \(state.availableStarterCount)") {
                             state.addStarterDictionary()
                         }
                         // Без имени это просто «добавить сорок два».
-                        .accessibilityLabel("Добавить \(state.availableStarterCount) готовых замен для английских терминов")
+                        .accessibilityLabel("Add \(state.availableStarterCount) ready-made replacements for English terms")
                     }
                     .padding(10)
                     .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
@@ -316,35 +316,35 @@ private struct DictionarySettings: View {
                     // Строка читается целиком: «сентри», стрелка и «Sentry»
                     // по отдельности не значат ничего.
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Слышится как «\(replacement.spoken)», писать как «\(replacement.written)»")
+                    .accessibilityLabel("Heard as “\(replacement.spoken)”, written as “\(replacement.written)”")
                 }
                 .onDelete(perform: state.removeReplacements)
             }
             .disabled(!state.isDictionaryEditable)
-            .accessibilityLabel("Список замен")
+            .accessibilityLabel("Replacement list")
 
             HStack {
                 // Подпись у полей только в виде подсказки внутри рамки: пустое
                 // поле VoiceOver прочитает, а заполненное — уже нет, и человек
                 // потеряет, в каком из двух полей он стоит.
-                TextField("Слышится как", text: $spoken)
-                    .accessibilityLabel("Слышится как")
+                TextField("Heard as", text: $spoken)
+                    .accessibilityLabel("Heard as")
                 Image(systemName: "arrow.right")
                     .foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
-                TextField("Писать как", text: $written)
-                    .accessibilityLabel("Писать как")
-                Button("Добавить") {
+                TextField("Write as", text: $written)
+                    .accessibilityLabel("Write as")
+                Button("Add") {
                     state.addReplacement(spoken: spoken, written: written)
                     spoken = ""
                     written = ""
                 }
                 .disabled(spoken.isEmpty || written.isEmpty || !state.isDictionaryEditable)
-                .accessibilityLabel("Добавить замену")
+                .accessibilityLabel("Add replacement")
                 .accessibilityHint(
                     state.isDictionaryEditable
-                        ? "Заполните оба поля"
-                        : "Словарь не изменяется, пока прежние данные не прочитались"
+                        ? "Fill in both fields"
+                        : "The dictionary can't be edited until the previous data has been read"
                 )
             }
             .padding()
@@ -360,16 +360,16 @@ private struct AboutView: View {
             Text("Wai Dictation")
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
-            Text("Диктовка, которая работает целиком на вашем Mac.")
+            Text("Dictation that runs entirely on your Mac.")
                 .foregroundStyle(.secondary)
 
             Divider()
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Что уходит в сеть")
+                Text("What goes over the network")
                     .font(.headline)
                     .accessibilityAddTraits(.isHeader)
-                Text("Загрузка модели по вашей команде и проверка обновлений, если вы её включили. Больше ничего: речь, текст и нажатия клавиш никуда не отправляются и нигде не сохраняются, кроме вашего компьютера.")
+                Text("The model download you start yourself, and the update check if you turned it on. Nothing else: your speech, text, and keystrokes are never sent anywhere and never stored anywhere except your computer.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -377,16 +377,16 @@ private struct AboutView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Модели распознавания")
+                Text("Recognition models")
                     .font(.headline)
                     .accessibilityAddTraits(.isHeader)
-                Text("Parakeet TDT 0.6B v3 © NVIDIA, лицензия CC BY 4.0. Конвертирована в Core ML и квантизована шестибитной палитрой проектом FluidInference.")
+                Text("Parakeet TDT 0.6B v3 © NVIDIA, licensed under CC BY 4.0. Converted to Core ML and quantized with a 6-bit palette by the FluidInference project.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("Parakeet TDT-CTC 110M © NVIDIA, лицензия CC BY 4.0 — акустический подсказчик терминов. Конвертирована в Core ML проектом FluidInference.")
+                Text("Parakeet TDT-CTC 110M © NVIDIA, licensed under CC BY 4.0 — the acoustic vocabulary helper. Converted to Core ML by the FluidInference project.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("Библиотеки: FluidAudio (Apache 2.0), Sparkle (MIT).")
+                Text("Libraries: FluidAudio (Apache 2.0), Sparkle (MIT).")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

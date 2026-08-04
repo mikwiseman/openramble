@@ -28,8 +28,8 @@ struct MenuContent: View {
 
         if state.dictationState == .preparing || state.dictationState == .listening {
             Divider()
-            Button("Остановить и вставить") { state.finishCurrentDictation() }
-            Button("Отменить и удалить запись", role: .destructive) {
+            Button("Stop and insert") { state.finishCurrentDictation() }
+            Button("Cancel and delete recording", role: .destructive) {
                 state.cancelCurrentDictation()
             }
         }
@@ -37,7 +37,7 @@ struct MenuContent: View {
         if !state.isDictationReady {
             Divider()
             setupHints
-            Button("Пройти настройку заново") {
+            Button("Run setup again") {
                 showOnboarding()
                 openWindow(id: "onboarding")
             }
@@ -45,19 +45,19 @@ struct MenuContent: View {
 
         if state.recoveredText != nil {
             Divider()
-            Button("Повторить вставку") { state.retryRecoveredText() }
-            Button("Скопировать текст") { state.copyRecoveredText() }
-            Button("Удалить сохранённый текст", role: .destructive) {
+            Button("Retry insert") { state.retryRecoveredText() }
+            Button("Copy text") { state.copyRecoveredText() }
+            Button("Delete saved text", role: .destructive) {
                 state.deleteRecoveredText()
             }
         }
 
         if state.recoveredRecording != nil {
             Divider()
-            Text("Локальная запись после сбоя")
-            Button("Повторить распознавание") { state.retryRecoveredRecording() }
+            Text("Local recording after a failure")
+            Button("Retry transcription") { state.retryRecoveredRecording() }
                 .disabled(!state.modelState.isReady || state.dictationState != .idle)
-            Button("Удалить запись") { state.deleteRecoveredRecording() }
+            Button("Delete recording") { state.deleteRecoveredRecording() }
         }
 
         Divider()
@@ -74,13 +74,13 @@ struct MenuContent: View {
 
         Divider()
 
-        Button("Проверить обновления…") { updater.checkForUpdates() }
+        Button("Check for Updates…") { updater.checkForUpdates() }
             .disabled(!updater.canCheckForUpdates)
 
-        Button("Настройки…") { openSettings() }
+        Button("Settings…") { openSettings() }
             .keyboardShortcut(",", modifiers: .command)
 
-        Button("Выйти из Wai Dictation") { NSApplication.shared.terminate(nil) }
+        Button("Quit Wai Dictation") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q", modifiers: .command)
     }
 
@@ -89,21 +89,21 @@ struct MenuContent: View {
         if !state.accessibilityGranted {
             switch state.accessibilityState {
             case .denied:
-                Button("Выдать универсальный доступ") { state.requestAccessibility() }
+                Button("Grant Accessibility access") { state.requestAccessibility() }
             case .waitingForSettings:
-                Button("Открыть настройки доступа") { state.openAccessibilitySettings() }
+                Button("Open Accessibility settings") { state.openAccessibilitySettings() }
             case .restartRequired:
-                Button("Перезапустить для доступа") { state.restartForAccessibility() }
+                Button("Relaunch to apply access") { state.restartForAccessibility() }
             case .repairRequired, .failed:
-                Text("Нужно восстановить Универсальный доступ")
+                Text("Accessibility access needs repair")
             case .repairing:
-                Text("Восстанавливаю Универсальный доступ…")
+                Text("Repairing Accessibility access…")
             case .granted:
                 EmptyView()
             }
         }
         if !state.microphoneGranted {
-            Button("Разрешить микрофон") { state.requestMicrophone() }
+            Button("Allow microphone") { state.requestMicrophone() }
         }
         // Через тот же тип, что и оба экрана. Раньше меню знало про модель один
         // булев «готова или нет» и предлагало «Скачать» даже посреди загрузки —
@@ -115,7 +115,7 @@ struct MenuContent: View {
             place: .settings
         )
         if state.modelState.isReady, !state.isEngineReady {
-            Text("Готовлю модель к диктовке…")
+            Text("Preparing the model for dictation…")
         } else if !state.modelState.isReady {
             Text(model.progressLabel.map { "\(model.title) — \($0)" } ?? model.title)
 

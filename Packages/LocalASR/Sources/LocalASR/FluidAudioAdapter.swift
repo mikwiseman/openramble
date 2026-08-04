@@ -67,7 +67,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
 
         guard AsrModels.modelsExist(at: directory, version: .v3) else {
             throw ASREngineError.modelsUnavailable(
-                "в \(directory.lastPathComponent) нет полного набора бандлов Parakeet v3"
+                "\(directory.lastPathComponent) doesn't contain the full set of Parakeet v3 bundles"
             )
         }
 
@@ -125,7 +125,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
                     // Текст термина в ошибку не попадает намеренно: содержимое
                     // словаря — данные человека, как и текст диктовки.
                     throw ASREngineError.modelsUnavailable(
-                        "термин №\(index + 1) не токенизируется подсказчиком"
+                        "term #\(index + 1) can't be tokenized by the vocabulary helper"
                     )
                 }
                 terms.append(
@@ -201,7 +201,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             throw ASREngineError.modelsNotLoaded
         }
         guard !samples.isEmpty else {
-            throw ASREngineError.unsupportedAudioFormat("пустой буфер")
+            throw ASREngineError.unsupportedAudioFormat("empty buffer")
         }
 
         let started = ContinuousClock.now

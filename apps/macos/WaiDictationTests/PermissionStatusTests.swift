@@ -4,14 +4,14 @@ import XCTest
 /// руками.
 final class PermissionStatusTests: XCTestCase {
     private func microphone(granted: Bool) -> PermissionStatus {
-        PermissionStatus(title: "Микрофон", detail: "Чтобы услышать вашу речь.", granted: granted)
+        PermissionStatus(title: "Microphone", detail: "To hear your speech.", granted: granted)
     }
 
     func testНевыданноеРазрешениеПредлагаетКнопку() {
         let status = microphone(granted: false)
 
-        XCTAssertEqual(status.actionTitle, "Выдать")
-        XCTAssertEqual(status.accessibilityValue, "Разрешение не выдано")
+        XCTAssertEqual(status.actionTitle, "Grant")
+        XCTAssertEqual(status.accessibilityValue, "Permission not granted")
     }
 
     /// Выданное разрешение кнопки не показывает: нажимать больше нечего.
@@ -20,7 +20,7 @@ final class PermissionStatusTests: XCTestCase {
 
         XCTAssertNil(status.actionTitle)
         XCTAssertNil(status.actionAccessibilityLabel)
-        XCTAssertEqual(status.accessibilityValue, "Разрешение выдано")
+        XCTAssertEqual(status.accessibilityValue, "Permission granted")
     }
 
     /// Галочка сама по себе VoiceOver ничего не говорит.
@@ -38,21 +38,21 @@ final class PermissionStatusTests: XCTestCase {
     func testКнопкиРазныхРазрешенийРазличимыНаСлух() {
         let microphone = microphone(granted: false)
         let accessibility = PermissionStatus(
-            title: "Универсальный доступ",
-            detail: "Чтобы услышать горячую клавишу.",
+            title: "Accessibility",
+            detail: "To hear the hotkey.",
             granted: false
         )
 
         XCTAssertEqual(microphone.actionTitle, accessibility.actionTitle)
-        XCTAssertEqual(microphone.actionAccessibilityLabel, "Выдать разрешение: Микрофон")
-        XCTAssertEqual(accessibility.actionAccessibilityLabel, "Выдать разрешение: Универсальный доступ")
+        XCTAssertEqual(microphone.actionAccessibilityLabel, "Grant access: Microphone")
+        XCTAssertEqual(accessibility.actionAccessibilityLabel, "Grant access: Accessibility")
         XCTAssertNotEqual(microphone.actionAccessibilityLabel, accessibility.actionAccessibilityLabel)
     }
 
     func testНазваниеИПояснениеЧитаютсяВместе() {
         XCTAssertEqual(
             microphone(granted: false).accessibilityLabel,
-            "Микрофон. Чтобы услышать вашу речь."
+            "Microphone. To hear your speech."
         )
     }
 
@@ -60,30 +60,30 @@ final class PermissionStatusTests: XCTestCase {
     func testAccessibilityПослеВозвратаПредлагаетПерезапуск() {
         let status = PermissionStatus.accessibility(
             state: .restartRequired,
-            detail: "Чтобы услышать горячую клавишу."
+            detail: "To hear the hotkey."
         )
 
-        XCTAssertEqual(status.actionTitle, "Перезапустить")
-        XCTAssertEqual(status.accessibilityValue, "Требуется перезапуск приложения")
+        XCTAssertEqual(status.actionTitle, "Relaunch")
+        XCTAssertEqual(status.accessibilityValue, "App relaunch required")
     }
 
     func testAccessibilityСоСтаройЗаписьюПредлагаетИсправление() {
         let status = PermissionStatus.accessibility(
             state: .repairRequired,
-            detail: "Чтобы услышать горячую клавишу."
+            detail: "To hear the hotkey."
         )
 
-        XCTAssertEqual(status.actionTitle, "Исправить")
-        XCTAssertEqual(status.accessibilityValue, "Нужно восстановить системную запись разрешения")
+        XCTAssertEqual(status.actionTitle, "Repair")
+        XCTAssertEqual(status.accessibilityValue, "The system permission entry needs repair")
     }
 
     func testAccessibilityВоВремяRepairБлокируетПовторнуюКоманду() {
         let status = PermissionStatus.accessibility(
             state: .repairing,
-            detail: "Чтобы услышать горячую клавишу."
+            detail: "To hear the hotkey."
         )
 
         XCTAssertNil(status.actionTitle)
-        XCTAssertEqual(status.accessibilityValue, "Восстанавливаем разрешение")
+        XCTAssertEqual(status.accessibilityValue, "Repairing the permission")
     }
 }

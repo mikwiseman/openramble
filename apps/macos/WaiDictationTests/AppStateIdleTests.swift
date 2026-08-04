@@ -148,12 +148,12 @@ final class AppStateIdleTests: XCTestCase {
         XCTAssertEqual(stops, 1, "запись оборвали вместо того, чтобы дописать её на диск")
         XCTAssertEqual(aborts, 0)
         XCTAssertEqual(state.lastNotice?.kind, .info)
-        XCTAssertEqual(state.lastNotice?.message.contains("сон"), true)
+        XCTAssertEqual(state.lastNotice?.message.contains("sleep"), true)
 
         // Объяснение обязано дойти до экрана. Сказанное посреди остановки его
         // не достигает: ядро тут же перерисовывает панель под «распознаю».
         try await waitFor("объяснение дошло до панели") {
-            await self.overlay.notices.contains { $0.message.contains("сон") }
+            await self.overlay.notices.contains { $0.message.contains("sleep") }
         }
     }
 
@@ -232,7 +232,7 @@ final class AppStateIdleTests: XCTestCase {
         try await waitFor("диктовка закончилась") { state.dictationState == .idle }
         try await waitFor("WAV доступна для Retry") { state.recoveredRecording != nil }
         XCTAssertEqual(state.lastNotice?.kind, .failure)
-        XCTAssertEqual(state.lastNotice?.message.contains("аудиоустройство отключено"), true)
+        XCTAssertEqual(state.lastNotice?.message.contains("audio device was disconnected"), true)
         let recording = await capture.isRecording
         XCTAssertFalse(recording)
     }
@@ -249,11 +249,11 @@ final class AppStateIdleTests: XCTestCase {
 
         let notices = await overlay.notices
         XCTAssertTrue(
-            notices.contains { $0.message.contains("аудиоустройство отключено") },
+            notices.contains { $0.message.contains("audio device was disconnected") },
             "нужна точная причина остановки"
         )
         XCTAssertFalse(
-            notices.contains { $0.message.contains("распознать") },
+            notices.contains { $0.message.contains("transcribe") },
             "после disconnect ASR не должен запускаться"
         )
     }

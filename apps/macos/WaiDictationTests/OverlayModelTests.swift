@@ -118,7 +118,7 @@ final class OverlayModelTests: XCTestCase {
         model.show(.listening, elapsed: 0)
 
         XCTAssertNil(model.notice)
-        XCTAssertEqual(model.content.title, "Слушаю")
+        XCTAssertEqual(model.content.title, "Listening")
     }
 
     /// Отложенное скрытие принадлежит своему показу.
@@ -140,7 +140,7 @@ final class OverlayModelTests: XCTestCase {
 
         XCTAssertEqual(
             announcer.messages,
-            ["Идёт запись. Горячая клавиша — вставить. Escape — удалить запись."]
+            ["Recording. Press the hotkey to insert. Press Escape to delete the recording."]
         )
         XCTAssertEqual(announcer.announcements.first?.urgent, true)
     }
@@ -156,7 +156,7 @@ final class OverlayModelTests: XCTestCase {
 
         XCTAssertEqual(
             announcer.messages,
-            ["Идёт запись. Горячая клавиша — вставить. Escape — удалить запись."]
+            ["Recording. Press the hotkey to insert. Press Escape to delete the recording."]
         )
     }
 
@@ -169,8 +169,8 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(
             announcer.messages,
             [
-                "Идёт запись. Горячая клавиша — вставить. Escape — удалить запись.",
-                "Идёт запись. Горячая клавиша — вставить. Escape — удалить запись.",
+                "Recording. Press the hotkey to insert. Press Escape to delete the recording.",
+                "Recording. Press the hotkey to insert. Press Escape to delete the recording.",
             ]
         )
     }
@@ -193,10 +193,10 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(
             announcer.messages,
             [
-                "Включаю микрофон",
-                "Идёт запись. Горячая клавиша — вставить. Escape — удалить запись.",
-                "Запись остановлена, распознаю речь",
-                "Вставляю текст",
+                "Turning on the microphone",
+                "Recording. Press the hotkey to insert. Press Escape to delete the recording.",
+                "Recording stopped, transcribing speech",
+                "Inserting text",
             ]
         )
     }

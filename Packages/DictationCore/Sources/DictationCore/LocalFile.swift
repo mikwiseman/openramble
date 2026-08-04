@@ -15,7 +15,7 @@ public enum LocalFile {
     /// Прочитать локальный файл целиком.
     public static func read(_ url: URL) throws -> Data {
         guard url.isFileURL else {
-            throw Failure.notAFileURL(url.scheme ?? "без схемы")
+            throw Failure.notAFileURL(url.scheme ?? "no scheme")
         }
         let handle: FileHandle
         do {
