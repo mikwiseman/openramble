@@ -134,7 +134,7 @@ xcodebuild archive \
   -archivePath "$BUILD_DIR/$SCHEME.xcarchive" \
   -destination 'generic/platform=macOS' \
   -clonedSourcePackagesDirPath "$PACKAGE_CACHE" \
-  "${SIGN_ARGS[@]}" "${BUILD_OVERRIDES[@]}" 2>&1 \
+  "${SIGN_ARGS[@]}" ${BUILD_OVERRIDES[@]+"${BUILD_OVERRIDES[@]}"} 2>&1 \
   | tee "$ARCHIVE_LOG" \
   | grep -E "error:|warning: .*deprecated|ARCHIVE"
 ARCHIVE_STATUS=${PIPESTATUS[0]}
