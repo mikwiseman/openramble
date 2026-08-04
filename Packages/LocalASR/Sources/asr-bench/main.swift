@@ -198,9 +198,17 @@ func prepareTranscriber() async throws -> LocalTranscriber {
 /// Включается `WAI_EVAL_PIPELINE=on`. Позволяет сравнивать не движки, а
 /// продукт: сырой ответ печатается рядом, скорер считает обработанный.
 func makeEvalPipeline() -> TextPipeline? {
-    guard isOn("WAI_EVAL_PIPELINE") else { return nil }
-    print("Скорер считает текст после словаря замен (WAI_EVAL_PIPELINE=on)")
-    return TextPipeline(replacements: StarterDictionary.developer)
+    let mode = ProcessInfo.processInfo.environment["WAI_EVAL_PIPELINE"]?.lowercased()
+    switch mode {
+    case "on":
+        print("Скорер считает текст после словаря замен (WAI_EVAL_PIPELINE=on)")
+        return TextPipeline(replacements: StarterDictionary.developer)
+    case "exact":
+        print("Словарь без фонетического добора (WAI_EVAL_PIPELINE=exact)")
+        return TextPipeline(replacements: StarterDictionary.developer, phoneticMatching: false)
+    default:
+        return nil
+    }
 }
 
 let arguments = Array(CommandLine.arguments.dropFirst())
