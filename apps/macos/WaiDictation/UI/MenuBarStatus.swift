@@ -6,23 +6,46 @@ import DictationCore
 /// без описания для незрячего человека не существует вовсе: VoiceOver прочитает
 /// имя системного символа вроде «mic.slash» или промолчит.
 enum MenuBarStatus {
-    static func iconName(state: DictationState, isDictationReady: Bool) -> String {
+    static func iconName(
+        state: DictationState,
+        isDictationReady: Bool,
+        hasRecoveredWork: Bool = false
+    ) -> String {
         switch state {
         case .listening: return "mic.fill"
         case .transcribing, .inserting: return "waveform"
-        case .preparing, .idle: return isDictationReady ? "mic" : "mic.slash"
+        case .preparing, .idle:
+            // Спасённый текст или запись видны только внутри меню — а меню
+            // открывают, когда что-то заподозрили. Восклицательный бейдж на
+            // волне — единственный способ сказать «есть несделанная работа»
+            // человеку, который в меню не заглядывает. Имя символа закреплено
+            // тестом на существование: несуществующее имя даёт пустой значок,
+            // что хуже отсутствия бейджа.
+            if hasRecoveredWork, state == .idle {
+                return "waveform.badge.exclamationmark"
+            }
+            return isDictationReady ? "mic" : "mic.slash"
         }
     }
 
     /// Ярлык значка. Начинается с имени приложения: в строке меню значков много,
     /// и «идёт запись» без хозяина ничего не говорит.
-    static func accessibilityLabel(state: DictationState, isDictationReady: Bool) -> String {
+    static func accessibilityLabel(
+        state: DictationState,
+        isDictationReady: Bool,
+        hasRecoveredWork: Bool = false
+    ) -> String {
         switch state {
         case .listening: return "Wai Dictation: recording"
         case .transcribing: return "Wai Dictation: transcribing speech"
         case .inserting: return "Wai Dictation: inserting text"
         case .preparing: return "Wai Dictation: turning on the microphone"
         case .idle:
+            // Бейдж на значке обязан звучать и для VoiceOver: картинка без
+            // слов для незрячего не существует.
+            if hasRecoveredWork {
+                return "Wai Dictation: last dictation needs attention — open the menu"
+            }
             return isDictationReady
                 ? "Wai Dictation: ready to dictate"
                 : "Wai Dictation: setup needed"

@@ -1,3 +1,4 @@
+import AppKit
 import LocalASR
 import DictationCore
 import XCTest
@@ -203,5 +204,62 @@ final class MenuRecoveryLineTests: XCTestCase {
         )
 
         XCTAssertEqual(line, "Listening")
+    }
+}
+
+/// Бейдж несделанной работы на значке в строке меню.
+@MainActor
+final class MenuBarBadgeTests: XCTestCase {
+    func testВПокоеСоСпасённымТекстомЗначокНоситБейдж() {
+        XCTAssertEqual(
+            MenuBarStatus.iconName(state: .idle, isDictationReady: true, hasRecoveredWork: true),
+            "waveform.badge.exclamationmark",
+            "Человек, не открывающий меню, иначе не узнает о спасённом тексте"
+        )
+    }
+
+    func testВоВремяДиктовкиБейджНеПеребиваетЖивоеСостояние() {
+        XCTAssertEqual(
+            MenuBarStatus.iconName(state: .listening, isDictationReady: true, hasRecoveredWork: true),
+            "mic.fill",
+            "Идущая запись важнее прошлой беды"
+        )
+        XCTAssertEqual(
+            MenuBarStatus.iconName(state: .transcribing, isDictationReady: true, hasRecoveredWork: true),
+            "waveform"
+        )
+    }
+
+    func testСимволБейджаСуществуетВСистеме() {
+        // Несуществующее имя SF Symbol даёт ПУСТОЙ значок в строке меню — хуже
+        // отсутствия бейджа. Тест прибивает имя к реальности системы.
+        let name = MenuBarStatus.iconName(state: .idle, isDictationReady: true, hasRecoveredWork: true)
+        XCTAssertNotNil(
+            NSImage(systemSymbolName: name, accessibilityDescription: nil),
+            "Символ «\(name)» не существует в этой версии macOS"
+        )
+    }
+
+    func testВсеИменаЗначковСуществуют() {
+        for state in [DictationState.idle, .preparing, .listening, .transcribing, .inserting] {
+            for ready in [true, false] {
+                for recovered in [true, false] {
+                    let name = MenuBarStatus.iconName(
+                        state: state, isDictationReady: ready, hasRecoveredWork: recovered
+                    )
+                    XCTAssertNotNil(
+                        NSImage(systemSymbolName: name, accessibilityDescription: nil),
+                        "Символ «\(name)» не существует"
+                    )
+                }
+            }
+        }
+    }
+
+    func testБейджЗвучитДляVoiceOver() {
+        let label = MenuBarStatus.accessibilityLabel(
+            state: .idle, isDictationReady: true, hasRecoveredWork: true
+        )
+        XCTAssertTrue(label.contains("needs attention"), "Картинка без слов для незрячего не существует: \(label)")
     }
 }

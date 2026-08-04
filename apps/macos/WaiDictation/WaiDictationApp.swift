@@ -20,7 +20,9 @@ struct WaiDictationApp: App {
             Image(
                 systemName: MenuBarStatus.iconName(
                     state: state.dictationState,
-                    isDictationReady: state.isDictationReady
+                    isDictationReady: state.isDictationReady,
+                    hasRecoveredWork: state.recoveredText != nil
+                        || state.recoveredRecording != nil
                 )
             )
             // Значок — единственное постоянное присутствие приложения на
@@ -28,7 +30,9 @@ struct WaiDictationApp: App {
             .accessibilityLabel(
                 MenuBarStatus.accessibilityLabel(
                     state: state.dictationState,
-                    isDictationReady: state.isDictationReady
+                    isDictationReady: state.isDictationReady,
+                    hasRecoveredWork: state.recoveredText != nil
+                        || state.recoveredRecording != nil
                 )
             )
             .task {
