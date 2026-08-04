@@ -10,13 +10,18 @@ import XCTest
 /// раз загруженные в общий, поменяли бы результаты всех остальных сквозных
 /// тестов в зависимости от порядка запуска.
 final class VocabularyBoostEndToEndTests: XCTestCase {
-    private static let ctcDirectory: URL = {
+    private static func resolveCtcDirectory() throws -> URL {
         if let override = ProcessInfo.processInfo.environment["WAI_CTC_DIR"] {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
-        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appending(path: "FluidAudio/Models/parakeet-ctc-110m-coreml", directoryHint: .isDirectory)
-    }()
+        // Основной путь — собственная установка приложения: тот же манифест,
+        // те же суммы и раскладка, что и у пользователя.
+        let manifest = try ModelManifest.bundledVocabulary()
+        let root = ProcessInfo.processInfo.environment["WAI_MODELS_ROOT"]
+            .map { URL(fileURLWithPath: $0, isDirectory: true) }
+        let layout = try ModelInstallLayout(manifest: manifest, root: root)
+        return layout.engineDirectory
+    }
 
     private var transcriber: LocalTranscriber!
     private var workspace: URL!
@@ -24,9 +29,11 @@ final class VocabularyBoostEndToEndTests: XCTestCase {
     override func setUp() async throws {
         try await super.setUp()
 
-        guard FileManager.default.fileExists(atPath: Self.ctcDirectory.path) else {
+        let ctcDirectory = try Self.resolveCtcDirectory()
+        guard FileManager.default.fileExists(atPath: ctcDirectory.path) else {
             throw XCTSkip(
-                "CTC-модели подсказчика нет в \(Self.ctcDirectory.path); задайте WAI_CTC_DIR"
+                "Подсказчик не установлен в \(ctcDirectory.path). "
+                    + "Поставить: asr-bench install-vocab; либо задайте WAI_CTC_DIR"
             )
         }
 
@@ -43,7 +50,7 @@ final class VocabularyBoostEndToEndTests: XCTestCase {
         transcriber = LocalTranscriber()
         try await transcriber.prepare(modelDirectory: layout.engineDirectory)
         try await transcriber.prepareVocabulary(
-            modelDirectory: Self.ctcDirectory,
+            modelDirectory: ctcDirectory,
             boost: .developerDefault()
         )
 

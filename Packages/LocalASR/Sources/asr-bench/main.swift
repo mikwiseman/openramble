@@ -15,6 +15,7 @@ func usage() -> Never {
     Команды:
       status                    что установлено и где
       install                   скачать и установить модель (~483 МБ)
+      install-vocab             скачать акустический подсказчик терминов (~103 МБ)
       import <папка>            взять модель из готовой папки, без сети
       delete                    удалить установленную модель
       transcribe <файл>...      распознать файлы
@@ -24,6 +25,10 @@ func usage() -> Never {
 
     Переменные окружения:
       WAI_MODELS_ROOT           корень установки (по умолчанию Application Support)
+      WAI_VOCAB=on              включить установленный подсказчик терминов
+      WAI_VOCAB_DIR             папка CTC-моделей подсказчика (для замеров)
+      WAI_VOCAB_SIMILARITY      порог похожести подсказчика (по умолчанию 0.65)
+      WAI_EVAL_PIPELINE=on      скорер считает текст после словаря замен
       WAI_ASR_MEL_CONTEXT=on    вернуть mel-контекст FluidAudio на стыке окон
                                 (только чтобы повторить замер потери речи)
     """)
@@ -40,6 +45,47 @@ func makeStore() throws -> (ModelStore, ModelInstallLayout, ModelManifest) {
     let layout = try ModelInstallLayout(manifest: manifest, root: modelsRoot())
     let store = ModelStore(manifest: manifest, layout: layout)
     return (store, layout, manifest)
+}
+
+/// Хранилище акустического подсказчика — тем же механизмом, что и основное:
+/// зафиксированная ревизия, проверка сумм, crash-safe promotion.
+func makeVocabularyStore() throws -> (ModelStore, ModelInstallLayout, ModelManifest) {
+    let manifest = try ModelManifest.bundledVocabulary()
+    let layout = try ModelInstallLayout(manifest: manifest, root: modelsRoot())
+    let store = ModelStore(manifest: manifest, layout: layout)
+    return (store, layout, manifest)
+}
+
+/// Скачивание с прогрессом — общий путь обеих моделей.
+func install(store: ModelStore, layout: ModelInstallLayout, manifest: ModelManifest) async -> Never {
+    print("Скачиваю \(formatBytes(manifest.totalByteCount)) — \(manifest.files.count) файл(ов)")
+    print("Источник: \(manifest.repository) @ \(manifest.revision)")
+
+    let states = await store.states()
+    let monitor = Task {
+        var lastShown = -1
+        for await state in states {
+            switch state {
+            case let .downloading(received, total) where total > 0:
+                let percent = Int(Double(received) / Double(total) * 100)
+                if percent >= lastShown + 5 {
+                    lastShown = percent
+                    print("  \(percent)% — \(formatBytes(received))")
+                }
+            case let .verifying(checked, total):
+                print("  проверка \(checked)/\(total)")
+            default:
+                break
+            }
+        }
+    }
+
+    await store.install()
+    monitor.cancel()
+
+    let finalState = await store.currentState()
+    printState(finalState, layout: layout, manifest: manifest)
+    exit(finalState.isReady ? 0 : 70)
 }
 
 func formatBytes(_ bytes: Int64) -> String {
@@ -103,8 +149,18 @@ func prepareTranscriber() async throws -> LocalTranscriber {
     print(String(format: "Модель загружена за %.2f с", seconds(started.duration(to: .now))))
 
     // Акустический подсказчик терминов: сравнение «с ним и без него» — ровно
-    // тот замер, ради которого переключатель существует.
-    if let vocabDirectory = ProcessInfo.processInfo.environment["WAI_VOCAB_DIR"] {
+    // тот замер, ради которого переключатель существует. `WAI_VOCAB=on` берёт
+    // установленный подсказчик (install-vocab); `WAI_VOCAB_DIR` — явную папку.
+    var vocabularyDirectory = ProcessInfo.processInfo.environment["WAI_VOCAB_DIR"]
+    if vocabularyDirectory == nil, isOn("WAI_VOCAB") {
+        let (vocabStore, vocabLayout, _) = try makeVocabularyStore()
+        guard await vocabStore.refreshState().isReady else {
+            print("Подсказчик не установлен. Запустите: asr-bench install-vocab")
+            exit(69)
+        }
+        vocabularyDirectory = vocabLayout.engineDirectory.path
+    }
+    if let vocabDirectory = vocabularyDirectory {
         let similarity = ProcessInfo.processInfo.environment["WAI_VOCAB_SIMILARITY"]
             .flatMap(Float.init)
         let biasWeight = ProcessInfo.processInfo.environment["WAI_VOCAB_CBW"]
@@ -164,35 +220,15 @@ case "install":
         print("Модель уже установлена: \(layout.installedDirectory.path)")
         exit(0)
     }
+    await install(store: store, layout: layout, manifest: manifest)
 
-    print("Скачиваю \(formatBytes(manifest.totalByteCount)) — \(manifest.files.count) файл(ов)")
-    print("Источник: \(manifest.repository) @ \(manifest.revision)")
-
-    let states = await store.states()
-    let monitor = Task {
-        var lastShown = -1
-        for await state in states {
-            switch state {
-            case let .downloading(received, total) where total > 0:
-                let percent = Int(Double(received) / Double(total) * 100)
-                if percent >= lastShown + 5 {
-                    lastShown = percent
-                    print("  \(percent)% — \(formatBytes(received))")
-                }
-            case let .verifying(checked, total):
-                print("  проверка \(checked)/\(total)")
-            default:
-                break
-            }
-        }
+case "install-vocab":
+    let (store, layout, manifest) = try makeVocabularyStore()
+    if await store.refreshState().isReady {
+        print("Подсказчик уже установлен: \(layout.installedDirectory.path)")
+        exit(0)
     }
-
-    await store.install()
-    monitor.cancel()
-
-    let finalState = await store.currentState()
-    printState(finalState, layout: layout, manifest: manifest)
-    exit(finalState.isReady ? 0 : 70)
+    await install(store: store, layout: layout, manifest: manifest)
 
 case "import":
     guard let sourcePath = operands.first else { usage() }
