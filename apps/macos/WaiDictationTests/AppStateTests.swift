@@ -422,6 +422,97 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(state.isEngineReady)
     }
 
+    // MARK: - Нажатие в неготовности
+
+    /// Дождаться сообщения на панели. Объяснение уходит туда через задачу, и
+    /// сразу после нажатия его там ещё нет.
+    private func waitForNotice(
+        containing fragment: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async throws {
+        let deadline = ContinuousClock.now + .seconds(5)
+        while ContinuousClock.now < deadline {
+            let messages = await overlay.notices.map(\.message)
+            if messages.contains(where: { $0.contains(fragment) }) { return }
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        let messages = await overlay.notices.map(\.message)
+        XCTFail("не дождались «\(fragment)». Сказано: \(messages)", file: file, line: line)
+    }
+
+    /// Раньше нажатие в неготовности не делало ровным счётом ничего: ядро
+    /// отклоняло старт молча, и человек оставался с рабочей на вид программой,
+    /// которая не отзывается на клавишу.
+    func testНажатиеБезМоделиОбъясняетПочемуНичегоНеНачалось() async throws {
+        let state = makeState()
+        await state.refreshModelState()
+        XCTAssertFalse(state.modelState.isReady)
+
+        monitor.onPress?()
+
+        XCTAssertEqual(state.dictationState, .idle)
+        try await waitForNotice(containing: "model isn't downloaded")
+    }
+
+    func testНажатиеБезМикрофонаНазываетМикрофон() async throws {
+        try installModelMarker()
+        harness.permissions.microphoneGranted = false
+        let state = makeState()
+        await state.refreshModelState()
+
+        monitor.onPress?()
+
+        XCTAssertEqual(state.dictationState, .idle)
+        try await waitForNotice(containing: "microphone access")
+    }
+
+    /// Тот же ответ на жест без удержания: молчать на двойное нажатие так же
+    /// нечестно, как на обычное.
+    func testДвойноеНажатиеВНеготовностиТожеОбъясняется() async throws {
+        let state = makeState()
+        await state.refreshModelState()
+
+        monitor.onDoubleTap?()
+
+        XCTAssertEqual(state.dictationState, .idle)
+        XCTAssertFalse(state.isHandsFreeActive)
+        try await waitForNotice(containing: "model isn't downloaded")
+    }
+
+    /// В готовности объяснять нечего: панель показывает саму диктовку.
+    func testВГотовностиНажатиеНеПородитЛишнегоСообщения() async throws {
+        try installModelMarker()
+        let state = makeState()
+        await state.refreshModelState()
+        let before = await overlay.notices.count
+
+        monitor.onPress?()
+        XCTAssertEqual(state.dictationState, .preparing)
+
+        // Дать задаче объяснения шанс сработать, если бы она была заведена.
+        try await Task.sleep(for: .milliseconds(50))
+        let after = await overlay.notices.count
+        XCTAssertEqual(after, before, "готовая диктовка не имеет права ничего объяснять")
+    }
+
+    /// Нажатие поверх идущей диктовки ядро тоже отклоняет — и здесь молчание
+    /// уместно: панель на экране, человек и так видит, что происходит.
+    func testНажатиеПосредиДиктовкиНеПридирается() async throws {
+        try installModelMarker()
+        let state = makeState()
+        await state.refreshModelState()
+        monitor.onPress?()
+        XCTAssertEqual(state.dictationState, .preparing)
+        let before = await overlay.notices.count
+
+        monitor.onPress?()
+
+        try await Task.sleep(for: .milliseconds(50))
+        let after = await overlay.notices.count
+        XCTAssertEqual(after, before)
+    }
+
     // MARK: - Жесты
 
     func testДвойноеНажатиеВПокоеНачинаетДиктовкуБезУдержания() async throws {

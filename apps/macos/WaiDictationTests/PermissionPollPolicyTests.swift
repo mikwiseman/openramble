@@ -40,6 +40,34 @@ final class PermissionPollPolicyTests: XCTestCase {
         )
     }
 
+    /// Главное решение этого типа, записанное проверкой: выданные разрешения на
+    /// частоту опроса не влияют вообще. Замедление «когда всё хорошо» звучит
+    /// разумно и было бы ошибкой — отзыв доступа не присылает события, а
+    /// приложение с отозванным Accessibility выглядит целым и молча не
+    /// работает. Если кто-то вернёт зависимость от флагов, упадёт здесь.
+    func testВыданныеРазрешенияНеМеняютЧастотуОпроса() {
+        let combinations = [(true, true), (true, false), (false, true), (false, false)]
+
+        let intervals = combinations.map { accessibility, microphone in
+            PermissionPollPolicy.interval(
+                accessibilityGranted: accessibility,
+                microphoneGranted: microphone,
+                base: 1
+            )
+        }
+
+        XCTAssertEqual(Set(intervals).count, 1, "частота обязана быть одна на все четыре случая: \(intervals)")
+    }
+
+    /// Основание больше потолка урезается: обещание «не позже двух секунд»
+    /// держится даже если снаружи попросили опрашивать раз в минуту.
+    func testБольшоеОснованиеУрезаетсяДоДвухСекунд() {
+        XCTAssertEqual(
+            PermissionPollPolicy.interval(accessibilityGranted: true, microphoneGranted: true, base: 60),
+            2
+        )
+    }
+
     func testНулевоеОснованиеВыключаетОпросСовсем() {
         XCTAssertEqual(
             PermissionPollPolicy.interval(accessibilityGranted: true, microphoneGranted: true, base: 0),

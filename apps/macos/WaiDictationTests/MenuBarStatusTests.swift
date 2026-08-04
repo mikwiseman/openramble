@@ -107,6 +107,24 @@ final class MenuModelOfferTests: XCTestCase {
 
         XCTAssertTrue(model.actions.contains(.install))
     }
+
+    /// Меню обязано называть настоящий остаток, а не полную установку.
+    ///
+    /// После обновления со сборки без подсказчика докачать надо ~103 МБ, а меню
+    /// брало объём по умолчанию и обещало 586 — ошибка в пять раз. По этой
+    /// цифре решают, жать ли на дорогой или медленной сети.
+    func testОстатокЗагрузкиНеПодменяетсяПолнымОбъёмом() {
+        let model = ModelStatus.make(
+            state: .notInstalled,
+            isPreparingEngine: false,
+            place: .settings,
+            downloadMegabytes: 103
+        )
+
+        let title = model.title(for: .install)
+        XCTAssertTrue(title.contains("103 MB"), "сказано: \(title)")
+        XCTAssertFalse(title.contains("586"), "полный объём вместо остатка: \(title)")
+    }
 }
 
 /// Режим без удержания в строке меню.
@@ -135,5 +153,55 @@ final class MenuHandsFreeLineTests: XCTestCase {
         )
 
         XCTAssertEqual(line, "Listening", "Клавиша зажата — объяснять нечего")
+    }
+}
+
+/// Несделанная работа в первой строке меню.
+///
+/// Панель диктовки — тост на четыре секунды. Человек, который отвернулся,
+/// раньше терял и объяснение, и знание, что распознанный текст ещё жив. Меню
+/// держит это столько, сколько нужно.
+@MainActor
+final class MenuRecoveryLineTests: XCTestCase {
+    private func line(text: Bool = false, recording: Bool = false) -> String {
+        MenuBarStatus.statusLine(
+            state: .idle,
+            isDictationReady: true,
+            isHandsFreeActive: false,
+            hotkeyTitle: "Right Command",
+            hasRecoveredText: text,
+            hasRecoveredRecording: recording
+        )
+    }
+
+    func testНевставленныйТекстНазываетсяВПервойСтроке() {
+        XCTAssertEqual(line(text: true), "Last dictation wasn't inserted — the text is saved below")
+    }
+
+    func testСохранённаяЗаписьТожеНазывается() {
+        XCTAssertEqual(line(recording: true), "A recording is waiting to be transcribed")
+    }
+
+    /// Текст ближе к результату, чем запись: его осталось только вставить.
+    func testТекстВажнееЗаписи() {
+        XCTAssertEqual(line(text: true, recording: true), line(text: true))
+    }
+
+    func testБезНесделаннойРаботыСтрокаПрежняя() {
+        XCTAssertEqual(line(), "Hold Right Command and speak")
+    }
+
+    /// Пока диктовка идёт, первая строка про неё и есть: спасённый текст
+    /// подождёт до покоя, а перебивать им живую запись нельзя.
+    func testВоВремяДиктовкиСтрокаПроДиктовку() {
+        let line = MenuBarStatus.statusLine(
+            state: .listening,
+            isDictationReady: true,
+            isHandsFreeActive: false,
+            hotkeyTitle: "Right Command",
+            hasRecoveredText: true
+        )
+
+        XCTAssertEqual(line, "Listening")
     }
 }

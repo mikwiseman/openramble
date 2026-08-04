@@ -19,7 +19,9 @@ struct MenuContent: View {
                 state: state.dictationState,
                 isDictationReady: state.isDictationReady,
                 isHandsFreeActive: state.isHandsFreeActive,
-                hotkeyTitle: state.hotkey.title
+                hotkeyTitle: state.hotkey.title,
+                hasRecoveredText: state.recoveredText != nil,
+                hasRecoveredRecording: state.recoveredRecording != nil
             )
         )
 
@@ -42,6 +44,10 @@ struct MenuContent: View {
 
         if state.recoveredText != nil {
             Divider()
+            // Заголовок над кнопками — как у блока с записью ниже. Без него три
+            // кнопки подряд не говорят, к чему они относятся, а панель с
+            // объяснением к этому моменту давно ушла с экрана.
+            Text("Text from the last dictation")
             Button("Retry insert") { state.retryRecoveredText() }
             Button("Copy text") { state.copyRecoveredText() }
             Button("Delete saved text", role: .destructive) {
@@ -106,10 +112,15 @@ struct MenuContent: View {
         // булев «готова или нет» и предлагало «Скачать» даже посреди загрузки —
         // нажатие уходило в никуда, а первая строка меню при этом говорила
         // «Нужна настройка», ни словом не упоминая, что загрузка идёт.
+        // Объём передаётся, а не берётся по умолчанию. Без него кнопка в меню
+        // всегда обещала 586 МБ — полную установку, — даже когда докачать надо
+        // один подсказчик на ~103 МБ. По этой цифре решают, жать ли на дорогой
+        // или медленной сети, и ошибаться в ней в пять раз нельзя.
         let model = ModelStatus.make(
             state: state.modelState,
             isPreparingEngine: state.isPreparingEngine,
-            place: .settings
+            place: .settings,
+            downloadMegabytes: state.remainingDownloadMegabytes
         )
         if state.modelState.isReady, !state.isEngineReady {
             Text("Preparing the model for dictation…")

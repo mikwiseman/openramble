@@ -30,14 +30,33 @@ enum MenuBarStatus {
     }
 
     /// Первая строка меню — она же объяснение, что делать.
+    ///
+    /// Про несделанную работу она говорит раньше, чем про клавишу. Панель
+    /// диктовки — тост: она живёт четыре секунды и уходит, и это правильно,
+    /// потому что закрыть её нечем — фокуса она не берёт и кнопки закрытия у
+    /// неё нет, а несгораемое окошко поверх чужой работы было бы хуже беды,
+    /// которую оно объясняет. Значит, объяснение обязано где-то осесть
+    /// насовсем, и это место — меню: пункты Retry/Copy тут же под строкой.
+    /// Раньше сообщение «текст не вставлен» просто исчезало, и человек, который
+    /// отвернулся, терял и причину, и знание, что текст ещё жив.
     static func statusLine(
         state: DictationState,
         isDictationReady: Bool,
         isHandsFreeActive: Bool,
-        hotkeyTitle: String
+        hotkeyTitle: String,
+        hasRecoveredText: Bool = false,
+        hasRecoveredRecording: Bool = false
     ) -> String {
         switch state {
         case .idle:
+            // Текст важнее записи: он уже распознан, и до готового результата
+            // человеку остался один пункт меню.
+            if hasRecoveredText {
+                return "Last dictation wasn't inserted — the text is saved below"
+            }
+            if hasRecoveredRecording {
+                return "A recording is waiting to be transcribed"
+            }
             return isDictationReady
                 ? "Hold \(hotkeyTitle) and speak"
                 : "Setup needed"

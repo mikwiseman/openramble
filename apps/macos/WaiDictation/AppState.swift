@@ -814,6 +814,7 @@ public final class AppState: ObservableObject {
         hotkeyMonitor.onPress = { [weak self] in
             guard let self else { return }
             guard !self.isRecoveryOperationActive else { return }
+            guard self.explainIfNotReady() else { return }
             self.controller?.begin(
                 handsFree: false,
                 isEnabled: self.isDictationReady,
@@ -833,6 +834,7 @@ public final class AppState: ObservableObject {
                 // всё равно не началась бы, потому что эта ещё не закончилась.
                 self.controller?.promoteToHandsFree()
             case .idle:
+                guard self.explainIfNotReady() else { return }
                 self.controller?.begin(
                     handsFree: true,
                     isEnabled: self.isDictationReady,
@@ -850,6 +852,34 @@ public final class AppState: ObservableObject {
             // обычная клавиша, и перехватывать её нельзя.
             self?.cancelCurrentDictation()
         }
+    }
+
+    /// Можно ли начинать диктовку; если нет — сказать, почему.
+    ///
+    /// Ядро отклоняет старт молча, и это правильно: у него нет ни экрана, ни
+    /// слов. Но снаружи молчание в ответ на нажатие неотличимо от сломанного
+    /// приложения — особенно в окне прогрева после установки, где всё выдано,
+    /// всё скачано, а клавиша ещё десятки секунд не работает.
+    ///
+    /// Спрашивается только в покое. Нажатие посреди идущей диктовки ядро тоже
+    /// отклоняет, но там молчание уместно: человек видит панель и знает, что
+    /// происходит, а объяснение на каждое лишнее нажатие было бы придиркой.
+    ///
+    /// Возвращает `true`, если препятствий нет.
+    private func explainIfNotReady() -> Bool {
+        guard dictationState == .idle else { return true }
+        guard let reason = DictationReadiness.reason(
+            accessibilityGranted: accessibilityGranted,
+            microphoneGranted: microphoneGranted,
+            modelState: modelState,
+            isEngineReady: isEngineReady
+        ) else { return true }
+
+        // Именно warning: для VoiceOver это срочное объявление, а человек
+        // только что нажал клавишу и ждёт ответа сейчас, а не после того, как
+        // синтезатор дочитает чужую фразу.
+        notify(DictationNotice(kind: .warning, message: reason))
+        return false
     }
 
     /// Показать сообщение человеку.
