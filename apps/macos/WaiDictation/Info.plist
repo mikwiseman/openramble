@@ -27,7 +27,7 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Mik Wiseman. MIT.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Микрофон нужен, чтобы записать вашу речь. Запись обрабатывается на этом компьютере и никуда не отправляется.</string>
+	<string>Wai Dictation needs the microphone to record your speech. The recording is processed on this Mac and is never sent anywhere.</string>
 	<key>SUAllowsAutomaticUpdates</key>
 	<false/>
 	<key>SUEnableAutomaticChecks</key>

@@ -11,6 +11,9 @@ struct OnboardingView: View {
     let onFinish: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    /// «Уменьшить движение» в универсальном доступе. Переход между шагами —
+    /// украшение, и человеку, который его отключил, оно доставаться не должно.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var step: OnboardingStep = .welcome
     /// Что человек продиктовал на пробу.
@@ -23,8 +26,14 @@ struct OnboardingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Выравнивание задаётся явно. Без него шаг, у которого нет ни одного
+            // тянущегося вширь элемента (например «Recognition model», когда
+            // модель уже готова и индикатора загрузки нет), сжимался до ширины
+            // своего текста и уезжал в центр окна — а соседние шаги при этом
+            // стояли по левому краю. Один и тот же мастер выглядел собранным из
+            // двух разных.
             content
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 .padding(32)
 
             Divider()
@@ -47,14 +56,17 @@ struct OnboardingView: View {
                 // Почему кнопка погашена. Без этой строки человек видит мёртвую
                 // «Дальше» и не знает, чего от него ждут, — а для незрячего
                 // установка на этом просто заканчивается.
-                if let reason = blockReason {
-                    Text(reason)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                }
+                //
+                // Строка есть всегда, даже пустая: иначе её появление сдвигало
+                // подвал вместе с кнопками вверх, а область содержимого — вниз.
+                // Шаг, где разрешение только что выдали, дёргался целиком.
+                Text(blockReason ?? " ")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .accessibilityHidden(blockReason == nil)
             }
             .padding()
         }
@@ -97,25 +109,19 @@ struct OnboardingView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 10) {
-                Label {
-                    Text("Speech is recognized by a model on your disk. Works on a plane.")
-                        .fixedSize(horizontal: false, vertical: true)
-                } icon: {
-                    Image(systemName: "airplane").foregroundStyle(.blue)
-                }
-                Label {
-                    Text("The app goes online only on your command: to download the model and, if you turn it on, to check for updates.")
-                        .fixedSize(horizontal: false, vertical: true)
-                } icon: {
-                    Image(systemName: "arrow.down.circle").foregroundStyle(.blue)
-                }
-                Label {
-                    Text("No accounts, no analytics, no reports. The code is open — you can check.")
-                        .fixedSize(horizontal: false, vertical: true)
-                } icon: {
+                OnboardingPoint(
+                    symbol: "airplane",
+                    text: "Speech is recognized by a model on your disk. Works on a plane."
+                )
+                OnboardingPoint(
+                    symbol: "arrow.down.circle",
+                    text: "The app goes online only on your command: to download the model and, if you turn it on, to check for updates."
+                )
+                OnboardingPoint(
                     // Открытый замок читается как «незащищено» — ровно наоборот.
-                    Image(systemName: "eye.slash").foregroundStyle(.blue)
-                }
+                    symbol: "eye.slash",
+                    text: "No accounts, no analytics, no reports. The code is open — you can check."
+                )
             }
             .font(.callout)
 
@@ -287,6 +293,11 @@ struct OnboardingView: View {
             }
         }
         .buttonStyle(.borderedProminent)
+        // Кнопка по умолчанию: Return ведёт мастер вперёд. Раньше главное
+        // действие всей установки было недоступно с клавиатуры — Return не
+        // делал ничего, и пройти четыре шага без мыши было нельзя. На последнем
+        // шаге фокус стоит в поле пробы, и Return достаётся полю, а не кнопке.
+        .keyboardShortcut(.defaultAction)
         .disabled(blockReason != nil)
         .accessibilityHint(blockReason ?? "")
     }
@@ -310,12 +321,17 @@ struct OnboardingView: View {
     private func forward() {
         guard let next = step.next else { return }
         if next == .tryIt { trialStartCount = state.successfulDictationCount }
-        withAnimation { step = next }
+        withAnimation(stepTransition) { step = next }
     }
 
     private func back() {
         guard let previous = step.previous else { return }
-        withAnimation { step = previous }
+        withAnimation(stepTransition) { step = previous }
+    }
+
+    /// `nil` — переход без анимации, мгновенной сменой содержимого.
+    private var stepTransition: Animation? {
+        reduceMotion ? nil : .easeOut(duration: 0.2)
     }
 
     private func finishOnboarding() {
@@ -323,6 +339,28 @@ struct OnboardingView: View {
         // Окно закрывается здесь же. Иначе на экране оставалась бы пустая
         // рамка после завершения настройки.
         dismiss()
+    }
+}
+
+/// Пункт списка ценностей на первом шаге.
+///
+/// Значок стоит в колонке фиксированной ширины. Иначе ширину колонки задаёт сам
+/// глиф, а у `eye.slash` он шире, чем у `airplane`: текст третьего пункта
+/// начинался на несколько точек правее двух первых, и левый край списка выходил
+/// рваным.
+private struct OnboardingPoint: View {
+    let symbol: String
+    let text: LocalizedStringKey
+
+    var body: some View {
+        Label {
+            Text(text)
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: symbol)
+                .foregroundStyle(.blue)
+                .frame(width: 20, alignment: .center)
+        }
     }
 }
 

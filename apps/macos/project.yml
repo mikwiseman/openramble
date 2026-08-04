@@ -90,9 +90,12 @@ targets:
         CFBundleIconFile: AppIcon
         # Приложение живёт в строке меню и не показывается в Dock.
         LSUIElement: true
+        # Эту строку человек читает в системном диалоге разрешения — то есть
+        # это интерфейс, а не комментарий, и язык у неё тот же, что у всего
+        # остального: английский.
         NSMicrophoneUsageDescription: >-
-          Микрофон нужен, чтобы записать вашу речь. Запись обрабатывается
-          на этом компьютере и никуда не отправляется.
+          Wai Dictation needs the microphone to record your speech. The
+          recording is processed on this Mac and is never sent anywhere.
         NSHumanReadableCopyright: "© 2026 Mik Wiseman. MIT."
 
         # --- Обновления (Sparkle) ---

@@ -9,9 +9,6 @@ import SwiftUI
 /// проверяться должно.
 struct MenuContent: View {
     @ObservedObject var state: AppState
-    // Отдельная подписка: Sparkle сообщает о своих изменениях сам, через
-    // AppState они бы не дошли.
-    @ObservedObject var updater: SparkleUpdater
     let showOnboarding: () -> Void
     @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
@@ -60,9 +57,22 @@ struct MenuContent: View {
             Button("Delete recording") { state.deleteRecoveredRecording() }
         }
 
-        Divider()
+        // Правка последней диктовки. Пункт появляется только после успешной
+        // вставки: до неё окно всё равно показало бы «править нечего».
+        //
+        // Без этого пункта окно «Fix Last Dictation» не открывалось ниоткуда:
+        // сцена в приложении была, а входа в неё не было — в строке меню его
+        // нет, а главное меню у LSUIElement-приложения показывается, только
+        // когда открыто хоть одно окно. Целая функция была недостижима.
+        if state.lastDictation != nil {
+            Divider()
+            Button("Fix Last Dictation…") {
+                openWindow(id: "fix-dictation")
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        }
 
-            .disabled(!updater.canCheckForUpdates)
+        Divider()
 
         Button("Settings…") { openSettings() }
             .keyboardShortcut(",", modifiers: .command)

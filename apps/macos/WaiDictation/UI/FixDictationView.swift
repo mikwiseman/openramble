@@ -42,7 +42,10 @@ struct FixDictationView: View {
 
             HStack {
                 Spacer()
+                // Escape закрывает окно: без этого единственным выходом была
+                // мышь, а окно с текстовым полем притягивает клавиатуру.
                 Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
                 Button("Learn corrections") {
                     let learned = state.learnCorrections(editedText: edited)
                     if learned == 0 {

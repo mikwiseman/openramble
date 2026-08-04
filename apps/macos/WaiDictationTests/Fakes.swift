@@ -561,6 +561,12 @@ final class FakeAnnouncer: AccessibilityAnnouncing {
     func announce(_ message: String, urgent: Bool) {
         announcements.append((message, urgent))
     }
+
+    /// Забыть сказанное. Нужно там, где проверяется одно объявление, а до него
+    /// по делу прозвучали другие.
+    func reset() {
+        announcements = []
+    }
 }
 
 // MARK: - Загрузка модели

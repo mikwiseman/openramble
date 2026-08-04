@@ -13,6 +13,13 @@ import SwiftUI
 public final class DictationOverlay: OverlayPresenting {
     private var panel: NSPanel?
     private let model: OverlayModel
+    /// Подписка на изменение размера панели. Панель растёт за содержимым, а
+    /// содержимое меняется прямо во время диктовки.
+    ///
+    /// Помечена `nonisolated(unsafe)`, потому что подписку снимает `deinit`, а
+    /// он у изолированного класса — вне изоляции. Трогают её только с главного
+    /// потока: панель целиком живёт на нём.
+    nonisolated(unsafe) private var resizeObserver: (any NSObjectProtocol)?
 
     public init(
         announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
@@ -25,6 +32,13 @@ public final class DictationOverlay: OverlayPresenting {
             } else {
                 self?.hidePanel()
             }
+        }
+    }
+
+    deinit {
+        // Подписка, оставленная в центре уведомлений, переживает владельца.
+        if let resizeObserver {
+            NotificationCenter.default.removeObserver(resizeObserver)
         }
     }
 
@@ -61,6 +75,20 @@ public final class DictationOverlay: OverlayPresenting {
             // права обрезаться до «автоматич…» — обрезанный тост хуже молчания.
             hosting.sizingOptions = .preferredContentSize
             panel.contentView = hosting
+            // Окно при смене размера держит левый верхний угол на месте. Ширина
+            // же меняется прямо во время диктовки: с первым распознанным словом
+            // появляется предпросмотр, и панель становится с 280 точек на 360.
+            // Без пересчёта она уезжала на 80 точек вправо от центра экрана —
+            // ровно в тот момент, когда человек на неё смотрит. Считаем по
+            // факту изменения размера, а не по догадке о нём: сам размер
+            // задаёт SwiftUI, и заранее он здесь неизвестен.
+            resizeObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didResizeNotification,
+                object: panel,
+                queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.position() }
+            }
             self.panel = panel
         }
         position()
@@ -186,15 +214,31 @@ final class OverlayModel: ObservableObject {
         if !confirmed.isEmpty || !volatile.isEmpty { showsSilenceHint = false }
     }
 
+    /// Ярлык панели для VoiceOver — вместе с подсказкой о тишине, если она есть.
+    var accessibilityLabel: String {
+        let base = content.accessibilityLabel
+        return showsSilenceHint ? "\(Self.silenceHint) \(base)" : base
+    }
+
     func updateInputLevel(_ level: Float) {
         inputLevel = min(1, max(0, level))
     }
 
     /// Сигнала нет уже дольше порога — сказать про микрофон.
+    ///
+    /// Объявляется вслух, в отличие от предпросмотра. Предпросмотр читать
+    /// нельзя — это поток слов поверх собственной речи человека; а вот
+    /// «микрофон вас не слышит» незрячему нужнее всех: он не видит ни
+    /// пульсирующей точки, ни пустого предпросмотра, и без объявления узнает о
+    /// мёртвом микрофоне только по пустому результату в конце.
     func showSilenceHint() {
-        guard state == .listening, !hasPreview else { return }
+        guard state == .listening, !hasPreview, !showsSilenceHint else { return }
         showsSilenceHint = true
+        announcer.announce(Self.silenceHint, urgent: true)
     }
+
+    /// Текст подсказки. Один на экран и на объявление: расходиться им нельзя.
+    static let silenceHint = "No sound detected — check your microphone."
 
     /// Показать сообщение и убрать его через положенное время.
     func showNotice(_ notice: DictationNotice) {
@@ -279,20 +323,25 @@ final class OverlayModel: ObservableObject {
 
 private struct OverlayView: View {
     @ObservedObject var model: OverlayModel
+    /// «Уменьшить движение»: пульс точки — украшение, и человек, который
+    /// отключил движение в универсальном доступе, не обязан на него смотреть.
+    /// Цвет точки при этом остаётся: он несёт смысл, а не движение.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let content = model.content
+        let pulse = model.state == .listening && !reduceMotion
 
         return HStack(alignment: .top, spacing: 12) {
             Circle()
                 .fill(color(for: content.tone))
                 .frame(width: 10, height: 10)
                 // Точка дышит вместе с голосом: видно, что микрофон слышит.
-                .scaleEffect(model.state == .listening ? 1 + CGFloat(model.inputLevel) * 0.6 : 1)
-                .animation(.easeOut(duration: 0.12), value: model.inputLevel)
+                .scaleEffect(pulse ? 1 + CGFloat(model.inputLevel) * 0.6 : 1)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: model.inputLevel)
                 .padding(.top, 3)
             VStack(alignment: .leading, spacing: 2) {
-                Text(model.showsSilenceHint ? "No sound detected — check your microphone." : content.title)
+                Text(model.showsSilenceHint ? OverlayModel.silenceHint : content.title)
                     .font(.system(size: 13, weight: .medium))
                     .fixedSize(horizontal: false, vertical: true)
                 if let subtitle = content.subtitle {
@@ -325,7 +374,7 @@ private struct OverlayView: View {
         // Панель читается одним элементом: цветная точка и счётчик по
         // отдельности не значат ничего.
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(content.accessibilityLabel)
+        .accessibilityLabel(model.accessibilityLabel)
     }
 
     private func color(for tone: OverlayContent.Tone) -> Color {

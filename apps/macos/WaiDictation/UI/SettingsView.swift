@@ -7,16 +7,23 @@ struct SettingsView: View {
 
     var body: some View {
         TabView {
-            GeneralSettings(state: state, updater: state.updater)
+            GeneralSettings(state: state)
                 .tabItem { Label("General", systemImage: "gearshape") }
             ModelSettings(state: state)
                 .tabItem { Label("Model", systemImage: "waveform") }
             DictionarySettings(state: state)
                 .tabItem { Label("Dictionary", systemImage: "character.book.closed") }
+            // Обновления — единственное, что приложение делает в сети без
+            // прямой команды, и раньше этот выключатель лежал пятой секцией
+            // «General»: в окне высотой 400 точек он оказывался ниже сгиба, и
+            // человек, пришедший в настройки именно за ним, видел страницу без
+            // него. Отдельная вкладка ставит его туда, где его ищут.
+            UpdateSettings(updater: state.updater)
+                .tabItem { Label("Updates", systemImage: "arrow.triangle.2.circlepath") }
             AboutView()
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 520, height: 400)
+        .frame(width: 520, height: 460)
     }
 }
 
@@ -24,8 +31,6 @@ struct SettingsView: View {
 
 private struct GeneralSettings: View {
     @ObservedObject var state: AppState
-    // Sparkle сообщает о своих изменениях сам, через AppState они бы не дошли.
-    @ObservedObject var updater: SparkleUpdater
     @State private var showAccessibilityRepairConfirmation = false
 
     var body: some View {
@@ -61,8 +66,28 @@ private struct GeneralSettings: View {
             }
 
             Section {
+                // Автозапуск был написан и работал, но включить его было
+                // негде: утилита с горячей клавишей, не пережившая
+                // перезагрузку, неотличима от сломанной — клавиша просто
+                // молчит, и объяснить это некому.
+                Toggle("Launch at login", isOn: $state.launchAtLogin)
+                    .accessibilityHint("Starts Wai Dictation automatically when you log in")
+                Text("A dictation key only works while the app is running. Without this, the key stops working after every restart.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 Toggle("Play sounds when recording starts and stops", isOn: $state.soundsEnabled)
                     .accessibilityHint("A short tone when recording starts and when it stops")
+
+                // Предпросмотр в коде описан как украшение, которое можно
+                // выключить, — а выключателя не было.
+                Toggle("Show recognized words while you speak", isOn: $state.showLivePreview)
+                    .accessibilityHint("Shows the text being recognized inside the dictation panel")
+                Text("The dictation panel shows the text as it is recognized. Turn this off if you'd rather not see it on screen.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section {
@@ -82,40 +107,6 @@ private struct GeneralSettings: View {
                 Text("Wai Dictation uses the clipboard briefly to paste, then restores the previous item byte-for-byte. Passwords, file promises, and items over 16 MB are never touched — when pasting is not safe, your text stays available from the menu.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-            }
-
-            Section("Updates") {
-                // Переключатель гаснет вместе с механизмом обновлений. Иначе
-                // получалось молчаливое враньё: рядом написано «обновления не
-                // работают», человек щёлкает переключатель, текст под ним
-                // обещает ежесуточную проверку — а настройка уходит в
-                // незапущенный механизм и не делает ничего.
-                Toggle("Check for updates automatically", isOn: $updater.automaticChecksEnabled)
-                    .accessibilityHint("The only switch that changes the app's network behavior")
-                    .disabled(updater.startupFailure != nil)
-                Text("Off by default. When on, the app downloads a small version list from GitHub once a day. Apart from the model download and the update itself, there are no other network requests: only your IP address and the app version are sent — no details about your computer, and nothing you dictated.")
-                    .font(.caption)
-                    .foregroundStyle(updater.startupFailure == nil ? .secondary : .tertiary)
-
-                HStack {
-                    Button("Check now", action: updater.checkForUpdates)
-                        .disabled(!updater.canCheckForUpdates)
-                    Spacer()
-                }
-
-                if let failure = updater.startupFailure {
-                    // Молчать нельзя: иначе человек будет считать, что
-                    // обновления приходят, а они не приходят.
-                    VStack(alignment: .leading, spacing: 2) {
-                        Label("Updates are not working", systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                        Text(failure)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Updates are not working. \(failure)")
-                }
             }
 
             Section("Permissions") {
@@ -189,6 +180,54 @@ private struct GeneralSettings: View {
     }
 }
 
+// MARK: - Обновления
+
+private struct UpdateSettings: View {
+    // Sparkle сообщает о своих изменениях сам, через AppState они бы не дошли.
+    @ObservedObject var updater: SparkleUpdater
+
+    var body: some View {
+        Form {
+            Section {
+                // Переключатель гаснет вместе с механизмом обновлений. Иначе
+                // получалось молчаливое враньё: рядом написано «обновления не
+                // работают», человек щёлкает переключатель, текст под ним
+                // обещает ежесуточную проверку — а настройка уходит в
+                // незапущенный механизм и не делает ничего.
+                Toggle("Check for updates automatically", isOn: $updater.automaticChecksEnabled)
+                    .accessibilityHint("The only switch that changes the app's network behavior")
+                    .disabled(updater.startupFailure != nil)
+                Text("Off by default. When on, the app downloads a small version list from GitHub once a day. Apart from the model download and the update itself, there are no other network requests: only your IP address and the app version are sent — no details about your computer, and nothing you dictated.")
+                    .font(.caption)
+                    .foregroundStyle(updater.startupFailure == nil ? .secondary : .tertiary)
+
+                HStack {
+                    Button("Check now", action: updater.checkForUpdates)
+                        .disabled(!updater.canCheckForUpdates)
+                    Spacer()
+                }
+            }
+
+            if let failure = updater.startupFailure {
+                Section {
+                    // Молчать нельзя: иначе человек будет считать, что
+                    // обновления приходят, а они не приходят.
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("Updates are not working", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text(failure)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Updates are not working. \(failure)")
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
 private struct PermissionRow: View {
     let status: PermissionStatus
     let action: () -> Void
@@ -226,6 +265,7 @@ private struct PermissionRow: View {
 
 private struct ModelSettings: View {
     @ObservedObject var state: AppState
+    @State private var showDeleteConfirmation = false
 
     var body: some View {
         Form {
@@ -239,7 +279,11 @@ private struct ModelSettings: View {
                     ),
                     install: state.installModel,
                     cancel: state.cancelModelInstall,
-                    delete: state.deleteModel
+                    // Удаление стоит рядом с обычными кнопками и раньше
+                    // срабатывало с первого щелчка: промах стоил половины
+                    // гигабайта и новой загрузки. Отменить это нечем, значит
+                    // спрашиваем.
+                    delete: { showDeleteConfirmation = true }
                 )
             }
 
@@ -251,6 +295,16 @@ private struct ModelSettings: View {
         }
         .formStyle(.grouped)
         .task { await state.refreshModelState() }
+        .confirmationDialog(
+            "Delete the recognition model?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete model", role: .destructive) { state.deleteModel() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Dictation stops working until you download the model again — that's another \(state.remainingDownloadMegabytes == 0 ? 586 : state.remainingDownloadMegabytes) MB over the network.")
+        }
     }
 }
 
@@ -303,25 +357,45 @@ private struct DictionarySettings: View {
             }
             .padding()
 
-            List {
-                ForEach(state.replacements) { replacement in
-                    HStack {
-                        Text(replacement.spoken)
-                            .foregroundStyle(.secondary)
-                        Image(systemName: "arrow.right")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                        Text(replacement.written)
-                    }
-                    // Строка читается целиком: «сентри», стрелка и «Sentry»
-                    // по отдельности не значат ничего.
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Heard as “\(replacement.spoken)”, written as “\(replacement.written)”")
+            // Пустой словарь — обычное дело для нового человека, и раньше он
+            // видел на этом месте просто провал в пол-окна без единого слова.
+            if state.replacements.isEmpty {
+                VStack(spacing: 4) {
+                    Text("No replacements yet")
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                    Text("Add a pair below: what the model hears on the left, what should be written on the right.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .onDelete(perform: state.removeReplacements)
+                .padding(.horizontal, 40)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityElement(children: .combine)
+            } else {
+                List {
+                    ForEach(state.replacements) { replacement in
+                        HStack {
+                            Text(replacement.spoken)
+                                .foregroundStyle(.secondary)
+                            Image(systemName: "arrow.right")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                            Text(replacement.written)
+                        }
+                        // Строка читается целиком: «сентри», стрелка и «Sentry»
+                        // по отдельности не значат ничего.
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Heard as “\(replacement.spoken)”, written as “\(replacement.written)”")
+                    }
+                    .onDelete(perform: state.removeReplacements)
+                }
+                .disabled(!state.isDictionaryEditable)
+                .accessibilityLabel("Replacement list")
             }
-            .disabled(!state.isDictionaryEditable)
-            .accessibilityLabel("Replacement list")
+
+            Divider()
 
             HStack {
                 // Подпись у полей только в виде подсказки внутри рамки: пустое
@@ -355,6 +429,16 @@ private struct DictionarySettings: View {
 // MARK: - О программе
 
 private struct AboutView: View {
+    /// Версия и номер сборки. Первое, что спрашивают в любом отчёте об ошибке,
+    /// и единственного места, где это можно было прочитать, в приложении не
+    /// было вовсе: в Dock значка нет, «About» из главного меню недостижим.
+    private var version: String {
+        let info = Bundle.main.infoDictionary
+        let marketing = info?["CFBundleShortVersionString"] as? String ?? "—"
+        let build = info?["CFBundleVersion"] as? String ?? "—"
+        return "Version \(marketing) (\(build))"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Wai Dictation")
@@ -362,6 +446,10 @@ private struct AboutView: View {
                 .accessibilityAddTraits(.isHeader)
             Text("Dictation that runs entirely on your Mac.")
                 .foregroundStyle(.secondary)
+            Text(version)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
 
             Divider()
 

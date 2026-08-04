@@ -14,7 +14,6 @@ struct WaiDictationApp: App {
         MenuBarExtra {
             MenuContent(
                 state: state,
-                updater: state.updater,
                 showOnboarding: { onboardingCompleted = false }
             )
         } label: {
@@ -44,10 +43,14 @@ struct WaiDictationApp: App {
             }
         }
 
+        // Содержимое здесь безусловное. Пока оно пряталось за
+        // `if !onboardingCompleted`, macOS оставляла у себя саму сцену: после
+        // настройки в меню «Window» жил пункт «Welcome», и он открывал окно
+        // размером 0×0 — рамку без содержимого, из которой нечего закрыть и
+        // непонятно, что это было. Теперь тот же пункт честно показывает
+        // настройку заново, ровно как «Run setup again» в строке меню.
         Window("Welcome", id: "onboarding") {
-            if !onboardingCompleted {
-                OnboardingView(state: state) { onboardingCompleted = true }
-            }
+            OnboardingView(state: state) { onboardingCompleted = true }
         }
         .windowResizability(.contentSize)
 
