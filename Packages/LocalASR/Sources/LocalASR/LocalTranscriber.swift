@@ -32,8 +32,23 @@ public actor LocalTranscriber {
         loadedDirectory = modelDirectory
     }
 
+    /// Загрузить акустический подсказчик терминов.
+    ///
+    /// Отдельно от `prepare`, потому что это отдельная модель с отдельной
+    /// судьбой: без неё распознавание полноценно работает, а с ней термины
+    /// узнаются на уровне звука, а не пост-обработкой.
+    public func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {
+        guard let capable = engine as? VocabularyBoostCapable else {
+            throw ASREngineError.modelsUnavailable("the engine doesn't support vocabulary hints")
+        }
+        try await capable.loadVocabularyModels(from: modelDirectory, boost: boost)
+    }
+
     /// Распознать записанный файл.
-    public func transcribe(fileURL: URL) async throws -> ASRResult {
+    ///
+    /// `languageHint` — код BCP-47 либо `nil` для автоопределения; см.
+    /// `ASREngineAdapting.transcribe(samples:languageHint:)`.
+    public func transcribe(fileURL: URL, languageHint: String? = nil) async throws -> ASRResult {
         guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
 
         let samples: [Float]
@@ -44,7 +59,7 @@ public actor LocalTranscriber {
         }
 
         try Task.checkCancellation()
-        return try await transcribe(samples: samples)
+        return try await transcribe(samples: samples, languageHint: languageHint)
     }
 
     /// Распознать готовый буфер.
@@ -58,14 +73,35 @@ public actor LocalTranscriber {
     /// на главном сценарии (русская речь с английскими вставками) теряла втрое
     /// больше слов, чем правильно настроенный движок. Подробности и цифры — в
     /// `docs/benchmarks.md`.
-    public func transcribe(samples: [Float]) async throws -> ASRResult {
+    public func transcribe(samples: [Float], languageHint: String? = nil) async throws -> ASRResult {
         guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
         guard !samples.isEmpty else {
-            throw ASREngineError.unsupportedAudioFormat("пустая запись")
+            throw ASREngineError.unsupportedAudioFormat("empty recording")
         }
 
         try Task.checkCancellation()
-        return try await engine.transcribe(samples: samples)
+        return try await engine.transcribe(samples: samples, languageHint: languageHint)
+    }
+
+    /// Живой предпросмотр: старт, поток отсчётов, стоп.
+    ///
+    /// Молча пропускается, если движок не умеет предпросмотр: это украшение
+    /// поверх диктовки, а не её часть — контракт тот же, что у подсказки языка.
+    public func startPreview(
+        onUpdate: @escaping @Sendable (_ confirmed: String, _ volatile: String) -> Void
+    ) async throws {
+        guard let capable = engine as? LivePreviewCapable else { return }
+        try await capable.startPreview(onUpdate: onUpdate)
+    }
+
+    public func feedPreview(samples: [Float]) async {
+        guard let capable = engine as? LivePreviewCapable else { return }
+        await capable.feedPreview(samples: samples)
+    }
+
+    public func stopPreview() async {
+        guard let capable = engine as? LivePreviewCapable else { return }
+        await capable.stopPreview()
     }
 
     /// Освободить память под моделью.

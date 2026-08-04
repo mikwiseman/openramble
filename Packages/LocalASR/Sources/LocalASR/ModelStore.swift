@@ -7,11 +7,17 @@ public enum ModelState: Sendable, Equatable {
     case downloading(receivedBytes: Int64, totalBytes: Int64)
     case verifying(checked: Int, total: Int)
     case ready(directory: URL)
+    case repairRequired(String)
     case failed(ModelStoreError)
     case deleting
 
     public var isReady: Bool {
         if case .ready = self { return true }
+        return false
+    }
+
+    public var requiresRepair: Bool {
+        if case .repairRequired = self { return true }
         return false
     }
 
@@ -33,10 +39,19 @@ public enum ModelStoreError: Error, Sendable, Equatable {
     case download(String)
     case verification(String)
     case install(String)
+    case repairRequired(String)
     /// Папка, из которой пользователь просил взять модель, не подходит.
     case importSource(String)
     case notEnoughDiskSpace(requiredBytes: Int64, availableBytes: Int64)
     case cancelled
+}
+
+/// Test seam для имитации process kill между файловыми шагами promotion.
+public enum ModelPromotionCheckpoint: Sendable, Equatable, CaseIterable {
+    case afterBackup
+    case afterStagingMove
+    case afterReadyMarker
+    case afterBackupRemoval
 }
 
 /// Установка, проверка и удаление модели.
@@ -51,6 +66,7 @@ public actor ModelStore {
     private let downloader: ModelDownloading
     private let verifier: ModelVerifier
     private let fileManager: FileManager
+    private let injectedPromotionFailure: ModelPromotionCheckpoint?
 
     private var state: ModelState = .notInstalled
     private var observers: [UUID: AsyncStream<ModelState>.Continuation] = [:]
@@ -61,13 +77,15 @@ public actor ModelStore {
         layout: ModelInstallLayout,
         downloader: ModelDownloading = URLSessionModelDownloader(),
         verifier: ModelVerifier = ModelVerifier(),
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        injectedPromotionFailure: ModelPromotionCheckpoint? = nil
     ) {
         self.manifest = manifest
         self.layout = layout
         self.downloader = downloader
         self.verifier = verifier
         self.fileManager = fileManager
+        self.injectedPromotionFailure = injectedPromotionFailure
     }
 
     // MARK: - Наблюдение
@@ -106,18 +124,138 @@ public actor ModelStore {
     /// частично на месте.
     @discardableResult
     public func refreshState() -> ModelState {
+        do {
+            try recoverInterruptedPromotion()
+        } catch {
+            setState(.repairRequired("couldn't recover an interrupted model update"))
+            return state
+        }
         sweepStaleStaging()
 
-        guard let data = try? LocalFile.read(layout.readyMarker),
-              let marker = try? JSONDecoder().decode(ModelReadyMarker.self, from: data),
-              marker.matches(manifest)
-        else {
+        guard fileManager.fileExists(atPath: layout.readyMarker.path) else {
+            if fileManager.fileExists(atPath: layout.installedDirectory.path) {
+                setState(.repairRequired("the model's ready marker is missing"))
+                return state
+            }
             setState(.notInstalled)
+            return state
+        }
+
+        let marker: ModelReadyMarker
+        do {
+            let data = try LocalFile.read(layout.readyMarker)
+            marker = try JSONDecoder().decode(ModelReadyMarker.self, from: data)
+            guard marker.matches(manifest) else {
+                throw ModelStoreError.repairRequired("the model marker is incompatible with this app version")
+            }
+        } catch let error as ModelStoreError {
+            setRefreshFailure(error)
+            return state
+        } catch {
+            setState(.repairRequired("the model marker is damaged"))
+            return state
+        }
+
+        do {
+            let metadata = try validateInstalledFiles(marker: marker)
+            if marker.installedFiles != metadata {
+                try writeReadyMarker(installedFiles: metadata)
+            }
+        } catch let error as ModelStoreError {
+            setRefreshFailure(error)
+            return state
+        } catch {
+            setState(.repairRequired(error.localizedDescription))
             return state
         }
 
         setState(.ready(directory: layout.installedDirectory))
         return state
+    }
+
+    private func setRefreshFailure(_ error: ModelStoreError) {
+        if case let .repairRequired(detail) = error {
+            setState(.repairRequired(detail))
+        } else {
+            setState(.failed(error))
+        }
+    }
+
+    /// Проверить точный inventory и размеры. Если metadata изменилась либо это
+    /// marker старого формата, SHA-256 подтверждается до Ready.
+    private func validateInstalledFiles(
+        marker: ModelReadyMarker
+    ) throws -> [ModelReadyMarker.InstalledFile] {
+        let expectedPaths = Set(manifest.files.map(\.path))
+        let engine = layout.engineDirectory
+        guard fileManager.fileExists(atPath: engine.path) else {
+            throw ModelStoreError.repairRequired("the model folder is missing")
+        }
+
+        guard let enumerator = fileManager.enumerator(
+            at: engine,
+            includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey, .contentModificationDateKey],
+            options: []
+        ) else {
+            throw ModelStoreError.repairRequired("couldn't read the model files")
+        }
+
+        var actualPaths = Set<String>()
+        var metadata: [ModelReadyMarker.InstalledFile] = []
+        let previous = Dictionary(uniqueKeysWithValues: (marker.installedFiles ?? []).map { ($0.path, $0) })
+
+        for case let url as URL in enumerator {
+            let values = try url.resourceValues(forKeys: [
+                .isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey, .contentModificationDateKey,
+            ])
+            guard values.isSymbolicLink != true else {
+                throw ModelStoreError.repairRequired("\(url.lastPathComponent) is a symbolic link")
+            }
+            guard values.isRegularFile == true else { continue }
+
+            // Finder создаёт `.DS_Store` при простом просмотре папки. Это его
+            // мусор, а не файл модели: убираем и продолжаем, потому что repair
+            // здесь означал бы перекачку сотен мегабайт из-за открытого окна.
+            if url.lastPathComponent == ".DS_Store" {
+                try fileManager.removeItem(at: url)
+                continue
+            }
+
+            let prefix = engine.standardizedFileURL.path + "/"
+            guard url.standardizedFileURL.path.hasPrefix(prefix) else {
+                throw ModelStoreError.repairRequired("a model file escaped the install directory")
+            }
+            let path = String(url.standardizedFileURL.path.dropFirst(prefix.count))
+            actualPaths.insert(path)
+
+            guard let expected = manifest.files.first(where: { $0.path == path }) else {
+                throw ModelStoreError.repairRequired("unexpected file \(path)")
+            }
+            let byteCount = Int64(values.fileSize ?? -1)
+            guard byteCount == expected.byteCount else {
+                throw ModelStoreError.repairRequired("wrong size for \(path)")
+            }
+
+            let item = ModelReadyMarker.InstalledFile(
+                path: path,
+                byteCount: byteCount,
+                modifiedAt: values.contentModificationDate
+            )
+            if previous[path] != item {
+                do {
+                    try verifier.verify(file: expected, at: url)
+                } catch {
+                    throw ModelStoreError.repairRequired("\(path) is damaged")
+                }
+            }
+            metadata.append(item)
+        }
+
+        guard actualPaths == expectedPaths else {
+            let missing = expectedPaths.subtracting(actualPaths).sorted().joined(separator: ", ")
+            throw ModelStoreError.repairRequired("missing files: \(missing)")
+        }
+        return metadata.sorted { $0.path < $1.path }
     }
 
     /// Убрать брошенные staging-директории от прерванных попыток.
@@ -138,6 +276,25 @@ public actor ModelStore {
         }
     }
 
+    /// Довести до консистентного состояния promotion, прерванный между rename.
+    private func recoverInterruptedPromotion() throws {
+        let destination = layout.installedDirectory
+        let backup = layout.backupDirectory
+        guard fileManager.fileExists(atPath: backup.path) else { return }
+
+        let destinationHasMarker = fileManager.fileExists(
+            atPath: destination.appending(path: ".ready.json").path
+        )
+        if destinationHasMarker {
+            try fileManager.removeItem(at: backup)
+        } else {
+            if fileManager.fileExists(atPath: destination.path) {
+                try fileManager.removeItem(at: destination)
+            }
+            try fileManager.moveItem(at: backup, to: destination)
+        }
+    }
+
     // MARK: - Установка
 
     /// Скачать и установить модель. Повторный вызов во время работы игнорируется.
@@ -154,6 +311,18 @@ public actor ModelStore {
     /// Отменить установку. Скачанное в staging удаляется — недоверенных остатков не держим.
     public func cancelInstall() {
         activeTask?.cancel()
+    }
+
+    /// Явное восстановление, выбранное пользователем. В отличие от `install`,
+    /// не доверяет прежнему `.ready`: Core ML warmup мог обнаружить дефект,
+    /// который файловый inventory не умеет диагностировать. Старую копию
+    /// promotion всё равно держит до полностью проверенной новой.
+    public func repair() async {
+        guard activeTask == nil else { return }
+        let task = Task { await performInstall() }
+        activeTask = task
+        await task.value
+        activeTask = nil
     }
 
     /// Взять модель из готовой папки, не заходя в сеть.
@@ -200,7 +369,6 @@ public actor ModelStore {
         do {
             try preflightDiskSpace()
             try fileManager.createDirectory(at: staging, withIntermediateDirectories: true)
-            defer { try? fileManager.removeItem(at: staging) }
 
             try await collect(staging)
             try Task.checkCancellation()
@@ -211,15 +379,34 @@ public actor ModelStore {
             excludeFromBackup(layout.modelDirectory)
             setState(.ready(directory: layout.installedDirectory))
         } catch is CancellationError {
-            try? fileManager.removeItem(at: staging)
-            setState(.notInstalled)
+            do {
+                try removeStaging(staging)
+                setState(.notInstalled)
+            } catch {
+                setState(.failed(.install("download cancelled, but the partial files weren't deleted: \(error.localizedDescription)")))
+            }
         } catch let error as ModelStoreError {
-            try? fileManager.removeItem(at: staging)
-            setState(.failed(error))
+            let primary = String(describing: error)
+            do {
+                try removeStaging(staging)
+                setState(.failed(error))
+            } catch {
+                setState(.failed(.install("\(primary); staging wasn't deleted: \(error.localizedDescription)")))
+            }
         } catch {
-            try? fileManager.removeItem(at: staging)
-            setState(.failed(.install(error.localizedDescription)))
+            let primary = error.localizedDescription
+            do {
+                try removeStaging(staging)
+                setState(.failed(.install(primary)))
+            } catch {
+                setState(.failed(.install("\(primary); staging wasn't deleted: \(error.localizedDescription)")))
+            }
         }
+    }
+
+    private func removeStaging(_ staging: URL) throws {
+        guard fileManager.fileExists(atPath: staging.path) else { return }
+        try fileManager.removeItem(at: staging)
     }
 
     /// Скопировать файлы манифеста из чужой папки в staging.
@@ -245,7 +432,7 @@ public actor ModelStore {
                     inside: layout.engineDirectory(inside: staging)
                 )
             } catch {
-                throw ModelStoreError.importSource("путь \(file.path) ведёт за пределы папки")
+                throw ModelStoreError.importSource("the path \(file.path) leads outside the folder")
             }
             try checkImportable(origin, path: file.path)
 
@@ -256,7 +443,7 @@ public actor ModelStore {
             do {
                 try fileManager.copyItem(at: origin, to: destination)
             } catch {
-                throw ModelStoreError.importSource("не скопировался \(file.path): \(error.localizedDescription)")
+                throw ModelStoreError.importSource("couldn't copy \(file.path): \(error.localizedDescription)")
             }
 
             completed += file.byteCount
@@ -272,13 +459,13 @@ public actor ModelStore {
     private func checkImportable(_ url: URL, path: String) throws {
         let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
         guard let values else {
-            throw ModelStoreError.importSource("в папке нет файла \(path)")
+            throw ModelStoreError.importSource("the folder has no file \(path)")
         }
         if values.isSymbolicLink == true {
-            throw ModelStoreError.importSource("\(path) — символическая ссылка, а нужен файл")
+            throw ModelStoreError.importSource("\(path) is a symbolic link, but a regular file is required")
         }
         guard values.isRegularFile == true else {
-            throw ModelStoreError.importSource("\(path) — не обычный файл")
+            throw ModelStoreError.importSource("\(path) is not a regular file")
         }
     }
 
@@ -308,7 +495,7 @@ public actor ModelStore {
 
             let sources = manifest.downloadURLs(for: file)
             guard !sources.isEmpty else {
-                throw ModelStoreError.manifest("не построился адрес для \(file.path)")
+                throw ModelStoreError.manifest("couldn't build a URL for \(file.path)")
             }
             let destination = try layout.destination(for: file, inside: layout.engineDirectory(inside: staging))
             try fileManager.createDirectory(
@@ -324,7 +511,9 @@ public actor ModelStore {
                 total: total
             )
 
-            try? fileManager.removeItem(at: destination)
+            if fileManager.fileExists(atPath: destination.path) {
+                try fileManager.removeItem(at: destination)
+            }
             try fileManager.moveItem(at: temporary, to: destination)
             completed += file.byteCount
             setState(.downloading(receivedBytes: completed, totalBytes: total))
@@ -369,7 +558,7 @@ public actor ModelStore {
             }
         }
 
-        throw ModelStoreError.download("\(file.path): не осталось источников")
+        throw ModelStoreError.download("\(file.path): no sources left")
     }
 
     private func reportDownloadProgress(_ received: Int64, total: Int64) {
@@ -391,25 +580,61 @@ public actor ModelStore {
         }
     }
 
-    /// Переезд staging → финальная директория одним движением, затем метка готовности.
+    /// Crash-safe swap: старая модель остаётся в backup до marker новой.
     private func promote(from staging: URL) throws {
         let destination = layout.installedDirectory
+        let backup = layout.backupDirectory
         do {
             try fileManager.createDirectory(
                 at: destination.deletingLastPathComponent(),
                 withIntermediateDirectories: true
             )
-            if fileManager.fileExists(atPath: destination.path) {
-                try fileManager.removeItem(at: destination)
+            if fileManager.fileExists(atPath: backup.path) {
+                try fileManager.removeItem(at: backup)
             }
+            if fileManager.fileExists(atPath: destination.path) {
+                try fileManager.moveItem(at: destination, to: backup)
+            }
+            try injectPromotionFailure(at: .afterBackup)
             try fileManager.moveItem(at: staging, to: destination)
-
-            let marker = ModelReadyMarker(manifest: manifest, verifiedAt: Date())
-            let data = try JSONEncoder().encode(marker)
-            try data.write(to: layout.readyMarker, options: .atomic)
+            try injectPromotionFailure(at: .afterStagingMove)
+            let metadata = try installedMetadataWithoutMarker()
+            try writeReadyMarker(installedFiles: metadata)
+            try injectPromotionFailure(at: .afterReadyMarker)
+            if fileManager.fileExists(atPath: backup.path) {
+                try fileManager.removeItem(at: backup)
+            }
+            try injectPromotionFailure(at: .afterBackupRemoval)
         } catch {
             throw ModelStoreError.install(error.localizedDescription)
         }
+    }
+
+    private func injectPromotionFailure(at checkpoint: ModelPromotionCheckpoint) throws {
+        guard injectedPromotionFailure == checkpoint else { return }
+        throw ModelStoreError.install("injected promotion failure: \(checkpoint)")
+    }
+
+    private func installedMetadataWithoutMarker() throws -> [ModelReadyMarker.InstalledFile] {
+        try manifest.files.map { file in
+            let url = try layout.destination(for: file, inside: layout.engineDirectory)
+            let values = try url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+            return .init(
+                path: file.path,
+                byteCount: Int64(values.fileSize ?? -1),
+                modifiedAt: values.contentModificationDate
+            )
+        }.sorted { $0.path < $1.path }
+    }
+
+    private func writeReadyMarker(installedFiles: [ModelReadyMarker.InstalledFile]) throws {
+        let marker = ModelReadyMarker(
+            manifest: manifest,
+            verifiedAt: Date(),
+            installedFiles: installedFiles
+        )
+        let data = try JSONEncoder().encode(marker)
+        try data.write(to: layout.readyMarker, options: .atomic)
     }
 
     /// Модель — скачиваемый кэш, в резервных копиях ей не место.
@@ -435,7 +660,13 @@ public actor ModelStore {
         }
 
         setState(.deleting)
-        try? fileManager.removeItem(at: layout.modelDirectory)
-        setState(.notInstalled)
+        do {
+            if fileManager.fileExists(atPath: layout.modelDirectory.path) {
+                try fileManager.removeItem(at: layout.modelDirectory)
+            }
+            setState(.notInstalled)
+        } catch {
+            setState(.failed(.install("couldn't delete the model: \(error.localizedDescription)")))
+        }
     }
 }

@@ -11,8 +11,7 @@ final class OverlayModelTests: XCTestCase {
     private var model: OverlayModel!
     private var visibility: [Bool] = []
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
         announcer = FakeAnnouncer()
         model = OverlayModel(announcer: announcer, noticeDuration: .milliseconds(120))
         visibility = []
@@ -119,7 +118,7 @@ final class OverlayModelTests: XCTestCase {
         model.show(.listening, elapsed: 0)
 
         XCTAssertNil(model.notice)
-        XCTAssertEqual(model.content.title, "Слушаю")
+        XCTAssertEqual(model.content.title, "Listening")
     }
 
     /// Отложенное скрытие принадлежит своему показу.
@@ -139,7 +138,10 @@ final class OverlayModelTests: XCTestCase {
     func testНачалоЗаписиГоворитсяВслух() {
         model.show(.listening, elapsed: 0)
 
-        XCTAssertEqual(announcer.messages, ["Идёт запись"])
+        XCTAssertEqual(
+            announcer.messages,
+            ["Recording. Press the hotkey to insert. Press Escape to delete the recording."]
+        )
         XCTAssertEqual(announcer.announcements.first?.urgent, true)
     }
 
@@ -152,7 +154,10 @@ final class OverlayModelTests: XCTestCase {
         model.show(.listening, elapsed: 1)
         model.show(.listening, elapsed: 2)
 
-        XCTAssertEqual(announcer.messages, ["Идёт запись"])
+        XCTAssertEqual(
+            announcer.messages,
+            ["Recording. Press the hotkey to insert. Press Escape to delete the recording."]
+        )
     }
 
     func testСледующаяДиктовкаОбъявляетсяЗаново() {
@@ -161,7 +166,13 @@ final class OverlayModelTests: XCTestCase {
 
         model.show(.listening, elapsed: 0)
 
-        XCTAssertEqual(announcer.messages, ["Идёт запись", "Идёт запись"])
+        XCTAssertEqual(
+            announcer.messages,
+            [
+                "Recording. Press the hotkey to insert. Press Escape to delete the recording.",
+                "Recording. Press the hotkey to insert. Press Escape to delete the recording.",
+            ]
+        )
     }
 
     func testСообщениеГоворитсяВслухЦеликом() {
@@ -182,10 +193,10 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(
             announcer.messages,
             [
-                "Включаю микрофон",
-                "Идёт запись",
-                "Запись остановлена, распознаю речь",
-                "Вставляю текст",
+                "Turning on the microphone",
+                "Recording. Press the hotkey to insert. Press Escape to delete the recording.",
+                "Recording stopped, transcribing speech",
+                "Inserting text",
             ]
         )
     }

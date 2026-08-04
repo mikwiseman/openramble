@@ -151,23 +151,23 @@ extension ModelManifest {
         }
 
         guard !manifest.files.isEmpty else {
-            throw ModelManifestError.invalid("в манифесте нет ни одного файла")
+            throw ModelManifestError.invalid("the manifest lists no files")
         }
         // Ревизия обязана быть полным SHA коммита: короткая форма или имя ветки
         // не дают гарантии неизменности содержимого.
         guard manifest.revision.count == 40,
               manifest.revision.allSatisfy({ $0.isHexDigit })
         else {
-            throw ModelManifestError.invalid("ревизия должна быть полным SHA-1 коммита")
+            throw ModelManifestError.invalid("the revision must be a full commit SHA-1")
         }
         for file in manifest.files {
             guard file.byteCount > 0 else {
-                throw ModelManifestError.invalid("нулевой размер у \(file.path)")
+                throw ModelManifestError.invalid("zero size for \(file.path)")
             }
             guard file.sha256.count == 64,
                   file.sha256.allSatisfy({ $0.isHexDigit && !$0.isUppercase })
             else {
-                throw ModelManifestError.invalid("некорректная SHA-256 у \(file.path)")
+                throw ModelManifestError.invalid("invalid SHA-256 for \(file.path)")
             }
             // Путь приходит из манифеста и участвует в построении пути на диске,
             // поэтому выход за пределы директории установки должен быть невозможен.
@@ -175,7 +175,7 @@ extension ModelManifest {
                   !file.path.contains(".."),
                   !file.path.isEmpty
             else {
-                throw ModelManifestError.invalid("недопустимый путь: \(file.path)")
+                throw ModelManifestError.invalid("invalid path: \(file.path)")
             }
         }
 
@@ -185,13 +185,13 @@ extension ModelManifest {
             // источника, когда чинить уже некогда.
             let parts = mirror.repository.split(separator: "/", omittingEmptySubsequences: false)
             guard parts.count == 2, parts.allSatisfy({ !$0.isEmpty }) else {
-                throw ModelManifestError.invalid("запасной репозиторий должен быть «владелец/имя»")
+                throw ModelManifestError.invalid("the mirror repository must be “owner/name”")
             }
             guard !mirror.releaseTag.isEmpty else {
-                throw ModelManifestError.invalid("у запасного источника пустой тег релиза")
+                throw ModelManifestError.invalid("the mirror has an empty release tag")
             }
             guard manifest.files.allSatisfy({ manifest.mirrorURL(for: $0) != nil }) else {
-                throw ModelManifestError.invalid("из запасного источника не строится адрес")
+                throw ModelManifestError.invalid("couldn't build a URL from the mirror")
             }
         }
         return manifest

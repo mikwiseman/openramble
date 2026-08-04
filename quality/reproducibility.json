@@ -1,0 +1,21 @@
+{
+  "baselineGitSHA": "5c0004608c028cc6e5ec86e93dc4236a9dc6969c",
+  "model": {
+    "id": "parakeet-tdt-0.6b-v3",
+    "revision": "aed02740059203c4a87495924f685de3722ae9ce",
+    "manifestSHA256": "5082e7480f6cd00b2e499b607942aef86f82110121a479d34969edd4da337540",
+    "bytes": 483105645
+  },
+  "dependencies": {
+    "FluidAudio": "0.15.5@19600a485baa4998812e4654b70d2bab8f2c9949",
+    "Sparkle": "2.9.4@b6496a74a087257ef5e6da1c5b29a447a60f5bd7",
+    "XcodeGen": "2.46.0",
+    "XcodeGenArchiveSHA256": "4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806"
+  },
+  "scorerSHA256": "ee1dc73f3fac6194ccca5e47a7e4fbf8d52403240d8a471b0d8f7122e82670f4",
+  "syntheticCorpusSourceSHA256": "f194b139f47742d6f2b2cdc750a176c3f3d5be313dd0c15996467ad4ee5cac6c",
+  "knownDictionaryGaps": [
+    "feature flag", "Python", "Sentry", "Docker", "Kubernetes",
+    "branch", "Postgres", "Redis", "Xcode", "code review"
+  ]
+}

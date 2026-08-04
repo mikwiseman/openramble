@@ -22,29 +22,29 @@ final class ModelStatusTests: XCTestCase {
     func testНеУстановленаПредлагаетСкачатьИНазываетРазмер() {
         let status = status(.notInstalled)
 
-        XCTAssertEqual(status.title, "Модель не установлена")
+        XCTAssertEqual(status.title, "Model not installed")
         XCTAssertEqual(status.actions, [.install])
-        XCTAssertEqual(status.detail?.contains("483 МБ"), true)
+        // Обе модели одной кнопкой: 483 МБ распознавание + 103 МБ подсказчик.
+        XCTAssertEqual(status.detail?.contains("586 MB"), true)
         XCTAssertNil(status.progress)
     }
 
     func testЗагрузкаПоказываетМегабайтыИДолю() {
         let status = status(.downloading(receivedBytes: 120_000_000, totalBytes: 483_000_000))
 
-        XCTAssertEqual(status.title, "Скачиваю модель…")
-        XCTAssertEqual(status.progressLabel, "120 из 483 МБ")
+        XCTAssertEqual(status.title, "Downloading model…")
+        XCTAssertEqual(status.progressLabel, "120 of 483 MB")
         XCTAssertEqual(status.progress ?? 0, 0.248, accuracy: 0.01)
-        // Во время загрузки нажимать нечего: вторая кнопка «скачать» начала бы
-        // вторую установку поверх идущей.
-        XCTAssertEqual(status.actions, [])
-        XCTAssertEqual(status.announcement, "Скачиваю модель, 120 из 483 МБ")
+        // Единственное действие — честно остановить загрузку и удалить partial.
+        XCTAssertEqual(status.actions, [.cancel])
+        XCTAssertEqual(status.announcement, "Downloading model, 120 of 483 MB")
     }
 
     func testПроверкаНазываетНомерФайла() {
         let status = status(.verifying(checked: 3, total: 12))
 
-        XCTAssertEqual(status.title, "Проверяю скачанное…")
-        XCTAssertEqual(status.progressLabel, "Файл 3 из 12")
+        XCTAssertEqual(status.title, "Verifying download…")
+        XCTAssertEqual(status.progressLabel, "File 3 of 12")
         XCTAssertEqual(status.progress ?? 0, 0.25, accuracy: 0.001)
         XCTAssertEqual(status.actions, [])
     }
@@ -52,7 +52,7 @@ final class ModelStatusTests: XCTestCase {
     func testГотоваяМодельВНастройкахДаётЕёУдалить() {
         let status = status(ready, place: .settings)
 
-        XCTAssertEqual(status.title, "Модель готова")
+        XCTAssertEqual(status.title, "Model ready")
         XCTAssertEqual(status.tone, .success)
         XCTAssertEqual(status.actions, [.delete])
     }
@@ -68,24 +68,38 @@ final class ModelStatusTests: XCTestCase {
     func testПрогревДвижкаОбъясняетЗадержкуПервогоРаза() {
         let status = status(ready, preparing: true)
 
-        XCTAssertEqual(status.title, "Модель готова")
-        XCTAssertEqual(status.detail?.contains("первому запуску"), true)
-        XCTAssertEqual(status.announcement, "Модель готова, готовлю к первому запуску")
+        XCTAssertEqual(status.title, "Model ready")
+        XCTAssertEqual(status.detail?.contains("20–40 seconds"), true)
+        XCTAssertEqual(status.announcement, "Model ready, preparing for first use")
     }
 
     func testОшибкаПредлагаетПовторить() {
-        let status = status(.failed(.download("сервер не ответил")))
+        let status = status(.failed(.download("the server did not respond")))
 
-        XCTAssertEqual(status.title, "Не удалось установить модель")
+        XCTAssertEqual(status.title, "Model installation failed")
         XCTAssertEqual(status.tone, .failure)
         XCTAssertEqual(status.actions, [.retry])
-        XCTAssertEqual(status.detail, "Не удалось скачать: сервер не ответил")
+        XCTAssertEqual(status.detail, "Download failed: the server did not respond")
+    }
+
+    func testПовреждённаяМодельТребуетЯвногоВосстановления() {
+        let status = status(.repairRequired("checksum mismatch"))
+
+        XCTAssertEqual(status.title, "Model needs repair")
+        XCTAssertEqual(status.actions, [.repair])
+        XCTAssertEqual(status.title(for: .repair), "Redownload model — 586 MB")
+        // Добор после обновления называет только остаток, а не полный объём.
+        XCTAssertEqual(
+            ModelStatus.Action.repair.title(downloadMegabytes: 103),
+            "Redownload model — 103 MB"
+        )
+        XCTAssertEqual(status.detail?.contains("damaged"), true)
     }
 
     func testУдалениеПоказываетсяОтдельно() {
         let status = status(.deleting)
 
-        XCTAssertEqual(status.title, "Удаляю модель…")
+        XCTAssertEqual(status.title, "Deleting model…")
         XCTAssertEqual(status.actions, [])
         XCTAssertNil(status.progress)
     }
@@ -103,7 +117,7 @@ final class ModelStatusTests: XCTestCase {
 
         XCTAssertEqual(
             text,
-            "На диске не хватает места: нужно 594 МБ, свободно 120 МБ."
+            "Not enough disk space: 594 MB needed, 120 MB free."
         )
         XCTAssertFalse(text.contains("requiredBytes"))
     }
@@ -114,6 +128,7 @@ final class ModelStatusTests: XCTestCase {
             .download("нет сети"),
             .verification("не сошлась сумма"),
             .install("нет прав"),
+            .repairRequired("нет marker"),
             .importSource("не та папка"),
             .notEnoughDiskSpace(requiredBytes: 1, availableBytes: 0),
             .cancelled,
@@ -137,6 +152,7 @@ final class ModelStatusTests: XCTestCase {
             .downloading(receivedBytes: 0, totalBytes: 483_000_000),
             .verifying(checked: 0, total: 12),
             ready,
+            .repairRequired("повреждена"),
             .failed(.cancelled),
             .deleting,
         ]
@@ -153,12 +169,15 @@ final class ModelStatusTests: XCTestCase {
     // MARK: - Подсказки к кнопкам
 
     func testУКаждойКнопкиЕстьПодсказка() {
-        for action in [ModelStatus.Action.install, .retry, .delete] {
-            XCTAssertFalse(action.title.isEmpty)
-            XCTAssertFalse(action.hint.isEmpty)
+        for action in [ModelStatus.Action.install, .retry, .repair, .delete] {
+            XCTAssertFalse(action.title(downloadMegabytes: 586).isEmpty)
+            XCTAssertFalse(action.hint(downloadMegabytes: 586).isEmpty)
         }
         // Удаление — единственное необратимое действие на экране, и о его цене
         // надо сказать до нажатия.
-        XCTAssertEqual(ModelStatus.Action.delete.hint.contains("перестанет работать"), true)
+        XCTAssertEqual(
+            ModelStatus.Action.delete.hint(downloadMegabytes: 586).contains("stops working"),
+            true
+        )
     }
 }

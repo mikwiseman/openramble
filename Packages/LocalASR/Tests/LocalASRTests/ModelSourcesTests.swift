@@ -327,7 +327,7 @@ final class ModelSourcesTests: XCTestCase {
         guard case let .failed(error) = state, case let .importSource(message) = error else {
             return XCTFail("Путь наружу обязан останавливать импорт, получено: \(state)")
         }
-        XCTAssertTrue(message.contains("за пределы"), "Причина отказа не названа: \(message)")
+        XCTAssertTrue(message.contains("outside the folder"), "Причина отказа не названа: \(message)")
         XCTAssertFalse(FileManager.default.fileExists(atPath: layout.installedDirectory.path))
     }
 
@@ -350,7 +350,7 @@ final class ModelSourcesTests: XCTestCase {
         guard case let .failed(error) = state, case let .importSource(message) = error else {
             return XCTFail("Символическая ссылка обязана отвергаться, получено: \(state)")
         }
-        XCTAssertTrue(message.contains("ссылка"), "Причина отказа не названа: \(message)")
+        XCTAssertTrue(message.contains("symbolic link"), "Причина отказа не названа: \(message)")
         XCTAssertFalse(FileManager.default.fileExists(atPath: layout.installedDirectory.path))
     }
 

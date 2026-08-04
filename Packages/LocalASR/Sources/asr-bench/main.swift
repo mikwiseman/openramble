@@ -15,6 +15,7 @@ func usage() -> Never {
     Команды:
       status                    что установлено и где
       install                   скачать и установить модель (~483 МБ)
+      install-vocab             скачать акустический подсказчик терминов (~103 МБ)
       import <папка>            взять модель из готовой папки, без сети
       delete                    удалить установленную модель
       transcribe <файл>...      распознать файлы
@@ -24,6 +25,10 @@ func usage() -> Never {
 
     Переменные окружения:
       WAI_MODELS_ROOT           корень установки (по умолчанию Application Support)
+      WAI_VOCAB=on              включить установленный подсказчик терминов
+      WAI_VOCAB_DIR             папка CTC-моделей подсказчика (для замеров)
+      WAI_VOCAB_SIMILARITY      порог похожести подсказчика (по умолчанию 0.65)
+      WAI_EVAL_PIPELINE=on      скорер считает текст после словаря замен
       WAI_ASR_MEL_CONTEXT=on    вернуть mel-контекст FluidAudio на стыке окон
                                 (только чтобы повторить замер потери речи)
     """)
@@ -40,6 +45,47 @@ func makeStore() throws -> (ModelStore, ModelInstallLayout, ModelManifest) {
     let layout = try ModelInstallLayout(manifest: manifest, root: modelsRoot())
     let store = ModelStore(manifest: manifest, layout: layout)
     return (store, layout, manifest)
+}
+
+/// Хранилище акустического подсказчика — тем же механизмом, что и основное:
+/// зафиксированная ревизия, проверка сумм, crash-safe promotion.
+func makeVocabularyStore() throws -> (ModelStore, ModelInstallLayout, ModelManifest) {
+    let manifest = try ModelManifest.bundledVocabulary()
+    let layout = try ModelInstallLayout(manifest: manifest, root: modelsRoot())
+    let store = ModelStore(manifest: manifest, layout: layout)
+    return (store, layout, manifest)
+}
+
+/// Скачивание с прогрессом — общий путь обеих моделей.
+func install(store: ModelStore, layout: ModelInstallLayout, manifest: ModelManifest) async -> Never {
+    print("Скачиваю \(formatBytes(manifest.totalByteCount)) — \(manifest.files.count) файл(ов)")
+    print("Источник: \(manifest.repository) @ \(manifest.revision)")
+
+    let states = await store.states()
+    let monitor = Task {
+        var lastShown = -1
+        for await state in states {
+            switch state {
+            case let .downloading(received, total) where total > 0:
+                let percent = Int(Double(received) / Double(total) * 100)
+                if percent >= lastShown + 5 {
+                    lastShown = percent
+                    print("  \(percent)% — \(formatBytes(received))")
+                }
+            case let .verifying(checked, total):
+                print("  проверка \(checked)/\(total)")
+            default:
+                break
+            }
+        }
+    }
+
+    await store.install()
+    monitor.cancel()
+
+    let finalState = await store.currentState()
+    printState(finalState, layout: layout, manifest: manifest)
+    exit(finalState.isReady ? 0 : 70)
 }
 
 func formatBytes(_ bytes: Int64) -> String {
@@ -71,6 +117,8 @@ func printState(_ state: ModelState, layout: ModelInstallLayout, manifest: Model
         print("Модель готова: \(directory.path)")
         print("Ревизия: \(manifest.revision)")
         print("Файлов: \(manifest.files.count), \(formatBytes(manifest.totalByteCount))")
+    case let .repairRequired(detail):
+        print("Модель требует восстановления: \(detail)")
     case let .failed(error):
         print("Ошибка: \(error)")
     case .deleting:
@@ -99,7 +147,68 @@ func prepareTranscriber() async throws -> LocalTranscriber {
     let started = ContinuousClock.now
     try await transcriber.prepare(modelDirectory: layout.engineDirectory)
     print(String(format: "Модель загружена за %.2f с", seconds(started.duration(to: .now))))
+
+    // Акустический подсказчик терминов: сравнение «с ним и без него» — ровно
+    // тот замер, ради которого переключатель существует. `WAI_VOCAB=on` берёт
+    // установленный подсказчик (install-vocab); `WAI_VOCAB_DIR` — явную папку.
+    var vocabularyDirectory = ProcessInfo.processInfo.environment["WAI_VOCAB_DIR"]
+    if vocabularyDirectory == nil, isOn("WAI_VOCAB") {
+        let (vocabStore, vocabLayout, _) = try makeVocabularyStore()
+        guard await vocabStore.refreshState().isReady else {
+            print("Подсказчик не установлен. Запустите: asr-bench install-vocab")
+            exit(69)
+        }
+        vocabularyDirectory = vocabLayout.engineDirectory.path
+    }
+    if let vocabDirectory = vocabularyDirectory {
+        let similarity = ProcessInfo.processInfo.environment["WAI_VOCAB_SIMILARITY"]
+            .flatMap(Float.init)
+        let biasWeight = ProcessInfo.processInfo.environment["WAI_VOCAB_CBW"]
+            .flatMap(Float.init)
+        let defaults = VocabularyBoost.developerDefault()
+        let boost = VocabularyBoost(
+            terms: defaults.terms,
+            minSimilarity: similarity ?? defaults.minSimilarity,
+            biasWeight: biasWeight ?? defaults.biasWeight
+        )
+        if let similarity {
+            print("Порог похожести подсказчика: \(similarity) (WAI_VOCAB_SIMILARITY)")
+        }
+        if let biasWeight {
+            print("Вес акустической улики: \(biasWeight) (WAI_VOCAB_CBW)")
+        }
+        let vocabStarted = ContinuousClock.now
+        try await transcriber.prepareVocabulary(
+            modelDirectory: URL(fileURLWithPath: vocabDirectory, isDirectory: true),
+            boost: boost
+        )
+        print(
+            String(
+                format: "Подсказчик загружен за %.2f с — %d терминов",
+                seconds(vocabStarted.duration(to: .now)),
+                boost.terms.count
+            )
+        )
+    }
     return transcriber
+}
+
+/// Словарь замен приложения поверх сырого ответа — то, что видит человек.
+///
+/// Включается `WAI_EVAL_PIPELINE=on`. Позволяет сравнивать не движки, а
+/// продукт: сырой ответ печатается рядом, скорер считает обработанный.
+func makeEvalPipeline() -> TextPipeline? {
+    let mode = ProcessInfo.processInfo.environment["WAI_EVAL_PIPELINE"]?.lowercased()
+    switch mode {
+    case "on":
+        print("Скорер считает текст после словаря замен (WAI_EVAL_PIPELINE=on)")
+        return TextPipeline(replacements: StarterDictionary.developer)
+    case "exact":
+        print("Словарь без фонетического добора (WAI_EVAL_PIPELINE=exact)")
+        return TextPipeline(replacements: StarterDictionary.developer, phoneticMatching: false)
+    default:
+        return nil
+    }
 }
 
 let arguments = Array(CommandLine.arguments.dropFirst())
@@ -111,6 +220,10 @@ case "status":
     let (store, layout, manifest) = try makeStore()
     let state = await store.refreshState()
     printState(state, layout: layout, manifest: manifest)
+    let (vocabStore, vocabLayout, vocabManifest) = try makeVocabularyStore()
+    let vocabState = await vocabStore.refreshState()
+    print("\nПодсказчик терминов:")
+    printState(vocabState, layout: vocabLayout, manifest: vocabManifest)
     exit(state.isReady ? 0 : 69)
 
 case "install":
@@ -119,35 +232,15 @@ case "install":
         print("Модель уже установлена: \(layout.installedDirectory.path)")
         exit(0)
     }
+    await install(store: store, layout: layout, manifest: manifest)
 
-    print("Скачиваю \(formatBytes(manifest.totalByteCount)) — \(manifest.files.count) файл(ов)")
-    print("Источник: \(manifest.repository) @ \(manifest.revision)")
-
-    let states = await store.states()
-    let monitor = Task {
-        var lastShown = -1
-        for await state in states {
-            switch state {
-            case let .downloading(received, total) where total > 0:
-                let percent = Int(Double(received) / Double(total) * 100)
-                if percent >= lastShown + 5 {
-                    lastShown = percent
-                    print("  \(percent)% — \(formatBytes(received))")
-                }
-            case let .verifying(checked, total):
-                print("  проверка \(checked)/\(total)")
-            default:
-                break
-            }
-        }
+case "install-vocab":
+    let (store, layout, manifest) = try makeVocabularyStore()
+    if await store.refreshState().isReady {
+        print("Подсказчик уже установлен: \(layout.installedDirectory.path)")
+        exit(0)
     }
-
-    await store.install()
-    monitor.cancel()
-
-    let finalState = await store.currentState()
-    printState(finalState, layout: layout, manifest: manifest)
-    exit(finalState.isReady ? 0 : 70)
+    await install(store: store, layout: layout, manifest: manifest)
 
 case "import":
     guard let sourcePath = operands.first else { usage() }
@@ -170,11 +263,15 @@ case "delete":
     let (store, layout, _) = try makeStore()
     await store.delete()
     print("Удалено: \(layout.modelDirectory.path)")
+    let (vocabStore, vocabLayout, _) = try makeVocabularyStore()
+    await vocabStore.delete()
+    print("Удалено: \(vocabLayout.modelDirectory.path)")
 
 case "eval":
     guard let manifestPath = operands.first else { usage() }
     let items = try Evaluation.loadManifest(at: manifestPath)
     let transcriber = try await prepareTranscriber()
+    let pipeline = makeEvalPipeline()
 
     var outcomes: [EvalOutcome] = []
     for item in items {
@@ -187,9 +284,10 @@ case "eval":
             print("Ошибка: \(error)")
             continue
         }
+        let hypothesis = pipeline.map { $0.process(result.text).text } ?? result.text
         let outcome = EvalOutcome(
             item: item,
-            report: TranscriptScorer.score(reference: item.reference, hypothesis: result.text),
+            report: TranscriptScorer.score(reference: item.reference, hypothesis: hypothesis),
             result: result,
             wallClock: seconds(started.duration(to: .now)),
             peakMemory: peakMemoryBytes()

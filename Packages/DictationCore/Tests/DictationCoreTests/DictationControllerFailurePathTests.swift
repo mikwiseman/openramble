@@ -62,19 +62,6 @@ actor SilentSounds: Sounding {
     func playStop() async {}
 }
 
-actor CountingRecovery: RecoveryStoring {
-    private(set) var savedTexts: [String] = []
-    private var shouldFail = false
-
-    func setShouldFail(_ value: Bool) { shouldFail = value }
-
-    func save(_ text: String) async throws -> URL {
-        savedTexts.append(text)
-        if shouldFail { throw CocoaError(.fileWriteNoPermission) }
-        return URL(fileURLWithPath: "/tmp/recovered.txt")
-    }
-}
-
 @MainActor
 final class StateLog {
     var states: [DictationState] = []
@@ -90,7 +77,6 @@ final class DictationControllerFailurePathTests: XCTestCase {
     private var capture: ScriptedCapture!
     private var inserter: ScriptedInserter!
     private var overlay: CollectingOverlay!
-    private var recovery: CountingRecovery!
     private var transcribeCalls: TranscribeCounter!
 
     /// Счётчик обращений к распознаванию — замыкание передаётся как `@Sendable`.
@@ -103,11 +89,13 @@ final class DictationControllerFailurePathTests: XCTestCase {
         capture = ScriptedCapture()
         inserter = ScriptedInserter()
         overlay = CollectingOverlay()
-        recovery = CountingRecovery()
         transcribeCalls = TranscribeCounter()
     }
 
-    private func makeController(recognized: String = "привет мир") -> DictationController {
+    private func makeController(
+        recognized: String = "привет мир",
+        allowPressReturnCommand: Bool = false
+    ) -> DictationController {
         let counter = transcribeCalls!
         return DictationController(
             capture: capture,
@@ -118,7 +106,7 @@ final class DictationControllerFailurePathTests: XCTestCase {
             inserter: inserter,
             overlay: overlay,
             sounds: SilentSounds(),
-            recovery: recovery
+            pipeline: { TextPipeline(allowPressReturnCommand: allowPressReturnCommand) }
         )
     }
 
@@ -145,16 +133,14 @@ final class DictationControllerFailurePathTests: XCTestCase {
         // никому не нужна — приватный инструмент не складывает продиктованное
         // без причины.
         await inserter.setReturnError(.modifiersStillHeld)
-        let controller = makeController(recognized: "готово отправь")
+        let controller = makeController(recognized: "готово отправь", allowPressReturnCommand: true)
 
         await runFullDictation(controller)
 
         let inserted = await inserter.insertedTexts
-        let saved = await recovery.savedTexts
         let notices = await overlay.notices
 
         XCTAssertEqual(inserted, ["Готово"], "Текст обязан остаться вставленным")
-        XCTAssertTrue(saved.isEmpty, "Вставленный текст сохранять на диск незачем")
         XCTAssertEqual(notices.first?.kind, .warning)
         XCTAssertTrue(
             notices.contains { $0.message.contains("Return") },
@@ -165,7 +151,7 @@ final class DictationControllerFailurePathTests: XCTestCase {
     }
 
     func testSuccessfulReturnLeavesNoNotice() async throws {
-        let controller = makeController(recognized: "готово отправь")
+        let controller = makeController(recognized: "готово отправь", allowPressReturnCommand: true)
 
         await runFullDictation(controller)
 
@@ -177,22 +163,27 @@ final class DictationControllerFailurePathTests: XCTestCase {
 
     // MARK: - Спасение текста
 
-    func testUserIsWarnedEvenWhenSavingTheTextAlsoFails() async throws {
-        // Диск заполнен или папка недоступна. Это худший случай: текст потерян
-        // окончательно. Промолчать — значит оставить человека в уверенности,
-        // что диктовка прошла.
+    func testInsertionFailureKeepsTextOnlyInMemory() async throws {
         await inserter.setInsertError(.accessibilityPermissionDenied)
-        await recovery.setShouldFail(true)
         let controller = makeController(recognized: "важная мысль")
 
         await runFullDictation(controller)
 
         let notices = await overlay.notices
         XCTAssertEqual(notices.first?.kind, .warning)
-        XCTAssertNil(notices.first?.recoveryFile, "Файла нет — и обещать его нельзя")
         XCTAssertEqual(controller.pendingRecovery?.text, "Важная мысль")
-        XCTAssertNil(controller.pendingRecovery?.file)
         XCTAssertEqual(controller.state, .idle, "Сессия обязана закрыться в любом случае")
+    }
+
+    func testNextDictationKeepsPreviousRecoverableTextUntilExplicitRecovery() async throws {
+        await inserter.setInsertError(.accessibilityPermissionDenied)
+        let controller = makeController(recognized: "важная мысль")
+        await runFullDictation(controller)
+        XCTAssertNotNil(controller.pendingRecovery)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+
+        XCTAssertEqual(controller.pendingRecovery?.text, "Важная мысль")
     }
 
     // MARK: - Слишком короткое нажатие
@@ -220,17 +211,28 @@ final class DictationControllerFailurePathTests: XCTestCase {
         // Отмена, нажатая в момент вставки, приходит слишком поздно: событие
         // уже ушло в чужое приложение. Важно, что сессия при этом закрывается
         // корректно, а не остаётся висеть в «вставляю».
-        await inserter.setInsertDelay(.milliseconds(120))
+        //
+        // Момент «вставка идёт» ловится опросом, а не фиксированным сном:
+        // на перегруженном CI-runner `Task.sleep(30ms)` спит и две секунды,
+        // за которые вставка успевает закончиться целиком.
+        await inserter.setInsertDelay(.milliseconds(800))
         let controller = makeController()
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()
         controller.stop()
-        try await Task.sleep(for: .milliseconds(30))
+        for _ in 0..<400 where controller.state != .inserting {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(2))
+        }
         XCTAssertEqual(controller.state, .inserting)
 
         controller.cancel()
         await settle(40)
+        for _ in 0..<400 where controller.state != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
 
         let inserted = await inserter.insertedTexts
         XCTAssertEqual(inserted, ["Привет мир"])

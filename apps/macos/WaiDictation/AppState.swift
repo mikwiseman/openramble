@@ -1,5 +1,6 @@
 import AVFoundation
 import AppKit
+import ServiceManagement
 import DictationAudio
 import DictationCore
 import Foundation
@@ -16,15 +17,21 @@ public struct AppEnvironment {
     public var defaults: UserDefaults
     public var paths: AppPaths
     public var permissions: any PermissionReading
+    public var accessibilityManager: any AccessibilityManaging
     public var hotkeyMonitor: any HotkeyMonitoring
     public var inserter: any TextInserting
     public var overlay: any OverlayPresenting
-    public var makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing
+    /// Фабрика захвата: папка записей, обработчик сбоя и слушатель живых
+    /// отсчётов (для предпросмотра и уровня микрофона).
+    public var makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void, @escaping @Sendable ([Float]) -> Void) -> any AudioCapturing
     /// Чем распознавать. Такой же край системы, как микрофон и вставка: в
     /// приложении это модель на диске, в тесте — заранее известный ответ. Без
     /// этого шва путь диктовки целиком в приложении нельзя было проверить
     /// вовсе — тесты доходили только до начала записи.
-    public var transcribe: (URL) -> @Sendable (URL) async throws -> ASRResult
+    /// Фабрика распознавания: папка движка и поставщик подсказки языка.
+    /// Подсказка читается на каждый вызов — человек мог сменить язык между
+    /// диктовками, и закреплять её при сборке значило бы игнорировать выбор.
+    public var transcribe: (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult
     /// Как часто опрашивать разрешения в самом занятом режиме. Ноль — не опрашивать.
     public var permissionPollInterval: TimeInterval
     /// Чем скачивать модель. Единственная сеть, которая есть у приложения.
@@ -33,24 +40,30 @@ public struct AppEnvironment {
     public var workspaceNotifications: NotificationCenter
     /// Общий центр уведомлений: оттуда приходит смена аудиоустройства.
     public var notifications: NotificationCenter
+    /// Единственный production instance движка. В тестах `nil`: там ASR
+    /// подставлен через `transcribe` и настоящая модель не нужна.
+    public var localTranscriber: LocalTranscriber?
 
     public init(
         defaults: UserDefaults,
         paths: AppPaths,
         permissions: any PermissionReading,
+        accessibilityManager: any AccessibilityManaging,
         hotkeyMonitor: any HotkeyMonitoring,
         inserter: any TextInserting,
         overlay: any OverlayPresenting,
-        makeCapture: @escaping (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing,
-        transcribe: @escaping (URL) -> @Sendable (URL) async throws -> ASRResult,
+        makeCapture: @escaping (URL, @escaping @Sendable (AudioCaptureError) -> Void, @escaping @Sendable ([Float]) -> Void) -> any AudioCapturing,
+        transcribe: @escaping (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult,
         permissionPollInterval: TimeInterval,
         modelDownloader: any ModelDownloading,
         workspaceNotifications: NotificationCenter,
-        notifications: NotificationCenter
+        notifications: NotificationCenter,
+        localTranscriber: LocalTranscriber? = nil
     ) {
         self.defaults = defaults
         self.paths = paths
         self.permissions = permissions
+        self.accessibilityManager = accessibilityManager
         self.hotkeyMonitor = hotkeyMonitor
         self.inserter = inserter
         self.overlay = overlay
@@ -60,29 +73,35 @@ public struct AppEnvironment {
         self.modelDownloader = modelDownloader
         self.workspaceNotifications = workspaceNotifications
         self.notifications = notifications
+        self.localTranscriber = localTranscriber
     }
 
     /// Настоящие края — то, из чего собирается работающее приложение.
     public static func system() -> AppEnvironment {
-        AppEnvironment(
+        let transcriber = LocalTranscriber()
+        return AppEnvironment(
             defaults: .standard,
             paths: .standard(),
             permissions: SystemPermissions(),
+            accessibilityManager: SystemAccessibilityManager(),
             hotkeyMonitor: GlobalHotkeyMonitor(),
             inserter: TextInserter(),
             overlay: DictationOverlay(),
-            makeCapture: { MicrophoneCapture(directory: $0, onFailure: $1) },
-            transcribe: { engineDirectory in
-                let transcriber = LocalTranscriber()
+            makeCapture: { MicrophoneCapture(directory: $0, onFailure: $1, onSamples: $2) },
+            transcribe: { engineDirectory, languageHint in
                 return { url in
                     try await transcriber.prepare(modelDirectory: engineDirectory)
-                    return try await transcriber.transcribe(fileURL: url)
+                    return try await transcriber.transcribe(
+                        fileURL: url,
+                        languageHint: languageHint()
+                    )
                 }
             },
             permissionPollInterval: 1,
             modelDownloader: URLSessionModelDownloader(),
             workspaceNotifications: NSWorkspace.shared.notificationCenter,
-            notifications: .default
+            notifications: .default,
+            localTranscriber: transcriber
         )
     }
 }
@@ -98,18 +117,45 @@ public final class AppState: ObservableObject {
     @Published public private(set) var dictationState: DictationState = .idle
     @Published public private(set) var modelState: ModelState = .notInstalled
     @Published public private(set) var accessibilityGranted = false
+    @Published public private(set) var accessibilityState: AccessibilityPermissionState = .denied
     @Published public private(set) var microphoneGranted = false
     @Published public private(set) var lastNotice: DictationNotice?
     @Published public private(set) var isPreparingEngine = false
+    @Published public private(set) var isEngineReady = false
+    /// Сколько скачает кнопка установки: полный объём или добор после обновления.
+    @Published public private(set) var remainingDownloadMegabytes = 586
+    /// Язык распознавания: nil — автоопределение по звуку. Код BCP-47 («en»).
+    /// Ручной выбор — выход для случая, когда акцент уводит автоопределение
+    /// не в тот язык; смешанной речи он противопоказан, поэтому по умолчанию
+    /// всегда автоматика.
+    @Published public var recognitionLanguage: String? {
+        didSet {
+            guard oldValue != recognitionLanguage else { return }
+            if let recognitionLanguage {
+                defaults.set(recognitionLanguage, forKey: Self.recognitionLanguageKey)
+            } else {
+                defaults.removeObject(forKey: Self.recognitionLanguageKey)
+            }
+        }
+    }
 
-    /// Последний текст, который не удалось вставить и пришлось сохранить.
-    ///
-    /// Живёт дольше самого сообщения: оно исчезает с экрана через несколько
-    /// секунд, а найти файл человек захочет позже — когда разберётся, почему
-    /// вставка не прошла. Сбрасывается следующей удачной диктовкой.
-    @Published public private(set) var recoveredFile: URL?
+    nonisolated static let recognitionLanguageKey = "recognitionLanguage"
+
+    /// Текст неудачной вставки. Никогда не пишется на диск.
+    @Published public private(set) var recoveredText: String?
+    /// WAV после технической ошибки, доступный для Retry/Delete.
+    @Published public private(set) var recoveredRecording: URL?
     /// Идёт ли запись без удержания клавиши — показывается в меню.
     @Published public private(set) var isHandsFreeActive = false
+    /// Только успешная вставка считается пройденной пробой в онбординге.
+    @Published public private(set) var successfulDictationCount = 0
+
+    /// Последняя успешная диктовка — только в памяти процесса. Из неё окно
+    /// правки учит словарь; на диск текст не попадает никогда.
+    public struct LastDictation: Equatable {
+        public let insertedText: String
+    }
+    @Published public private(set) var lastDictation: LastDictation?
 
     /// Что не так со словарём. Пока не `nil`, словарь заблокирован на запись.
     @Published public private(set) var dictionaryProblem: ReplacementsStore.Problem?
@@ -142,14 +188,19 @@ public final class AppState: ObservableObject {
         static let fnUsage = "AppleFnUsageType"
     }
 
+    /// Маркер переживает relaunch. Если новый процесс всё ещё не trusted,
+    /// повторять перезапуск бессмысленно — нужен явный repair старой TCC-записи.
+    static let accessibilityRelaunchPendingKey = "accessibilityRelaunchPending"
+
     private let defaults: UserDefaults
     private let paths: AppPaths
     private let permissions: any PermissionReading
+    private let accessibilityManager: any AccessibilityManaging
     private let hotkeyMonitor: any HotkeyMonitoring
     private let inserter: any TextInserting
     private let overlay: any OverlayPresenting
-    private let makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing
-    private let transcribe: (URL) -> @Sendable (URL) async throws -> ASRResult
+    private let makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void, @escaping @Sendable ([Float]) -> Void) -> any AudioCapturing
+    private let transcribe: (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult
     private let permissionPollInterval: TimeInterval
     private let modelDownloader: any ModelDownloading
     private let workspaceNotifications: NotificationCenter
@@ -161,12 +212,47 @@ public final class AppState: ObservableObject {
     public let updater = SparkleUpdater()
 
     private var store: ModelStore?
+    private var vocabularyStore: ModelStore?
+    private var vocabularyDirectory: URL?
+    private var mainModelBytes: Int64 = 0
+    private var vocabularyModelBytes: Int64 = 0
+    private var mainModelFileCount = 0
+    private var vocabularyModelFileCount = 0
     private var transcriber: LocalTranscriber?
+    private var recordingRecovery: RecordingRecoveryStore?
+    private var engineDirectory: URL?
     private var controller: DictationController?
     /// Идёт ли установка модели прямо сейчас.
     private var isInstalling = false
+    /// Отказ Core ML при прогреве. Файлы на диске при этом целы, поэтому осмотр
+    /// диска отказа не видит — состояние держится здесь до явного восстановления.
+    private var engineLoadFailure: String?
+    /// Retry/Delete recovery выполняются по одному и блокируют hotkey.
+    private var isRecoveryOperationActive = false
     /// Сообщение, которое ждёт конца сессии.
     private var noticeAfterSession: DictationNotice?
+    /// Отложенная подсказка «нет звука» — отменяется первым же живым сигналом.
+    private var silenceHintTask: Task<Void, Never>?
+
+    /// Живой предпросмотр распознавания в панели. Украшение — выключается.
+    @Published public var showLivePreview: Bool {
+        didSet {
+            guard oldValue != showLivePreview else { return }
+            defaults.set(showLivePreview, forKey: Self.showLivePreviewKey)
+        }
+    }
+    nonisolated static let showLivePreviewKey = "showLivePreview"
+
+    /// Запуск при входе в систему. Приложение без иконки в Dock, которое не
+    /// запустилось после перезагрузки, неотличимо от сломанного: клавиша
+    /// молчит, и некому объяснить почему.
+    @Published public var launchAtLogin: Bool {
+        didSet {
+            guard oldValue != launchAtLogin else { return }
+            applyLaunchAtLogin()
+        }
+    }
+    private var didCompleteInitialPermissionRefresh = false
 
     // Таймеры и подписки помечены `nonisolated(unsafe)`, потому что их снимает
     // `deinit`, а он у изолированного класса — вне изоляции. Трогают их только
@@ -176,7 +262,7 @@ public final class AppState: ObservableObject {
     nonisolated(unsafe) private var systemObservers: [(center: NotificationCenter, token: any NSObjectProtocol)] = []
 
     public var isDictationReady: Bool {
-        accessibilityGranted && microphoneGranted && modelState.isReady
+        accessibilityGranted && microphoneGranted && modelState.isReady && isEngineReady
     }
 
     /// Как часто сейчас опрашиваются разрешения. Ноль — опрос не идёт.
@@ -204,8 +290,14 @@ public final class AppState: ObservableObject {
 
     public init(environment: AppEnvironment) {
         defaults = environment.defaults
+        recognitionLanguage = environment.defaults.string(forKey: Self.recognitionLanguageKey)
+        showLivePreview = environment.defaults.object(forKey: Self.showLivePreviewKey) == nil
+            ? true
+            : environment.defaults.bool(forKey: Self.showLivePreviewKey)
+        launchAtLogin = SMAppService.mainApp.status == .enabled
         paths = environment.paths
         permissions = environment.permissions
+        accessibilityManager = environment.accessibilityManager
         hotkeyMonitor = environment.hotkeyMonitor
         inserter = environment.inserter
         overlay = environment.overlay
@@ -215,6 +307,10 @@ public final class AppState: ObservableObject {
         modelDownloader = environment.modelDownloader
         workspaceNotifications = environment.workspaceNotifications
         notifications = environment.notifications
+        transcriber = environment.localTranscriber
+        // Тестовые окружения подставляют готовое ASR-замыкание и не нуждаются
+        // в Core ML warmup. Production всегда передаёт shared transcriber.
+        isEngineReady = environment.localTranscriber == nil
         replacementsStore = ReplacementsStore(
             defaults: environment.defaults,
             key: Keys.replacements
@@ -253,32 +349,74 @@ public final class AppState: ObservableObject {
         let sounds = SystemSounds(enabled: { [weak self] in self?.soundsEnabled ?? true })
 
         do {
-            let capture = makeCapture(try paths.takes()) { [weak self] _ in
-                // Диск кончился или файл стал недоступен посреди речи. Ждать
-                // остановки нельзя — человек говорит в пустоту.
-                Task { @MainActor in
-                    self?.controller?.interrupt(
-                        reason: "Не удалось записать звук — проверьте свободное место на диске."
-                    )
+            let previewFeed = transcriber
+            let capture = makeCapture(
+                try paths.takes(),
+                { [weak self] error in
+                    // Аудиопоток перестал быть пригодным посреди речи. Ждать
+                    // остановки нельзя: человек говорит в пустоту, а причина
+                    // должна быть показана точно.
+                    Task { @MainActor in
+                        self?.controller?.interrupt(
+                            reason: Self.captureFailureMessage(error)
+                        )
+                    }
+                },
+                { [weak self, previewFeed] samples in
+                    // Живые отсчёты: в предпросмотр и в индикатор уровня.
+                    // Пик достаточен — RMS здесь не точнее для глаза.
+                    let peak = samples.reduce(Float(0)) { max($0, abs($1)) }
+                    Task { @MainActor in self?.registerInputLevel(peak) }
+                    if let previewFeed {
+                        Task { await previewFeed.feedPreview(samples: samples) }
+                    }
                 }
-            }
-            let recovery = RecoveryStore(directory: try paths.recovery())
+            )
+            let recordingRecovery = RecordingRecoveryStore(directory: try paths.audioRecovery())
+            self.recordingRecovery = recordingRecovery
 
             let manifest = try ModelManifest.bundled()
             let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
             let store = ModelStore(manifest: manifest, layout: layout, downloader: modelDownloader)
-            let transcriber = LocalTranscriber()
             self.store = store
-            self.transcriber = transcriber
+            mainModelBytes = manifest.totalByteCount
+            mainModelFileCount = manifest.files.count
+
+            // Акустический подсказчик терминов — вторая модель с собственным
+            // манифестом. Для человека обе — одна «модель»: см. ModelPairState.
+            let vocabularyManifest = try ModelManifest.bundledVocabulary()
+            let vocabularyLayout = try ModelInstallLayout(
+                manifest: vocabularyManifest,
+                root: try paths.models()
+            )
+            vocabularyStore = ModelStore(
+                manifest: vocabularyManifest,
+                layout: vocabularyLayout,
+                downloader: modelDownloader
+            )
+            vocabularyDirectory = vocabularyLayout.engineDirectory
+            vocabularyModelBytes = vocabularyManifest.totalByteCount
+            vocabularyModelFileCount = vocabularyManifest.files.count
 
             let engineDirectory = layout.engineDirectory
+            self.engineDirectory = engineDirectory
             let controller = DictationController(
                 capture: capture,
-                transcribe: transcribe(engineDirectory),
+                transcribe: transcribe(
+                    engineDirectory,
+                    { [box = UncheckedBox(defaults)] in
+                        // Провайдер зовётся из фонового контекста распознавания.
+                        // UserDefaults потокобезопасен (документировано), а
+                        // хранилище — тот же источник истины, что и
+                        // published-свойство; box лишь проносит его через
+                        // Sendable-границу.
+                        box.value.string(forKey: Self.recognitionLanguageKey)
+                    }
+                ),
                 inserter: inserter,
                 overlay: overlay,
                 sounds: sounds,
-                recovery: recovery,
+                recordingRecovery: recordingRecovery,
                 pipeline: { [weak self] in
                     TextPipeline(replacements: self?.replacements ?? [])
                 }
@@ -287,17 +425,12 @@ public final class AppState: ObservableObject {
                 self?.dictationState = state
                 self?.updateDurationTimer(for: state)
                 self?.flushNoticeAfterSession(state)
-                // Новая диктовка началась — прошлая беда позади. Иначе пункт
-                // «показать спасённый текст» остался бы в меню навсегда и
-                // указывал бы на всё более старый файл.
-                if state == .listening { self?.recoveredFile = nil }
+                self?.updateLivePreview(for: state)
             }
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
-                // Адрес спасённого файла запоминаем отдельно: сообщение уйдёт
-                // с экрана через несколько секунд, а искать текст человек
-                // станет позже.
-                if let file = notice.recoveryFile { self?.recoveredFile = file }
+                if let text = notice.recoverableText { self?.recoveredText = text }
+                if let audio = notice.recoveryAudio { self?.recoveredRecording = audio }
                 // Ядро само объяснилось. Своё объяснение поверх его слов было бы
                 // хуже молчания: у сессии одна причина конца, а не две.
                 self?.noticeAfterSession = nil
@@ -308,12 +441,16 @@ public final class AppState: ObservableObject {
                 self?.hotkeyMonitor.isHandsFreeActive = active
                 self?.isHandsFreeActive = active
             }
+            controller.onTextInserted = { [weak self] text in
+                self?.successfulDictationCount += 1
+                self?.lastDictation = LastDictation(insertedText: text)
+            }
             self.controller = controller
         } catch {
             notify(
                 DictationNotice(
                     kind: .failure,
-                    message: "Не удалось подготовить рабочие папки: \(error.localizedDescription)"
+                    message: "Couldn't prepare the app's working folders: \(error.localizedDescription)"
                 )
             )
         }
@@ -321,10 +458,233 @@ public final class AppState: ObservableObject {
         wireHotkey()
         observeSystemEvents()
         refreshPermissions()
-        // Записи, уцелевшие после падения приложения: обычно каталог пуст, но
-        // без уборки такой файл пролежал бы там навсегда.
-        paths.sweepAbandonedTakes()
-        Task { await refreshModelState() }
+        Task {
+            removeLegacyTextRecovery()
+            await importAbandonedRecordings()
+            await refreshModelState()
+            if modelState.isReady { await warmUpEngine() }
+        }
+    }
+
+    /// Старые сборки писали нераспознанный текст на диск в `Recovered/`.
+    /// Теперь такой текст живёт только в памяти, и обещание «распознанный текст
+    /// не пишется на диск» обязано покрывать и следы прошлых версий.
+    private func removeLegacyTextRecovery() {
+        guard let support = try? paths.support() else { return }
+        let legacy = support.appending(path: "Recovered", directoryHint: .isDirectory)
+        guard FileManager.default.fileExists(atPath: legacy.path) else { return }
+        do {
+            try FileManager.default.removeItem(at: legacy)
+        } catch {
+            notify(
+                DictationNotice(
+                    kind: .warning,
+                    message: "Couldn't delete the old version's recovery texts. "
+                        + "Delete them manually: ~/Library/Application Support/WaiDictation/Recovered"
+                )
+            )
+        }
+    }
+
+    static func captureFailureMessage(_ error: AudioCaptureError) -> String {
+        switch error {
+        case .unsupportedAudioFormat(let detail):
+            return "Couldn't handle the selected microphone's audio format: \(detail)"
+        case .microphonePermissionDenied:
+            return "No microphone access. Open System Settings."
+        case .engineUnavailable(let detail):
+            return "The microphone stopped responding: \(detail)"
+        case .diskFull:
+            return "Couldn't record audio: no free disk space."
+        case .writeFailed(let detail):
+            return "Couldn't record audio: \(detail)"
+        case .notRecording:
+            return "Recording stopped unexpectedly."
+        }
+    }
+
+    private func importAbandonedRecordings() async {
+        guard let recordingRecovery else { return }
+        do {
+            let result = try await recordingRecovery.importAbandoned(from: paths.takes())
+            recoveredRecording = result.recordings.first
+            if recoveredRecording != nil {
+                notify(
+                    DictationNotice(
+                        kind: result.discardedCorruptCount == 0 ? .warning : .failure,
+                        message: result.discardedCorruptCount == 0
+                            ? "A local recording was found after an interruption — you can retry transcription or delete it."
+                            : "One recording was saved for retry. A damaged fragment couldn't be recovered and was deleted.",
+                        recoveryAudio: recoveredRecording
+                    )
+                )
+            } else if result.discardedCorruptCount > 0 {
+                notify(
+                    DictationNotice(
+                        kind: .failure,
+                        message: "An unfinished recording was damaged: it can't be recovered, the fragment was deleted."
+                    )
+                )
+            }
+        } catch {
+            notify(
+                DictationNotice(
+                    kind: .failure,
+                    message: "Couldn't prepare recording recovery: \(error.localizedDescription)"
+                )
+            )
+        }
+    }
+
+    // MARK: - Copy / Retry / Delete recovery
+
+    public func copyRecoveredText() {
+        guard let recoveredText else { return }
+        do {
+            try HostOnlyPasteboard().copyHostOnly(recoveredText)
+            notify(DictationNotice(kind: .info, message: "Text copied to this Mac only."))
+        } catch {
+            notify(DictationNotice(kind: .failure, message: "Couldn't copy the text."))
+        }
+    }
+
+    public func retryRecoveredText() {
+        guard dictationState == .idle,
+              !isRecoveryOperationActive,
+              let recoveredText
+        else { return }
+        let target = inserter.frontmostApplication()
+        isRecoveryOperationActive = true
+        dictationState = .inserting
+        Task { [weak self] in
+            guard let self else { return }
+            defer {
+                self.dictationState = .idle
+                self.isRecoveryOperationActive = false
+            }
+            await overlay.present(.inserting, elapsed: 0)
+            do {
+                try await inserter.insert(recoveredText, into: target)
+                self.recoveredText = nil
+                await overlay.dismiss()
+            } catch {
+                notify(
+                    DictationNotice(
+                        kind: .warning,
+                        message: "Retry insert failed — the text is still available via Copy and Retry.",
+                        recoverableText: recoveredText
+                    )
+                )
+            }
+        }
+    }
+
+    public func deleteRecoveredText() {
+        guard !isRecoveryOperationActive else { return }
+        recoveredText = nil
+    }
+
+    public func retryRecoveredRecording() {
+        guard dictationState == .idle,
+              !isRecoveryOperationActive,
+              modelState.isReady,
+              let url = recoveredRecording,
+              let engineDirectory,
+              let recordingRecovery
+        else { return }
+        let target = inserter.frontmostApplication()
+
+        isRecoveryOperationActive = true
+        dictationState = .transcribing
+        Task { [weak self] in
+            guard let self else { return }
+            defer {
+                self.dictationState = .idle
+                self.isRecoveryOperationActive = false
+            }
+            await overlay.present(.transcribing, elapsed: 0)
+            let recognizedText: String
+            do {
+                let result = try await transcribe(
+                    engineDirectory,
+                    { [box = UncheckedBox(defaults)] in
+                        box.value.string(forKey: Self.recognitionLanguageKey)
+                    }
+                )(url)
+                let output = TextPipeline(replacements: replacements).process(result.text)
+                guard !output.text.isEmpty else { throw ASREngineError.inferenceFailed("empty result") }
+                recognizedText = output.text
+            } catch {
+                notify(
+                    DictationNotice(
+                        kind: .failure,
+                        message: "Retry transcription failed. The recording is still saved locally.",
+                        recoveryAudio: url
+                    )
+                )
+                return
+            }
+
+            dictationState = .inserting
+            await overlay.present(.inserting, elapsed: 0)
+            do {
+                try await inserter.insert(recognizedText, into: target)
+            } catch {
+                recoveredText = recognizedText
+                do {
+                    try await recordingRecovery.delete(url)
+                    recoveredRecording = try await recordingRecovery.recordings().first
+                    notify(
+                        DictationNotice(
+                            kind: .warning,
+                            message: "The recording was transcribed, but the text wasn't inserted — Copy and Retry are in the menu.",
+                            recoverableText: recognizedText
+                        )
+                    )
+                } catch {
+                    recoveredRecording = url
+                    notify(
+                        DictationNotice(
+                            kind: .failure,
+                            message: "The text is available via Copy and Retry, but the local WAV couldn't be deleted: \(error.localizedDescription)",
+                            recoverableText: recognizedText,
+                            recoveryAudio: url
+                        )
+                    )
+                }
+                return
+            }
+
+            do {
+                try await recordingRecovery.delete(url)
+                recoveredRecording = try await recordingRecovery.recordings().first
+                await overlay.dismiss()
+            } catch {
+                recoveredRecording = url
+                notify(
+                    DictationNotice(
+                        kind: .failure,
+                        message: "The text was inserted, but the local WAV couldn't be deleted: \(error.localizedDescription)",
+                        recoveryAudio: url
+                    )
+                )
+            }
+        }
+    }
+
+    public func deleteRecoveredRecording() {
+        guard !isRecoveryOperationActive, let url = recoveredRecording else { return }
+        isRecoveryOperationActive = true
+        Task { [weak self] in
+            guard let self else { return }
+            defer { self.isRecoveryOperationActive = false }
+            do {
+                try await recordingRecovery?.delete(url)
+                recoveredRecording = try await recordingRecovery?.recordings().first
+            } catch {
+                notify(DictationNotice(kind: .failure, message: "Couldn't delete the local recording."))
+            }
+        }
     }
 
     /// Подписаться на то, что происходит с компьютером помимо нас.
@@ -335,6 +695,18 @@ public final class AppState: ObservableObject {
         observe(workspaceNotifications, NSWorkspace.willSleepNotification) { $0.handleSleep() }
         observe(workspaceNotifications, NSWorkspace.didWakeNotification) { $0.handleWake() }
         observe(notifications, .AVAudioEngineConfigurationChange) { $0.handleAudioConfigurationChange() }
+        observe(notifications, NSApplication.didBecomeActiveNotification) {
+            $0.handleApplicationBecameActive()
+        }
+    }
+
+    private func handleApplicationBecameActive() {
+        let wasWaitingForSettings = accessibilityState == .waitingForSettings
+        refreshPermissions()
+        if wasWaitingForSettings, !accessibilityGranted,
+           accessibilityState != .repairRequired {
+            accessibilityState = .restartRequired
+        }
     }
 
     private func observe(
@@ -366,7 +738,7 @@ public final class AppState: ObservableObject {
             // Сказанное до сна уже записано. Распознаём его, а не выбрасываем.
             noticeAfterSession = DictationNotice(
                 kind: .info,
-                message: "Компьютер уходил в сон — запись пришлось остановить."
+                message: "The Mac went to sleep — recording had to stop."
             )
             stopCurrentRecording()
         case .preparing:
@@ -394,11 +766,9 @@ public final class AppState: ObservableObject {
     /// тишину и узнаёт об этом только по пустому результату.
     private func handleAudioConfigurationChange() {
         guard dictationState == .listening else { return }
-        noticeAfterSession = DictationNotice(
-            kind: .warning,
-            message: "Микрофон сменился — запись остановлена на этом месте."
+        controller?.preserveActiveRecording(
+            reason: "The microphone or audio device was disconnected. Dictation stopped."
         )
-        stopCurrentRecording()
     }
 
     /// Сказать то, что ждало конца сессии.
@@ -424,10 +794,26 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// Видимая кнопка в menu bar: пользователь не обязан помнить жест.
+    public func finishCurrentDictation() {
+        guard !isRecoveryOperationActive,
+              dictationState == .preparing || dictationState == .listening
+        else { return }
+        stopCurrentRecording()
+    }
+
+    /// Общая безопасная отмена для Escape и menu bar.
+    public func cancelCurrentDictation() {
+        guard !isRecoveryOperationActive, dictationState != .idle else { return }
+        controller?.cancel()
+        notify(DictationNotice(kind: .info, message: "Dictation cancelled. The recording was deleted."))
+    }
+
     private func wireHotkey() {
         hotkeyMonitor.setHotkey(hotkey)
         hotkeyMonitor.onPress = { [weak self] in
             guard let self else { return }
+            guard !self.isRecoveryOperationActive else { return }
             self.controller?.begin(
                 handsFree: false,
                 isEnabled: self.isDictationReady,
@@ -462,8 +848,7 @@ public final class AppState: ObservableObject {
         hotkeyMonitor.onEscape = { [weak self] in
             // Escape отменяет только идущую диктовку. В остальное время это
             // обычная клавиша, и перехватывать её нельзя.
-            guard let self, self.dictationState != .idle else { return }
-            self.controller?.cancel()
+            self?.cancelCurrentDictation()
         }
     }
 
@@ -481,11 +866,65 @@ public final class AppState: ObservableObject {
     public func refreshPermissions() {
         let accessibility = permissions.accessibilityGranted
         let microphone = permissions.microphoneGranted
+        let previousAccessibility = accessibilityGranted
+        let previousMicrophone = microphoneGranted
 
         // Проверяем на изменение: интерфейс подписан на эти поля, а сюда
         // приходят и по таймеру, и с каждым открытием настроек.
         if accessibility != accessibilityGranted { accessibilityGranted = accessibility }
         if microphone != microphoneGranted { microphoneGranted = microphone }
+
+        if accessibility {
+            accessibilityState = .granted
+            defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
+        } else if defaults.bool(forKey: Self.accessibilityRelaunchPendingKey) {
+            accessibilityState = .repairRequired
+        } else {
+            switch accessibilityState {
+            case .waitingForSettings, .restartRequired, .repairRequired, .repairing, .failed:
+                break
+            case .denied, .granted:
+                accessibilityState = .denied
+            }
+        }
+
+        if !didCompleteInitialPermissionRefresh {
+            didCompleteInitialPermissionRefresh = true
+            if !accessibility || !microphone {
+                notify(
+                    DictationNotice(
+                        kind: .warning,
+                        message: "Dictation is off: grant Accessibility and Microphone access in System Settings."
+                    )
+                )
+            }
+        } else if previousAccessibility, !accessibility {
+            if dictationState == .preparing || dictationState == .listening {
+                controller?.preserveActiveRecording(
+                    reason: "Accessibility access was revoked. Dictation stopped; open System Settings."
+                )
+            } else {
+                notify(
+                    DictationNotice(
+                        kind: .failure,
+                        message: "Accessibility access was revoked. Open System Settings."
+                    )
+                )
+            }
+        } else if previousMicrophone, !microphone {
+            if dictationState == .preparing || dictationState == .listening {
+                controller?.preserveActiveRecording(
+                    reason: "Microphone access was revoked. Dictation stopped; open System Settings."
+                )
+            } else {
+                notify(
+                    DictationNotice(
+                        kind: .failure,
+                        message: "Microphone access was revoked. The app may need a relaunch."
+                    )
+                )
+            }
+        }
 
         // Монитор регистрируется заново при каждой проверке: система начинает
         // отдавать ему события только после выдачи доступа, и без повторного
@@ -527,13 +966,71 @@ public final class AppState: ObservableObject {
     }
 
     public func requestAccessibility() {
-        Permissions.requestAccessibility()
-        Permissions.openAccessibilitySettings()
+        guard !accessibilityGranted else { return }
+        accessibilityState = .waitingForSettings
+        _ = accessibilityManager.requestAccess()
+        accessibilityManager.openSettings()
+        refreshPermissions()
+    }
+
+    public func openAccessibilitySettings() {
+        accessibilityManager.openSettings()
+    }
+
+    public func revealApplicationForAccessibility() {
+        accessibilityManager.revealApplication()
+    }
+
+    public func restartForAccessibility() {
+        defaults.set(true, forKey: Self.accessibilityRelaunchPendingKey)
+        Task {
+            do {
+                try await accessibilityManager.relaunchApplication()
+            } catch {
+                defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
+                accessibilityState = .failed(error.localizedDescription)
+                notify(
+                    DictationNotice(
+                        kind: .failure,
+                        message: "Couldn't relaunch Wai Dictation: \(error.localizedDescription)"
+                    )
+                )
+            }
+        }
+    }
+
+    /// Вызывается только после отдельного подтверждения в UI: команда удаляет
+    /// Accessibility-записи ровно этого bundle id и потребует выдать доступ
+    /// заново. Автоматического reset при запуске или запросе нет.
+    public func repairAccessibility() {
+        guard !accessibilityGranted, accessibilityState != .repairing else { return }
+        accessibilityState = .repairing
+        Task {
+            do {
+                try await accessibilityManager.resetAccess()
+                // После reset отсутствие grant ожидаемо: новый процесс должен
+                // снова показать обычную кнопку «Выдать», а не попасть в цикл
+                // «repair required». Pending относится только к перезапуску
+                // без reset, который обязан был подхватить уже включённый grant.
+                defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
+                try await accessibilityManager.relaunchApplication()
+            } catch {
+                defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
+                accessibilityState = .failed(error.localizedDescription)
+                notify(
+                    DictationNotice(
+                        kind: .failure,
+                        message: "Couldn't repair Accessibility access: \(error.localizedDescription)"
+                    )
+                )
+            }
+        }
     }
 
     public func requestMicrophone() {
         Task {
-            _ = await Permissions.requestMicrophone()
+            let granted = await Permissions.requestMicrophone()
+            if !granted { Permissions.openMicrophoneSettings() }
             refreshPermissions()
         }
     }
@@ -546,7 +1043,39 @@ public final class AppState: ObservableObject {
         // установлена»: метки готовности ещё нет. Прогресс с экрана пропадал бы
         // ровно тогда, когда человек открыл настройки на него посмотреть.
         guard !isInstalling else { return }
-        modelState = await store.refreshState()
+        let mainState = await store.refreshState()
+        let vocabularyState = await vocabularyStore?.refreshState() ?? .notInstalled
+        modelState = combinedModelState(main: mainState, vocabulary: vocabularyState)
+        remainingDownloadMegabytes = Int(
+            (ModelPairState.remainingBytes(
+                main: mainState,
+                vocabulary: vocabularyState,
+                mainTotalBytes: mainModelBytes,
+                vocabularyTotalBytes: vocabularyModelBytes
+            ) + 500_000) / 1_000_000
+        )
+        // Осмотр диска не видит отказ Core ML: файлы целы, а модель не поднялась.
+        // Пока человек явно не запросил восстановление, отказ остаётся на экране —
+        // иначе кнопка восстановления исчезает, а диктовка так и не работает.
+        if let engineLoadFailure, modelState.isReady {
+            modelState = .repairRequired(engineLoadFailure)
+        }
+        if transcriber == nil {
+            isEngineReady = modelState.isReady
+        } else if !modelState.isReady {
+            isEngineReady = false
+        }
+    }
+
+    private func combinedModelState(main: ModelState, vocabulary: ModelState) -> ModelState {
+        ModelPairState.combine(
+            main: main,
+            vocabulary: vocabulary,
+            mainTotalBytes: mainModelBytes,
+            vocabularyTotalBytes: vocabularyModelBytes,
+            mainFileCount: mainModelFileCount,
+            vocabularyFileCount: vocabularyModelFileCount
+        )
     }
 
     public func installModel() {
@@ -555,14 +1084,62 @@ public final class AppState: ObservableObject {
         // дважды проще, чем кажется.
         guard let store, !isInstalling else { return }
         isInstalling = true
+        isEngineReady = false
+        // Отказ Core ML оставляет файлы на диске «целыми» — оба хранилища
+        // скажут «готово». Явное восстановление обязано сдержать обещание из
+        // сообщения и перекачать заново, а не молча повторить прогрев.
+        let engineRejectedModels = engineLoadFailure != nil
+        // Явная команда человека открывает новую попытку: прежний отказ Core ML
+        // больше не держится, свежая установка прогреется заново.
+        engineLoadFailure = nil
 
         Task {
-            let states = await store.states()
-            let monitor = Task { @MainActor in
-                for await state in states { modelState = state }
+            // Обе модели ставятся последовательно, а прогресс на экране общий:
+            // каждое событие любого из хранилищ пересобирает объединённое
+            // состояние. Уже готовая модель не трогается — так добор после
+            // обновления скачивает только недостающий подсказчик.
+            var mainLatest = await store.refreshState()
+            let vocabularyLatest = UncheckedBox(
+                await vocabularyStore?.refreshState() ?? .notInstalled
+            )
+
+            if !mainLatest.isReady || engineRejectedModels {
+                let states = await store.states()
+                let monitor = Task { @MainActor in
+                    for await state in states {
+                        modelState = combinedModelState(
+                            main: state,
+                            vocabulary: vocabularyLatest.value
+                        )
+                    }
+                }
+                if mainLatest.isReady || mainLatest.requiresRepair {
+                    await store.repair()
+                } else {
+                    await store.install()
+                }
+                monitor.cancel()
+                mainLatest = await store.currentState()
             }
-            await store.install()
-            monitor.cancel()
+
+            if mainLatest.isReady, let vocabularyStore,
+               !vocabularyLatest.value.isReady || engineRejectedModels {
+                let states = await vocabularyStore.states()
+                let mainSnapshot = mainLatest
+                let monitor = Task { @MainActor in
+                    for await state in states {
+                        vocabularyLatest.value = state
+                        modelState = combinedModelState(main: mainSnapshot, vocabulary: state)
+                    }
+                }
+                if vocabularyLatest.value.isReady || vocabularyLatest.value.requiresRepair {
+                    await vocabularyStore.repair()
+                } else {
+                    await vocabularyStore.install()
+                }
+                monitor.cancel()
+            }
+
             isInstalling = false
             await refreshModelState()
 
@@ -570,6 +1147,14 @@ public final class AppState: ObservableObject {
             // секунды. Делаем это сразу, чтобы пользователь не ждал в момент
             // первой диктовки.
             if modelState.isReady { await warmUpEngine() }
+        }
+    }
+
+    public func cancelModelInstall() {
+        guard isInstalling else { return }
+        Task {
+            await store?.cancelInstall()
+            await vocabularyStore?.cancelInstall()
         }
     }
 
@@ -583,15 +1168,18 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .warning,
-                    message: "Сейчас идёт диктовка. Дождитесь её окончания."
+                    message: "Dictation is in progress. Wait for it to finish."
                 )
             )
             return
         }
         guard let store else { return }
         Task {
+            isEngineReady = false
+            engineLoadFailure = nil
             await transcriber?.unload()
             await store.delete()
+            await vocabularyStore?.delete()
             await refreshModelState()
         }
     }
@@ -599,6 +1187,7 @@ public final class AppState: ObservableObject {
     private func warmUpEngine() async {
         guard let transcriber, let store else { return }
         guard case .ready = await store.currentState() else { return }
+        isEngineReady = false
         isPreparingEngine = true
         defer { isPreparingEngine = false }
 
@@ -606,17 +1195,99 @@ public final class AppState: ObservableObject {
             let manifest = try ModelManifest.bundled()
             let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
             try await transcriber.prepare(modelDirectory: layout.engineDirectory)
+            // Подсказчик терминов — часть той же готовности: без него диктовка
+            // работала бы тише заявленного, а молчаливое «хуже, но работает»
+            // здесь запрещено.
+            if let vocabularyDirectory {
+                // Собственные замены человека — включая выученные из правок —
+                // усиливают акустику с теми же предохранителями, что и
+                // стартовый набор.
+                try await transcriber.prepareVocabulary(
+                    modelDirectory: vocabularyDirectory,
+                    boost: .withUserReplacements(
+                        replacements.map { (spoken: $0.spoken, written: $0.written) }
+                    )
+                )
+            }
+            isEngineReady = true
+            engineLoadFailure = nil
         } catch {
+            let detail =
+                "the files passed verification, but Core ML couldn't load the model: \(error.localizedDescription)"
+            engineLoadFailure = detail
+            modelState = .repairRequired(detail)
             notify(
                 DictationNotice(
-                    kind: .warning,
-                    message: "Модель установлена, но не загрузилась: \(error.localizedDescription)"
+                    kind: .failure,
+                    message: "The model didn't load. An explicit repair will redownload "
+                        + "\(remainingDownloadMegabytes == 0 ? 586 : remainingDownloadMegabytes) MB."
                 )
             )
         }
     }
 
     // MARK: - Предел длительности
+
+    // MARK: - Живой предпросмотр
+
+    /// Запись пошла — включить предпросмотр; запись кончилась — выключить.
+    ///
+    /// Предпросмотр — украшение: его отказ не имеет права трогать диктовку,
+    /// поэтому ошибки старта не всплывают сообщением — отсутствие текста в
+    /// панели видно само по себе, а вставка работает как раньше.
+    private func updateLivePreview(for state: DictationState) {
+        guard let transcriber, showLivePreview else { return }
+        switch state {
+        case .listening:
+            silenceHintTask?.cancel()
+            silenceHintTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { return }
+                (self?.overlay as? PreviewPresenting)?.showSilenceHint()
+            }
+            Task { [weak self] in
+                try? await transcriber.startPreview { confirmed, volatile in
+                    Task { @MainActor in
+                        (self?.overlay as? PreviewPresenting)?
+                            .updatePreview(confirmed: confirmed, volatile: volatile)
+                    }
+                }
+            }
+        default:
+            silenceHintTask?.cancel()
+            silenceHintTask = nil
+            Task { await transcriber.stopPreview() }
+        }
+    }
+
+    /// Пик уровня с микрофона — в пульс точки записи. Сигнал громче порога
+    /// отменяет подсказку «нет звука».
+    private func registerInputLevel(_ peak: Float) {
+        (overlay as? PreviewPresenting)?.updateInputLevel(peak)
+        if peak > 0.02 {
+            silenceHintTask?.cancel()
+            silenceHintTask = nil
+        }
+    }
+
+    /// Ошибка регистрации видима: молча оставить человека без автозапуска —
+    /// значит вернуть проблему «после перезагрузки клавиша молчит».
+    private func applyLaunchAtLogin() {
+        do {
+            if launchAtLogin {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+        } catch {
+            notify(
+                DictationNotice(
+                    kind: .warning,
+                    message: "Could not update the login item: \(error.localizedDescription)"
+                )
+            )
+        }
+    }
 
     private func updateDurationTimer(for state: DictationState) {
         durationTimer?.invalidate()
@@ -635,6 +1306,43 @@ public final class AppState: ObservableObject {
     /// Нельзя ровно в одном случае: прежний словарь не прочитался. Тогда любая
     /// запись затёрла бы его целиком — и человек потерял бы всё накопленное.
     public var isDictionaryEditable: Bool { dictionaryProblem == nil }
+
+    /// Выучить правки последней диктовки: пословный diff с консервативным
+    /// фильтром — учатся только термины (латиница, бренд-регистр), правки
+    /// обычной речи не проходят. Возвращает, сколько замен добавлено.
+    @discardableResult
+    public func learnCorrections(editedText: String) -> Int {
+        guard let lastDictation else { return 0 }
+        let proposals = CorrectionLearning.propose(
+            original: lastDictation.insertedText,
+            edited: editedText,
+            existing: replacements
+        )
+        for proposal in proposals {
+            addReplacement(spoken: proposal.spoken, written: proposal.written)
+        }
+        if !proposals.isEmpty {
+            notify(
+                DictationNotice(
+                    kind: .info,
+                    message: proposals.count == 1
+                        ? "Learned 1 replacement for future dictations."
+                        : "Learned \(proposals.count) replacements for future dictations."
+                )
+            )
+        }
+        return proposals.count
+    }
+
+    /// Правка не дала ни одной замены — сказать прямо, а не закрыть окно молча.
+    public func notifyNothingLearned() {
+        notify(
+            DictationNotice(
+                kind: .info,
+                message: "No new terms to learn — only term-like corrections become replacements."
+            )
+        )
+    }
 
     public func addReplacement(spoken: String, written: String) {
         let spoken = spoken.trimmingCharacters(in: .whitespaces)
@@ -674,7 +1382,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Словарь не сохранён: \(error.localizedDescription)"
+                        message: "The dictionary wasn't saved: \(error.localizedDescription)"
                     )
                 )
                 return

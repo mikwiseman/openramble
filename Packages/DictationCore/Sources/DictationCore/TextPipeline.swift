@@ -95,14 +95,30 @@ public struct TextPipeline: Sendable {
     }
 
     private let replacements: [DictionaryReplacement]
+    private let allowPressReturnCommand: Bool
+    /// Выключатель фонетического добора — существует ради замера «а нужен ли
+    /// он вообще поверх акустического подсказчика» (WAI_EVAL_PIPELINE=exact).
+    private let phoneticMatching: Bool
 
-    public init(replacements: [DictionaryReplacement] = []) {
+    public init(
+        replacements: [DictionaryReplacement] = [],
+        allowPressReturnCommand: Bool = false,
+        phoneticMatching: Bool = true
+    ) {
         self.replacements = replacements
+        self.allowPressReturnCommand = allowPressReturnCommand
+        self.phoneticMatching = phoneticMatching
     }
 
     public func process(_ recognized: String) -> Output {
-        let parsed = TrailingCommandParser.parse(recognized)
-        let replaced = DictionaryReplacements.apply(replacements, to: parsed.text)
+        var parsed = TrailingCommandParser.parse(recognized)
+        // В safe beta голосовая команда Send/Return отключена: один false
+        // trigger необратимо отправляет сообщение или форму. Сам parser
+        // остаётся отдельно тестируемым для возможного явного режима позже.
+        if parsed.command == .pressReturn, !allowPressReturnCommand {
+            parsed = TrailingCommandParser.Result(text: recognized, command: nil)
+        }
+        let replaced = DictionaryReplacements.apply(replacements, to: parsed.text, phoneticMatching: phoneticMatching)
         let polished = TranscriptPolisher.polish(replaced)
 
         guard parsed.command == .newLine, !polished.isEmpty else {

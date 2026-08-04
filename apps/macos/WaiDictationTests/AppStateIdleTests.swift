@@ -19,11 +19,11 @@ final class AppStateIdleTests: XCTestCase {
     private var capture: FakeCapture { harness.capture }
     private var overlay: FakeOverlay { harness.overlay }
 
-    override func setUpWithError() throws {
+    override func setUp() async throws {
         harness = try AppHarness()
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         harness.tearDown()
     }
 
@@ -36,7 +36,7 @@ final class AppStateIdleTests: XCTestCase {
 
         let state = harness.makeState()
 
-        XCTAssertEqual(state.permissionPollingInterval, 30)
+        XCTAssertEqual(state.permissionPollingInterval, 1)
         XCTAssertTrue(state.isPollingPermissions)
     }
 
@@ -60,7 +60,7 @@ final class AppStateIdleTests: XCTestCase {
         harness.permissions.accessibilityGranted = true
         state.refreshPermissions()
 
-        XCTAssertEqual(state.permissionPollingInterval, 30)
+        XCTAssertEqual(state.permissionPollingInterval, 1)
     }
 
     func testОпросМожноВыключитьСовсем() {
@@ -148,12 +148,12 @@ final class AppStateIdleTests: XCTestCase {
         XCTAssertEqual(stops, 1, "запись оборвали вместо того, чтобы дописать её на диск")
         XCTAssertEqual(aborts, 0)
         XCTAssertEqual(state.lastNotice?.kind, .info)
-        XCTAssertEqual(state.lastNotice?.message.contains("сон"), true)
+        XCTAssertEqual(state.lastNotice?.message.contains("sleep"), true)
 
         // Объяснение обязано дойти до экрана. Сказанное посреди остановки его
         // не достигает: ядро тут же перерисовывает панель под «распознаю».
         try await waitFor("объяснение дошло до панели") {
-            await self.overlay.notices.contains { $0.message.contains("сон") }
+            await self.overlay.notices.contains { $0.message.contains("sleep") }
         }
     }
 
@@ -230,20 +230,15 @@ final class AppStateIdleTests: XCTestCase {
         harness.notifications.post(name: .AVAudioEngineConfigurationChange, object: nil)
 
         try await waitFor("диктовка закончилась") { state.dictationState == .idle }
-        XCTAssertEqual(state.lastNotice?.kind, .warning)
-        XCTAssertEqual(state.lastNotice?.message.contains("Микрофон сменился"), true)
+        try await waitFor("WAV доступна для Retry") { state.recoveredRecording != nil }
+        XCTAssertEqual(state.lastNotice?.kind, .failure)
+        XCTAssertEqual(state.lastNotice?.message.contains("audio device was disconnected"), true)
         let recording = await capture.isRecording
         XCTAssertFalse(recording)
     }
 
-    /// Ядро уже объяснилось само.
-    ///
-    /// У сессии одна причина конца, а не две: своё объяснение поверх чужого
-    /// затёрло бы важное — например, что распознать речь не вышло вовсе.
-    func testСобственноеОбъяснениеНеЗатираетСообщениеЯдра() async throws {
-        // Записи хватает на распознавание, но оно сорвётся — сессия закончится
-        // настоящим сбоем ядра. Раньше сбой брался сам собой (модели на диске
-        // нет), и тест зависел от обстоятельства, а не от собственного условия.
+    /// После disconnect распознавание не запускается на обрезанном аудио.
+    func testСменаМикрофонаНеЗапускаетASRНаОбрезаннойЗаписи() async throws {
         harness.transcription.error = ASREngineError.modelsNotLoaded
         let state = try await makeReadyState(recordingDuration: 2)
         monitor.onPress?()
@@ -254,12 +249,12 @@ final class AppStateIdleTests: XCTestCase {
 
         let notices = await overlay.notices
         XCTAssertTrue(
-            notices.contains { $0.kind == .failure },
-            "ядро обязано сказать о сорвавшемся распознавании"
+            notices.contains { $0.message.contains("audio device was disconnected") },
+            "нужна точная причина остановки"
         )
         XCTAssertFalse(
-            notices.contains { $0.message.contains("Микрофон сменился") },
-            "наше объяснение затёрло собой настоящую причину конца сессии"
+            notices.contains { $0.message.contains("transcribe") },
+            "после disconnect ASR не должен запускаться"
         )
     }
 

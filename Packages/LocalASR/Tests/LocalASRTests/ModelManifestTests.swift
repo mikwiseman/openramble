@@ -94,3 +94,77 @@ final class ModelManifestTests: XCTestCase {
         }
     }
 }
+
+final class ModelDownloadPolicyTests: XCTestCase {
+    private let policy = ModelDownloadPolicy()
+
+    func testAllowsPinnedModelAndApprovedRedirectHosts() throws {
+        let allowed = [
+            "https://huggingface.co/org/model/file",
+            "https://cdn-lfs.hf.co/file",
+            "https://us-east-1.aws.huggingface.co/file",
+            "https://github.com/org/repo/releases/download/v1/file",
+            "https://objects.githubusercontent.com/file",
+            "https://release-assets.githubusercontent.com/file",
+        ]
+
+        for raw in allowed {
+            XCTAssertNoThrow(try policy.validate(XCTUnwrap(URL(string: raw))), raw)
+        }
+    }
+
+    func testRejectsHTTPAndLookalikeHosts() throws {
+        let rejected = [
+            "http://huggingface.co/file",
+            "https://huggingface.co.attacker.example/file",
+            "https://githubusercontent.com.attacker.example/file",
+            "https://pages.github.com/file",
+            "https://example.com/file",
+        ]
+
+        for raw in rejected {
+            XCTAssertThrowsError(try policy.validate(XCTUnwrap(URL(string: raw))), raw)
+        }
+    }
+
+    // MARK: - Вкомпилированный манифест подсказчика
+
+    /// Манифест подсказчика — второй корень доверия: без него установка
+    /// CTC-модели не имеет ни имён файлов, ни контрольных сумм.
+    func testBundledVocabularyManifestДержитПолныйНаборПодсказчика() throws {
+        let manifest = try ModelManifest.bundledVocabulary()
+
+        XCTAssertEqual(manifest.modelID, "parakeet-ctc-110m")
+
+        let paths = Set(manifest.files.map(\.path))
+        // CtcModels.loadDirect читает эти три; CtcTokenizer.load — tokenizer.json.
+        for required in [
+            "vocab.json",
+            "tokenizer.json",
+            "MelSpectrogram.mlmodelc/coremldata.bin",
+            "AudioEncoder.mlmodelc/coremldata.bin",
+            "AudioEncoder.mlmodelc/weights/weight.bin",
+        ] {
+            XCTAssertTrue(paths.contains(required), "в манифесте нет \(required)")
+        }
+
+        // Ревизия зафиксирована, суммы у каждого файла.
+        XCTAssertEqual(manifest.revision.count, 40)
+        XCTAssertTrue(manifest.files.allSatisfy { $0.sha256.count == 64 })
+
+        // Подсказчик обязан оставаться лёгким довеском, а не второй моделью
+        // такого же веса: если набор внезапно вырос, это ошибка отбора файлов.
+        XCTAssertLessThan(manifest.totalByteCount, 150_000_000)
+        XCTAssertGreaterThan(manifest.totalByteCount, 50_000_000)
+    }
+
+    /// Обе модели живут в разных папках установки: у них свои репозитории,
+    /// ревизии и жизненные циклы.
+    func testМанифестыНеПересекаютсяПоМестуУстановки() throws {
+        let main = try ModelManifest.bundled()
+        let vocabulary = try ModelManifest.bundledVocabulary()
+
+        XCTAssertNotEqual(main.modelID, vocabulary.modelID)
+        XCTAssertNotEqual(main.revision, vocabulary.revision)
+    }
+}

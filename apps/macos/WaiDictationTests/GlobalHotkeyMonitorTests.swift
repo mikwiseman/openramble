@@ -16,12 +16,16 @@ final class GlobalHotkeyMonitorTests: XCTestCase {
         HotkeyEvent(
             keyCode: DictationHotkey.rightCommand.keyCode,
             rawFlags: NSEvent.ModifierFlags.command.rawValue | 0x0000_0010,
-            at: Date()
+            at: Date(timeIntervalSince1970: 1_000_000)
         )
     }
 
     private var releasedRightCommand: HotkeyEvent {
-        HotkeyEvent(keyCode: DictationHotkey.rightCommand.keyCode, rawFlags: 0, at: Date())
+        HotkeyEvent(
+            keyCode: DictationHotkey.rightCommand.keyCode,
+            rawFlags: 0,
+            at: Date(timeIntervalSince1970: 1_000_001)
+        )
     }
 
     // MARK: - Запуск
@@ -164,6 +168,53 @@ final class GlobalHotkeyMonitorTests: XCTestCase {
         source.sendFlags(releasedRightCommand)
 
         XCTAssertEqual(log, ["press", "release"])
+    }
+
+    func testБыстроеОтпусканиеЖдётВторогоНажатия() async throws {
+        var releases = 0
+        monitor.onRelease = { releases += 1 }
+        monitor.start()
+
+        source.sendFlags(pressedRightCommand)
+        source.sendFlags(
+            HotkeyEvent(
+                keyCode: DictationHotkey.rightCommand.keyCode,
+                rawFlags: 0,
+                at: Date(timeIntervalSince1970: 1_000_000.05)
+            )
+        )
+
+        XCTAssertEqual(releases, 0)
+        try await Task.sleep(for: .milliseconds(380))
+        XCTAssertEqual(releases, 1)
+    }
+
+    func testДвойноеНажатиеНеУспеваетОстановитьПервуюСессию() async throws {
+        var releases = 0
+        var doubleTaps = 0
+        monitor.onRelease = { releases += 1 }
+        monitor.onDoubleTap = { doubleTaps += 1 }
+        monitor.start()
+
+        source.sendFlags(pressedRightCommand)
+        source.sendFlags(
+            HotkeyEvent(
+                keyCode: DictationHotkey.rightCommand.keyCode,
+                rawFlags: 0,
+                at: Date(timeIntervalSince1970: 1_000_000.05)
+            )
+        )
+        source.sendFlags(
+            HotkeyEvent(
+                keyCode: DictationHotkey.rightCommand.keyCode,
+                rawFlags: NSEvent.ModifierFlags.command.rawValue | 0x0000_0010,
+                at: Date(timeIntervalSince1970: 1_000_000.2)
+            )
+        )
+
+        XCTAssertEqual(doubleTaps, 1)
+        try await Task.sleep(for: .milliseconds(380))
+        XCTAssertEqual(releases, 0)
     }
 
     func testРежимБезУдержанияМеняетСмыслНажатия() {

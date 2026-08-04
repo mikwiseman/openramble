@@ -15,8 +15,12 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../DictationCore"),
-        // Пин точный, не `from:` — документация FluidAudio местами расходится с API тега.
-        .package(url: "https://github.com/FluidInference/FluidAudio.git", exact: "0.15.5"),
+        // Immutable commit тега 0.15.5: даже перемещённый upstream tag не
+        // изменит код release-сборки.
+        .package(
+            url: "https://github.com/FluidInference/FluidAudio.git",
+            revision: "19600a485baa4998812e4654b70d2bab8f2c9949"
+        ),
     ],
     targets: [
         .target(

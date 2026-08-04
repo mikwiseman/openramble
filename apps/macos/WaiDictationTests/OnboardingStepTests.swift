@@ -12,13 +12,17 @@ final class OnboardingStepTests: XCTestCase {
         _ step: OnboardingStep,
         microphone: Bool = true,
         accessibility: Bool = true,
-        model: ModelState? = nil
+        model: ModelState? = nil,
+        engineReady: Bool = true,
+        trialSucceeded: Bool = true
     ) -> String? {
         OnboardingGate.blockReason(
             step: step,
             microphoneGranted: microphone,
             accessibilityGranted: accessibility,
-            modelState: model ?? ready
+            modelState: model ?? ready,
+            engineReady: engineReady,
+            trialSucceeded: trialSucceeded
         )
     }
 
@@ -45,17 +49,17 @@ final class OnboardingStepTests: XCTestCase {
     }
 
     func testПоследнийШагЗакрываетНастройку() {
-        XCTAssertEqual(OnboardingStep.welcome.nextButtonTitle, "Дальше")
-        XCTAssertEqual(OnboardingStep.model.nextButtonTitle, "Дальше")
-        XCTAssertEqual(OnboardingStep.tryIt.nextButtonTitle, "Готово")
+        XCTAssertEqual(OnboardingStep.welcome.nextButtonTitle, "Continue")
+        XCTAssertEqual(OnboardingStep.model.nextButtonTitle, "Continue")
+        XCTAssertEqual(OnboardingStep.tryIt.nextButtonTitle, "Done")
     }
 
     func testСчётчикШаговЧитаетсяСловами() {
-        XCTAssertEqual(OnboardingStep.welcome.progressText, "1 из 4")
-        XCTAssertEqual(OnboardingStep.tryIt.progressText, "4 из 4")
+        XCTAssertEqual(OnboardingStep.welcome.progressText, "1 of 4")
+        XCTAssertEqual(OnboardingStep.tryIt.progressText, "4 of 4")
         // «1 из 4» без слова «шаг» VoiceOver читает как пару чисел ниоткуда.
-        XCTAssertEqual(OnboardingStep.welcome.progressAccessibilityLabel, "Шаг 1 из 4")
-        XCTAssertEqual(OnboardingStep.tryIt.progressAccessibilityLabel, "Шаг 4 из 4")
+        XCTAssertEqual(OnboardingStep.welcome.progressAccessibilityLabel, "Step 1 of 4")
+        XCTAssertEqual(OnboardingStep.tryIt.progressAccessibilityLabel, "Step 4 of 4")
     }
 
     // MARK: - Кто пускает дальше
@@ -64,26 +68,29 @@ final class OnboardingStepTests: XCTestCase {
         XCTAssertNil(reason(.welcome, microphone: false, accessibility: false, model: .notInstalled))
     }
 
-    func testПробаНеТребуетНичего() {
-        // На последнем шаге всё уже выдано и скачано — задерживать нечем.
-        XCTAssertNil(reason(.tryIt))
+    func testПробаТребуетПервойУспешнойДиктовки() {
+        XCTAssertEqual(
+            reason(.tryIt, trialSucceeded: false),
+            "Try dictation first, or press “Skip the try-out”."
+        )
+        XCTAssertNil(reason(.tryIt, trialSucceeded: true))
     }
 
     // MARK: - Разрешения
 
     func testБезОбоихРазрешенийСказаноПроОба() {
         let text = reason(.permissions, microphone: false, accessibility: false)
-        XCTAssertEqual(text, "Осталось выдать оба разрешения — микрофон и универсальный доступ.")
+        XCTAssertEqual(text, "Two permissions left to grant — Microphone and Accessibility.")
     }
 
     func testБезМикрофонаСказаноПроМикрофон() {
-        XCTAssertEqual(reason(.permissions, microphone: false, accessibility: true), "Остался микрофон.")
+        XCTAssertEqual(reason(.permissions, microphone: false, accessibility: true), "Microphone is still needed.")
     }
 
     func testБезУниверсальногоДоступаСказаноПроНего() {
         XCTAssertEqual(
             reason(.permissions, microphone: true, accessibility: false),
-            "Остался универсальный доступ."
+            "Accessibility is still needed."
         )
     }
 
@@ -104,25 +111,32 @@ final class OnboardingStepTests: XCTestCase {
     func testКаждоеСостояниеМоделиОбъясняетСебя() {
         XCTAssertEqual(
             reason(.model, model: .notInstalled),
-            "Сначала скачайте модель — без неё распознавать нечем."
+            "Download the model first — without it there is nothing to recognize with."
         )
         XCTAssertEqual(
             reason(.model, model: .downloading(receivedBytes: 1, totalBytes: 2)),
-            "Дождитесь конца загрузки."
+            "Wait for the download to finish."
         )
         XCTAssertEqual(
             reason(.model, model: .verifying(checked: 1, total: 12)),
-            "Идёт проверка скачанного."
+            "The download is being verified."
         )
         XCTAssertEqual(
-            reason(.model, model: .failed(.download("нет сети"))),
-            "Загрузка не удалась. Попробуйте ещё раз."
+            reason(.model, model: .failed(.download("no network"))),
+            "The download failed. Try again."
         )
-        XCTAssertEqual(reason(.model, model: .deleting), "Модель удаляется.")
+        XCTAssertEqual(reason(.model, model: .deleting), "The model is being deleted.")
     }
 
     func testГотоваяМодельПускаетДальше() {
         XCTAssertNil(reason(.model, model: ready))
+    }
+
+    func testГотовыйInventoryНеПускаетДоЗавершенияWarmup() {
+        XCTAssertEqual(
+            reason(.model, model: ready, engineReady: false),
+            "Wait for the model to finish preparing for first use."
+        )
     }
 
     /// Ни на одном шаге погашенная кнопка не остаётся без объяснения.
@@ -134,6 +148,7 @@ final class OnboardingStepTests: XCTestCase {
             .notInstalled,
             .downloading(receivedBytes: 0, totalBytes: 1),
             .verifying(checked: 0, total: 1),
+            .repairRequired("повреждена"),
             .failed(.cancelled),
             .deleting,
             ready,

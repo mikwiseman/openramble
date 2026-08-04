@@ -15,6 +15,10 @@ struct OnboardingView: View {
     @State private var step: OnboardingStep = .welcome
     /// Что человек продиктовал на пробу.
     @State private var trial = ""
+    /// Вручную напечатанный текст не считается пробой: ждём именно успешную
+    /// вставку, случившуюся после входа на последний шаг.
+    @State private var trialStartCount = 0
+    @State private var showAccessibilityRepairConfirmation = false
     @FocusState private var trialFocused: Bool
 
     var body: some View {
@@ -28,8 +32,8 @@ struct OnboardingView: View {
             VStack(spacing: 6) {
                 HStack {
                     if step.hasPrevious {
-                        Button("Назад") { back() }
-                            .accessibilityHint("Вернуться к шагу \(step.rawValue)")
+                        Button("Back") { back() }
+                            .accessibilityHint("Go back to step \(step.rawValue)")
                     }
                     Spacer()
                     Text(step.progressText)
@@ -47,12 +51,26 @@ struct OnboardingView: View {
                     Text(reason)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
             .padding()
         }
         .frame(width: 560, height: 420)
+        .confirmationDialog(
+            "Repair Accessibility access?",
+            isPresented: $showAccessibilityRepairConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Reset Wai Dictation's access and relaunch", role: .destructive) {
+                state.repairAccessibility()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("macOS will remove only Wai Dictation's Accessibility entries. After the relaunch you will need to grant access again.")
+        }
     }
 
     @ViewBuilder
@@ -69,30 +87,34 @@ struct OnboardingView: View {
 
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Диктовка, которая никуда не отправляет вашу речь")
+            Text("Dictation that never sends your speech anywhere")
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Нажали клавишу, сказали, отпустили — текст появился там, где стоял курсор. В любом приложении.")
+            Text("Press a key, speak, release — the text appears where your cursor was. In any app.")
                 .foregroundStyle(.secondary)
 
             Divider()
 
             VStack(alignment: .leading, spacing: 10) {
                 Label {
-                    Text("Речь распознаётся моделью на вашем диске. Работает в самолёте.")
+                    Text("Speech is recognized by a model on your disk. Works on a plane.")
+                        .fixedSize(horizontal: false, vertical: true)
                 } icon: {
                     Image(systemName: "airplane").foregroundStyle(.blue)
                 }
                 Label {
-                    Text("В сеть приложение выходит только по вашей команде: скачать модель и, если включите, проверить обновления.")
+                    Text("The app goes online only on your command: to download the model and, if you turn it on, to check for updates.")
+                        .fixedSize(horizontal: false, vertical: true)
                 } icon: {
                     Image(systemName: "arrow.down.circle").foregroundStyle(.blue)
                 }
                 Label {
-                    Text("Ни аккаунтов, ни аналитики, ни отчётов. Код открыт — это можно проверить.")
+                    Text("No accounts, no analytics, no reports. The code is open — you can check.")
+                        .fixedSize(horizontal: false, vertical: true)
                 } icon: {
-                    Image(systemName: "lock.open").foregroundStyle(.blue)
+                    // Открытый замок читается как «незащищено» — ровно наоборот.
+                    Image(systemName: "eye.slash").foregroundStyle(.blue)
                 }
             }
             .font(.callout)
@@ -103,33 +125,44 @@ struct OnboardingView: View {
 
     private var permissions: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Два разрешения")
+            Text("Two permissions")
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Оба выдаются в системных настройках. Мы подскажем, где именно.")
+            Text("Both are granted in System Settings. We'll show you exactly where.")
                 .foregroundStyle(.secondary)
 
             VStack(spacing: 12) {
                 OnboardingPermission(
                     status: PermissionStatus(
-                        title: "Микрофон",
-                        detail: "Чтобы услышать вашу речь.",
+                        title: "Microphone",
+                        detail: "To hear your speech.",
                         granted: state.microphoneGranted
                     ),
                     action: state.requestMicrophone
                 )
                 OnboardingPermission(
-                    status: PermissionStatus(
-                        title: "Универсальный доступ",
-                        detail: "Чтобы услышать горячую клавишу и вставить готовый текст.",
-                        granted: state.accessibilityGranted
+                    status: PermissionStatus.accessibility(
+                        state: state.accessibilityState,
+                        detail: "To hear the hotkey and insert the finished text.",
                     ),
-                    action: state.requestAccessibility
+                    action: performAccessibilityAction
                 )
             }
 
-            Text("Отдельное разрешение «Мониторинг ввода» не нужно. Приложение не запоминает и не передаёт нажатия — оно ищет только вашу горячую клавишу.")
+            if needsAccessibilityRepair {
+                HStack {
+                    Button("Show the app in Finder") {
+                        state.revealApplicationForAccessibility()
+                    }
+                    Button("Open System Settings") {
+                        state.openAccessibilitySettings()
+                    }
+                }
+                .font(.caption)
+            }
+
+            Text("A separate “Input Monitoring” permission is not needed. The app doesn't store or transmit keystrokes — it only looks for your hotkey.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -137,9 +170,33 @@ struct OnboardingView: View {
         }
     }
 
+    private var needsAccessibilityRepair: Bool {
+        switch state.accessibilityState {
+        case .repairRequired, .failed:
+            true
+        default:
+            false
+        }
+    }
+
+    private func performAccessibilityAction() {
+        switch state.accessibilityState {
+        case .denied:
+            state.requestAccessibility()
+        case .waitingForSettings:
+            state.openAccessibilitySettings()
+        case .restartRequired:
+            state.restartForAccessibility()
+        case .repairRequired, .failed:
+            showAccessibilityRepairConfirmation = true
+        case .repairing, .granted:
+            break
+        }
+    }
+
     private var model: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Модель распознавания")
+            Text("Recognition model")
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
 
@@ -147,9 +204,11 @@ struct OnboardingView: View {
                 status: ModelStatus.make(
                     state: state.modelState,
                     isPreparingEngine: state.isPreparingEngine,
-                    place: .onboarding
+                    place: .onboarding,
+                    downloadMegabytes: state.remainingDownloadMegabytes
                 ),
                 install: state.installModel,
+                cancel: state.cancelModelInstall,
                 delete: state.deleteModel
             )
 
@@ -159,17 +218,17 @@ struct OnboardingView: View {
 
     private var tryIt: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Попробуйте")
+            Text("Try it")
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
 
-            Picker("Горячая клавиша", selection: $state.hotkey) {
+            Picker("Dictation key", selection: $state.hotkey) {
                 ForEach(DictationHotkey.allCases, id: \.self) { key in
                     Text(key.title).tag(key)
                 }
             }
             .pickerStyle(.menu)
-            .accessibilityHint("Клавиша, которую надо удерживать во время диктовки")
+            .accessibilityHint("The key you hold down while dictating")
 
             if let warning = state.hotkeyWarning {
                 Label {
@@ -181,10 +240,10 @@ struct OnboardingView: View {
                         .foregroundStyle(.orange)
                 }
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Предупреждение о клавише. \(warning)")
+                .accessibilityLabel("Key warning. \(warning)")
             }
 
-            Text("Удерживайте \(state.hotkey.title), скажите что-нибудь и отпустите. Текст появится в поле ниже.")
+            Text("Hold \(state.hotkey.title), say something, and release. The text will appear in the field below.")
                 .foregroundStyle(.secondary)
 
             // Поле для пробы. Настоящее, с изменяемым текстом: раньше оно было
@@ -197,12 +256,20 @@ struct OnboardingView: View {
                 .focused($trialFocused)
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
                 .onAppear { trialFocused = true }
-                .accessibilityLabel("Поле для пробной диктовки")
+                .accessibilityLabel("Trial dictation field")
 
             if state.dictationState == .listening {
-                Label("Слушаю…", systemImage: "waveform")
+                Label("Listening…", systemImage: "waveform")
                     .foregroundStyle(.red)
-                    .accessibilityLabel("Идёт запись")
+                    .accessibilityLabel("Recording")
+            }
+
+            if trialSucceeded {
+                Label("Done — dictation works", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            } else {
+                Button("Skip the try-out") { finishOnboarding() }
+                    .buttonStyle(.link)
             }
 
             Spacer()
@@ -214,12 +281,7 @@ struct OnboardingView: View {
     private var nextButton: some View {
         Button(step.nextButtonTitle) {
             if step.isLast {
-                onFinish()
-                // Окно закрывается здесь же. Иначе на экране оставалась бы
-                // пустая рамка: содержимое исчезает вместе с флагом настройки,
-                // а сама рамка — нет, и последним действием установки человек
-                // закрывал бы её руками.
-                dismiss()
+                finishOnboarding()
             } else {
                 forward()
             }
@@ -234,23 +296,33 @@ struct OnboardingView: View {
             step: step,
             microphoneGranted: state.microphoneGranted,
             accessibilityGranted: state.accessibilityGranted,
-            modelState: state.modelState
+            modelState: state.modelState,
+            engineReady: state.isEngineReady,
+            trialSucceeded: trialSucceeded
         )
+    }
+
+    private var trialSucceeded: Bool {
+        state.successfulDictationCount > trialStartCount
+            && !trial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func forward() {
         guard let next = step.next else { return }
+        if next == .tryIt { trialStartCount = state.successfulDictationCount }
         withAnimation { step = next }
-        // Загрузку запускаем сразу при переходе к шагу модели, чтобы она шла,
-        // пока человек читает.
-        if next == .model, case .notInstalled = state.modelState {
-            state.installModel()
-        }
     }
 
     private func back() {
         guard let previous = step.previous else { return }
         withAnimation { step = previous }
+    }
+
+    private func finishOnboarding() {
+        onFinish()
+        // Окно закрывается здесь же. Иначе на экране оставалась бы пустая
+        // рамка после завершения настройки.
+        dismiss()
     }
 }
 

@@ -66,6 +66,113 @@ public struct SystemPermissions: PermissionReading {
     public var microphoneGranted: Bool { Permissions.microphone == .granted }
 }
 
+/// Состояние именно живого процесса, а не положение переключателя в Settings.
+///
+/// macOS может показать включённую старую TCC-запись, которая не совпадает с
+/// designated requirement текущего бинарника. `AXIsProcessTrusted()` тогда
+/// остаётся false, и это единственный авторитетный ответ для работающего app.
+public enum AccessibilityPermissionState: Sendable, Equatable {
+    case denied
+    case waitingForSettings
+    case restartRequired
+    case repairRequired
+    case repairing
+    case failed(String)
+    case granted
+}
+
+@MainActor
+public protocol AccessibilityManaging {
+    @discardableResult
+    func requestAccess() -> Bool
+    func openSettings()
+    func revealApplication()
+    func resetAccess() async throws
+    func relaunchApplication() async throws
+}
+
+public enum AccessibilityRecoveryError: LocalizedError, Equatable {
+    case missingBundleIdentifier
+    case resetFailed(Int32, String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .missingBundleIdentifier:
+            return "The app has no bundle identifier."
+        case let .resetFailed(status, output):
+            let suffix = output.isEmpty ? "" : " \(output)"
+            return "tccutil exited with code \(status).\(suffix)"
+        }
+    }
+}
+
+/// Поддерживаемый recovery-путь: официальный AX API, System Settings,
+/// `tccutil` по явной команде пользователя и полноценный relaunch процесса.
+/// TCC.db приложение не читает и не изменяет напрямую.
+@MainActor
+public struct SystemAccessibilityManager: AccessibilityManaging {
+    public init() {}
+
+    public func requestAccess() -> Bool {
+        Permissions.requestAccessibility()
+    }
+
+    public func openSettings() {
+        Permissions.openAccessibilitySettings()
+    }
+
+    public func revealApplication() {
+        NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
+    }
+
+    public func resetAccess() async throws {
+        guard let bundleIdentifier = Bundle.main.bundleIdentifier else {
+            throw AccessibilityRecoveryError.missingBundleIdentifier
+        }
+
+        // Ожидание завершения — через terminationHandler, а не waitUntilExit:
+        // синхронное ожидание на main actor замораживало бы интерфейс на всё
+        // время работы tccutil.
+        let result: (status: Int32, message: String) = try await withCheckedThrowingContinuation {
+            continuation in
+            let process = Process()
+            let output = Pipe()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+            process.arguments = ["reset", "Accessibility", bundleIdentifier]
+            process.standardOutput = output
+            process.standardError = output
+            process.terminationHandler = { finished in
+                let data = output.fileHandleForReading.readDataToEndOfFile()
+                let message = String(data: data, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                continuation.resume(returning: (finished.terminationStatus, message))
+            }
+            do {
+                try process.run()
+            } catch {
+                // Процесс не запустился — terminationHandler не сработает.
+                process.terminationHandler = nil
+                continuation.resume(throwing: error)
+            }
+        }
+
+        guard result.status == 0 else {
+            throw AccessibilityRecoveryError.resetFailed(result.status, result.message)
+        }
+    }
+
+    public func relaunchApplication() async throws {
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        configuration.createsNewApplicationInstance = true
+        _ = try await NSWorkspace.shared.openApplication(
+            at: Bundle.main.bundleURL,
+            configuration: configuration
+        )
+        NSApplication.shared.terminate(nil)
+    }
+}
+
 // MARK: - Звуки
 
 /// Короткие сигналы начала и конца записи.
@@ -93,9 +200,6 @@ public struct SystemSounds: Sounding {
     }
 }
 
-// Сохранение несостоявшейся вставки — `RecoveryStore` — живёт в DictationCore:
-// это чистая работа с файлами, и правила ротации там покрыты тестами.
-
 // MARK: - Пути приложения
 
 /// Где приложение держит свои файлы.
@@ -121,7 +225,7 @@ public struct AppPaths: Sendable {
         guard let base = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask).first
         else {
-            preconditionFailure("Система не сообщила расположение Application Support")
+            preconditionFailure("The system did not report the Application Support location")
         }
         return AppPaths(root: base)
     }
@@ -148,38 +252,14 @@ public struct AppPaths: Sendable {
         return directory
     }
 
-    /// Куда складывается текст, который не удалось вставить.
-    public func recovery() throws -> URL {
-        let directory = try support().appending(path: "Recovered", directoryHint: .isDirectory)
+    /// WAV, сохранённые только после технической ошибки или process kill.
+    public func audioRecovery() throws -> URL {
+        let directory = try support().appending(path: "RecoveredAudio", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try Self.excludeFromBackup(directory)
         return directory
     }
 
-    /// Подмести записи, уцелевшие после падения или отключения питания.
-    ///
-    /// Обычно каталог пуст: запись удаляется сразу после распознавания. Но если
-    /// приложение прервали посреди диктовки, файл останется — и без уборки
-    /// пролежит там навсегда.
-    ///
-    /// Возвращает число убранных файлов: вызывающему это нужно, чтобы отличить
-    /// «убирать было нечего» от «уборка не сработала».
-    @discardableResult
-    public func sweepAbandonedTakes() -> Int {
-        guard let directory = try? takes(),
-              let entries = try? FileManager.default.contentsOfDirectory(
-                  at: directory,
-                  includingPropertiesForKeys: nil
-              )
-        else { return 0 }
-
-        var removed = 0
-        for entry in entries where entry.pathExtension == "wav" {
-            guard (try? FileManager.default.removeItem(at: entry)) != nil else { continue }
-            removed += 1
-        }
-        return removed
-    }
 
     /// Записи и восстановленные тексты — не то, что стоит хранить в резервных
     /// копиях: это содержимое речи пользователя.

@@ -4,6 +4,32 @@ import DictationCore
 import Foundation
 import LocalASR
 
+/// Собственный crash-WAV: payload уже сброшен на диск, а размеры в header ещё
+/// нулевые, потому что process не дошёл до `WAVWriter.close()`.
+func writeAbandonedTestWAV(to url: URL, sampleBytes: Int = 3200) throws {
+    var data = Data()
+    func u16(_ value: UInt16) {
+        withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
+    }
+    func u32(_ value: UInt32) {
+        withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
+    }
+    data.append(contentsOf: "RIFF".utf8)
+    u32(36)
+    data.append(contentsOf: "WAVEfmt ".utf8)
+    u32(16)
+    u16(1)
+    u16(1)
+    u32(16_000)
+    u32(32_000)
+    u16(2)
+    u16(16)
+    data.append(contentsOf: "data".utf8)
+    u32(0)
+    data.append(Data(repeating: 7, count: sampleBytes))
+    try data.write(to: url)
+}
+
 // Подставные края системы.
 //
 // Исходники приложения компилируются прямо в тестовый бандл, поэтому импорта
@@ -155,6 +181,9 @@ final class FakePasteboard: DictationPasteboard, @unchecked Sendable {
     private let lock = NSLock()
     private var written: [String] = []
     private var error: TextInsertionError?
+    private var restoreError: TextInsertionError?
+    private var transactions: [PasteboardTransaction] = []
+    var onBegin: (@Sendable () -> Void)?
 
     let log: CallLog
 
@@ -168,17 +197,38 @@ final class FakePasteboard: DictationPasteboard, @unchecked Sendable {
         self.error = error
     }
 
+    func setRestoreError(_ error: TextInsertionError?) {
+        lock.lock()
+        defer { lock.unlock() }
+        restoreError = error
+    }
+
     var writtenTexts: [String] {
         lock.lock()
         defer { lock.unlock() }
         return written
     }
 
-    func writeHostOnly(_ text: String) throws {
+    func beginHostOnlyWrite(_ text: String) throws -> PasteboardTransaction {
         log.record("pasteboard")
         lock.lock()
         let failure = error
         if failure == nil { written.append(text) }
+        lock.unlock()
+        if let failure { throw failure }
+        let transaction = PasteboardTransaction()
+        lock.lock()
+        transactions.append(transaction)
+        lock.unlock()
+        onBegin?()
+        return transaction
+    }
+
+    func restore(_ transaction: PasteboardTransaction) throws {
+        log.record("restore")
+        lock.lock()
+        transactions.removeAll { $0 == transaction }
+        let failure = restoreError
         lock.unlock()
         if let failure { throw failure }
     }
@@ -201,7 +251,8 @@ actor FakeCapture: AudioCapturing {
     /// полный круг диктовки, не трогая настоящую модель.
     private var duration: TimeInterval = 2.0
 
-    private let file = URL(fileURLWithPath: "/tmp/wai-dictation-test-take.wav")
+    private let file = FileManager.default.temporaryDirectory
+        .appending(path: "wai-dictation-test-take-\(UUID().uuidString).wav")
 
     func setDuration(_ value: TimeInterval) { duration = value }
 
@@ -214,6 +265,7 @@ actor FakeCapture: AudioCapturing {
     func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
         stopCount += 1
         isRecording = false
+        try Data("RIFF-test-audio".utf8).write(to: file, options: .atomic)
         return (file, duration)
     }
 
@@ -270,6 +322,42 @@ final class FakePermissions: PermissionReading {
     }
 }
 
+@MainActor
+final class FakeAccessibilityManager: AccessibilityManaging {
+    var requestResult = false
+    var resetError: Error?
+    var relaunchError: Error?
+
+    private(set) var requestCount = 0
+    private(set) var openSettingsCount = 0
+    private(set) var revealApplicationCount = 0
+    private(set) var resetCount = 0
+    private(set) var relaunchCount = 0
+
+    func requestAccess() -> Bool {
+        requestCount += 1
+        return requestResult
+    }
+
+    func openSettings() {
+        openSettingsCount += 1
+    }
+
+    func revealApplication() {
+        revealApplicationCount += 1
+    }
+
+    func resetAccess() async throws {
+        resetCount += 1
+        if let resetError { throw resetError }
+    }
+
+    func relaunchApplication() async throws {
+        relaunchCount += 1
+        if let relaunchError { throw relaunchError }
+    }
+}
+
 // MARK: - Приложение целиком
 
 /// Подставное окружение приложения.
@@ -284,6 +372,7 @@ final class AppHarness {
     let suiteName: String
     let defaults: UserDefaults
     let permissions = FakePermissions()
+    let accessibilityManager = FakeAccessibilityManager()
     let monitor = FakeHotkeyMonitor()
     let overlay = FakeOverlay()
     let capture = FakeCapture()
@@ -365,18 +454,26 @@ final class AppHarness {
     /// диктовка обрывалась бы на полпути и путь до вставки остался бы непроверенным.
     let transcription = FakeTranscription()
 
+    /// Движок для прогрева. Обычным проверкам он не нужен: без него прогрев
+    /// считается пройденным. Задаётся там, где проверяется сам прогрев.
+    var warmUpEngine: (any ASREngineAdapting)?
+
     func makeState() -> AppState {
         AppState(
             environment: AppEnvironment(
                 defaults: defaults,
                 paths: AppPaths(root: root),
                 permissions: permissions,
+                accessibilityManager: accessibilityManager,
                 hotkeyMonitor: monitor,
                 inserter: inserter,
                 overlay: overlay,
-                makeCapture: { [capture] _, _ in capture },
-                transcribe: { [transcription] _ in
+                makeCapture: { [capture] _, _, _ in capture },
+                transcribe: { [transcription] _, _ in
                     { _ in
+                        if let delay = transcription.delay {
+                            try await Task.sleep(for: delay)
+                        }
                         if let error = transcription.error { throw error }
                         return ASRResult(
                             text: transcription.text,
@@ -388,24 +485,62 @@ final class AppHarness {
                 permissionPollInterval: permissionPollInterval,
                 modelDownloader: downloader,
                 workspaceNotifications: workspaceNotifications,
-                notifications: notifications
+                notifications: notifications,
+                localTranscriber: warmUpEngine.map { LocalTranscriber(engine: $0) }
             )
         )
     }
 
-    /// Разложить на диске метку готовой модели.
+    /// Разложить тестовый inventory и метку готовой модели.
     ///
-    /// Настоящая установка — это 483 МБ по сети. Готовность же определяется
-    /// одним файлом, и его достаточно, чтобы пройти путь «модель на месте».
+    /// Файлы sparse: логический размер соответствует manifest, но блоки на
+    /// диске не занимают 483 МБ. Marker фиксирует тот же size/mtime, который
+    /// записывает прошедшая SHA-проверку production-установка.
     func installModelMarker() throws {
+        // Продукт считает модель готовой, только когда готовы обе: основная и
+        // подсказчик терминов. Тестовая установка кладёт метки обеим.
+        try installMarker(for: try ModelManifest.bundled())
+        try installMarker(for: try ModelManifest.bundledVocabulary())
+    }
+
+    /// Состояние после обновления со сборки без подсказчика: основная модель
+    /// стоит, подсказчика нет — проверка сценария добора.
+    func installMainModelMarkerOnly() throws {
+        try installMarker(for: try ModelManifest.bundled())
+    }
+
+    private func installMarker(for manifest: ModelManifest) throws {
         let paths = AppPaths(root: root)
-        let manifest = try ModelManifest.bundled()
         let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
         try FileManager.default.createDirectory(
-            at: layout.installedDirectory,
+            at: layout.engineDirectory,
             withIntermediateDirectories: true
         )
-        let marker = ModelReadyMarker(manifest: manifest, verifiedAt: Date())
+        var installedFiles: [ModelReadyMarker.InstalledFile] = []
+        for file in manifest.files {
+            let url = layout.engineDirectory.appending(path: file.path)
+            try FileManager.default.createDirectory(
+                at: url.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            _ = FileManager.default.createFile(atPath: url.path, contents: nil)
+            let handle = try FileHandle(forWritingTo: url)
+            try handle.truncate(atOffset: UInt64(file.byteCount))
+            try handle.close()
+            let values = try url.resourceValues(forKeys: [.contentModificationDateKey])
+            installedFiles.append(
+                .init(
+                    path: file.path,
+                    byteCount: file.byteCount,
+                    modifiedAt: values.contentModificationDate
+                )
+            )
+        }
+        let marker = ModelReadyMarker(
+            manifest: manifest,
+            verifiedAt: Date(),
+            installedFiles: installedFiles.sorted { $0.path < $1.path }
+        )
         try JSONEncoder().encode(marker).write(to: layout.readyMarker)
     }
 }
@@ -494,4 +629,21 @@ final class FakeHotkeyMonitor: HotkeyMonitoring {
 final class FakeTranscription: @unchecked Sendable {
     var text = "Проверка связи"
     var error: (any Error)?
+    var delay: Duration?
+}
+
+/// Движок, у которого Core ML не поднимается, хотя файлы модели на диске целы.
+///
+/// Ровно такой отказ случается в жизни: проверка SHA-256 прошла, а загрузка
+/// в нейромодуль упала. Осмотр диска это состояние увидеть не может.
+final class FailingASREngine: ASREngineAdapting, @unchecked Sendable {
+    func loadModels(from directory: URL) async throws {
+        throw ASREngineError.modelsUnavailable("Core ML отказал при загрузке")
+    }
+
+    func transcribe(samples: [Float]) async throws -> ASRResult {
+        throw ASREngineError.modelsNotLoaded
+    }
+
+    func unload() async {}
 }

@@ -16,6 +16,7 @@ __pycache__/
 
 # Артефакты сборки и релиза
 artifacts/
+quality/release-evidence.json
 *.dmg
 *.zip
 
@@ -29,6 +30,7 @@ Models/
 
 # Временные файлы проверки без сети
 .build-zero-network/
+.build-tools/
 
 # Файл разрешённых версий не отслеживается намеренно.
 #

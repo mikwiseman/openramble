@@ -38,7 +38,7 @@ final class HotkeyGestureMachineTests: XCTestCase {
             machine.handle(event(.rightCommand, flags: Bits.command | Bits.rightCommandSide)),
             .press
         )
-        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 1)), .release)
+        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 1)), .release(after: 0))
     }
 
     func testПовторныеСобытияВоВремяУдержанияНичегоНеДобавляют() {
@@ -49,7 +49,7 @@ final class HotkeyGestureMachineTests: XCTestCase {
         // Автоповтор и прочие лишние события: жест уже начат, второго начала нет.
         XCTAssertEqual(machine.handle(event(.rightCommand, flags: held, after: 0.1)), .none)
         XCTAssertEqual(machine.handle(event(.rightCommand, flags: held, after: 0.2)), .none)
-        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 0.3)), .release)
+        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 0.3)), .release(after: 0.05))
     }
 
     func testЧужаяКлавишаНеТрогаетЖест() {
@@ -120,7 +120,7 @@ final class HotkeyGestureMachineTests: XCTestCase {
             machine.handle(
                 event(.rightCommand, flags: Bits.command | Bits.leftCommandSide, after: 0.5)
             ),
-            .release
+            .release(after: 0)
         )
     }
 
@@ -140,7 +140,7 @@ final class HotkeyGestureMachineTests: XCTestCase {
             machine.handle(
                 event(.leftControl, flags: Bits.control | Bits.rightControlSide, after: 0.4)
             ),
-            .release
+            .release(after: 0)
         )
     }
 
@@ -161,7 +161,7 @@ final class HotkeyGestureMachineTests: XCTestCase {
         var machine = HotkeyGestureMachine(hotkey: .fn)
 
         XCTAssertEqual(machine.handle(event(.fn, flags: Bits.function)), .press)
-        XCTAssertEqual(machine.handle(event(.fn, flags: 0, after: 0.6)), .release)
+        XCTAssertEqual(machine.handle(event(.fn, flags: 0, after: 0.6)), .release(after: 0))
     }
 
     // MARK: - Двойное нажатие
@@ -171,7 +171,7 @@ final class HotkeyGestureMachineTests: XCTestCase {
         let held = Bits.command | Bits.rightCommandSide
 
         XCTAssertEqual(machine.handle(event(.rightCommand, flags: held)), .press)
-        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 0.05)), .release)
+        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 0.05)), .release(after: 0.3))
         XCTAssertEqual(machine.handle(event(.rightCommand, flags: held, after: 0.2)), .doubleTap)
     }
 
@@ -180,7 +180,7 @@ final class HotkeyGestureMachineTests: XCTestCase {
         let held = Bits.command | Bits.rightCommandSide
 
         XCTAssertEqual(machine.handle(event(.rightCommand, flags: held)), .press)
-        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 0.05)), .release)
+        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 0.05)), .release(after: 0.3))
         XCTAssertEqual(machine.handle(event(.rightCommand, flags: held, after: 0.5)), .press)
     }
 
@@ -189,9 +189,9 @@ final class HotkeyGestureMachineTests: XCTestCase {
         let held = Bits.command | Bits.rightCommandSide
 
         XCTAssertEqual(machine.handle(event(.rightCommand, flags: held)), .press)
-        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 0.05)), .release)
+        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 0.05)), .release(after: 0.3))
         XCTAssertEqual(machine.handle(event(.rightCommand, flags: held, after: 0.1)), .doubleTap)
-        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 0.15)), .release)
+        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 0.15)), .release(after: 0.3))
         // Три нажатия подряд не означают «двойное дважды».
         XCTAssertEqual(machine.handle(event(.rightCommand, flags: held, after: 0.2)), .press)
     }
@@ -215,7 +215,7 @@ final class HotkeyGestureMachineTests: XCTestCase {
 
         XCTAssertEqual(machine.handle(event(.rightCommand, flags: held)), .stopHandsFree)
         machine.isHandsFreeActive = false
-        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 0.1)), .release)
+        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 0.1)), .release(after: 0.25))
     }
 
     // MARK: - Смена клавиши
@@ -232,7 +232,7 @@ final class HotkeyGestureMachineTests: XCTestCase {
             machine.handle(event(.rightCommand, flags: Bits.command | Bits.rightCommandSide)),
             .press
         )
-        XCTAssertEqual(machine.setHotkey(.fn), .release)
+        XCTAssertEqual(machine.setHotkey(.fn), .release(after: 0))
         XCTAssertFalse(machine.isHeld)
     }
 

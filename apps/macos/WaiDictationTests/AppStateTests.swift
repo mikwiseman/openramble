@@ -5,20 +5,31 @@ import XCTest
 /// Проводка приложения: что происходит на краях, где всё обычно и ломается.
 @MainActor
 final class AppStateTests: XCTestCase {
+    func testОшибкаАудиоконвертераНеМаскируетсяПодНехваткуМеста() {
+        let message = AppState.captureFailureMessage(
+            .unsupportedAudioFormat("48 kHz stereo couldn't be converted")
+        )
+
+        XCTAssertTrue(message.contains("audio format"))
+        XCTAssertTrue(message.contains("48 kHz stereo"))
+        XCTAssertFalse(message.contains("disk space"))
+    }
+
     private var harness: AppHarness!
 
     private var root: URL { harness.root }
     private var defaults: UserDefaults { harness.defaults }
     private var permissions: FakePermissions { harness.permissions }
+    private var accessibilityManager: FakeAccessibilityManager { harness.accessibilityManager }
     private var monitor: FakeHotkeyMonitor { harness.monitor }
     private var overlay: FakeOverlay { harness.overlay }
     private var capture: FakeCapture { harness.capture }
 
-    override func setUpWithError() throws {
+    override func setUp() async throws {
         harness = try AppHarness()
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         harness.tearDown()
     }
 
@@ -36,6 +47,101 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(state.accessibilityGranted)
         XCTAssertFalse(state.isDictationReady)
         XCTAssertFalse(monitor.isRunning)
+        XCTAssertEqual(state.accessibilityState, .denied)
+    }
+
+    func testЗапросAccessibilityОткрываетНастройкиИНачинаетОжидание() {
+        permissions.accessibilityGranted = false
+        let state = makeState()
+
+        state.requestAccessibility()
+
+        XCTAssertEqual(accessibilityManager.requestCount, 1)
+        XCTAssertEqual(accessibilityManager.openSettingsCount, 1)
+        XCTAssertEqual(accessibilityManager.resetCount, 0)
+        XCTAssertEqual(state.accessibilityState, .waitingForSettings)
+    }
+
+    func testВозвратИзНастроекБезДоступаПредлагаетПерезапуск() async {
+        permissions.accessibilityGranted = false
+        let state = makeState()
+        state.requestAccessibility()
+
+        harness.notifications.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+        await Task.yield()
+
+        XCTAssertEqual(state.accessibilityState, .restartRequired)
+    }
+
+    func testПерезапускДляAccessibilityЗапоминаетНезавершенноеВосстановление() async {
+        permissions.accessibilityGranted = false
+        let state = makeState()
+
+        state.restartForAccessibility()
+        await Task.yield()
+
+        XCTAssertEqual(accessibilityManager.relaunchCount, 1)
+        XCTAssertTrue(defaults.bool(forKey: AppState.accessibilityRelaunchPendingKey))
+    }
+
+    func testПослеНеудачногоПерезапускаПредлагаетсяRepair() {
+        permissions.accessibilityGranted = false
+        defaults.set(true, forKey: AppState.accessibilityRelaunchPendingKey)
+
+        let state = makeState()
+
+        XCTAssertEqual(state.accessibilityState, .repairRequired)
+        XCTAssertEqual(accessibilityManager.resetCount, 0)
+    }
+
+    func testПолученныйПослеПерезапускаДоступОчищаетRepairMarker() {
+        permissions.accessibilityGranted = true
+        defaults.set(true, forKey: AppState.accessibilityRelaunchPendingKey)
+
+        let state = makeState()
+
+        XCTAssertEqual(state.accessibilityState, .granted)
+        XCTAssertFalse(defaults.bool(forKey: AppState.accessibilityRelaunchPendingKey))
+    }
+
+    func testЯвныйRepairСбрасываетТолькоПослеКомандыИПерезапускаетПриложение() async {
+        permissions.accessibilityGranted = false
+        defaults.set(true, forKey: AppState.accessibilityRelaunchPendingKey)
+        let state = makeState()
+        XCTAssertEqual(accessibilityManager.resetCount, 0)
+
+        state.repairAccessibility()
+        for _ in 0..<20 where accessibilityManager.relaunchCount == 0 {
+            await Task.yield()
+        }
+
+        XCTAssertEqual(accessibilityManager.resetCount, 1)
+        XCTAssertEqual(accessibilityManager.relaunchCount, 1)
+        XCTAssertFalse(defaults.bool(forKey: AppState.accessibilityRelaunchPendingKey))
+    }
+
+    func testОшибкаRepairНеПерезапускаетИНазываетПроблему() async {
+        permissions.accessibilityGranted = false
+        accessibilityManager.resetError = CocoaError(.fileWriteNoPermission)
+        let state = makeState()
+
+        state.repairAccessibility()
+        for _ in 0..<20 where state.accessibilityState == .repairing {
+            await Task.yield()
+        }
+
+        guard case .failed = state.accessibilityState else {
+            return XCTFail("Ожидалась видимая ошибка восстановления")
+        }
+        XCTAssertEqual(accessibilityManager.relaunchCount, 0)
+    }
+
+    func testПоказатьПриложениеДляРучногоДобавления() {
+        let state = makeState()
+
+        state.revealApplicationForAccessibility()
+
+        XCTAssertEqual(accessibilityManager.revealApplicationCount, 1)
     }
 
     func testСДоступомСлежениеЗапускается() {
@@ -60,6 +166,77 @@ final class AppStateTests: XCTestCase {
 
         XCTAssertFalse(monitor.isRunning)
         XCTAssertFalse(state.isDictationReady)
+    }
+
+    func testОтозванныйAccessibilityВоВремяЗаписиСохраняетWAV() async throws {
+        try installModelMarker()
+        let state = makeState()
+        await state.refreshModelState()
+        monitor.onPress?()
+        for _ in 0..<40 where state.dictationState != .listening {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(state.dictationState, .listening)
+
+        permissions.accessibilityGranted = false
+        state.refreshPermissions()
+        for _ in 0..<60 where state.recoveredRecording == nil {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertFalse(monitor.isRunning)
+        XCTAssertEqual(state.dictationState, .idle)
+        XCTAssertNotNil(state.recoveredRecording)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: state.recoveredRecording?.path ?? ""))
+    }
+
+    func testОтозванныйМикрофонВоВремяЗаписиСохраняетWAV() async throws {
+        try installModelMarker()
+        let state = makeState()
+        await state.refreshModelState()
+        monitor.onPress?()
+        for _ in 0..<40 where state.dictationState != .listening {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(state.dictationState, .listening)
+
+        permissions.microphoneGranted = false
+        state.refreshPermissions()
+        for _ in 0..<60 where state.recoveredRecording == nil {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertEqual(state.dictationState, .idle)
+        XCTAssertFalse(state.isDictationReady)
+        XCTAssertNotNil(state.recoveredRecording)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: state.recoveredRecording?.path ?? ""))
+    }
+
+    func testОтзывAccessibilityВоВремяРаспознаванияСразуПоказываетNotice() async throws {
+        try installModelMarker()
+        harness.transcription.delay = .milliseconds(300)
+        let state = makeState()
+        await state.refreshModelState()
+        monitor.onPress?()
+        for _ in 0..<40 where state.dictationState != .listening {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        monitor.onRelease?()
+        for _ in 0..<40 where state.dictationState != .transcribing {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(state.dictationState, .transcribing)
+
+        permissions.accessibilityGranted = false
+        state.refreshPermissions()
+
+        XCTAssertEqual(state.lastNotice?.message.contains("Accessibility access was revoked"), true)
     }
 
     func testБезМикрофонаДиктовкаНеГотова() {
@@ -93,6 +270,49 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(state.dictationState, .idle)
     }
 
+    // MARK: - Первая успешная диктовка
+
+    func testСчётчикРастётТолькоПослеУспешнойВставки() async throws {
+        try installModelMarker()
+        let state = makeState()
+        await state.refreshModelState()
+        XCTAssertEqual(state.successfulDictationCount, 0)
+
+        monitor.onPress?()
+        for _ in 0..<40 where state.dictationState != .listening {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(state.successfulDictationCount, 0)
+        monitor.onRelease?()
+        for _ in 0..<60 where state.dictationState != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertEqual(state.successfulDictationCount, 1)
+    }
+
+    func testЯвнаяОтменаЗаписиПодтверждаетУдаление() async throws {
+        try installModelMarker()
+        let state = makeState()
+        await state.refreshModelState()
+
+        monitor.onPress?()
+        for _ in 0..<40 where state.dictationState != .listening {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        state.cancelCurrentDictation()
+        for _ in 0..<40 where state.dictationState != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertEqual(state.lastNotice?.message, "Dictation cancelled. The recording was deleted.")
+        XCTAssertEqual(state.successfulDictationCount, 0)
+    }
+
     func testСМодельюИРазрешениямиНажатиеЗапускаетДиктовку() async throws {
         try installModelMarker()
         let state = makeState()
@@ -123,7 +343,7 @@ final class AppStateTests: XCTestCase {
         // оно задачей, поэтому даём ей дойти до оверлея.
         try await Task.sleep(for: .milliseconds(100))
         let notices = await overlay.notices
-        XCTAssertTrue(notices.contains { $0.message.contains("Дождитесь") })
+        XCTAssertTrue(notices.contains { $0.message.contains("Wait for it to finish") })
     }
 
     func testВПокоеМодельУдаляется() async throws {
@@ -136,6 +356,70 @@ final class AppStateTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(200))
 
         XCTAssertFalse(state.modelState.isReady)
+    }
+
+    func testСтарыйКаталогТекстовыхRecoveryУдаляетсяПриЗапуске() async throws {
+        // Прошлые сборки писали нераспознанный текст в Recovered/. Обещание
+        // «распознанный текст не пишется на диск» обязано покрывать и их следы.
+        let legacy = harness.root.appending(path: "WaiDictation", directoryHint: .isDirectory)
+            .appending(path: "Recovered", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: legacy, withIntermediateDirectories: true)
+        try Data("старая диктовка".utf8).write(to: legacy.appending(path: "recovery-1.txt"))
+
+        _ = makeState()
+        for _ in 0..<200 {
+            if !FileManager.default.fileExists(atPath: legacy.path) { break }
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: legacy.path),
+            "Тексты диктовок старых сборок обязаны исчезнуть при первом же запуске"
+        )
+    }
+
+    func testДоборПодсказчикаПослеОбновленияПриложения() async throws {
+        // Человек обновился со сборки, где подсказчика ещё не было: основная
+        // модель стоит, подсказчика нет. Для него это «модель не готова», а
+        // кнопка обязана называть настоящий остаток, а не полные 586 МБ.
+        try harness.installMainModelMarkerOnly()
+        let state = makeState()
+
+        await state.refreshModelState()
+
+        XCTAssertFalse(state.modelState.isReady)
+        XCTAssertEqual(state.remainingDownloadMegabytes, 103)
+    }
+
+    func testПадениеПрогреваПереживаетОбновлениеСостоянияМодели() async throws {
+        // Файлы модели целы, но Core ML их не поднимает. Осмотр диска такое
+        // состояние увидеть не может: он снова скажет «готово».
+        try installModelMarker()
+        harness.warmUpEngine = FailingASREngine()
+        let state = makeState()
+
+        // Прогрев на старте падает и просит явное восстановление.
+        for _ in 0..<200 {
+            if case .repairRequired = state.modelState { break }
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        guard case .repairRequired = state.modelState else {
+            return XCTFail("Прогрев обязан был кончиться repairRequired, а не \(state.modelState)")
+        }
+
+        // Человек открыл настройки — экран обновил состояние модели с диска.
+        await state.refreshModelState()
+
+        // Кнопка восстановления не имеет права исчезнуть: диктовка не работает,
+        // а «Готовлю модель…» без конца — это тупик без выхода.
+        guard case .repairRequired = state.modelState else {
+            return XCTFail(
+                "Осмотр диска затёр repairRequired: \(state.modelState). Человек остался без кнопки восстановления."
+            )
+        }
+        XCTAssertFalse(state.isEngineReady)
     }
 
     // MARK: - Жесты
@@ -194,6 +478,56 @@ final class AppStateTests: XCTestCase {
     }
 
     // MARK: - Настройки
+
+    func testУспешнаяДиктовкаЗапоминаетсяИПравкаУчитСловарь() async throws {
+        try installModelMarker()
+        harness.transcription.text = "Открой поуст герз и проверь индексы"
+        let state = makeState()
+        await state.refreshModelState()
+
+        monitor.onPress?()
+        for _ in 0..<40 where state.dictationState != .listening {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        monitor.onRelease?()
+        for _ in 0..<200 where state.lastDictation == nil {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        let last = try XCTUnwrap(state.lastDictation)
+        XCTAssertTrue(last.insertedText.contains("поуст герз"))
+
+        // Человек поправил термин — словарь выучил ровно эту пару.
+        let learned = state.learnCorrections(
+            editedText: last.insertedText.replacingOccurrences(of: "поуст герз", with: "Postgres")
+        )
+
+        XCTAssertEqual(learned, 1)
+        XCTAssertTrue(state.replacements.contains { $0.spoken == "поуст герз" && $0.written == "Postgres" })
+
+        // Повторная та же правка не плодит дубликатов.
+        XCTAssertEqual(state.learnCorrections(
+            editedText: last.insertedText.replacingOccurrences(of: "поуст герз", with: "Postgres")
+        ), 0)
+    }
+
+    func testЯзыкРаспознаванияСохраняетсяИПереживаетПерезапуск() {
+        let state = makeState()
+        XCTAssertNil(state.recognitionLanguage, "По умолчанию — автоопределение")
+
+        state.recognitionLanguage = "en"
+        XCTAssertEqual(harness.defaults.string(forKey: AppState.recognitionLanguageKey), "en")
+
+        // «Перезапуск»: новый AppState с теми же defaults.
+        let restarted = makeState()
+        XCTAssertEqual(restarted.recognitionLanguage, "en")
+
+        // Возврат к автоопределению убирает ключ, а не пишет пустую строку.
+        restarted.recognitionLanguage = nil
+        XCTAssertNil(harness.defaults.string(forKey: AppState.recognitionLanguageKey))
+    }
 
     func testСменаКлавишиДоходитДоМонитораИСохраняется() {
         let state = makeState()
@@ -266,7 +600,7 @@ final class AppStateTests: XCTestCase {
         try? await Task.sleep(for: .milliseconds(100))
 
         let notices = await overlay.notices
-        XCTAssertTrue(notices.contains { $0.message.contains("Словарь") })
+        XCTAssertTrue(notices.contains { $0.message.contains("replacement dictionary") })
     }
 
     func testСловарьИзБудущегоНеТрогается() {
@@ -307,32 +641,39 @@ final class AppStateTests: XCTestCase {
 
     // MARK: - Уборка
 
-    /// Записи, уцелевшие после падения приложения, убираются при запуске.
-    func testЗапускПодметаетБрошенныеЗаписи() throws {
+    /// Записи, уцелевшие после падения приложения, становятся явным Retry/Delete.
+    func testЗапускИмпортируетБрошенныеЗаписиВRecovery() async throws {
         let paths = AppPaths(root: root)
         let orphan = try paths.takes().appending(path: "take-старая.wav")
-        try Data("звук".utf8).write(to: orphan)
+        try writeAbandonedTestWAV(to: orphan)
 
-        _ = makeState()
+        let state = makeState()
+        for _ in 0..<40 where state.recoveredRecording == nil {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
 
         XCTAssertFalse(FileManager.default.fileExists(atPath: orphan.path))
+        XCTAssertNotNil(state.recoveredRecording)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: state.recoveredRecording?.path ?? ""))
+        let repaired = try Data(contentsOf: XCTUnwrap(state.recoveredRecording))
+        let payloadSize = repaired[40..<44].withUnsafeBytes {
+            UInt32(littleEndian: $0.load(as: UInt32.self))
+        }
+        XCTAssertEqual(payloadSize, 3200)
     }
 }
 
-/// Адрес спасённого текста.
-///
-/// «Он сохранён» без ответа на «где» почти бесполезно: файл лежит в служебной
-/// папке, а это единственная копия сказанного. Проверяется настоящим путём —
-/// вставка отказывает, ядро само сохраняет текст и называет файл.
+/// Спасённый текст остаётся только в памяти с Copy/Retry.
 @MainActor
 final class RecoveredFileTests: XCTestCase {
     private var harness: AppHarness!
 
-    override func setUpWithError() throws {
+    override func setUp() async throws {
         harness = try AppHarness()
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         harness.tearDown()
     }
 
@@ -343,11 +684,11 @@ final class RecoveredFileTests: XCTestCase {
         }
     }
 
-    func testПослеНеудачнойВставкиАдресФайлаИзвестен() async throws {
+    func testПослеНеудачнойВставкиТекстДоступенВПамяти() async throws {
         try harness.installModelMarker()
         let state = harness.makeState()
         await state.refreshModelState()
-        XCTAssertNil(state.recoveredFile, "Пока ничего не спасали, показывать нечего")
+        XCTAssertNil(state.recoveredText, "Пока ничего не спасали, показывать нечего")
 
         await harness.inserter.setError(.accessibilityPermissionDenied)
 
@@ -356,19 +697,10 @@ final class RecoveredFileTests: XCTestCase {
         harness.monitor.onRelease?()
         await settle()
 
-        let file = try XCTUnwrap(
-            state.recoveredFile,
-            "Текст сохранён — значит человеку надо сказать, где именно"
-        )
-        XCTAssertTrue(
-            FileManager.default.fileExists(atPath: file.path),
-            "Пункт меню поведёт в Finder по этому адресу: файл обязан существовать"
-        )
+        XCTAssertEqual(state.recoveredText, "Проверка связи")
     }
 
-    func testНоваяДиктовкаУбираетПрошлыйАдрес() async throws {
-        // Иначе пункт меню остался бы навсегда и указывал на всё более старый
-        // файл.
+    func testНоваяОтменённаяДиктовкаНеТеряетСпасённыйТекст() async throws {
         try harness.installModelMarker()
         let state = harness.makeState()
         await state.refreshModelState()
@@ -378,12 +710,52 @@ final class RecoveredFileTests: XCTestCase {
         await settle()
         harness.monitor.onRelease?()
         await settle()
-        XCTAssertNotNil(state.recoveredFile)
+        XCTAssertNotNil(state.recoveredText)
 
         await harness.inserter.setError(nil)
         harness.monitor.onPress?()
         await settle()
+        harness.monitor.onEscape?()
+        await settle()
 
-        XCTAssertNil(state.recoveredFile, "Новая диктовка — прошлая беда позади")
+        XCTAssertEqual(state.recoveredText, "Проверка связи")
+    }
+
+    func testСпасённыйТекстУдаляетсяТолькоЯвно() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+        XCTAssertEqual(state.recoveredText, "Проверка связи")
+
+        state.deleteRecoveredText()
+
+        XCTAssertNil(state.recoveredText)
+    }
+
+    func testДваRetryТекстаВставляютЕгоОдинРаз() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+        await harness.inserter.setError(nil)
+
+        state.retryRecoveredText()
+        state.retryRecoveredText()
+        await settle()
+
+        let inserted = await harness.inserter.insertedTexts
+        XCTAssertEqual(inserted, ["Проверка связи"])
+        XCTAssertNil(state.recoveredText)
     }
 }

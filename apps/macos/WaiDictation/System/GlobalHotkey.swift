@@ -15,9 +15,9 @@ public enum DictationHotkey: String, CaseIterable, Sendable, Codable {
     public var title: String {
         switch self {
         case .fn: return "Fn (🌐)"
-        case .rightCommand: return "Правый Command"
-        case .rightOption: return "Правый Option"
-        case .leftControl: return "Левый Control"
+        case .rightCommand: return "Right Command"
+        case .rightOption: return "Right Option"
+        case .leftControl: return "Left Control"
         }
     }
 
@@ -90,8 +90,9 @@ struct HotkeyGestureMachine {
         case none
         /// Клавишу нажали — начинаем диктовку.
         case press
-        /// Отпустили — заканчиваем.
-        case release
+        /// Отпустили — заканчиваем. Короткий tap ждёт остаток окна
+        /// двойного нажатия; долгое удержание заканчивается сразу.
+        case release(after: TimeInterval)
         /// Второе нажатие подряд — режим без удержания.
         case doubleTap
         /// Нажатие во время записи без удержания — просьба остановить.
@@ -111,6 +112,7 @@ struct HotkeyGestureMachine {
 
     private(set) var isHeld = false
     private var lastTapAt: Date?
+    private var pressedAt: Date?
 
     init(hotkey: DictationHotkey, doubleTapWindow: TimeInterval = 0.35) {
         self.hotkey = hotkey
@@ -127,15 +129,17 @@ struct HotkeyGestureMachine {
         hotkey = new
         isHeld = false
         lastTapAt = nil
+        pressedAt = nil
         // В режиме без удержания отпускание и так ничего не значит: запись идёт
         // до следующего нажатия, и оно придёт уже с новой клавиши.
-        return wasHeld && !isHandsFreeActive ? .release : .none
+        return wasHeld && !isHandsFreeActive ? .release(after: 0) : .none
     }
 
     /// Слежение остановлено — начатый жест оборван.
     mutating func reset() {
         isHeld = false
         lastTapAt = nil
+        pressedAt = nil
     }
 
     mutating func handle(_ event: HotkeyEvent) -> Action {
@@ -145,6 +149,7 @@ struct HotkeyGestureMachine {
 
         if pressed, !isHeld {
             isHeld = true
+            pressedAt = event.at
 
             if isHandsFreeActive {
                 lastTapAt = nil
@@ -162,10 +167,16 @@ struct HotkeyGestureMachine {
 
         if !pressed, isHeld {
             isHeld = false
+            let heldFor = pressedAt.map { event.at.timeIntervalSince($0) } ?? doubleTapWindow
+            pressedAt = nil
             // В режиме без удержания отпускание ничего не значит: запись идёт
             // до следующего нажатия.
             guard !isHandsFreeActive else { return .none }
-            return .release
+            let remaining = max(0, doubleTapWindow - heldFor)
+            // NSEvent не обещает десятичную точность Date. Миллисекунды для
+            // жеста более чем достаточны и не дают погрешности плавающей точки
+            // удлинять или укорачивать окно между одинаковыми жестами.
+            return .release(after: (remaining * 1_000).rounded() / 1_000)
         }
 
         return .none
@@ -199,6 +210,19 @@ public protocol HotkeyEventSource: AnyObject {
 /// сравнивается с выбранной клавишей и Escape, всё остальное отбрасывается.
 @MainActor
 public final class SystemHotkeyEventSource: HotkeyEventSource {
+    /// Global monitors do not receive events while this app is active. The
+    /// onboarding test field is inside Wai Dictation, so each logical
+    /// subscription owns both a global and a local monitor.
+    private final class MonitorPair {
+        let global: Any
+        let local: Any
+
+        init(global: Any, local: Any) {
+            self.global = global
+            self.local = local
+        }
+    }
+
     public init() {}
 
     public var isTrusted: Bool { AXIsProcessTrusted() }
@@ -208,19 +232,46 @@ public final class SystemHotkeyEventSource: HotkeyEventSource {
         // напрямую. Обёртка в отдельную задачу не гарантировала бы порядок:
         // нажатие и отпускание могли прийти в обратной последовательности, и
         // диктовка осталась бы включённой.
-        NSEvent.addGlobalMonitorForEvents(matching: [.flagsChanged]) { event in
+        let global = NSEvent.addGlobalMonitorForEvents(matching: [.flagsChanged]) { event in
             MainActor.assumeIsolated { handler(HotkeyEvent(event)) }
         }
+        guard let global else { return nil }
+        let local = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged]) { event in
+            handler(HotkeyEvent(event))
+            return event
+        }
+        guard let local else {
+            NSEvent.removeMonitor(global)
+            return nil
+        }
+        return MonitorPair(global: global, local: local)
     }
 
     public func addKeyDownMonitor(_ handler: @escaping @MainActor (HotkeyEvent) -> Void) -> Any? {
-        NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { event in
+        let global = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { event in
             MainActor.assumeIsolated { handler(HotkeyEvent(event)) }
         }
+        guard let global else { return nil }
+        let local = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
+            handler(HotkeyEvent(event))
+            // Ничего не перехватываем: Escape и остальные клавиши продолжают
+            // обычный путь активного приложения.
+            return event
+        }
+        guard let local else {
+            NSEvent.removeMonitor(global)
+            return nil
+        }
+        return MonitorPair(global: global, local: local)
     }
 
     public func removeMonitor(_ token: Any) {
-        NSEvent.removeMonitor(token)
+        if let pair = token as? MonitorPair {
+            NSEvent.removeMonitor(pair.global)
+            NSEvent.removeMonitor(pair.local)
+        } else {
+            NSEvent.removeMonitor(token)
+        }
     }
 }
 
@@ -271,6 +322,7 @@ public final class GlobalHotkeyMonitor: HotkeyMonitoring {
     private var machine: HotkeyGestureMachine
     private var flagsMonitor: Any?
     private var keyMonitor: Any?
+    private var pendingRelease: Task<Void, Never>?
 
     public init(
         source: any HotkeyEventSource = SystemHotkeyEventSource(),
@@ -323,6 +375,8 @@ public final class GlobalHotkeyMonitor: HotkeyMonitoring {
     }
 
     public func stop() {
+        pendingRelease?.cancel()
+        pendingRelease = nil
         if let flagsMonitor { source.removeMonitor(flagsMonitor) }
         if let keyMonitor { source.removeMonitor(keyMonitor) }
         flagsMonitor = nil
@@ -346,8 +400,30 @@ public final class GlobalHotkeyMonitor: HotkeyMonitoring {
         switch action {
         case .none: break
         case .press: onPress?()
-        case .release: onRelease?()
-        case .doubleTap: onDoubleTap?()
+        case let .release(delay):
+            pendingRelease?.cancel()
+            pendingRelease = nil
+            guard delay > 0 else {
+                onRelease?()
+                return
+            }
+            pendingRelease = Task { [weak self] in
+                do {
+                    try await Task.sleep(for: .seconds(delay))
+                } catch {
+                    return
+                }
+                guard !Task.isCancelled else { return }
+                self?.pendingRelease = nil
+                self?.onRelease?()
+            }
+        case .doubleTap:
+            // Первый быстрый tap уже запустил сессию, но его отпускание
+            // ждало второго нажатия. Теперь это та же сессия без удержания:
+            // отложенная остановка больше не принадлежит ей.
+            pendingRelease?.cancel()
+            pendingRelease = nil
+            onDoubleTap?()
         case .stopHandsFree: onSingleTapWhileHandsFree?()
         }
     }

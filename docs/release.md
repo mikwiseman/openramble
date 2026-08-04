@@ -451,39 +451,27 @@ ad-hoc подписью сборки.
 ### Пробные сборки: что ими можно проверить, а что нельзя
 
 ```bash
-./scripts/build-dmg.sh                 # без подписи вообще
-DEVELOPER_ID="-" ./scripts/build-dmg.sh   # ad-hoc, вся последовательность подписи
+./scripts/build-dmg.sh
 ```
 
-Второй вариант проходит ровно ту же последовательность, что и релиз:
-подписывает каждый вложенный компонент, проверяет `codesign --verify --deep
---strict`, сверяет удостоверения и закрепляет идентификатор
-`is.waiwai.dictation`. Годится, чтобы поймать поломку в порядке подписи.
+Команда собирает запускаемый Debug-probe `Wai Dictation Dev` с отдельным
+bundle id `is.waiwai.dictation.dev` и проверяемой ad-hoc-подписью. Он годится
+для CI и локального smoke, но не портит production-разрешения и не
+создаёт неразличимые строки Accessibility.
 
-**Запустить получившееся приложение при этом нельзя.** Ad-hoc-подпись плюс
-Hardened Runtime включают проверку библиотек, а вложенный
-`Sparkle.framework` подписан без Team ID, и dyld отказывается его грузить:
-
-```
-Library not loaded: @rpath/Sparkle.framework/Versions/B/Sparkle
-Reason: … not valid for use in process
-```
-
-Приложение умирает примерно через 0,7 с после запуска, без окна и без
-сообщения — в системном логе остаётся `amfid: The file is adhoc signed or
-signed by an unknown certificate chain`. У настоящего релиза этой беды нет:
-Developer ID даёт общий Team ID приложению и фреймворку.
-
-Поэтому: **проверять поведение приложения надо на сборке из первой строки**
-(без подписи — там нет Hardened Runtime, и она запускается), а
-последовательность подписи — на второй.
+Проверка production identity, Developer ID, Hardened Runtime, Gatekeeper и
+нотаризация идёт только через `./scripts/build-installable-beta.sh` или
+полный `./scripts/release.sh`. Installable beta по умолчанию тоже требует
+чистое git-дерево. Явный `ALLOW_DIRTY_BETA=1` разрешён только для
+локального QA незакоммиченного кода, не для публичной раздачи. Такой билд
+получает уникальный UTC build number; его можно задать явно через
+`BUILD_NUMBER_OVERRIDE`.
 
 ### Идентификатор приложения менять нельзя
 
-`is.waiwai.dictation` зафиксирован в `scripts/build-dmg.sh`, и скрипт
-останавливается, если собралось что-то другое (например, конфигурация Debug —
-там суффикс `.dev`). Приложению он передаётся в `codesign --identifier`
-явно, чтобы не зависеть от имени продукта.
+Release всегда требует `is.waiwai.dictation`, Debug-probe —
+`is.waiwai.dictation.dev`. Скрипт останавливается при любом расхождении.
+Production-идентификатор передаётся в `codesign --identifier` явно.
 
 Причина простая: универсальный доступ выдаётся системой конкретному
 идентификатору. Смените его — и после обновления человек обнаружит, что

@@ -16,7 +16,8 @@ packages:
   # должна осознанно, а не сама при следующей сборке.
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
-    exactVersion: 2.9.4
+    # Immutable commit тега 2.9.4.
+    revision: b6496a74a087257ef5e6da1c5b29a447a60f5bd7
 
 settings:
   base:
@@ -30,23 +31,11 @@ settings:
     # приложения, а из песочницы это невозможно.
     ENABLE_APP_SANDBOX: NO
     ENABLE_HARDENED_RUNTIME: YES
-    # Собираем под обе архитектуры: распознавание работает только на Apple
-    # Silicon, но приложение должно запускаться и на Intel, чтобы честно
-    # сказать об этом пользователю.
-    ARCHS: "arm64 x86_64"
+    # Safe beta поддерживает только Apple Silicon. Intel slice запрещён и
+    # проверяется повторно на уже собранном artifact.
+    ARCHS: arm64
     ONLY_ACTIVE_ARCH: NO
-  configs:
-    # Отладочная и тестовая сборка идёт только под ту архитектуру, на которой
-    # её запускают.
-    #
-    # Иначе `xcodebuild … -destination 'platform=macOS'` собирает цель
-    # приложения под обе архитектуры, а пакеты Xcode при конкретном назначении
-    # строит только под одну — и компиляция падает на «Unable to find module
-    # dependency: DictationCore» под x86_64. Универсальность нужна релизу, и он
-    # её получает: `scripts/build-dmg.sh` собирает с `generic/platform=macOS`,
-    # где пакеты строятся под обе.
-    Debug:
-      ONLY_ACTIVE_ARCH: YES
+    EXCLUDED_ARCHS: x86_64
 
 targets:
   WaiDictation:
@@ -54,6 +43,18 @@ targets:
     platform: macOS
     sources:
       - path: WaiDictation
+      - path: ../../LICENSE
+        buildPhase: resources
+      - path: ../../NOTICE
+        buildPhase: resources
+      - path: ../../THIRD_PARTY_LICENSES.md
+        buildPhase: resources
+      - path: ../../Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json
+        buildPhase: resources
+      - path: ../../Packages/LocalASR/Sources/LocalASR/Resources/vocabulary-manifest.json
+        buildPhase: resources
+      - path: WaiDictation/Resources/AppIcon.icns
+        buildPhase: resources
     dependencies:
       - package: DictationCore
         product: DictationCore
@@ -68,6 +69,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation
         PRODUCT_NAME: Wai Dictation
         INFOPLIST_FILE: WaiDictation/Info.plist
+        CODE_SIGN_ENTITLEMENTS: WaiDictation/WaiDictation.entitlements
         SWIFT_STRICT_CONCURRENCY: complete
         # Предупреждения — ошибки, как и в пакетах. Раньше это было правдой
         # только для них, а CI утверждал, что для всего проекта: цель
@@ -77,11 +79,15 @@ targets:
       configs:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.dev
+          PRODUCT_NAME: Wai Dictation Dev
     info:
       path: WaiDictation/Info.plist
       properties:
-        CFBundleName: Wai Dictation
-        CFBundleShortVersionString: "0.1.0"
+        CFBundleName: "$(PRODUCT_NAME)"
+        CFBundleDisplayName: "$(PRODUCT_NAME)"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleIconFile: AppIcon
         # Приложение живёт в строке меню и не показывается в Dock.
         LSUIElement: true
         NSMicrophoneUsageDescription: >-
@@ -110,7 +116,7 @@ targets:
         # Появится здесь после `generate_keys` — он публичный, и его место
         # в репозитории. До этого выпустить релиз нельзя: scripts/release.sh
         # откажется работать. Порядок действий — в docs/release.md.
-        # SUPublicEDKey: "…"
+        SUPublicEDKey: "9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI="
 
   # Тесты цели приложения.
   #
@@ -150,6 +156,7 @@ targets:
         PRODUCT_NAME: WaiDictationTests
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_STRICT_CONCURRENCY: complete
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
         # Тестовый бандл грузится в чужой процесс (xctest), поэтому нужные ему
         # фреймворки лежат внутри него самого.
         LD_RUNPATH_SEARCH_PATHS:

@@ -40,12 +40,32 @@ SPARKLE_KEY_PATH="${SPARKLE_KEY_PATH:-}"
 DEVELOPER_ID="${DEVELOPER_ID:-}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 SPARKLE_BIN="${SPARKLE_BIN:-}"
+LIVE_BENCHMARK_REPORT="${LIVE_BENCHMARK_REPORT:-quality/live-benchmark-report.json}"
+RELEASE_EVIDENCE="${RELEASE_EVIDENCE:-quality/release-evidence.json}"
+REUSE_VERIFIED_ARTIFACT="${REUSE_VERIFIED_ARTIFACT:-0}"
 
 fail() {
   echo "" >&2
   echo "$1" >&2
   exit 1
 }
+
+# --- Один SHA и подтверждённый CI -------------------------------------------
+
+[[ -z "$(git status --porcelain)" ]] || fail "Release требует чистого дерева."
+[[ "$(git branch --show-current)" == "main" ]] || fail "Release разрешён только из main."
+git fetch --quiet origin main
+HEAD_SHA=$(git rev-parse HEAD)
+ORIGIN_SHA=$(git rev-parse origin/main)
+[[ "$HEAD_SHA" == "$ORIGIN_SHA" ]] || fail "HEAD не совпадает с origin/main."
+command -v gh >/dev/null || fail "Не найден gh для проверки required CI."
+CI_CONCLUSION=$(gh run list \
+  --workflow CI \
+  --commit "$HEAD_SHA" \
+  --limit 1 \
+  --json conclusion,status,headSha \
+  --jq '.[0] | select(.headSha == "'"$HEAD_SHA"'") | select(.status == "completed") | .conclusion')
+[[ "$CI_CONCLUSION" == "success" ]] || fail "Нет зелёного завершённого CI на SHA $HEAD_SHA."
 
 # --- Ключ подписи обновлений -------------------------------------------------
 
@@ -106,7 +126,7 @@ if [[ -z "$DEVELOPER_ID" || -z "$NOTARY_PROFILE" ]]; then
   DEVELOPER_ID=\"Developer ID Application: Имя (TEAMID)\"
   NOTARY_PROFILE=\"имя профиля из xcrun notarytool store-credentials\"
 
-Пробный образ без подписи: ./scripts/build-dmg.sh"
+Отдельный Debug-probe: ./scripts/build-dmg.sh"
 fi
 
 # --- Проверки перед сборкой --------------------------------------------------
@@ -158,16 +178,48 @@ fi
 echo "→ Проверяю сетевую поверхность"
 ./scripts/check-network-surface.sh >/dev/null
 
+[[ -f "$LIVE_BENCHMARK_REPORT" ]] || fail "Нет живого benchmark report: $LIVE_BENCHMARK_REPORT
+Заполните quality/live-benchmark-template.json по frozen corpus. Safe beta без этого gate не выпускается."
+echo "→ Проверяю живой benchmark"
+./scripts/validate-live-benchmark.py "$LIVE_BENCHMARK_REPORT" "$HEAD_SHA"
+
 echo "→ Гоняю тесты"
 swift test --package-path Packages/DictationCore >/dev/null
 swift test --package-path Packages/LocalASR >/dev/null
+XCODEGEN=$(./scripts/pinned-xcodegen.sh)
+(cd apps/macos && "$XCODEGEN" generate >/dev/null)
+xcodebuild -project apps/macos/WaiDictation.xcodeproj -scheme WaiDictation \
+  -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test >/dev/null
+
+echo "→ Проверяю runtime без сети"
+./scripts/test-zero-network.sh >/dev/null
+./scripts/test-zero-network-trace.sh >/dev/null
 
 # --- Сборка образа -----------------------------------------------------------
 
 echo "→ Собираю образ"
-DEVELOPER_ID="$DEVELOPER_ID" NOTARY_PROFILE="$NOTARY_PROFILE" ./scripts/build-dmg.sh
+if [[ "$REUSE_VERIFIED_ARTIFACT" == "1" ]]; then
+  echo "  Использую уже проверенный artifact; новый DMG не создаётся."
+elif [[ "$REUSE_VERIFIED_ARTIFACT" == "0" ]]; then
+  DEVELOPER_ID="$DEVELOPER_ID" NOTARY_PROFILE="$NOTARY_PROFILE" ./scripts/build-dmg.sh
+else
+  fail "REUSE_VERIFIED_ARTIFACT принимает только 0 или 1."
+fi
 
 [[ -d "$APP_PATH" ]] || fail "Сборка не дала приложения: $APP_PATH"
+
+echo "→ Проверяю установленный artifact"
+./scripts/smoke-installed-artifact.sh "$APP_PATH"
+
+for resource in \
+  LICENSE NOTICE THIRD_PARTY_LICENSES.md model-manifest.json \
+  FluidAudio-Apache-2.0.txt FluidAudio-fastcluster-BSD.txt \
+  FluidAudio-vbx-Apache-2.0.txt Sparkle-LICENSE.txt \
+  Parakeet-CC-BY-4.0.txt
+do
+  [[ -f "$APP_PATH/Contents/Resources/$resource" ]] \
+    || fail "В artifact нет обязательного resource: $resource"
+done
 
 plist_value() {
   /usr/libexec/PlistBuddy -c "Print :$1" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
@@ -194,6 +246,24 @@ fi
 
 DMG_PATH="artifacts/dmg/WaiDictation-$VERSION.dmg"
 [[ -f "$DMG_PATH" ]] || fail "Образа нет: $DMG_PATH"
+
+# В режиме reuse особенно важно доказать, что это настоящий Developer ID /
+# notarized artifact, а не прошедшая smoke ad-hoc сборка.
+APP_AUTHORITY=$(codesign -dvv "$APP_PATH" 2>&1 | sed -n 's/^Authority=//p' | head -1)
+[[ "$APP_AUTHORITY" == Developer\ ID\ Application:* ]] \
+  || fail "Приложение подписано не Developer ID Application: ${APP_AUTHORITY:-ad-hoc}."
+xcrun stapler validate "$DMG_PATH" >/dev/null \
+  || fail "Staple ticket не подтверждён для $DMG_PATH."
+spctl --assess --type install --verbose=2 "$DMG_PATH" \
+  || fail "Gatekeeper не принимает $DMG_PATH."
+
+[[ -f "$RELEASE_EVIDENCE" ]] || fail "Нет manual evidence для этого DMG: $RELEASE_EVIDENCE
+
+Сначала проверьте подписанный DMG по quality/manual-release-matrix.md,
+заполните копию quality/release-evidence-template.json и повторите без пересборки:
+  REUSE_VERIFIED_ARTIFACT=1 RELEASE_EVIDENCE=$RELEASE_EVIDENCE ./scripts/release.sh"
+echo "→ Сверяю manual evidence с SHA и DMG"
+./scripts/validate-release-evidence.py "$RELEASE_EVIDENCE" "$HEAD_SHA" "$DMG_PATH"
 
 echo "  версия $VERSION, сборка $BUILD, минимум macOS $MIN_OS"
 

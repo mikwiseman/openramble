@@ -17,11 +17,11 @@ final class OverlayContentTests: XCTestCase {
     // MARK: - Состояния
 
     func testКаждоеСостояниеПодписаноПоСвоему() {
-        XCTAssertEqual(content(.idle).title, "Готово")
-        XCTAssertEqual(content(.preparing).title, "Включаю микрофон…")
-        XCTAssertEqual(content(.listening).title, "Слушаю")
-        XCTAssertEqual(content(.transcribing).title, "Распознаю…")
-        XCTAssertEqual(content(.inserting).title, "Вставляю")
+        XCTAssertEqual(content(.idle).title, "Done")
+        XCTAssertEqual(content(.preparing).title, "Turning on the microphone…")
+        XCTAssertEqual(content(.listening).title, "Listening")
+        XCTAssertEqual(content(.transcribing).title, "Transcribing…")
+        XCTAssertEqual(content(.inserting).title, "Inserting")
     }
 
     func testЗаписьОтличаетсяЦветомОтОстального() {
@@ -36,35 +36,47 @@ final class OverlayContentTests: XCTestCase {
 
     /// Секунды — единственный признак, что запись правда идёт.
     func testСчётчикПоказываетсяТолькоТамГдеОнЗначит() {
-        XCTAssertEqual(content(.listening, elapsed: 7).subtitle, "7 с")
-        XCTAssertEqual(content(.transcribing, elapsed: 12.4).subtitle, "12 с")
+        XCTAssertEqual(
+            content(.listening, elapsed: 7).subtitle,
+            "7 s · Hotkey — insert · Esc — delete"
+        )
+        XCTAssertEqual(content(.transcribing, elapsed: 12.4).subtitle, "12 s")
         XCTAssertNil(content(.preparing, elapsed: 3).subtitle)
         XCTAssertNil(content(.inserting, elapsed: 3).subtitle)
         XCTAssertNil(content(.idle, elapsed: 3).subtitle)
     }
 
     func testСчётчикНеУходитВМинус() {
-        XCTAssertEqual(content(.listening, elapsed: -2).subtitle, "0 с")
+        XCTAssertEqual(
+            content(.listening, elapsed: -2).subtitle,
+            "0 s · Hotkey — insert · Esc — delete"
+        )
     }
 
     /// «5 с» VoiceOver читает как «5 эс».
     func testСекундыЧитаютсяСловамиИСклоняются() {
-        XCTAssertEqual(OverlayContent.spokenSeconds(1), "1 секунда")
-        XCTAssertEqual(OverlayContent.spokenSeconds(2), "2 секунды")
-        XCTAssertEqual(OverlayContent.spokenSeconds(4), "4 секунды")
-        XCTAssertEqual(OverlayContent.spokenSeconds(5), "5 секунд")
-        XCTAssertEqual(OverlayContent.spokenSeconds(11), "11 секунд")
-        XCTAssertEqual(OverlayContent.spokenSeconds(12), "12 секунд")
-        XCTAssertEqual(OverlayContent.spokenSeconds(21), "21 секунда")
-        XCTAssertEqual(OverlayContent.spokenSeconds(22), "22 секунды")
-        XCTAssertEqual(OverlayContent.spokenSeconds(25), "25 секунд")
-        XCTAssertEqual(OverlayContent.spokenSeconds(111), "111 секунд")
-        XCTAssertEqual(OverlayContent.spokenSeconds(0), "0 секунд")
+        XCTAssertEqual(OverlayContent.spokenSeconds(1), "1 second")
+        XCTAssertEqual(OverlayContent.spokenSeconds(2), "2 seconds")
+        XCTAssertEqual(OverlayContent.spokenSeconds(4), "4 seconds")
+        XCTAssertEqual(OverlayContent.spokenSeconds(5), "5 seconds")
+        XCTAssertEqual(OverlayContent.spokenSeconds(11), "11 seconds")
+        XCTAssertEqual(OverlayContent.spokenSeconds(12), "12 seconds")
+        XCTAssertEqual(OverlayContent.spokenSeconds(21), "21 seconds")
+        XCTAssertEqual(OverlayContent.spokenSeconds(22), "22 seconds")
+        XCTAssertEqual(OverlayContent.spokenSeconds(25), "25 seconds")
+        XCTAssertEqual(OverlayContent.spokenSeconds(111), "111 seconds")
+        XCTAssertEqual(OverlayContent.spokenSeconds(0), "0 seconds")
     }
 
     func testЯрлыкЗаписиНазываетСекундыСловами() {
-        XCTAssertEqual(content(.listening, elapsed: 3).accessibilityLabel, "Идёт запись, 3 секунды")
-        XCTAssertEqual(content(.listening, elapsed: 1).accessibilityLabel, "Идёт запись, 1 секунда")
+        XCTAssertEqual(
+            content(.listening, elapsed: 3).accessibilityLabel,
+            "Recording, 3 seconds. Press the hotkey to insert. Press Escape to delete the recording."
+        )
+        XCTAssertEqual(
+            content(.listening, elapsed: 1).accessibilityLabel,
+            "Recording, 1 second. Press the hotkey to insert. Press Escape to delete the recording."
+        )
     }
 
     // MARK: - Объявления
@@ -76,14 +88,14 @@ final class OverlayContentTests: XCTestCase {
     func testНачалоЗаписиОбъявляетсяСрочно() {
         let content = content(.listening)
 
-        XCTAssertEqual(content.announcement, "Идёт запись")
+        XCTAssertEqual(content.announcement, "Recording. Press the hotkey to insert. Press Escape to delete the recording.")
         XCTAssertTrue(content.isAnnouncementUrgent)
     }
 
     func testРаботаПослеЗаписиТожеОбъявляется() {
-        XCTAssertEqual(content(.transcribing).announcement, "Запись остановлена, распознаю речь")
-        XCTAssertEqual(content(.inserting).announcement, "Вставляю текст")
-        XCTAssertEqual(content(.preparing).announcement, "Включаю микрофон")
+        XCTAssertEqual(content(.transcribing).announcement, "Recording stopped, transcribing speech")
+        XCTAssertEqual(content(.inserting).announcement, "Inserting text")
+        XCTAssertEqual(content(.preparing).announcement, "Turning on the microphone")
     }
 
     /// Панель в покое убирается с экрана — объявлять там нечего.
@@ -94,7 +106,7 @@ final class OverlayContentTests: XCTestCase {
     // MARK: - Сообщения
 
     func testСообщениеЗаменяетСобойСостояние() {
-        let notice = DictationNotice(kind: .warning, message: "Текст не вставлен: активен защищённый ввод.")
+        let notice = DictationNotice(kind: .warning, message: "Text not inserted: secure input is active.")
         let content = content(.listening, notice: notice, elapsed: 9)
 
         XCTAssertEqual(content.title, notice.message)

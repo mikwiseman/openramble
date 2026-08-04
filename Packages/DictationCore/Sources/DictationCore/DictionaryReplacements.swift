@@ -50,7 +50,11 @@ public enum DictionaryReplacements {
     /// фонетический добор: он ловит те написания термина, которых в словаре
     /// нет и быть не может, потому что модель пишет одно и то же слово
     /// по-разному в разных фразах. Замер обоих проходов — в docs/benchmarks.md.
-    public static func apply(_ replacements: [DictionaryReplacement], to text: String) -> String {
+    public static func apply(
+        _ replacements: [DictionaryReplacement],
+        to text: String,
+        phoneticMatching: Bool = true
+    ) -> String {
         guard !replacements.isEmpty, !text.isEmpty else { return text }
 
         var result = text
@@ -65,6 +69,7 @@ public enum DictionaryReplacements {
                 in: result
             )
         }
+        guard phoneticMatching else { return result }
         return PhoneticMatching.apply(replacements, to: result)
     }
 

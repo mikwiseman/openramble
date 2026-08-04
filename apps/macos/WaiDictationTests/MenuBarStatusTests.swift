@@ -39,30 +39,30 @@ final class MenuBarStatusTests: XCTestCase {
     func testОписаниеЗначкаНазываетТоЧтоПроисходит() {
         XCTAssertEqual(
             MenuBarStatus.accessibilityLabel(state: .listening, isDictationReady: true),
-            "Wai Dictation: идёт запись"
+            "Wai Dictation: recording"
         )
         XCTAssertEqual(
             MenuBarStatus.accessibilityLabel(state: .idle, isDictationReady: false),
-            "Wai Dictation: нужна настройка"
+            "Wai Dictation: setup needed"
         )
         XCTAssertEqual(
             MenuBarStatus.accessibilityLabel(state: .idle, isDictationReady: true),
-            "Wai Dictation: готово к диктовке"
+            "Wai Dictation: ready to dictate"
         )
     }
 
     func testПерваяСтрокаМенюГоворитЧтоДелать() {
         XCTAssertEqual(
-            MenuBarStatus.statusLine(state: .idle, isDictationReady: true, isHandsFreeActive: false, hotkeyTitle: "Правый Command"),
-            "Удерживайте Правый Command и говорите"
+            MenuBarStatus.statusLine(state: .idle, isDictationReady: true, isHandsFreeActive: false, hotkeyTitle: "Right Command"),
+            "Hold Right Command and speak"
         )
         XCTAssertEqual(
-            MenuBarStatus.statusLine(state: .idle, isDictationReady: false, isHandsFreeActive: false, hotkeyTitle: "Правый Command"),
-            "Нужна настройка"
+            MenuBarStatus.statusLine(state: .idle, isDictationReady: false, isHandsFreeActive: false, hotkeyTitle: "Right Command"),
+            "Setup needed"
         )
         XCTAssertEqual(
             MenuBarStatus.statusLine(state: .listening, isDictationReady: true, isHandsFreeActive: false, hotkeyTitle: "Fn (🌐)"),
-            "Слушаю"
+            "Listening"
         )
     }
 }
@@ -117,11 +117,11 @@ final class MenuHandsFreeLineTests: XCTestCase {
             state: .listening,
             isDictationReady: true,
             isHandsFreeActive: true,
-            hotkeyTitle: "Правый Command"
+            hotkeyTitle: "Right Command"
         )
 
         XCTAssertTrue(
-            line.contains("Правый Command"),
+            line.contains("Right Command"),
             "Клавишу отпустили, а запись идёт — человек обязан узнать, чем её закончить: \(line)"
         )
     }
@@ -131,9 +131,9 @@ final class MenuHandsFreeLineTests: XCTestCase {
             state: .listening,
             isDictationReady: true,
             isHandsFreeActive: false,
-            hotkeyTitle: "Правый Command"
+            hotkeyTitle: "Right Command"
         )
 
-        XCTAssertEqual(line, "Слушаю", "Клавиша зажата — объяснять нечего")
+        XCTAssertEqual(line, "Listening", "Клавиша зажата — объяснять нечего")
     }
 }

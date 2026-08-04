@@ -177,7 +177,153 @@ final class ModelStoreTests: XCTestCase {
 
         let state = await store.refreshState()
 
-        XCTAssertEqual(state, .notInstalled)
+        guard case .repairRequired = state else {
+            return XCTFail("Ожидался repairRequired, получено: \(state)")
+        }
+    }
+
+    func testRefreshRequiresReadyMarkerWhenModelDirectoryExists() async throws {
+        let manifest = makeManifest()
+        let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
+        let (store, layout) = makeStore(manifest: manifest, downloader: downloader)
+        await store.install()
+        try FileManager.default.removeItem(at: layout.readyMarker)
+
+        let state = await store.refreshState()
+
+        guard case .repairRequired = state else {
+            return XCTFail("Ожидался repairRequired, получено: \(state)")
+        }
+    }
+
+    func testRefreshRejectsCorruptedReadyMarker() async throws {
+        let manifest = makeManifest()
+        let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
+        let (store, layout) = makeStore(manifest: manifest, downloader: downloader)
+        await store.install()
+        try Data("not-json".utf8).write(to: layout.readyMarker)
+
+        let state = await store.refreshState()
+
+        guard case .repairRequired = state else {
+            return XCTFail("Ожидался repairRequired, получено: \(state)")
+        }
+    }
+
+    func testRefreshRequiresEveryInstalledFile() async throws {
+        let manifest = makeManifest()
+        let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
+        let (store, layout) = makeStore(manifest: manifest, downloader: downloader)
+        await store.install()
+        try FileManager.default.removeItem(at: layout.engineDirectory.appending(path: "vocab.json"))
+
+        let state = await store.refreshState()
+
+        guard case .repairRequired = state else {
+            return XCTFail("Ожидался repairRequired, получено: \(state)")
+        }
+    }
+
+    func testRefreshRejectsHiddenFileOutsideManifestInventory() async throws {
+        let manifest = makeManifest()
+        let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
+        let (store, layout) = makeStore(manifest: manifest, downloader: downloader)
+        await store.install()
+        try Data("unexpected".utf8).write(to: layout.engineDirectory.appending(path: ".hidden"))
+
+        let state = await store.refreshState()
+
+        guard case .repairRequired = state else {
+            return XCTFail("Exact inventory обязан отвергать hidden-файл: \(state)")
+        }
+    }
+
+    /// Finder создаёт `.DS_Store` при простом просмотре папки. Это мусор, а не
+    /// повреждение: объявлять из-за него repair и перекачивать 483 МБ нельзя.
+    func testRefreshУбираетМусорFinderВместоRepair() async throws {
+        let manifest = makeManifest()
+        let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
+        let (store, layout) = makeStore(manifest: manifest, downloader: downloader)
+        await store.install()
+        let dsStore = layout.engineDirectory.appending(path: ".DS_Store")
+        try Data([0x00, 0x00, 0x00, 0x01]).write(to: dsStore)
+
+        let state = await store.refreshState()
+
+        guard case .ready = state else {
+            return XCTFail("Просмотр папки в Finder не повод перекачивать модель: \(state)")
+        }
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: dsStore.path),
+            "Мусор Finder должен быть убран, иначе он вернёт repair при следующем осмотре"
+        )
+    }
+
+    func testRefreshDetectsSameSizeMutation() async throws {
+        let manifest = makeManifest()
+        let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
+        let (store, layout) = makeStore(manifest: manifest, downloader: downloader)
+        await store.install()
+        let target = layout.engineDirectory.appending(path: "vocab.json")
+        let corrupt = Data(repeating: 0x78, count: fileB.count)
+        try corrupt.write(to: target)
+        try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(10)], ofItemAtPath: target.path)
+
+        let state = await store.refreshState()
+
+        guard case .repairRequired = state else {
+            return XCTFail("Ожидался repairRequired, получено: \(state)")
+        }
+    }
+
+    func testRefreshRestoresInterruptedPromotionBackup() async throws {
+        let manifest = makeManifest()
+        let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
+        let (store, layout) = makeStore(manifest: manifest, downloader: downloader)
+        await store.install()
+        try FileManager.default.moveItem(at: layout.installedDirectory, to: layout.backupDirectory)
+
+        let state = await store.refreshState()
+
+        XCTAssertTrue(state.isReady)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: layout.readyMarker.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: layout.backupDirectory.path))
+    }
+
+    func testEveryPromotionInterruptionRecoversOldOrNewReadyModel() async throws {
+        for checkpoint in ModelPromotionCheckpoint.allCases {
+            let caseRoot = root.appending(path: String(describing: checkpoint))
+            try FileManager.default.createDirectory(at: caseRoot, withIntermediateDirectories: true)
+            let manifest = makeManifest()
+            let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
+            let layout = ModelInstallLayout(
+                root: caseRoot,
+                modelID: manifest.modelID,
+                revision: manifest.revision,
+                engineFolderName: "repo"
+            )
+
+            let baseline = ModelStore(manifest: manifest, layout: layout, downloader: downloader)
+            await baseline.install()
+            let baselineState = await baseline.currentState()
+            XCTAssertTrue(baselineState.isReady, "baseline \(checkpoint)")
+
+            let interrupted = ModelStore(
+                manifest: manifest,
+                layout: layout,
+                downloader: downloader,
+                injectedPromotionFailure: checkpoint
+            )
+            await interrupted.install()
+            guard case .failed = await interrupted.currentState() else {
+                return XCTFail("Ожидался injected failure на \(checkpoint)")
+            }
+
+            let relaunched = ModelStore(manifest: manifest, layout: layout, downloader: downloader)
+            let recovered = await relaunched.refreshState()
+            XCTAssertTrue(recovered.isReady, "После \(checkpoint) должна быть готова старая либо новая модель: \(recovered)")
+            XCTAssertFalse(FileManager.default.fileExists(atPath: layout.backupDirectory.path))
+        }
     }
 
     func testDeleteRemovesEverything() async throws {
@@ -211,6 +357,21 @@ final class ModelStoreTests: XCTestCase {
             firstRoundRequests,
             "Повторная установка готовой модели не должна ничего качать"
         )
+    }
+
+    func testExplicitRepairReinstallsEvenWhenStoreWasReady() async throws {
+        let manifest = makeManifest()
+        let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
+        let (store, _) = makeStore(manifest: manifest, downloader: downloader)
+        await store.install()
+        let firstRoundRequests = await downloader.requestedPaths.count
+
+        await store.repair()
+
+        let repairedState = await store.currentState()
+        let repairedRequests = await downloader.requestedPaths.count
+        XCTAssertTrue(repairedState.isReady)
+        XCTAssertEqual(repairedRequests, firstRoundRequests * 2)
     }
 
     func testProgressIsReportedWhileDownloading() {

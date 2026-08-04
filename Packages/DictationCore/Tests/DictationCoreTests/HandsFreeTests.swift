@@ -22,8 +22,7 @@ final class HandsFreeTests: XCTestCase {
             transcribe: { _ in ASRResult(text: "текст", audioDuration: 2, processingDuration: 0.1) },
             inserter: inserter,
             overlay: FakeOverlay(),
-            sounds: FakeSounds(),
-            recovery: FakeRecovery()
+            sounds: FakeSounds()
         )
     }
 

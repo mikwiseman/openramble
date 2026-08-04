@@ -26,45 +26,71 @@ struct MenuContent: View {
             )
         )
 
+        if state.dictationState == .preparing || state.dictationState == .listening {
+            Divider()
+            Button("Stop and insert") { state.finishCurrentDictation() }
+            Button("Cancel and delete recording", role: .destructive) {
+                state.cancelCurrentDictation()
+            }
+        }
+
         if !state.isDictationReady {
             Divider()
             setupHints
-            Button("Пройти настройку заново") {
+            Button("Run setup again") {
                 showOnboarding()
                 openWindow(id: "onboarding")
             }
         }
 
-        // Текст, который не удалось вставить, сохраняется на диск — и до сих
-        // пор человеку сообщали только сам факт. «Он сохранён» без ответа на
-        // «где» почти бесполезно: файл лежит в служебной папке, которую в
-        // Finder ещё надо суметь открыть. А это единственная копия сказанного.
-        if let file = state.recoveredFile {
+        if state.recoveredText != nil {
             Divider()
-            Button("Показать спасённый текст") {
-                NSWorkspace.shared.activateFileViewerSelecting([file])
+            Button("Retry insert") { state.retryRecoveredText() }
+            Button("Copy text") { state.copyRecoveredText() }
+            Button("Delete saved text", role: .destructive) {
+                state.deleteRecoveredText()
             }
+        }
+
+        if state.recoveredRecording != nil {
+            Divider()
+            Text("Local recording after a failure")
+            Button("Retry transcription") { state.retryRecoveredRecording() }
+                .disabled(!state.modelState.isReady || state.dictationState != .idle)
+            Button("Delete recording") { state.deleteRecoveredRecording() }
         }
 
         Divider()
 
-        Button("Проверить обновления…") { updater.checkForUpdates() }
             .disabled(!updater.canCheckForUpdates)
 
-        Button("Настройки…") { openSettings() }
+        Button("Settings…") { openSettings() }
             .keyboardShortcut(",", modifiers: .command)
 
-        Button("Завершить") { NSApplication.shared.terminate(nil) }
+        Button("Quit Wai Dictation") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q", modifiers: .command)
     }
 
     @ViewBuilder
     private var setupHints: some View {
         if !state.accessibilityGranted {
-            Button("Выдать универсальный доступ") { state.requestAccessibility() }
+            switch state.accessibilityState {
+            case .denied:
+                Button("Grant Accessibility access") { state.requestAccessibility() }
+            case .waitingForSettings:
+                Button("Open Accessibility settings") { state.openAccessibilitySettings() }
+            case .restartRequired:
+                Button("Relaunch to apply access") { state.restartForAccessibility() }
+            case .repairRequired, .failed:
+                Text("Accessibility access needs repair")
+            case .repairing:
+                Text("Repairing Accessibility access…")
+            case .granted:
+                EmptyView()
+            }
         }
         if !state.microphoneGranted {
-            Button("Разрешить микрофон") { state.requestMicrophone() }
+            Button("Allow microphone") { state.requestMicrophone() }
         }
         // Через тот же тип, что и оба экрана. Раньше меню знало про модель один
         // булев «готова или нет» и предлагало «Скачать» даже посреди загрузки —
@@ -75,13 +101,16 @@ struct MenuContent: View {
             isPreparingEngine: state.isPreparingEngine,
             place: .settings
         )
-        if !state.modelState.isReady {
+        if state.modelState.isReady, !state.isEngineReady {
+            Text("Preparing the model for dictation…")
+        } else if !state.modelState.isReady {
             Text(model.progressLabel.map { "\(model.title) — \($0)" } ?? model.title)
 
             ForEach(model.actions.filter { $0 != .delete }, id: \.self) { action in
-                Button(action.title) {
+                Button(model.title(for: action)) {
                     switch action {
-                    case .install, .retry: state.installModel()
+                    case .install, .retry, .repair: state.installModel()
+                    case .cancel: state.cancelModelInstall()
                     case .delete: break
                     }
                 }

@@ -53,10 +53,10 @@ struct OverlayContent: Equatable {
         switch state {
         case .idle:
             return OverlayContent(
-                title: "Готово",
+                title: "Done",
                 subtitle: nil,
                 tone: .idle,
-                accessibilityLabel: "Диктовка не идёт",
+                accessibilityLabel: "Not dictating",
                 // Панель в этот момент убирается. Объявлять «готово» в пустоту
                 // незачем: человек и так слышал, что диктовка закончилась.
                 announcement: nil,
@@ -65,44 +65,44 @@ struct OverlayContent: Equatable {
 
         case .preparing:
             return OverlayContent(
-                title: "Включаю микрофон…",
+                title: "Turning on the microphone…",
                 subtitle: nil,
                 tone: .working,
-                accessibilityLabel: "Включаю микрофон",
-                announcement: "Включаю микрофон",
+                accessibilityLabel: "Turning on the microphone",
+                announcement: "Turning on the microphone",
                 isAnnouncementUrgent: false
             )
 
         case .listening:
             let seconds = spokenSeconds(elapsed)
             return OverlayContent(
-                title: "Слушаю",
-                subtitle: shortSeconds(elapsed),
+                title: "Listening",
+                subtitle: "\(shortSeconds(elapsed)) · Hotkey — insert · Esc — delete",
                 tone: .recording,
-                accessibilityLabel: "Идёт запись, \(seconds)",
+                accessibilityLabel: "Recording, \(seconds). Press the hotkey to insert. Press Escape to delete the recording.",
                 // Главное объявление во всём приложении: без него незрячий
                 // человек не знает, что микрофон включён.
-                announcement: "Идёт запись",
+                announcement: "Recording. Press the hotkey to insert. Press Escape to delete the recording.",
                 isAnnouncementUrgent: true
             )
 
         case .transcribing:
             return OverlayContent(
-                title: "Распознаю…",
+                title: "Transcribing…",
                 subtitle: shortSeconds(elapsed),
                 tone: .working,
-                accessibilityLabel: "Запись остановлена, распознаю речь",
-                announcement: "Запись остановлена, распознаю речь",
+                accessibilityLabel: "Recording stopped, transcribing speech",
+                announcement: "Recording stopped, transcribing speech",
                 isAnnouncementUrgent: false
             )
 
         case .inserting:
             return OverlayContent(
-                title: "Вставляю",
+                title: "Inserting",
                 subtitle: nil,
                 tone: .working,
-                accessibilityLabel: "Вставляю текст",
-                announcement: "Вставляю текст",
+                accessibilityLabel: "Inserting text",
+                announcement: "Inserting text",
                 isAnnouncementUrgent: false
             )
         }
@@ -118,7 +118,7 @@ struct OverlayContent: Equatable {
 
     /// Счётчик на панели. Коротко — места там нет.
     private static func shortSeconds(_ elapsed: TimeInterval) -> String {
-        String(format: "%.0f с", max(0, elapsed))
+        String(format: "%.0f s", max(0, elapsed))
     }
 
     /// То же число словами.
@@ -132,12 +132,6 @@ struct OverlayContent: Equatable {
 
     /// Форма слова «секунда» для числа.
     private static func secondsWord(_ value: Int) -> String {
-        let hundred = value % 100
-        if (11...14).contains(hundred) { return "секунд" }
-        switch value % 10 {
-        case 1: return "секунда"
-        case 2...4: return "секунды"
-        default: return "секунд"
-        }
+        value == 1 ? "second" : "seconds"
     }
 }

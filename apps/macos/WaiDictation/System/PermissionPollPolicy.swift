@@ -11,9 +11,6 @@ import Foundation
 /// Совсем бросить опрос тоже нельзя: с отозванным доступом горячая клавиша
 /// молча перестаёт работать, и значок в строке меню обязан об этом сказать.
 enum PermissionPollPolicy {
-    /// Во сколько раз реже спрашивать, когда всё уже выдано.
-    static let idleFactor: Double = 30
-
     /// Возвращает промежуток между опросами. Ноль — не опрашивать.
     static func interval(
         accessibilityGranted: Bool,
@@ -23,10 +20,10 @@ enum PermissionPollPolicy {
         // Ноль означает «опрос выключен снаружи» — так делают тесты.
         guard base > 0 else { return 0 }
 
-        // Чего-то не хватает — человек прямо сейчас в системных настройках и
-        // ждёт, что экран отзовётся на выданное разрешение.
-        guard accessibilityGranted, microphoneGranted else { return base }
-
-        return base * idleFactor
+        // Revoke не присылает надёжного события. Safe beta обязана заметить
+        // потерю Accessibility не позже двух секунд даже в полном покое.
+        _ = accessibilityGranted
+        _ = microphoneGranted
+        return min(base, 2)
     }
 }

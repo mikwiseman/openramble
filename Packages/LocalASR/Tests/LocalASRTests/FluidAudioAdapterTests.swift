@@ -1,3 +1,4 @@
+import DictationCore
 import FluidAudio
 import XCTest
 @testable import LocalASR
@@ -92,6 +93,74 @@ final class FluidAudioAdapterTests: XCTestCase {
         let enabled = await adapter.usesMelChunkContext
 
         XCTAssertFalse(enabled, "Включённый mel-контекст молча съедает текст на стыке окон")
+    }
+
+    func testAdapterOwnsOfflineModeBeforeLoading() {
+        ModelHub.offlineMode = false
+
+        FluidAudioAdapter.enforceOfflineMode()
+
+        XCTAssertTrue(ModelHub.offlineMode)
+    }
+
+    /// Папка без CTC-бандлов — это ошибка загрузки, а не молчаливое «подсказки
+    /// не работают». Сети здесь нет: отказ происходит на проверке файлов.
+    func testНеполнаяПапкаПодсказчикаДаётВидимуюОшибку() async throws {
+        let adapter = FluidAudioAdapter()
+        let empty = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appending(path: "ctc-empty-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: empty, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: empty) }
+
+        do {
+            try await adapter.loadVocabularyModels(
+                from: empty,
+                boost: VocabularyBoost(terms: [.init(text: "deploy")])
+            )
+            XCTFail("Пустая папка обязана дать ошибку загрузки подсказчика")
+        } catch let error as ASREngineError {
+            guard case .modelsUnavailable = error else {
+                return XCTFail("Ожидалась modelsUnavailable, пришло: \(error)")
+            }
+        }
+    }
+
+    /// Пустой список терминов — это осознанное «подсказки выключены», а не
+    /// повод грузить CTC-модели в память.
+    func testПустойСписокТерминовНеТрогаетМодели() async throws {
+        let adapter = FluidAudioAdapter()
+        let missing = URL(fileURLWithPath: "/nonexistent-\(UUID().uuidString)")
+
+        // Папки не существует, но с пустым списком терминов адаптер не должен
+        // даже пытаться её читать.
+        try await adapter.loadVocabularyModels(from: missing, boost: VocabularyBoost(terms: []))
+    }
+
+    /// Неизвестный код языка — ошибка вызывающего, и она видима сразу,
+    /// до загрузки моделей: молча превратиться в «auto» она не имеет права.
+    func testНеизвестнаяПодсказкаЯзыкаДаётВидимуюОшибку() async {
+        let adapter = FluidAudioAdapter()
+
+        do {
+            _ = try await adapter.transcribe(samples: [0.1, 0.2], languageHint: "xx")
+            XCTFail("Неизвестный код обязан дать ошибку")
+        } catch let error as ASREngineError {
+            guard case let .inferenceFailed(detail) = error else {
+                return XCTFail("Ожидалась inferenceFailed, пришло: \(error)")
+            }
+            XCTAssertTrue(detail.contains("xx"))
+        } catch {
+            XCTFail("Неожиданная ошибка: \(error)")
+        }
+    }
+
+    /// Список подсказок — источник для выбора языка в интерфейсе.
+    func testСписокЯзыковНепустИБезДубликатов() {
+        let hints = FluidAudioAdapter.supportedLanguageHints
+
+        XCTAssertTrue(hints.contains("ru"))
+        XCTAssertTrue(hints.contains("en"))
+        XCTAssertEqual(hints.count, Set(hints).count, "Дубликаты сломали бы Picker")
     }
 
     func testMixedRussianEnglishKeepsLatinIntact() {
