@@ -108,8 +108,24 @@ public struct HostOnlyPasteboard: DictationPasteboard {
     private let transactions: PasteboardTransactionStorage
 
     static let maximumSnapshotBytes = 16 * 1024 * 1024
-    static let allowedSnapshotTypes: Set<NSPasteboard.PasteboardType> = [
-        .string, .rtf, .html, .png, .tiff,
+
+    /// Содержимое, которое нельзя ни снять, ни восстановить достоверно.
+    ///
+    /// Всё остальное — включая служебные типы браузеров и мессенджеров —
+    /// обычные байты: снимок берёт их как есть и возвращает как есть. Раньше
+    /// здесь стоял белый список из пяти типов, и вставка отказывалась после
+    /// любого «скопировал из Chrome» — то есть в самом частом состоянии
+    /// буфера обмена.
+    ///
+    /// - Concealed: пароль из менеджера паролей. Его нельзя держать в памяти
+    ///   процесса и нельзя потерять — не трогаем буфер вовсе.
+    /// - File promise: данные материализуются только в контексте drop;
+    ///   снимок обещания не восстановил бы файл.
+    static let untouchableTypes: Set<NSPasteboard.PasteboardType> = [
+        concealedType,
+        NSPasteboard.PasteboardType("com.apple.pasteboard.promised-file-content-type"),
+        NSPasteboard.PasteboardType("com.apple.pasteboard.promised-file-url"),
+        NSPasteboard.PasteboardType("Apple files promise pasteboard type"),
     ]
 
     public init(name: String = NSPasteboard.Name.general.rawValue) {
@@ -192,9 +208,13 @@ public struct HostOnlyPasteboard: DictationPasteboard {
         for item in pasteboard.pasteboardItems ?? [] {
             var values: [NSPasteboard.PasteboardType: Data] = [:]
             for type in item.types {
-                guard Self.allowedSnapshotTypes.contains(type),
-                      let data = item.data(forType: type)
-                else {
+                guard !Self.untouchableTypes.contains(type) else {
+                    throw TextInsertionError.protectedClipboard
+                }
+                // Тип объявлен, а данных нет — ленивый provider не отдал
+                // содержимое. Частичный снимок вернул бы урезанную копию,
+                // а молчаливая деградация здесь запрещена.
+                guard let data = item.data(forType: type) else {
                     throw TextInsertionError.protectedClipboard
                 }
                 totalBytes += data.count

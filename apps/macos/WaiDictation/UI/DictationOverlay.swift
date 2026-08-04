@@ -54,7 +54,11 @@ public final class DictationOverlay: OverlayPresenting {
             panel.isOpaque = false
             panel.hasShadow = true
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-            panel.contentView = NSHostingView(rootView: OverlayView(model: model))
+            let hosting = NSHostingView(rootView: OverlayView(model: model))
+            // Панель растёт за содержимым: сообщение в две строки не имеет
+            // права обрезаться до «автоматич…» — обрезанный тост хуже молчания.
+            hosting.sizingOptions = .preferredContentSize
+            panel.contentView = hosting
             self.panel = panel
         }
         position()
@@ -239,10 +243,12 @@ private struct OverlayView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(content.title)
                     .font(.system(size: 13, weight: .medium))
+                    .fixedSize(horizontal: false, vertical: true)
                 if let subtitle = content.subtitle {
                     Text(subtitle)
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             Spacer(minLength: 0)

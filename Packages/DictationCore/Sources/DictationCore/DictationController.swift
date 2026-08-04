@@ -391,7 +391,9 @@ public final class DictationController {
             // Не сбой, а нормальная ситуация: активно поле пароля.
             message = "Текст не вставлен: активен защищённый ввод. Доступны Copy и Retry."
         } else if let insertion = error as? TextInsertionError, insertion == .protectedClipboard {
-            message = "Clipboard protected: автоматическая вставка отменена. Доступны Copy и Retry."
+            // После перехода на снимок «любые байты как есть» сюда попадают
+            // только пароль из менеджера, file promise и буфер больше 16 МиБ.
+            message = "В буфере пароль или файл — вставка его не тронула. Текст: Copy и Retry."
         } else {
             message = "Текст не удалось вставить. Доступны Copy и Retry."
         }

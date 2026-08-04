@@ -125,17 +125,72 @@ final class HostOnlyPasteboardTests: XCTestCase {
         XCTAssertEqual(board.string(forType: .string), "новое пользователя")
     }
 
-    func testНеподдерживаемыйТипЗащищаетClipboardДоMutation() throws {
-        let custom = NSPasteboard.PasteboardType("com.example.secret")
+    /// Скопированное из браузера или мессенджера несёт свои служебные типы —
+    /// это нормальное содержимое, а не угроза. Снимок берёт данные любого типа
+    /// байт-в-байт и возвращает их байт-в-байт; отказ здесь блокировал бы
+    /// диктовку после любого «скопировал из Chrome».
+    func testПроизвольныеТипыСнимаютсяИВосстанавливаютсяБайтВБайт() throws {
+        let custom = NSPasteboard.PasteboardType("org.chromium.source-url")
         board.prepareForNewContents(with: .currentHostOnly)
-        board.setData(Data([1, 2, 3]), forType: custom)
+        let item = NSPasteboardItem()
+        item.setString("текст из браузера", forType: .string)
+        item.setData(Data([1, 2, 3]), forType: custom)
+        XCTAssertTrue(board.writeObjects([item]))
+
+        let transaction = try pasteboard.beginHostOnlyWrite("диктовка")
+        XCTAssertEqual(board.string(forType: .string), "диктовка")
+        try pasteboard.restore(transaction)
+
+        XCTAssertEqual(board.string(forType: .string), "текст из браузера")
+        XCTAssertEqual(board.data(forType: custom), Data([1, 2, 3]))
+    }
+
+    /// Пароль из менеджера паролей помечен ConcealedType. Его нельзя ни
+    /// показывать, ни держать в памяти — вставка отказывается до mutation.
+    func testПарольВБуфереНеТрогаетсяВовсе() throws {
+        board.prepareForNewContents(with: .currentHostOnly)
+        let item = NSPasteboardItem()
+        item.setString("hunter2", forType: .string)
+        item.setString("", forType: HostOnlyPasteboard.concealedType)
+        XCTAssertTrue(board.writeObjects([item]))
         let before = board.changeCount
 
         XCTAssertThrowsError(try pasteboard.beginHostOnlyWrite("диктовка")) { error in
             XCTAssertEqual(error as? TextInsertionError, .protectedClipboard)
         }
         XCTAssertEqual(board.changeCount, before)
-        XCTAssertEqual(board.data(forType: custom), Data([1, 2, 3]))
+        XCTAssertEqual(board.string(forType: .string), "hunter2")
+    }
+
+    /// File promise обещает данные, которых ещё нет: материализовать и
+    /// восстановить его невозможно, поэтому вставка не трогает такой буфер.
+    func testFilePromiseНеТрогается() throws {
+        let promise = NSPasteboard.PasteboardType("com.apple.pasteboard.promised-file-content-type")
+        board.prepareForNewContents(with: .currentHostOnly)
+        let item = NSPasteboardItem()
+        item.setString("public.png", forType: promise)
+        XCTAssertTrue(board.writeObjects([item]))
+        let before = board.changeCount
+
+        XCTAssertThrowsError(try pasteboard.beginHostOnlyWrite("диктовка")) { error in
+            XCTAssertEqual(error as? TextInsertionError, .protectedClipboard)
+        }
+        XCTAssertEqual(board.changeCount, before)
+    }
+
+    /// Снимок живёт в памяти процесса — гигантский буфер туда не помещается
+    /// по бюджету, и честнее отказаться до mutation, чем не восстановить.
+    func testСверхразмерныйБуферНеТрогается() throws {
+        board.prepareForNewContents(with: .currentHostOnly)
+        let item = NSPasteboardItem()
+        item.setData(Data(repeating: 0x42, count: 17 * 1024 * 1024), forType: .string)
+        XCTAssertTrue(board.writeObjects([item]))
+        let before = board.changeCount
+
+        XCTAssertThrowsError(try pasteboard.beginHostOnlyWrite("диктовка")) { error in
+            XCTAssertEqual(error as? TextInsertionError, .protectedClipboard)
+        }
+        XCTAssertEqual(board.changeCount, before)
     }
 
     func testОшибкаЗаписиВозвращаетПрежнийClipboard() throws {
