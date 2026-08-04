@@ -71,6 +71,8 @@ func printState(_ state: ModelState, layout: ModelInstallLayout, manifest: Model
         print("Модель готова: \(directory.path)")
         print("Ревизия: \(manifest.revision)")
         print("Файлов: \(manifest.files.count), \(formatBytes(manifest.totalByteCount))")
+    case let .repairRequired(detail):
+        print("Модель требует восстановления: \(detail)")
     case let .failed(error):
         print("Ошибка: \(error)")
     case .deleting:

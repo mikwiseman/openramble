@@ -194,9 +194,10 @@ final class TrailingCommandParserTests: XCTestCase {
 
 final class TextPipelineTests: XCTestCase {
     func testFullPathFromRecognizedToInsertable() {
-        let pipeline = TextPipeline(replacements: [
-            DictionaryReplacement(spoken: "сентри", written: "Sentry"),
-        ])
+        let pipeline = TextPipeline(
+            replacements: [DictionaryReplacement(spoken: "сентри", written: "Sentry")],
+            allowPressReturnCommand: true
+        )
 
         let output = pipeline.process("сентри снова упал , посмотри отправь")
 
@@ -207,9 +208,10 @@ final class TextPipelineTests: XCTestCase {
     func testCommandIsStrippedBeforeDictionaryRuns() {
         // Порядок важен: если сначала применить словарь, он может задеть
         // слово команды и та перестанет распознаваться.
-        let pipeline = TextPipeline(replacements: [
-            DictionaryReplacement(spoken: "отправь", written: "ОТПРАВЬ"),
-        ])
+        let pipeline = TextPipeline(
+            replacements: [DictionaryReplacement(spoken: "отправь", written: "ОТПРАВЬ")],
+            allowPressReturnCommand: true
+        )
 
         let output = pipeline.process("готово отправь")
 
@@ -221,6 +223,13 @@ final class TextPipelineTests: XCTestCase {
         let output = TextPipeline().process("   ")
 
         XCTAssertEqual(output.text, "")
+        XCTAssertNil(output.command)
+    }
+
+    func testSafeBetaDoesNotExecuteSpokenSendCommand() {
+        let output = TextPipeline().process("важное сообщение отправь")
+
+        XCTAssertEqual(output.text, "Важное сообщение отправь")
         XCTAssertNil(output.command)
     }
 

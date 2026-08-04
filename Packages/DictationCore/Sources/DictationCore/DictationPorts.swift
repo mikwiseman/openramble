@@ -28,6 +28,7 @@ public protocol AudioCapturing: Sendable {
 public enum AudioCaptureError: Error, Sendable, Equatable {
     case microphonePermissionDenied
     case engineUnavailable(String)
+    case unsupportedAudioFormat(String)
     case diskFull
     case writeFailed(String)
     case notRecording
@@ -69,9 +70,17 @@ public enum TextInsertionError: Error, Sendable, Equatable {
     /// Вставлять туда нельзя, и это не сбой, а нормальная ситуация.
     case secureInputActive
     case clipboardWriteFailed
+    /// До Paste clipboard не удалось вернуть; текст не вставлен.
+    case clipboardRestoreFailed
+    /// Paste уже отправлен, но прежний clipboard вернуть не удалось.
+    case insertedButClipboardRestoreFailed
+    /// Текущее содержимое буфера нельзя безопасно материализовать и вернуть.
+    case protectedClipboard
     /// Пользователь не отпустил модификаторы, и нажатие превратилось бы в чужое сочетание.
     case modifiersStillHeld
     case targetUnavailable
+    /// Активное приложение изменилось после захвата цели диктовки.
+    case targetChanged
 }
 
 // MARK: - Обратная связь
@@ -85,7 +94,7 @@ public protocol OverlayPresenting: Sendable {
     func dismiss() async
 
     /// Показать сообщение, которое нельзя пропустить — например, что текст
-    /// не удалось вставить и он сохранён в файл.
+    /// не удалось вставить и он остался доступен в памяти через Copy/Retry.
     func presentNotice(_ notice: DictationNotice) async
 }
 
@@ -99,13 +108,21 @@ public struct DictationNotice: Sendable, Equatable {
 
     public let kind: Kind
     public let message: String
-    /// Файл, в который сохранён текст, если вставить не удалось.
-    public let recoveryFile: URL?
+    /// Распознанный текст, который не удалось вставить. Только память процесса.
+    public let recoverableText: String?
+    /// Локальный WAV, сохранённый после технического сбоя.
+    public let recoveryAudio: URL?
 
-    public init(kind: Kind, message: String, recoveryFile: URL? = nil) {
+    public init(
+        kind: Kind,
+        message: String,
+        recoverableText: String? = nil,
+        recoveryAudio: URL? = nil
+    ) {
         self.kind = kind
         self.message = message
-        self.recoveryFile = recoveryFile
+        self.recoverableText = recoverableText
+        self.recoveryAudio = recoveryAudio
     }
 }
 

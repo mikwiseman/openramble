@@ -10,6 +10,7 @@ import os
 /// Плата за это — задержка холодного старта, поэтому запуск сделан максимально
 /// коротким, а звук подтверждения играет только после первого пришедшего кадра.
 public actor MicrophoneCapture: AudioCapturing {
+    public typealias ConverterFactory = @Sendable (AVAudioFormat, AVAudioFormat) -> AVAudioConverter?
     private let logger = Logger(subsystem: "is.waiwai.dictation", category: "capture")
 
     /// Куда складывать записи.
@@ -34,13 +35,16 @@ public actor MicrophoneCapture: AudioCapturing {
     /// Молчать до остановки нельзя: закончившееся место на диске человек иначе
     /// обнаружит через пять минут говорения — и текста уже не будет.
     private let onFailure: @Sendable (AudioCaptureError) -> Void
+    private let converterFactory: ConverterFactory
 
     public init(
         directory: URL,
-        onFailure: @escaping @Sendable (AudioCaptureError) -> Void = { _ in }
+        onFailure: @escaping @Sendable (AudioCaptureError) -> Void = { _ in },
+        converterFactory: @escaping ConverterFactory = { AVAudioConverter(from: $0, to: $1) }
     ) {
         self.directory = directory
         self.onFailure = onFailure
+        self.converterFactory = converterFactory
     }
 
     /// Сколько прошло от запуска движка до первого реального кадра звука.
@@ -93,22 +97,42 @@ public actor MicrophoneCapture: AudioCapturing {
 
         // Ресемплинг нужен почти всегда: встроенный микрофон отдаёт 44,1 или 48 кГц,
         // а распознавание ждёт 16 кГц.
-        converter = inputFormat.sampleRate == sampleRate && inputFormat.channelCount == 1
-            ? nil
-            : AVAudioConverter(from: inputFormat, to: targetFormat)
+        do {
+            self.converter = try Self.converter(
+                from: inputFormat,
+                to: targetFormat,
+                factory: converterFactory
+            )
+        } catch {
+            writer.discard()
+            self.writer = nil
+            throw error
+        }
 
         let enqueue = await sink.start { [weak self] samples in
             await self?.consume(samples)
         }
 
         let converter = self.converter
+        let failureHandler = onFailure
+        let conversionFailure = FailureOnce()
         input.installTap(onBus: 0, bufferSize: 2048, format: inputFormat) { buffer, _ in
             // Колбэк приходит на потоке звукового движка — уносим данные в очередь
             // как обычный массив, а не как буфер, который нельзя передавать между
             // изоляциями. Кладём синхронно: очередь и есть гарантия порядка.
-            let samples = Self.extractSamples(from: buffer, using: converter, target: targetFormat)
-            guard !samples.isEmpty else { return }
-            enqueue(samples)
+            do {
+                let samples = try Self.extractSamples(from: buffer, using: converter, target: targetFormat)
+                guard !samples.isEmpty else { return }
+                enqueue(samples)
+            } catch {
+                conversionFailure.run {
+                    failureHandler(
+                        .unsupportedAudioFormat(
+                            "ошибка преобразования звука: \(error.localizedDescription)"
+                        )
+                    )
+                }
+            }
         }
 
         do {
@@ -190,26 +214,30 @@ public actor MicrophoneCapture: AudioCapturing {
     }
 
     /// Привести пришедший кадр к моно 16 кГц.
-    private nonisolated static func extractSamples(
+    nonisolated static func extractSamples(
         from buffer: AVAudioPCMBuffer,
         using converter: AVAudioConverter?,
         target: AVAudioFormat
-    ) -> [Float] {
+    ) throws -> [Float] {
         guard let converter else {
-            guard let channel = buffer.floatChannelData?[0] else { return [] }
+            guard let channel = buffer.floatChannelData?[0] else {
+                throw AudioCaptureError.unsupportedAudioFormat("микрофон не отдал Float32 PCM")
+            }
             return Array(UnsafeBufferPointer(start: channel, count: Int(buffer.frameLength)))
         }
 
         let ratio = target.sampleRate / buffer.format.sampleRate
         let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 512
-        guard let output = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else { return [] }
+        guard let output = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else {
+            throw AudioCaptureError.unsupportedAudioFormat("не создался буфер 16 кГц mono")
+        }
 
         // Коробки объясняют компилятору то, что верно по факту: замыкание
         // выполняется синхронно здесь же, а не в другом потоке.
         let supplied = UncheckedBox(false)
         let input = UncheckedBox(buffer)
         var error: NSError?
-        converter.convert(to: output, error: &error) { _, status in
+        let status = converter.convert(to: output, error: &error) { _, status in
             if supplied.value {
                 status.pointee = .noDataNow
                 return nil
@@ -219,7 +247,51 @@ public actor MicrophoneCapture: AudioCapturing {
             return input.value
         }
 
-        guard error == nil, let channel = output.floatChannelData?[0] else { return [] }
+        if let error {
+            throw AudioCaptureError.unsupportedAudioFormat(error.localizedDescription)
+        }
+        guard status != .error else {
+            throw AudioCaptureError.unsupportedAudioFormat("конвертер отклонил аудиокадр")
+        }
+        guard let channel = output.floatChannelData?[0] else {
+            throw AudioCaptureError.unsupportedAudioFormat("конвертер не вернул Float32 PCM")
+        }
         return Array(UnsafeBufferPointer(start: channel, count: Int(output.frameLength)))
+    }
+
+    /// Чистый seam для проверки критической развилки: `nil` допустим только
+    /// когда преобразование действительно не требуется.
+    nonisolated static func converter(
+        from source: AVAudioFormat,
+        to target: AVAudioFormat,
+        factory: ConverterFactory
+    ) throws -> AVAudioConverter? {
+        let needsConversion = source.sampleRate != target.sampleRate
+            || source.channelCount != target.channelCount
+        guard needsConversion else { return nil }
+        guard let converter = factory(source, target) else {
+            throw AudioCaptureError.unsupportedAudioFormat(
+                "не удалось преобразовать \(Int(source.sampleRate)) Гц / \(source.channelCount) кан. в 16 кГц mono"
+            )
+        }
+        return converter
+    }
+}
+
+/// Аудиопоток может прислать несколько кадров до асинхронной остановки.
+/// Одна причина не должна создавать десятки параллельных interrupt-задач.
+private final class FailureOnce: @unchecked Sendable {
+    private let lock = NSLock()
+    private var didRun = false
+
+    func run(_ body: () -> Void) {
+        lock.lock()
+        guard !didRun else {
+            lock.unlock()
+            return
+        }
+        didRun = true
+        lock.unlock()
+        body()
     }
 }

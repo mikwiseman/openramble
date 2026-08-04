@@ -125,8 +125,8 @@ final class DictationEndToEndTests: EndToEndScenario {
         await assertNoFailureNotices()
     }
 
-    /// Английская речь целиком: словарь её не портит, команда работает.
-    func testEnglishDictationWithEnglishTrailingCommand() async throws {
+    /// Safe beta не превращает произнесённое в необратимую отправку.
+    func testEnglishTrailingSendStaysVerbatimAndNeverPressesReturn() async throws {
         try await speak(Phrase.englishSend, voice: .english)
         let controller = makeController()
 
@@ -135,10 +135,10 @@ final class DictationEndToEndTests: EndToEndScenario {
         let texts = await inserter.texts
         let text = try XCTUnwrap(texts.first)
         XCTAssertTrue(text.contains("pull request"), "Английская фраза пришла не целиком: \(text)")
-        XCTAssertFalse(text.containsInsensitive("send it"), "Команда осталась в тексте: \(text)")
+        XCTAssertTrue(text.containsInsensitive("send it"), "Произнесённые слова пропали: \(text)")
 
         let presses = await inserter.returnPresses
-        XCTAssertEqual(presses, 1, "«Send it» — такая же команда, как «отправь»")
+        XCTAssertEqual(presses, 0, "Речь не должна отправлять сообщение в safe beta")
 
         await assertNoRecordingsLeft()
         await assertNoFailureNotices()
@@ -180,8 +180,8 @@ final class DictationEndToEndTests: EndToEndScenario {
 
     // MARK: - Команда в конце фразы
 
-    /// «Отправь» в конце становится нажатием Return и не остаётся в тексте.
-    func testTrailingSendCommandPressesReturnWithoutEatingWords() async throws {
+    /// «Отправь» остаётся обычным текстом и никогда не нажимает Return.
+    func testTrailingSendStaysVerbatimAndNeverPressesReturn() async throws {
         try await speak(Phrase.send)
         let controller = makeController()
 
@@ -190,17 +190,16 @@ final class DictationEndToEndTests: EndToEndScenario {
         let texts = await inserter.texts
         let text = try XCTUnwrap(texts.first)
         let presses = await inserter.returnPresses
-        XCTAssertEqual(presses, 1, "«Отправь» — это действие, а не слово")
+        XCTAssertEqual(presses, 0, "False trigger не должен отправлять сообщение")
 
-        XCTAssertFalse(
+        XCTAssertTrue(
             text.containsInsensitive("отправ"),
-            "Команда осталась в тексте: \(text)"
+            "Произнесённое слово исчезло: \(text)"
         )
         // Главная опасность здесь — срезать вместе с командой соседние слова.
         for word in ["Проверь", "pull request", "пожалуйста"] {
             XCTAssertTrue(text.containsInsensitive(word), "Слово «\(word)» пропало: \(text)")
         }
-        XCTAssertFalse(text.hasSuffix(","), "Хвостовая запятая от команды должна уйти: \(text)")
 
         await assertNoRecordingsLeft()
         await assertNoFailureNotices()

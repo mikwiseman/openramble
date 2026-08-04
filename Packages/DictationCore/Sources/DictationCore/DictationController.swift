@@ -3,13 +3,6 @@ import Foundation
 /// Что делать с распознанным текстом, если вставить его не удалось.
 public struct RecoveredDictation: Sendable, Equatable {
     public let text: String
-    public let file: URL?
-}
-
-/// Сохранение текста, который не удалось вставить.
-public protocol RecoveryStoring: Sendable {
-    /// Записать текст на диск и вернуть адрес файла.
-    func save(_ text: String) async throws -> URL
 }
 
 /// Ядро диктовки.
@@ -39,6 +32,9 @@ public final class DictationController {
 
     public var onStateChange: (@MainActor (DictationState) -> Void)?
     public var onNotice: (@MainActor (DictationNotice) -> Void)?
+    /// Успешная вставка — единственное доказательство, что первая проба
+    /// действительно прошла, а не была вручную напечатана в TextEditor.
+    public var onTextInserted: (@MainActor () -> Void)?
     /// Сообщает, идёт ли запись без удержания: от этого зависит, как
     /// истолковать следующее нажатие клавиши.
     public var onHandsFreeChange: (@MainActor (Bool) -> Void)?
@@ -58,7 +54,7 @@ public final class DictationController {
     private let inserter: any TextInserting
     private let overlay: any OverlayPresenting
     private let sounds: any Sounding
-    private let recovery: any RecoveryStoring
+    private let recordingRecovery: any RecordingRecoveryStoring
     private let pipeline: () -> TextPipeline
 
     // MARK: - Состояние сессии
@@ -95,7 +91,7 @@ public final class DictationController {
         inserter: any TextInserting,
         overlay: any OverlayPresenting,
         sounds: any Sounding,
-        recovery: any RecoveryStoring,
+        recordingRecovery: any RecordingRecoveryStoring = DiscardingRecordingRecovery(),
         pipeline: @escaping () -> TextPipeline = { TextPipeline() }
     ) {
         self.capture = capture
@@ -103,7 +99,7 @@ public final class DictationController {
         self.inserter = inserter
         self.overlay = overlay
         self.sounds = sounds
-        self.recovery = recovery
+        self.recordingRecovery = recordingRecovery
         self.pipeline = pipeline
     }
 
@@ -121,6 +117,9 @@ public final class DictationController {
 
         currentSession += 1
         let session = currentSession
+        // Не трогаем прошлый Copy/Retry: новая запись может быть отменена или
+        // завершиться ошибкой. Спасённый текст удаляется только явным действием
+        // либо после успешного Retry.
         isHandsFree = handsFree
         isHandsFreeActive = handsFree
         cancellationRequested = false
@@ -252,15 +251,10 @@ public final class DictationController {
             return
         }
 
-        // Запись удаляется, чем бы дело ни кончилось, — поэтому удаление стоит
-        // сразу за её получением, до всех проверок. Она нужна только на время
-        // распознавания: хранить голос пользователя дольше — и лишний расход
-        // диска, и совсем не то, чего от приватного продукта ждут.
-        defer { discard(recording.url) }
-
         await sounds.playStop()
 
         guard shouldContinue(session) else {
+            await discard(recording.url)
             await finishWithoutInsertion(session: session)
             return
         }
@@ -269,6 +263,7 @@ public final class DictationController {
         // записях отказывается работать, но показывать из-за этого ошибку
         // неправильно: человек просто передумал.
         guard DictationDurationPolicy.isWorthTranscribing(duration: recording.duration) else {
+            await discard(recording.url)
             await finishWithoutInsertion(session: session)
             return
         }
@@ -277,20 +272,41 @@ public final class DictationController {
         do {
             recognized = try await transcribe(recording.url)
         } catch is CancellationError {
+            await discard(recording.url)
             await finishWithoutInsertion(session: session)
             return
         } catch let error as ASREngineError where error == .cancelled {
             // Отмена, дошедшая через движок: это не сбой, сообщать не о чем.
+            await discard(recording.url)
             await finishWithoutInsertion(session: session)
             return
         } catch {
-            await fail(session: session, with: .recognition(String(describing: error)))
+            let saved: URL?
+            let suffix: String
+            do {
+                saved = try await recordingRecovery.preserve(recording.url)
+                suffix = saved == nil
+                    ? " Не удалось подготовить запись для повтора."
+                    : " Запись сохранена локально — можно повторить или удалить."
+            } catch {
+                saved = nil
+                suffix = " Запись осталась локально, но подготовить Retry/Delete не удалось: \(error.localizedDescription)"
+            }
+            let notice = DictationNotice(
+                kind: .failure,
+                message: DictationError.recognition(String(describing: error)).userMessage + suffix,
+                recoveryAudio: saved
+            )
+            onNotice?(notice)
+            await overlay.presentNotice(notice)
+            await cleanup(session: session)
             return
         }
 
         // Проверка после каждого ожидания: пока шло распознавание, пользователь
         // мог нажать отмену.
         guard shouldContinue(session) else {
+            await discard(recording.url)
             await finishWithoutInsertion(session: session)
             return
         }
@@ -298,11 +314,13 @@ public final class DictationController {
         let processed = pipeline().process(recognized.text)
         guard !processed.text.isEmpty else {
             // Пустой результат — не ошибка: человек мог передумать и промолчать.
+            await discard(recording.url)
             await finishWithoutInsertion(session: session)
             return
         }
 
         await insert(processed, session: session)
+        await discard(recording.url)
     }
 
     private func insert(_ output: TextPipeline.Output, session: Int) async {
@@ -322,6 +340,7 @@ public final class DictationController {
             await handleInsertionFailure(error, text: output.text, session: session)
             return
         }
+        onTextInserted?()
 
         // Нажатие разбирается отдельно от вставки намеренно. Это разные
         // системные вызовы, и второй отказывает при живом первом — например,
@@ -354,18 +373,30 @@ public final class DictationController {
 
     /// Текст распознан, но вставить не удалось — сохраняем, чтобы он не пропал.
     private func handleInsertionFailure(_ error: Error, text: String, session: Int) async {
-        let file = try? await recovery.save(text)
-        pendingRecovery = RecoveredDictation(text: text, file: file)
+        if let insertion = error as? TextInsertionError,
+           insertion == .insertedButClipboardRestoreFailed {
+            let notice = DictationNotice(
+                kind: .warning,
+                message: "Текст вставлен, но прежний clipboard восстановить не удалось."
+            )
+            onNotice?(notice)
+            await overlay.presentNotice(notice)
+            await cleanup(session: session)
+            return
+        }
+        pendingRecovery = RecoveredDictation(text: text)
 
         let message: String
         if let insertion = error as? TextInsertionError, insertion == .secureInputActive {
             // Не сбой, а нормальная ситуация: активно поле пароля.
-            message = "Текст не вставлен: активен защищённый ввод. Он сохранён."
+            message = "Текст не вставлен: активен защищённый ввод. Доступны Copy и Retry."
+        } else if let insertion = error as? TextInsertionError, insertion == .protectedClipboard {
+            message = "Clipboard protected: автоматическая вставка отменена. Доступны Copy и Retry."
         } else {
-            message = "Текст не удалось вставить. Он сохранён."
+            message = "Текст не удалось вставить. Доступны Copy и Retry."
         }
 
-        let notice = DictationNotice(kind: .warning, message: message, recoveryFile: file)
+        let notice = DictationNotice(kind: .warning, message: message, recoverableText: text)
         onNotice?(notice)
         await overlay.presentNotice(notice)
         await cleanup(session: session)
@@ -410,6 +441,46 @@ public final class DictationController {
             await self.capture.abortRecording()
             await self.finishWithoutInsertion(session: session)
         }
+    }
+
+    /// Системное разрешение или устройство исчезло во время записи.
+    /// Закрываем WAV и сохраняем его для явного Retry/Delete, не пытаясь
+    /// распознавать или вставлять в уже недоверенное состояние системы.
+    public func preserveActiveRecording(reason message: String) {
+        guard state == .preparing || state == .listening else { return }
+        if state == .preparing {
+            cancel()
+            let notice = DictationNotice(kind: .failure, message: message)
+            onNotice?(notice)
+            Task { await overlay.presentNotice(notice) }
+            return
+        }
+        guard finalizationTask == nil else { return }
+
+        let session = currentSession
+        state = .transcribing
+        let task = Task { [weak self] in
+            guard let self else { return }
+            let saved: URL?
+            do {
+                let recording = try await self.capture.stopRecording()
+                await self.sounds.playStop()
+                saved = try await self.recordingRecovery.preserve(recording.url)
+            } catch {
+                saved = nil
+            }
+            let notice = DictationNotice(
+                kind: .failure,
+                message: saved == nil
+                    ? message + " Не удалось подготовить запись для повтора."
+                    : message + " Запись сохранена локально — можно повторить или удалить.",
+                recoveryAudio: saved
+            )
+            self.onNotice?(notice)
+            await self.overlay.presentNotice(notice)
+            await self.cleanup(session: session)
+        }
+        finalizationTask = task
     }
 
     // MARK: - Завершение
@@ -473,8 +544,18 @@ public final class DictationController {
     /// Отдельным методом, чтобы удаление нельзя было случайно пропустить на
     /// одной из веток завершения: голос пользователя не должен оставаться в
     /// файлах после того, как текст распознан.
-    private func discard(_ url: URL) {
-        try? FileManager.default.removeItem(at: url)
+    private func discard(_ url: URL) async {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        do {
+            try FileManager.default.removeItem(at: url)
+        } catch {
+            let notice = DictationNotice(
+                kind: .failure,
+                message: "Не удалось удалить локальную запись: \(error.localizedDescription)"
+            )
+            onNotice?(notice)
+            await overlay.presentNotice(notice)
+        }
     }
 
     /// Достигнут ли предел длительности — проверяется таймером снаружи.
@@ -495,9 +576,8 @@ public final class DictationController {
 /// Ошибки, которые видит пользователь.
 ///
 /// Отказ вставки сюда не входит намеренно: текст в этот момент уже распознан и
-/// сохранён, и человеку надо сказать не «не удалось», а куда он делся. Это
-/// делает `handleInsertionFailure` — своим сообщением и с файлом спасённого
-/// текста в уведомлении.
+/// остаётся в памяти, и человеку надо сказать не «не удалось», а как получить
+/// его через Copy/Retry. Это делает `handleInsertionFailure`.
 public enum DictationError: Error, Sendable, Equatable {
     case capture(String)
     case recognition(String)

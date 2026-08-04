@@ -79,6 +79,13 @@ public struct ModelInstallLayout: Sendable {
         installedDirectory.appending(path: ".ready.json", directoryHint: .notDirectory)
     }
 
+    /// Последняя заведомо рабочая установка на время crash-safe promotion.
+    /// При нормальном завершении удаляется; после падения используется для
+    /// восстановления до того, как состояние будет показано интерфейсу.
+    public var backupDirectory: URL {
+        modelDirectory.appending(path: ".backup-\(revision)", directoryHint: .isDirectory)
+    }
+
     /// Директория для конкретной попытки установки. Уникальна, чтобы две
     /// параллельные попытки не топтали друг друга.
     public func stagingDirectory(attempt: UUID) -> URL {
@@ -128,33 +135,55 @@ public enum ModelInstallError: Error, Sendable, Equatable {
 /// что мы сейчас ожидаем. Если ревизия или версия FluidAudio разошлись —
 /// установка считается непригодной, а не «наверное, сойдёт».
 public struct ModelReadyMarker: Codable, Sendable, Equatable {
+    public struct InstalledFile: Codable, Sendable, Equatable {
+        public let path: String
+        public let byteCount: Int64
+        public let modifiedAt: Date?
+
+        public init(path: String, byteCount: Int64, modifiedAt: Date?) {
+            self.path = path
+            self.byteCount = byteCount
+            self.modifiedAt = modifiedAt
+        }
+    }
+
     public let revision: String
     public let fluidAudioVersion: String
     public let fileCount: Int
     public let totalByteCount: Int64
     public let verifiedAt: Date
+    /// Старые marker-файлы не содержат inventory. Они декодируются, но проходят
+    /// полную проверку один раз и переписываются в новом формате.
+    public let installedFiles: [InstalledFile]?
 
     public init(
         revision: String,
         fluidAudioVersion: String,
         fileCount: Int,
         totalByteCount: Int64,
-        verifiedAt: Date
+        verifiedAt: Date,
+        installedFiles: [InstalledFile]? = nil
     ) {
         self.revision = revision
         self.fluidAudioVersion = fluidAudioVersion
         self.fileCount = fileCount
         self.totalByteCount = totalByteCount
         self.verifiedAt = verifiedAt
+        self.installedFiles = installedFiles
     }
 
-    public init(manifest: ModelManifest, verifiedAt: Date) {
+    public init(
+        manifest: ModelManifest,
+        verifiedAt: Date,
+        installedFiles: [InstalledFile]? = nil
+    ) {
         self.init(
             revision: manifest.revision,
             fluidAudioVersion: manifest.fluidAudioVersion,
             fileCount: manifest.files.count,
             totalByteCount: manifest.totalByteCount,
-            verifiedAt: verifiedAt
+            verifiedAt: verifiedAt,
+            installedFiles: installedFiles
         )
     }
 

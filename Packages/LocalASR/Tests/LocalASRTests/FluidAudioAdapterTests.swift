@@ -94,6 +94,14 @@ final class FluidAudioAdapterTests: XCTestCase {
         XCTAssertFalse(enabled, "Включённый mel-контекст молча съедает текст на стыке окон")
     }
 
+    func testAdapterOwnsOfflineModeBeforeLoading() {
+        ModelHub.offlineMode = false
+
+        FluidAudioAdapter.enforceOfflineMode()
+
+        XCTAssertTrue(ModelHub.offlineMode)
+    }
+
     func testMixedRussianEnglishKeepsLatinIntact() {
         // Главный сценарий продукта: английские термины внутри русской речи
         // не должны склеиваться с соседними словами.

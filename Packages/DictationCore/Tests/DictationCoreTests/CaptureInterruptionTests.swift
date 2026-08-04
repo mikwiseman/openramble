@@ -17,8 +17,7 @@ final class CaptureInterruptionTests: XCTestCase {
             transcribe: { _ in ASRResult(text: "текст", audioDuration: 2, processingDuration: 0.1) },
             inserter: FakeInserter(),
             overlay: overlay,
-            sounds: FakeSounds(),
-            recovery: FakeRecovery()
+            sounds: FakeSounds()
         )
     }
 
@@ -72,8 +71,7 @@ final class CaptureInterruptionTests: XCTestCase {
             transcribe: { _ in ASRResult(text: "текст", audioDuration: 2, processingDuration: 0.1) },
             inserter: inserter,
             overlay: FakeOverlay(),
-            sounds: FakeSounds(),
-            recovery: FakeRecovery()
+            sounds: FakeSounds()
         )
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)

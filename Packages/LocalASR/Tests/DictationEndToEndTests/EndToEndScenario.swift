@@ -76,7 +76,6 @@ class EndToEndScenario: XCTestCase {
     private(set) var overlay: RecordingOverlay!
     private(set) var sounds: CountingSounds!
     private(set) var probe: TranscriptionProbe!
-    private(set) var recovery: RecoveryStore!
     private(set) var workspace: URL!
 
     override func setUp() async throws {
@@ -96,11 +95,6 @@ class EndToEndScenario: XCTestCase {
         overlay = RecordingOverlay()
         sounds = CountingSounds()
         probe = TranscriptionProbe()
-        // Хранилище спасённого текста настоящее: оно не трогает ни микрофон, ни
-        // чужие окна, а значит подставлять его незачем.
-        recovery = RecoveryStore(
-            directory: workspace.appending(path: "recovery", directoryHint: .isDirectory)
-        )
     }
 
     override func tearDown() async throws {
@@ -135,7 +129,6 @@ class EndToEndScenario: XCTestCase {
             inserter: inserter,
             overlay: overlay,
             sounds: sounds,
-            recovery: recovery,
             pipeline: { TextPipeline(replacements: replacements) }
         )
     }

@@ -68,14 +68,6 @@ actor FakeSounds: Sounding {
     func playStop() async { stopPlays += 1 }
 }
 
-actor FakeRecovery: RecoveryStoring {
-    private(set) var savedTexts: [String] = []
-    func save(_ text: String) async throws -> URL {
-        savedTexts.append(text)
-        return URL(fileURLWithPath: "/tmp/recovery.txt")
-    }
-}
-
 // MARK: - Тесты
 
 @MainActor
@@ -84,14 +76,12 @@ final class DictationControllerTests: XCTestCase {
     private var inserter: FakeInserter!
     private var overlay: FakeOverlay!
     private var sounds: FakeSounds!
-    private var recovery: FakeRecovery!
 
     override func setUp() async throws {
         capture = FakeCapture()
         inserter = FakeInserter()
         overlay = FakeOverlay()
         sounds = FakeSounds()
-        recovery = FakeRecovery()
     }
 
     private func makeController(
@@ -110,7 +100,6 @@ final class DictationControllerTests: XCTestCase {
             inserter: inserter,
             overlay: overlay,
             sounds: sounds,
-            recovery: recovery,
             pipeline: { TextPipeline(replacements: replacements) }
         )
     }
@@ -258,8 +247,8 @@ final class DictationControllerTests: XCTestCase {
         XCTAssertEqual(controller.state, .idle)
     }
 
-    func testTextIsSavedWhenInsertionFails() async throws {
-        // Вставка не удалась — распознанное нельзя терять.
+    func testTextStaysInMemoryWhenInsertionFails() async throws {
+        // Вставка не удалась — распознанное нельзя терять или писать на диск.
         await inserter.setError(.accessibilityPermissionDenied)
         let controller = makeController(recognized: "важная мысль")
 
@@ -268,9 +257,7 @@ final class DictationControllerTests: XCTestCase {
         controller.stop()
         await settle()
 
-        let saved = await recovery.savedTexts
-        XCTAssertEqual(saved, ["Важная мысль"], "Текст обязан сохраниться на диск")
-        XCTAssertNotNil(controller.pendingRecovery)
+        XCTAssertEqual(controller.pendingRecovery?.text, "Важная мысль")
     }
 
     func testSecureInputFailureExplainsItself() async throws {
@@ -288,6 +275,20 @@ final class DictationControllerTests: XCTestCase {
             notices.contains { $0.message.contains("защищённый ввод") },
             "Пользователю нужно объяснить, почему текст не вставился"
         )
+    }
+
+    func testClipboardRestoreFailureDoesNotClaimInsertedTextWasLost() async throws {
+        await inserter.setError(.insertedButClipboardRestoreFailed)
+        let controller = makeController(recognized: "текст уже вставлен")
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        let notices = await overlay.notices
+        XCTAssertNil(controller.pendingRecovery)
+        XCTAssertTrue(notices.contains { $0.message.contains("Текст вставлен") })
     }
 
     // MARK: Цель вставки
@@ -315,7 +316,7 @@ final class DictationControllerTests: XCTestCase {
 
     // MARK: Команда в конце фразы
 
-    func testTrailingCommandPressesReturn() async throws {
+    func testSafeBetaNeverPressesReturnFromSpeech() async throws {
         let controller = makeController(recognized: "готово отправь")
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()
@@ -324,8 +325,8 @@ final class DictationControllerTests: XCTestCase {
 
         let inserted = await inserter.insertedTexts
         let presses = await inserter.returnPresses
-        XCTAssertEqual(inserted, ["Готово"])
-        XCTAssertEqual(presses, 1, "Команда «отправь» должна нажать Return")
+        XCTAssertEqual(inserted, ["Готово отправь"])
+        XCTAssertEqual(presses, 0, "False trigger не должен отправлять сообщение")
     }
 
     func testNewLineCommandArrivesAsTextNotAsKeypress() async throws {

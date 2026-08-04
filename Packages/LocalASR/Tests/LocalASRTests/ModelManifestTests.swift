@@ -94,3 +94,36 @@ final class ModelManifestTests: XCTestCase {
         }
     }
 }
+
+final class ModelDownloadPolicyTests: XCTestCase {
+    private let policy = ModelDownloadPolicy()
+
+    func testAllowsPinnedModelAndApprovedRedirectHosts() throws {
+        let allowed = [
+            "https://huggingface.co/org/model/file",
+            "https://cdn-lfs.hf.co/file",
+            "https://us-east-1.aws.huggingface.co/file",
+            "https://github.com/org/repo/releases/download/v1/file",
+            "https://objects.githubusercontent.com/file",
+            "https://release-assets.githubusercontent.com/file",
+        ]
+
+        for raw in allowed {
+            XCTAssertNoThrow(try policy.validate(XCTUnwrap(URL(string: raw))), raw)
+        }
+    }
+
+    func testRejectsHTTPAndLookalikeHosts() throws {
+        let rejected = [
+            "http://huggingface.co/file",
+            "https://huggingface.co.attacker.example/file",
+            "https://githubusercontent.com.attacker.example/file",
+            "https://pages.github.com/file",
+            "https://example.com/file",
+        ]
+
+        for raw in rejected {
+            XCTAssertThrowsError(try policy.validate(XCTUnwrap(URL(string: raw))), raw)
+        }
+    }
+}

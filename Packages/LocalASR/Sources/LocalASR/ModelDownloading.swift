@@ -19,7 +19,33 @@ public protocol ModelDownloading: Sendable {
 public enum ModelDownloadError: Error, Sendable, Equatable {
     case network(String)
     case httpStatus(Int)
+    case unapprovedURL(String)
+    case unexpectedSize(expected: Int64, actual: Int64)
     case cancelled
+}
+
+/// Чистая политика сетевой поверхности model download.
+public struct ModelDownloadPolicy: Sendable {
+    public init() {}
+
+    public func allows(_ url: URL) -> Bool {
+        guard url.scheme?.lowercased() == "https", let host = url.host()?.lowercased() else {
+            return false
+        }
+        return host == "huggingface.co"
+            || host.hasSuffix(".huggingface.co")
+            || host == "hf.co"
+            || host.hasSuffix(".hf.co")
+            || host == "github.com"
+            || host == "objects.githubusercontent.com"
+            || host == "release-assets.githubusercontent.com"
+    }
+
+    public func validate(_ url: URL) throws {
+        guard allows(url) else {
+            throw ModelDownloadError.unapprovedURL(url.host() ?? url.absoluteString)
+        }
+    }
 }
 
 /// Загрузчик поверх URLSession.
@@ -32,8 +58,13 @@ public enum ModelDownloadError: Error, Sendable, Equatable {
 /// проходов асинхронного цикла, и загрузка упиралась не в сеть, а в него.
 public final class URLSessionModelDownloader: NSObject, ModelDownloading, @unchecked Sendable {
     private let configuration: URLSessionConfiguration
+    private let policy: ModelDownloadPolicy
 
-    public init(configuration: URLSessionConfiguration? = nil) {
+    public init(
+        configuration: URLSessionConfiguration? = nil,
+        policy: ModelDownloadPolicy = ModelDownloadPolicy()
+    ) {
+        self.policy = policy
         if let configuration {
             self.configuration = configuration
         } else {
@@ -54,12 +85,20 @@ public final class URLSessionModelDownloader: NSObject, ModelDownloading, @unche
         expectedBytes: Int64,
         onProgress: @escaping @Sendable (Int64) -> Void
     ) async throws -> URL {
+        try policy.validate(url)
+        guard expectedBytes > 0 else {
+            throw ModelDownloadError.unexpectedSize(expected: expectedBytes, actual: 0)
+        }
         // Делегат ставится на сессию, а не на задачу. Разница не косметическая:
         // задаче система отдаёт лишь округлённую долю (замер — два обновления
         // с числом «100» на файл), а сессии — настоящие байты (89 обновлений на
         // тех же 23 МБ). Индикатор без этого замирает на самом большом файле,
         // а он — 92% всей установки.
-        let observer = DownloadObserver(onProgress: onProgress)
+        let observer = DownloadObserver(
+            expectedBytes: expectedBytes,
+            policy: policy,
+            onProgress: onProgress
+        )
         let session = URLSession(configuration: configuration, delegate: observer, delegateQueue: nil)
         defer { session.finishTasksAndInvalidate() }
 
@@ -78,11 +117,19 @@ public final class URLSessionModelDownloader: NSObject, ModelDownloading, @unche
 
 /// Приёмник событий одной загрузки.
 private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
+    private let expectedBytes: Int64
+    private let policy: ModelDownloadPolicy
     private let onProgress: @Sendable (Int64) -> Void
     private let lock = NSLock()
     private var continuation: CheckedContinuation<URL, any Error>?
 
-    init(onProgress: @escaping @Sendable (Int64) -> Void) {
+    init(
+        expectedBytes: Int64,
+        policy: ModelDownloadPolicy,
+        onProgress: @escaping @Sendable (Int64) -> Void
+    ) {
+        self.expectedBytes = expectedBytes
+        self.policy = policy
         self.onProgress = onProgress
     }
 
@@ -112,7 +159,27 @@ private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unc
         totalBytesWritten: Int64,
         totalBytesExpectedToWrite: Int64
     ) {
+        guard totalBytesWritten <= expectedBytes else {
+            downloadTask.cancel()
+            finish(.failure(ModelDownloadError.unexpectedSize(expected: expectedBytes, actual: totalBytesWritten)))
+            return
+        }
         onProgress(totalBytesWritten)
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        guard let url = request.url, policy.allows(url) else {
+            finish(.failure(ModelDownloadError.unapprovedURL(request.url?.host() ?? "неизвестный адрес")))
+            completionHandler(nil)
+            return
+        }
+        completionHandler(request)
     }
 
     func urlSession(
@@ -126,6 +193,25 @@ private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unc
         if let http = downloadTask.response as? HTTPURLResponse,
            !(200...299).contains(http.statusCode) {
             finish(.failure(ModelDownloadError.httpStatus(http.statusCode)))
+            return
+        }
+        if let expected = downloadTask.response?.expectedContentLength,
+           expected >= 0,
+           expected != expectedBytes {
+            finish(.failure(ModelDownloadError.unexpectedSize(expected: expectedBytes, actual: expected)))
+            return
+        }
+
+        let actual: Int64
+        do {
+            let values = try location.resourceValues(forKeys: [.fileSizeKey])
+            actual = Int64(values.fileSize ?? -1)
+        } catch {
+            finish(.failure(ModelDownloadError.network(error.localizedDescription)))
+            return
+        }
+        guard actual == expectedBytes else {
+            finish(.failure(ModelDownloadError.unexpectedSize(expected: expectedBytes, actual: actual)))
             return
         }
 

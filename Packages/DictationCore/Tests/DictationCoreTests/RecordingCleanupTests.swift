@@ -73,7 +73,8 @@ final class RecordingCleanupTests: XCTestCase {
         capture: FileCapture,
         transcribeError: Error? = nil,
         transcribeDelay: Duration = .zero,
-        insertError: TextInsertionError? = nil
+        insertError: TextInsertionError? = nil,
+        recordingRecovery: any RecordingRecoveryStoring = DiscardingRecordingRecovery()
     ) -> DictationController {
         let inserter = FakeInserter()
         if let insertError {
@@ -89,7 +90,7 @@ final class RecordingCleanupTests: XCTestCase {
             inserter: inserter,
             overlay: FakeOverlay(),
             sounds: FakeSounds(),
-            recovery: FakeRecovery()
+            recordingRecovery: recordingRecovery
         )
     }
 
@@ -106,12 +107,14 @@ final class RecordingCleanupTests: XCTestCase {
         XCTAssertTrue(leftovers.isEmpty, "После вставки запись голоса должна быть удалена: \(leftovers)")
     }
 
-    func testRecordingIsDeletedWhenRecognitionFails() async throws {
-        // Сбой распознавания — не повод хранить голос.
+    func testRecordingIsPreservedWhenRecognitionFails() async throws {
+        // При сбое ASR WAV — единственный путь повторить диктовку без потери.
         let capture = FileCapture(directory: directory)
+        let recovered = directory.appending(path: "RecoveredAudio", directoryHint: .isDirectory)
         let controller = makeController(
             capture: capture,
-            transcribeError: ASREngineError.inferenceFailed("сбой")
+            transcribeError: ASREngineError.inferenceFailed("сбой"),
+            recordingRecovery: RecordingRecoveryStore(directory: recovered)
         )
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
@@ -119,8 +122,11 @@ final class RecordingCleanupTests: XCTestCase {
         controller.stop()
         await settle()
 
-        let leftovers = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-        XCTAssertTrue(leftovers.isEmpty, "После ошибки распознавания запись тоже удаляется: \(leftovers)")
+        let recordings = try FileManager.default.contentsOfDirectory(
+            at: recovered,
+            includingPropertiesForKeys: nil
+        )
+        XCTAssertEqual(recordings.filter { $0.pathExtension == "wav" }.count, 1)
     }
 
     func testRecordingIsDeletedWhenInsertionFails() async throws {

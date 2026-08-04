@@ -48,6 +48,12 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     /// Это подтверждено документацией библиотеки (Documentation/ASR/ManualModelLoading.md)
     /// и проверяется отдельным прогоном в песочнице с запрещённой сетью.
     public func loadModels(from directory: URL) async throws {
+        // Wai Dictation управляет моделью самостоятельно: пользователь явно
+        // скачивает зафиксированный manifest, после чего каждый файл проверяется
+        // по SHA-256. FluidAudio не должен пытаться «починить» повреждение своей
+        // сетевой загрузкой. Флаг ставится здесь — на единственной границе импорта
+        // FluidAudio — до любого loader во всех клиентах LocalASR, включая bench.
+        ModelHub.offlineMode = true
         guard models == nil else { return }
 
         guard AsrModels.modelsExist(at: directory, version: .v3) else {
@@ -74,6 +80,12 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         } catch {
             throw ASREngineError.modelsUnavailable(error.localizedDescription)
         }
+    }
+
+    /// Test seam: подтверждает, что настройка принадлежит адаптеру, а не одному
+    /// из вызывающих приложений. Не используйте её вместо `loadModels` в runtime.
+    static func enforceOfflineMode() {
+        ModelHub.offlineMode = true
     }
 
     public func transcribe(samples: [Float]) async throws -> DictationCore.ASRResult {

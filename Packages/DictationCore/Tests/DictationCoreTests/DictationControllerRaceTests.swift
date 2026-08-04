@@ -86,10 +86,6 @@ actor CountingSounds: Sounding {
     func playStop() async {}
 }
 
-actor NoopRecovery: RecoveryStoring {
-    func save(_ text: String) async throws -> URL { URL(fileURLWithPath: "/tmp/noop.txt") }
-}
-
 /// Счётчик обращений к распознаванию, доступный из `@Sendable`-замыкания.
 actor TranscribeTracker {
     private(set) var inFlight = 0
@@ -149,8 +145,7 @@ final class DictationControllerRaceTests: XCTestCase {
             },
             inserter: inserter,
             overlay: overlay,
-            sounds: sounds,
-            recovery: NoopRecovery()
+            sounds: sounds
         )
     }
 
