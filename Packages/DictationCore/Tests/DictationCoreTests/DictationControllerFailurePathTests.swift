@@ -92,9 +92,23 @@ final class DictationControllerFailurePathTests: XCTestCase {
         transcribeCalls = TranscribeCounter()
     }
 
+    /// Часы, которые тест двигает сам: ждать час в проверке предела нельзя.
+    final class TestClock: @unchecked Sendable {
+        private let lock = NSLock()
+        private var offset: TimeInterval = 0
+        func advance(by seconds: TimeInterval) {
+            lock.lock(); offset += seconds; lock.unlock()
+        }
+        var now: Date {
+            lock.lock(); defer { lock.unlock() }
+            return Date().addingTimeInterval(offset)
+        }
+    }
+
     private func makeController(
         recognized: String = "привет мир",
-        allowPressReturnCommand: Bool = false
+        allowPressReturnCommand: Bool = false,
+        clock: TestClock? = nil
     ) -> DictationController {
         let counter = transcribeCalls!
         return DictationController(
@@ -106,7 +120,8 @@ final class DictationControllerFailurePathTests: XCTestCase {
             inserter: inserter,
             overlay: overlay,
             sounds: SilentSounds(),
-            pipeline: { TextPipeline(allowPressReturnCommand: allowPressReturnCommand) }
+            pipeline: { TextPipeline(allowPressReturnCommand: allowPressReturnCommand) },
+            now: { clock?.now ?? Date() }
         )
     }
 
@@ -205,6 +220,39 @@ final class DictationControllerFailurePathTests: XCTestCase {
         XCTAssertEqual(controller.state, .idle)
     }
 
+    // MARK: - Пустой результат
+
+    func testEmptyRecognitionTellsThePersonInsteadOfVanishing() async throws {
+        // Человек держал клавишу и говорил, а движок не расслышал ничего:
+        // микрофон выбран не тот, вокруг шумно, речь ушла в стол. Панель
+        // просто гасла — и это неотличимо от «текст вставился куда-то не
+        // туда»: человек идёт искать пропавшую фразу в чужом окне.
+        let controller = makeController(recognized: "   ")
+
+        await runFullDictation(controller)
+
+        let inserted = await inserter.insertedTexts
+        let notices = await overlay.notices
+        XCTAssertTrue(inserted.isEmpty, "Вставлять нечего")
+        XCTAssertEqual(notices.count, 1, "Молчать здесь нельзя: \(notices.map(\.message))")
+        XCTAssertEqual(notices.first?.kind, .info, "Это не сбой — движок просто не расслышал")
+        XCTAssertNil(notices.first?.recoveryAudio, "Голос не остаётся на диске")
+        XCTAssertEqual(controller.state, .idle)
+    }
+
+    func testEmptyRecognitionAfterCancelStaysSilent() async throws {
+        // Отменённая диктовка не объясняется ничем: человек сам её закрыл.
+        let controller = makeController(recognized: "   ")
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.cancel()
+        await settle(30)
+
+        let notices = await overlay.notices
+        XCTAssertTrue(notices.isEmpty, "После отмены сообщать не о чем: \(notices.map(\.message))")
+    }
+
     // MARK: - Отмена в момент вставки
 
     func testCancelDuringInsertionCannotTakeTheTextBack() async throws {
@@ -266,6 +314,64 @@ final class DictationControllerFailurePathTests: XCTestCase {
         let starts = await capture.startCount
         XCTAssertEqual(controller.state, .idle)
         XCTAssertEqual(starts, 0)
+    }
+
+    func testHourLimitExplanationReachesTheScreenAfterTheSession() async throws {
+        // Запись обрывается на полуслове не человеком и не сбоем, а пределом.
+        // Объяснение уходило только подписчику, а его никто не показывает —
+        // человек видел, как диктовка кончилась сама, и не узнавал почему.
+        // Показать в момент обрыва тоже нельзя: `finish()` тут же перерисует
+        // панель под «распознаю», и объяснение живёт доли секунды.
+        let clock = TestClock()
+        let controller = makeController(clock: clock)
+        var notices: [DictationNotice] = []
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        // Час прошёл — двигаем часы сессии, а не спим.
+        clock.advance(by: DictationDurationPolicy.maximum + 1)
+        controller.checkDurationLimit()
+        for _ in 0..<400 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        await settle(3)
+
+        let presented = await overlay.notices
+        XCTAssertEqual(
+            presented.map(\.message),
+            ["Reached the one-hour limit. Transcribing what was recorded."],
+            "Объяснение обязано дойти до панели — и ровно один раз"
+        )
+        XCTAssertEqual(presented.first?.kind, .info)
+        XCTAssertEqual(notices.count, 1, "Подписчик тоже узнаёт — один раз")
+        let inserted = await inserter.insertedTexts
+        XCTAssertEqual(inserted, ["Привет мир"], "Сказанное до предела не теряется")
+    }
+
+    func testFailureMessageWinsOverTheHourLimitExplanation() async throws {
+        // Предел достигнут, а распознавание упало. У сессии одна причина
+        // конца: рассказ о сбое важнее объяснения предела и не имеет права
+        // быть затёртым.
+        await inserter.setInsertError(.accessibilityPermissionDenied)
+        let clock = TestClock()
+        let controller = makeController(clock: clock)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        clock.advance(by: DictationDurationPolicy.maximum + 1)
+        controller.checkDurationLimit()
+        for _ in 0..<400 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        await settle(3)
+
+        let presented = await overlay.notices
+        XCTAssertEqual(presented.count, 1, "Одна причина конца — одно сообщение")
+        XCTAssertEqual(presented.first?.kind, .warning)
+        XCTAssertEqual(controller.pendingRecovery?.text, "Привет мир")
     }
 
     func testDurationCheckDoesNotCutOffAFreshRecording() async throws {

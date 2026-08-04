@@ -26,6 +26,47 @@ actor FakeCapture: AudioCapturing {
     func abortRecording() async { abortCount += 1 }
 }
 
+/// Захват, у которого первый кадр звука приходит не сразу, как у настоящего.
+///
+/// Настоящий движок возвращается из `startRecording` на запуске, а слышать
+/// начинает примерно через 0,13 с. Всё, что происходит в этот зазор,
+/// подставной захват без задержки скрывал полностью.
+actor SlowFirstFrameCapture: AudioCapturing {
+    private(set) var startCount = 0
+    private(set) var stopCount = 0
+    private(set) var abortCount = 0
+    /// `nil` — устройство молчит и кадра не будет вовсе (AirPods в ящике).
+    private let firstFrame: Gate?
+    private let file = URL(fileURLWithPath: "/tmp/slow-first-frame.wav")
+
+    init(firstFrame: Gate?) { self.firstFrame = firstFrame }
+
+    func startRecording() async throws -> URL {
+        startCount += 1
+        return file
+    }
+
+    func waitForFirstFrame() async -> Bool {
+        guard let firstFrame else {
+            // Молчащее устройство: ждём, пока запись не закончат снаружи.
+            while stopCount == 0, abortCount == 0 {
+                await Task.yield()
+                try? await Task.sleep(for: .milliseconds(1))
+            }
+            return false
+        }
+        await firstFrame.pass()
+        return true
+    }
+
+    func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
+        stopCount += 1
+        return (file, 2.0)
+    }
+
+    func abortRecording() async { abortCount += 1 }
+}
+
 actor FakeInserter: TextInserting {
     private(set) var insertedTexts: [String] = []
     private(set) var returnPresses = 0
@@ -142,6 +183,90 @@ final class DictationControllerTests: XCTestCase {
         let playsAfter = await sounds.startPlays
         XCTAssertEqual(playsAfter, 1)
         XCTAssertEqual(controller.state, .listening)
+    }
+
+    func testStartSoundWaitsForTheFirstRecordedFrame() async throws {
+        // «Говорите» — обещание, что микрофон уже слышит. Движок запускается
+        // раньше, чем начинает отдавать кадры: 0,13–0,14 с на M4 Pro
+        // (docs/benchmarks.md). Человек, начинающий говорить по сигналу, терял
+        // в этот зазор первое слово.
+        let frame = Gate()
+        let slowCapture = SlowFirstFrameCapture(firstFrame: frame)
+        let controller = DictationController(
+            capture: slowCapture,
+            transcribe: { _ in ASRResult(text: "привет", audioDuration: 2, processingDuration: 0.1) },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+
+        XCTAssertEqual(controller.state, .listening, "Панель показывает запись сразу")
+        let beforeFrame = await sounds.startPlays
+        XCTAssertEqual(beforeFrame, 0, "Сигнал не звучит, пока микрофон не отдал ни кадра")
+
+        await frame.open()
+        await settle()
+
+        let afterFrame = await sounds.startPlays
+        XCTAssertEqual(afterFrame, 1, "С первым кадром сигнал обязан прозвучать")
+    }
+
+    func testSilentDeviceGivesNoStartSoundAndDoesNotHangTheSession() async throws {
+        // Кадров нет вовсе — микрофон выбран не тот. Обещать «говорите» здесь
+        // нельзя, но и подвесить сессию ожиданием — тоже: остановка обязана
+        // работать, иначе микрофон останется включённым до часового предела.
+        let silentCapture = SlowFirstFrameCapture(firstFrame: nil)
+        let controller = DictationController(
+            capture: silentCapture,
+            transcribe: { _ in ASRResult(text: "привет", audioDuration: 2, processingDuration: 0.1) },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        XCTAssertEqual(controller.state, .listening)
+        let plays = await sounds.startPlays
+        XCTAssertEqual(plays, 0, "Молчащее устройство не даёт повода звать говорить")
+
+        controller.stop()
+        for _ in 0..<400 where controller.state != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertEqual(controller.state, .idle, "Остановка обязана пройти и без единого кадра")
+        let stops = await silentCapture.stopCount
+        XCTAssertEqual(stops, 1)
+    }
+
+    func testQuickTapStopsWithoutWaitingForTheFirstFrame() async throws {
+        // Нажал и отпустил раньше, чем движок услышал: ждать кадра ради звука
+        // «говорите» в уже законченной записи незачем, а на молчащем
+        // устройстве это ожидание оставило бы микрофон включённым.
+        let silentCapture = SlowFirstFrameCapture(firstFrame: nil)
+        let controller = DictationController(
+            capture: silentCapture,
+            transcribe: { _ in ASRResult(text: "привет", audioDuration: 2, processingDuration: 0.1) },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        controller.stop()
+        for _ in 0..<400 where controller.state != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertEqual(controller.state, .idle, "Отложенное отпускание не ждёт первого кадра")
+        let plays = await sounds.startPlays
+        XCTAssertEqual(plays, 0)
     }
 
     // MARK: Отпускание раньше готовности
@@ -356,6 +481,12 @@ final class DictationControllerTests: XCTestCase {
     // MARK: Пустой результат
 
     func testEmptyRecognitionInsertsNothingAndDoesNotError() async throws {
+        // Раньше здесь проверялось «ни одного сообщения». Требование было
+        // сформулировано как «промолчать — не ошибка», и это верно: ошибкой
+        // пустой результат не является. Но молчание оказалось не тем ответом:
+        // погасшая панель без текста неотличима от «вставилось в чужое окно»,
+        // и человек шёл искать фразу там, где её нет. Проверяем то, что и
+        // требовалось: не ошибка, ничего не вставлено, голос не сохранён.
         let controller = makeController(recognized: "   ")
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()
@@ -365,7 +496,11 @@ final class DictationControllerTests: XCTestCase {
         let inserted = await inserter.insertedTexts
         let notices = await overlay.notices
         XCTAssertTrue(inserted.isEmpty)
-        XCTAssertTrue(notices.isEmpty, "Промолчать — не ошибка")
+        XCTAssertTrue(
+            notices.allSatisfy { $0.kind != .failure },
+            "Пустой результат — не сбой: \(notices.map(\.message))"
+        )
+        XCTAssertTrue(notices.allSatisfy { $0.recoveryAudio == nil })
         XCTAssertEqual(controller.state, .idle)
     }
 

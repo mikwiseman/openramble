@@ -21,10 +21,15 @@ final class RecordingCleanupTests: XCTestCase {
         let duration: TimeInterval
         private(set) var lastFile: URL?
         private var isRecording = false
+        /// Задержка ровно там, где она есть у настоящего захвата: файл уже
+        /// закрыт и лежит на диске, а вызов ещё не вернулся. С этого момента
+        /// прерывание записи не удаляет ничего — удалять умеет только владелец.
+        private let stopGate: Gate?
 
-        init(directory: URL, duration: TimeInterval = 3.0) {
+        init(directory: URL, duration: TimeInterval = 3.0, stopGate: Gate? = nil) {
             self.directory = directory
             self.duration = duration
+            self.stopGate = stopGate
         }
 
         func startRecording() async throws -> URL {
@@ -38,6 +43,7 @@ final class RecordingCleanupTests: XCTestCase {
         func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
             guard let lastFile, isRecording else { throw AudioCaptureError.notRecording }
             isRecording = false
+            if let stopGate { await stopGate.pass() }
             return (lastFile, duration)
         }
 
@@ -73,7 +79,10 @@ final class RecordingCleanupTests: XCTestCase {
         capture: FileCapture,
         transcribeError: Error? = nil,
         transcribeDelay: Duration = .zero,
+        transcribeGate: Gate? = nil,
+        transcribeEntered: Gate? = nil,
         insertError: TextInsertionError? = nil,
+        overlay: any OverlayPresenting = FakeOverlay(),
         recordingRecovery: any RecordingRecoveryStoring = DiscardingRecordingRecovery()
     ) -> DictationController {
         let inserter = FakeInserter()
@@ -84,11 +93,13 @@ final class RecordingCleanupTests: XCTestCase {
             capture: capture,
             transcribe: { _ in
                 if transcribeDelay > .zero { try await Task.sleep(for: transcribeDelay) }
+                if let transcribeEntered { await transcribeEntered.open() }
+                if let transcribeGate { await transcribeGate.pass() }
                 if let transcribeError { throw transcribeError }
                 return ASRResult(text: "распознано", audioDuration: 3, processingDuration: 0.1)
             },
             inserter: inserter,
-            overlay: FakeOverlay(),
+            overlay: overlay,
             sounds: FakeSounds(),
             recordingRecovery: recordingRecovery
         )
@@ -170,6 +181,119 @@ final class RecordingCleanupTests: XCTestCase {
 
         let leftovers = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
         XCTAssertTrue(leftovers.isEmpty, "Слишком короткая запись тоже удаляется: \(leftovers)")
+    }
+
+    func testCancelBeforeRecognitionFailureLeavesNeitherFileNorNotice() async throws {
+        // Человек нажал Escape, а движок в это время всё-таки успел упасть.
+        // Отмена уже случилась: WAV отменённой диктовки не имеет права осесть
+        // в папке повтора, а сбой — объявиться сообщением. Иначе Escape
+        // оставляет ровно тот след, от которого он и должен избавлять.
+        let gate = Gate()
+        let entered = Gate()
+        let capture = FileCapture(directory: directory)
+        let recovered = directory.appending(path: "RecoveredAudio", directoryHint: .isDirectory)
+        let overlay = CollectingOverlay()
+        let controller = makeController(
+            capture: capture,
+            transcribeError: ASREngineError.inferenceFailed("сбой"),
+            transcribeGate: gate,
+            transcribeEntered: entered,
+            overlay: overlay,
+            recordingRecovery: RecordingRecoveryStore(directory: recovered)
+        )
+        var notices: [DictationNotice] = []
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        // Ждём не состояния, а того, что движок действительно начал работу:
+        // состояние переключается синхронно, задача — нет, и отмена, посланная
+        // раньше первой строки задачи, проверяла бы совсем другую ветку.
+        await entered.pass()
+        XCTAssertEqual(controller.state, .transcribing)
+
+        controller.cancel()
+        await settle()
+        await gate.open()
+        for _ in 0..<400 where controller.state != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        await settle()
+
+        let saved = (try? FileManager.default.contentsOfDirectory(at: recovered, includingPropertiesForKeys: nil))?
+            .filter { $0.pathExtension == "wav" } ?? []
+        XCTAssertTrue(saved.isEmpty, "Отменённая диктовка не сохраняется для Retry: \(saved)")
+
+        let takes = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "wav" }
+        XCTAssertTrue(takes.isEmpty, "Отменённая диктовка не оставляет запись в Takes: \(takes)")
+
+        let presented = await overlay.notices
+        XCTAssertTrue(
+            presented.allSatisfy { $0.kind != .failure },
+            "После отмены сообщать не о чем: \(presented.map(\.message))"
+        )
+        XCTAssertTrue(notices.allSatisfy { $0.recoveryAudio == nil })
+    }
+
+    func testCancelDuringRescueLeavesNeitherFileNorNotice() async throws {
+        // Устройство пропало посреди речи: контроллер закрывает WAV и готовит
+        // его к Retry. Пока файл закрывается, человек нажимает Escape — и с
+        // этого момента у диктовки один исход. Отменённая запись не имеет
+        // права ни осесть на диске «для повтора», ни объявиться сообщением о
+        // сбое поверх той сессии, которую человек начал следом.
+        let gate = Gate()
+        let capture = FileCapture(directory: directory, stopGate: gate)
+        let recovered = directory.appending(path: "RecoveredAudio", directoryHint: .isDirectory)
+        let overlay = CollectingOverlay()
+        var notices: [DictationNotice] = []
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in ASRResult(text: "распознано", audioDuration: 3, processingDuration: 0.1) },
+            inserter: FakeInserter(),
+            overlay: overlay,
+            sounds: FakeSounds(),
+            recordingRecovery: RecordingRecoveryStore(directory: recovered)
+        )
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        XCTAssertEqual(controller.state, .listening)
+
+        controller.preserveActiveRecording(reason: "Устройство отключилось.")
+        await settle()
+        XCTAssertEqual(controller.state, .transcribing, "Спасение записи обязано начаться")
+
+        controller.cancel()
+        await settle()
+        await gate.open()
+        for _ in 0..<400 where controller.state != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        await settle()
+
+        let takes = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "wav" }
+        XCTAssertTrue(takes.isEmpty, "Отменённая диктовка не оставляет запись в Takes: \(takes)")
+
+        let saved = (try? FileManager.default.contentsOfDirectory(at: recovered, includingPropertiesForKeys: nil))?
+            .filter { $0.pathExtension == "wav" } ?? []
+        XCTAssertTrue(saved.isEmpty, "Отменённая диктовка не сохраняется для Retry: \(saved)")
+
+        let presented = await overlay.notices
+        XCTAssertTrue(
+            presented.allSatisfy { $0.kind != .failure },
+            "После отмены сообщение о сбое спасения показывать не за что: \(presented.map(\.message))"
+        )
+        XCTAssertTrue(
+            notices.allSatisfy { $0.recoveryAudio == nil },
+            "Отменённая запись не предлагается для Retry"
+        )
+        XCTAssertEqual(controller.state, .idle)
     }
 
     func testRecordingIsDeletedWhenCancelledDuringTranscription() async throws {

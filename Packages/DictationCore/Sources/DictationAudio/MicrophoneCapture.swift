@@ -30,6 +30,13 @@ public actor MicrophoneCapture: AudioCapturing {
     private var firstBufferAt: ContinuousClock.Instant?
     private var startedAt: ContinuousClock.Instant?
 
+    /// Ожидающие первого кадра — им отвечает `waitForFirstFrame()`.
+    ///
+    /// Каждый пробуждается ровно один раз: либо пришедшим кадром, либо концом
+    /// записи. Второго источника пробуждения нет намеренно — забытое здесь
+    /// продолжение подвесило бы старт диктовки.
+    private var firstFrameWaiters: [CheckedContinuation<Bool, Never>] = []
+
     /// Запись сорвалась прямо во время речи.
     ///
     /// Молчать до остановки нельзя: закончившееся место на диске человек иначе
@@ -63,9 +70,31 @@ public actor MicrophoneCapture: AudioCapturing {
         return startedAt.duration(to: firstBufferAt)
     }
 
+    /// Первый кадр уже пришёл — или его не будет.
+    ///
+    /// Ждать безопасно: продолжение регистрируется и отпускает актор, поэтому
+    /// остановка и прерывание записи проходят и будят ожидающих.
+    public func waitForFirstFrame() async -> Bool {
+        if firstBufferAt != nil { return true }
+        guard engine != nil else { return false }
+        return await withCheckedContinuation { continuation in
+            firstFrameWaiters.append(continuation)
+        }
+    }
+
+    private func wakeFirstFrameWaiters(arrived: Bool) {
+        guard !firstFrameWaiters.isEmpty else { return }
+        let waiting = firstFrameWaiters
+        firstFrameWaiters = []
+        for waiter in waiting { waiter.resume(returning: arrived) }
+    }
+
     public func startRecording() async throws -> URL {
         guard engine == nil else { throw AudioCaptureError.engineUnavailable("recording is already in progress") }
 
+        // Ждущие от прошлой записи (если такие остались) больше не дождутся её
+        // кадра: их запись кончилась.
+        wakeFirstFrameWaiters(arrived: false)
         startedAt = .now
         firstBufferAt = nil
         writeFailure = nil
@@ -160,7 +189,13 @@ public actor MicrophoneCapture: AudioCapturing {
     }
 
     private func consume(_ samples: [Float]) {
-        if firstBufferAt == nil { firstBufferAt = .now }
+        if firstBufferAt == nil {
+            firstBufferAt = .now
+            // Только теперь микрофон действительно слышит: до этой строки звук
+            // подтверждения обманывал бы человека на десятую долю секунды, и
+            // первое слово уходило бы в тишину.
+            wakeFirstFrameWaiters(arrived: true)
+        }
         onSamples(samples)
         guard let writer, writeFailure == nil else { return }
         do {
@@ -179,6 +214,9 @@ public actor MicrophoneCapture: AudioCapturing {
         guard let engine, writer != nil, !isStopping else { throw AudioCaptureError.notRecording }
         isStopping = true
         defer { isStopping = false }
+        // Кадра можно больше не ждать: запись кончается. Иначе старт сессии,
+        // повисший на молчащем устройстве, не отпустил бы никогда.
+        wakeFirstFrameWaiters(arrived: false)
 
         // Сначала глушим движок, потом снимаем отвод: кадр, уже вышедший из
         // железа, успевает дойти до очереди.
@@ -213,6 +251,7 @@ public actor MicrophoneCapture: AudioCapturing {
     }
 
     public func abortRecording() async {
+        wakeFirstFrameWaiters(arrived: false)
         engine?.stop()
         engine?.inputNode.removeTap(onBus: 0)
         engine = nil

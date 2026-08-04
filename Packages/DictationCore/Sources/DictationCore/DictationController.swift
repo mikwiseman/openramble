@@ -58,6 +58,9 @@ public final class DictationController {
     private let sounds: any Sounding
     private let recordingRecovery: any RecordingRecoveryStoring
     private let pipeline: () -> TextPipeline
+    /// Часы сессии. Отдельной зависимостью ровно по той же причине, что и
+    /// микрофон: часовой предел иначе нельзя проверить, не прождав час.
+    private let now: @Sendable () -> Date
 
     // MARK: - Состояние сессии
 
@@ -87,6 +90,14 @@ public final class DictationController {
     /// микрофон оставался включённым, и выйти из этого было нечем.
     private var currentSession = 0
 
+    /// Сообщение, которое ждёт конца сессии.
+    ///
+    /// Сразу показать нельзя: следом за остановкой панель перерисовывается под
+    /// «распознаю» и стирает сообщение — оно живёт на экране доли секунды.
+    /// Пока ждало только объяснение часового предела: единственный путь, где
+    /// сессию заканчивает не человек и не сбой.
+    private var noticeAfterSession: DictationNotice?
+
     public init(
         capture: any AudioCapturing,
         transcribe: @escaping @Sendable (URL) async throws -> ASRResult,
@@ -94,7 +105,8 @@ public final class DictationController {
         overlay: any OverlayPresenting,
         sounds: any Sounding,
         recordingRecovery: any RecordingRecoveryStoring = DiscardingRecordingRecovery(),
-        pipeline: @escaping () -> TextPipeline = { TextPipeline() }
+        pipeline: @escaping () -> TextPipeline = { TextPipeline() },
+        now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.capture = capture
         self.transcribe = transcribe
@@ -103,6 +115,7 @@ public final class DictationController {
         self.sounds = sounds
         self.recordingRecovery = recordingRecovery
         self.pipeline = pipeline
+        self.now = now
     }
 
     // MARK: - Начало
@@ -126,6 +139,7 @@ public final class DictationController {
         isHandsFreeActive = handsFree
         cancellationRequested = false
         deferredStopRequested = false
+        noticeAfterSession = nil
         // Цель запоминаем сразу: потом фокус уйдёт.
         targetApplication = inserter.frontmostApplication()
         state = .preparing
@@ -159,20 +173,30 @@ public final class DictationController {
             return
         }
 
-        recordingStartedAt = Date()
+        recordingStartedAt = now()
         state = .listening
-        // Звук играем только теперь, когда запись реально идёт. Если играть его
-        // раньше, пользователь начнёт говорить в ещё не поднятый микрофон и
-        // потеряет первое слово.
-        await sounds.playStart()
         await overlay.present(.listening, elapsed: 0)
 
         // Отпускание, пришедшее пока поднимался движок, обрабатываем здесь —
-        // ровно один раз.
+        // ровно один раз. Раньше сигнала намеренно: ждать первого кадра ради
+        // звука «говорите» в записи, которая уже кончилась, незачем, а
+        // отложить из-за ожидания остановку значило бы держать микрофон
+        // включённым на молчащем устройстве, пока кадр не придёт, — а он
+        // может не прийти вовсе.
         if deferredStopRequested {
             deferredStopRequested = false
             finish()
+            return
         }
+
+        // Звук — только когда микрофон действительно начал отдавать кадры.
+        // Движок запускается раньше, чем начинает слышать: между этими
+        // моментами около десятой доли секунды, и человек, начинающий
+        // говорить по сигналу, терял в неё первое слово.
+        guard await capture.waitForFirstFrame() else { return }
+        // Пока ждали кадр, сессию могли закрыть или начать следующую.
+        guard isCurrent(session), state == .listening else { return }
+        await sounds.playStart()
     }
 
     // MARK: - Остановка
@@ -283,6 +307,15 @@ public final class DictationController {
             await finishWithoutInsertion(session: session)
             return
         } catch {
+            // Отмена, пришедшая пока работал движок, главнее его сбоя. Иначе
+            // Escape оставлял бы ровно тот след, от которого избавляет:
+            // сохранённый для Retry голос и сообщение о сбое — уже поверх той
+            // сессии, которую человек начал следом.
+            guard shouldContinue(session) else {
+                await discard(recording.url)
+                await finishWithoutInsertion(session: session)
+                return
+            }
             let saved: URL?
             let suffix: String
             do {
@@ -299,8 +332,7 @@ public final class DictationController {
                 message: DictationError.recognition(String(describing: error)).userMessage + suffix,
                 recoveryAudio: saved
             )
-            onNotice?(notice)
-            await overlay.presentNotice(notice)
+            await report(notice)
             await cleanup(session: session)
             return
         }
@@ -315,9 +347,19 @@ public final class DictationController {
 
         let processed = pipeline().process(recognized.text)
         guard !processed.text.isEmpty else {
-            // Пустой результат — не ошибка: человек мог передумать и промолчать.
+            // Пустой результат — не ошибка: человек мог промолчать, говорить
+            // слишком тихо или в не тот микрофон. Но и молчать в ответ нельзя:
+            // погасшая панель без текста неотличима от «вставилось не туда», и
+            // человек идёт искать пропавшую фразу в чужом окне. Слишком
+            // короткое нажатие сюда не попадает — оно отсеяно выше и объяснения
+            // не требует.
             await discard(recording.url)
-            await finishWithoutInsertion(session: session)
+            let notice = DictationNotice(
+                kind: .info,
+                message: "Nothing was recognized — nothing was inserted."
+            )
+            await report(notice)
+            await cleanup(session: session)
             return
         }
 
@@ -368,8 +410,7 @@ public final class DictationController {
             kind: .warning,
             message: "The text was inserted, but pressing Return failed."
         )
-        onNotice?(notice)
-        await overlay.presentNotice(notice)
+        await report(notice)
         await cleanup(session: session)
     }
 
@@ -381,8 +422,7 @@ public final class DictationController {
                 kind: .warning,
                 message: "The text was inserted, but the previous clipboard couldn't be restored."
             )
-            onNotice?(notice)
-            await overlay.presentNotice(notice)
+            await report(notice)
             await cleanup(session: session)
             return
         }
@@ -401,8 +441,7 @@ public final class DictationController {
         }
 
         let notice = DictationNotice(kind: .warning, message: message, recoverableText: text)
-        onNotice?(notice)
-        await overlay.presentNotice(notice)
+        await report(notice)
         await cleanup(session: session)
     }
 
@@ -436,6 +475,7 @@ public final class DictationController {
         finalizationTask?.cancel()
 
         let notice = DictationNotice(kind: .failure, message: message)
+        noticeAfterSession = nil
         onNotice?(notice)
 
         let session = currentSession
@@ -455,6 +495,7 @@ public final class DictationController {
         if state == .preparing {
             cancel()
             let notice = DictationNotice(kind: .failure, message: message)
+            noticeAfterSession = nil
             onNotice?(notice)
             Task { await overlay.presentNotice(notice) }
             return
@@ -465,13 +506,29 @@ public final class DictationController {
         state = .transcribing
         let task = Task { [weak self] in
             guard let self else { return }
-            let saved: URL?
+            let recording: (url: URL, duration: TimeInterval)?
             do {
-                let recording = try await self.capture.stopRecording()
+                recording = try await self.capture.stopRecording()
                 await self.sounds.playStop()
-                saved = try await self.recordingRecovery.preserve(recording.url)
             } catch {
-                saved = nil
+                recording = nil
+            }
+
+            // Пока закрывался файл, человек мог нажать Escape. С этого момента
+            // у диктовки один исход — отмена, и она главнее спасения: закрытый
+            // WAV уже не удалит прерывание записи, а спасённый лёг бы в папку
+            // повтора вопреки обещанию «отменённая диктовка удалена». Заодно
+            // молчим: сообщение о сбое упало бы поверх той сессии, которую
+            // человек начал следом.
+            guard !Task.isCancelled else {
+                if let recording { await self.discard(recording.url) }
+                await self.cleanup(session: session)
+                return
+            }
+
+            var saved: URL?
+            if let recording {
+                saved = try? await self.recordingRecovery.preserve(recording.url)
             }
             let notice = DictationNotice(
                 kind: .failure,
@@ -480,8 +537,7 @@ public final class DictationController {
                     : message + " The recording is saved locally — you can retry or delete it.",
                 recoveryAudio: saved
             )
-            self.onNotice?(notice)
-            await self.overlay.presentNotice(notice)
+            await self.report(notice)
             await self.cleanup(session: session)
         }
         finalizationTask = task
@@ -507,8 +563,7 @@ public final class DictationController {
         guard isCurrent(session) else { return }
 
         let notice = DictationNotice(kind: .failure, message: error.userMessage)
-        onNotice?(notice)
-        await overlay.presentNotice(notice)
+        await report(notice)
         await cleanup(session: session)
     }
 
@@ -535,12 +590,31 @@ public final class DictationController {
         targetApplication = nil
         recordingStartedAt = nil
         state = .idle
-        await overlay.dismiss()
+
+        // Отложенное сообщение показываем здесь — когда панель уже свободна.
+        if let pending = noticeAfterSession {
+            noticeAfterSession = nil
+            onNotice?(pending)
+            await overlay.presentNotice(pending)
+        } else {
+            await overlay.dismiss()
+        }
     }
 
     private func elapsedSeconds() -> TimeInterval {
         guard let recordingStartedAt else { return 0 }
-        return Date().timeIntervalSince(recordingStartedAt)
+        return now().timeIntervalSince(recordingStartedAt)
+    }
+
+    /// Показать сообщение: и подписчику, и на панели.
+    ///
+    /// Единственный выход сообщений наружу из ядра. Здесь же снимается
+    /// отложенное: у сессии одна причина конца, а не две, и объяснение
+    /// часового предела не имеет права затереть рассказ о сбое.
+    private func report(_ notice: DictationNotice) async {
+        noticeAfterSession = nil
+        onNotice?(notice)
+        await overlay.presentNotice(notice)
     }
 
     /// Убрать запись с диска.
@@ -557,8 +631,7 @@ public final class DictationController {
                 kind: .failure,
                 message: "Couldn't delete the local recording: \(error.localizedDescription)"
             )
-            onNotice?(notice)
-            await overlay.presentNotice(notice)
+            await report(notice)
         }
     }
 
@@ -566,11 +639,13 @@ public final class DictationController {
     public func checkDurationLimit() {
         guard state == .listening else { return }
         if DictationDurationPolicy.action(elapsed: elapsedSeconds()) == .stopAndTranscribe {
-            onNotice?(
-                DictationNotice(
-                    kind: .info,
-                    message: "Reached the one-hour limit. Transcribing what was recorded."
-                )
+            // Показать сейчас нельзя: `finish()` тут же перерисует панель под
+            // «распознаю». А только через `onNotice` — значит никуда: панель
+            // сообщений от подписчика не показывает, и объяснение обрыва на
+            // полуслове не доходило вовсе.
+            noticeAfterSession = DictationNotice(
+                kind: .info,
+                message: "Reached the one-hour limit. Transcribing what was recorded."
             )
             finish()
         }

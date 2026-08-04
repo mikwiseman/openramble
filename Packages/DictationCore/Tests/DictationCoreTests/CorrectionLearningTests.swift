@@ -85,6 +85,107 @@ final class CorrectionLearningTests: XCTestCase {
         )
     }
 
+    func testОбычнаяПравкаРечиНаЛатиницеНеУчится() {
+        // Тот же запрет, что и для «быстро» → «быстрее», но в тексте, где
+        // латиница есть с обеих сторон. Раньше признаком термина считалось
+        // «справа есть латиница» — в английском тексте он не значил ничего, и
+        // сюда проваливалась любая правка слов.
+        for (original, edited) in [
+            ("please send me the file", "please send me a file"),
+            ("the quick brown fox jumps", "the slow brown fox jumps"),
+            ("I went to the store today", "I ran to the store today"),
+        ] {
+            XCTAssertTrue(
+                CorrectionLearning.propose(original: original, edited: edited).isEmpty,
+                "Правка речи «\(original)» → «\(edited)» не должна становиться заменой"
+            )
+        }
+    }
+
+    func testВыученнаяПравкаРечиНеПеределываетБудущиеДиктовки() {
+        // Цена ошибки, ради которой фильтр и существует: одна правка «the» →
+        // «a» переписывала каждую следующую диктовку.
+        let learned = CorrectionLearning.propose(
+            original: "please send me the file",
+            edited: "please send me a file"
+        )
+        let text = TextPipeline(replacements: learned).process("The report is on the desk").text
+
+        XCTAssertEqual(text, "The report is on the desk")
+    }
+
+    func testПравкаРегистраНаГраницеПредложенияНеУчится() {
+        // Перестановка заглавных при переносе слов внутри абзаца давала пару
+        // «The» → «the» вместе с её противоположностью «the» → «The»: два
+        // правила, спорящих друг с другом в каждой будущей диктовке.
+        let proposals = CorrectionLearning.propose(
+            original: "The file is ready. the build passed.",
+            edited: "the file is ready. The build passed."
+        )
+
+        XCTAssertTrue(proposals.isEmpty)
+    }
+
+    func testОднобуквеннаяЗаменаНеУчится() {
+        // Смена письменности формально есть, термина — нет, а замена по всему
+        // тексту стоит дороже любой пользы.
+        let proposals = CorrectionLearning.propose(original: "привет мир", edited: "привет a")
+
+        XCTAssertTrue(proposals.isEmpty)
+    }
+
+    func testБрендРегистрВнутриСловаУчитсяИБезСменыПисьменности() {
+        // Единственный признак термина, который работает в тексте целиком на
+        // латинице: заглавная не в начале слова.
+        for (spoken, written) in [("api", "API"), ("iphone", "iPhone"), ("mac os", "macOS")] {
+            let proposals = CorrectionLearning.propose(
+                original: "open \(spoken) now",
+                edited: "open \(written) now"
+            )
+            XCTAssertEqual(proposals.map(\.written), [written], "«\(spoken)» → «\(written)»")
+        }
+    }
+
+    func testОднаИТаЖеПараПредлагаетсяОдинРаз() {
+        let proposals = CorrectionLearning.propose(
+            original: "открой сентри и закрой сентри",
+            edited: "открой Sentry и закрой Sentry"
+        )
+
+        XCTAssertEqual(proposals.count, 1, "Дубликат в словаре человеку придётся удалять отдельно")
+        XCTAssertEqual(proposals.map(\.spoken), ["сентри"])
+    }
+
+    func testПереписанныйТекстНеУчитНичему() {
+        // Не правка терминов, а другой текст: якорные слова на месте, а между
+        // ними подменено всё. Установить разом столько молчаливых правил
+        // необратимо — честнее не выучить ничего.
+        var original = ""
+        var edited = ""
+        for index in 0..<40 {
+            original += "слово\(index) sep "
+            edited += "Term\(index)X sep "
+        }
+
+        XCTAssertTrue(CorrectionLearning.propose(original: original, edited: edited).isEmpty)
+    }
+
+    func testПравкаНесколькихТерминовВПределахЛимитаУчится() {
+        // Граница должна пропускать настоящую правку: пять терминов подряд —
+        // всё ещё правка, а не подмена текста.
+        var original = ""
+        var edited = ""
+        for index in 0..<CorrectionLearning.maximumProposalsPerCorrection {
+            original += "термин\(index) sep "
+            edited += "Term\(index)X sep "
+        }
+
+        XCTAssertEqual(
+            CorrectionLearning.propose(original: original, edited: edited).count,
+            CorrectionLearning.maximumProposalsPerCorrection
+        )
+    }
+
     func testКириллическаяПравкаТерминаНаКириллицуНеУчится() {
         // «сентри» → «центре»-подобные пары без латиницы не проходят фильтр:
         // без сигнала «это термин» слишком велик шанс выучить обычную правку.

@@ -7,12 +7,23 @@ import Foundation
 /// текст, который человек поправил у нас сам. Пословный diff превращает правку
 /// в кандидатов на замену.
 ///
-/// Фильтр консервативен намеренно. Учится только пара, где правая сторона
-/// похожа на термин: содержит латиницу либо смешанный регистр. Всё остальное —
-/// скорее правка речи («быстро» → «быстрее»), и выучить её значило бы молча
-/// подменять слова человека в следующих диктовках. Правило то же, что у
-/// фильтра «обычных слов» в индустрии, но проверяемое и локальное.
+/// Фильтр консервативен намеренно. Учится только пара, у которой правая сторона
+/// несёт **сигнал термина**: смену письменности («поуст герз» → «Postgres») или
+/// бренд-регистр («github» → «GitHub»). Всё остальное — скорее правка речи
+/// («быстро» → «быстрее», «the file» → «a file»), и выучить её значило бы молча
+/// подменять слова человека в следующих диктовках.
 public enum CorrectionLearning {
+    /// Сколько замен может выйти из одной правки.
+    ///
+    /// Правка диктовки — это несколько терминов. Когда пар больше, перед нами
+    /// не правка, а другой текст: вставленный перевод, переписанный абзац. Из
+    /// такого нельзя учить ничего — не потому, что часть пар плоха, а потому,
+    /// что установить разом десятки молчаливых правил будущих диктовок
+    /// необратимо, а сказать «учить нечего» и попросить поправить термины
+    /// меньшими порциями — нет. Замер: правка-подмена на 200 слов давала
+    /// 200 замен разом.
+    static let maximumProposalsPerCorrection = 5
+
     /// Предложить замены по правке. Ничего не сохраняет — только предлагает.
     public static func propose(
         original: String,
@@ -24,6 +35,7 @@ public enum CorrectionLearning {
         guard !originalWords.isEmpty, !editedWords.isEmpty else { return [] }
 
         let known = Set(existing.map { $0.spoken.lowercased() })
+        var seen = Set<String>()
         var proposals: [DictionaryReplacement] = []
 
         for pair in substitutions(from: originalWords, to: editedWords) {
@@ -32,12 +44,17 @@ public enum CorrectionLearning {
             guard spoken.lowercased() != written.lowercased() || spoken != written else {
                 continue
             }
-            guard looksLikeTerm(written) else { continue }
+            guard looksLikeTerm(spoken: spoken, written: written) else { continue }
             guard !known.contains(spoken.lowercased()) else { continue }
+            // Одна и та же пара может встретиться в тексте дважды («открой
+            // сентри и закрой сентри»). Второй экземпляр в словаре ничего не
+            // добавляет, а удалять его человеку пришлось бы отдельной строкой.
+            guard seen.insert("\(spoken.lowercased())\u{0}\(written)").inserted else { continue }
             // Термины из правки латиницей не склоняются — как и в стартовом
             // наборе: склоняемая основа выдумывала бы совпадения.
             proposals.append(DictionaryReplacement(spoken: spoken, written: written, inflects: false))
         }
+        guard proposals.count <= maximumProposalsPerCorrection else { return [] }
         return proposals
     }
 
@@ -122,10 +139,35 @@ public enum CorrectionLearning {
         text.split { !$0.isLetter && !$0.isNumber && $0 != "-" }.map(String.init)
     }
 
-    /// Похоже ли написанное на термин, ради которого заводят словарь.
-    private static func looksLikeTerm(_ written: String) -> Bool {
-        let hasLatin = written.contains { $0.isLetter && $0.isASCII }
-        guard hasLatin else { return false }
-        return true
+    /// Похоже ли исправление на термин, ради которого заводят словарь.
+    ///
+    /// Проверять одну лишь латиницу справа нельзя: в тексте, который целиком
+    /// на латинице, этот признак не значит ничего, и обычная правка речи
+    /// проходила бы за термин. Замер: «please send me the file» → «…a file»
+    /// давал замену «the» → «a», после которой каждая следующая диктовка
+    /// молча превращала «The report is on the desk» в «A report is on a desk».
+    ///
+    /// Поэтому сигналом считается не наличие латиницы, а её появление там, где
+    /// её не было, либо регистр, которого у обычного слова не бывает:
+    ///
+    /// 1. **Смена письменности** — слева латиницы нет, справа есть. Ровно то,
+    ///    как выглядит термин, услышанный кириллицей: «поуст герз» → «Postgres».
+    /// 2. **Бренд-регистр** — заглавная не в начале слова: «GitHub», «macOS»,
+    ///    «API». Заглавная только первой буквой сигналом не считается: она
+    ///    неотличима от начала предложения, и на ней ловились пары вроде
+    ///    «The» → «the» вместе со своей противоположностью «the» → «The».
+    ///
+    /// Одной латинской буквы для термина мало: «мир» → «a» формально сменяет
+    /// письменность, а как замена по всему тексту стоит слишком дорого.
+    private static func looksLikeTerm(spoken: String, written: String) -> Bool {
+        guard written.filter({ $0.isLetter && $0.isASCII }).count >= 2 else { return false }
+
+        let spokenHasLatin = spoken.contains { $0.isLetter && $0.isASCII }
+        let writtenHasLatin = written.contains { $0.isLetter && $0.isASCII }
+        if !spokenHasLatin, writtenHasLatin { return true }
+
+        return words(from: written).contains { word in
+            word.dropFirst().contains { $0.isUppercase && $0.isASCII }
+        }
     }
 }
