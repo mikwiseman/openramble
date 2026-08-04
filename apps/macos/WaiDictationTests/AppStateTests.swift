@@ -850,3 +850,72 @@ final class RecoveredFileTests: XCTestCase {
         XCTAssertNil(state.recoveredText)
     }
 }
+
+/// Живой предпросмотр и сохранённый язык распознавания.
+@MainActor
+final class LivePreviewToggleTests: XCTestCase {
+    /// Движок, запоминающий команды предпросмотра.
+    private final class PreviewEngine: ASREngineAdapting, LivePreviewCapable, @unchecked Sendable {
+        private let lock = NSLock()
+        private var _stops = 0
+        var stopCount: Int { lock.withLock { _stops } }
+
+        func loadModels(from directory: URL) async throws {}
+        func transcribe(samples: [Float]) async throws -> ASRResult {
+            ASRResult(text: "", audioDuration: 0, processingDuration: 0)
+        }
+        func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
+            ASRResult(text: "", audioDuration: 0, processingDuration: 0)
+        }
+        func unload() async {}
+        func startPreview(
+            onUpdate: @escaping @Sendable (_ confirmed: String, _ volatile: String) -> Void
+        ) async throws {}
+        func feedPreview(samples: [Float]) async {}
+        func stopPreview() async { lock.withLock { _stops += 1 } }
+    }
+
+    func testВыключениеГалочкиОстанавливаетПредпросмотрНемедленно() async throws {
+        let harness = try AppHarness()
+        defer { harness.tearDown() }
+        let engine = PreviewEngine()
+        harness.warmUpEngine = engine
+        let state = harness.makeState()
+        XCTAssertTrue(state.showLivePreview, "По умолчанию предпросмотр включён")
+
+        state.showLivePreview = false
+
+        // Остановка уходит асинхронной задачей — ждём опросом, не сном.
+        for _ in 0..<200 where engine.stopCount == 0 {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertGreaterThanOrEqual(
+            engine.stopCount, 1,
+            "Человек снял галочку, чтобы предпросмотр погас сейчас, а не при следующей смене состояния"
+        )
+    }
+
+    func testНезнакомыйСохранённыйЯзыкЧитаетсяКакАвтоопределение() throws {
+        let harness = try AppHarness()
+        defer { harness.tearDown() }
+        harness.defaults.set("xx-not-a-language", forKey: AppState.recognitionLanguageKey)
+
+        let state = harness.makeState()
+
+        XCTAssertNil(
+            state.recognitionLanguage,
+            "Код, которого движок не знает, ронял бы каждую диктовку и копил WAV в спасении"
+        )
+    }
+
+    func testЗнакомыйСохранённыйЯзыкПереживаетПерезапуск() throws {
+        let harness = try AppHarness()
+        defer { harness.tearDown() }
+        harness.defaults.set("ru", forKey: AppState.recognitionLanguageKey)
+
+        let state = harness.makeState()
+
+        XCTAssertEqual(state.recognitionLanguage, "ru")
+    }
+}

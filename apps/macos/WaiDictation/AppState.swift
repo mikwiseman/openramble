@@ -239,9 +239,28 @@ public final class AppState: ObservableObject {
         didSet {
             guard oldValue != showLivePreview else { return }
             defaults.set(showLivePreview, forKey: Self.showLivePreviewKey)
+            // Выключили посреди диктовки — предпросмотр гаснет сейчас, а не
+            // «когда-нибудь при смене состояния». Человек снял галочку, чтобы
+            // текст ушёл с экрана немедленно.
+            if !showLivePreview {
+                previewFeedGate.close()
+                (overlay as? PreviewPresenting)?.updatePreview(confirmed: "", volatile: "")
+                if let transcriber { Task { await transcriber.stopPreview() } }
+            } else if dictationState == .listening {
+                previewFeedGate.open()
+                updateLivePreview(for: .listening)
+            }
         }
     }
     nonisolated static let showLivePreviewKey = "showLivePreview"
+
+    /// Кран между аудиопотоком и предпросмотром.
+    ///
+    /// Колбэк захвата живёт вне главного актора и не может читать @Published:
+    /// затвор — единственная точка правды, доступная с обеих сторон. Закрыт —
+    /// и на каждый из ~23 кадров в секунду не создаётся задача ради вызова,
+    /// который всё равно кончился бы ничем.
+    private let previewFeedGate = PreviewFeedGate()
 
     /// Запуск при входе в систему. Приложение без иконки в Dock, которое не
     /// запустилось после перезагрузки, неотличимо от сломанного: клавиша
@@ -290,7 +309,15 @@ public final class AppState: ObservableObject {
 
     public init(environment: AppEnvironment) {
         defaults = environment.defaults
-        recognitionLanguage = environment.defaults.string(forKey: Self.recognitionLanguageKey)
+        // Сохранённый код сверяется со списком движка. Список — свойство
+        // библиотеки и может сузиться при её обновлении; без проверки каждая
+        // диктовка падала бы на «unsupported language hint», WAV копились бы
+        // в спасении, а пикер показывал бы пустую строку. Незнакомый код —
+        // это автоопределение, как и было до выбора.
+        let storedLanguage = environment.defaults.string(forKey: Self.recognitionLanguageKey)
+        recognitionLanguage = storedLanguage.flatMap {
+            FluidAudioAdapter.supportedLanguageHints.contains($0) ? $0 : nil
+        }
         showLivePreview = environment.defaults.object(forKey: Self.showLivePreviewKey) == nil
             ? true
             : environment.defaults.bool(forKey: Self.showLivePreviewKey)
@@ -362,12 +389,12 @@ public final class AppState: ObservableObject {
                         )
                     }
                 },
-                { [weak self, previewFeed] samples in
+                { [weak self, previewFeed, previewFeedGate] samples in
                     // Живые отсчёты: в предпросмотр и в индикатор уровня.
                     // Пик достаточен — RMS здесь не точнее для глаза.
                     let peak = samples.reduce(Float(0)) { max($0, abs($1)) }
                     Task { @MainActor in self?.registerInputLevel(peak) }
-                    if let previewFeed {
+                    if let previewFeed, previewFeedGate.isOpen {
                         Task { await previewFeed.feedPreview(samples: samples) }
                     }
                 }
@@ -1266,9 +1293,15 @@ public final class AppState: ObservableObject {
     /// поэтому ошибки старта не всплывают сообщением — отсутствие текста в
     /// панели видно само по себе, а вставка работает как раньше.
     private func updateLivePreview(for state: DictationState) {
-        guard let transcriber, showLivePreview else { return }
+        // Настройка закрывает только ЗАПУСК. Остановка обязана идти всегда:
+        // раньше guard стоял на входе, и выключение предпросмотра посреди
+        // диктовки означало, что stopPreview не вызовется никогда — вторая
+        // ASR-сессия и её задача жили вечно, а панель продолжала показывать
+        // предпросмотр при выключенной галочке.
+        guard let transcriber else { return }
         switch state {
-        case .listening:
+        case .listening where showLivePreview:
+            previewFeedGate.open()
             silenceHintTask?.cancel()
             silenceHintTask = Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(2))
@@ -1283,7 +1316,10 @@ public final class AppState: ObservableObject {
                     }
                 }
             }
+        case .listening:
+            break
         default:
+            previewFeedGate.close()
             silenceHintTask?.cancel()
             silenceHintTask = nil
             Task { await transcriber.stopPreview() }
