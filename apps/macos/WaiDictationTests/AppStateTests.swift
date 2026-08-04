@@ -379,6 +379,19 @@ final class AppStateTests: XCTestCase {
         )
     }
 
+    func testДоборПодсказчикаПослеОбновленияПриложения() async throws {
+        // Человек обновился со сборки, где подсказчика ещё не было: основная
+        // модель стоит, подсказчика нет. Для него это «модель не готова», а
+        // кнопка обязана называть настоящий остаток, а не полные 586 МБ.
+        try harness.installMainModelMarkerOnly()
+        let state = makeState()
+
+        await state.refreshModelState()
+
+        XCTAssertFalse(state.modelState.isReady)
+        XCTAssertEqual(state.remainingDownloadMegabytes, 103)
+    }
+
     func testПадениеПрогреваПереживаетОбновлениеСостоянияМодели() async throws {
         // Файлы модели целы, но Core ML их не поднимает. Осмотр диска такое
         // состояние увидеть не может: он снова скажет «готово».

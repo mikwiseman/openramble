@@ -113,6 +113,8 @@ public final class AppState: ObservableObject {
     @Published public private(set) var lastNotice: DictationNotice?
     @Published public private(set) var isPreparingEngine = false
     @Published public private(set) var isEngineReady = false
+    /// Сколько скачает кнопка установки: полный объём или добор после обновления.
+    @Published public private(set) var remainingDownloadMegabytes = 586
 
     /// Текст неудачной вставки. Никогда не пишется на диск.
     @Published public private(set) var recoveredText: String?
@@ -178,6 +180,12 @@ public final class AppState: ObservableObject {
     public let updater = SparkleUpdater()
 
     private var store: ModelStore?
+    private var vocabularyStore: ModelStore?
+    private var vocabularyDirectory: URL?
+    private var mainModelBytes: Int64 = 0
+    private var vocabularyModelBytes: Int64 = 0
+    private var mainModelFileCount = 0
+    private var vocabularyModelFileCount = 0
     private var transcriber: LocalTranscriber?
     private var recordingRecovery: RecordingRecoveryStore?
     private var engineDirectory: URL?
@@ -299,6 +307,24 @@ public final class AppState: ObservableObject {
             let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
             let store = ModelStore(manifest: manifest, layout: layout, downloader: modelDownloader)
             self.store = store
+            mainModelBytes = manifest.totalByteCount
+            mainModelFileCount = manifest.files.count
+
+            // Акустический подсказчик терминов — вторая модель с собственным
+            // манифестом. Для человека обе — одна «модель»: см. ModelPairState.
+            let vocabularyManifest = try ModelManifest.bundledVocabulary()
+            let vocabularyLayout = try ModelInstallLayout(
+                manifest: vocabularyManifest,
+                root: try paths.models()
+            )
+            vocabularyStore = ModelStore(
+                manifest: vocabularyManifest,
+                layout: vocabularyLayout,
+                downloader: modelDownloader
+            )
+            vocabularyDirectory = vocabularyLayout.engineDirectory
+            vocabularyModelBytes = vocabularyManifest.totalByteCount
+            vocabularyModelFileCount = vocabularyManifest.files.count
 
             let engineDirectory = layout.engineDirectory
             self.engineDirectory = engineDirectory
@@ -928,7 +954,17 @@ public final class AppState: ObservableObject {
         // установлена»: метки готовности ещё нет. Прогресс с экрана пропадал бы
         // ровно тогда, когда человек открыл настройки на него посмотреть.
         guard !isInstalling else { return }
-        modelState = await store.refreshState()
+        let mainState = await store.refreshState()
+        let vocabularyState = await vocabularyStore?.refreshState() ?? .notInstalled
+        modelState = combinedModelState(main: mainState, vocabulary: vocabularyState)
+        remainingDownloadMegabytes = Int(
+            (ModelPairState.remainingBytes(
+                main: mainState,
+                vocabulary: vocabularyState,
+                mainTotalBytes: mainModelBytes,
+                vocabularyTotalBytes: vocabularyModelBytes
+            ) + 500_000) / 1_000_000
+        )
         // Осмотр диска не видит отказ Core ML: файлы целы, а модель не поднялась.
         // Пока человек явно не запросил восстановление, отказ остаётся на экране —
         // иначе кнопка восстановления исчезает, а диктовка так и не работает.
@@ -942,6 +978,17 @@ public final class AppState: ObservableObject {
         }
     }
 
+    private func combinedModelState(main: ModelState, vocabulary: ModelState) -> ModelState {
+        ModelPairState.combine(
+            main: main,
+            vocabulary: vocabulary,
+            mainTotalBytes: mainModelBytes,
+            vocabularyTotalBytes: vocabularyModelBytes,
+            mainFileCount: mainModelFileCount,
+            vocabularyFileCount: vocabularyModelFileCount
+        )
+    }
+
     public func installModel() {
         // Повторное нажатие во время загрузки ничего не начинает: кнопка на
         // экране живёт до первого пришедшего состояния, и успеть нажать её
@@ -949,27 +996,61 @@ public final class AppState: ObservableObject {
         guard let store, !isInstalling else { return }
         isInstalling = true
         isEngineReady = false
-        let isRepair: Bool
-        if case .repairRequired = modelState {
-            isRepair = true
-        } else {
-            isRepair = false
-        }
+        // Отказ Core ML оставляет файлы на диске «целыми» — оба хранилища
+        // скажут «готово». Явное восстановление обязано сдержать обещание из
+        // сообщения и перекачать заново, а не молча повторить прогрев.
+        let engineRejectedModels = engineLoadFailure != nil
         // Явная команда человека открывает новую попытку: прежний отказ Core ML
         // больше не держится, свежая установка прогреется заново.
         engineLoadFailure = nil
 
         Task {
-            let states = await store.states()
-            let monitor = Task { @MainActor in
-                for await state in states { modelState = state }
+            // Обе модели ставятся последовательно, а прогресс на экране общий:
+            // каждое событие любого из хранилищ пересобирает объединённое
+            // состояние. Уже готовая модель не трогается — так добор после
+            // обновления скачивает только недостающий подсказчик.
+            var mainLatest = await store.refreshState()
+            let vocabularyLatest = UncheckedBox(
+                await vocabularyStore?.refreshState() ?? .notInstalled
+            )
+
+            if !mainLatest.isReady || engineRejectedModels {
+                let states = await store.states()
+                let monitor = Task { @MainActor in
+                    for await state in states {
+                        modelState = combinedModelState(
+                            main: state,
+                            vocabulary: vocabularyLatest.value
+                        )
+                    }
+                }
+                if mainLatest.isReady || mainLatest.requiresRepair {
+                    await store.repair()
+                } else {
+                    await store.install()
+                }
+                monitor.cancel()
+                mainLatest = await store.currentState()
             }
-            if isRepair {
-                await store.repair()
-            } else {
-                await store.install()
+
+            if mainLatest.isReady, let vocabularyStore,
+               !vocabularyLatest.value.isReady || engineRejectedModels {
+                let states = await vocabularyStore.states()
+                let mainSnapshot = mainLatest
+                let monitor = Task { @MainActor in
+                    for await state in states {
+                        vocabularyLatest.value = state
+                        modelState = combinedModelState(main: mainSnapshot, vocabulary: state)
+                    }
+                }
+                if vocabularyLatest.value.isReady || vocabularyLatest.value.requiresRepair {
+                    await vocabularyStore.repair()
+                } else {
+                    await vocabularyStore.install()
+                }
+                monitor.cancel()
             }
-            monitor.cancel()
+
             isInstalling = false
             await refreshModelState()
 
@@ -982,7 +1063,10 @@ public final class AppState: ObservableObject {
 
     public func cancelModelInstall() {
         guard isInstalling else { return }
-        Task { await store?.cancelInstall() }
+        Task {
+            await store?.cancelInstall()
+            await vocabularyStore?.cancelInstall()
+        }
     }
 
     public func deleteModel() {
@@ -1006,6 +1090,7 @@ public final class AppState: ObservableObject {
             engineLoadFailure = nil
             await transcriber?.unload()
             await store.delete()
+            await vocabularyStore?.delete()
             await refreshModelState()
         }
     }
@@ -1021,6 +1106,15 @@ public final class AppState: ObservableObject {
             let manifest = try ModelManifest.bundled()
             let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
             try await transcriber.prepare(modelDirectory: layout.engineDirectory)
+            // Подсказчик терминов — часть той же готовности: без него диктовка
+            // работала бы тише заявленного, а молчаливое «хуже, но работает»
+            // здесь запрещено.
+            if let vocabularyDirectory {
+                try await transcriber.prepareVocabulary(
+                    modelDirectory: vocabularyDirectory,
+                    boost: .developerDefault()
+                )
+            }
             isEngineReady = true
             engineLoadFailure = nil
         } catch {
@@ -1031,7 +1125,8 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .failure,
-                    message: "Модель не загрузилась. Требуется явное восстановление 483 МБ."
+                    message: "Модель не загрузилась. Требуется явное восстановление "
+                        + "\(remainingDownloadMegabytes == 0 ? 586 : remainingDownloadMegabytes) МБ."
                 )
             )
         }

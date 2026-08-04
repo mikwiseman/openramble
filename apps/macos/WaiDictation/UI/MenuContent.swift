@@ -108,7 +108,7 @@ struct MenuContent: View {
             Text(model.progressLabel.map { "\(model.title) — \($0)" } ?? model.title)
 
             ForEach(model.actions.filter { $0 != .delete }, id: \.self) { action in
-                Button(action.title) {
+                Button(model.title(for: action)) {
                     switch action {
                     case .install, .retry, .repair: state.installModel()
                     case .cancel: state.cancelModelInstall()

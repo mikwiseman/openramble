@@ -51,6 +51,8 @@ targets:
         buildPhase: resources
       - path: ../../Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json
         buildPhase: resources
+      - path: ../../Packages/LocalASR/Sources/LocalASR/Resources/vocabulary-manifest.json
+        buildPhase: resources
     dependencies:
       - package: DictationCore
         product: DictationCore

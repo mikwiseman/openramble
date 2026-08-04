@@ -497,8 +497,20 @@ final class AppHarness {
     /// диске не занимают 483 МБ. Marker фиксирует тот же size/mtime, который
     /// записывает прошедшая SHA-проверку production-установка.
     func installModelMarker() throws {
+        // Продукт считает модель готовой, только когда готовы обе: основная и
+        // подсказчик терминов. Тестовая установка кладёт метки обеим.
+        try installMarker(for: try ModelManifest.bundled())
+        try installMarker(for: try ModelManifest.bundledVocabulary())
+    }
+
+    /// Состояние после обновления со сборки без подсказчика: основная модель
+    /// стоит, подсказчика нет — проверка сценария добора.
+    func installMainModelMarkerOnly() throws {
+        try installMarker(for: try ModelManifest.bundled())
+    }
+
+    private func installMarker(for manifest: ModelManifest) throws {
         let paths = AppPaths(root: root)
-        let manifest = try ModelManifest.bundled()
         let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
         try FileManager.default.createDirectory(
             at: layout.engineDirectory,

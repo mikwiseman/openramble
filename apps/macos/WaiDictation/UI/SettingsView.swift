@@ -221,7 +221,8 @@ private struct ModelSettings: View {
                     status: ModelStatus.make(
                         state: state.modelState,
                         isPreparingEngine: state.isPreparingEngine,
-                        place: .settings
+                        place: .settings,
+                        downloadMegabytes: state.remainingDownloadMegabytes
                     ),
                     install: state.installModel,
                     cancel: state.cancelModelInstall,

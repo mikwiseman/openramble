@@ -153,7 +153,8 @@ jobs:
         run: |
           RESOURCES="artifacts/build/WaiDictation.xcarchive/Products/Applications/Wai Dictation Dev.app/Contents/Resources"
           for file in \
-            LICENSE NOTICE THIRD_PARTY_LICENSES.md model-manifest.json \
+            LICENSE NOTICE THIRD_PARTY_LICENSES.md \
+            model-manifest.json vocabulary-manifest.json \
             FluidAudio-Apache-2.0.txt FluidAudio-fastcluster-BSD.txt \
             FluidAudio-vbx-Apache-2.0.txt Sparkle-LICENSE.txt \
             Parakeet-CC-BY-4.0.txt

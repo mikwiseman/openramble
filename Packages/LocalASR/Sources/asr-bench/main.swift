@@ -212,6 +212,10 @@ case "status":
     let (store, layout, manifest) = try makeStore()
     let state = await store.refreshState()
     printState(state, layout: layout, manifest: manifest)
+    let (vocabStore, vocabLayout, vocabManifest) = try makeVocabularyStore()
+    let vocabState = await vocabStore.refreshState()
+    print("\nПодсказчик терминов:")
+    printState(vocabState, layout: vocabLayout, manifest: vocabManifest)
     exit(state.isReady ? 0 : 69)
 
 case "install":
@@ -251,6 +255,9 @@ case "delete":
     let (store, layout, _) = try makeStore()
     await store.delete()
     print("Удалено: \(layout.modelDirectory.path)")
+    let (vocabStore, vocabLayout, _) = try makeVocabularyStore()
+    await vocabStore.delete()
+    print("Удалено: \(vocabLayout.modelDirectory.path)")
 
 case "eval":
     guard let manifestPath = operands.first else { usage() }

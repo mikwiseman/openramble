@@ -16,6 +16,11 @@ public enum ModelState: Sendable, Equatable {
         return false
     }
 
+    public var requiresRepair: Bool {
+        if case .repairRequired = self { return true }
+        return false
+    }
+
     /// Доля выполнения для индикатора, если она осмысленна.
     public var progress: Double? {
         switch self {

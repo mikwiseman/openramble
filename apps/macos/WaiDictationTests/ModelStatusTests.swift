@@ -24,7 +24,8 @@ final class ModelStatusTests: XCTestCase {
 
         XCTAssertEqual(status.title, "Модель не установлена")
         XCTAssertEqual(status.actions, [.install])
-        XCTAssertEqual(status.detail?.contains("483 МБ"), true)
+        // Обе модели одной кнопкой: 483 МБ распознавание + 103 МБ подсказчик.
+        XCTAssertEqual(status.detail?.contains("586 МБ"), true)
         XCTAssertNil(status.progress)
     }
 
@@ -86,7 +87,12 @@ final class ModelStatusTests: XCTestCase {
 
         XCTAssertEqual(status.title, "Модель требует восстановления")
         XCTAssertEqual(status.actions, [.repair])
-        XCTAssertEqual(ModelStatus.Action.repair.title, "Скачать модель заново — 483 МБ")
+        XCTAssertEqual(status.title(for: .repair), "Скачать модель заново — 586 МБ")
+        // Добор после обновления называет только остаток, а не полный объём.
+        XCTAssertEqual(
+            ModelStatus.Action.repair.title(downloadMegabytes: 103),
+            "Скачать модель заново — 103 МБ"
+        )
         XCTAssertEqual(status.detail?.contains("повреждена"), true)
     }
 
@@ -164,11 +170,14 @@ final class ModelStatusTests: XCTestCase {
 
     func testУКаждойКнопкиЕстьПодсказка() {
         for action in [ModelStatus.Action.install, .retry, .repair, .delete] {
-            XCTAssertFalse(action.title.isEmpty)
-            XCTAssertFalse(action.hint.isEmpty)
+            XCTAssertFalse(action.title(downloadMegabytes: 586).isEmpty)
+            XCTAssertFalse(action.hint(downloadMegabytes: 586).isEmpty)
         }
         // Удаление — единственное необратимое действие на экране, и о его цене
         // надо сказать до нажатия.
-        XCTAssertEqual(ModelStatus.Action.delete.hint.contains("перестанет работать"), true)
+        XCTAssertEqual(
+            ModelStatus.Action.delete.hint(downloadMegabytes: 586).contains("перестанет работать"),
+            true
+        )
     }
 }

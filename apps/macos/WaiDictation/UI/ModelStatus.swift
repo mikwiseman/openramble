@@ -20,20 +20,22 @@ struct ModelStatus: Equatable {
         case cancel
         case delete
 
-        var title: String {
+        /// Кнопка называет настоящий объём: полный для чистой установки и
+        /// только остаток — когда после обновления доскачивается подсказчик.
+        func title(downloadMegabytes: Int) -> String {
             switch self {
-            case .install: return "Скачать модель — 483 МБ"
+            case .install: return "Скачать модель — \(downloadMegabytes) МБ"
             case .retry: return "Попробовать снова"
-            case .repair: return "Скачать модель заново — 483 МБ"
+            case .repair: return "Скачать модель заново — \(downloadMegabytes) МБ"
             case .cancel: return "Отменить загрузку"
             case .delete: return "Удалить модель"
             }
         }
 
         /// Подсказка для VoiceOver: что случится по нажатию.
-        var hint: String {
+        func hint(downloadMegabytes: Int) -> String {
             switch self {
-            case .install: return "Скачает около 483 МБ. Это единственная загрузка приложения."
+            case .install: return "Скачает около \(downloadMegabytes) МБ. Это единственная загрузка приложения."
             case .retry: return "Повторит загрузку модели с начала."
             case .repair: return "Скачает и проверит новую копию модели. Повреждённая копия не используется."
             case .cancel: return "Остановит загрузку и удалит недокачанные файлы."
@@ -58,17 +60,39 @@ struct ModelStatus: Equatable {
     var tone: Tone
     /// Что объявить VoiceOver при смене состояния.
     var announcement: String
+    /// Сколько скачает кнопка install/repair — полный объём или остаток.
+    var downloadMegabytes: Int = 586
+
+    func title(for action: Action) -> String {
+        action.title(downloadMegabytes: downloadMegabytes)
+    }
+
+    func hint(for action: Action) -> String {
+        action.hint(downloadMegabytes: downloadMegabytes)
+    }
 
     static func make(
         state: ModelState,
         isPreparingEngine: Bool,
-        place: Place
+        place: Place,
+        downloadMegabytes: Int = 586
+    ) -> ModelStatus {
+        var status = makeStatus(state: state, isPreparingEngine: isPreparingEngine, place: place, downloadMegabytes: downloadMegabytes)
+        status.downloadMegabytes = downloadMegabytes
+        return status
+    }
+
+    private static func makeStatus(
+        state: ModelState,
+        isPreparingEngine: Bool,
+        place: Place,
+        downloadMegabytes: Int
     ) -> ModelStatus {
         switch state {
         case .notInstalled:
             return ModelStatus(
                 title: "Модель не установлена",
-                detail: "483 МБ с Hugging Face CDN; при недоступности — зеркало GitHub. После проверки распознавание работает без сети.",
+                detail: "\(downloadMegabytes) МБ с Hugging Face CDN; при недоступности — зеркало GitHub. После проверки распознавание работает без сети.",
                 progress: nil,
                 progressLabel: nil,
                 actions: [.install],

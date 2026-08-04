@@ -69,18 +69,18 @@ struct ModelStatusView: View {
     private func button(for action: ModelStatus.Action) -> some View {
         switch action {
         case .install:
-            Button(action.title, action: install)
+            Button(status.title(for: action), action: install)
                 .buttonStyle(.borderedProminent)
-                .accessibilityHint(action.hint)
+                .accessibilityHint(status.hint(for: action))
         case .retry, .repair:
-            Button(action.title, action: install)
-                .accessibilityHint(action.hint)
+            Button(status.title(for: action), action: install)
+                .accessibilityHint(status.hint(for: action))
         case .cancel:
-            Button(action.title, role: .cancel, action: cancel)
-                .accessibilityHint(action.hint)
+            Button(status.title(for: action), role: .cancel, action: cancel)
+                .accessibilityHint(status.hint(for: action))
         case .delete:
-            Button(action.title, role: .destructive, action: delete)
-                .accessibilityHint(action.hint)
+            Button(status.title(for: action), role: .destructive, action: delete)
+                .accessibilityHint(status.hint(for: action))
         }
     }
 }
