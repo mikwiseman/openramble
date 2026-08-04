@@ -113,7 +113,7 @@ targets:
         # Появится здесь после `generate_keys` — он публичный, и его место
         # в репозитории. До этого выпустить релиз нельзя: scripts/release.sh
         # откажется работать. Порядок действий — в docs/release.md.
-        # SUPublicEDKey: "…"
+        SUPublicEDKey: "9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI="
 
   # Тесты цели приложения.
   #

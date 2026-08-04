@@ -5,6 +5,10 @@
   "fluidAudioVersion": "0.15.5",
   "quantization": "mixed precision",
   "license": "CC-BY-4.0",
+  "mirror": {
+    "repository": "mikwiseman/wai-dictation",
+    "releaseTag": "models-accdafd8"
+  },
   "files": [
     {
       "path": "AudioEncoder.mlmodelc/analytics/coremldata.bin",
