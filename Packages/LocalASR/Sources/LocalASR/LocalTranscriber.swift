@@ -45,7 +45,10 @@ public actor LocalTranscriber {
     }
 
     /// Распознать записанный файл.
-    public func transcribe(fileURL: URL) async throws -> ASRResult {
+    ///
+    /// `languageHint` — код BCP-47 либо `nil` для автоопределения; см.
+    /// `ASREngineAdapting.transcribe(samples:languageHint:)`.
+    public func transcribe(fileURL: URL, languageHint: String? = nil) async throws -> ASRResult {
         guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
 
         let samples: [Float]
@@ -56,7 +59,7 @@ public actor LocalTranscriber {
         }
 
         try Task.checkCancellation()
-        return try await transcribe(samples: samples)
+        return try await transcribe(samples: samples, languageHint: languageHint)
     }
 
     /// Распознать готовый буфер.
@@ -70,14 +73,14 @@ public actor LocalTranscriber {
     /// на главном сценарии (русская речь с английскими вставками) теряла втрое
     /// больше слов, чем правильно настроенный движок. Подробности и цифры — в
     /// `docs/benchmarks.md`.
-    public func transcribe(samples: [Float]) async throws -> ASRResult {
+    public func transcribe(samples: [Float], languageHint: String? = nil) async throws -> ASRResult {
         guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
         guard !samples.isEmpty else {
             throw ASREngineError.unsupportedAudioFormat("пустая запись")
         }
 
         try Task.checkCancellation()
-        return try await engine.transcribe(samples: samples)
+        return try await engine.transcribe(samples: samples, languageHint: languageHint)
     }
 
     /// Освободить память под моделью.

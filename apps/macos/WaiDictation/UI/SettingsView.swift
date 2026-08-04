@@ -65,6 +65,19 @@ private struct GeneralSettings: View {
                     .accessibilityHint("Короткий сигнал, когда запись началась и когда закончилась")
             }
 
+            Section {
+                Picker("Recognition language", selection: $state.recognitionLanguage) {
+                    Text("Automatic").tag(String?.none)
+                    ForEach(RecognitionLanguages.options) { option in
+                        Text(option.name).tag(String?.some(option.code))
+                    }
+                }
+                .accessibilityHint("Language the engine listens for; Automatic detects it from your voice")
+                Text("Automatic detects the language from your voice, including mixed phrases. Pick a specific language only when detection keeps guessing wrong — it narrows recognition to that language alone.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Приватная вставка") {
                 Text("Перед ⌘V прежнее содержимое clipboard снимается в память байт-в-байт и возвращается не позже чем через две секунды. Не трогаются только пароль из менеджера паролей, file promises и содержимое больше 16 МиБ — тогда вставки не будет, текст останется через Copy/Retry. В beta непрерывность предыдущего элемента Universal Clipboard не гарантируется.")
                     .font(.caption)

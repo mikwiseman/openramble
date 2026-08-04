@@ -70,6 +70,22 @@ public protocol ASREngineAdapting: Sendable {
     /// Распознать фрагмент. Ожидается моно 16 кГц Float32 — ровно то, что отдаёт захват.
     func transcribe(samples: [Float]) async throws -> ASRResult
 
+    /// Распознать с подсказкой языка.
+    ///
+    /// `languageHint` — код BCP-47 («en», «ru»). `nil` — автоопределение по
+    /// звуку. Подсказка сужает распознавание до одного языка: это выход для
+    /// случая, когда акцент уводит автоопределение не туда, но смешанную речь
+    /// она ломает — поэтому по умолчанию всегда `nil`.
+    func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult
+
     /// Освободить память под моделью.
     func unload() async
+}
+
+extension ASREngineAdapting {
+    /// Подсказка — необязательная способность движка: кто её не понимает,
+    /// распознаёт как обычно. Это контракт подсказки, а не деградация.
+    public func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
+        try await transcribe(samples: samples)
+    }
 }

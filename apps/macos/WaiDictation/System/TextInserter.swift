@@ -59,7 +59,9 @@ private final class PasteboardTransactionStorage: @unchecked Sendable {
         lock.unlock()
 
         // Даже если вызывающая задача погибла между записью и restore,
-        // чувствительный snapshot не переживает privacy budget.
+        // чувствительный snapshot не переживает privacy budget. Три секунды:
+        // секунда на потребление ⌘V медленным приложением (VoiceInk #722),
+        // до полусекунды на отпускание модификаторов и запас на планировщик.
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + lifetime) { [weak self] in
             self?.expire(id)
         }
@@ -129,14 +131,14 @@ public struct HostOnlyPasteboard: DictationPasteboard {
     ]
 
     public init(name: String = NSPasteboard.Name.general.rawValue) {
-        self.init(name: name, snapshotLifetime: 2) { pasteboard, objects in
+        self.init(name: name, snapshotLifetime: 3) { pasteboard, objects in
             pasteboard.writeObjects(objects)
         }
     }
 
     init(
         name: String,
-        snapshotLifetime: TimeInterval = 2,
+        snapshotLifetime: TimeInterval = 3,
         writeObjects: @escaping @Sendable (NSPasteboard, [NSPasteboardWriting]) -> Bool = {
             pasteboard, objects in
             pasteboard.writeObjects(objects)
@@ -355,7 +357,14 @@ public struct TextInserter: TextInserting {
     /// Сколько ждать отпускания и с каким шагом.
     static let releasePollLimit = 50
     static let releasePollInterval = Duration.milliseconds(10)
-    static let pasteConsumptionDelay = Duration.milliseconds(100)
+    /// Пауза между ⌘V и восстановлением буфера.
+    ///
+    /// 100 мс оказалось мало не по нашей вине: медленные приложения (Electron,
+    /// Java, удалённые столы) читают pasteboard в своём цикле событий сотни
+    /// миллисекунд спустя — и получали уже ВОССТАНОВЛЕННОЕ старое содержимое
+    /// вместо диктовки. Это задокументированный полевой опыт VoiceInk
+    /// (issue #722): практический минимум — около секунды.
+    static let pasteConsumptionDelay = Duration.milliseconds(1000)
 
     private let system: any InputSystem
     private let pasteboard: any DictationPasteboard

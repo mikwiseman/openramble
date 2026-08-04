@@ -136,6 +136,33 @@ final class FluidAudioAdapterTests: XCTestCase {
         try await adapter.loadVocabularyModels(from: missing, boost: VocabularyBoost(terms: []))
     }
 
+    /// Неизвестный код языка — ошибка вызывающего, и она видима сразу,
+    /// до загрузки моделей: молча превратиться в «auto» она не имеет права.
+    func testНеизвестнаяПодсказкаЯзыкаДаётВидимуюОшибку() async {
+        let adapter = FluidAudioAdapter()
+
+        do {
+            _ = try await adapter.transcribe(samples: [0.1, 0.2], languageHint: "xx")
+            XCTFail("Неизвестный код обязан дать ошибку")
+        } catch let error as ASREngineError {
+            guard case let .inferenceFailed(detail) = error else {
+                return XCTFail("Ожидалась inferenceFailed, пришло: \(error)")
+            }
+            XCTAssertTrue(detail.contains("xx"))
+        } catch {
+            XCTFail("Неожиданная ошибка: \(error)")
+        }
+    }
+
+    /// Список подсказок — источник для выбора языка в интерфейсе.
+    func testСписокЯзыковНепустИБезДубликатов() {
+        let hints = FluidAudioAdapter.supportedLanguageHints
+
+        XCTAssertTrue(hints.contains("ru"))
+        XCTAssertTrue(hints.contains("en"))
+        XCTAssertEqual(hints.count, Set(hints).count, "Дубликаты сломали бы Picker")
+    }
+
     func testMixedRussianEnglishKeepsLatinIntact() {
         // Главный сценарий продукта: английские термины внутри русской речи
         // не должны склеиваться с соседними словами.

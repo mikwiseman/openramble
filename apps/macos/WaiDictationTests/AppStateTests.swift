@@ -479,6 +479,22 @@ final class AppStateTests: XCTestCase {
 
     // MARK: - Настройки
 
+    func testЯзыкРаспознаванияСохраняетсяИПереживаетПерезапуск() {
+        let state = makeState()
+        XCTAssertNil(state.recognitionLanguage, "По умолчанию — автоопределение")
+
+        state.recognitionLanguage = "en"
+        XCTAssertEqual(harness.defaults.string(forKey: AppState.recognitionLanguageKey), "en")
+
+        // «Перезапуск»: новый AppState с теми же defaults.
+        let restarted = makeState()
+        XCTAssertEqual(restarted.recognitionLanguage, "en")
+
+        // Возврат к автоопределению убирает ключ, а не пишет пустую строку.
+        restarted.recognitionLanguage = nil
+        XCTAssertNil(harness.defaults.string(forKey: AppState.recognitionLanguageKey))
+    }
+
     func testСменаКлавишиДоходитДоМонитораИСохраняется() {
         let state = makeState()
 

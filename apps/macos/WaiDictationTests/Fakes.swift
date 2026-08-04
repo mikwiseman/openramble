@@ -469,7 +469,7 @@ final class AppHarness {
                 inserter: inserter,
                 overlay: overlay,
                 makeCapture: { [capture] _, _ in capture },
-                transcribe: { [transcription] _ in
+                transcribe: { [transcription] _, _ in
                     { _ in
                         if let delay = transcription.delay {
                             try await Task.sleep(for: delay)

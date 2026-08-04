@@ -25,7 +25,10 @@ public struct AppEnvironment {
     /// приложении это модель на диске, в тесте — заранее известный ответ. Без
     /// этого шва путь диктовки целиком в приложении нельзя было проверить
     /// вовсе — тесты доходили только до начала записи.
-    public var transcribe: (URL) -> @Sendable (URL) async throws -> ASRResult
+    /// Фабрика распознавания: папка движка и поставщик подсказки языка.
+    /// Подсказка читается на каждый вызов — человек мог сменить язык между
+    /// диктовками, и закреплять её при сборке значило бы игнорировать выбор.
+    public var transcribe: (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult
     /// Как часто опрашивать разрешения в самом занятом режиме. Ноль — не опрашивать.
     public var permissionPollInterval: TimeInterval
     /// Чем скачивать модель. Единственная сеть, которая есть у приложения.
@@ -47,7 +50,7 @@ public struct AppEnvironment {
         inserter: any TextInserting,
         overlay: any OverlayPresenting,
         makeCapture: @escaping (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing,
-        transcribe: @escaping (URL) -> @Sendable (URL) async throws -> ASRResult,
+        transcribe: @escaping (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult,
         permissionPollInterval: TimeInterval,
         modelDownloader: any ModelDownloading,
         workspaceNotifications: NotificationCenter,
@@ -82,10 +85,13 @@ public struct AppEnvironment {
             inserter: TextInserter(),
             overlay: DictationOverlay(),
             makeCapture: { MicrophoneCapture(directory: $0, onFailure: $1) },
-            transcribe: { engineDirectory in
+            transcribe: { engineDirectory, languageHint in
                 return { url in
                     try await transcriber.prepare(modelDirectory: engineDirectory)
-                    return try await transcriber.transcribe(fileURL: url)
+                    return try await transcriber.transcribe(
+                        fileURL: url,
+                        languageHint: languageHint()
+                    )
                 }
             },
             permissionPollInterval: 1,
@@ -115,6 +121,22 @@ public final class AppState: ObservableObject {
     @Published public private(set) var isEngineReady = false
     /// Сколько скачает кнопка установки: полный объём или добор после обновления.
     @Published public private(set) var remainingDownloadMegabytes = 586
+    /// Язык распознавания: nil — автоопределение по звуку. Код BCP-47 («en»).
+    /// Ручной выбор — выход для случая, когда акцент уводит автоопределение
+    /// не в тот язык; смешанной речи он противопоказан, поэтому по умолчанию
+    /// всегда автоматика.
+    @Published public var recognitionLanguage: String? {
+        didSet {
+            guard oldValue != recognitionLanguage else { return }
+            if let recognitionLanguage {
+                defaults.set(recognitionLanguage, forKey: Self.recognitionLanguageKey)
+            } else {
+                defaults.removeObject(forKey: Self.recognitionLanguageKey)
+            }
+        }
+    }
+
+    nonisolated static let recognitionLanguageKey = "recognitionLanguage"
 
     /// Текст неудачной вставки. Никогда не пишется на диск.
     @Published public private(set) var recoveredText: String?
@@ -168,7 +190,7 @@ public final class AppState: ObservableObject {
     private let inserter: any TextInserting
     private let overlay: any OverlayPresenting
     private let makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing
-    private let transcribe: (URL) -> @Sendable (URL) async throws -> ASRResult
+    private let transcribe: (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult
     private let permissionPollInterval: TimeInterval
     private let modelDownloader: any ModelDownloading
     private let workspaceNotifications: NotificationCenter
@@ -237,6 +259,7 @@ public final class AppState: ObservableObject {
 
     public init(environment: AppEnvironment) {
         defaults = environment.defaults
+        recognitionLanguage = environment.defaults.string(forKey: Self.recognitionLanguageKey)
         paths = environment.paths
         permissions = environment.permissions
         accessibilityManager = environment.accessibilityManager
@@ -330,7 +353,17 @@ public final class AppState: ObservableObject {
             self.engineDirectory = engineDirectory
             let controller = DictationController(
                 capture: capture,
-                transcribe: transcribe(engineDirectory),
+                transcribe: transcribe(
+                    engineDirectory,
+                    { [box = UncheckedBox(defaults)] in
+                        // Провайдер зовётся из фонового контекста распознавания.
+                        // UserDefaults потокобезопасен (документировано), а
+                        // хранилище — тот же источник истины, что и
+                        // published-свойство; box лишь проносит его через
+                        // Sendable-границу.
+                        box.value.string(forKey: Self.recognitionLanguageKey)
+                    }
+                ),
                 inserter: inserter,
                 overlay: overlay,
                 sounds: sounds,
@@ -521,7 +554,12 @@ public final class AppState: ObservableObject {
             await overlay.present(.transcribing, elapsed: 0)
             let recognizedText: String
             do {
-                let result = try await transcribe(engineDirectory)(url)
+                let result = try await transcribe(
+                    engineDirectory,
+                    { [box = UncheckedBox(defaults)] in
+                        box.value.string(forKey: Self.recognitionLanguageKey)
+                    }
+                )(url)
                 let output = TextPipeline(replacements: replacements).process(result.text)
                 guard !output.text.isEmpty else { throw ASREngineError.inferenceFailed("пустой результат") }
                 recognizedText = output.text

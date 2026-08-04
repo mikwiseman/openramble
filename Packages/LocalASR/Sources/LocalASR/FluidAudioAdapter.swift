@@ -168,6 +168,35 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     }
 
     public func transcribe(samples: [Float]) async throws -> DictationCore.ASRResult {
+        try await transcribe(samples: samples, languageHint: nil)
+    }
+
+    /// Языки, которые движок принимает как подсказку (BCP-47 коды).
+    ///
+    /// Список — свойство движка, а не продукта, поэтому живёт на единственной
+    /// границе импорта FluidAudio. UI строит из него выбор языка.
+    public static var supportedLanguageHints: [String] {
+        Language.allCases.map(\.rawValue)
+    }
+
+    public func transcribe(
+        samples: [Float],
+        languageHint: String?
+    ) async throws -> DictationCore.ASRResult {
+        // Подсказка проверяется до всего остального: неизвестный код — ошибка
+        // вызывающего, и она обязана быть видимой, а не молча стать «auto».
+        let language: Language?
+        if let languageHint {
+            guard let parsed = Language(rawValue: languageHint) else {
+                throw ASREngineError.inferenceFailed(
+                    "unsupported language hint: \(languageHint)"
+                )
+            }
+            language = parsed
+        } else {
+            language = nil
+        }
+
         guard let manager else {
             throw ASREngineError.modelsNotLoaded
         }
@@ -184,9 +213,14 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         do {
             // Каждая диктовка независима — начинаем с чистого состояния декодера.
             var state = try TdtDecoderState()
-            // language: nil — автоопределение. Модель покрывает 25 европейских
-            // языков, и жёсткий выбор языка ломал бы смешанную речь.
-            let result = try await manager.transcribe(samples, decoderState: &state, language: nil)
+            // nil — автоопределение по звуку. Модель покрывает 25 европейских
+            // языков; жёсткий выбор ломает смешанную речь, поэтому подсказка —
+            // только явный выбор человека, когда акцент уводит автоопределение.
+            let result = try await manager.transcribe(
+                samples,
+                decoderState: &state,
+                language: language
+            )
             decoderState = state
             // Подсказчик правит текст по акустическим уликам CTC-модели.
             // Тайминги остаются от исходных токенов: замена слова не двигает
