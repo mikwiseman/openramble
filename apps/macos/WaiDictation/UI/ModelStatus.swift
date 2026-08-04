@@ -16,12 +16,16 @@ struct ModelStatus: Equatable {
     enum Action: Hashable {
         case install
         case retry
+        case repair
+        case cancel
         case delete
 
         var title: String {
             switch self {
-            case .install: return "Скачать модель"
+            case .install: return "Скачать модель — 483 МБ"
             case .retry: return "Попробовать снова"
+            case .repair: return "Скачать модель заново — 483 МБ"
+            case .cancel: return "Отменить загрузку"
             case .delete: return "Удалить модель"
             }
         }
@@ -31,6 +35,8 @@ struct ModelStatus: Equatable {
             switch self {
             case .install: return "Скачает около 483 МБ. Это единственная загрузка приложения."
             case .retry: return "Повторит загрузку модели с начала."
+            case .repair: return "Скачает и проверит новую копию модели. Повреждённая копия не используется."
+            case .cancel: return "Остановит загрузку и удалит недокачанные файлы."
             case .delete: return "Освободит место на диске. Диктовка перестанет работать, пока модель не скачана заново."
             }
         }
@@ -62,7 +68,7 @@ struct ModelStatus: Equatable {
         case .notInstalled:
             return ModelStatus(
                 title: "Модель не установлена",
-                detail: "Около 483 МБ. Скачивается один раз — дальше интернет не нужен.",
+                detail: "483 МБ с Hugging Face CDN; при недоступности — зеркало GitHub. После проверки распознавание работает без сети.",
                 progress: nil,
                 progressLabel: nil,
                 actions: [.install],
@@ -77,7 +83,7 @@ struct ModelStatus: Equatable {
                 detail: "Можно продолжать — загрузка не прервётся.",
                 progress: state.progress,
                 progressLabel: label,
-                actions: [],
+                actions: [.cancel],
                 tone: .neutral,
                 announcement: "Скачиваю модель, \(label)"
             )
@@ -110,16 +116,36 @@ struct ModelStatus: Equatable {
                 announcement: isPreparingEngine ? "Модель готова, готовлю к первому запуску" : "Модель готова"
             )
 
-        case let .failed(error):
-            let reason = message(for: error)
+        case let .repairRequired(detail):
+            let reason = message(for: .repairRequired(detail))
             return ModelStatus(
-                title: "Не удалось установить модель",
+                title: "Модель требует восстановления",
                 detail: reason,
                 progress: nil,
                 progressLabel: nil,
-                actions: [.retry],
+                actions: [.repair],
                 tone: .failure,
-                announcement: "Не удалось установить модель. \(reason)"
+                announcement: "Модель требует восстановления. \(reason)"
+            )
+
+        case let .failed(error):
+            let reason = message(for: error)
+            let requiresRepair: Bool
+            if case .repairRequired = error {
+                requiresRepair = true
+            } else {
+                requiresRepair = false
+            }
+            return ModelStatus(
+                title: requiresRepair ? "Модель требует восстановления" : "Не удалось установить модель",
+                detail: reason,
+                progress: nil,
+                progressLabel: nil,
+                actions: [requiresRepair ? .repair : .retry],
+                tone: .failure,
+                announcement: requiresRepair
+                    ? "Модель требует восстановления. \(reason)"
+                    : "Не удалось установить модель. \(reason)"
             )
 
         case .deleting:
@@ -153,6 +179,8 @@ struct ModelStatus: Equatable {
             return "Скачанное не сошлось с контрольными суммами: \(detail)"
         case let .install(detail):
             return "Не удалось разложить файлы: \(detail)"
+        case let .repairRequired(detail):
+            return "Модель повреждена или неполна: \(detail). Скачайте её заново по явной команде."
         case let .manifest(detail):
             return "Испорчен список файлов модели: \(detail)"
         case let .importSource(detail):

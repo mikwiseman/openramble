@@ -47,11 +47,18 @@ enum OnboardingGate {
         step: OnboardingStep,
         microphoneGranted: Bool,
         accessibilityGranted: Bool,
-        modelState: ModelState
+        modelState: ModelState,
+        engineReady: Bool = true,
+        trialSucceeded: Bool = true
     ) -> String? {
         switch step {
-        case .welcome, .tryIt:
+        case .welcome:
             return nil
+
+        case .tryIt:
+            return trialSucceeded
+                ? nil
+                : "Сначала попробуйте диктовку или нажмите «Пропустить пробу»."
 
         case .permissions:
             // Дальше пускаем только когда оба разрешения выданы: следующий шаг
@@ -65,10 +72,11 @@ enum OnboardingGate {
 
         case .model:
             switch modelState {
-            case .ready: return nil
+            case .ready: return engineReady ? nil : "Дождитесь подготовки модели к первому запуску."
             case .notInstalled: return "Сначала скачайте модель — без неё распознавать нечем."
             case .downloading: return "Дождитесь конца загрузки."
             case .verifying: return "Идёт проверка скачанного."
+            case .repairRequired: return "Модель повреждена. Скачайте её заново по явной команде."
             case .failed: return "Загрузка не удалась. Попробуйте ещё раз."
             case .deleting: return "Модель удаляется."
             }
@@ -79,13 +87,17 @@ enum OnboardingGate {
         step: OnboardingStep,
         microphoneGranted: Bool,
         accessibilityGranted: Bool,
-        modelState: ModelState
+        modelState: ModelState,
+        engineReady: Bool = true,
+        trialSucceeded: Bool = true
     ) -> Bool {
         blockReason(
             step: step,
             microphoneGranted: microphoneGranted,
             accessibilityGranted: accessibilityGranted,
-            modelState: modelState
+            modelState: modelState,
+            engineReady: engineReady,
+            trialSucceeded: trialSucceeded
         ) == nil
     }
 }

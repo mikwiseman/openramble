@@ -20,6 +20,7 @@ final class TextInserterTests: XCTestCase {
         system = FakeInputSystem(log: log)
         pasteboard = FakePasteboard(log: log)
         inserter = TextInserter(system: system, pasteboard: pasteboard)
+        system.setFrontmost(target)
     }
 
     // MARK: - Отказы до записи в буфер
@@ -77,13 +78,15 @@ final class TextInserterTests: XCTestCase {
     func testФокусВозвращаетсяДоЗаписиВБуфер() async throws {
         try await inserter.insert("привет", into: target)
 
-        XCTAssertEqual(log.entries, ["activate", "pasteboard", "post"])
+        XCTAssertEqual(log.entries, ["activate", "pasteboard", "post", "restore"])
     }
 
-    func testБезЦелиФокусНеТрогается() async throws {
-        try await inserter.insert("привет", into: nil)
-
-        XCTAssertEqual(log.entries, ["pasteboard", "post"])
+    func testБезЦелиВставкаЗапрещена() async {
+        await XCTAssertThrowsErrorAsync(
+            try await inserter.insert("привет", into: nil),
+            expected: TextInsertionError.targetUnavailable
+        )
+        XCTAssertEqual(log.entries, [])
     }
 
     // MARK: - Ожидание модификаторов
@@ -154,6 +157,56 @@ final class TextInserterTests: XCTestCase {
             expected: TextInsertionError.clipboardWriteFailed
         )
         XCTAssertEqual(system.postedKeys.count, 0)
+    }
+
+    func testСменаЦелиПослеЗаписиВБуферОтменяетPasteИВосстанавливаетSnapshot() async {
+        let other = TargetApplication(
+            bundleIdentifier: "com.apple.Terminal",
+            processIdentifier: 999,
+            localizedName: "Terminal"
+        )
+        pasteboard.onBegin = { [system] in system?.setFrontmost(other) }
+
+        await XCTAssertThrowsErrorAsync(
+            try await inserter.insert("привет", into: target),
+            expected: TextInsertionError.targetChanged
+        )
+
+        XCTAssertEqual(system.postedKeys.count, 0)
+        XCTAssertEqual(log.entries, ["activate", "pasteboard", "restore"])
+    }
+
+    func testОшибкаRestoreПослеPasteОтличаетсяОтНеудачнойВставки() async {
+        pasteboard.setRestoreError(.clipboardWriteFailed)
+
+        await XCTAssertThrowsErrorAsync(
+            try await inserter.insert("привет", into: target),
+            expected: TextInsertionError.insertedButClipboardRestoreFailed
+        )
+
+        XCTAssertEqual(system.postedKeys.count, 1, "Paste уже был отправлен")
+    }
+
+    func testОтменаПослеPasteВсёРавноВосстанавливаетSnapshot() async {
+        let inserter = try! XCTUnwrap(inserter)
+        let system = try! XCTUnwrap(system)
+        let log = try! XCTUnwrap(log)
+        let target = target
+        let task = Task {
+            try await inserter.insert("привет", into: target)
+        }
+        for _ in 0..<100 where system.postedKeys.isEmpty {
+            await Task.yield()
+        }
+        XCTAssertEqual(system.postedKeys.count, 1, "тест обязан отменить уже после Cmd+V")
+
+        task.cancel()
+        await XCTAssertThrowsErrorAsync(
+            try await task.value,
+            expected: TextInsertionError.insertedButClipboardRestoreFailed
+        )
+
+        XCTAssertEqual(log.entries, ["activate", "pasteboard", "post", "restore"])
     }
 
     func testReturnЭтоОтдельноеНажатиеБезМодификаторов() async throws {

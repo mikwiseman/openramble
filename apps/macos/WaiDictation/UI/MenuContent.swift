@@ -26,6 +26,14 @@ struct MenuContent: View {
             )
         )
 
+        if state.dictationState == .preparing || state.dictationState == .listening {
+            Divider()
+            Button("Остановить и вставить") { state.finishCurrentDictation() }
+            Button("Отменить и удалить запись", role: .destructive) {
+                state.cancelCurrentDictation()
+            }
+        }
+
         if !state.isDictationReady {
             Divider()
             setupHints
@@ -35,15 +43,21 @@ struct MenuContent: View {
             }
         }
 
-        // Текст, который не удалось вставить, сохраняется на диск — и до сих
-        // пор человеку сообщали только сам факт. «Он сохранён» без ответа на
-        // «где» почти бесполезно: файл лежит в служебной папке, которую в
-        // Finder ещё надо суметь открыть. А это единственная копия сказанного.
-        if let file = state.recoveredFile {
+        if state.recoveredText != nil {
             Divider()
-            Button("Показать спасённый текст") {
-                NSWorkspace.shared.activateFileViewerSelecting([file])
+            Button("Повторить вставку") { state.retryRecoveredText() }
+            Button("Скопировать текст") { state.copyRecoveredText() }
+            Button("Удалить сохранённый текст", role: .destructive) {
+                state.deleteRecoveredText()
             }
+        }
+
+        if state.recoveredRecording != nil {
+            Divider()
+            Text("Локальная запись после сбоя")
+            Button("Повторить распознавание") { state.retryRecoveredRecording() }
+                .disabled(!state.modelState.isReady || state.dictationState != .idle)
+            Button("Удалить запись") { state.deleteRecoveredRecording() }
         }
 
         Divider()
@@ -54,14 +68,27 @@ struct MenuContent: View {
         Button("Настройки…") { openSettings() }
             .keyboardShortcut(",", modifiers: .command)
 
-        Button("Завершить") { NSApplication.shared.terminate(nil) }
+        Button("Выйти из Wai Dictation") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q", modifiers: .command)
     }
 
     @ViewBuilder
     private var setupHints: some View {
         if !state.accessibilityGranted {
-            Button("Выдать универсальный доступ") { state.requestAccessibility() }
+            switch state.accessibilityState {
+            case .denied:
+                Button("Выдать универсальный доступ") { state.requestAccessibility() }
+            case .waitingForSettings:
+                Button("Открыть настройки доступа") { state.openAccessibilitySettings() }
+            case .restartRequired:
+                Button("Перезапустить для доступа") { state.restartForAccessibility() }
+            case .repairRequired, .failed:
+                Text("Нужно восстановить Универсальный доступ")
+            case .repairing:
+                Text("Восстанавливаю Универсальный доступ…")
+            case .granted:
+                EmptyView()
+            }
         }
         if !state.microphoneGranted {
             Button("Разрешить микрофон") { state.requestMicrophone() }
@@ -75,13 +102,16 @@ struct MenuContent: View {
             isPreparingEngine: state.isPreparingEngine,
             place: .settings
         )
-        if !state.modelState.isReady {
+        if state.modelState.isReady, !state.isEngineReady {
+            Text("Готовлю модель к диктовке…")
+        } else if !state.modelState.isReady {
             Text(model.progressLabel.map { "\(model.title) — \($0)" } ?? model.title)
 
             ForEach(model.actions.filter { $0 != .delete }, id: \.self) { action in
                 Button(action.title) {
                     switch action {
-                    case .install, .retry: state.installModel()
+                    case .install, .retry, .repair: state.installModel()
+                    case .cancel: state.cancelModelInstall()
                     case .delete: break
                     }
                 }

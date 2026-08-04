@@ -55,4 +55,35 @@ final class PermissionStatusTests: XCTestCase {
             "Микрофон. Чтобы услышать вашу речь."
         )
     }
+
+
+    func testAccessibilityПослеВозвратаПредлагаетПерезапуск() {
+        let status = PermissionStatus.accessibility(
+            state: .restartRequired,
+            detail: "Чтобы услышать горячую клавишу."
+        )
+
+        XCTAssertEqual(status.actionTitle, "Перезапустить")
+        XCTAssertEqual(status.accessibilityValue, "Требуется перезапуск приложения")
+    }
+
+    func testAccessibilityСоСтаройЗаписьюПредлагаетИсправление() {
+        let status = PermissionStatus.accessibility(
+            state: .repairRequired,
+            detail: "Чтобы услышать горячую клавишу."
+        )
+
+        XCTAssertEqual(status.actionTitle, "Исправить")
+        XCTAssertEqual(status.accessibilityValue, "Нужно восстановить системную запись разрешения")
+    }
+
+    func testAccessibilityВоВремяRepairБлокируетПовторнуюКоманду() {
+        let status = PermissionStatus.accessibility(
+            state: .repairing,
+            detail: "Чтобы услышать горячую клавишу."
+        )
+
+        XCTAssertNil(status.actionTitle)
+        XCTAssertEqual(status.accessibilityValue, "Восстанавливаем разрешение")
+    }
 }

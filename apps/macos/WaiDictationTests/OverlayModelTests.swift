@@ -11,8 +11,7 @@ final class OverlayModelTests: XCTestCase {
     private var model: OverlayModel!
     private var visibility: [Bool] = []
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
         announcer = FakeAnnouncer()
         model = OverlayModel(announcer: announcer, noticeDuration: .milliseconds(120))
         visibility = []
@@ -139,7 +138,10 @@ final class OverlayModelTests: XCTestCase {
     func testНачалоЗаписиГоворитсяВслух() {
         model.show(.listening, elapsed: 0)
 
-        XCTAssertEqual(announcer.messages, ["Идёт запись"])
+        XCTAssertEqual(
+            announcer.messages,
+            ["Идёт запись. Горячая клавиша — вставить. Escape — удалить запись."]
+        )
         XCTAssertEqual(announcer.announcements.first?.urgent, true)
     }
 
@@ -152,7 +154,10 @@ final class OverlayModelTests: XCTestCase {
         model.show(.listening, elapsed: 1)
         model.show(.listening, elapsed: 2)
 
-        XCTAssertEqual(announcer.messages, ["Идёт запись"])
+        XCTAssertEqual(
+            announcer.messages,
+            ["Идёт запись. Горячая клавиша — вставить. Escape — удалить запись."]
+        )
     }
 
     func testСледующаяДиктовкаОбъявляетсяЗаново() {
@@ -161,7 +166,13 @@ final class OverlayModelTests: XCTestCase {
 
         model.show(.listening, elapsed: 0)
 
-        XCTAssertEqual(announcer.messages, ["Идёт запись", "Идёт запись"])
+        XCTAssertEqual(
+            announcer.messages,
+            [
+                "Идёт запись. Горячая клавиша — вставить. Escape — удалить запись.",
+                "Идёт запись. Горячая клавиша — вставить. Escape — удалить запись.",
+            ]
+        )
     }
 
     func testСообщениеГоворитсяВслухЦеликом() {
@@ -183,7 +194,7 @@ final class OverlayModelTests: XCTestCase {
             announcer.messages,
             [
                 "Включаю микрофон",
-                "Идёт запись",
+                "Идёт запись. Горячая клавиша — вставить. Escape — удалить запись.",
                 "Запись остановлена, распознаю речь",
                 "Вставляю текст",
             ]

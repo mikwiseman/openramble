@@ -36,7 +36,10 @@ final class OverlayContentTests: XCTestCase {
 
     /// Секунды — единственный признак, что запись правда идёт.
     func testСчётчикПоказываетсяТолькоТамГдеОнЗначит() {
-        XCTAssertEqual(content(.listening, elapsed: 7).subtitle, "7 с")
+        XCTAssertEqual(
+            content(.listening, elapsed: 7).subtitle,
+            "7 с · Горячая клавиша — вставить · Esc — удалить"
+        )
         XCTAssertEqual(content(.transcribing, elapsed: 12.4).subtitle, "12 с")
         XCTAssertNil(content(.preparing, elapsed: 3).subtitle)
         XCTAssertNil(content(.inserting, elapsed: 3).subtitle)
@@ -44,7 +47,10 @@ final class OverlayContentTests: XCTestCase {
     }
 
     func testСчётчикНеУходитВМинус() {
-        XCTAssertEqual(content(.listening, elapsed: -2).subtitle, "0 с")
+        XCTAssertEqual(
+            content(.listening, elapsed: -2).subtitle,
+            "0 с · Горячая клавиша — вставить · Esc — удалить"
+        )
     }
 
     /// «5 с» VoiceOver читает как «5 эс».
@@ -63,8 +69,14 @@ final class OverlayContentTests: XCTestCase {
     }
 
     func testЯрлыкЗаписиНазываетСекундыСловами() {
-        XCTAssertEqual(content(.listening, elapsed: 3).accessibilityLabel, "Идёт запись, 3 секунды")
-        XCTAssertEqual(content(.listening, elapsed: 1).accessibilityLabel, "Идёт запись, 1 секунда")
+        XCTAssertEqual(
+            content(.listening, elapsed: 3).accessibilityLabel,
+            "Идёт запись, 3 секунды. Горячая клавиша — вставить. Escape — удалить запись."
+        )
+        XCTAssertEqual(
+            content(.listening, elapsed: 1).accessibilityLabel,
+            "Идёт запись, 1 секунда. Горячая клавиша — вставить. Escape — удалить запись."
+        )
     }
 
     // MARK: - Объявления
@@ -76,7 +88,7 @@ final class OverlayContentTests: XCTestCase {
     func testНачалоЗаписиОбъявляетсяСрочно() {
         let content = content(.listening)
 
-        XCTAssertEqual(content.announcement, "Идёт запись")
+        XCTAssertEqual(content.announcement, "Идёт запись. Горячая клавиша — вставить. Escape — удалить запись.")
         XCTAssertTrue(content.isAnnouncementUrgent)
     }
 

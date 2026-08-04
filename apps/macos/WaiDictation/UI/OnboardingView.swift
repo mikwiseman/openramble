@@ -15,6 +15,10 @@ struct OnboardingView: View {
     @State private var step: OnboardingStep = .welcome
     /// Что человек продиктовал на пробу.
     @State private var trial = ""
+    /// Вручную напечатанный текст не считается пробой: ждём именно успешную
+    /// вставку, случившуюся после входа на последний шаг.
+    @State private var trialStartCount = 0
+    @State private var showAccessibilityRepairConfirmation = false
     @FocusState private var trialFocused: Bool
 
     var body: some View {
@@ -47,12 +51,26 @@ struct OnboardingView: View {
                     Text(reason)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
             .padding()
         }
         .frame(width: 560, height: 420)
+        .confirmationDialog(
+            "Восстановить Универсальный доступ?",
+            isPresented: $showAccessibilityRepairConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Сбросить доступ Wai Dictation и перезапустить", role: .destructive) {
+                state.repairAccessibility()
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("macOS удалит только Accessibility-записи Wai Dictation. После перезапуска доступ нужно будет выдать заново.")
+        }
     }
 
     @ViewBuilder
@@ -81,18 +99,27 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Label {
                     Text("Речь распознаётся моделью на вашем диске. Работает в самолёте.")
+                        .fixedSize(horizontal: false, vertical: true)
                 } icon: {
                     Image(systemName: "airplane").foregroundStyle(.blue)
                 }
                 Label {
                     Text("В сеть приложение выходит только по вашей команде: скачать модель и, если включите, проверить обновления.")
+                        .fixedSize(horizontal: false, vertical: true)
                 } icon: {
                     Image(systemName: "arrow.down.circle").foregroundStyle(.blue)
                 }
                 Label {
                     Text("Ни аккаунтов, ни аналитики, ни отчётов. Код открыт — это можно проверить.")
+                        .fixedSize(horizontal: false, vertical: true)
                 } icon: {
                     Image(systemName: "lock.open").foregroundStyle(.blue)
+                }
+                Label {
+                    Text("Safe beta требует Mac на Apple Silicon и macOS 14 или новее.")
+                        .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "cpu").foregroundStyle(.blue)
                 }
             }
             .font(.callout)
@@ -120,13 +147,24 @@ struct OnboardingView: View {
                     action: state.requestMicrophone
                 )
                 OnboardingPermission(
-                    status: PermissionStatus(
-                        title: "Универсальный доступ",
+                    status: PermissionStatus.accessibility(
+                        state: state.accessibilityState,
                         detail: "Чтобы услышать горячую клавишу и вставить готовый текст.",
-                        granted: state.accessibilityGranted
                     ),
-                    action: state.requestAccessibility
+                    action: performAccessibilityAction
                 )
+            }
+
+            if needsAccessibilityRepair {
+                HStack {
+                    Button("Показать приложение в Finder") {
+                        state.revealApplicationForAccessibility()
+                    }
+                    Button("Открыть Системные настройки") {
+                        state.openAccessibilitySettings()
+                    }
+                }
+                .font(.caption)
             }
 
             Text("Отдельное разрешение «Мониторинг ввода» не нужно. Приложение не запоминает и не передаёт нажатия — оно ищет только вашу горячую клавишу.")
@@ -134,6 +172,30 @@ struct OnboardingView: View {
                 .foregroundStyle(.secondary)
 
             Spacer()
+        }
+    }
+
+    private var needsAccessibilityRepair: Bool {
+        switch state.accessibilityState {
+        case .repairRequired, .failed:
+            true
+        default:
+            false
+        }
+    }
+
+    private func performAccessibilityAction() {
+        switch state.accessibilityState {
+        case .denied:
+            state.requestAccessibility()
+        case .waitingForSettings:
+            state.openAccessibilitySettings()
+        case .restartRequired:
+            state.restartForAccessibility()
+        case .repairRequired, .failed:
+            showAccessibilityRepairConfirmation = true
+        case .repairing, .granted:
+            break
         }
     }
 
@@ -150,6 +212,7 @@ struct OnboardingView: View {
                     place: .onboarding
                 ),
                 install: state.installModel,
+                cancel: state.cancelModelInstall,
                 delete: state.deleteModel
             )
 
@@ -205,6 +268,14 @@ struct OnboardingView: View {
                     .accessibilityLabel("Идёт запись")
             }
 
+            if trialSucceeded {
+                Label("Готово — диктовка работает", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            } else {
+                Button("Пропустить пробу") { finishOnboarding() }
+                    .buttonStyle(.link)
+            }
+
             Spacer()
         }
     }
@@ -214,12 +285,7 @@ struct OnboardingView: View {
     private var nextButton: some View {
         Button(step.nextButtonTitle) {
             if step.isLast {
-                onFinish()
-                // Окно закрывается здесь же. Иначе на экране оставалась бы
-                // пустая рамка: содержимое исчезает вместе с флагом настройки,
-                // а сама рамка — нет, и последним действием установки человек
-                // закрывал бы её руками.
-                dismiss()
+                finishOnboarding()
             } else {
                 forward()
             }
@@ -234,23 +300,33 @@ struct OnboardingView: View {
             step: step,
             microphoneGranted: state.microphoneGranted,
             accessibilityGranted: state.accessibilityGranted,
-            modelState: state.modelState
+            modelState: state.modelState,
+            engineReady: state.isEngineReady,
+            trialSucceeded: trialSucceeded
         )
+    }
+
+    private var trialSucceeded: Bool {
+        state.successfulDictationCount > trialStartCount
+            && !trial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func forward() {
         guard let next = step.next else { return }
+        if next == .tryIt { trialStartCount = state.successfulDictationCount }
         withAnimation { step = next }
-        // Загрузку запускаем сразу при переходе к шагу модели, чтобы она шла,
-        // пока человек читает.
-        if next == .model, case .notInstalled = state.modelState {
-            state.installModel()
-        }
     }
 
     private func back() {
         guard let previous = step.previous else { return }
         withAnimation { step = previous }
+    }
+
+    private func finishOnboarding() {
+        onFinish()
+        // Окно закрывается здесь же. Иначе на экране оставалась бы пустая
+        // рамка после завершения настройки.
+        dismiss()
     }
 }
 

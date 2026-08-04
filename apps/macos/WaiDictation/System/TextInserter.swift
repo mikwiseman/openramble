@@ -7,8 +7,83 @@ import Foundation
 
 /// Запись продиктованного в буфер обмена.
 public protocol DictationPasteboard: Sendable {
-    /// Положить текст так, чтобы он не покинул этот компьютер.
-    func writeHostOnly(_ text: String) throws
+    /// Сохранить допустимое прежнее содержимое в памяти и положить локальный текст.
+    func beginHostOnlyWrite(_ text: String) throws -> PasteboardTransaction
+    /// Вернуть прежнее содержимое, только если запись всё ещё принадлежит нам.
+    func restore(_ transaction: PasteboardTransaction) throws
+}
+
+public struct PasteboardTransaction: Sendable, Equatable {
+    fileprivate let id: UUID
+
+    init(id: UUID = UUID()) {
+        self.id = id
+    }
+}
+
+private final class PasteboardTransactionStorage: @unchecked Sendable {
+    struct Snapshot {
+        let items: [[NSPasteboard.PasteboardType: Data]]
+        let ownedChangeCount: Int
+    }
+
+    /// Что осталось от транзакции к моменту restore.
+    enum Claim {
+        /// Snapshot ещё в памяти — восстановление возможно.
+        case snapshot(Snapshot)
+        /// Privacy budget уже стёр содержимое; остался только счётчик владения.
+        /// По нему restore отличает «человек уже скопировал своё» от «прежнее
+        /// содержимое потеряно навсегда».
+        case expired(ownedChangeCount: Int)
+        /// Транзакции не было либо её уже восстановили.
+        case missing
+    }
+
+    private let lock = NSLock()
+    private var snapshots: [UUID: Snapshot] = [:]
+    /// Tombstone просроченного snapshot. Содержимого здесь нет — только Int,
+    /// поэтому privacy budget не нарушается.
+    private var expiredOwnership: [UUID: Int] = [:]
+    private let lifetime: TimeInterval
+
+    init(lifetime: TimeInterval) {
+        self.lifetime = lifetime
+    }
+
+    func insert(_ snapshot: Snapshot, for id: UUID) {
+        lock.lock()
+        // Вставки идут строго по одной: прежние tombstone больше некому
+        // предъявить, и словарь не растёт бесконечно.
+        expiredOwnership.removeAll()
+        snapshots[id] = snapshot
+        lock.unlock()
+
+        // Даже если вызывающая задача погибла между записью и restore,
+        // чувствительный snapshot не переживает privacy budget.
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + lifetime) { [weak self] in
+            self?.expire(id)
+        }
+    }
+
+    func take(_ id: UUID) -> Claim {
+        lock.lock()
+        defer { lock.unlock() }
+        if let snapshot = snapshots.removeValue(forKey: id) {
+            return .snapshot(snapshot)
+        }
+        if let owned = expiredOwnership.removeValue(forKey: id) {
+            return .expired(ownedChangeCount: owned)
+        }
+        return .missing
+    }
+
+    private func expire(_ id: UUID) {
+        lock.lock()
+        if let snapshot = snapshots.removeValue(forKey: id) {
+            expiredOwnership[id] = snapshot.ownedChangeCount
+        }
+        lock.unlock()
+    }
 }
 
 /// Буфер обмена, ограниченный этим компьютером.
@@ -29,22 +104,140 @@ public struct HostOnlyPasteboard: DictationPasteboard {
     /// Имя доски. В приложении — общая; в тесте своя, чтобы прогон не затирал
     /// то, что человек в этот момент скопировал.
     private let name: String
+    private let writeObjects: @Sendable (NSPasteboard, [NSPasteboardWriting]) -> Bool
+    private let transactions: PasteboardTransactionStorage
+
+    static let maximumSnapshotBytes = 16 * 1024 * 1024
+    static let allowedSnapshotTypes: Set<NSPasteboard.PasteboardType> = [
+        .string, .rtf, .html, .png, .tiff,
+    ]
 
     public init(name: String = NSPasteboard.Name.general.rawValue) {
-        self.name = name
+        self.init(name: name, snapshotLifetime: 2) { pasteboard, objects in
+            pasteboard.writeObjects(objects)
+        }
     }
 
-    public func writeHostOnly(_ text: String) throws {
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name(name))
-        pasteboard.prepareForNewContents(with: .currentHostOnly)
+    init(
+        name: String,
+        snapshotLifetime: TimeInterval = 2,
+        writeObjects: @escaping @Sendable (NSPasteboard, [NSPasteboardWriting]) -> Bool = {
+            pasteboard, objects in
+            pasteboard.writeObjects(objects)
+        }
+    ) {
+        self.name = name
+        self.writeObjects = writeObjects
+        self.transactions = PasteboardTransactionStorage(lifetime: snapshotLifetime)
+    }
 
+    public func beginHostOnlyWrite(_ text: String) throws -> PasteboardTransaction {
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name(name))
+        let snapshot = try materializeSnapshot(from: pasteboard)
+        pasteboard.prepareForNewContents(with: .currentHostOnly)
+        let ownedChangeCount = pasteboard.changeCount
+        guard writeObjects(pasteboard, [dictatedItem(text)]) else {
+            do {
+                try restoreSnapshot(snapshot, to: pasteboard, ownedChangeCount: ownedChangeCount)
+            } catch {
+                throw TextInsertionError.clipboardRestoreFailed
+            }
+            throw TextInsertionError.clipboardWriteFailed
+        }
+
+        let transaction = PasteboardTransaction()
+        transactions.insert(
+            .init(items: snapshot, ownedChangeCount: pasteboard.changeCount),
+            for: transaction.id
+        )
+        return transaction
+    }
+
+    /// Явная команда Copy: пользователь сам разрешил заменить clipboard, но
+    /// диктовка всё равно не должна уйти в Universal Clipboard или history.
+    public func copyHostOnly(_ text: String) throws {
+        try write(text, to: NSPasteboard(name: NSPasteboard.Name(name)))
+    }
+
+    public func restore(_ transaction: PasteboardTransaction) throws {
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name(name))
+        // `take` одновременно очищает чувствительный snapshot из памяти — даже
+        // когда ownership уже потерян и восстанавливать ничего нельзя.
+        switch transactions.take(transaction.id) {
+        case let .snapshot(snapshot):
+            try restoreSnapshot(
+                snapshot.items,
+                to: pasteboard,
+                ownedChangeCount: snapshot.ownedChangeCount
+            )
+        case let .expired(ownedChangeCount):
+            // Privacy budget уже стёр прежнее содержимое человека. Если человек
+            // с тех пор скопировал своё — восстанавливать нечего и это не ошибка.
+            guard pasteboard.changeCount == ownedChangeCount else { return }
+            // Clipboard всё ещё наш: в нём лежит диктовка. Оставлять её нельзя,
+            // а «успех» здесь был бы молчаливой потерей содержимого человека.
+            pasteboard.prepareForNewContents(with: .currentHostOnly)
+            throw TextInsertionError.clipboardRestoreFailed
+        case .missing:
+            return
+        }
+    }
+
+    private func materializeSnapshot(
+        from pasteboard: NSPasteboard
+    ) throws -> [[NSPasteboard.PasteboardType: Data]] {
+        var totalBytes = 0
+        var result: [[NSPasteboard.PasteboardType: Data]] = []
+
+        for item in pasteboard.pasteboardItems ?? [] {
+            var values: [NSPasteboard.PasteboardType: Data] = [:]
+            for type in item.types {
+                guard Self.allowedSnapshotTypes.contains(type),
+                      let data = item.data(forType: type)
+                else {
+                    throw TextInsertionError.protectedClipboard
+                }
+                totalBytes += data.count
+                guard totalBytes <= Self.maximumSnapshotBytes else {
+                    throw TextInsertionError.protectedClipboard
+                }
+                values[type] = data
+            }
+            result.append(values)
+        }
+        return result
+    }
+
+    private func write(_ text: String, to pasteboard: NSPasteboard) throws {
+        pasteboard.prepareForNewContents(with: .currentHostOnly)
+        guard writeObjects(pasteboard, [dictatedItem(text)]) else {
+            throw TextInsertionError.clipboardWriteFailed
+        }
+    }
+
+    private func dictatedItem(_ text: String) -> NSPasteboardItem {
         let item = NSPasteboardItem()
         item.setString(text, forType: .string)
         item.setString("", forType: Self.transientType)
         item.setString("", forType: Self.concealedType)
         item.setString("", forType: Self.autoGeneratedType)
+        return item
+    }
 
-        guard pasteboard.writeObjects([item]) else {
+    private func restoreSnapshot(
+        _ snapshot: [[NSPasteboard.PasteboardType: Data]],
+        to pasteboard: NSPasteboard,
+        ownedChangeCount: Int
+    ) throws {
+        guard pasteboard.changeCount == ownedChangeCount else { return }
+        pasteboard.prepareForNewContents(with: .currentHostOnly)
+        guard !snapshot.isEmpty else { return }
+        let restored = snapshot.map { values -> NSPasteboardItem in
+            let item = NSPasteboardItem()
+            for (type, data) in values { item.setData(data, forType: type) }
+            return item
+        }
+        guard writeObjects(pasteboard, restored) else {
             throw TextInsertionError.clipboardWriteFailed
         }
     }
@@ -98,7 +291,11 @@ public struct SystemInput: InputSystem {
         app.activate()
         // Небольшая пауза: переключение фокуса не мгновенно, а нажатие,
         // отправленное раньше времени, уйдёт не туда.
-        try? await Task.sleep(for: .milliseconds(120))
+        do {
+            try await Task.sleep(for: .milliseconds(120))
+        } catch {
+            return false
+        }
         return true
     }
 
@@ -138,6 +335,7 @@ public struct TextInserter: TextInserting {
     /// Сколько ждать отпускания и с каким шагом.
     static let releasePollLimit = 50
     static let releasePollInterval = Duration.milliseconds(10)
+    static let pasteConsumptionDelay = Duration.milliseconds(100)
 
     private let system: any InputSystem
     private let pasteboard: any DictationPasteboard
@@ -156,6 +354,7 @@ public struct TextInserter: TextInserting {
 
     public func insert(_ text: String, into target: TargetApplication?) async throws {
         guard !text.isEmpty else { return }
+        guard let target else { throw TextInsertionError.targetUnavailable }
 
         // Защищённый ввод — не сбой, а нормальная ситуация.
         guard !system.isSecureInputEnabled else {
@@ -169,9 +368,45 @@ public struct TextInserter: TextInserting {
         // идти нельзя, а буфер к этому моменту ещё не тронут: иначе человек
         // терял бы скопированное там, где вставка всё равно не состоялась.
         try await activate(target)
-        try pasteboard.writeHostOnly(text)
-        try await waitForModifiersRelease()
-        try system.post(keyCode: CGKeyCode(kVK_ANSI_V), flags: .maskCommand)
+        try validateTarget(target)
+        try validateProtectedState()
+
+        let transaction = try pasteboard.beginHostOnlyWrite(text)
+        do {
+            try await waitForModifiersRelease()
+            // Последняя проверка выполняется после изменения clipboard и прямо
+            // перед необратимым событием Cmd+V.
+            try validateTarget(target)
+            try validateProtectedState()
+            try system.post(keyCode: CGKeyCode(kVK_ANSI_V), flags: .maskCommand)
+        } catch {
+            do {
+                try pasteboard.restore(transaction)
+            } catch {
+                throw TextInsertionError.clipboardRestoreFailed
+            }
+            throw error
+        }
+
+        // Большинство приложений читает pasteboard внутри события, но не все.
+        // 100 мс оставляет им время и держит snapshot далеко внутри лимита 2 с.
+        do {
+            try await Task.sleep(for: Self.pasteConsumptionDelay)
+        } catch {
+            // Cmd+V уже отправлен. Отмена задачи не даёт права оставить
+            // продиктованный текст в clipboard до таймера очистки snapshot.
+            do {
+                try pasteboard.restore(transaction)
+            } catch {
+                throw TextInsertionError.insertedButClipboardRestoreFailed
+            }
+            throw TextInsertionError.insertedButClipboardRestoreFailed
+        }
+        do {
+            try pasteboard.restore(transaction)
+        } catch {
+            throw TextInsertionError.insertedButClipboardRestoreFailed
+        }
     }
 
     public func pressReturn() async throws {
@@ -189,10 +424,24 @@ public struct TextInserter: TextInserting {
     /// Приложение могли закрыть, пока шло распознавание. Вставлять «куда-нибудь»
     /// в этом случае нельзя: впереди сейчас произвольное окно — вплоть до чужого
     /// поля пароля, — и продиктованное ушло бы туда.
-    private func activate(_ target: TargetApplication?) async throws {
-        guard let target else { return }
+    private func activate(_ target: TargetApplication) async throws {
         guard await system.activate(target) else {
             throw TextInsertionError.targetUnavailable
+        }
+    }
+
+    private func validateTarget(_ target: TargetApplication) throws {
+        guard system.frontmostApplication()?.processIdentifier == target.processIdentifier else {
+            throw TextInsertionError.targetChanged
+        }
+    }
+
+    private func validateProtectedState() throws {
+        guard !system.isSecureInputEnabled else {
+            throw TextInsertionError.secureInputActive
+        }
+        guard system.isAccessibilityTrusted else {
+            throw TextInsertionError.accessibilityPermissionDenied
         }
     }
 

@@ -26,6 +26,7 @@ private struct GeneralSettings: View {
     @ObservedObject var state: AppState
     // Sparkle сообщает о своих изменениях сам, через AppState они бы не дошли.
     @ObservedObject var updater: SparkleUpdater
+    @State private var showAccessibilityRepairConfirmation = false
 
     var body: some View {
         Form {
@@ -64,6 +65,12 @@ private struct GeneralSettings: View {
                     .accessibilityHint("Короткий сигнал, когда запись началась и когда закончилась")
             }
 
+            Section("Приватная вставка") {
+                Text("Перед ⌘V допустимое прежнее содержимое clipboard кратко хранится только в памяти и очищается не позже двух секунд. Если clipboard защищён, изменился или его нельзя полностью восстановить, автоматической вставки не будет — текст останется через Copy/Retry. В beta непрерывность предыдущего элемента Universal Clipboard не гарантируется.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Обновления") {
                 // Переключатель гаснет вместе с механизмом обновлений. Иначе
                 // получалось молчаливое враньё: рядом написано «обновления не
@@ -100,13 +107,22 @@ private struct GeneralSettings: View {
 
             Section("Разрешения") {
                 PermissionRow(
-                    status: PermissionStatus(
-                        title: "Универсальный доступ",
+                    status: PermissionStatus.accessibility(
+                        state: state.accessibilityState,
                         detail: "Нужен, чтобы услышать горячую клавишу и вставить текст.",
-                        granted: state.accessibilityGranted
                     ),
-                    action: state.requestAccessibility
+                    action: performAccessibilityAction
                 )
+                if needsAccessibilityRepair {
+                    HStack {
+                        Button("Показать в Finder") {
+                            state.revealApplicationForAccessibility()
+                        }
+                        Button("Открыть настройки") {
+                            state.openAccessibilitySettings()
+                        }
+                    }
+                }
                 PermissionRow(
                     status: PermissionStatus(
                         title: "Микрофон",
@@ -121,6 +137,42 @@ private struct GeneralSettings: View {
         // Разрешения выдаются в системных настройках, и вернувшийся сюда
         // человек должен увидеть свежее состояние, а не то, что было до ухода.
         .task { state.refreshPermissions() }
+        .confirmationDialog(
+            "Восстановить Универсальный доступ?",
+            isPresented: $showAccessibilityRepairConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Сбросить доступ Wai Dictation и перезапустить", role: .destructive) {
+                state.repairAccessibility()
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("macOS удалит только Accessibility-записи Wai Dictation. После перезапуска доступ нужно будет выдать заново.")
+        }
+    }
+
+    private var needsAccessibilityRepair: Bool {
+        switch state.accessibilityState {
+        case .repairRequired, .failed:
+            true
+        default:
+            false
+        }
+    }
+
+    private func performAccessibilityAction() {
+        switch state.accessibilityState {
+        case .denied:
+            state.requestAccessibility()
+        case .waitingForSettings:
+            state.openAccessibilitySettings()
+        case .restartRequired:
+            state.restartForAccessibility()
+        case .repairRequired, .failed:
+            showAccessibilityRepairConfirmation = true
+        case .repairing, .granted:
+            break
+        }
     }
 }
 
@@ -172,12 +224,13 @@ private struct ModelSettings: View {
                         place: .settings
                     ),
                     install: state.installModel,
+                    cancel: state.cancelModelInstall,
                     delete: state.deleteModel
                 )
             }
 
             Section {
-                Text("Parakeet TDT 0.6B v3 — распознаёт 25 языков, включая русский и английский в одной фразе.")
+                Text("Parakeet TDT 0.6B v3 — локальная beta для русского и английского. Смешанная RU/EN-речь пока экспериментальна и зависит от автоопределения языка.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

@@ -6,6 +6,7 @@ import SwiftUI
 struct ModelStatusView: View {
     let status: ModelStatus
     let install: () -> Void
+    let cancel: () -> Void
     let delete: () -> Void
     var announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer()
 
@@ -71,8 +72,11 @@ struct ModelStatusView: View {
             Button(action.title, action: install)
                 .buttonStyle(.borderedProminent)
                 .accessibilityHint(action.hint)
-        case .retry:
+        case .retry, .repair:
             Button(action.title, action: install)
+                .accessibilityHint(action.hint)
+        case .cancel:
+            Button(action.title, role: .cancel, action: cancel)
                 .accessibilityHint(action.hint)
         case .delete:
             Button(action.title, role: .destructive, action: delete)

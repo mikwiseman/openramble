@@ -19,16 +19,16 @@ final class PermissionPollPolicyTests: XCTestCase {
         )
     }
 
-    /// Всё выдано — ждать больше нечего.
-    func testКогдаВсёВыданоСпрашиваемРедко() {
+    /// Accessibility revoke не доставляет event: интервал всегда <= 2 секунд.
+    func testКогдаВсёВыданоRevokeВсёРавноЗамечаетсяБыстро() {
         let interval = PermissionPollPolicy.interval(
             accessibilityGranted: true,
             microphoneGranted: true,
             base: 1
         )
 
-        XCTAssertEqual(interval, 30)
-        XCTAssertGreaterThan(interval, 1, "в покое опрос обязан замедляться")
+        XCTAssertEqual(interval, 1)
+        XCTAssertLessThanOrEqual(interval, 2)
     }
 
     /// Но не прекращаем совсем: разрешение отзывают в системных настройках, и с

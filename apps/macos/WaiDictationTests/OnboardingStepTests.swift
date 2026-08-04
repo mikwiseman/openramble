@@ -12,13 +12,17 @@ final class OnboardingStepTests: XCTestCase {
         _ step: OnboardingStep,
         microphone: Bool = true,
         accessibility: Bool = true,
-        model: ModelState? = nil
+        model: ModelState? = nil,
+        engineReady: Bool = true,
+        trialSucceeded: Bool = true
     ) -> String? {
         OnboardingGate.blockReason(
             step: step,
             microphoneGranted: microphone,
             accessibilityGranted: accessibility,
-            modelState: model ?? ready
+            modelState: model ?? ready,
+            engineReady: engineReady,
+            trialSucceeded: trialSucceeded
         )
     }
 
@@ -64,9 +68,12 @@ final class OnboardingStepTests: XCTestCase {
         XCTAssertNil(reason(.welcome, microphone: false, accessibility: false, model: .notInstalled))
     }
 
-    func testПробаНеТребуетНичего() {
-        // На последнем шаге всё уже выдано и скачано — задерживать нечем.
-        XCTAssertNil(reason(.tryIt))
+    func testПробаТребуетПервойУспешнойДиктовки() {
+        XCTAssertEqual(
+            reason(.tryIt, trialSucceeded: false),
+            "Сначала попробуйте диктовку или нажмите «Пропустить пробу»."
+        )
+        XCTAssertNil(reason(.tryIt, trialSucceeded: true))
     }
 
     // MARK: - Разрешения
@@ -125,6 +132,13 @@ final class OnboardingStepTests: XCTestCase {
         XCTAssertNil(reason(.model, model: ready))
     }
 
+    func testГотовыйInventoryНеПускаетДоЗавершенияWarmup() {
+        XCTAssertEqual(
+            reason(.model, model: ready, engineReady: false),
+            "Дождитесь подготовки модели к первому запуску."
+        )
+    }
+
     /// Ни на одном шаге погашенная кнопка не остаётся без объяснения.
     ///
     /// Именно это и есть тупик установки: человек видит мёртвую «Дальше» и не
@@ -134,6 +148,7 @@ final class OnboardingStepTests: XCTestCase {
             .notInstalled,
             .downloading(receivedBytes: 0, totalBytes: 1),
             .verifying(checked: 0, total: 1),
+            .repairRequired("повреждена"),
             .failed(.cancelled),
             .deleting,
             ready,

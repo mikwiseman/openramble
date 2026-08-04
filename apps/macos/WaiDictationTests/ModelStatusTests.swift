@@ -34,9 +34,8 @@ final class ModelStatusTests: XCTestCase {
         XCTAssertEqual(status.title, "Скачиваю модель…")
         XCTAssertEqual(status.progressLabel, "120 из 483 МБ")
         XCTAssertEqual(status.progress ?? 0, 0.248, accuracy: 0.01)
-        // Во время загрузки нажимать нечего: вторая кнопка «скачать» начала бы
-        // вторую установку поверх идущей.
-        XCTAssertEqual(status.actions, [])
+        // Единственное действие — честно остановить загрузку и удалить partial.
+        XCTAssertEqual(status.actions, [.cancel])
         XCTAssertEqual(status.announcement, "Скачиваю модель, 120 из 483 МБ")
     }
 
@@ -82,6 +81,15 @@ final class ModelStatusTests: XCTestCase {
         XCTAssertEqual(status.detail, "Не удалось скачать: сервер не ответил")
     }
 
+    func testПовреждённаяМодельТребуетЯвногоВосстановления() {
+        let status = status(.repairRequired("не сошлась контрольная сумма"))
+
+        XCTAssertEqual(status.title, "Модель требует восстановления")
+        XCTAssertEqual(status.actions, [.repair])
+        XCTAssertEqual(ModelStatus.Action.repair.title, "Скачать модель заново — 483 МБ")
+        XCTAssertEqual(status.detail?.contains("повреждена"), true)
+    }
+
     func testУдалениеПоказываетсяОтдельно() {
         let status = status(.deleting)
 
@@ -114,6 +122,7 @@ final class ModelStatusTests: XCTestCase {
             .download("нет сети"),
             .verification("не сошлась сумма"),
             .install("нет прав"),
+            .repairRequired("нет marker"),
             .importSource("не та папка"),
             .notEnoughDiskSpace(requiredBytes: 1, availableBytes: 0),
             .cancelled,
@@ -137,6 +146,7 @@ final class ModelStatusTests: XCTestCase {
             .downloading(receivedBytes: 0, totalBytes: 483_000_000),
             .verifying(checked: 0, total: 12),
             ready,
+            .repairRequired("повреждена"),
             .failed(.cancelled),
             .deleting,
         ]
@@ -153,7 +163,7 @@ final class ModelStatusTests: XCTestCase {
     // MARK: - Подсказки к кнопкам
 
     func testУКаждойКнопкиЕстьПодсказка() {
-        for action in [ModelStatus.Action.install, .retry, .delete] {
+        for action in [ModelStatus.Action.install, .retry, .repair, .delete] {
             XCTAssertFalse(action.title.isEmpty)
             XCTAssertFalse(action.hint.isEmpty)
         }

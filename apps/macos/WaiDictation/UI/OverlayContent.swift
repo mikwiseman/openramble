@@ -77,12 +77,12 @@ struct OverlayContent: Equatable {
             let seconds = spokenSeconds(elapsed)
             return OverlayContent(
                 title: "Слушаю",
-                subtitle: shortSeconds(elapsed),
+                subtitle: "\(shortSeconds(elapsed)) · Горячая клавиша — вставить · Esc — удалить",
                 tone: .recording,
-                accessibilityLabel: "Идёт запись, \(seconds)",
+                accessibilityLabel: "Идёт запись, \(seconds). Горячая клавиша — вставить. Escape — удалить запись.",
                 // Главное объявление во всём приложении: без него незрячий
                 // человек не знает, что микрофон включён.
-                announcement: "Идёт запись",
+                announcement: "Идёт запись. Горячая клавиша — вставить. Escape — удалить запись.",
                 isAnnouncementUrgent: true
             )
 
