@@ -231,7 +231,7 @@ private struct ModelSettings: View {
             }
 
             Section {
-                Text("Parakeet TDT 0.6B v3 — локальная beta для русского и английского. Смешанная RU/EN-речь пока экспериментальна и зависит от автоопределения языка.")
+                Text("Parakeet TDT 0.6B v3 — локальная beta для русского и английского. Английские термины внутри русской речи узнаёт акустический подсказчик; его промахи чинит словарь замен.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -364,10 +364,13 @@ private struct AboutView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Модель распознавания")
+                Text("Модели распознавания")
                     .font(.headline)
                     .accessibilityAddTraits(.isHeader)
                 Text("Parakeet TDT 0.6B v3 © NVIDIA, лицензия CC BY 4.0. Конвертирована в Core ML и квантизована шестибитной палитрой проектом FluidInference.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("Parakeet TDT-CTC 110M © NVIDIA, лицензия CC BY 4.0 — акустический подсказчик терминов. Конвертирована в Core ML проектом FluidInference.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text("Библиотеки: FluidAudio (Apache 2.0), Sparkle (MIT).")
