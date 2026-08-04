@@ -50,6 +50,8 @@ public final class DictationOverlay: OverlayPresenting {
             )
             panel.isFloatingPanel = true
             panel.level = .statusBar
+            // Текст диктовки не должен утекать в записи экрана через HUD.
+            panel.sharingType = .none
             panel.backgroundColor = .clear
             panel.isOpaque = false
             panel.hasShadow = true
@@ -95,11 +97,31 @@ public final class DictationOverlay: OverlayPresenting {
 /// Живёт отдельно от `NSPanel` намеренно. Окно требует графического сеанса, а
 /// правила показа — счётчик секунд, автоскрытие сообщения, объявления для
 /// VoiceOver — проверяются без него.
+/// Край предпросмотра: украшение поверх диктовки, поэтому отдельный протокол,
+/// а не расширение ядра. Подставной оверлей в тестах записывает вызовы.
+@MainActor
+protocol PreviewPresenting: AnyObject {
+    func updatePreview(confirmed: String, volatile: String)
+    func updateInputLevel(_ level: Float)
+    func showSilenceHint()
+}
+
 @MainActor
 final class OverlayModel: ObservableObject {
     @Published private(set) var state: DictationState = .idle
     @Published private(set) var elapsed: TimeInterval = 0
     @Published private(set) var notice: DictationNotice?
+    /// Живой предпросмотр: устоявшийся текст и хвост, который ещё меняется.
+    /// Появляется с первым словом, а не с включением микрофона: пустая рамка
+    /// ожидания — это сценическое волнение, а не помощь.
+    @Published private(set) var previewConfirmed: String = ""
+    @Published private(set) var previewVolatile: String = ""
+    /// Пик уровня микрофона (0…1) — точка записи пульсирует вместе с голосом.
+    @Published private(set) var inputLevel: Float = 0
+    /// Слушаем дольше двух секунд, а сигнала нет: скорее всего, не тот микрофон.
+    @Published private(set) var showsSilenceHint = false
+
+    var hasPreview: Bool { !previewConfirmed.isEmpty || !previewVolatile.isEmpty }
 
     /// Должна ли панель быть на экране. Показывает её владелец.
     private(set) var isVisible = false
@@ -144,9 +166,34 @@ final class OverlayModel: ObservableObject {
         cancelAutoHide()
         self.state = state
         notice = nil
+        if state == .listening {
+            // Новая запись — прежний предпросмотр не имеет права мигнуть.
+            previewConfirmed = ""
+            previewVolatile = ""
+            inputLevel = 0
+            showsSilenceHint = false
+        }
         setElapsed(elapsed, ticking: state == .listening)
         setVisible(true)
         announceContent()
+    }
+
+    /// Обновить предпросмотр. VoiceOver намеренно молчит: читать поток
+    /// меняющихся слов поверх собственной речи человека — абсурд.
+    func updatePreview(confirmed: String, volatile: String) {
+        previewConfirmed = confirmed
+        previewVolatile = volatile
+        if !confirmed.isEmpty || !volatile.isEmpty { showsSilenceHint = false }
+    }
+
+    func updateInputLevel(_ level: Float) {
+        inputLevel = min(1, max(0, level))
+    }
+
+    /// Сигнала нет уже дольше порога — сказать про микрофон.
+    func showSilenceHint() {
+        guard state == .listening, !hasPreview else { return }
+        showsSilenceHint = true
     }
 
     /// Показать сообщение и убрать его через положенное время.
@@ -236,12 +283,16 @@ private struct OverlayView: View {
     var body: some View {
         let content = model.content
 
-        return HStack(spacing: 12) {
+        return HStack(alignment: .top, spacing: 12) {
             Circle()
                 .fill(color(for: content.tone))
                 .frame(width: 10, height: 10)
+                // Точка дышит вместе с голосом: видно, что микрофон слышит.
+                .scaleEffect(model.state == .listening ? 1 + CGFloat(model.inputLevel) * 0.6 : 1)
+                .animation(.easeOut(duration: 0.12), value: model.inputLevel)
+                .padding(.top, 3)
             VStack(alignment: .leading, spacing: 2) {
-                Text(content.title)
+                Text(model.showsSilenceHint ? "No sound detected — check your microphone." : content.title)
                     .font(.system(size: 13, weight: .medium))
                     .fixedSize(horizontal: false, vertical: true)
                 if let subtitle = content.subtitle {
@@ -250,12 +301,26 @@ private struct OverlayView: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                if model.hasPreview {
+                    // Хвост гипотезы важнее начала: показываем конец, максимум
+                    // две строки, без прокрутки и без по-словной анимации.
+                    (Text(model.previewConfirmed)
+                        + Text(model.previewConfirmed.isEmpty || model.previewVolatile.isEmpty ? "" : " ")
+                        + Text(model.previewVolatile).foregroundStyle(.secondary))
+                        .font(.system(size: 12))
+                        .lineLimit(2)
+                        .truncationMode(.head)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        // Во время распознавания текст остаётся, но приглушён:
+                        // пустота читалась бы как «мои слова пропали».
+                        .opacity(model.state == .transcribing ? 0.5 : 1)
+                }
             }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .frame(width: 280, alignment: .leading)
+        .frame(width: model.hasPreview ? 360 : 280, alignment: .leading)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
         // Панель читается одним элементом: цветная точка и счётчик по
         // отдельности не значат ничего.
@@ -272,5 +337,20 @@ private struct OverlayView: View {
         case .warning: return .orange
         case .failure: return .red
         }
+    }
+}
+
+
+extension DictationOverlay: PreviewPresenting {
+    func updatePreview(confirmed: String, volatile: String) {
+        model.updatePreview(confirmed: confirmed, volatile: volatile)
+    }
+
+    func updateInputLevel(_ level: Float) {
+        model.updateInputLevel(level)
+    }
+
+    func showSilenceHint() {
+        model.showSilenceHint()
     }
 }

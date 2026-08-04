@@ -131,7 +131,7 @@ struct ModelStatus: Equatable {
                 // «готова», но диктовка ещё подумает. Молчать об этом — значит
                 // получить жалобу на медленный первый раз.
                 detail: isPreparingEngine
-                    ? "Preparing for first use — this takes a few seconds and happens only once."
+                    ? "Preparing for this Mac — usually 20–40 seconds, and only once."
                     : nil,
                 progress: nil,
                 progressLabel: nil,

@@ -35,15 +35,23 @@ public actor MicrophoneCapture: AudioCapturing {
     /// Молчать до остановки нельзя: закончившееся место на диске человек иначе
     /// обнаружит через пять минут говорения — и текста уже не будет.
     private let onFailure: @Sendable (AudioCaptureError) -> Void
+    /// Слушатель живых отсчётов — для предпросмотра распознавания.
+    ///
+    /// Зовётся после конвертации в целевой формат, уже вне аудиопотока, в том
+    /// же порядке, в каком отсчёты уходят в WAV. Файл остаётся источником
+    /// истины: слушатель ничего не решает, он только смотрит.
+    private let onSamples: @Sendable ([Float]) -> Void
     private let converterFactory: ConverterFactory
 
     public init(
         directory: URL,
         onFailure: @escaping @Sendable (AudioCaptureError) -> Void = { _ in },
+        onSamples: @escaping @Sendable ([Float]) -> Void = { _ in },
         converterFactory: @escaping ConverterFactory = { AVAudioConverter(from: $0, to: $1) }
     ) {
         self.directory = directory
         self.onFailure = onFailure
+        self.onSamples = onSamples
         self.converterFactory = converterFactory
     }
 
@@ -153,6 +161,7 @@ public actor MicrophoneCapture: AudioCapturing {
 
     private func consume(_ samples: [Float]) {
         if firstBufferAt == nil { firstBufferAt = .now }
+        onSamples(samples)
         guard let writer, writeFailure == nil else { return }
         do {
             try writer.append(samples)

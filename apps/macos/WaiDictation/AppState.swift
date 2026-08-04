@@ -1,5 +1,6 @@
 import AVFoundation
 import AppKit
+import ServiceManagement
 import DictationAudio
 import DictationCore
 import Foundation
@@ -20,7 +21,9 @@ public struct AppEnvironment {
     public var hotkeyMonitor: any HotkeyMonitoring
     public var inserter: any TextInserting
     public var overlay: any OverlayPresenting
-    public var makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing
+    /// Фабрика захвата: папка записей, обработчик сбоя и слушатель живых
+    /// отсчётов (для предпросмотра и уровня микрофона).
+    public var makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void, @escaping @Sendable ([Float]) -> Void) -> any AudioCapturing
     /// Чем распознавать. Такой же край системы, как микрофон и вставка: в
     /// приложении это модель на диске, в тесте — заранее известный ответ. Без
     /// этого шва путь диктовки целиком в приложении нельзя было проверить
@@ -49,7 +52,7 @@ public struct AppEnvironment {
         hotkeyMonitor: any HotkeyMonitoring,
         inserter: any TextInserting,
         overlay: any OverlayPresenting,
-        makeCapture: @escaping (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing,
+        makeCapture: @escaping (URL, @escaping @Sendable (AudioCaptureError) -> Void, @escaping @Sendable ([Float]) -> Void) -> any AudioCapturing,
         transcribe: @escaping (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult,
         permissionPollInterval: TimeInterval,
         modelDownloader: any ModelDownloading,
@@ -84,7 +87,7 @@ public struct AppEnvironment {
             hotkeyMonitor: GlobalHotkeyMonitor(),
             inserter: TextInserter(),
             overlay: DictationOverlay(),
-            makeCapture: { MicrophoneCapture(directory: $0, onFailure: $1) },
+            makeCapture: { MicrophoneCapture(directory: $0, onFailure: $1, onSamples: $2) },
             transcribe: { engineDirectory, languageHint in
                 return { url in
                     try await transcriber.prepare(modelDirectory: engineDirectory)
@@ -189,7 +192,7 @@ public final class AppState: ObservableObject {
     private let hotkeyMonitor: any HotkeyMonitoring
     private let inserter: any TextInserting
     private let overlay: any OverlayPresenting
-    private let makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void) -> any AudioCapturing
+    private let makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void, @escaping @Sendable ([Float]) -> Void) -> any AudioCapturing
     private let transcribe: (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult
     private let permissionPollInterval: TimeInterval
     private let modelDownloader: any ModelDownloading
@@ -221,6 +224,27 @@ public final class AppState: ObservableObject {
     private var isRecoveryOperationActive = false
     /// Сообщение, которое ждёт конца сессии.
     private var noticeAfterSession: DictationNotice?
+    /// Отложенная подсказка «нет звука» — отменяется первым же живым сигналом.
+    private var silenceHintTask: Task<Void, Never>?
+
+    /// Живой предпросмотр распознавания в панели. Украшение — выключается.
+    @Published public var showLivePreview: Bool {
+        didSet {
+            guard oldValue != showLivePreview else { return }
+            defaults.set(showLivePreview, forKey: Self.showLivePreviewKey)
+        }
+    }
+    nonisolated static let showLivePreviewKey = "showLivePreview"
+
+    /// Запуск при входе в систему. Приложение без иконки в Dock, которое не
+    /// запустилось после перезагрузки, неотличимо от сломанного: клавиша
+    /// молчит, и некому объяснить почему.
+    @Published public var launchAtLogin: Bool {
+        didSet {
+            guard oldValue != launchAtLogin else { return }
+            applyLaunchAtLogin()
+        }
+    }
     private var didCompleteInitialPermissionRefresh = false
 
     // Таймеры и подписки помечены `nonisolated(unsafe)`, потому что их снимает
@@ -260,6 +284,10 @@ public final class AppState: ObservableObject {
     public init(environment: AppEnvironment) {
         defaults = environment.defaults
         recognitionLanguage = environment.defaults.string(forKey: Self.recognitionLanguageKey)
+        showLivePreview = environment.defaults.object(forKey: Self.showLivePreviewKey) == nil
+            ? true
+            : environment.defaults.bool(forKey: Self.showLivePreviewKey)
+        launchAtLogin = SMAppService.mainApp.status == .enabled
         paths = environment.paths
         permissions = environment.permissions
         accessibilityManager = environment.accessibilityManager
@@ -314,15 +342,29 @@ public final class AppState: ObservableObject {
         let sounds = SystemSounds(enabled: { [weak self] in self?.soundsEnabled ?? true })
 
         do {
-            let capture = makeCapture(try paths.takes()) { [weak self] error in
-                // Аудиопоток перестал быть пригодным посреди речи. Ждать остановки
-                // нельзя: человек говорит в пустоту, а причина должна быть показана точно.
-                Task { @MainActor in
-                    self?.controller?.interrupt(
-                        reason: Self.captureFailureMessage(error)
-                    )
+            let previewFeed = transcriber
+            let capture = makeCapture(
+                try paths.takes(),
+                { [weak self] error in
+                    // Аудиопоток перестал быть пригодным посреди речи. Ждать
+                    // остановки нельзя: человек говорит в пустоту, а причина
+                    // должна быть показана точно.
+                    Task { @MainActor in
+                        self?.controller?.interrupt(
+                            reason: Self.captureFailureMessage(error)
+                        )
+                    }
+                },
+                { [weak self, previewFeed] samples in
+                    // Живые отсчёты: в предпросмотр и в индикатор уровня.
+                    // Пик достаточен — RMS здесь не точнее для глаза.
+                    let peak = samples.reduce(Float(0)) { max($0, abs($1)) }
+                    Task { @MainActor in self?.registerInputLevel(peak) }
+                    if let previewFeed {
+                        Task { await previewFeed.feedPreview(samples: samples) }
+                    }
                 }
-            }
+            )
             let recordingRecovery = RecordingRecoveryStore(directory: try paths.audioRecovery())
             self.recordingRecovery = recordingRecovery
 
@@ -376,6 +418,7 @@ public final class AppState: ObservableObject {
                 self?.dictationState = state
                 self?.updateDurationTimer(for: state)
                 self?.flushNoticeAfterSession(state)
+                self?.updateLivePreview(for: state)
             }
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
@@ -1171,6 +1214,67 @@ public final class AppState: ObservableObject {
     }
 
     // MARK: - Предел длительности
+
+    // MARK: - Живой предпросмотр
+
+    /// Запись пошла — включить предпросмотр; запись кончилась — выключить.
+    ///
+    /// Предпросмотр — украшение: его отказ не имеет права трогать диктовку,
+    /// поэтому ошибки старта не всплывают сообщением — отсутствие текста в
+    /// панели видно само по себе, а вставка работает как раньше.
+    private func updateLivePreview(for state: DictationState) {
+        guard let transcriber, showLivePreview else { return }
+        switch state {
+        case .listening:
+            silenceHintTask?.cancel()
+            silenceHintTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { return }
+                (self?.overlay as? PreviewPresenting)?.showSilenceHint()
+            }
+            Task { [weak self] in
+                try? await transcriber.startPreview { confirmed, volatile in
+                    Task { @MainActor in
+                        (self?.overlay as? PreviewPresenting)?
+                            .updatePreview(confirmed: confirmed, volatile: volatile)
+                    }
+                }
+            }
+        default:
+            silenceHintTask?.cancel()
+            silenceHintTask = nil
+            Task { await transcriber.stopPreview() }
+        }
+    }
+
+    /// Пик уровня с микрофона — в пульс точки записи. Сигнал громче порога
+    /// отменяет подсказку «нет звука».
+    private func registerInputLevel(_ peak: Float) {
+        (overlay as? PreviewPresenting)?.updateInputLevel(peak)
+        if peak > 0.02 {
+            silenceHintTask?.cancel()
+            silenceHintTask = nil
+        }
+    }
+
+    /// Ошибка регистрации видима: молча оставить человека без автозапуска —
+    /// значит вернуть проблему «после перезагрузки клавиша молчит».
+    private func applyLaunchAtLogin() {
+        do {
+            if launchAtLogin {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+        } catch {
+            notify(
+                DictationNotice(
+                    kind: .warning,
+                    message: "Could not update the login item: \(error.localizedDescription)"
+                )
+            )
+        }
+    }
 
     private func updateDurationTimer(for state: DictationState) {
         durationTimer?.invalidate()

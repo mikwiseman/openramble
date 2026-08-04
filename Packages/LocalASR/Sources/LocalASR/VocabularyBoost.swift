@@ -91,6 +91,23 @@ extension VocabularyBoost {
     }
 }
 
+/// Движок, умеющий показывать распознавание вживую, пока человек говорит.
+///
+/// Текст предпросмотра — только для глаз: источником истины остаётся
+/// batch-распознавание готовой записи тем же движком.
+public protocol LivePreviewCapable: Sendable {
+    /// `confirmed` — устоявшийся текст, `volatile` — хвост, который ещё может
+    /// поменяться. Обновления приходят не чаще четырёх раз в секунду: мерцание
+    /// отвлекает сильнее, чем задержка.
+    func startPreview(
+        onUpdate: @escaping @Sendable (_ confirmed: String, _ volatile: String) -> Void
+    ) async throws
+    func feedPreview(samples: [Float]) async
+    func stopPreview() async
+}
+
+extension FluidAudioAdapter: LivePreviewCapable {}
+
 /// Движок, умеющий принимать акустические подсказки терминов.
 ///
 /// Протокол живёт в LocalASR, а не в DictationCore: ядру диктовки безразлично,

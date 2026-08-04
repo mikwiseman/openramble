@@ -113,13 +113,8 @@ struct OnboardingView: View {
                     Text("No accounts, no analytics, no reports. The code is open — you can check.")
                         .fixedSize(horizontal: false, vertical: true)
                 } icon: {
-                    Image(systemName: "lock.open").foregroundStyle(.blue)
-                }
-                Label {
-                    Text("Safe beta requires a Mac with Apple Silicon and macOS 14 or later.")
-                        .fixedSize(horizontal: false, vertical: true)
-                } icon: {
-                    Image(systemName: "cpu").foregroundStyle(.blue)
+                    // Открытый замок читается как «незащищено» — ровно наоборот.
+                    Image(systemName: "eye.slash").foregroundStyle(.blue)
                 }
             }
             .font(.callout)
@@ -227,7 +222,7 @@ struct OnboardingView: View {
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
 
-            Picker("Hotkey", selection: $state.hotkey) {
+            Picker("Dictation key", selection: $state.hotkey) {
                 ForEach(DictationHotkey.allCases, id: \.self) { key in
                     Text(key.title).tag(key)
                 }

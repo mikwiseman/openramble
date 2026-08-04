@@ -83,6 +83,27 @@ public actor LocalTranscriber {
         return try await engine.transcribe(samples: samples, languageHint: languageHint)
     }
 
+    /// Живой предпросмотр: старт, поток отсчётов, стоп.
+    ///
+    /// Молча пропускается, если движок не умеет предпросмотр: это украшение
+    /// поверх диктовки, а не её часть — контракт тот же, что у подсказки языка.
+    public func startPreview(
+        onUpdate: @escaping @Sendable (_ confirmed: String, _ volatile: String) -> Void
+    ) async throws {
+        guard let capable = engine as? LivePreviewCapable else { return }
+        try await capable.startPreview(onUpdate: onUpdate)
+    }
+
+    public func feedPreview(samples: [Float]) async {
+        guard let capable = engine as? LivePreviewCapable else { return }
+        await capable.feedPreview(samples: samples)
+    }
+
+    public func stopPreview() async {
+        guard let capable = engine as? LivePreviewCapable else { return }
+        await capable.stopPreview()
+    }
+
     /// Освободить память под моделью.
     public func unload() async {
         await engine.unload()

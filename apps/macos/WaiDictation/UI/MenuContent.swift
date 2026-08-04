@@ -62,19 +62,6 @@ struct MenuContent: View {
 
         Divider()
 
-        // Быстрая смена языка распознавания — без похода в настройки: человек
-        // переключает язык между диктовками, и три клика сюда не идут.
-        Picker("Language", selection: $state.recognitionLanguage) {
-            Text("Automatic").tag(String?.none)
-            ForEach(RecognitionLanguages.options) { option in
-                Text(option.name).tag(String?.some(option.code))
-            }
-        }
-        .pickerStyle(.menu)
-
-        Divider()
-
-        Button("Check for Updates…") { updater.checkForUpdates() }
             .disabled(!updater.canCheckForUpdates)
 
         Button("Settings…") { openSettings() }

@@ -69,7 +69,7 @@ final class ModelStatusTests: XCTestCase {
         let status = status(ready, preparing: true)
 
         XCTAssertEqual(status.title, "Model ready")
-        XCTAssertEqual(status.detail?.contains("first use"), true)
+        XCTAssertEqual(status.detail?.contains("20–40 seconds"), true)
         XCTAssertEqual(status.announcement, "Model ready, preparing for first use")
     }
 

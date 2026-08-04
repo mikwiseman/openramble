@@ -468,7 +468,7 @@ final class AppHarness {
                 hotkeyMonitor: monitor,
                 inserter: inserter,
                 overlay: overlay,
-                makeCapture: { [capture] _, _ in capture },
+                makeCapture: { [capture] _, _, _ in capture },
                 transcribe: { [transcription] _, _ in
                     { _ in
                         if let delay = transcription.delay {

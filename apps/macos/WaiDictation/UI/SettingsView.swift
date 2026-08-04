@@ -31,7 +31,7 @@ private struct GeneralSettings: View {
     var body: some View {
         Form {
             Section {
-                Picker("Hotkey", selection: $state.hotkey) {
+                Picker("Dictation key", selection: $state.hotkey) {
                     ForEach(DictationHotkey.allCases, id: \.self) { key in
                         Text(key.title).tag(key)
                     }
@@ -67,7 +67,7 @@ private struct GeneralSettings: View {
 
             Section {
                 Picker("Recognition language", selection: $state.recognitionLanguage) {
-                    Text("Automatic").tag(String?.none)
+                    Text("Automatic — recommended").tag(String?.none)
                     ForEach(RecognitionLanguages.options) { option in
                         Text(option.name).tag(String?.some(option.code))
                     }
@@ -78,8 +78,8 @@ private struct GeneralSettings: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section("Private paste") {
-                Text("Before ⌘V, the previous clipboard contents are captured to memory byte-for-byte and put back within two seconds. The only exceptions are a password from a password manager, file promises, and contents over 16 MiB — then nothing is pasted, and your text stays available via Copy and Retry. In beta, continuity of the previous Universal Clipboard item is not guaranteed.")
+            Section("Text insertion") {
+                Text("Wai Dictation uses the clipboard briefly to paste, then restores the previous item byte-for-byte. Passwords, file promises, and items over 16 MB are never touched — when pasting is not safe, your text stays available from the menu.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

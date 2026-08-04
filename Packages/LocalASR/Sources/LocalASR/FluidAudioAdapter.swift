@@ -1,3 +1,4 @@
+import AVFAudio
 import DictationCore
 import FluidAudio
 import Foundation
@@ -19,6 +20,12 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     private var vocabularyContext: CustomVocabularyContext?
     private var vocabularySizeConfig: ContextBiasingConstants.VocabSizeConfig?
     private var vocabularyBiasWeight: Float?
+
+    // Живой предпросмотр: pseudo-streaming менеджер на тех же весах, что и
+    // batch-путь. Его текст — только для глаз во время речи; источником
+    // истины остаётся batch-распознавание готовой записи.
+    private var previewManager: SlidingWindowAsrManager?
+    private var previewTask: Task<Void, Never>?
 
     /// Состояние декодера TDT.
     ///
@@ -167,6 +174,68 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         }
     }
 
+    /// Начать живой предпросмотр. Требует загруженной основной модели: веса
+    /// делятся между batch-распознаванием и предпросмотром, второй копии нет.
+    public func startPreview(
+        onUpdate: @escaping @Sendable (_ confirmed: String, _ volatile: String) -> Void
+    ) async throws {
+        guard let models else { throw ASREngineError.modelsNotLoaded }
+        guard previewManager == nil else { return }
+
+        let preview = SlidingWindowAsrManager()
+        try await preview.loadModels(models)
+        try await preview.startStreaming(source: .microphone)
+        previewManager = preview
+
+        previewTask = Task { [weak preview] in
+            guard let preview else { return }
+            var lastEmit = ContinuousClock.now - .seconds(1)
+            for await _ in await preview.transcriptionUpdates {
+                if Task.isCancelled { break }
+                // Не чаще четырёх раз в секунду: мерцание хуже задержки.
+                let now = ContinuousClock.now
+                guard lastEmit.duration(to: now) >= .milliseconds(250) else { continue }
+                lastEmit = now
+                // Семантика поля text у update меняется между режимами
+                // библиотеки; собственные confirmed/volatile — стабильный
+                // источник. Читаем их после каждого события.
+                let confirmed = await preview.confirmedTranscript
+                let volatile = await preview.volatileTranscript
+                onUpdate(confirmed, volatile)
+            }
+        }
+    }
+
+    /// Скормить предпросмотру живые отсчёты (16 кГц, моно, Float32).
+    public func feedPreview(samples: [Float]) async {
+        guard let previewManager, !samples.isEmpty else { return }
+        guard let format = AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: 16_000,
+            channels: 1,
+            interleaved: false
+        ), let buffer = AVAudioPCMBuffer(
+            pcmFormat: format,
+            frameCapacity: AVAudioFrameCount(samples.count)
+        ) else { return }
+        buffer.frameLength = AVAudioFrameCount(samples.count)
+        samples.withUnsafeBufferPointer { pointer in
+            buffer.floatChannelData?[0].update(from: pointer.baseAddress!, count: samples.count)
+        }
+        await previewManager.streamAudio(buffer)
+    }
+
+    /// Остановить предпросмотр и освободить его состояние. Веса модели общие
+    /// и остаются загруженными для batch-распознавания.
+    public func stopPreview() async {
+        previewTask?.cancel()
+        previewTask = nil
+        if let previewManager {
+            await previewManager.cancel()
+        }
+        previewManager = nil
+    }
+
     public func transcribe(samples: [Float]) async throws -> DictationCore.ASRResult {
         try await transcribe(samples: samples, languageHint: nil)
     }
@@ -287,6 +356,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     }
 
     public func unload() async {
+        await stopPreview()
         await manager?.cleanup()
         manager = nil
         models = nil
