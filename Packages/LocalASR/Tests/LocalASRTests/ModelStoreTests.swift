@@ -374,6 +374,116 @@ final class ModelStoreTests: XCTestCase {
         XCTAssertEqual(repairedRequests, firstRoundRequests * 2)
     }
 
+    /// Обновление FluidAudio не должно стоить пользователю перекачки модели.
+    ///
+    /// Ревизия модели — зафиксированный SHA коммита; если она не менялась, на
+    /// диске лежат ровно те же байты, что просит новый манифест. Раньше метка
+    /// сверялась вместе с версией библиотеки, и патч зависимости превращался в
+    /// «модель повреждена, качайте 483 МБ заново» у каждого, кто обновил
+    /// приложение. Теперь это перепроверка сумм на месте и переписанная метка.
+    func testFluidAudioBumpRevalidatesLocallyWithoutDownloading() async throws {
+        let installed = makeManifest()
+        let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
+        let (store, layout) = makeStore(manifest: installed, downloader: downloader)
+        await store.install()
+        let installedState = await store.currentState()
+        XCTAssertTrue(installedState.isReady)
+        let requestsAfterInstall = await downloader.requestedPaths.count
+
+        // Обновилась библиотека, веса не трогали: та же ревизия, тот же набор
+        // файлов, другая версия FluidAudio.
+        let bumped = ModelManifest(
+            modelID: installed.modelID,
+            repository: installed.repository,
+            revision: installed.revision,
+            fluidAudioVersion: "0.15.6",
+            quantization: installed.quantization,
+            license: installed.license,
+            files: installed.files
+        )
+        let upgraded = ModelStore(manifest: bumped, layout: layout, downloader: downloader)
+
+        let state = await upgraded.refreshState()
+
+        XCTAssertTrue(state.isReady, "Целые файлы после бампа библиотеки — это Ready, а не repair. Получено: \(state)")
+        let requestsAfterRefresh = await downloader.requestedPaths.count
+        XCTAssertEqual(
+            requestsAfterRefresh,
+            requestsAfterInstall,
+            "Ни одного байта из сети скачано быть не должно"
+        )
+        // Метка переписана под новую версию — иначе полная сверка сумм
+        // повторялась бы при каждом запуске приложения.
+        let marker = try JSONDecoder().decode(
+            ModelReadyMarker.self,
+            from: Data(contentsOf: layout.readyMarker)
+        )
+        XCTAssertEqual(marker.fluidAudioVersion, "0.15.6")
+        XCTAssertTrue(marker.matches(bumped))
+    }
+
+    /// Обратная сторона той же правки: смена ревизии — это другие веса, и вот
+    /// тут перекачка обязана случиться, а не тихо сойти за годную установку.
+    func testDifferentRevisionStillNeedsInstall() async throws {
+        let installed = makeManifest()
+        let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
+        let (store, _) = makeStore(manifest: installed, downloader: downloader)
+        await store.install()
+
+        let newRevision = ModelManifest(
+            modelID: installed.modelID,
+            repository: installed.repository,
+            revision: String(repeating: "c", count: 40),
+            fluidAudioVersion: installed.fluidAudioVersion,
+            quantization: installed.quantization,
+            license: installed.license,
+            files: installed.files
+        )
+        let layout = ModelInstallLayout(
+            root: root,
+            modelID: newRevision.modelID,
+            revision: newRevision.revision,
+            engineFolderName: "repo"
+        )
+        let other = ModelStore(manifest: newRevision, layout: layout, downloader: downloader)
+
+        let state = await other.refreshState()
+
+        guard case .notInstalled = state else {
+            return XCTFail("Другая ревизия — это не установленная модель, получено: \(state)")
+        }
+    }
+
+    /// Повреждение остаётся повреждением: бамп версии не должен превращаться в
+    /// «проверять не будем, и так сойдёт».
+    func testFluidAudioBumpStillCatchesDamagedFile() async throws {
+        let installed = makeManifest()
+        let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
+        let (store, layout) = makeStore(manifest: installed, downloader: downloader)
+        await store.install()
+
+        // Файл подменён после установки — размер тот же, содержимое другое.
+        let victim = layout.engineDirectory.appending(path: "Encoder.mlmodelc/weight.bin")
+        try Data("содержимое ПЕРВОГО файла".utf8).write(to: victim)
+
+        let bumped = ModelManifest(
+            modelID: installed.modelID,
+            repository: installed.repository,
+            revision: installed.revision,
+            fluidAudioVersion: "0.15.6",
+            quantization: installed.quantization,
+            license: installed.license,
+            files: installed.files
+        )
+        let upgraded = ModelStore(manifest: bumped, layout: layout, downloader: downloader)
+
+        let state = await upgraded.refreshState()
+
+        guard case .repairRequired = state else {
+            return XCTFail("Подменённый файл обязан требовать восстановления, получено: \(state)")
+        }
+    }
+
     func testProgressIsReportedWhileDownloading() {
         XCTAssertEqual(ModelState.downloading(receivedBytes: 50, totalBytes: 200).progress, 0.25)
         XCTAssertEqual(ModelState.verifying(checked: 1, total: 4).progress, 0.25)

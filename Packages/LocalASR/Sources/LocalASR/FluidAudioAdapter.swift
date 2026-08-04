@@ -1,7 +1,27 @@
 import AVFAudio
+import CoreML
 import DictationCore
 import FluidAudio
 import Foundation
+
+/// Какой файл энкодера грузить.
+///
+/// В репозитории модели их два. Имена — из терминов библиотеки, а не описание
+/// квантизации: `Encoder.mlmodelc` квантизован 6-битной палитрой (так и указано
+/// в атрибуции CC BY), `EncoderInt4.mlmodelc` — четырёхбитной.
+public enum EncoderVariant: String, Sendable, CaseIterable {
+    case palettized6bit
+    case int4
+}
+
+/// На чём считать энкодер.
+///
+/// Препроцессор библиотека всегда пришивает к CPU, декодер и joint идут на
+/// нейромодуль. Настраивается только энкодер — самая тяжёлая часть.
+public enum EncoderPlacement: String, Sendable, CaseIterable {
+    case neuralEngine
+    case gpu
+}
 
 /// Единственное место во всём проекте, где импортируется FluidAudio.
 ///
@@ -12,20 +32,43 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     private var models: AsrModels?
     private var manager: AsrManager?
 
+    /// Собранный подсказчик терминов: всё, что нужно одному распознаванию.
+    ///
+    /// Пять полей вместо одного означали бы, что их можно подменить по
+    /// отдельности. Здесь их подменяют только целиком, и распознавание берёт
+    /// снимок один раз — иначе правка словаря в середине диктовки успела бы
+    /// подсунуть улики от одного набора терминов и правило замены от другого.
+    private struct VocabularyHelper: Sendable {
+        let spotter: CtcKeywordSpotter
+        let context: CustomVocabularyContext
+        let rescorer: VocabularyRescorer
+        let sizeConfig: ContextBiasingConstants.VocabSizeConfig
+        let biasWeight: Float
+    }
+
     // Акустический подсказчик терминов: CTC-модель ищет термины в звуке,
     // rescorer правит текст TDT по её уликам. Всё опционально: без явной
     // загрузки распознавание работает ровно как раньше.
-    private var keywordSpotter: CtcKeywordSpotter?
-    private var vocabularyRescorer: VocabularyRescorer?
-    private var vocabularyContext: CustomVocabularyContext?
-    private var vocabularySizeConfig: ContextBiasingConstants.VocabSizeConfig?
-    private var vocabularyBiasWeight: Float?
+    private var vocabulary: VocabularyHelper?
+
+    /// Веса CTC-модели и её токенизатор. Держатся отдельно от набора терминов,
+    /// потому что переживают его правку: список меняется часто, веса — никогда.
+    private var ctcModels: CtcModels?
+    private var ctcTokenizer: CtcTokenizer?
+    private var ctcDirectory: URL?
 
     // Живой предпросмотр: pseudo-streaming менеджер на тех же весах, что и
     // batch-путь. Его текст — только для глаз во время речи; источником
     // истины остаётся batch-распознавание готовой записи.
     private var previewManager: SlidingWindowAsrManager?
     private var previewTask: Task<Void, Never>?
+
+    /// Идёт ли прямо сейчас запуск предпросмотра, и какой именно.
+    ///
+    /// Поколение решает спор между запуском и остановкой, попавшей внутрь него:
+    /// запуск, чьё поколение успело устареть, свой менеджер не устанавливает.
+    private var previewStarting = false
+    private var previewGeneration = 0
 
     /// Состояние декодера TDT.
     ///
@@ -51,9 +94,56 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     /// чтобы замер можно было повторить (`WAI_ASR_MEL_CONTEXT` в asr-bench).
     private let melChunkContext: Bool
 
-    public init(melChunkContext: Bool = false) {
+    /// Вариант файла энкодера. Замер обоих — в `docs/benchmarks.md`.
+    private let encoder: EncoderVariant
+
+    /// Где считается энкодер.
+    private let encoderPlacement: EncoderPlacement
+
+    /// Второй проход декодера с арбитражем на стыке окон.
+    ///
+    /// Библиотека держит его выключенным по умолчанию и включает только для
+    /// пути «v3 без mel-контекста» — то есть ровно для нашего. Стоит времени,
+    /// поэтому включён по результату замера, а не по описанию.
+    private let dualDecodeArbitration: Bool
+
+    /// Потолок токенов на одно окно у TDT-декодера.
+    ///
+    /// Библиотека ставит 150 и при превышении **молча обрывает разбор окна** —
+    /// `break` из цикла, без ошибки и без следа в тексте. Симптом тот же, что у
+    /// уже вылеченного mel-контекста: у фразы пропадает середина.
+    ///
+    /// 150 хватает не всегда. Счётчик считает все раскодированные токены окна,
+    /// включая двухсекундное перекрытие, которое в текст не попадает, — то есть
+    /// бюджет на новую речь меньше числа в настройке. На плотной русской речи
+    /// (340 слов в минуту, запись длиннее одного окна) потолок срабатывал и
+    /// съедал куски: «каждый обработчик бе **Пока не закончит**». WER такой
+    /// записи 9,8% против 4,3% без обрыва.
+    ///
+    /// 600 выбрано замером: 200 уже достаточно на самой плотной речи, которую
+    /// удалось синтезировать, дальше текст не меняется вовсе; 600 даёт тройной
+    /// запас и при этом остаётся втрое ниже теоретического максимума окна
+    /// (187 кадров × 10 токенов на кадр = 1870), то есть защита от зацикливания
+    /// декодера сохраняется. На корпусе текст не изменился ни в одном символе,
+    /// скорость тоже. Цифры — в `docs/benchmarks.md`.
+    private let maxTokensPerChunk: Int
+
+    public init(
+        melChunkContext: Bool = false,
+        encoder: EncoderVariant = .palettized6bit,
+        encoderPlacement: EncoderPlacement = .neuralEngine,
+        dualDecodeArbitration: Bool = false,
+        maxTokensPerChunk: Int = 600
+    ) {
         self.melChunkContext = melChunkContext
+        self.encoder = encoder
+        self.encoderPlacement = encoderPlacement
+        self.dualDecodeArbitration = dualDecodeArbitration
+        self.maxTokensPerChunk = maxTokensPerChunk
     }
+
+    /// Для теста, который сторожит выбранный потолок.
+    var chunkTokenCeiling: Int { maxTokensPerChunk }
 
     /// Для теста, который сторожит выбранное значение флага.
     var usesMelChunkContext: Bool { melChunkContext }
@@ -72,23 +162,32 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         ModelHub.offlineMode = true
         guard models == nil else { return }
 
-        guard AsrModels.modelsExist(at: directory, version: .v3) else {
+        // `.int8` — это имя варианта файла в терминах библиотеки
+        // (Encoder.mlmodelc против EncoderInt4.mlmodelc), а не описание квантизации.
+        // Фактически этот энкодер квантизован 6-битной палитрой — так и указано в
+        // атрибуции лицензии CC BY.
+        let precision: ParakeetEncoderPrecision = encoder == .int4 ? .int4 : .int8
+
+        guard AsrModels.modelsExist(at: directory, version: .v3, encoderPrecision: precision) else {
             throw ASREngineError.modelsUnavailable(
                 "\(directory.lastPathComponent) doesn't contain the full set of Parakeet v3 bundles"
             )
         }
 
         do {
-            // `encoderPrecision: .int8` — это имя варианта файла в терминах библиотеки
-            // (Encoder.mlmodelc против EncoderInt4.mlmodelc), а не описание квантизации.
-            // Фактически энкодер квантизован 6-битной палитрой — так и указано в
-            // атрибуции лицензии CC BY.
             let loaded = try await AsrModels.load(
                 from: directory,
                 version: .v3,
-                encoderPrecision: .int8
+                encoderPrecision: precision,
+                encoderComputeUnits: encoderPlacement == .gpu ? .cpuAndGPU : nil
             )
-            let manager = AsrManager(config: ASRConfig(melChunkContext: melChunkContext))
+            let manager = AsrManager(
+                config: ASRConfig(
+                    tdtConfig: TdtConfig(maxTokensPerChunk: maxTokensPerChunk),
+                    melChunkContext: melChunkContext,
+                    dualDecodeArbitration: dualDecodeArbitration
+                )
+            )
             try await manager.loadModels(loaded)
 
             self.models = loaded
@@ -104,55 +203,83 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         ModelHub.offlineMode = true
     }
 
-    /// Загрузить акустический подсказчик терминов из локальной директории.
+    /// Загрузить или пересобрать акустический подсказчик терминов.
+    ///
+    /// Вызывается и при прогреве, и каждый раз, когда человек поправил словарь:
+    /// набор терминов пересобирается на живом адаптере, веса CTC-модели при
+    /// этом остаются загруженными. Раньше здесь стоял `guard spotter == nil`,
+    /// и из-за него правка словаря доходила до текстовых замен сразу, а до
+    /// акустики — только после перезапуска приложения. Словарь вёл себя
+    /// по-разному в двух своих половинах, и объяснить это человеку было нечем.
+    ///
+    /// Пустой список — осознанное «выключено»: подсказчик снимается, веса
+    /// отпускаются, распознавание идёт как без него. Это тоже правка словаря:
+    /// человек стёр все термины и вправе увидеть результат сразу.
     ///
     /// Сети здесь нет по той же схеме, что и у основной модели:
     /// `CtcModels.loadDirect(from:)` читает уже разложенные бандлы
     /// (MelSpectrogram.mlmodelc, AudioEncoder.mlmodelc, vocab.json) и падает,
-    /// если их не хватает. Пустой список терминов — осознанное «выключено»:
-    /// модели не грузятся, распознавание идёт как раньше.
+    /// если их не хватает.
     public func loadVocabularyModels(from directory: URL, boost: VocabularyBoost) async throws {
         ModelHub.offlineMode = true
-        guard !boost.isEmpty else { return }
-        guard keywordSpotter == nil else { return }
 
-        do {
-            let ctcModels = try await CtcModels.loadDirect(from: directory, variant: .ctc110m)
-            let spotter = CtcKeywordSpotter(
-                models: ctcModels,
-                blankId: ctcModels.vocabulary.count
-            )
-            // Термин без CTC-токенов rescorer молча пропускает — токенизация
-            // здесь обязательна, это и есть включение термина в подсказки.
-            let tokenizer = try await CtcTokenizer.load(from: directory)
-            var terms: [CustomVocabularyTerm] = []
-            for (index, term) in boost.terms.enumerated() {
-                let tokenIds = tokenizer.encode(term.text)
-                guard !tokenIds.isEmpty else {
-                    // Текст термина в ошибку не попадает намеренно: содержимое
-                    // словаря — данные человека, как и текст диктовки.
-                    throw ASREngineError.modelsUnavailable(
-                        "term #\(index + 1) can't be tokenized by the vocabulary helper"
-                    )
-                }
-                terms.append(
-                    CustomVocabularyTerm(
-                        text: term.text,
-                        aliases: term.aliases.isEmpty ? nil : term.aliases,
-                        ctcTokenIds: tokenIds
-                    )
-                )
+        guard !boost.isEmpty else {
+            vocabulary = nil
+            ctcModels = nil
+            ctcTokenizer = nil
+            ctcDirectory = nil
+            return
+        }
+
+        // Веса и токенизатор переживают правку списка. Грузим их только когда
+        // их ещё нет либо когда сменилась папка.
+        let models: CtcModels
+        let tokenizer: CtcTokenizer
+        if let ctcModels, let ctcTokenizer, ctcDirectory == directory {
+            models = ctcModels
+            tokenizer = ctcTokenizer
+        } else {
+            do {
+                models = try await CtcModels.loadDirect(from: directory, variant: .ctc110m)
+                tokenizer = try await CtcTokenizer.load(from: directory)
+            } catch {
+                throw ASREngineError.modelsUnavailable(error.localizedDescription)
             }
-            let context = CustomVocabularyContext(
-                terms: terms,
-                minSimilarity: boost.minSimilarity
+            ctcModels = models
+            ctcTokenizer = tokenizer
+            ctcDirectory = directory
+        }
+
+        let spotter = CtcKeywordSpotter(models: models, blankId: models.vocabulary.count)
+
+        // Термин без CTC-токенов rescorer молча пропускает — токенизация
+        // здесь обязательна, это и есть включение термина в подсказки.
+        var terms: [CustomVocabularyTerm] = []
+        for (index, term) in boost.terms.enumerated() {
+            let tokenIds = tokenizer.encode(term.text)
+            guard !tokenIds.isEmpty else {
+                // Текст термина в ошибку не попадает намеренно: содержимое
+                // словаря — данные человека, как и текст диктовки.
+                throw VocabularyBoostError.termNotTokenizable(index: index + 1)
+            }
+            terms.append(
+                CustomVocabularyTerm(
+                    text: term.text,
+                    aliases: term.aliases.isEmpty ? nil : term.aliases,
+                    ctcTokenIds: tokenIds
+                )
             )
-            // Акустический rescue-проход выключен намеренно: он заменяет слова
-            // по одной акустической улике, минуя порог похожести, и на нашем
-            // корпусе именно он превращал «в центре» в Sentry и «комету» в
-            // commit. Сама библиотека рекомендует выключать его для коротких
-            // словарей (#702, #724); наш — десятки терминов, не сотни.
-            let rescorer = try await VocabularyRescorer.create(
+        }
+
+        let context = CustomVocabularyContext(terms: terms, minSimilarity: boost.minSimilarity)
+        // Акустический rescue-проход выключен намеренно: он заменяет слова
+        // по одной акустической улике, минуя порог похожести, и на нашем
+        // корпусе именно он превращал «в центре» в Sentry и «комету» в
+        // commit. Сама библиотека рекомендует выключать его для коротких
+        // словарей (#702, #724); наш — десятки терминов, не сотни.
+        let rescorer: VocabularyRescorer
+        do {
+            rescorer = try await VocabularyRescorer.create(
                 spotter: spotter,
                 vocabulary: context,
                 config: VocabularyRescorer.Config(
@@ -162,29 +289,69 @@ public actor FluidAudioAdapter: ASREngineAdapting {
                 ),
                 ctcModelDirectory: directory
             )
-            keywordSpotter = spotter
-            vocabularyRescorer = rescorer
-            vocabularyContext = context
-            vocabularySizeConfig = ContextBiasingConstants.rescorerConfig(
-                forVocabSize: context.terms.count
-            )
-            vocabularyBiasWeight = boost.biasWeight
         } catch {
             throw ASREngineError.modelsUnavailable(error.localizedDescription)
         }
+
+        // Подмена целиком и последним действием: распознавание, начатое до
+        // этой строки, доработает на прежнем наборе, следующее возьмёт новый.
+        vocabulary = VocabularyHelper(
+            spotter: spotter,
+            context: context,
+            rescorer: rescorer,
+            sizeConfig: ContextBiasingConstants.rescorerConfig(forVocabSize: context.terms.count),
+            biasWeight: boost.biasWeight
+        )
     }
+
+    /// Сколько терминов сейчас в акустическом наборе. Нужно тесту, который
+    /// сторожит пересборку набора без перезапуска.
+    var boostedTermCount: Int { vocabulary?.context.terms.count ?? 0 }
 
     /// Начать живой предпросмотр. Требует загруженной основной модели: веса
     /// делятся между batch-распознаванием и предпросмотром, второй копии нет.
+    ///
+    /// **Язык предпросмотру передать нечем.** Потоковый менеджер библиотеки
+    /// 0.15.5 не принимает подсказку языка вовсе — ни в конфигурации, ни в
+    /// `startStreaming`. Поэтому предпросмотр всегда идёт на автоопределении,
+    /// даже когда человек выбрал язык явно, и текст перед глазами может
+    /// разойтись с итоговым. Чинится это только со стороны библиотеки;
+    /// источником истины остаётся batch-распознавание, и оно язык уважает.
     public func startPreview(
         onUpdate: @escaping @Sendable (_ confirmed: String, _ volatile: String) -> Void
     ) async throws {
         guard let models else { throw ASREngineError.modelsNotLoaded }
-        guard previewManager == nil else { return }
+        guard previewManager == nil, !previewStarting else { return }
+
+        // Заявка на запуск ставится **до** первого await.
+        //
+        // Актор не держит очередь: на каждом await внутрь пускается следующий
+        // вызов. Пока запуск ждал загрузку весов и старт потока, `stopPreview`
+        // успевал войти, увидеть пустой `previewManager` и не сделать ничего —
+        // а запуск потом доводил дело до конца. Предпросмотр оставался
+        // запущенным навсегда, следующая диктовка не получала его вовсе, и
+        // человек видел перед собой текст прошлой сессии.
+        previewStarting = true
+        previewGeneration &+= 1
+        let generation = previewGeneration
 
         let preview = SlidingWindowAsrManager()
-        try await preview.loadModels(models)
-        try await preview.startStreaming(source: .microphone)
+        do {
+            try await preview.loadModels(models)
+            try await preview.startStreaming(source: .microphone)
+        } catch {
+            if previewGeneration == generation { previewStarting = false }
+            throw error
+        }
+
+        // Пока грузились, могли попросить остановиться — или начать заново.
+        // Тогда этот менеджер уже никому не нужен и обязан быть свёрнут здесь,
+        // иначе он останется работать в тени.
+        guard previewGeneration == generation else {
+            await preview.cancel()
+            return
+        }
+        previewStarting = false
         previewManager = preview
 
         previewTask = Task { [weak preview] in
@@ -227,7 +394,13 @@ public actor FluidAudioAdapter: ASREngineAdapting {
 
     /// Остановить предпросмотр и освободить его состояние. Веса модели общие
     /// и остаются загруженными для batch-распознавания.
+    ///
+    /// Останавливает и запуск, который идёт прямо сейчас: смена поколения
+    /// заставляет его свернуть свой менеджер вместо того, чтобы поставить его
+    /// на место уже остановленного.
     public func stopPreview() async {
+        previewGeneration &+= 1
+        previewStarting = false
         previewTask?.cancel()
         previewTask = nil
         if let previewManager {
@@ -235,6 +408,10 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         }
         previewManager = nil
     }
+
+    /// Идёт ли предпросмотр прямо сейчас. Test seam для проверки того, что
+    /// остановка посреди запуска действительно останавливает.
+    var isPreviewRunning: Bool { previewManager != nil }
 
     public func transcribe(samples: [Float]) async throws -> DictationCore.ASRResult {
         try await transcribe(samples: samples, languageHint: nil)
@@ -280,6 +457,18 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         let text: String
         let timings: [TokenTiming]?
         do {
+            // Набор терминов берётся один раз на всю диктовку: правка словаря
+            // в середине распознавания не имеет права подменить его между
+            // акустическим проходом и правкой текста.
+            let helper = vocabulary
+
+            // Акустический проход подсказчика зависит только от звука, а
+            // распознавание — только от него же. Общего у них нет ничего,
+            // поэтому проход стартует здесь и идёт параллельно разбору, а не
+            // после него: раньше эти две работы стояли в очередь друг за другом
+            // и человек ждал их сумму. Замер выигрыша — в `docs/benchmarks.md`.
+            async let spotted = Self.spotKeywords(samples: samples, helper: helper)
+
             // Каждая диктовка независима — начинаем с чистого состояния декодера.
             var state = try TdtDecoderState()
             // nil — автоопределение по звуку. Модель покрывает 25 европейских
@@ -295,10 +484,11 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             // Тайминги остаются от исходных токенов: замена слова не двигает
             // его место в записи, а потребителей пословных таймингов, которым
             // важна побуквенная точность заменённого слова, в продукте нет.
-            text = try await rescoreWithVocabulary(
+            text = Self.rescore(
                 text: result.text,
                 timings: result.tokenTimings,
-                samples: samples
+                spotted: try await spotted,
+                helper: helper
             ) ?? result.text
             timings = result.tokenTimings
         } catch is CancellationError {
@@ -316,41 +506,49 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         )
     }
 
-    /// Поправить текст по акустическим уликам подсказчика.
+    /// Поискать термины в звуке.
     ///
-    /// Возвращает `nil`, когда подсказчик не настроен или менять нечего.
+    /// Не метод актора намеренно: работает по переданному снимку набора и ни к
+    /// какому изменяемому состоянию не обращается — только поэтому её можно
+    /// вести одновременно с разбором, не боясь правки словаря посередине.
     /// Ошибка CTC-inference при настроенном подсказчике — настоящая ошибка
     /// распознавания: человек включил термины и вправе знать, что они не
     /// сработали, а запись сохранится для Retry.
-    private func rescoreWithVocabulary(
-        text: String,
-        timings: [TokenTiming]?,
-        samples: [Float]
-    ) async throws -> String? {
-        guard let keywordSpotter, let vocabularyRescorer, let vocabularyContext else {
-            return nil
-        }
-        guard let timings, !timings.isEmpty, !text.isEmpty else { return nil }
-
-        let spotResult = try await keywordSpotter.spotKeywordsWithLogProbs(
+    private static func spotKeywords(
+        samples: [Float],
+        helper: VocabularyHelper?
+    ) async throws -> CtcKeywordSpotter.SpotKeywordsResult? {
+        guard let helper else { return nil }
+        return try await helper.spotter.spotKeywordsWithLogProbs(
             audioSamples: samples,
-            customVocabulary: vocabularyContext,
+            customVocabulary: helper.context,
             minScore: nil
         )
+    }
+
+    /// Поправить текст по уже добытым акустическим уликам.
+    ///
+    /// Возвращает `nil`, когда подсказчик не настроен или менять нечего.
+    private static func rescore(
+        text: String,
+        timings: [TokenTiming]?,
+        spotted: CtcKeywordSpotter.SpotKeywordsResult?,
+        helper: VocabularyHelper?
+    ) -> String? {
+        guard let helper, let spotted else { return nil }
+        guard let timings, !timings.isEmpty, !text.isEmpty else { return nil }
         // Пустые log-probs — это не сбой, а «звука меньше одного кадра»:
         // таким записям подсказывать нечего.
-        guard !spotResult.logProbs.isEmpty else { return nil }
+        guard !spotted.logProbs.isEmpty else { return nil }
 
-        let sizeConfig = vocabularySizeConfig
-            ?? ContextBiasingConstants.rescorerConfig(forVocabSize: vocabularyContext.terms.count)
-        let output = vocabularyRescorer.ctcTokenRescore(
+        let output = helper.rescorer.ctcTokenRescore(
             transcript: text,
             tokenTimings: timings,
-            logProbs: spotResult.logProbs,
-            frameDuration: spotResult.frameDuration,
-            cbw: vocabularyBiasWeight ?? sizeConfig.cbw,
+            logProbs: spotted.logProbs,
+            frameDuration: spotted.frameDuration,
+            cbw: helper.biasWeight,
             marginSeconds: 0.5,
-            minSimilarity: max(sizeConfig.minSimilarity, vocabularyContext.minSimilarity)
+            minSimilarity: max(helper.sizeConfig.minSimilarity, helper.context.minSimilarity)
         )
         return output.wasModified ? output.text : nil
     }
@@ -361,11 +559,10 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         manager = nil
         models = nil
         decoderState = nil
-        keywordSpotter = nil
-        vocabularyRescorer = nil
-        vocabularyContext = nil
-        vocabularySizeConfig = nil
-        vocabularyBiasWeight = nil
+        vocabulary = nil
+        ctcModels = nil
+        ctcTokenizer = nil
+        ctcDirectory = nil
     }
 
     /// Склеить пословные тайминги из токенов.

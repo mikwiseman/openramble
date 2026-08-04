@@ -145,7 +145,7 @@ public actor ModelStore {
         do {
             let data = try LocalFile.read(layout.readyMarker)
             marker = try JSONDecoder().decode(ModelReadyMarker.self, from: data)
-            guard marker.matches(manifest) else {
+            guard marker.describesSameFiles(manifest) else {
                 throw ModelStoreError.repairRequired("the model marker is incompatible with this app version")
             }
         } catch let error as ModelStoreError {
@@ -156,9 +156,24 @@ public actor ModelStore {
             return state
         }
 
+        // Ревизия та же, а версия FluidAudio в метке разошлась — это обновление
+        // приложения поверх целых файлов, а не порча. Проверяем всё заново по
+        // контрольным суммам и переписываем метку. Сети здесь нет ни байта:
+        // ровно ради этого проверка отделена от «файлы другие».
+        let verifiedMarker = marker.matches(manifest)
+            ? marker
+            : ModelReadyMarker(
+                revision: marker.revision,
+                fluidAudioVersion: marker.fluidAudioVersion,
+                fileCount: marker.fileCount,
+                totalByteCount: marker.totalByteCount,
+                verifiedAt: marker.verifiedAt,
+                installedFiles: nil
+            )
+
         do {
-            let metadata = try validateInstalledFiles(marker: marker)
-            if marker.installedFiles != metadata {
+            let metadata = try validateInstalledFiles(marker: verifiedMarker)
+            if marker.installedFiles != metadata || !marker.matches(manifest) {
                 try writeReadyMarker(installedFiles: metadata)
             }
         } catch let error as ModelStoreError {

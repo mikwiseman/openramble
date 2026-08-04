@@ -187,10 +187,24 @@ public struct ModelReadyMarker: Codable, Sendable, Equatable {
         )
     }
 
-    /// Соответствует ли установленное текущему манифесту.
+    /// Соответствует ли установленное текущему манифесту полностью.
     public func matches(_ manifest: ModelManifest) -> Bool {
+        describesSameFiles(manifest) && fluidAudioVersion == manifest.fluidAudioVersion
+    }
+
+    /// Те же ли это файлы, что просит манифест.
+    ///
+    /// Отделено от `matches` намеренно. Версия FluidAudio — свойство приложения,
+    /// а не весов: обновление библиотеки, не трогающее ревизию модели, не делает
+    /// лежащие на диске файлы ни на байт другими. Пока это было одной проверкой,
+    /// патч зависимости означал бы «модель повреждена, перекачайте 483 МБ» у
+    /// каждого пользователя — за то, что мы у себя подняли номер версии.
+    ///
+    /// Ревизия здесь главная: она зафиксированный SHA коммита модели, и её
+    /// совпадение означает, что ожидаются ровно те же байты. Совпадение —
+    /// повод перепроверить файлы по контрольным суммам, а не качать заново.
+    public func describesSameFiles(_ manifest: ModelManifest) -> Bool {
         revision == manifest.revision
-            && fluidAudioVersion == manifest.fluidAudioVersion
             && fileCount == manifest.files.count
             && totalByteCount == manifest.totalByteCount
     }

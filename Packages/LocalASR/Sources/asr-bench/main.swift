@@ -28,9 +28,16 @@ func usage() -> Never {
       WAI_VOCAB=on              включить установленный подсказчик терминов
       WAI_VOCAB_DIR             папка CTC-моделей подсказчика (для замеров)
       WAI_VOCAB_SIMILARITY      порог похожести подсказчика (по умолчанию 0.65)
+      WAI_VOCAB_TERMS           оставить первые N терминов (замер цены словаря)
       WAI_EVAL_PIPELINE=on      скорер считает текст после словаря замен
       WAI_ASR_MEL_CONTEXT=on    вернуть mel-контекст FluidAudio на стыке окон
                                 (только чтобы повторить замер потери речи)
+      WAI_ASR_MODEL_DIR         папка бандлов движка мимо хранилища (для замеров)
+      WAI_ASR_ENCODER           palettized6bit (по умолчанию) | int4
+      WAI_ASR_ENCODER_PLACEMENT neuralEngine (по умолчанию) | gpu
+      WAI_ASR_DUAL_DECODE=on    второй проход декодера с арбитражем
+      WAI_ASR_MAX_TOKENS        потолок токенов на окно (по умолчанию 150)
+      WAI_ASR_LANGUAGE          принудительный язык (ru, en, …) вместо авто
     """)
     exit(64)
 }
@@ -131,11 +138,25 @@ func isOn(_ name: String) -> Bool {
 }
 
 func prepareTranscriber() async throws -> LocalTranscriber {
-    let (store, layout, _) = try makeStore()
-    let state = await store.refreshState()
-    guard state.isReady else {
-        print("Модель не установлена. Запустите: asr-bench install")
-        exit(69)
+    // Явная папка бандлов — единственный способ сравнить два энкодера: хранилище
+    // проверяет установку по манифесту и справедливо отвергает лишний файл
+    // (`EncoderInt4.mlmodelc` в манифест не входит). Тот же приём уже применён к
+    // подсказчику через `WAI_VOCAB_DIR`.
+    let explicitModelDirectory = ProcessInfo.processInfo.environment["WAI_ASR_MODEL_DIR"]
+        .map { URL(fileURLWithPath: $0, isDirectory: true) }
+
+    let engineDirectory: URL
+    if let explicitModelDirectory {
+        print("Папка движка задана явно: \(explicitModelDirectory.path) (замер, мимо хранилища)")
+        engineDirectory = explicitModelDirectory
+    } else {
+        let (store, layout, _) = try makeStore()
+        let state = await store.refreshState()
+        guard state.isReady else {
+            print("Модель не установлена. Запустите: asr-bench install")
+            exit(69)
+        }
+        engineDirectory = layout.engineDirectory
     }
 
     // Переключатель существует ради повторяемости замера: именно он показал,
@@ -143,9 +164,68 @@ func prepareTranscriber() async throws -> LocalTranscriber {
     let melChunkContext = isOn("WAI_ASR_MEL_CONTEXT")
     if melChunkContext { print("Mel-контекст на стыке окон включён (замер, не рабочий режим)") }
 
-    let transcriber = LocalTranscriber(engine: FluidAudioAdapter(melChunkContext: melChunkContext))
+    // Ручки движка. Неизвестное значение — видимая ошибка, а не тихий откат к
+    // умолчанию: иначе замер молча мерил бы не то, что написано в команде.
+    let encoder: EncoderVariant
+    if let raw = ProcessInfo.processInfo.environment["WAI_ASR_ENCODER"] {
+        guard let parsed = EncoderVariant(rawValue: raw) else {
+            print("WAI_ASR_ENCODER: неизвестный вариант «\(raw)»")
+            exit(64)
+        }
+        encoder = parsed
+        print("Энкодер: \(raw)")
+    } else {
+        encoder = .palettized6bit
+    }
+
+    let placement: EncoderPlacement
+    if let raw = ProcessInfo.processInfo.environment["WAI_ASR_ENCODER_PLACEMENT"] {
+        guard let parsed = EncoderPlacement(rawValue: raw) else {
+            print("WAI_ASR_ENCODER_PLACEMENT: неизвестное значение «\(raw)»")
+            exit(64)
+        }
+        placement = parsed
+        print("Энкодер считается на: \(raw)")
+    } else {
+        placement = .neuralEngine
+    }
+
+    let dualDecode = isOn("WAI_ASR_DUAL_DECODE")
+    if dualDecode { print("Второй проход декодера с арбитражем включён") }
+
+    // Потолок токенов не дублируется здесь числом: умолчание живёт в адаптере,
+    // и bench обязан мерить ровно то, что стоит в продукте. Переменная только
+    // переопределяет его — например чтобы повторить замер на прежних 150.
+    var maxTokens: Int?
+    if let raw = ProcessInfo.processInfo.environment["WAI_ASR_MAX_TOKENS"] {
+        guard let parsed = Int(raw), parsed > 0 else {
+            print("WAI_ASR_MAX_TOKENS: нужно положительное число, получено «\(raw)»")
+            exit(64)
+        }
+        maxTokens = parsed
+        print("Потолок токенов на окно: \(parsed)")
+    }
+
+    let adapter: FluidAudioAdapter
+    if let maxTokens {
+        adapter = FluidAudioAdapter(
+            melChunkContext: melChunkContext,
+            encoder: encoder,
+            encoderPlacement: placement,
+            dualDecodeArbitration: dualDecode,
+            maxTokensPerChunk: maxTokens
+        )
+    } else {
+        adapter = FluidAudioAdapter(
+            melChunkContext: melChunkContext,
+            encoder: encoder,
+            encoderPlacement: placement,
+            dualDecodeArbitration: dualDecode
+        )
+    }
+    let transcriber = LocalTranscriber(engine: adapter)
     let started = ContinuousClock.now
-    try await transcriber.prepare(modelDirectory: layout.engineDirectory)
+    try await transcriber.prepare(modelDirectory: engineDirectory)
     print(String(format: "Модель загружена за %.2f с", seconds(started.duration(to: .now))))
 
     // Акустический подсказчик терминов: сравнение «с ним и без него» — ровно
@@ -166,8 +246,20 @@ func prepareTranscriber() async throws -> LocalTranscriber {
         let biasWeight = ProcessInfo.processInfo.environment["WAI_VOCAB_CBW"]
             .flatMap(Float.init)
         let defaults = VocabularyBoost.developerDefault()
+        // Урезание списка существует ради одного вопроса: цена подсказчика
+        // растёт от числа терминов или от длины записи? Ответ решает, есть ли
+        // смысл сужать словарь ради скорости.
+        var terms = defaults.terms
+        if let raw = ProcessInfo.processInfo.environment["WAI_VOCAB_TERMS"] {
+            guard let limit = Int(raw), limit > 0 else {
+                print("WAI_VOCAB_TERMS: нужно положительное число, получено «\(raw)»")
+                exit(64)
+            }
+            terms = Array(terms.prefix(limit))
+            print("Терминов оставлено: \(terms.count)")
+        }
         let boost = VocabularyBoost(
-            terms: defaults.terms,
+            terms: terms,
             minSimilarity: similarity ?? defaults.minSimilarity,
             biasWeight: biasWeight ?? defaults.biasWeight
         )
@@ -209,6 +301,19 @@ func makeEvalPipeline() -> TextPipeline? {
     default:
         return nil
     }
+}
+
+/// Принудительный язык вместо автоопределения — ровно то, что выбирает человек
+/// в настройках. Существует, чтобы гипотезу «жёсткий язык помогает» можно было
+/// проверить прогоном, а не обсуждением.
+func languageHint() -> String? {
+    guard let raw = ProcessInfo.processInfo.environment["WAI_ASR_LANGUAGE"] else { return nil }
+    guard FluidAudioAdapter.supportedLanguageHints.contains(raw) else {
+        print("WAI_ASR_LANGUAGE: движок не знает языка «\(raw)»")
+        exit(64)
+    }
+    print("Принудительный язык: \(raw)")
+    return raw
 }
 
 let arguments = Array(CommandLine.arguments.dropFirst())
@@ -272,13 +377,17 @@ case "eval":
     let items = try Evaluation.loadManifest(at: manifestPath)
     let transcriber = try await prepareTranscriber()
     let pipeline = makeEvalPipeline()
+    let language = languageHint()
 
     var outcomes: [EvalOutcome] = []
     for item in items {
         let started = ContinuousClock.now
         let result: ASRResult
         do {
-            result = try await transcriber.transcribe(fileURL: URL(fileURLWithPath: item.file))
+            result = try await transcriber.transcribe(
+                fileURL: URL(fileURLWithPath: item.file),
+                languageHint: language
+            )
         } catch {
             print("\n=== \(URL(fileURLWithPath: item.file).lastPathComponent) ===")
             print("Ошибка: \(error)")
@@ -316,12 +425,13 @@ case "transcribe", "bench":
     guard !operands.isEmpty else { usage() }
     let transcriber = try await prepareTranscriber()
     let measure = command == "bench"
+    let language = languageHint()
 
     for path in operands {
         let url = URL(fileURLWithPath: path)
         let started = ContinuousClock.now
         do {
-            let result = try await transcriber.transcribe(fileURL: url)
+            let result = try await transcriber.transcribe(fileURL: url, languageHint: language)
             let wall = seconds(started.duration(to: .now))
 
             print("\n=== \(url.lastPathComponent) ===")

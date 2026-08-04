@@ -111,6 +111,73 @@ final class DictationLatencyTests: EndToEndScenario {
         )
     }
 
+    /// Отмена обязана освобождать движок сразу, а не после того, как он
+    /// домелет всю запись.
+    ///
+    /// Комментарий у `LocalTranscriber` раньше обещал, что очерёдность держит
+    /// актор. Это неверно — акторы реентерабельны, — и настоящий вопрос другой:
+    /// доходит ли отмена внутрь inference. Доходит: TDT-декодер библиотеки
+    /// проверяет `Task.checkCancellation()` в цикле по окнам, поэтому Escape на
+    /// длинной записи не заставляет следующую диктовку ждать хвост прошлой.
+    /// Тест сторожит это свойство: без него отмена стоила бы полного разбора.
+    func testОтменаПрерываетРазборНеДожидаясьКонца() async throws {
+        let transcriber = try await requireEndToEndTranscriber()
+        let recording = try await SpeechFixtures.shared.speech(Phrase.veryLong)
+
+        // Прогрев: первая работа с моделью в процессе всегда дороже.
+        _ = try await transcriber.transcribe(fileURL: recording)
+
+        let started = ContinuousClock.now
+        let work = Task { try await transcriber.transcribe(fileURL: recording) }
+        // Достаточно, чтобы разбор действительно начался, и заметно меньше,
+        // чем он занимает целиком.
+        try await Task.sleep(for: .milliseconds(20))
+        work.cancel()
+
+        do {
+            _ = try await work.value
+            // Запись короткая, разбор мог успеть закончиться до отмены — это не
+            // провал, но тогда тест ничего не проверил.
+            throw XCTSkip("разбор закончился быстрее отмены — на этой машине запись слишком короткая")
+        } catch let error as ASREngineError {
+            XCTAssertEqual(error, .cancelled, "Отменённый разбор обязан сказать, что он отменён")
+        }
+
+        let elapsed = Self.seconds(started.duration(to: .now))
+        XCTAssertLessThan(
+            elapsed,
+            1.0,
+            "Отмена заняла \(elapsed) с — движок домалывал запись вместо того, чтобы бросить её"
+        )
+    }
+
+    /// Два распознавания разом не портят друг другу результат.
+    ///
+    /// Машина состояний диктовки вторую не начнёт, но ни актор, ни транскрайбер
+    /// этого не гарантируют — оба реентерабельны на await. Подсказчик терминов
+    /// при этом общий, поэтому проверяется главное: каждый разбор получает свой
+    /// текст, а не смесь из двух.
+    func testДваОдновременныхРазбораНеСмешиваются() async throws {
+        let transcriber = try await requireEndToEndTranscriber()
+        let first = try await SpeechFixtures.shared.speech(Phrase.mixed)
+        let second = try await SpeechFixtures.shared.speech(Phrase.other)
+
+        // Опорные ответы, полученные поодиночке.
+        let loneFirst = try await transcriber.transcribe(fileURL: first).text
+        let loneSecond = try await transcriber.transcribe(fileURL: second).text
+
+        async let concurrentFirst = transcriber.transcribe(fileURL: first).text
+        async let concurrentSecond = transcriber.transcribe(fileURL: second).text
+        let (gotFirst, gotSecond) = try await (concurrentFirst, concurrentSecond)
+
+        XCTAssertEqual(gotFirst, loneFirst, "Первый разбор изменился от соседства со вторым")
+        XCTAssertEqual(gotSecond, loneSecond, "Второй разбор изменился от соседства с первым")
+        XCTAssertFalse(
+            gotSecond.contains(Phrase.mixedTerms[0]),
+            "В ответ второго разбора протёк текст первого"
+        )
+    }
+
     private static func seconds(_ duration: Duration) -> TimeInterval {
         TimeInterval(duration.components.seconds)
             + TimeInterval(duration.components.attoseconds) / 1e18
