@@ -34,7 +34,9 @@ public final class DictationController {
     public var onNotice: (@MainActor (DictationNotice) -> Void)?
     /// Успешная вставка — единственное доказательство, что первая проба
     /// действительно прошла, а не была вручную напечатана в TextEditor.
-    public var onTextInserted: (@MainActor () -> Void)?
+    /// Успешная вставка — с текстом, который реально ушёл в приложение.
+    /// Текст нужен окну «поправь последнюю диктовку»; на диск он не попадает.
+    public var onTextInserted: (@MainActor (String) -> Void)?
     /// Сообщает, идёт ли запись без удержания: от этого зависит, как
     /// истолковать следующее нажатие клавиши.
     public var onHandsFreeChange: (@MainActor (Bool) -> Void)?
@@ -340,7 +342,7 @@ public final class DictationController {
             await handleInsertionFailure(error, text: output.text, session: session)
             return
         }
-        onTextInserted?()
+        onTextInserted?(output.text)
 
         // Нажатие разбирается отдельно от вставки намеренно. Это разные
         // системные вызовы, и второй отказывает при живом первом — например,

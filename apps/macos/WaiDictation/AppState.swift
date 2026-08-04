@@ -150,6 +150,13 @@ public final class AppState: ObservableObject {
     /// Только успешная вставка считается пройденной пробой в онбординге.
     @Published public private(set) var successfulDictationCount = 0
 
+    /// Последняя успешная диктовка — только в памяти процесса. Из неё окно
+    /// правки учит словарь; на диск текст не попадает никогда.
+    public struct LastDictation: Equatable {
+        public let insertedText: String
+    }
+    @Published public private(set) var lastDictation: LastDictation?
+
     /// Что не так со словарём. Пока не `nil`, словарь заблокирован на запись.
     @Published public private(set) var dictionaryProblem: ReplacementsStore.Problem?
 
@@ -434,8 +441,9 @@ public final class AppState: ObservableObject {
                 self?.hotkeyMonitor.isHandsFreeActive = active
                 self?.isHandsFreeActive = active
             }
-            controller.onTextInserted = { [weak self] in
+            controller.onTextInserted = { [weak self] text in
                 self?.successfulDictationCount += 1
+                self?.lastDictation = LastDictation(insertedText: text)
             }
             self.controller = controller
         } catch {
@@ -1191,9 +1199,14 @@ public final class AppState: ObservableObject {
             // работала бы тише заявленного, а молчаливое «хуже, но работает»
             // здесь запрещено.
             if let vocabularyDirectory {
+                // Собственные замены человека — включая выученные из правок —
+                // усиливают акустику с теми же предохранителями, что и
+                // стартовый набор.
                 try await transcriber.prepareVocabulary(
                     modelDirectory: vocabularyDirectory,
-                    boost: .developerDefault()
+                    boost: .withUserReplacements(
+                        replacements.map { (spoken: $0.spoken, written: $0.written) }
+                    )
                 )
             }
             isEngineReady = true
@@ -1293,6 +1306,43 @@ public final class AppState: ObservableObject {
     /// Нельзя ровно в одном случае: прежний словарь не прочитался. Тогда любая
     /// запись затёрла бы его целиком — и человек потерял бы всё накопленное.
     public var isDictionaryEditable: Bool { dictionaryProblem == nil }
+
+    /// Выучить правки последней диктовки: пословный diff с консервативным
+    /// фильтром — учатся только термины (латиница, бренд-регистр), правки
+    /// обычной речи не проходят. Возвращает, сколько замен добавлено.
+    @discardableResult
+    public func learnCorrections(editedText: String) -> Int {
+        guard let lastDictation else { return 0 }
+        let proposals = CorrectionLearning.propose(
+            original: lastDictation.insertedText,
+            edited: editedText,
+            existing: replacements
+        )
+        for proposal in proposals {
+            addReplacement(spoken: proposal.spoken, written: proposal.written)
+        }
+        if !proposals.isEmpty {
+            notify(
+                DictationNotice(
+                    kind: .info,
+                    message: proposals.count == 1
+                        ? "Learned 1 replacement for future dictations."
+                        : "Learned \(proposals.count) replacements for future dictations."
+                )
+            )
+        }
+        return proposals.count
+    }
+
+    /// Правка не дала ни одной замены — сказать прямо, а не закрыть окно молча.
+    public func notifyNothingLearned() {
+        notify(
+            DictationNotice(
+                kind: .info,
+                message: "No new terms to learn — only term-like corrections become replacements."
+            )
+        )
+    }
 
     public func addReplacement(spoken: String, written: String) {
         let spoken = spoken.trimmingCharacters(in: .whitespaces)

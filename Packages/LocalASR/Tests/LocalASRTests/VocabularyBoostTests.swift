@@ -57,6 +57,25 @@ final class VocabularyBoostTests: XCTestCase {
         XCTAssertEqual(Set(kubernetes?.aliases ?? []), ["кубернетес", "кубернетис"])
     }
 
+    /// Замены пользователя — включая выученные из правок — попадают в
+    /// акустический набор с теми же предохранителями, что и стартовые.
+    func testПользовательскиеЗаменыПополняютНаборСФильтрами() {
+        let boost = VocabularyBoost.withUserReplacements([
+            (spoken: "поуст герз", written: "Postgres"),      // дубликат стартового — не плодится
+            (spoken: "графана", written: "Grafana"),          // новый термин — учится
+            (spoken: "деплой", written: "deploy"),            // опасный — никогда
+            (spoken: "как слышится", written: "как пишется"), // без латиницы — не термин
+        ])
+
+        let texts = boost.terms.map(\.text)
+        XCTAssertTrue(texts.contains("Grafana"))
+        XCTAssertFalse(texts.contains("deploy"))
+        XCTAssertFalse(texts.contains("как пишется"))
+        XCTAssertEqual(texts.filter { $0.lowercased() == "postgres" }.count, 1)
+        let grafana = boost.terms.first { $0.text == "Grafana" }
+        XCTAssertEqual(grafana?.aliases, ["графана"])
+    }
+
     /// Кириллические написания — мост между звуком и латинским термином:
     /// текст модели кириллический, и без таких псевдонимов кандидат для
     /// замены не находится вовсе.

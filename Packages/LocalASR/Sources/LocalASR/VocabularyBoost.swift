@@ -76,6 +76,23 @@ extension VocabularyBoost {
     /// словарю замен, чьи правила обычную речь не трогают (docs/benchmarks.md).
     static let unboostableWritten: Set<String> = ["deploy", "Sentry", "commit"]
 
+    /// Набор по словарю пользователя: стартовые термины плюс его собственные
+    /// замены — включая выученные из правок. Опасные термины отфильтрованы
+    /// тем же правилом, что и в стартовом наборе: пользовательская запись
+    /// «деплой → deploy» не имеет права вернуть deploy в акустику.
+    public static func withUserReplacements(
+        _ pairs: [(spoken: String, written: String)]
+    ) -> VocabularyBoost {
+        let defaults = developerDefault()
+        let known = Set(defaults.terms.map { $0.text.lowercased() })
+        let userTerms = pairs
+            .filter { !unboostableWritten.contains($0.written) }
+            .filter { $0.written.contains { $0.isLetter && $0.isASCII } }
+            .filter { !known.contains($0.written.lowercased()) }
+            .map { Term(text: $0.written, aliases: [$0.spoken]) }
+        return VocabularyBoost(terms: defaults.terms + userTerms)
+    }
+
     /// Готовый набор для словаря разработчика: латинский термин плюс его
     /// кириллические написания как псевдонимы — мост от звука к латинице.
     public static func developerDefault() -> VocabularyBoost {

@@ -479,6 +479,40 @@ final class AppStateTests: XCTestCase {
 
     // MARK: - Настройки
 
+    func testУспешнаяДиктовкаЗапоминаетсяИПравкаУчитСловарь() async throws {
+        try installModelMarker()
+        harness.transcription.text = "Открой поуст герз и проверь индексы"
+        let state = makeState()
+        await state.refreshModelState()
+
+        monitor.onPress?()
+        for _ in 0..<40 where state.dictationState != .listening {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        monitor.onRelease?()
+        for _ in 0..<200 where state.lastDictation == nil {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        let last = try XCTUnwrap(state.lastDictation)
+        XCTAssertTrue(last.insertedText.contains("поуст герз"))
+
+        // Человек поправил термин — словарь выучил ровно эту пару.
+        let learned = state.learnCorrections(
+            editedText: last.insertedText.replacingOccurrences(of: "поуст герз", with: "Postgres")
+        )
+
+        XCTAssertEqual(learned, 1)
+        XCTAssertTrue(state.replacements.contains { $0.spoken == "поуст герз" && $0.written == "Postgres" })
+
+        // Повторная та же правка не плодит дубликатов.
+        XCTAssertEqual(state.learnCorrections(
+            editedText: last.insertedText.replacingOccurrences(of: "поуст герз", with: "Postgres")
+        ), 0)
+    }
+
     func testЯзыкРаспознаванияСохраняетсяИПереживаетПерезапуск() {
         let state = makeState()
         XCTAssertNil(state.recognitionLanguage, "По умолчанию — автоопределение")
