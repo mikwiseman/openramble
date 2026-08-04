@@ -20,7 +20,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Версия Swift
         run: swift --version
@@ -48,11 +48,11 @@ jobs:
     # вернётся, прогон повиснет до конца лимита GitHub, а не упадёт.
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       # Проект собирается из project.yml и в репозитории не лежит.
-      - name: xcodegen
-        run: brew install xcodegen
+      - name: Проверить pinned XcodeGen
+        run: ./scripts/pinned-xcodegen.sh >/dev/null
 
       # Половина дефектов первого дня жила именно в цели приложения — в
       # пакетах их не видно, потому что она в них не входит. Гоняем тесты, а не
@@ -61,49 +61,46 @@ jobs:
       - name: Собрать и прогнать тесты
         run: |
           cd apps/macos
-          xcodegen generate
+          XCODEGEN=$(../../scripts/pinned-xcodegen.sh)
+          "$XCODEGEN" generate
           xcodebuild -project WaiDictation.xcodeproj -scheme WaiDictation \
-            -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test
+            -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test
 
   network-surface:
     name: Сетевая поверхность
     runs-on: macos-26
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       # Главное обещание продукта проверяется автоматически, а не на слово.
       - name: Проверить, что сеть только там, где разрешено
         run: ./scripts/check-network-surface.sh
 
-  universal-build:
-    name: Сборка под обе архитектуры
+  arm64-build:
+    name: Apple Silicon only
     runs-on: macos-26
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      # Приложение распространяется universal-бинарём: локальное распознавание
-      # доступно только на Apple Silicon, но собираться обязано и под Intel.
-      - name: arm64
+      # Safe beta поддерживает только Apple Silicon.
+      - name: LocalASR arm64
         run: swift build --package-path Packages/LocalASR --arch arm64
-
-      - name: x86_64
-        run: swift build --package-path Packages/LocalASR --arch x86_64
 
   release-build:
     name: Релизная сборка
     runs-on: macos-26
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - name: xcodegen
-        run: brew install xcodegen
+      - name: Проверить pinned XcodeGen
+        run: ./scripts/pinned-xcodegen.sh >/dev/null
 
       # Всё остальное в CI собирает Debug под текущее назначение. Релиз идёт
       # другой дорогой: конфигурация Release, архив, `generic/platform=macOS`
-      # и обе архитектуры сразу. Поломка, которая живёт только на этой дороге,
+      # и arm64-only artifact. Поломка, которая живёт только на этой дороге,
       # раньше обнаруживалась в момент выпуска — то есть тогда, когда чинить
       # её некогда. Подписи здесь нет и не нужно: проверяем сборку, а не
       # сертификат.
@@ -117,7 +114,7 @@ jobs:
       # видит человек в окне обновления.
       - name: Проверить инварианты Info.plist
         run: |
-          PLIST="artifacts/build/WaiDictation.xcarchive/Products/Applications/Wai Dictation.app/Contents/Info.plist"
+          PLIST="artifacts/build/WaiDictation.xcarchive/Products/Applications/Wai Dictation Dev.app/Contents/Info.plist"
           p() { /usr/libexec/PlistBuddy -c "Print :$1" "$PLIST" 2>/dev/null; }
           bad=0
           expect() {
@@ -129,7 +126,7 @@ jobs:
               bad=1
             fi
           }
-          expect CFBundleIdentifier is.waiwai.dictation
+          expect CFBundleIdentifier is.waiwai.dictation.dev
           expect LSMinimumSystemVersion 14.0
           expect LSUIElement true
           expect SUEnableAutomaticChecks false
@@ -145,15 +142,32 @@ jobs:
           printf '  %-28s project.yml=%s Info.plist=%s\n' версия "$marketing" "$short"
           [[ "$marketing" == "$short" ]] || bad=1
 
+          current=$(sed -n 's/^ *CURRENT_PROJECT_VERSION: *"\{0,1\}\([0-9]*\)"\{0,1\} *$/\1/p' apps/macos/project.yml | head -1)
+          build=$(p CFBundleVersion)
+          printf '  %-28s project.yml=%s Info.plist=%s\n' сборка "$current" "$build"
+          [[ "$current" == "$build" ]] || bad=1
+
           exit $bad
+
+      - name: Проверить обязательные notices модели и зависимостей
+        run: |
+          RESOURCES="artifacts/build/WaiDictation.xcarchive/Products/Applications/Wai Dictation Dev.app/Contents/Resources"
+          for file in \
+            LICENSE NOTICE THIRD_PARTY_LICENSES.md model-manifest.json \
+            FluidAudio-Apache-2.0.txt FluidAudio-fastcluster-BSD.txt \
+            FluidAudio-vbx-Apache-2.0.txt Sparkle-LICENSE.txt \
+            Parakeet-CC-BY-4.0.txt
+          do
+            test -s "$RESOURCES/$file" || { echo "Нет обязательного resource: $file" >&2; exit 1; }
+          done
 
       # Образ, который не монтируется, — это провал ровно на том шаге, который
       # делает каждый пользователь и не делает ни один тест.
       - name: Проверить, что образ открывается
         run: |
-          DMG=$(ls artifacts/dmg/WaiDictation-*.dmg)
+          DMG=$(ls artifacts/dmg/WaiDictationDev-*.dmg)
           hdiutil attach "$DMG" -nobrowse -readonly -mountpoint /tmp/waidmg
-          test -d "/tmp/waidmg/Wai Dictation.app"
+          test -d "/tmp/waidmg/Wai Dictation Dev.app"
           test -L "/tmp/waidmg/Applications"
           hdiutil detach /tmp/waidmg
 
@@ -162,7 +176,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       # docs/appcast.xml — единственный файл, который приложение скачивает
       # само. Сломанный XML тут означает, что обновления не приедут никому и

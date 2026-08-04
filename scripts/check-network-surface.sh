@@ -16,6 +16,11 @@ cd "$(dirname "$0")/.."
 # Файлы, которым сеть разрешена.
 ALLOWED='Packages/LocalASR/Sources/LocalASR/ModelDownloading.swift|SparkleUpdater.swift'
 
+# Проверяем только shipping-код. Тесты намеренно создают URLSession, читают
+# локальные fixture-файлы через Data(contentsOf:) и поднимают control-connect;
+# считать эти seams сетевой поверхностью продукта — ложный PASS/FAIL сигнал.
+SHIPPING_PATHS=(Packages/DictationCore/Sources Packages/LocalASR/Sources apps/macos/WaiDictation)
+
 # Символы, которые умеют ходить в сеть.
 FORBIDDEN='URLSession|NWConnection|NWBrowser|CFNetwork|CFStream|WKWebView|NSNetService|NSURLConnection'
 # Незаметные способы скачать: эти инициализаторы принимают URL и молча идут в сеть.
@@ -41,7 +46,7 @@ while IFS= read -r hit; do
     status=1
   fi
   echo "  $hit"
-done < <(grep -rnE "$FORBIDDEN" Packages/*/Sources apps 2>/dev/null \
+done < <(grep -rnE "$FORBIDDEN" "${SHIPPING_PATHS[@]}" 2>/dev/null \
   | grep -v '^Binary' \
   | grep -vE ':[0-9]+: *//' \
   | grep -vE 'URLSessionModelDownloader\(\)|: ModelDownloading' \
@@ -71,7 +76,7 @@ while IFS= read -r hit; do
   # гейт падал на строке, которая сама объясняет, почему так писать нельзя, —
   # а ложное срабатывание тут дороже пропуска: его начинают обходить, и
   # однажды обойдут настоящее.
-done < <(grep -rnE "$FORBIDDEN_PASTEBOARD" Packages/*/Sources apps 2>/dev/null \
+done < <(grep -rnE "$FORBIDDEN_PASTEBOARD" "${SHIPPING_PATHS[@]}" 2>/dev/null \
   | grep -v '^Binary' \
   | grep -vE ':[0-9]+: *//' \
   || true)
@@ -109,7 +114,7 @@ while IFS= read -r hit; do
   fi
   echo "  $hit"
 done < <(grep -rnE 'log(ger)?\.(info|debug|error|warning|notice)\(.*(transcript|dictatedText|recognizedText)' \
-  Packages/*/Sources apps 2>/dev/null || true)
+  "${SHIPPING_PATHS[@]}" 2>/dev/null || true)
 
 if [[ $status -eq 0 ]]; then
   echo ""

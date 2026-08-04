@@ -33,9 +33,9 @@ CC BY 4.0 не отменяет, поэтому атрибуция NVIDIA обя
 | [FluidAudio](https://github.com/FluidInference/FluidAudio) | 0.15.5 | Apache 2.0 | Запуск Parakeet через Core ML |
 | [Sparkle](https://sparkle-project.org) | 2.9.4 | MIT | Обновления приложения |
 
-Версии зафиксированы точно, а не диапазоном: FluidAudio — в
-`Packages/LocalASR/Package.swift` (`exact: "0.15.5"`), Sparkle — в
-`apps/macos/project.yml` (`exactVersion: 2.9.4`).
+Обе зависимости зафиксированы immutable commit SHA соответствующих тегов:
+FluidAudio 0.15.5 — `19600a485baa4998812e4654b70d2bab8f2c9949`,
+Sparkle 2.9.4 — `b6496a74a087257ef5e6da1c5b29a447a60f5bd7`.
 
 ### Sparkle
 
@@ -50,21 +50,21 @@ Copyright (c) 2014 Big Nerd Ranch.
 All rights reserved.
 ```
 
-Лицензия MIT, полный текст: https://github.com/sparkle-project/Sparkle/blob/2.9.4/LICENSE
+Лицензия MIT; полный upstream-файл `LICENSE`, включая external notices,
+включается в DMG как `Sparkle-LICENSE.txt`.
 
 ### FluidAudio
 
-Лицензия Apache 2.0, полный текст:
-https://github.com/FluidInference/FluidAudio/blob/v0.15.5/LICENSE
+Лицензия Apache 2.0; полный upstream-файл включается в DMG как
+`FluidAudio-Apache-2.0.txt`.
 
 FluidAudio поставляется одной библиотекой, и вместе с ней в образ попадает
 код, который она включает в себя:
 
 - **fastcluster** — © 2011 Daniel Müllner; изменения с версии 1.1.24 © Google Inc.
-  Лицензия BSD (2 пункта). Текст:
-  https://github.com/FluidInference/FluidAudio/blob/v0.15.5/ThirdPartyLicenses/fastcluster-LICENSE.md
-- **VBx** — © 2021–2024 BUT Speech@FIT. Лицензия Apache 2.0. Текст:
-  https://github.com/FluidInference/FluidAudio/blob/v0.15.5/ThirdPartyLicenses/vbx-LICENSE.md
+  Лицензия BSD (2 пункта), полный текст в `FluidAudio-fastcluster-BSD.txt`.
+- **VBx** — © 2021–2024 BUT Speech@FIT. Лицензия Apache 2.0, полный текст в
+  `FluidAudio-vbx-Apache-2.0.txt`.
 
 Ни то, ни другое Wai Dictation не использует — это части разделения дикторов,
 которое нам не нужно. Но код едет в образе, поэтому упомянут здесь.

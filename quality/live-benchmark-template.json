@@ -1,0 +1,34 @@
+{
+  "corpusSHA256": "REQUIRED",
+  "rawResultsSHA256": "REQUIRED",
+  "pipelineGitSHA": "REQUIRED",
+  "modelRevision": "aed02740059203c4a87495924f685de3722ae9ce",
+  "modelManifestSHA256": "5082e7480f6cd00b2e499b607942aef86f82110121a479d34969edd4da337540",
+  "scorerSHA256": "ee1dc73f3fac6194ccca5e47a7e4fbf8d52403240d8a471b0d8f7122e82670f4",
+  "referencesFrozenAt": "REQUIRED ISO-8601",
+  "scoredAt": "REQUIRED ISO-8601",
+  "emptyUserDictionary": true,
+  "speakerCount": 5,
+  "hardware": {"model": "MacBook Air M1", "memoryGB": 8, "os": "macOS 14.x", "osBuild": "REQUIRED"},
+  "microphones": ["built-in", "external-or-bluetooth"],
+  "metrics": {
+    "ruWER": 1.0,
+    "enWER": 1.0,
+    "mixedWER": 1.0,
+    "mixedEnglishTermRecall": 0.0,
+    "firstWordRetention": 0.0,
+    "engineReadyStopToTextP95Seconds": 999,
+    "launchToReadyP95Seconds": 999,
+    "oneTimeCoreMLCompileSeconds": 999,
+    "majorityWrongLanguageClips": 1,
+    "crashes": 1,
+    "recordingLosses": 1,
+    "warmedIdleRSSBytes": 9999999999,
+    "fiveMinutePeakRSSBytes": 9999999999
+  },
+  "speakers": [
+    {"id": "blind-1", "ruWER": 1.0, "enWER": 1.0, "termRecall": 0.0, "firstWordRetention": 0.0}
+  ],
+  "failureTaxonomy": {"REQUIRED category": 1},
+  "decision": {"value": "keep-or-switch", "signedBy": "REQUIRED", "signedAt": "REQUIRED ISO-8601"}
+}
