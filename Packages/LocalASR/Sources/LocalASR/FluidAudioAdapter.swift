@@ -11,6 +11,15 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     private var models: AsrModels?
     private var manager: AsrManager?
 
+    // Акустический подсказчик терминов: CTC-модель ищет термины в звуке,
+    // rescorer правит текст TDT по её уликам. Всё опционально: без явной
+    // загрузки распознавание работает ровно как раньше.
+    private var keywordSpotter: CtcKeywordSpotter?
+    private var vocabularyRescorer: VocabularyRescorer?
+    private var vocabularyContext: CustomVocabularyContext?
+    private var vocabularySizeConfig: ContextBiasingConstants.VocabSizeConfig?
+    private var vocabularyBiasWeight: Float?
+
     /// Состояние декодера TDT.
     ///
     /// Библиотека требует его как `inout` и переиспользует между вызовами для
@@ -88,6 +97,76 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         ModelHub.offlineMode = true
     }
 
+    /// Загрузить акустический подсказчик терминов из локальной директории.
+    ///
+    /// Сети здесь нет по той же схеме, что и у основной модели:
+    /// `CtcModels.loadDirect(from:)` читает уже разложенные бандлы
+    /// (MelSpectrogram.mlmodelc, AudioEncoder.mlmodelc, vocab.json) и падает,
+    /// если их не хватает. Пустой список терминов — осознанное «выключено»:
+    /// модели не грузятся, распознавание идёт как раньше.
+    public func loadVocabularyModels(from directory: URL, boost: VocabularyBoost) async throws {
+        ModelHub.offlineMode = true
+        guard !boost.isEmpty else { return }
+        guard keywordSpotter == nil else { return }
+
+        do {
+            let ctcModels = try await CtcModels.loadDirect(from: directory, variant: .ctc110m)
+            let spotter = CtcKeywordSpotter(
+                models: ctcModels,
+                blankId: ctcModels.vocabulary.count
+            )
+            // Термин без CTC-токенов rescorer молча пропускает — токенизация
+            // здесь обязательна, это и есть включение термина в подсказки.
+            let tokenizer = try await CtcTokenizer.load(from: directory)
+            var terms: [CustomVocabularyTerm] = []
+            for (index, term) in boost.terms.enumerated() {
+                let tokenIds = tokenizer.encode(term.text)
+                guard !tokenIds.isEmpty else {
+                    // Текст термина в ошибку не попадает намеренно: содержимое
+                    // словаря — данные человека, как и текст диктовки.
+                    throw ASREngineError.modelsUnavailable(
+                        "термин №\(index + 1) не токенизируется подсказчиком"
+                    )
+                }
+                terms.append(
+                    CustomVocabularyTerm(
+                        text: term.text,
+                        aliases: term.aliases.isEmpty ? nil : term.aliases,
+                        ctcTokenIds: tokenIds
+                    )
+                )
+            }
+            let context = CustomVocabularyContext(
+                terms: terms,
+                minSimilarity: boost.minSimilarity
+            )
+            // Акустический rescue-проход выключен намеренно: он заменяет слова
+            // по одной акустической улике, минуя порог похожести, и на нашем
+            // корпусе именно он превращал «в центре» в Sentry и «комету» в
+            // commit. Сама библиотека рекомендует выключать его для коротких
+            // словарей (#702, #724); наш — десятки терминов, не сотни.
+            let rescorer = try await VocabularyRescorer.create(
+                spotter: spotter,
+                vocabulary: context,
+                config: VocabularyRescorer.Config(
+                    spotterRescueMinSimilarity: 0.5,
+                    spotterRescueMultiWordMinSimilarity: 0.5,
+                    spotterRescueEnabled: false
+                ),
+                ctcModelDirectory: directory
+            )
+            keywordSpotter = spotter
+            vocabularyRescorer = rescorer
+            vocabularyContext = context
+            vocabularySizeConfig = ContextBiasingConstants.rescorerConfig(
+                forVocabSize: context.terms.count
+            )
+            vocabularyBiasWeight = boost.biasWeight
+        } catch {
+            throw ASREngineError.modelsUnavailable(error.localizedDescription)
+        }
+    }
+
     public func transcribe(samples: [Float]) async throws -> DictationCore.ASRResult {
         guard let manager else {
             throw ASREngineError.modelsNotLoaded
@@ -109,7 +188,15 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             // языков, и жёсткий выбор языка ломал бы смешанную речь.
             let result = try await manager.transcribe(samples, decoderState: &state, language: nil)
             decoderState = state
-            text = result.text
+            // Подсказчик правит текст по акустическим уликам CTC-модели.
+            // Тайминги остаются от исходных токенов: замена слова не двигает
+            // его место в записи, а потребителей пословных таймингов, которым
+            // важна побуквенная точность заменённого слова, в продукте нет.
+            text = try await rescoreWithVocabulary(
+                text: result.text,
+                timings: result.tokenTimings,
+                samples: samples
+            ) ?? result.text
             timings = result.tokenTimings
         } catch is CancellationError {
             throw ASREngineError.cancelled
@@ -126,11 +213,55 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         )
     }
 
+    /// Поправить текст по акустическим уликам подсказчика.
+    ///
+    /// Возвращает `nil`, когда подсказчик не настроен или менять нечего.
+    /// Ошибка CTC-inference при настроенном подсказчике — настоящая ошибка
+    /// распознавания: человек включил термины и вправе знать, что они не
+    /// сработали, а запись сохранится для Retry.
+    private func rescoreWithVocabulary(
+        text: String,
+        timings: [TokenTiming]?,
+        samples: [Float]
+    ) async throws -> String? {
+        guard let keywordSpotter, let vocabularyRescorer, let vocabularyContext else {
+            return nil
+        }
+        guard let timings, !timings.isEmpty, !text.isEmpty else { return nil }
+
+        let spotResult = try await keywordSpotter.spotKeywordsWithLogProbs(
+            audioSamples: samples,
+            customVocabulary: vocabularyContext,
+            minScore: nil
+        )
+        // Пустые log-probs — это не сбой, а «звука меньше одного кадра»:
+        // таким записям подсказывать нечего.
+        guard !spotResult.logProbs.isEmpty else { return nil }
+
+        let sizeConfig = vocabularySizeConfig
+            ?? ContextBiasingConstants.rescorerConfig(forVocabSize: vocabularyContext.terms.count)
+        let output = vocabularyRescorer.ctcTokenRescore(
+            transcript: text,
+            tokenTimings: timings,
+            logProbs: spotResult.logProbs,
+            frameDuration: spotResult.frameDuration,
+            cbw: vocabularyBiasWeight ?? sizeConfig.cbw,
+            marginSeconds: 0.5,
+            minSimilarity: max(sizeConfig.minSimilarity, vocabularyContext.minSimilarity)
+        )
+        return output.wasModified ? output.text : nil
+    }
+
     public func unload() async {
         await manager?.cleanup()
         manager = nil
         models = nil
         decoderState = nil
+        keywordSpotter = nil
+        vocabularyRescorer = nil
+        vocabularyContext = nil
+        vocabularySizeConfig = nil
+        vocabularyBiasWeight = nil
     }
 
     /// Склеить пословные тайминги из токенов.

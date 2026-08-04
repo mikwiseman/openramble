@@ -32,6 +32,18 @@ public actor LocalTranscriber {
         loadedDirectory = modelDirectory
     }
 
+    /// Загрузить акустический подсказчик терминов.
+    ///
+    /// Отдельно от `prepare`, потому что это отдельная модель с отдельной
+    /// судьбой: без неё распознавание полноценно работает, а с ней термины
+    /// узнаются на уровне звука, а не пост-обработкой.
+    public func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {
+        guard let capable = engine as? VocabularyBoostCapable else {
+            throw ASREngineError.modelsUnavailable("движок не поддерживает подсказки терминов")
+        }
+        try await capable.loadVocabularyModels(from: modelDirectory, boost: boost)
+    }
+
     /// Распознать записанный файл.
     public func transcribe(fileURL: URL) async throws -> ASRResult {
         guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }

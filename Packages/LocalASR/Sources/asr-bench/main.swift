@@ -101,7 +101,50 @@ func prepareTranscriber() async throws -> LocalTranscriber {
     let started = ContinuousClock.now
     try await transcriber.prepare(modelDirectory: layout.engineDirectory)
     print(String(format: "Модель загружена за %.2f с", seconds(started.duration(to: .now))))
+
+    // Акустический подсказчик терминов: сравнение «с ним и без него» — ровно
+    // тот замер, ради которого переключатель существует.
+    if let vocabDirectory = ProcessInfo.processInfo.environment["WAI_VOCAB_DIR"] {
+        let similarity = ProcessInfo.processInfo.environment["WAI_VOCAB_SIMILARITY"]
+            .flatMap(Float.init)
+        let biasWeight = ProcessInfo.processInfo.environment["WAI_VOCAB_CBW"]
+            .flatMap(Float.init)
+        let defaults = VocabularyBoost.developerDefault()
+        let boost = VocabularyBoost(
+            terms: defaults.terms,
+            minSimilarity: similarity ?? defaults.minSimilarity,
+            biasWeight: biasWeight ?? defaults.biasWeight
+        )
+        if let similarity {
+            print("Порог похожести подсказчика: \(similarity) (WAI_VOCAB_SIMILARITY)")
+        }
+        if let biasWeight {
+            print("Вес акустической улики: \(biasWeight) (WAI_VOCAB_CBW)")
+        }
+        let vocabStarted = ContinuousClock.now
+        try await transcriber.prepareVocabulary(
+            modelDirectory: URL(fileURLWithPath: vocabDirectory, isDirectory: true),
+            boost: boost
+        )
+        print(
+            String(
+                format: "Подсказчик загружен за %.2f с — %d терминов",
+                seconds(vocabStarted.duration(to: .now)),
+                boost.terms.count
+            )
+        )
+    }
     return transcriber
+}
+
+/// Словарь замен приложения поверх сырого ответа — то, что видит человек.
+///
+/// Включается `WAI_EVAL_PIPELINE=on`. Позволяет сравнивать не движки, а
+/// продукт: сырой ответ печатается рядом, скорер считает обработанный.
+func makeEvalPipeline() -> TextPipeline? {
+    guard isOn("WAI_EVAL_PIPELINE") else { return nil }
+    print("Скорер считает текст после словаря замен (WAI_EVAL_PIPELINE=on)")
+    return TextPipeline(replacements: StarterDictionary.developer)
 }
 
 let arguments = Array(CommandLine.arguments.dropFirst())
@@ -177,6 +220,7 @@ case "eval":
     guard let manifestPath = operands.first else { usage() }
     let items = try Evaluation.loadManifest(at: manifestPath)
     let transcriber = try await prepareTranscriber()
+    let pipeline = makeEvalPipeline()
 
     var outcomes: [EvalOutcome] = []
     for item in items {
@@ -189,9 +233,10 @@ case "eval":
             print("Ошибка: \(error)")
             continue
         }
+        let hypothesis = pipeline.map { $0.process(result.text).text } ?? result.text
         let outcome = EvalOutcome(
             item: item,
-            report: TranscriptScorer.score(reference: item.reference, hypothesis: result.text),
+            report: TranscriptScorer.score(reference: item.reference, hypothesis: hypothesis),
             result: result,
             wallClock: seconds(started.duration(to: .now)),
             peakMemory: peakMemoryBytes()

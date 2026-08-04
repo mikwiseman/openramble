@@ -1,3 +1,4 @@
+import DictationCore
 import FluidAudio
 import XCTest
 @testable import LocalASR
@@ -100,6 +101,39 @@ final class FluidAudioAdapterTests: XCTestCase {
         FluidAudioAdapter.enforceOfflineMode()
 
         XCTAssertTrue(ModelHub.offlineMode)
+    }
+
+    /// Папка без CTC-бандлов — это ошибка загрузки, а не молчаливое «подсказки
+    /// не работают». Сети здесь нет: отказ происходит на проверке файлов.
+    func testНеполнаяПапкаПодсказчикаДаётВидимуюОшибку() async throws {
+        let adapter = FluidAudioAdapter()
+        let empty = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appending(path: "ctc-empty-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: empty, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: empty) }
+
+        do {
+            try await adapter.loadVocabularyModels(
+                from: empty,
+                boost: VocabularyBoost(terms: [.init(text: "deploy")])
+            )
+            XCTFail("Пустая папка обязана дать ошибку загрузки подсказчика")
+        } catch let error as ASREngineError {
+            guard case .modelsUnavailable = error else {
+                return XCTFail("Ожидалась modelsUnavailable, пришло: \(error)")
+            }
+        }
+    }
+
+    /// Пустой список терминов — это осознанное «подсказки выключены», а не
+    /// повод грузить CTC-модели в память.
+    func testПустойСписокТерминовНеТрогаетМодели() async throws {
+        let adapter = FluidAudioAdapter()
+        let missing = URL(fileURLWithPath: "/nonexistent-\(UUID().uuidString)")
+
+        // Папки не существует, но с пустым списком терминов адаптер не должен
+        // даже пытаться её читать.
+        try await adapter.loadVocabularyModels(from: missing, boost: VocabularyBoost(terms: []))
     }
 
     func testMixedRussianEnglishKeepsLatinIntact() {
