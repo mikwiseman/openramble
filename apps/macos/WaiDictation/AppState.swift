@@ -1268,6 +1268,22 @@ public final class AppState: ObservableObject {
             }
             isEngineReady = true
             engineLoadFailure = nil
+        } catch let boost as VocabularyBoostError {
+            // Беда со списком терминов человека, а не с весами модели.
+            // Раньше это падало в общий catch и классифицировалось как порча
+            // модели: интерфейс предлагал перекачать сотни мегабайт, которые
+            // ничем бы не помогли — термин никуда не делся бы, и круг
+            // повторялся бы. Данные пользователя нельзя лечить перекачкой.
+            engineLoadFailure = nil
+            isEngineReady = true
+            notify(
+                DictationNotice(
+                    kind: .warning,
+                    message: "One of the dictionary terms couldn't be used for acoustic "
+                        + "boosting; dictation works, text replacements still apply. "
+                        + "(\(boost))"
+                )
+            )
         } catch {
             let detail =
                 "the files passed verification, but Core ML couldn't load the model: \(error.localizedDescription)"
@@ -1280,6 +1296,38 @@ public final class AppState: ObservableObject {
                         + "\(remainingDownloadMegabytes == 0 ? 586 : remainingDownloadMegabytes) MB."
                 )
             )
+        }
+    }
+
+    /// Правка словаря доезжает до акустики сейчас, а не после перезапуска.
+    ///
+    /// Текстовые замены применяются к следующей диктовке сразу — если акустика
+    /// при этом живёт старым списком, поведение словаря раздваивается без
+    /// объяснения: половина фичи работает, половина ждёт перезапуска, и
+    /// человек не может понять систему. Пересборка стоит доли секунды, веса
+    /// подсказчика переживают её без перезагрузки.
+    private func rebuildVocabularyBoost() {
+        guard isEngineReady, let transcriber, let vocabularyDirectory else { return }
+        let pairs = replacements.map { (spoken: $0.spoken, written: $0.written) }
+        Task { [weak self] in
+            do {
+                try await transcriber.prepareVocabulary(
+                    modelDirectory: vocabularyDirectory,
+                    boost: .withUserReplacements(pairs)
+                )
+            } catch {
+                // Акустика не пересобралась — текстовые замены уже работают, и
+                // единственная честная реакция — сказать, а не откатить правку.
+                await MainActor.run { [weak self] in
+                    self?.notify(
+                        DictationNotice(
+                            kind: .warning,
+                            message: "The dictionary was saved, but acoustic boosting "
+                                + "couldn't pick it up: \(error.localizedDescription)"
+                        )
+                    )
+                }
+            }
         }
     }
 
@@ -1454,6 +1502,7 @@ public final class AppState: ObservableObject {
                 return
             }
             replacements = updated
+            rebuildVocabularyBoost()
             return
         }
 

@@ -919,3 +919,59 @@ final class LivePreviewToggleTests: XCTestCase {
         XCTAssertEqual(state.recognitionLanguage, "ru")
     }
 }
+
+/// Правка словаря доезжает до акустического подсказчика без перезапуска.
+@MainActor
+final class VocabularyRebuildTests: XCTestCase {
+    /// Движок, считающий пересборки подсказчика.
+    private final class RebuildCountingEngine: ASREngineAdapting, VocabularyBoostCapable, @unchecked Sendable {
+        private let lock = NSLock()
+        private var _prepares = 0
+        private var _lastTermCount = -1
+        var prepares: Int { lock.withLock { _prepares } }
+        var lastTermCount: Int { lock.withLock { _lastTermCount } }
+
+        func loadModels(from directory: URL) async throws {}
+        func transcribe(samples: [Float]) async throws -> ASRResult {
+            ASRResult(text: "", audioDuration: 0, processingDuration: 0)
+        }
+        func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
+            ASRResult(text: "", audioDuration: 0, processingDuration: 0)
+        }
+        func unload() async {}
+        func loadVocabularyModels(from directory: URL, boost: VocabularyBoost) async throws {
+            lock.withLock {
+                _prepares += 1
+                _lastTermCount = boost.terms.count
+            }
+        }
+    }
+
+    func testПравкаСловаряПересобираетПодсказчикСразу() async throws {
+        let harness = try AppHarness()
+        defer { harness.tearDown() }
+        try harness.installModelMarker()
+        let engine = RebuildCountingEngine()
+        harness.warmUpEngine = engine
+        let state = harness.makeState()
+
+        // Дождаться прогрева — первая подготовка подсказчика происходит там.
+        for _ in 0..<400 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertTrue(state.isEngineReady, "Прогрев обязан пройти")
+        let after = engine.prepares
+
+        state.addReplacement(spoken: "сентри", written: "Sentry")
+
+        for _ in 0..<400 where engine.prepares == after {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertGreaterThan(
+            engine.prepares, after,
+            "Текстовая замена работает сразу — акустика не имеет права ждать перезапуска"
+        )
+    }
+}
