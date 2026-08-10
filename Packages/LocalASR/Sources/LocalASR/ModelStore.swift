@@ -101,6 +101,10 @@ public actor ModelStore {
             // Every retry downloads the file again and fills the disk again.
             // The remedy is free space, and only the person can provide it.
             return false
+        case .corruptContent:
+            // The same source will serve the same bytes. The mirror is the
+            // answer here, and the loop moves on to it.
+            return false
         }
     }
     private let verifier: ModelVerifier
@@ -589,13 +593,17 @@ public actor ModelStore {
         total: Int64
     ) async throws -> URL {
         var failures: [String] = []
+        // Corruption is a different verdict from "could not download". If every
+        // source hands us bad bytes, the honest word for that is a failed
+        // check, not a failed transfer — and the UI tells the two apart.
+        var corruptions: [String] = []
 
         for (index, url) in sources.enumerated() {
             var lastError: ModelDownloadError?
 
             for attempt in 1...Self.attemptsPerSource {
                 do {
-                    return try await downloader.download(
+                    let temporary = try await downloader.download(
                         from: url,
                         expectedBytes: file.byteCount,
                         onProgress: { [weak self] received in
@@ -604,6 +612,20 @@ public actor ModelStore {
                             }
                         }
                     )
+                    // Checked here, not only in the final pass, so that a source
+                    // serving corrupt bytes hands over to the mirror. Content
+                    // corruption is the one failure SHA-256 exists to catch, and
+                    // before this it aborted the whole install and sent the user
+                    // back to the same bad source. The manifest promises the
+                    // mirror means a single source is not a single point of
+                    // failure; for corrupt content it provided none.
+                    do {
+                        try verifier.verify(file: file, at: temporary)
+                        return temporary
+                    } catch {
+                        try? fileManager.removeItem(at: temporary)
+                        throw ModelDownloadError.corruptContent(String(describing: error))
+                    }
                 } catch ModelDownloadError.cancelled {
                     throw CancellationError()
                 } catch let ModelDownloadError.localWriteFailed(reason) {
@@ -626,8 +648,19 @@ public actor ModelStore {
 
             if let lastError {
                 failures.append("\(url.host() ?? url.absoluteString): \(lastError)")
+                if case let .corruptContent(detail) = lastError { corruptions.append(detail) }
             }
             if index == sources.count - 1 {
+                // Corruption outranks "could not download" because it is the
+                // more specific verdict: the bytes arrived and were wrong. A
+                // source that was merely absent says nothing about the file,
+                // while a source that served damaged content says a great deal.
+                // The full list still travels with it, so no detail is lost.
+                if !corruptions.isEmpty {
+                    throw ModelStoreError.verification(
+                        "\(file.path): \(failures.joined(separator: "; "))"
+                    )
+                }
                 throw ModelStoreError.download("\(file.path): \(failures.joined(separator: "; "))")
             }
         }

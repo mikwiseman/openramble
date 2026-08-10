@@ -30,6 +30,12 @@ public enum ModelDownloadError: Error, Sendable, Equatable {
     /// attempts and roughly 2.7 GB of downloads before failing, and the user
     /// was told the network was at fault.
     case localWriteFailed(String)
+    /// The bytes arrived intact in size but wrong in content.
+    ///
+    /// Raised by the store, not the downloader: only the store knows the
+    /// manifest checksum. It lives here so the source-walking loop can treat it
+    /// as a reason to try the mirror, which is exactly what the mirror is for.
+    case corruptContent(String)
     case cancelled
 }
 
