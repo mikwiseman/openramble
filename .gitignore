@@ -1,0 +1,46 @@
+# Swift / SPM
+.build/
+.swiftpm/
+Package.resolved.backup
+*.xcodeproj
+*.xcworkspace
+DerivedData/
+xcuserdata/
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Build and release artifacts
+artifacts/
+quality/release-evidence.json
+*.dmg
+*.zip
+
+# Private set for quality measurements: owner’s voice to a public repository
+# doesn't hit. The path to it is transmitted via WAI_EVAL_DIR (see docs/benchmarks.md).
+eval-private/
+
+# The model is downloaded by the user, it is not in the repository
+Models/
+*.mlmodelc
+
+# Temporary check files without network
+.build-zero-network/
+.build-tools/
+
+# The resolved versions file is not intentionally tracked.
+#
+# It fluctuates on its own: xcodebuild adds Sparkle from the graph there
+# applications, swift build for one package removes it. Everyone who collects
+# project in both ways - and this is the usual procedure - the tree turns out to be
+# dirty, and in general work these are conflicts from scratch.
+#
+# Nothing to lose: both dependencies are fixed by the exact version in the manifests themselves
+# (FluidAudio - exact in Package.swift, Sparkle - exactVersion in project.yml),
+# and FluidAudio does not have its own dependencies at all.
+Package.resolved
+.gstack/

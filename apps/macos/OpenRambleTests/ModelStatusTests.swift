@@ -1,0 +1,183 @@
+import LocalASR
+import XCTest
+
+/// What a person sees about the model in each of its states.
+///
+/// There are six states, two screens, and previously all six were painted in both
+/// places with hands. What is checked here is what is visible: title, explanation,
+/// indicator signature and set of buttons.
+final class ModelStatusTests: XCTestCase {
+    private let ready = ModelState.ready(directory: URL(fileURLWithPath: "/tmp/model"))
+
+    private func status(
+        _ state: ModelState,
+        preparing: Bool = false,
+        place: ModelStatus.Place = .settings
+    ) -> ModelStatus {
+        ModelStatus.make(state: state, isPreparingEngine: preparing, place: place)
+    }
+
+    // MARK: - States
+
+    func testScenario001() {
+        let status = status(.notInstalled)
+
+        XCTAssertEqual(status.title, "Model not installed")
+        XCTAssertEqual(status.actions, [.install])
+        // Both models with one button: 483 MB recognition + 103 MB prompt.
+        XCTAssertEqual(status.detail?.contains("586 MB"), true)
+        XCTAssertNil(status.progress)
+    }
+
+    func testScenario002() {
+        let status = status(.downloading(receivedBytes: 120_000_000, totalBytes: 483_000_000))
+
+        XCTAssertEqual(status.title, "Downloading model…")
+        XCTAssertEqual(status.progressLabel, "120 of 483 MB")
+        XCTAssertEqual(status.progress ?? 0, 0.248, accuracy: 0.01)
+        // The only action is to honestly stop the download and remove partial.
+        XCTAssertEqual(status.actions, [.cancel])
+        XCTAssertEqual(status.announcement, "Downloading model, 120 of 483 MB")
+    }
+
+    func testScenario003() {
+        let status = status(.verifying(checked: 3, total: 12))
+
+        XCTAssertEqual(status.title, "Verifying download…")
+        XCTAssertEqual(status.progressLabel, "File 3 of 12")
+        XCTAssertEqual(status.progress ?? 0, 0.25, accuracy: 0.001)
+        XCTAssertEqual(status.actions, [])
+    }
+
+    func testScenario004() {
+        let status = status(ready, place: .settings)
+
+        XCTAssertEqual(status.title, "Model ready")
+        XCTAssertEqual(status.tone, .success)
+        XCTAssertEqual(status.actions, [.delete])
+    }
+
+    /// There is no delete button in onboarding.
+    ///
+    /// A person installs the application for the first time; just suggest demolishing
+    /// the downloaded 483 MB is the only thing he definitely doesn’t need right now.
+    func testScenario005() {
+        XCTAssertEqual(status(ready, place: .onboarding).actions, [])
+    }
+
+    func testScenario006() {
+        let status = status(ready, preparing: true)
+
+        XCTAssertEqual(status.title, "Model ready")
+        XCTAssertEqual(status.detail?.contains("20–40 seconds"), true)
+        XCTAssertEqual(status.announcement, "Model ready, preparing for first use")
+    }
+
+    func testScenario007() {
+        let status = status(.failed(.download("the server did not respond")))
+
+        XCTAssertEqual(status.title, "Model installation failed")
+        XCTAssertEqual(status.tone, .failure)
+        XCTAssertEqual(status.actions, [.retry])
+        XCTAssertEqual(status.detail, "Download failed: the server did not respond")
+    }
+
+    func testScenario008() {
+        let status = status(.repairRequired("checksum mismatch"))
+
+        XCTAssertEqual(status.title, "Model needs repair")
+        XCTAssertEqual(status.actions, [.repair])
+        XCTAssertEqual(status.title(for: .repair), "Redownload model — 586 MB")
+        // Addition after update only names the remainder, not the full amount.
+        XCTAssertEqual(
+            ModelStatus.Action.repair.title(downloadMegabytes: 103),
+            "Redownload model — 103 MB"
+        )
+        XCTAssertEqual(status.detail?.contains("damaged"), true)
+    }
+
+    func testScenario009() {
+        let status = status(.deleting)
+
+        XCTAssertEqual(status.title, "Deleting model…")
+        XCTAssertEqual(status.actions, [])
+        XCTAssertNil(status.progress)
+    }
+
+    // MARK: - Errors in words
+
+    /// Lack of space was due to an enumeration dump with raw bytes.
+    ///
+    /// The person saw `notEnoughDiskSpace(requiredBytes: 594…, availableBytes: 1…)`
+    /// and should have guessed that there was no space on the disk.
+    func testScenario010() {
+        let text = ModelStatus.message(
+            for: .notEnoughDiskSpace(requiredBytes: 594_000_000, availableBytes: 120_000_000)
+        )
+
+        XCTAssertEqual(
+            text,
+            "Not enough disk space: 594 MB needed, 120 MB free."
+        )
+        XCTAssertFalse(text.contains("requiredBytes"))
+    }
+
+    func testScenario011() {
+        let errors: [ModelStoreError] = [
+            .manifest("broken json"),
+            .download("no network"),
+            .verification("amount did not match"),
+            .install("no rights"),
+            .repairRequired("no marker"),
+            .importSource("wrong folder"),
+            .notEnoughDiskSpace(requiredBytes: 1, availableBytes: 0),
+            .cancelled,
+        ]
+
+        for error in errors {
+            let text = ModelStatus.message(for: error)
+            XCTAssertFalse(text.isEmpty)
+            XCTAssertFalse(
+                text.contains("("),
+                "'\(text)' looks like an enum dump, not an explanation"
+            )
+        }
+    }
+
+    // MARK: - Announcements
+
+    func testScenario012() {
+        let states: [ModelState] = [
+            .notInstalled,
+            .downloading(receivedBytes: 0, totalBytes: 483_000_000),
+            .verifying(checked: 0, total: 12),
+            ready,
+            .repairRequired("damaged"),
+            .failed(.cancelled),
+            .deleting,
+        ]
+
+        var announcements: Set<String> = []
+        for state in states {
+            let announcement = status(state).announcement
+            XCTAssertFalse(announcement.isEmpty)
+            announcements.insert(announcement)
+        }
+        XCTAssertEqual(announcements.count, states.count, "states should not sound the same")
+    }
+
+    // MARK: - Button tooltips
+
+    func testScenario013() {
+        for action in [ModelStatus.Action.install, .retry, .repair, .delete] {
+            XCTAssertFalse(action.title(downloadMegabytes: 586).isEmpty)
+            XCTAssertFalse(action.hint(downloadMegabytes: 586).isEmpty)
+        }
+        // Deleting is the only irreversible action on the screen, and its cost
+        // must be said before pressing.
+        XCTAssertEqual(
+            ModelStatus.Action.delete.hint(downloadMegabytes: 586).contains("stops working"),
+            true
+        )
+    }
+}

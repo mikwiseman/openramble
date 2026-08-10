@@ -1,0 +1,128 @@
+import DictationCore
+import Foundation
+
+/// Local speech recognition.
+///
+/// Keeps the model loaded, recognizes files and knows how to release memory.
+///
+/// The actor here protects the state, but **not** the order: actors are reentrant,
+/// and on each `await` the next call is launched inside. The “one dictation” rule
+/// at a time" is held by the state machine `DictationController` at a higher level - it
+/// simply doesn't start the second one until the first one is finished. Here's to it
+/// can't be relied upon: if someone calls `transcribe` twice, both are parsed
+/// will go alternately, and it will be correct, but twice as slow.
+public actor LocalTranscriber {
+    private let engine: any ASREngineAdapting
+    private let reader: AudioFileReader
+    private var loadedDirectory: URL?
+
+    public init(
+        engine: any ASREngineAdapting = FluidAudioAdapter(),
+        reader: AudioFileReader = AudioFileReader()
+    ) {
+        self.engine = engine
+        self.reader = reader
+    }
+
+    public var isPrepared: Bool { loadedDirectory != nil }
+
+    /// Load the model in advance.
+    ///
+    /// The first call after installation compiles the model for the neuromodule and therefore
+    /// noticeably longer than subsequent ones - this should not be done at the moment when
+    /// the user is waiting for text.
+    public func prepare(modelDirectory: URL) async throws {
+        if loadedDirectory == modelDirectory { return }
+        try await engine.loadModels(from: modelDirectory)
+        loadedDirectory = modelDirectory
+    }
+
+    /// Load or rebuild the acoustic term hint.
+    ///
+    /// Separate from `prepare`, because it is a separate model with a separate
+    /// fate: without it, recognition works fully, and with it the terms
+    /// are recognized at the sound level, and not by post-processing.
+    ///
+    /// **Call this every time the user's dictionary has changed** - not
+    /// only when warming up. The repeated call reassembles the term set into
+    /// live engine; the weights of the CTC model remain loaded, so that
+    /// reassembly costs a fraction of a second, not thirteen. Empty set takes off
+    /// prompter and releases his weight.
+    ///
+    /// Errors are differentiated intentionally: `VocabularyBoostError` - trouble with the list
+    /// terms, that is, with human data, and restoring its model is not
+    /// treats; `ASREngineError.modelsUnavailable` - the problem with the weights, and there
+    /// pumping is appropriate. Catch them separately.
+    public func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {
+        guard let capable = engine as? VocabularyBoostCapable else {
+            throw ASREngineError.modelsUnavailable("the engine doesn't support vocabulary hints")
+        }
+        try await capable.loadVocabularyModels(from: modelDirectory, boost: boost)
+    }
+
+    /// Recognize the recorded file.
+    ///
+    /// `languageHint` - BCP-47 code or `nil` for auto-detection; see
+    /// `ASREngineAdapting.transcribe(samples:languageHint:)`.
+    public func transcribe(fileURL: URL, languageHint: String? = nil) async throws -> ASRResult {
+        guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
+
+        let samples: [Float]
+        do {
+            samples = try reader.samples(from: fileURL)
+        } catch let failure as AudioFileReader.Failure {
+            throw ASREngineError.unsupportedAudioFormat(String(describing: failure))
+        }
+
+        try Task.checkCancellation()
+        return try await transcribe(samples: samples, languageHint: languageHint)
+    }
+
+    /// Recognize a ready buffer.
+    ///
+    /// The entire recording goes into the engine, no matter how long it is: splicing
+    /// He makes fifteen-second windows himself, with overlap and deduplication
+    /// tokens. Previously, there was its own cutting of pauses - it was
+    /// written against the silent loss of speech at the junction of the windows. The measurements showed that
+    /// the reason for the loss was not in the length of the piece, but in the `melChunkContext` flag
+    /// libraries; cutting cut phrases in the middle, slowed down parsing twice and
+    /// on the main scenario (Russian speech with English inserts) lost three times
+    /// more words than a properly configured engine. Details and numbers - in
+    /// `docs/benchmarks.md`.
+    public func transcribe(samples: [Float], languageHint: String? = nil) async throws -> ASRResult {
+        guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
+        guard !samples.isEmpty else {
+            throw ASREngineError.unsupportedAudioFormat("empty recording")
+        }
+
+        try Task.checkCancellation()
+        return try await engine.transcribe(samples: samples, languageHint: languageHint)
+    }
+
+    /// Live preview: start, flow of samples, stop.
+    ///
+    /// Silently skipped if the engine can't preview: this is a decoration
+    /// on top of the dictation, and not part of it - the contract is the same as that of the language hint.
+    public func startPreview(
+        onUpdate: @escaping @Sendable (_ confirmed: String, _ volatile: String) -> Void
+    ) async throws {
+        guard let capable = engine as? LivePreviewCapable else { return }
+        try await capable.startPreview(onUpdate: onUpdate)
+    }
+
+    public func feedPreview(samples: [Float]) async {
+        guard let capable = engine as? LivePreviewCapable else { return }
+        await capable.feedPreview(samples: samples)
+    }
+
+    public func stopPreview() async {
+        guard let capable = engine as? LivePreviewCapable else { return }
+        await capable.stopPreview()
+    }
+
+    /// Free up memory under the model.
+    public func unload() async {
+        await engine.unload()
+        loadedDirectory = nil
+    }
+}

@@ -1,0 +1,23 @@
+{
+  "gitSHA": "REQUIRED 40-hex SHA",
+  "dmgSHA256": "REQUIRED 64-hex SHA-256",
+  "positioning": "Russian-UI safe beta",
+  "m1MacOS14": {
+    "result": "REQUIRED pass",
+    "evidence": "REQUIRED link or local evidence identifier"
+  },
+  "currentAppleSiliconMacOS26": {
+    "result": "REQUIRED pass",
+    "evidence": "REQUIRED link or local evidence identifier"
+  },
+  "macOS15": {
+    "result": "not-tested",
+    "evidence": "REQUIRED result evidence or beta-note explaining absence"
+  },
+  "sparkleFromPreviousInstalledBuild": {
+    "result": "REQUIRED pass",
+    "evidence": "REQUIRED link or local evidence identifier"
+  },
+  "signedBy": "REQUIRED person",
+  "signedAt": "REQUIRED ISO-8601"
+}

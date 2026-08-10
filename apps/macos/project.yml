@@ -1,0 +1,184 @@
+name: OpenRamble
+
+options:
+  bundleIdPrefix: is.waiwai
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+packages:
+  DictationCore:
+    path: ../../Packages/DictationCore
+  LocalASR:
+    path: ../../Packages/LocalASR
+  # Updates. The version is pinned exactly, not `from:`: Sparkle arrives
+  # a ready-made binary framework inside the application, and this version will rise
+  # should be done consciously, and not on its own during the next build.
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    # Immutable commit tag 2.9.4.
+    revision: b6496a74a087257ef5e6da1c5b29a447a60f5bd7
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    MARKETING_VERSION: "0.3.3"
+    CURRENT_PROJECT_VERSION: "8"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    # The sandbox is turned off intentionally: dictation must insert text into other people's
+    # applications, but this is not possible from the sandbox.
+    ENABLE_APP_SANDBOX: NO
+    ENABLE_HARDENED_RUNTIME: YES
+    # Safe beta only supports Apple Silicon. Intel slice is prohibited and
+    # is checked again on an already assembled artifact.
+    ARCHS: arm64
+    ONLY_ACTIVE_ARCH: NO
+    EXCLUDED_ARCHS: x86_64
+
+targets:
+  OpenRamble:
+    type: application
+    platform: macOS
+    sources:
+      - path: OpenRamble
+      - path: ../../LICENSE
+        buildPhase: resources
+      - path: ../../NOTICE
+        buildPhase: resources
+      - path: ../../THIRD_PARTY_LICENSES.md
+        buildPhase: resources
+      - path: ../../Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json
+        buildPhase: resources
+      - path: ../../Packages/LocalASR/Sources/LocalASR/Resources/vocabulary-manifest.json
+        buildPhase: resources
+      - path: OpenRamble/Resources/AppIcon.icns
+        buildPhase: resources
+    dependencies:
+      - package: DictationCore
+        product: DictationCore
+      - package: DictationCore
+        product: DictationAudio
+      - package: LocalASR
+        product: LocalASR
+      - package: Sparkle
+        product: Sparkle
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation
+        PRODUCT_NAME: OpenRamble
+        INFOPLIST_FILE: OpenRamble/Info.plist
+        CODE_SIGN_ENTITLEMENTS: OpenRamble/OpenRamble.entitlements
+        SWIFT_STRICT_CONCURRENCY: complete
+        # Warnings are errors, just like in packages. It used to be true
+        # only for them, and CI claimed that for the entire project: goal
+        # applications were assembled without a gate, and three isolation violations once
+        # were already hiding behind exactly such a hole.
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.dev
+          PRODUCT_NAME: OpenRambleDev
+    info:
+      path: OpenRamble/Info.plist
+      properties:
+        CFBundleName: "$(PRODUCT_NAME)"
+        CFBundleDisplayName: "$(PRODUCT_NAME)"
+        CFBundleShortVersionString: "0.3.3"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleIconFile: AppIcon
+        # The application lives in the menu bar and is not shown in the Dock.
+        LSUIElement: true
+        # This line is read by the person in the system permission dialog - that is
+        # this is an interface, not a comment, and its language is the same as everything else
+        # rest: English.
+        NSMicrophoneUsageDescription: >-
+          OpenRamble needs the microphone to record your speech. The
+          recording is processed on this Mac and is never sent anywhere.
+        NSHumanReadableCopyright: "© 2026 Mik Wiseman. MIT."
+
+        # --- Updates (Sparkle) ---
+        #
+        # Where is the list of versions. A regular static file on GitHub Pages,
+        # The product does not have any server.
+        SUFeedURL: https://mikwiseman.github.io/openramble/appcast.xml
+        # Autocheck is disabled. The key is required in this form: without it
+        # On the second launch, Sparkle will ask “should you check for updates?” and by
+        # will enable checks by default. The product promises “a network only according to your
+        # team" - an application that goes online at startup, this is a promise
+        # violates. The user enables the checks himself in the settings.
+        SUEnableAutomaticChecks: false
+        # Do not send system report (Mac model, OS version, language, CPU).
+        # Along with the update request, only the IP and application version are sent.
+        SUSendProfileInfo: false
+        # Background download and installation are not available even as an option: update
+        # is placed when the person pressed the button, and nothing else.
+        SUAllowsAutomaticUpdates: false
+        # EdDSA public key used to verify the update signature.
+        # Appears here after `generate_keys` - it is public, and its place
+        # in the repository. The release cannot be released before this: scripts/release.sh
+        # will refuse to work. The procedure is in docs/release.md.
+        SUPublicEDKey: "9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI="
+
+  # Application target tests.
+  #
+  # Build WITHOUT the host application (`TEST_HOST` is not set), and the sources
+  # applications are compiled directly into a test bundle. The reason is not convenience:
+  # with the owner `xcodebuild test` we would have to run the application itself, but it
+  # lives in the menu bar (`LSUIElement`), raises timers, asks
+  # permissions and opens the onboarding window on the first launch. In a session without
+  # graphical session such a run hangs until timeout instead of
+  # crash with an understandable error. Plus the introduction of a bundle into an application with enabled
+  # Hardened Runtime requires a separate signature relaxation.
+  #
+  # The price for this is that the application sources are compiled twice. She's noticeable
+  # just for the build time and it's worth it.
+  OpenRambleTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: OpenRambleTests
+      - path: OpenRamble
+        excludes:
+          # Entry point: `@main` in the test bundle is not needed and gets in the way.
+          - "OpenRambleApp.swift"
+          - "Info.plist"
+    dependencies:
+      - package: DictationCore
+        product: DictationCore
+      - package: DictationCore
+        product: DictationAudio
+      - package: LocalASR
+        product: LocalASR
+      - package: Sparkle
+        product: Sparkle
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.tests
+        PRODUCT_NAME: OpenRambleTests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_STRICT_CONCURRENCY: complete
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+        # The test bundle is loaded into someone else's process (xctest), so it needs
+        # frameworks lie within it.
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+          - "@loader_path/../Frameworks"
+
+schemes:
+  # One scheme for everything: `xcodebuild build` builds the application, `xcodebuild test`
+  # runs tests. A separate scheme for tests would diverge from the one that
+  # used by humans and CI.
+  OpenRamble:
+    build:
+      targets:
+        OpenRamble: all
+        OpenRambleTests: [test]
+    test:
+      config: Debug
+      targets:
+        - OpenRambleTests
+    run:
+      config: Debug

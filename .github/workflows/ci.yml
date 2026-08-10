@@ -1,0 +1,225 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# The repository is public, and the task has nothing to write here: it only collects
+# and checks. Default rights are wider than necessary.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Package tests
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Swift version
+        run: swift --version
+
+      # Warnings in this project - bugs: Swift 6 strict concurrency
+      # catches here exactly those races that appear in sound once every hundred times
+      # starts and does not play. Tests are collected by the same gate: three
+      # insulation violations were hidden precisely in them, and a test that reads from a different place
+      # where it writes, it goes through green and doesn’t check anything.
+      - name: DictationCore
+        run: |
+          swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors
+          swift test --package-path Packages/DictationCore
+
+      - name: LocalASR
+        run: |
+          swift build --package-path Packages/LocalASR --build-tests -Xswiftc -warnings-as-errors
+          swift test --package-path Packages/LocalASR
+
+  app:
+    name: Application build
+    runs-on: macos-26
+    # The application target lives in the menu bar and opens a window on first launch.
+    # Tests are collected without a host for this reason, but if one day the host
+    # will return, the run will hang until the end of the GitHub limit, and will not fall.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The project is assembled from project.yml and is not in the repository.
+      - name: Check pinned XcodeGen
+        run: ./scripts/pinned-xcodegen.sh >/dev/null
+
+      # Half of the defects of the first day lived precisely in the purpose of the application - in
+      # You can't see them in the packages, because it's not included in them. We run tests, not
+      # assembly only: eleven defects were found there precisely by tests, and not
+      # by the compiler.
+      - name: Collect and run tests
+        run: |
+          cd apps/macos
+          XCODEGEN=$(../../scripts/pinned-xcodegen.sh)
+          "$XCODEGEN" generate
+          xcodebuild -project OpenRamble.xcodeproj -scheme OpenRamble \
+            -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test
+
+  network-surface:
+    name: Network surface
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The main promise of the product is verified automatically, not by word of mouth.
+      - name: Check that the network is only where it is allowed
+        run: ./scripts/check-network-surface.sh
+
+  arm64-build:
+    name: Apple Silicon only
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # Safe beta only supports Apple Silicon.
+      - name: LocalASR arm64
+        run: swift build --package-path Packages/LocalASR --arch arm64
+
+  release-build:
+    name: Release build
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Check pinned XcodeGen
+        run: ./scripts/pinned-xcodegen.sh >/dev/null
+
+      - name: Check release policy, bootstrap and notary credentials
+        run: |
+          ./scripts/tests/test-release-policy.sh
+          ./scripts/tests/test-notary-credentials.sh
+          ./scripts/tests/test-bootstrap-release-secrets.sh
+          ./scripts/tests/test-release-keychain.sh
+
+      # Everything else in CI is collected by Debug for the current purpose. Release is underway
+      # another way: Release configuration, archive, `generic/platform=macOS`
+      # and arm64-only artifact. A breakdown that lives only on this road,
+      # used to be detected at the time of release - that is, when to repair
+      # she has no time. There is no signature here and is not needed: we are checking the assembly, not
+      # certificate.
+      - name: Build an image without a signature
+        run: ./scripts/build-dmg.sh
+
+      # Values on which the fate of already installed copies depends. Each
+      # of which various things break: identifier - issued universal access,
+      # SUFeedURL - delivery of updates, three keys Sparkle - promise "network
+      # only at your command", version discrepancy - the name of the image and what
+      # seen by a person in the update window.
+      - name: Check Info.plist invariants
+        run: |
+          PLIST="artifacts/build/OpenRamble.xcarchive/Products/Applications/OpenRambleDev.app/Contents/Info.plist"
+          p() { /usr/libexec/PlistBuddy -c "Print :$1" "$PLIST" 2>/dev/null; }
+          bad=0
+          expect() {
+            local actual; actual=$(p "$1")
+            if [[ "$actual" == "$2" ]]; then
+              printf '  %-28s %s\n' "$1" "$actual"
+            else
+              printf ' %-28s expected "%s", got "%s"\n' "$1" "$2" "$actual"
+              bad=1
+            fi
+          }
+          expect CFBundleIdentifier is.waiwai.dictation.dev
+          expect LSMinimumSystemVersion 14.0
+          expect LSUIElement true
+          expect SUEnableAutomaticChecks false
+          expect SUSendProfileInfo false
+          expect SUAllowsAutomaticUpdates false
+
+          feed=$(p SUFeedURL)
+          printf ' %-28s %s\n' SUFeedURL "${feed:-(empty)}"
+          [[ -n "$feed" ]] || bad=1
+
+          marketing=$(sed -n 's/^ *MARKETING_VERSION: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' apps/macos/project.yml | head -1)
+          short=$(p CFBundleShortVersionString)
+          printf ' %-28s project.yml=%s Info.plist=%s\n' version "$marketing" "$short"
+          [[ "$marketing" == "$short" ]] || bad=1
+
+          current=$(sed -n 's/^ *CURRENT_PROJECT_VERSION: *"\{0,1\}\([0-9]*\)"\{0,1\} *$/\1/p' apps/macos/project.yml | head -1)
+          build=$(p CFBundleVersion)
+          printf ' %-28s project.yml=%s Info.plist=%s\n' build "$current" "$build"
+          [[ "$current" == "$build" ]] || bad=1
+
+          exit $bad
+
+      - name: Check required model and dependency notices
+        run: |
+          RESOURCES="artifacts/build/OpenRamble.xcarchive/Products/Applications/OpenRambleDev.app/Contents/Resources"
+          for file in \
+            LICENSE NOTICE THIRD_PARTY_LICENSES.md \
+            model-manifest.json vocabulary-manifest.json \
+            FluidAudio-Apache-2.0.txt FluidAudio-fastcluster-BSD.txt \
+            FluidAudio-vbx-Apache-2.0.txt Sparkle-LICENSE.txt \
+            Parakeet-CC-BY-4.0.txt
+          do
+            test -s "$RESOURCES/$file" || { echo "No required resource: $file" >&2; exit 1; }
+          done
+
+      # An image that does not mount is a failure at exactly the step that
+      # is done by every user and not by any test.
+      - name: Check that the image opens
+        run: |
+          DMG=$(ls artifacts/dmg/OpenRambleDev-*.dmg)
+          hdiutil attach "$DMG" -nobrowse -readonly -mountpoint /tmp/waidmg
+          test -d "/tmp/waidmg/OpenRambleDev.app"
+          test -L "/tmp/waidmg/Applications"
+          hdiutil detach /tmp/waidmg
+
+  feed:
+    name: Update feed
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # docs/appcast.xml is the only file that the application downloads
+      #self. Broken XML here means that updates will not arrive to anyone and
+      # You learn about this not from CI, but from people.
+      - name: The feed is parsed as XML
+        run: xmllint --noout docs/appcast.xml
+
+      # scripts/update-appcast.py - the only code that writes this feed,
+      # and so far not a single line of it has been executed in CI. Checking three
+      # properties on which delivery is based: record appears, number
+      # builds cannot be downsized, re-releasing the same build does not produce more results
+      # take.
+      - name: update-appcast.py does what it promises
+        run: |
+          T=$(mktemp -d)
+          cp docs/appcast.xml "$T/feed.xml"
+          printf -- '- Check.\n' > "$T/notes.md"
+          common=(APPCAST="$T/feed.xml" NOTES_PATH="$T/notes.md" MIN_OS=14.0
+                  FEED_URL=https://example.invalid/appcast.xml
+                  DMG_URL=https://example.invalid/a.dmg
+                  LENGTH=1 SIGNATURE=signature APP_NAME="OpenRamble")
+
+          env "${common[@]}" VERSION=9.9.9 BUILD=999 python3 scripts/update-appcast.py
+          xmllint --noout "$T/feed.xml"
+          grep -q '<title>9.9.9</title>' "$T/feed.xml"
+
+          if env "${common[@]}" VERSION=9.9.8 BUILD=998 python3 scripts/update-appcast.py; then
+            echo "FAIL: tape accepted assembly with lower number" >&2
+            exit 1
+          fi
+
+          env "${common[@]}" VERSION=9.9.9 BUILD=999 python3 scripts/update-appcast.py
+          count=$(grep -c '<title>9.9.9</title>' "$T/feed.xml")
+          if [[ "$count" != "1" ]]; then
+            echo "FAIL: re-releasing build 999 left $count entries" >&2
+            exit 1
+          fi
+          echo "The tape behaves as agreed."
