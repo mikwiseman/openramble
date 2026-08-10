@@ -302,3 +302,80 @@ func XCTAssertThrowsErrorAsync<T>(
         XCTFail("expected \(expected), arrived \(error)", file: file, line: line)
     }
 }
+
+/// A deferred restore that fails must still reach the person.
+///
+/// The restore runs a second after the paste, detached, with nobody left to
+/// throw to. The only branch that reported it threw from the zero-delay path,
+/// which production never uses — so on the shipping path the loss was
+/// completely silent: the person's clipboard gone, our dictation in its place.
+final class DeferredRestoreFailureTests: XCTestCase {
+    private let target = TargetApplication(
+        bundleIdentifier: "com.apple.TextEdit",
+        processIdentifier: 4242,
+        localizedName: "TextEdit"
+    )
+
+    func testScenario021() async throws {
+        let log = CallLog()
+        let system = FakeInputSystem(log: log)
+        let pasteboard = FakePasteboard(log: log)
+        system.setFrontmost(target)
+        pasteboard.setRestoreError(.clipboardRestoreFailed)
+
+        let reported = ReportBox()
+        let reporter = ClipboardRestoreReporter()
+        reporter.onFailure { error in reported.record(error) }
+        let inserter = TextInserter(
+            system: system,
+            pasteboard: pasteboard,
+            restoreDelay: .milliseconds(20),
+            restoreReporter: reporter
+        )
+
+        _ = try await inserter.insertReportingMarks("\u{043F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}", into: target)
+        try await Task.sleep(for: .milliseconds(400))
+
+        XCTAssertEqual(
+            reported.value, .insertedButClipboardRestoreFailed,
+            "losing the person's clipboard has to be said out loud"
+        )
+    }
+
+    /// A restore that works stays quiet: a warning after every dictation would
+    /// be noise, and noise is how real warnings stop being read.
+    func testScenario022() async throws {
+        let log = CallLog()
+        let system = FakeInputSystem(log: log)
+        let pasteboard = FakePasteboard(log: log)
+        system.setFrontmost(target)
+
+        let reported = ReportBox()
+        let reporter = ClipboardRestoreReporter()
+        reporter.onFailure { error in reported.record(error) }
+        let inserter = TextInserter(
+            system: system,
+            pasteboard: pasteboard,
+            restoreDelay: .milliseconds(20),
+            restoreReporter: reporter
+        )
+
+        _ = try await inserter.insertReportingMarks("\u{043F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}", into: target)
+        try await Task.sleep(for: .milliseconds(400))
+
+        XCTAssertNil(reported.value)
+    }
+
+    private final class ReportBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var stored: TextInsertionError?
+        var value: TextInsertionError? {
+            lock.lock(); defer { lock.unlock() }
+            return stored
+        }
+        func record(_ error: TextInsertionError) {
+            lock.lock(); defer { lock.unlock() }
+            stored = error
+        }
+    }
+}

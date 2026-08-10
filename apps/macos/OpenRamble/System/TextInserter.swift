@@ -375,6 +375,30 @@ public struct SystemInput: InputSystem {
 ///
 /// Works via the clipboard and synthetic pressing ⌘V: this is the only one
 /// a way to insert text into an arbitrary application without knowing its device.
+/// Carries a failed deferred restore to whoever can show it.
+///
+/// `TextInserter` is a value type built before `AppState` exists, so a callback
+/// assigned afterwards would land on a copy and never fire. A reference handed
+/// in at construction closes that gap honestly.
+public final class ClipboardRestoreReporter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var handler: (@Sendable (TextInsertionError) -> Void)?
+
+    public init() {}
+
+    public func onFailure(_ handler: @escaping @Sendable (TextInsertionError) -> Void) {
+        lock.lock(); defer { lock.unlock() }
+        self.handler = handler
+    }
+
+    func report(_ error: TextInsertionError) {
+        lock.lock()
+        let handler = self.handler
+        lock.unlock()
+        handler?(error)
+    }
+}
+
 public struct TextInserter: TextInserting {
     /// Modifiers, the release of which we wait for before ⌘V.
     ///
@@ -393,15 +417,23 @@ public struct TextInserter: TextInserting {
     private let system: any InputSystem
     private let pasteboard: any DictationPasteboard
     private let restoreDelay: Duration
+    /// Where a failed deferred restore is reported.
+    ///
+    /// The restore is fire-and-forget a second after the paste, so there is
+    /// nobody left to throw to. Without this the person silently loses whatever
+    /// they had copied, and the dictated text stays on the board in its place.
+    private let restoreReporter: ClipboardRestoreReporter?
 
     public init(
         system: any InputSystem = SystemInput(),
         pasteboard: any DictationPasteboard = HostOnlyPasteboard(),
-        restoreDelay: Duration = .milliseconds(1000)
+        restoreDelay: Duration = .milliseconds(1000),
+        restoreReporter: ClipboardRestoreReporter? = nil
     ) {
         self.system = system
         self.pasteboard = pasteboard
         self.restoreDelay = restoreDelay
+        self.restoreReporter = restoreReporter
     }
 
     public func frontmostApplication() -> TargetApplication? {
@@ -476,9 +508,21 @@ public struct TextInserter: TextInserting {
 
         let pasteboard = self.pasteboard
         let restoreDelay = self.restoreDelay
+        let reporter = self.restoreReporter
         Task.detached(priority: .utility) {
             try? await Task.sleep(for: restoreDelay)
-            try? pasteboard.restore(transaction)
+            do {
+                try pasteboard.restore(transaction)
+            } catch {
+                // The insertion itself succeeded, so this cannot be thrown — the
+                // caller is long gone. Reporting it is the only honest option:
+                // what failed here is putting the person's own clipboard back,
+                // and on the shipping path (a one second delay) this branch is
+                // the ONLY one that can say so. The zero-delay branch above
+                // throws, but production never uses it, so before this callback
+                // existed the loss was completely silent.
+                reporter?.report(.insertedButClipboardRestoreFailed)
+            }
         }
         return InsertionMarks(pasteDispatchedAt: pasteDispatchedAt)
     }

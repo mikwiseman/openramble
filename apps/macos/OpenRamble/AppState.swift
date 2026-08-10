@@ -51,6 +51,8 @@ public struct AppEnvironment {
     /// at other people’s windows, so there is a seam: “turned off means we can’t read” otherwise
     /// there is nothing to prove, but you will have to prove it in the README.
     public var focusedFieldReader: any FocusedFieldReading
+    /// Where the inserter reports a clipboard it could not put back.
+    public var clipboardRestoreReporter: ClipboardRestoreReporter?
 
     public init(
         defaults: UserDefaults,
@@ -70,7 +72,8 @@ public struct AppEnvironment {
         workspaceNotifications: NotificationCenter,
         notifications: NotificationCenter,
         localTranscriber: LocalTranscriber? = nil,
-        focusedFieldReader: any FocusedFieldReading = SystemFocusedFieldReader()
+        focusedFieldReader: any FocusedFieldReading = SystemFocusedFieldReader(),
+        clipboardRestoreReporter: ClipboardRestoreReporter? = nil
     ) {
         self.defaults = defaults
         self.paths = paths
@@ -90,18 +93,20 @@ public struct AppEnvironment {
         self.notifications = notifications
         self.localTranscriber = localTranscriber
         self.focusedFieldReader = focusedFieldReader
+        self.clipboardRestoreReporter = clipboardRestoreReporter
     }
 
     /// Real edges are what a working application is built from.
     public static func system() -> AppEnvironment {
         let transcriber = LocalTranscriber()
+        let restoreReporter = ClipboardRestoreReporter()
         return AppEnvironment(
             defaults: .standard,
             paths: .standard(),
             permissions: SystemPermissions(),
             accessibilityManager: SystemAccessibilityManager(),
             hotkeyMonitor: GlobalHotkeyMonitor(),
-            inserter: TextInserter(),
+            inserter: TextInserter(restoreReporter: restoreReporter),
             overlay: DictationOverlay(),
             makeCapture: { MicrophoneCapture(directory: $0, onFailure: $1, onSamples: $2) },
             transcribe: { engineDirectory, languageHint in
@@ -257,6 +262,7 @@ public final class AppState: ObservableObject {
     private let accessibilityManager: any AccessibilityManaging
     private let hotkeyMonitor: any HotkeyMonitoring
     private let inserter: any TextInserting
+    private let clipboardRestoreReporter: ClipboardRestoreReporter?
     private let overlay: any OverlayPresenting
     private let makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void, @escaping @Sendable ([Float]) -> Void) -> any AudioCapturing
     private let transcribe: (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult
@@ -442,6 +448,7 @@ public final class AppState: ObservableObject {
         accessibilityManager = environment.accessibilityManager
         hotkeyMonitor = environment.hotkeyMonitor
         inserter = environment.inserter
+        clipboardRestoreReporter = environment.clipboardRestoreReporter
         overlay = environment.overlay
         makeCapture = environment.makeCapture
         transcribe = environment.transcribe
@@ -605,6 +612,21 @@ public final class AppState: ObservableObject {
                     insertedText: provenance.finalText,
                     provenance: provenance
                 )
+            }
+            // Putting the person's own clipboard back happens a second after the
+            // paste, detached, with nobody left to throw to. If it fails they
+            // silently lose whatever they had copied and our dictation stays on
+            // the board in its place — exactly the kind of quiet loss the
+            // project forbids. This is the only path that can say so.
+            clipboardRestoreReporter?.onFailure { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.notify(
+                        DictationNotice(
+                            kind: .warning,
+                            message: "The text was inserted, but the previous clipboard couldn't be restored."
+                        )
+                    )
+                }
             }
             self.controller = controller
         } catch {
