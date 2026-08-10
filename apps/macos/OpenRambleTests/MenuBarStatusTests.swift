@@ -263,3 +263,61 @@ final class MenuBarBadgeTests: XCTestCase {
         XCTAssertTrue(label.contains("needs attention"), "A picture without words does not exist for a blind person: \(label)")
     }
 }
+
+/// The brand mark in the menu bar, and when it steps aside.
+final class MenuBarBrandIconTests: XCTestCase {
+    /// At rest the menu bar says whose app this is.
+    func testScenario030() {
+        XCTAssertTrue(
+            MenuBarStatus.usesBrandIcon(state: .idle, isDictationReady: true)
+        )
+    }
+
+    /// A live microphone outranks the logo. Whether the app is recording has to
+    /// be readable at a glance, and a brand mark cannot say it.
+    func testScenario031() {
+        for state in [DictationState.listening, .transcribing, .inserting, .preparing] {
+            XCTAssertFalse(
+                MenuBarStatus.usesBrandIcon(state: state, isDictationReady: true),
+                "\(state) has something to report"
+            )
+        }
+    }
+
+    /// So does something being wrong, or work left unfinished.
+    func testScenario032() {
+        XCTAssertFalse(
+            MenuBarStatus.usesBrandIcon(state: .idle, isDictationReady: false),
+            "dictation is not available — the icon must show it"
+        )
+        XCTAssertFalse(
+            MenuBarStatus.usesBrandIcon(
+                state: .idle, isDictationReady: true, hasRecoveredWork: true
+            ),
+            "unfinished work must stay visible without opening the menu"
+        )
+    }
+
+    /// The asset name is what SwiftUI looks up; a typo shows an empty icon.
+    ///
+    /// Loaded from this bundle rather than through `NSImage(named:)`, because
+    /// these tests build without a host app — `Bundle.main` is then the xctest
+    /// tool, and the lookup would fail for a reason that has nothing to do with
+    /// whether the asset ships.
+    func testScenario033() {
+        XCTAssertEqual(MenuBarStatus.brandIconName, "BrandIconMenuBar")
+        XCTAssertNotNil(
+            Bundle(for: MenuBarBrandIconTests.self).image(forResource: MenuBarStatus.brandIconName),
+            "the asset must be in the bundle, or the menu bar goes blank"
+        )
+    }
+
+    /// A template asset takes the menu bar's own tint; a non-template one would
+    /// stay dark on a dark menu bar.
+    func testScenario034() throws {
+        let image = try XCTUnwrap(
+            Bundle(for: MenuBarBrandIconTests.self).image(forResource: MenuBarStatus.brandIconName)
+        )
+        XCTAssertTrue(image.isTemplate, "the icon must follow the menu bar's appearance")
+    }
+}

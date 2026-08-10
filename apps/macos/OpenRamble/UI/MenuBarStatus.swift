@@ -6,6 +6,22 @@ import DictationCore
 /// without a description for a blind person does not exist at all: VoiceOver will read
 /// name of the system symbol like “mic.slash” or remain silent.
 enum MenuBarStatus {
+    /// The brand mark, shown when nothing is happening.
+    ///
+    /// The menu bar is the only permanent presence this app has, so at rest it
+    /// should say whose it is. It gives that up the moment there is something
+    /// to report: a microphone that is listening, or work left unfinished, has
+    /// to be visible at a glance, and a logo cannot say either.
+    static let brandIconName = "BrandIconMenuBar"
+
+    static func usesBrandIcon(
+        state: DictationState,
+        isDictationReady: Bool,
+        hasRecoveredWork: Bool = false
+    ) -> Bool {
+        state == .idle && isDictationReady && !hasRecoveredWork
+    }
+
     static func iconName(
         state: DictationState,
         isDictationReady: Bool,

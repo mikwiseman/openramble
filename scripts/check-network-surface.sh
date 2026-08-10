@@ -87,8 +87,18 @@ done < <(grep -rnE "$FORBIDDEN_PASTEBOARD" "${SHIPPING_PATHS[@]}" 2>/dev/null \
 # commands, and the promise on the main page will become untrue.
 echo "Checking update settings..."
 PROJECT_YML="apps/macos/project.yml"
+# What the gate defends is what README promises, and that promise changed:
+# the app now looks for updates on its own, because a security fix that never
+# arrives helps nobody. The two guarantees that did NOT change are the ones
+# still pinned here — nothing about this Mac travels with the request, and
+# nothing installs without a click.
+#
+# `SUEnableAutomaticChecks` stays in the list, now required to be `true`. It is
+# pinned in BOTH directions on purpose: leaving the key absent lets Sparkle ask
+# the person its own question on the second launch, and an unannounced modal
+# about update policy is exactly what neither value is supposed to produce.
 declare -a REQUIRED_UPDATE_KEYS=(
-  "SUEnableAutomaticChecks: false"
+  "SUEnableAutomaticChecks: true"
   "SUSendProfileInfo: false"
   "SUAllowsAutomaticUpdates: false"
 )
@@ -118,6 +128,6 @@ done < <(grep -rnE 'log(ger)?\.(info|debug|error|warning|notice)\(.*(transcript|
 
 if [[ $status -eq 0 ]]; then
   echo ""
-  echo "Network surface is fine: model loading and updates (disabled by default), nothing else."
+  echo "Network surface is fine: model download and update checks, nothing else."
 fi
 exit $status

@@ -76,7 +76,14 @@ struct MenuContent: View {
 
         Divider()
 
-        Button("Settings…") { openSettings() }
+        Button("Settings…") {
+            openSettings()
+            // Without this the window opens behind whatever the person was
+            // working in: the app has no Dock icon (LSUIElement), so macOS does
+            // not bring it forward on its own, and they have to hide other apps
+            // to find the settings they just asked for.
+            NSApp.activate(ignoringOtherApps: true)
+        }
             .keyboardShortcut(",", modifiers: .command)
 
         Button("Quit OpenRamble") { NSApplication.shared.terminate(nil) }

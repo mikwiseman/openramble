@@ -76,7 +76,12 @@ run_packages() {
     echo "→ $package"
     local log
     log=$(mktemp)
-    if swift test --package-path "Packages/$package" > "$log" 2>&1; then
+    # -warnings-as-errors because that is what CI does. Without it this script
+    # said "everything is green" on code CI then rejected, which is worse than
+    # no check at all: it spends the trust it was built to earn.
+    if swift build --package-path "Packages/$package" --build-tests \
+         -Xswiftc -warnings-as-errors > "$log" 2>&1 \
+       && swift test --package-path "Packages/$package" >> "$log" 2>&1; then
       # We look for the line with the counter in the entire output, not in the tail: after it
       # swift-testing prints its lines, and tail does not catch it.
       grep -E "Executed [0-9]+ tests, with" "$log" | tail -1

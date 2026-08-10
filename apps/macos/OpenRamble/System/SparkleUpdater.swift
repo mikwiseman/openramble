@@ -10,18 +10,21 @@ import Sparkle
 /// Settings, without which the promise of “network only at your command” would be
 /// not true, they are in Info.plist (see `apps/macos/project.yml`):
 ///
-/// - `SUEnableAutomaticChecks = false` - the most important one. It's not "we didn't include
-/// auto-check”, and “we answered no for the user”. Without this key
-/// On the second launch, Sparkle itself shows the “check for updates?” window.
-/// and by default includes checks - that is, the application would go online
-/// by itself, without asking, in the first seconds of work.
+/// - `SUEnableAutomaticChecks = true` — the app looks for updates on its own.
+/// The key is set explicitly rather than left absent: without it Sparkle asks
+/// the person on the second launch, and a modal about update policy in the
+/// first minute of a dictation app is a question nobody came here to answer.
+/// This is the one place the app reaches the network without being asked,
+/// and it is a deliberate trade — a security fix that never arrives helps
+/// nobody. The switch is in Settings, and turning it off silences it fully.
 /// - `SUSendProfileInfo = false` — a hardware report is not sent along with the request,
 /// system version and language.
 /// - `SUAllowsAutomaticUpdates = false` - no background downloading or installation
 /// even as options: the update is installed only when clicked.
 ///
-/// You can enable scheduled scanning in the settings - and this is the only
-/// a switch that changes the application's network behavior.
+/// The two guarantees that do NOT depend on that switch: nothing about this
+/// Mac travels with the request, and nothing installs by itself. Scheduled
+/// checking is the only knob that changes the app's network behaviour.
 @MainActor
 public final class SparkleUpdater: ObservableObject {
     /// Is it possible to run the check right now. While another check is in progress or

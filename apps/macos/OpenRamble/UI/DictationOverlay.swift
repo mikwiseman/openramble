@@ -382,6 +382,19 @@ final class OverlayModel: ObservableObject {
 }
 
 private struct OverlayView: View {
+    /// How much of the running transcript stays on screen.
+    ///
+    /// Two lines showed the tail of a sentence and nothing else — the person
+    /// saw a fragment and could not tell whether the rest had been heard at
+    /// all. Six lines hold a couple of sentences at this width, which is what
+    /// someone actually wants to check mid-dictation.
+    ///
+    /// Bounded rather than unlimited on purpose: this panel floats over another
+    /// application's window, and a minute of speech would cover the screen the
+    /// person is dictating into. The newest words are kept (`truncationMode`
+    /// is `.head`) because that is the part still being decided.
+    static let previewLineLimit = 6
+
     @ObservedObject var model: OverlayModel
     /// “Reduce movement”: the pulse point is a decoration, and the person who
     /// turned off motion in universal access, no need to look at it.
@@ -404,7 +417,7 @@ private struct OverlayView: View {
                 if model.state == .listening, model.hasPreview {
                     previewText
                         .font(.system(size: 13, weight: .medium))
-                        .lineLimit(2)
+                        .lineLimit(OverlayView.previewLineLimit)
                         .truncationMode(.head)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
@@ -419,13 +432,14 @@ private struct OverlayView: View {
                     }
                 }
                 if model.hasPreview, model.state != .listening {
-                    // The tail of the hypothesis is more important than the beginning: we show the end, the maximum
-                    // two lines, no scrolling and no word-by-word animation.
+                    // The tail of the hypothesis matters more than its beginning,
+                    // so the end is what stays. No scrolling and no per-word
+                    // animation: the text is still changing under the cursor.
                     (Text(model.previewConfirmed)
                         + Text(model.previewConfirmed.isEmpty || model.previewVolatile.isEmpty ? "" : " ")
                         + Text(model.previewVolatile).foregroundStyle(.secondary))
                         .font(.system(size: 12))
-                        .lineLimit(2)
+                        .lineLimit(OverlayView.previewLineLimit)
                         .truncationMode(.head)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         // During recognition, the text remains, but is muted:

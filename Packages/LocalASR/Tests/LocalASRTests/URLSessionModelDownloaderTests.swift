@@ -165,7 +165,7 @@ private final class FailingURLProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var failEveryRequest = false
     nonisolated(unsafe) static var failWith: (any Error)?
     nonisolated(unsafe) static private(set) var requestCount = 0
-    nonisolated(unsafe) private static let lock = NSLock()
+    private static let lock = NSLock()
 
     static func reset() {
         lock.lock(); defer { lock.unlock() }

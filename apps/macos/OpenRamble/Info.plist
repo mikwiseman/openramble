@@ -31,7 +31,7 @@
 	<key>SUAllowsAutomaticUpdates</key>
 	<false/>
 	<key>SUEnableAutomaticChecks</key>
-	<false/>
+	<true/>
 	<key>SUFeedURL</key>
 	<string>https://mikwiseman.github.io/openramble/appcast.xml</string>
 	<key>SUPublicEDKey</key>

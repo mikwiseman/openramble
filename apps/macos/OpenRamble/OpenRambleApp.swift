@@ -17,14 +17,27 @@ struct OpenRambleApp: App {
                 showOnboarding: { onboardingCompleted = false }
             )
         } label: {
-            Image(
-                systemName: MenuBarStatus.iconName(
+            Group {
+                if MenuBarStatus.usesBrandIcon(
                     state: state.dictationState,
                     isDictationReady: state.isDictationReady,
                     hasRecoveredWork: state.recoveredText != nil
                         || state.recoveredRecording != nil
-                )
-            )
+                ) {
+                    // A 22pt template asset, so macOS tints it for light, dark
+                    // and the highlighted menu the same way it tints a symbol.
+                    Image(MenuBarStatus.brandIconName)
+                } else {
+                    Image(
+                        systemName: MenuBarStatus.iconName(
+                            state: state.dictationState,
+                            isDictationReady: state.isDictationReady,
+                            hasRecoveredWork: state.recoveredText != nil
+                                || state.recoveredRecording != nil
+                        )
+                    )
+                }
+            }
             // The icon is the only permanent presence of the application on
             // screen. Without a shortcut, VoiceOver reads the name of the system symbol.
             .accessibilityLabel(

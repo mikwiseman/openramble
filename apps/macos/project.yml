@@ -108,7 +108,7 @@ targets:
         # will enable checks by default. The product promises “a network only according to your
         # team" - an application that goes online at startup, this is a promise
         # violates. The user enables the checks himself in the settings.
-        SUEnableAutomaticChecks: false
+        SUEnableAutomaticChecks: true
         # Do not send system report (Mac model, OS version, language, CPU).
         # Along with the update request, only the IP and application version are sent.
         SUSendProfileInfo: false

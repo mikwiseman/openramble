@@ -26,8 +26,12 @@ The app only uses the network for actions initiated by the user:
 | Check for updates | GitHub Pages | IP address and app version |
 | Download an update | GitHub Releases | IP address and download request |
 
-Automatic update checks are disabled by default. Enable them in Settings →
-General → Updates.
+OpenRamble checks for updates automatically, so a fix reaches you without you
+having to go looking for it. Turn it off in Settings → General → Updates.
+
+Two things stay off regardless: no report about your Mac, its system version or
+language is sent with the check, and nothing installs on its own — an update
+downloads and installs only after you click.
 
 You can verify offline recognition with an already installed model:
 
