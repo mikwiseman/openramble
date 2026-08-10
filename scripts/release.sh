@@ -173,11 +173,17 @@ SHORT_VERSION=$(yml_value CFBundleShortVersionString)
 
 # Two lines about the same version must match: Sparkle shows the person
 # CFBundleShortVersionString, and the image name is taken from it.
-if [[ "$MARKETING_VERSION" != "$SHORT_VERSION" ]]; then
+#
+# A reference to the variable is the better of the two spellings and is accepted
+# as-is: it cannot diverge, which is the whole point of this check. A literal
+# copy can, and did — the two sat at 0.3.4 and 0.3.3 until CI compared them.
+if [[ "$SHORT_VERSION" != "\$(MARKETING_VERSION)" \
+   && "$MARKETING_VERSION" != "$SHORT_VERSION" ]]; then
   fail "Versions in $PROJECT_YML have diverged:
   MARKETING_VERSION           = $MARKETING_VERSION
   CFBundleShortVersionString  = $SHORT_VERSION
-Both strings must be the same."
+Both strings must be the same, or CFBundleShortVersionString must reference
+\$(MARKETING_VERSION)."
 fi
 
 NOTES_PATH="$NOTES_DIR/$MARKETING_VERSION.md"
