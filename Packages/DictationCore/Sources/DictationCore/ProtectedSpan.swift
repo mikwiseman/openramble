@@ -71,6 +71,18 @@ enum ProtectedSpanDetector {
             }
 
             let end = tokenEnd(characters, from: index)
+
+            // A backtick that opened not the token, but its middle: `"`a  b`"`
+            // begins with a quotation mark. Jumping to the end of the token
+            // carried the scan over the pair entirely - the polisher then collapsed
+            // the spaces inside, and phonetic selection worked in a bracketed
+            // piece of code. We rewind to the backtick itself; it is always ahead
+            // of `index`, so the cycle continues to move forward.
+            if let backtick = characters[index..<end].firstIndex(of: "`"), backtick > index {
+                index = backtick
+                continue
+            }
+
             let token = Array(characters[index..<end])
 
             if let span = spanForToken(token, startingAt: index) {
@@ -127,29 +139,49 @@ enum ProtectedSpanDetector {
 
     /// Parsing one token. The order of checks is from the most specific to the most general.
     private static func spanForToken(_ token: [Character], startingAt start: Int) -> ProtectedSpan? {
-        // Tail punctuation belongs to the phrase, not the token: "open /etc/hosts."
-        var body = token
-        while let last = body.last, isTrailingPunctuation(last) { body.removeLast() }
+        // Punctuation on both sides belongs to the phrase, not to the token:
+        // "open /etc/hosts.", «TextPipeline.Output», [AppState.shared].
+        var body = token[...]
+        while let first = body.first, isLeadingPunctuation(first) { body = body.dropFirst() }
+        while let last = body.last, isTrailingPunctuation(last) { body = body.dropLast() }
         guard !body.isEmpty else { return nil }
 
+        let core = Array(body)
         let kind: ProtectedSpan.Kind?
-        if isFlag(body) {
+        if isFlag(core) {
             kind = .flag
-        } else if isPath(body) {
+        } else if isPath(core) {
             kind = .path
-        } else if isIdentifier(body) {
+        } else if isIdentifier(core) {
             kind = .identifier
         } else {
             kind = nil
         }
 
         guard let kind else { return nil }
-        let range = start..<(start + body.count)
+        // The slice keeps the indices of the token, so its beginning is exactly
+        // how much was cut off on the left.
+        let lower = start + body.startIndex
+        let range = lower..<(lower + body.count)
         return ProtectedSpan(kind: kind, range: range, text: String(body))
     }
 
+    /// An opening bracket or quotation mark.
+    ///
+    /// « » is the standard Russian quotation mark, the model emits it constantly.
+    /// Until the beginning was cut off, one such character made the whole token
+    /// invisible to the detector - and every stage after the dictionary rewrote
+    /// the name inside it.
+    ///
+    /// Cutting does not make speech a span: every rule below requires either the
+    /// Latin alphabet or a slash at the beginning of the path, and a Cyrillic word
+    /// in quotation marks or brackets remains just a word.
+    private static func isLeadingPunctuation(_ character: Character) -> Bool {
+        "«\"'([{“‘".contains(character)
+    }
+
     private static func isTrailingPunctuation(_ character: Character) -> Bool {
-        ",.!?;:…»\")".contains(character)
+        ",.!?;:…»\"')]}”’".contains(character)
     }
 
     // MARK: - Rules

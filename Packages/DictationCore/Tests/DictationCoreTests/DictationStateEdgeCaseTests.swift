@@ -71,6 +71,24 @@ final class DictationStateEdgeCaseTests: XCTestCase {
         XCTAssertFalse(DictationDurationPolicy.isWorthTranscribing(duration: -1))
     }
 
+    func testEmptyRecordingAfterALongHoldIsAMicrophoneFault() {
+        // The same empty record, two completely different stories. A person
+        // touched a key - he changed his mind, and there is nothing to tell him.
+        // A person held the key for twelve seconds and spoke - and the recording
+        // is empty: the microphone is muted, dead or taken by another
+        // application. Being silent here means losing an entire paragraph without
+        // a single word of explanation.
+        XCTAssertEqual(DictationDurationPolicy.outcomeForShortRecording(held: 12), .reportSilentInput)
+        XCTAssertEqual(
+            DictationDurationPolicy.outcomeForShortRecording(
+                held: DictationDurationPolicy.minimumHoldForSilentInput
+            ),
+            .reportSilentInput
+        )
+        XCTAssertEqual(DictationDurationPolicy.outcomeForShortRecording(held: 0.2), .dropSilently)
+        XCTAssertEqual(DictationDurationPolicy.outcomeForShortRecording(held: 0), .dropSilently)
+    }
+
     // MARK: - Duration limit
 
     func testFreshRecordingKeepsGoing() {

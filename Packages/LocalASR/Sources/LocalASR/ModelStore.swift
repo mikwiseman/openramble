@@ -346,7 +346,11 @@ public actor ModelStore {
             atPath: destination.appending(path: ".ready.json").path
         )
         if destinationHasMarker {
-            try fileManager.removeItem(at: backup)
+            // The new model is in place and marked ready, so the backup is
+            // leftover housekeeping. Failing to delete it is not a broken
+            // install, and treating it as one used to offer the person exactly
+            // one remedy — redownload 483 MB — which lands in the same state.
+            try? fileManager.removeItem(at: backup)
         } else {
             if fileManager.fileExists(atPath: destination.path) {
                 try fileManager.removeItem(at: destination)
@@ -564,17 +568,13 @@ public actor ModelStore {
             )
 
             let alreadyDone = completed
-            let temporary = try await downloadFromAnySource(
+            try await downloadFromAnySource(
                 sources,
                 file: file,
+                destination: destination,
                 alreadyDone: alreadyDone,
                 total: total
             )
-
-            if fileManager.fileExists(atPath: destination.path) {
-                try fileManager.removeItem(at: destination)
-            }
-            try fileManager.moveItem(at: temporary, to: destination)
             completed += file.byteCount
             setState(.downloading(receivedBytes: completed, totalBytes: total))
         }
@@ -589,9 +589,10 @@ public actor ModelStore {
     private func downloadFromAnySource(
         _ sources: [URL],
         file: ModelManifest.File,
+        destination: URL,
         alreadyDone: Int64,
         total: Int64
-    ) async throws -> URL {
+    ) async throws {
         var failures: [String] = []
         // Corruption is a different verdict from "could not download". If every
         // source hands us bad bytes, the honest word for that is a failed
@@ -619,12 +620,37 @@ public actor ModelStore {
                     // back to the same bad source. The manifest promises the
                     // mirror means a single source is not a single point of
                     // failure; for corrupt content it provided none.
+                    // Check and place without letting go of the file in between.
+                    //
+                    // These used to be in different scopes, and the gap cost a
+                    // whole install once on this machine: a verified temporary
+                    // vanished before the caller could move it, and a four
+                    // minute download died as `install(...couldn't be moved...)`
+                    // with no way back. It did not reproduce, so the mechanism
+                    // is unproven — but the window it needed is closed here, and
+                    // a failure now falls to the mirror instead of ending
+                    // everything.
                     do {
                         try verifier.verify(file: file, at: temporary)
-                        return temporary
                     } catch {
                         try? fileManager.removeItem(at: temporary)
                         throw ModelDownloadError.corruptContent(String(describing: error))
+                    }
+                    do {
+                        if fileManager.fileExists(atPath: destination.path) {
+                            try fileManager.removeItem(at: destination)
+                        }
+                        try fileManager.moveItem(at: temporary, to: destination)
+                        return
+                    } catch {
+                        try? fileManager.removeItem(at: temporary)
+                        // Placing it is a local operation, so a failure here is
+                        // this Mac's, not the source's — but unlike a full disk
+                        // it is worth one more try, because what we saw was a
+                        // file going missing rather than a volume filling up.
+                        throw ModelDownloadError.network(
+                            "couldn't store \(file.path): \(error.localizedDescription)"
+                        )
                     }
                 } catch ModelDownloadError.cancelled {
                     throw CancellationError()
@@ -713,13 +739,49 @@ public actor ModelStore {
             let metadata = try installedMetadataWithoutMarker()
             try writeReadyMarker(installedFiles: metadata)
             try injectPromotionFailure(at: .afterReadyMarker)
+        } catch {
+            // Errors here are Swift enums as often as they are FileManager
+            // errors, and `localizedDescription` flattens an enum into
+            // "The operation couldn't be completed. (LocalASR.ModelStoreError
+            // error 3.)" — which tells nobody anything. FileManager errors
+            // stringify fine, which is exactly why this hid.
+            throw ModelStoreError.install(describe(error))
+        }
+
+        // Past this line the model IS installed: the files are in place and the
+        // ready marker is written. Removing the old copy is housekeeping, and
+        // failing at housekeeping must not be reported as a failed install.
+        //
+        // It used to be inside the `do`, so a backup that would not delete —
+        // a stray lock, a permissions oddity — turned a finished install into
+        // `.failed`, skipped the engine warm-up, and on the next refresh became
+        // `.repairRequired`, whose only offered remedy is downloading 483 MB
+        // again into the very same situation.
+        do {
+            try injectPromotionFailure(at: .afterBackupRemoval)
             if fileManager.fileExists(atPath: backup.path) {
                 try fileManager.removeItem(at: backup)
             }
-            try injectPromotionFailure(at: .afterBackupRemoval)
         } catch {
-            throw ModelStoreError.install(error.localizedDescription)
+            // Left behind, not hidden: the next install reclaims it, and
+            // `recoverInterruptedPromotion` knows how to read this state.
         }
+    }
+
+    /// A description that survives a Swift enum.
+    ///
+    /// `localizedDescription` turns `ModelStoreError.verification("…")` into a
+    /// number. `String(describing:)` keeps the case and its payload, which is
+    /// the part a person or a bug report needs.
+    private func describe(_ error: any Error) -> String {
+        if error is LocalizedError || error is CocoaError || error is POSIXError {
+            return error.localizedDescription
+        }
+        let nsError = error as NSError
+        if nsError.domain == NSCocoaErrorDomain || nsError.domain == NSPOSIXErrorDomain {
+            return nsError.localizedDescription
+        }
+        return String(describing: error)
     }
 
     private func injectPromotionFailure(at checkpoint: ModelPromotionCheckpoint) throws {

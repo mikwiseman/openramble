@@ -24,6 +24,26 @@ public enum CorrectionLearning {
     /// 200 replacements at once.
     static let maximumProposalsPerCorrection = 5
 
+    /// Above how many words an edit is not considered at all.
+    ///
+    /// The diff is an LCS table of `original × edited` cells, and it is built on
+    /// the MainActor right after the insertion - while the person is still typing.
+    /// Measurement before the ceiling: 2000 words - 0.92 s and 31 MB, 4000 - 3.36 s
+    /// and 125 MB, 6000 - 7.50 s and 282 MB. The application beach-balled in the
+    /// middle of the work.
+    ///
+    /// `maximumProposalsPerCorrection` did not limit anything here: it is applied
+    /// to the finished diff, that is, after the entire table has been paid for.
+    /// And by the same doctrine, an edit of hundreds of words is not an edit of
+    /// terms - it would be thrown away at the end anyway. So we say “there is
+    /// nothing to learn” before the work, not after it.
+    ///
+    /// Four hundred is a dictation of a couple of paragraphs, more than any real
+    /// term correction, and it costs about 40 ms and 1.3 MB - a bearable price
+    /// for the MainActor. The table remains two-dimensional: the traceback reads
+    /// it entirely, and two rows are not enough for that.
+    static let maximumWordsPerCorrection = 400
+
     /// Suggest replacements for edits. It doesn't save anything - it only offers.
     ///
     /// `protecting` - protected spans of the source text. Of these, proposals are not
@@ -39,6 +59,10 @@ public enum CorrectionLearning {
         let originalWords = words(from: original)
         let editedWords = words(from: edited)
         guard !originalWords.isEmpty, !editedWords.isEmpty else { return [] }
+        // The ceiling is checked before the diff, and not after it: the whole
+        // point is not to build a table that will be thrown away anyway.
+        guard originalWords.count <= maximumWordsPerCorrection,
+              editedWords.count <= maximumWordsPerCorrection else { return [] }
 
         let known = Set(existing.map { $0.spoken.lowercased() })
         let protectedWords = Set(

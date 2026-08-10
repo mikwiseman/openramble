@@ -312,9 +312,27 @@ public final class DictationController {
         // Pressed and immediately released - nothing to recognize. The engine on such
         // records refuse to work, but show an error because of this
         // incorrect: the person simply changed his mind.
+        //
+        // The recorded audio alone does not tell these two stories apart. The key,
+        // held for a dozen seconds against a muted, dead or occupied microphone,
+        // gives exactly the same empty recording - and being silent about it means
+        // eating up an entire dictated paragraph without a single word of
+        // explanation. Therefore, the hold is asked here, and this is the only
+        // place where the session needs it.
         guard DictationDurationPolicy.isWorthTranscribing(duration: recording.duration) else {
+            let outcome = DictationDurationPolicy.outcomeForShortRecording(held: elapsedSeconds())
             await discard(recording.url)
-            await finishWithoutInsertion(session: session)
+            switch outcome {
+            case .dropSilently:
+                await finishWithoutInsertion(session: session)
+            case .reportSilentInput:
+                let notice = DictationNotice(
+                    kind: .failure,
+                    message: "The microphone recorded nothing — check that the right input device is selected and not muted."
+                )
+                await report(notice)
+                await cleanup(session: session)
+            }
             return
         }
 

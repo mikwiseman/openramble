@@ -18,6 +18,26 @@ final class PolisherSpanTests: XCTestCase {
         XCTAssertEqual(TranscriptPolisher.polish("\u{043F}\u{0440}\u{0430}\u{0432}\u{044C} Foo.Bar"), "\u{041F}\u{0440}\u{0430}\u{0432}\u{044C} Foo.Bar")
     }
 
+    /// The same defect, only the name is in quotation marks or brackets.
+    ///
+    /// « » is the standard Russian quotation mark, and the model puts it around
+    /// names all the time. One such character used to disable the protection of
+    /// the entire token, and the polisher split the name in two.
+    func testDoesNotSplitAQuotedOrBracketedIdentifier() {
+        XCTAssertEqual(
+            TranscriptPolisher.polish("\u{043E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} «TextPipeline.Output»"),
+            "\u{041E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} «TextPipeline.Output»"
+        )
+        XCTAssertEqual(
+            TranscriptPolisher.polish("\u{0437}\u{043E}\u{0432}\u{0438} (AppState.shared)"),
+            "\u{0417}\u{043E}\u{0432}\u{0438} (AppState.shared)"
+        )
+        XCTAssertEqual(
+            TranscriptPolisher.polish("\u{043F}\u{0440}\u{0430}\u{0432}\u{044C} [AppState.shared]"),
+            "\u{041F}\u{0440}\u{0430}\u{0432}\u{044C} [AppState.shared]"
+        )
+    }
+
     /// The actual supply boundary is still being broken up.
     ///
     /// The rule about identifiers is only about ASCII, so the Russian text is
@@ -81,6 +101,15 @@ final class PolisherSpanTests: XCTestCase {
         XCTAssertEqual(
             TranscriptPolisher.polish("\u{0434}\u{043E}   `a  b`   \u{043F}\u{043E}\u{0441}\u{043B}\u{0435}"),
             "\u{0414}\u{043E} `a  b` \u{043F}\u{043E}\u{0441}\u{043B}\u{0435}"
+        )
+    }
+
+    /// The same boundary, but the backticks are inside quotes: the quotation mark
+    /// is not a reason to lose the pair and collapse the spaces the code needs.
+    func testWhitespaceCollapseStopsAtTheSpanBoundaryBehindAQuote() {
+        XCTAssertEqual(
+            TranscriptPolisher.polish("\u{043D}\u{0430}\u{043F}\u{0438}\u{0448}\u{0438} \"`a  b`\" \u{0432}\u{043E}\u{0442} \u{0442}\u{0430}\u{043A}"),
+            "\u{041D}\u{0430}\u{043F}\u{0438}\u{0448}\u{0438} \"`a  b`\" \u{0432}\u{043E}\u{0442} \u{0442}\u{0430}\u{043A}"
         )
     }
 }

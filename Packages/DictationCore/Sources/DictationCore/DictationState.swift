@@ -121,6 +121,33 @@ public enum DictationDurationPolicy {
         duration >= minimum
     }
 
+    /// What to do with a recording that is too short to recognize.
+    public enum ShortRecordingOutcome: Sendable, Equatable {
+        /// Keep silent: the key was touched, the person changed his mind.
+        case dropSilently
+        /// Tell: the key was held down, and the microphone did not record anything.
+        case reportSilentInput
+    }
+
+    /// How long a hold must last before an empty recording stops being a change
+    /// of mind and becomes a broken microphone.
+    ///
+    /// The recording starts counting after the engine has risen, so only the wait
+    /// for the first frame - tens of milliseconds - falls into the gap between the
+    /// hold and the recorded audio. One and a half seconds is four times the
+    /// `minimum`: no latency can eat that much, only an input that gives nothing -
+    /// muted, dead or taken by another application.
+    public static let minimumHoldForSilentInput: TimeInterval = 1.5
+
+    /// The recording did not reach the `minimum`. Was that the person or the device?
+    ///
+    /// Only the hold decides. Duration is not asked about here: a recording that
+    /// did not reach the minimum after a long hold is a faulty input, whether
+    /// there are zero frames in it or a third of a second.
+    public static func outcomeForShortRecording(held: TimeInterval) -> ShortRecordingOutcome {
+        held >= minimumHoldForSilentInput ? .reportSilentInput : .dropSilently
+    }
+
     /// An hour is the limit of one session.
     ///
     /// Engineering limitation: WAV is written stream to disk, but recognition

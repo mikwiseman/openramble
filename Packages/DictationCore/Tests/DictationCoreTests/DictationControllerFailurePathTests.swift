@@ -220,6 +220,34 @@ final class DictationControllerFailurePathTests: XCTestCase {
         XCTAssertEqual(controller.state, .idle)
     }
 
+    func testLongHoldWithAnEmptyRecordingBlamesTheMicrophone() async throws {
+        // The key was held for twelve seconds of wall clock, and the capture
+        // returned zero: the input is muted, the USB microphone is dead, or
+        // another application is holding the device. The guard above is about “I
+        // changed my mind”, but it only looked at the recorded audio - so a person
+        // who dictated a whole paragraph got nothing at all: no text, no message,
+        // no sound.
+        await capture.setDuration(0)
+        let clock = TestClock()
+        let controller = makeController(clock: clock)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        clock.advance(by: 12)
+        controller.stop()
+        await settle()
+
+        let calls = await transcribeCalls.count
+        let inserted = await inserter.insertedTexts
+        let notices = await overlay.notices
+        XCTAssertEqual(calls, 0, "\u{0420}\u{0430}\u{0441}\u{043F}\u{043E}\u{0437}\u{043D}\u{0430}\u{0432}\u{0430}\u{0442}\u{044C} \u{043D}\u{0435}\u{0447}\u{0435}\u{0433}\u{043E}")
+        XCTAssertTrue(inserted.isEmpty)
+        XCTAssertEqual(notices.count, 1, "\u{041C}\u{043E}\u{043B}\u{0447}\u{0430}\u{0442}\u{044C} \u{0437}\u{0434}\u{0435}\u{0441}\u{044C} \u{043D}\u{0435}\u{043B}\u{044C}\u{0437}\u{044F}: \(notices.map(\.message))")
+        XCTAssertEqual(notices.first?.kind, .failure, "\u{042D}\u{0442}\u{043E} \u{043D}\u{0435} «\u{043F}\u{0435}\u{0440}\u{0435}\u{0434}\u{0443}\u{043C}\u{0430}\u{043B}», \u{0430} \u{043D}\u{0435}\u{0438}\u{0441}\u{043F}\u{0440}\u{0430}\u{0432}\u{043D}\u{044B}\u{0439} \u{0432}\u{0445}\u{043E}\u{0434}")
+        XCTAssertNil(notices.first?.recoveryAudio, "\u{0421}\u{043F}\u{0430}\u{0441}\u{0430}\u{0442}\u{044C} \u{043F}\u{0443}\u{0441}\u{0442}\u{0443}\u{044E} \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{043D}\u{0435}\u{0437}\u{0430}\u{0447}\u{0435}\u{043C}")
+        XCTAssertEqual(controller.state, .idle)
+    }
+
     // MARK: - Empty result
 
     func testEmptyRecognitionTellsThePersonInsteadOfVanishing() async throws {

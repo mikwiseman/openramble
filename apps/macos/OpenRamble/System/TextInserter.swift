@@ -52,8 +52,10 @@ private final class PasteboardTransactionStorage: @unchecked Sendable {
 
     func insert(_ snapshot: Snapshot, for id: UUID) {
         lock.lock()
-        // Insertions come strictly one at a time: the old tombstone is no longer available
-        // present, and the dictionary does not grow indefinitely.
+        // The old tombstone is no longer needed: a record that lands on our own dictation
+        // takes it over through `inherit`, and everyone else lands on someone else's
+        // contents, where the past ownership counter means nothing. The dictionary
+        // does not grow indefinitely.
         expiredOwnership.removeAll()
         snapshots[id] = snapshot
         lock.unlock()
@@ -65,6 +67,39 @@ private final class PasteboardTransactionStorage: @unchecked Sendable {
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + lifetime) { [weak self] in
             self?.expire(id)
         }
+    }
+
+    /// Remember only ownership: there is nothing to restore anymore.
+    ///
+    /// The fact itself cannot be lost. Losing it means that restore would consider
+    /// the clipboard someone else's and would silently leave the dictation in it.
+    func insertExpired(ownedChangeCount: Int, for id: UUID) {
+        lock.lock()
+        expiredOwnership.removeAll()
+        expiredOwnership[id] = ownedChangeCount
+        lock.unlock()
+    }
+
+    /// Give the pending contents of the person to the record that is about to replace
+    /// our own dictation on the board.
+    ///
+    /// Two dictations within one restore window are commonplace: a short answer in the
+    /// chat, and a second one a second later. For a record that lands on our own text,
+    /// the person's clipboard is what the previous transaction holds - and only it. The
+    /// transaction is taken away along with it: its own restore would be applied to a
+    /// board that is no longer his.
+    func inherit(ownedChangeCount: Int) -> Claim {
+        lock.lock()
+        defer { lock.unlock() }
+        if let id = snapshots.first(where: { $0.value.ownedChangeCount == ownedChangeCount })?.key,
+           let snapshot = snapshots.removeValue(forKey: id) {
+            return .snapshot(snapshot)
+        }
+        if let id = expiredOwnership.first(where: { $0.value == ownedChangeCount })?.key {
+            expiredOwnership.removeValue(forKey: id)
+            return .expired(ownedChangeCount: ownedChangeCount)
+        }
+        return .missing
     }
 
     func take(_ id: UUID) -> Claim {
@@ -130,7 +165,30 @@ public struct HostOnlyPasteboard: DictationPasteboard {
 
     public func beginHostOnlyWrite(_ text: String) throws -> PasteboardTransaction {
         let pasteboard = NSPasteboard(name: NSPasteboard.Name(name))
-        let snapshot = materializeSnapshot(from: pasteboard)
+        // Restoration is deferred by a second after ⌘V, and the second dictation within
+        // this second is normal life, not an edge case. If our own dictation is still on
+        // the board, the person's contents are held by the previous transaction: a fresh
+        // snapshot here would capture the dictated text instead of it - and the person's
+        // clipboard would be lost forever, and the previous dictation would return to
+        // the board instead.
+        let inherited = transactions.inherit(ownedChangeCount: pasteboard.changeCount)
+        let snapshot: [[NSPasteboard.PasteboardType: Data]]
+        let inheritsLostContents: Bool
+        switch inherited {
+        case let .snapshot(previous):
+            snapshot = previous.items
+            inheritsLostContents = false
+        case .expired:
+            // The privacy budget has already erased the person's contents; only the fact
+            // that the board is still ours has survived. This fact is passed on: restore
+            // has to say it out loud, and not leave the dictation in the buffer silently.
+            snapshot = []
+            inheritsLostContents = true
+        case .missing:
+            snapshot = materializeSnapshot(from: pasteboard)
+            inheritsLostContents = false
+        }
+
         pasteboard.prepareForNewContents(with: .currentHostOnly)
         let ownedChangeCount = pasteboard.changeCount
         guard writeObjects(pasteboard, [dictatedItem(text)]) else {
@@ -143,10 +201,17 @@ public struct HostOnlyPasteboard: DictationPasteboard {
         }
 
         let transaction = PasteboardTransaction()
-        transactions.insert(
-            .init(items: snapshot, ownedChangeCount: pasteboard.changeCount),
-            for: transaction.id
-        )
+        if inheritsLostContents {
+            transactions.insertExpired(
+                ownedChangeCount: pasteboard.changeCount,
+                for: transaction.id
+            )
+        } else {
+            transactions.insert(
+                .init(items: snapshot, ownedChangeCount: pasteboard.changeCount),
+                for: transaction.id
+            )
+        }
         return transaction
     }
 

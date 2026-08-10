@@ -196,4 +196,49 @@ final class CorrectionLearningTests: XCTestCase {
 
         XCTAssertTrue(proposals.isEmpty)
     }
+
+    func testScenario017() {
+        // An edit of thousands of words is not a term correction, and the diff
+        // behind it is quadratic in both time and memory - and it runs on the
+        // MainActor right after the insertion, while the person is still typing.
+        // Measurement before the ceiling: 2000 words - 0.92 s and 31 MB, 4000 -
+        // 3.36 s and 125 MB, 6000 - 7.50 s and 282 MB. The limit on the number of
+        // proposals saved nothing: it is applied to the finished diff.
+        var original = ""
+        var edited = ""
+        for index in 0..<6000 {
+            original += "\u{0441}\u{043B}\u{043E}\u{0432}\u{043E}\(index) "
+            edited += index == 0 ? "GitHub " : "\u{0441}\u{043B}\u{043E}\u{0432}\u{043E}\(index) "
+        }
+
+        let started = Date()
+        let proposals = CorrectionLearning.propose(original: original, edited: edited)
+        let spent = Date().timeIntervalSince(started)
+
+        XCTAssertTrue(proposals.isEmpty, "\u{0418}\u{0437} \u{043F}\u{0435}\u{0440}\u{0435}\u{043F}\u{0438}\u{0441}\u{0430}\u{043D}\u{043D}\u{043E}\u{0433}\u{043E} \u{0442}\u{0435}\u{043A}\u{0441}\u{0442}\u{0430} \u{0443}\u{0447}\u{0438}\u{0442}\u{044C}\u{0441}\u{044F} \u{043D}\u{0435}\u{0447}\u{0435}\u{043C}\u{0443}")
+        // The bound is deliberately loose: this is not a benchmark, but a check
+        // that the work is refused before it starts, and not after it.
+        XCTAssertLessThan(spent, 2.0, "\u{0420}\u{0430}\u{0437}\u{0431}\u{043E}\u{0440} \u{043F}\u{0440}\u{0430}\u{0432}\u{043A}\u{0438} \u{0438}\u{0434}\u{0451}\u{0442} \u{043D}\u{0430} MainActor \u{0438} \u{043D}\u{0435} \u{0438}\u{043C}\u{0435}\u{0435}\u{0442} \u{043F}\u{0440}\u{0430}\u{0432}\u{0430} \u{043F}\u{043E}\u{0434}\u{0432}\u{0435}\u{0448}\u{0438}\u{0432}\u{0430}\u{0442}\u{044C} \u{0438}\u{043D}\u{0442}\u{0435}\u{0440}\u{0444}\u{0435}\u{0439}\u{0441}")
+    }
+
+    func testScenario018() {
+        // The ceiling must not cut off a real edit: a long dictation with one
+        // corrected term is still a lesson for the dictionary. One word further -
+        // and there is nothing left to learn.
+        func correction(words: Int) -> [DictionaryReplacement] {
+            var original = ""
+            var edited = ""
+            for index in 0..<words {
+                original += "\u{0441}\u{043B}\u{043E}\u{0432}\u{043E}\(index) "
+                edited += index == 0 ? "GitHub " : "\u{0441}\u{043B}\u{043E}\u{0432}\u{043E}\(index) "
+            }
+            return CorrectionLearning.propose(original: original, edited: edited)
+        }
+
+        XCTAssertEqual(
+            correction(words: CorrectionLearning.maximumWordsPerCorrection).map(\.written),
+            ["GitHub"]
+        )
+        XCTAssertTrue(correction(words: CorrectionLearning.maximumWordsPerCorrection + 1).isEmpty)
+    }
 }

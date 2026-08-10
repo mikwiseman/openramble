@@ -282,10 +282,31 @@ actor FakeInserter: TextInserting {
     /// How to refuse. Insertion failure is not uncommon: protected input revoked
     /// access, closed recipient window.
     private var error: TextInsertionError?
+    /// Keep the insertion open until the test lets it finish.
+    ///
+    /// In life, `.inserting` lasts as long as ⌘V takes in someone else's application -
+    /// long enough for a person to press Escape. Without a hold, the state passes
+    /// between two lines of the test, and what the application says at this moment
+    /// cannot be checked at all.
+    private var isHolding = false
+    private var held: CheckedContinuation<Void, Never>?
 
     func setError(_ error: TextInsertionError?) { self.error = error }
 
+    func holdInsertions() { isHolding = true }
+
+    func releaseInsertions() {
+        isHolding = false
+        held?.resume()
+        held = nil
+    }
+
     func insert(_ text: String, into target: TargetApplication?) async throws {
+        if isHolding {
+            await withCheckedContinuation { continuation in
+                held = continuation
+            }
+        }
         if let error { throw error }
         insertedTexts.append(text)
     }

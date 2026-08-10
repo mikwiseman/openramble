@@ -35,6 +35,17 @@ final class ProtectedSpanDetectorTests: XCTestCase {
         XCTAssertEqual(spans.first?.kind, .backticks)
     }
 
+    /// A backtick behind a quotation mark or a bracket is still a backtick.
+    ///
+    /// The scan jumped straight to the end of the token, so a pair that did not
+    /// open the token was never looked at at all: the polisher collapsed the
+    /// spaces inside `"`a  b`"`, and phonetic matching fired inside the backticks.
+    func testBacktickSpanIsFoundBehindAQuoteOrBracket() {
+        XCTAssertEqual(texts("\u{043D}\u{0430}\u{043F}\u{0438}\u{0448}\u{0438} \"`a  b`\" \u{0432}\u{043E}\u{0442} \u{0442}\u{0430}\u{043A}"), ["`a  b`"])
+        XCTAssertEqual(texts("(`\u{0434}\u{0438}\u{043F}\u{043B}\u{043E}\u{0439}`)"), ["`\u{0434}\u{0438}\u{043F}\u{043B}\u{043E}\u{0439}`"])
+        XCTAssertEqual(kinds("(`\u{0434}\u{0438}\u{043F}\u{043B}\u{043E}\u{0439}`)"), [.backticks])
+    }
+
     // MARK: - Paths
 
     func testAbsoluteAndHomePathsAreSpans() {
@@ -120,6 +131,42 @@ final class ProtectedSpanDetectorTests: XCTestCase {
     func testGluedEnglishSentenceIsProtectedAndThatIsTheKnownCost() {
         XCTAssertEqual(texts("Done.Next"), ["Done.Next"])
         XCTAssertEqual(texts("\u{0413}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E}.\u{0414}\u{0430}\u{043B}\u{044C}\u{0448}\u{0435}"), [])
+    }
+
+    // MARK: - Brackets and quotation marks
+
+    /// Brackets and quotes around the token belong to the phrase, not to the token.
+    ///
+    /// Only the tail was cut off before, and the token was obliged to begin right
+    /// after a space - so one leading character made the whole word invisible to
+    /// the detector, and every later stage rewrote it: `«TextPipeline.Output»`
+    /// came out as `«TextPipeline. Output»`. This is not an exotic case: « » is
+    /// the standard Russian quotation mark, and the model emits it constantly.
+    func testLeadingQuoteOrBracketDoesNotHideTheToken() {
+        XCTAssertEqual(texts("\u{0442}\u{0438}\u{043F} «TextPipeline.Output» \u{0434}\u{0430}\u{043B}\u{044C}\u{0448}\u{0435}"), ["TextPipeline.Output"])
+        XCTAssertEqual(texts("\u{0442}\u{0438}\u{043F} (TextPipeline.Output)"), ["TextPipeline.Output"])
+        XCTAssertEqual(texts("\u{0437}\u{043E}\u{0432}\u{0438} [AppState.shared]"), ["AppState.shared"])
+        XCTAssertEqual(texts("\u{043E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} (/\u{043F}\u{0443}\u{0442}\u{044C}/\u{0441}\u{0435}\u{043D}\u{0442}\u{0440}\u{0438}/\u{0444}\u{0430}\u{0439}\u{043B})"), ["/\u{043F}\u{0443}\u{0442}\u{044C}/\u{0441}\u{0435}\u{043D}\u{0442}\u{0440}\u{0438}/\u{0444}\u{0430}\u{0439}\u{043B}"])
+        XCTAssertEqual(kinds("\u{043E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} (/\u{043F}\u{0443}\u{0442}\u{044C}/\u{0441}\u{0435}\u{043D}\u{0442}\u{0440}\u{0438}/\u{0444}\u{0430}\u{0439}\u{043B})"), [.path])
+    }
+
+    /// Cutting off the brackets has no right to turn ordinary speech into a span.
+    ///
+    /// A false span silently suppresses the dictionary and the polisher, and that
+    /// is worse than a missed one: the person sees an uncorrected term and does
+    /// not understand why.
+    func testBracketsAroundOrdinarySpeechStillGiveNoSpans() {
+        XCTAssertEqual(texts("\u{044D}\u{0442}\u{043E} (\u{0438}/\u{0438}\u{043B}\u{0438}) \u{0442}\u{043E}"), [])
+        XCTAssertEqual(texts("«\u{041F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}, \u{043A}\u{0430}\u{043A} \u{0434}\u{0435}\u{043B}\u{0430}?»"), [])
+        XCTAssertEqual(texts("\u{0440}\u{0430}\u{0431}\u{043E}\u{0442}\u{0430}\u{0435}\u{0442} (24/7)"), [])
+        XCTAssertEqual(texts("«\u{0442}\u{0430}\u{0439}\u{043F}-\u{0441}\u{043A}\u{0440}\u{0438}\u{043F}\u{0442}»"), [])
+        XCTAssertEqual(texts("\u{0441}\u{043C}\u{0435}\u{0448}\u{043D}\u{043E})))"), [])
+        // Versions and domains in brackets remain the same as without them: they
+        // are protected by the polisher's guard, and the dictionary has the right
+        // to reach them.
+        XCTAssertEqual(texts("\u{0432}\u{0435}\u{0440}\u{0441}\u{0438}\u{044F} (2.0.1)"), [])
+        XCTAssertEqual(texts("\u{0441}\u{0430}\u{0439}\u{0442} «wai.computer»"), [])
+        XCTAssertEqual(texts("\u{043E}\u{0442}\u{0434}\u{0430}\u{0439} «API»"), [])
     }
 
     // MARK: - General properties

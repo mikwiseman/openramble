@@ -1030,8 +1030,18 @@ public final class AppState: ObservableObject {
     }
 
     /// General safe cancel for Escape and menu bar.
+    ///
+    /// The message is given only for a cancellation that has actually taken place. From
+    /// `.inserting` there is nothing to cancel - ⌘V has already gone into someone else's
+    /// window - and the kernel ignores such a request. The words “the recording was
+    /// deleted” would then say the exact opposite of what a person sees a moment later in
+    /// his document, and would also erase the real warning about the insertion from the
+    /// screen. Escape at this moment does nothing, and it is right that it says nothing:
+    /// the text is already in place, and there is nothing to report about it.
     public func cancelCurrentDictation() {
-        guard !isRecoveryOperationActive, dictationState != .idle else { return }
+        guard !isRecoveryOperationActive,
+              DictationStopPolicy.canCancel(state: dictationState)
+        else { return }
         controller?.cancel()
         notify(DictationNotice(kind: .info, message: "Dictation cancelled. The recording was deleted."))
     }

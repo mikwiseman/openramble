@@ -255,6 +255,35 @@ final class TextInserterTests: XCTestCase {
         }
         XCTAssertEqual(log.entries, ["activate", "pasteboard", "post", "restore"])
     }
+
+    /// Two dictations one after another, faster than the deferred restore.
+    ///
+    /// Two short answers in the chat a second apart - and the second insert falls into
+    /// the restore window of the first one. What a person copied before dictation must
+    /// survive both: this is his clipboard, and the application borrowed it for a second.
+    ///
+    /// A real board here, and not a fake one: the whole point is in the ownership counter,
+    /// and it belongs to the system, not to us.
+    func testScenario020() async throws {
+        let boardName = "is.waiwai.dictation.tests.\(UUID().uuidString)"
+        let board = NSPasteboard(name: NSPasteboard.Name(boardName))
+        defer { board.releaseGlobally() }
+        board.prepareForNewContents(with: .currentHostOnly)
+        board.setString("what the person copied", forType: .string)
+
+        let inserter = TextInserter(
+            system: system,
+            pasteboard: HostOnlyPasteboard(name: boardName),
+            restoreDelay: .milliseconds(80)
+        )
+        try await inserter.insert("DICTATION ONE", into: target)
+        try await inserter.insert("DICTATION TWO", into: target)
+
+        for _ in 0..<200 where board.string(forType: .string) != "what the person copied" {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(board.string(forType: .string), "what the person copied")
+    }
 }
 
 /// An asynchronous analogue of `XCTAssertThrowsError` with checking a specific error.

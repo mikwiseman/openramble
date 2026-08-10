@@ -602,6 +602,44 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(state.dictationState, .idle)
     }
 
+    /// Escape during insertion.
+    ///
+    /// From `.inserting` there is nothing to cancel: ⌘V has already gone into someone
+    /// else's window, `DictationStopPolicy` knows this and the kernel ignores the request.
+    /// The text appears in the person's document a moment later - so the message about
+    /// the deleted recording would say the exact opposite of what he sees, and would
+    /// overwrite a real warning about the insertion itself.
+    func testScenario061() async throws {
+        try installModelMarker()
+        let state = makeState()
+        await state.refreshModelState()
+
+        await harness.inserter.holdInsertions()
+        monitor.onPress?()
+        for _ in 0..<200 where state.dictationState != .inserting {
+            if state.dictationState == .listening { monitor.onRelease?() }
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(state.dictationState, .inserting)
+
+        monitor.onEscape?()
+
+        XCTAssertNotEqual(
+            state.lastNotice?.message,
+            "Dictation cancelled. The recording was deleted.",
+            "The insertion was not cancelled, and the text is about to appear in the document"
+        )
+
+        await harness.inserter.releaseInsertions()
+        for _ in 0..<200 where state.dictationState != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        let inserted = await harness.inserter.insertedTexts
+        XCTAssertEqual(inserted, ["Ping test"], "The text lands in someone else's window anyway")
+    }
+
     // MARK: - Settings
 
     func testScenario036() async throws {

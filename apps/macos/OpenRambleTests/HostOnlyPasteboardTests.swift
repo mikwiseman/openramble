@@ -195,6 +195,44 @@ final class HostOnlyPasteboardTests: XCTestCase {
         }
         XCTAssertEqual(board.string(forType: .string), "before dictation")
     }
+
+    /// Two dictations inside one restore window.
+    ///
+    /// Restoration is deferred by a second after ⌘V, and a second dictation within that
+    /// second is an ordinary thing - two short replies in a chat. The second write lands
+    /// on OUR text: a snapshot taken here would capture the dictation instead of the
+    /// person's clipboard, and the person's own content would be gone for good.
+    func testScenario015() throws {
+        board.prepareForNewContents(with: .currentHostOnly)
+        board.setString("what the person copied", forType: .string)
+
+        let first = try pasteboard.beginHostOnlyWrite("DICTATION ONE")
+        let second = try pasteboard.beginHostOnlyWrite("DICTATION TWO")
+        // The deferred restore of the first dictation arrives when the second one has
+        // already replaced it on the board.
+        try pasteboard.restore(first)
+        try pasteboard.restore(second)
+
+        XCTAssertEqual(board.string(forType: .string), "what the person copied")
+        XCTAssertFalse(
+            board.types?.contains(HostOnlyPasteboard.concealedType) == true,
+            "The dictated text has no right to remain in the clipboard"
+        )
+    }
+
+    /// The same overlap, but the restores arrive in reverse order: the superseded
+    /// transaction must not return the dictation to the board over the person's content.
+    func testScenario016() throws {
+        board.prepareForNewContents(with: .currentHostOnly)
+        board.setString("what the person copied", forType: .string)
+
+        let first = try pasteboard.beginHostOnlyWrite("DICTATION ONE")
+        let second = try pasteboard.beginHostOnlyWrite("DICTATION TWO")
+        try pasteboard.restore(second)
+        XCTAssertNoThrow(try pasteboard.restore(first))
+
+        XCTAssertEqual(board.string(forType: .string), "what the person copied")
+    }
 }
 
 private final class FailFirstPasteboardWriter: @unchecked Sendable {

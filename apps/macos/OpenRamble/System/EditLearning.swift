@@ -42,8 +42,7 @@ public struct SystemFocusedFieldReader: FocusedFieldReading {
             kAXFocusedUIElementAttribute as CFString,
             &focused
         )
-        guard result == .success, let focused else { return nil }
-        let element = focused as! AXUIElement
+        guard result == .success, let element = Self.element(from: focused) else { return nil }
         return FocusedFieldHandle {
             var value: CFTypeRef?
             let status = AXUIElementCopyAttributeValue(
@@ -54,6 +53,49 @@ public struct SystemFocusedFieldReader: FocusedFieldReading {
             guard status == .success else { return nil }
             return value as? String
         }
+    }
+
+    /// The focused element, if this is really an element.
+    ///
+    /// The value is given away by the accessibility server of ANOTHER application, and its
+    /// type is that application's word, not our guarantee. Swift does not check a cast to
+    /// a CoreFoundation type at all - neither `as!` nor `as?` - so an unchecked cast stops
+    /// nothing: someone else's object goes on into `AXUIElementCopyAttributeValue`, and
+    /// what happens there depends on the framework, not on us. Comparing type identifiers
+    /// is the only real check, and the rest of this file is defensive for the same reason:
+    /// the price of an unread field is one unlearned word, and the price of a foreign
+    /// object passed on during a dictation is unknown.
+    static func element(from value: CFTypeRef?) -> AXUIElement? {
+        guard let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+        return (value as! AXUIElement)
+    }
+}
+
+/// When the observer rereads the field into which it was inserted.
+///
+/// The numbers are not an implementation detail: the settings say “twice — at 8 and 25
+/// seconds”, and `learnFromEdits` says “only in the first half a minute”. This is the one
+/// place where the application reads inside someone else's window, so the word about WHEN
+/// must be exactly true. Spent as a chain of pauses, these same two numbers would take the
+/// second reading to the 33rd second - beyond the promised half a minute, and beyond what a
+/// person agreed to when he turned on the switch. Hence the offsets from the insertion,
+/// hence a separate type: a place where the promise and the code are one line apart.
+enum EditLearningSchedule {
+    /// Offsets from the moment of insertion, in order.
+    static let checkOffsets: [Duration] = [.seconds(8), .seconds(25)]
+
+    /// The boundary promised in the settings: nothing is read later.
+    static let limit: Duration = .seconds(30)
+
+    /// Turn the offsets from the insertion into pauses that a sequential loop sleeps.
+    static func waits(between offsets: [Duration]) -> [Duration] {
+        var waits: [Duration] = []
+        var elapsed = Duration.zero
+        for offset in offsets {
+            waits.append(max(.zero, offset - elapsed))
+            elapsed = max(elapsed, offset)
+        }
+        return waits
     }
 }
 
@@ -66,15 +108,15 @@ public struct SystemFocusedFieldReader: FocusedFieldReading {
 @MainActor
 final class EditLearningWatcher {
     private let reader: any FocusedFieldReading
-    private let checkDelays: [Duration]
+    private let checkOffsets: [Duration]
     private var watch: Task<Void, Never>?
 
     init(
         reader: any FocusedFieldReading = SystemFocusedFieldReader(),
-        checkDelays: [Duration] = [.seconds(8), .seconds(25)]
+        checkOffsets: [Duration] = EditLearningSchedule.checkOffsets
     ) {
         self.reader = reader
-        self.checkDelays = checkDelays
+        self.checkOffsets = checkOffsets
     }
 
     /// Start observing the text you just inserted.
@@ -89,9 +131,10 @@ final class EditLearningWatcher {
         guard let field = reader.captureFocusedField() else { return }
         guard let baseline = field.value(), baseline.contains(inserted) else { return }
 
-        watch = Task { @MainActor [checkDelays] in
-            for delay in checkDelays {
-                try? await Task.sleep(for: delay)
+        let waits = EditLearningSchedule.waits(between: checkOffsets)
+        watch = Task { @MainActor in
+            for wait in waits {
+                if wait > .zero { try? await Task.sleep(for: wait) }
                 guard !Task.isCancelled else { return }
                 guard let current = field.value() else { return }
                 if let edit = InsertedEditExtractor.extract(

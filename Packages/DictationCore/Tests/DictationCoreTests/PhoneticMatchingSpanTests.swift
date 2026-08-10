@@ -89,6 +89,19 @@ final class PhoneticMatchingSpanTests: XCTestCase {
         XCTAssertEqual(result, "\u{043B}\u{0435}\u{0436}\u{0438}\u{0442} \u{0432} /Users/mik/\u{0441}\u{0435}\u{043D}\u{0442}\u{0440}\u{0438}/log")
     }
 
+    /// Collision 3: the same two pieces, but in brackets.
+    ///
+    /// A quotation mark or a bracket before the piece used to disable the
+    /// protection entirely, and the selection worked right inside the path and
+    /// inside the backticks - exactly where a person dictated the writing verbatim.
+    func testPhoneticDoesNotFireInsideABracketedPathOrBackticks() {
+        XCTAssertEqual(
+            phonetic("\u{043B}\u{0435}\u{0436}\u{0438}\u{0442} \u{0432} (/Users/mik/\u{0441}\u{0435}\u{043D}\u{0442}\u{0440}\u{0438}/log)"),
+            "\u{043B}\u{0435}\u{0436}\u{0438}\u{0442} \u{0432} (/Users/mik/\u{0441}\u{0435}\u{043D}\u{0442}\u{0440}\u{0438}/log)"
+        )
+        XCTAssertEqual(phonetic("\u{0441}\u{043C}\u{043E}\u{0442}\u{0440}\u{0438} (`\u{0441}\u{0435}\u{043D}\u{0442}\u{0440}\u{0438}`) \u{0442}\u{0443}\u{0442}"), "\u{0441}\u{043C}\u{043E}\u{0442}\u{0440}\u{0438} (`\u{0441}\u{0435}\u{043D}\u{0442}\u{0440}\u{0438}`) \u{0442}\u{0443}\u{0442}")
+    }
+
     /// A window of three words has no right to step over the span.
     func testPhoneticWindowNeverStraddlesASpanBoundary() {
         let terms = [DictionaryReplacement(spoken: "\u{0434}\u{0430}\u{0443}\u{043D} \u{0442}\u{0430}\u{0439}\u{043C}", written: "downtime", inflects: false)]

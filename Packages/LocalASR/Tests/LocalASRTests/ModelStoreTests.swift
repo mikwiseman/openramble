@@ -336,8 +336,22 @@ final class ModelStoreTests: XCTestCase {
                 injectedPromotionFailure: checkpoint
             )
             await interrupted.install()
-            guard case .failed = await interrupted.currentState() else {
-                return XCTFail("\u{041E}\u{0436}\u{0438}\u{0434}\u{0430}\u{043B}\u{0441}\u{044F} injected failure \u{043D}\u{0430} \(checkpoint)")
+            let interruptedState = await interrupted.currentState()
+            switch checkpoint {
+            case .afterBackupRemoval:
+                // Past this point the model is installed and marked ready, and
+                // only the old copy is left to sweep up. A sweep that fails is
+                // not a failed install: reporting it as one skipped the engine
+                // warm-up and, on the next launch, offered redownloading 483 MB
+                // as the sole remedy for a model that was already working.
+                XCTAssertTrue(
+                    interruptedState.isReady,
+                    "housekeeping after the ready marker must not fail the install: \(interruptedState)"
+                )
+            default:
+                guard case .failed = interruptedState else {
+                    return XCTFail("\u{041E}\u{0436}\u{0438}\u{0434}\u{0430}\u{043B}\u{0441}\u{044F} injected failure \u{043D}\u{0430} \(checkpoint)")
+                }
             }
 
             let relaunched = ModelStore(manifest: manifest, layout: layout, downloader: downloader)
