@@ -136,7 +136,7 @@ jobs:
           expect CFBundleIdentifier is.waiwai.dictation.dev
           expect LSMinimumSystemVersion 14.0
           expect LSUIElement true
-          expect SUEnableAutomaticChecks false
+          expect SUEnableAutomaticChecks true
           expect SUSendProfileInfo false
           expect SUAllowsAutomaticUpdates false
 

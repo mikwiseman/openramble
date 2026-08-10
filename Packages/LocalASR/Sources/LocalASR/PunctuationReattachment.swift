@@ -218,14 +218,34 @@ enum PunctuationReattachment {
 
         var band = max(16, abs(rows - columns) + 8)
         let widest = max(rows, columns)
-        while true {
+        while band <= Self.widestAffordableBand(rows: rows, columns: columns) {
             if let steps = alignWithinBand(leftKeys, rightKeys, band: band) { return steps }
             if band >= widest { break }
             band = min(band * 2, widest)
         }
-        // Unreachable in practice: at full width the band covers every cell and
-        // the cost check always succeeds. Kept so the loop cannot spin.
-        return alignWithinBand(leftKeys, rightKeys, band: widest, trustResult: true) ?? []
+        // Too far apart to align affordably. `restore` reads an empty result as
+        // "leave the rescorer's text alone", which is the same thing the 0.5
+        // fuse already does when the two sides disagree too much: losing some
+        // punctuation beats freezing after the key was released.
+        return []
+    }
+
+    /// How wide the band may get before the work stops being worth it.
+    ///
+    /// The band widens whenever the edit cost reaches its edge, and cost counts
+    /// substitutions — so a long text the rescorer changed in many places pushes
+    /// the band up proportionally, and the cost goes back to quadratic with a
+    /// smaller constant. Measured: 4000 words with a substitution every 50 took
+    /// a band of 128, and 8000 words took 256, so doubling the input still
+    /// quadrupled the time.
+    ///
+    /// The product cannot afford that after the key is released, so the budget
+    /// is on total cells rather than on elegance. Four million cells is about
+    /// 16 MB and a fraction of a second; beyond it the answer is not worth
+    /// waiting for.
+    private static func widestAffordableBand(rows: Int, columns: Int) -> Int {
+        let budget = 4_000_000
+        return max(16, budget / max(rows + 1, 1))
     }
 
     /// One banded pass. Returns `nil` when the cost reached the band edge and

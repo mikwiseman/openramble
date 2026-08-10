@@ -40,17 +40,39 @@ final class PunctuationReattachmentCostTests: XCTestCase {
 
     /// The hour-long limit the app allows is roughly 8000 words. That case used
     /// to need a 488 MB matrix; it must now finish without one.
-    func testHourLongDictationFinishes() {
+    ///
+    /// The ceiling is generous on purpose. A tight one measured a shared CI
+    /// runner as much as it measured the code and failed at 3.2 s against a
+    /// 3.0 s budget while nothing was wrong. Five seconds in a debug build
+    /// still catches any return to the old 16.7 s (28 s in debug) beyond doubt.
+    func testHourLongDictationFinishesQuickly() {
         let sample = text(words: 8000)
         let started = ContinuousClock.now
-        let result = PunctuationReattachment.restore(original: sample.original, rescored: sample.rescored)
+        let result = PunctuationReattachment.restore(
+            original: sample.original, rescored: sample.rescored
+        )
         let elapsed = ContinuousClock.now - started
 
         XCTAssertFalse(result.isEmpty)
         XCTAssertLessThan(
-            elapsed, .seconds(3),
-            "8000 words took \(elapsed); before the fix this was 16.7 s"
+            elapsed, .seconds(5),
+            "8000 words took \(elapsed); before the fix this was 16.7 s in release"
         )
+    }
+
+    /// Two texts with nothing in common must not be ground through a full
+    /// matrix. The work budget gives up instead, and giving up means leaving
+    /// the rescorer's text alone — the same thing the 0.5 fuse already does.
+    func testHopelesslyDifferentTextsGiveUpInsteadOfGrinding() {
+        let original = (0..<6000).map { "aaa\($0)" }.joined(separator: " ")
+        let rescored = (0..<6000).map { "zzz\($0)" }.joined(separator: " ")
+
+        let started = ContinuousClock.now
+        let result = PunctuationReattachment.restore(original: original, rescored: rescored)
+        let elapsed = ContinuousClock.now - started
+
+        XCTAssertEqual(result, rescored, "nothing recoverable — the rescorer's text stands")
+        XCTAssertLessThan(elapsed, .seconds(5), "took \(elapsed)")
     }
 
     /// Speed must not have been bought with correctness: the three invariants
