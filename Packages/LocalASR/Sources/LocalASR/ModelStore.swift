@@ -64,6 +64,41 @@ public actor ModelStore {
     private let manifest: ModelManifest
     private let layout: ModelInstallLayout
     private let downloader: ModelDownloading
+    /// Pause between attempts on the same source. Injected so tests do not wait.
+    private let retryDelay: Duration
+
+    /// How many times one source is tried before handing over to the mirror.
+    ///
+    /// Three, not more: the encoder is 92% of a 586 MB install, and a source
+    /// that fails three times in a row is not blinking, it is down. The mirror
+    /// is the better answer at that point.
+    private static let attemptsPerSource = 3
+
+    /// Is this failure worth trying again?
+    ///
+    /// Only the failures where the same request, sent again, can plausibly
+    /// succeed. Everything else is a property of the address or of the user's
+    /// intent, and repeating it would be either useless or wrong:
+    ///
+    /// - `.cancelled` — the user said stop. Retrying keeps pulling 586 MB
+    ///   against a direct command.
+    /// - `.unapprovedURL` — a redirect left the allowlist. Retrying knocks on a
+    ///   disallowed host again, which is exactly what the policy forbids.
+    /// - `.httpStatus(4xx)` — the address is wrong. No repetition fixes that.
+    /// - `.unexpectedSize` — the source holds a different file than the manifest
+    ///   describes. Re-pulling it cannot change what is on the other end.
+    private static func isTransient(_ error: ModelDownloadError) -> Bool {
+        switch error {
+        case .network:
+            return true
+        case let .httpStatus(code):
+            // 408 and 429 are explicit "ask again"; 5xx is the server's bad
+            // minute rather than our bad address.
+            return code == 408 || code == 429 || (500...599).contains(code)
+        case .unapprovedURL, .unexpectedSize, .cancelled:
+            return false
+        }
+    }
     private let verifier: ModelVerifier
     private let fileManager: FileManager
     private let injectedPromotionFailure: ModelPromotionCheckpoint?
@@ -78,6 +113,7 @@ public actor ModelStore {
         downloader: ModelDownloading = URLSessionModelDownloader(),
         verifier: ModelVerifier = ModelVerifier(),
         fileManager: FileManager = .default,
+        retryDelay: Duration = .seconds(2),
         injectedPromotionFailure: ModelPromotionCheckpoint? = nil
     ) {
         self.manifest = manifest
@@ -85,6 +121,7 @@ public actor ModelStore {
         self.downloader = downloader
         self.verifier = verifier
         self.fileManager = fileManager
+        self.retryDelay = retryDelay
         self.injectedPromotionFailure = injectedPromotionFailure
     }
 
@@ -550,30 +587,48 @@ public actor ModelStore {
         var failures: [String] = []
 
         for (index, url) in sources.enumerated() {
-            do {
-                return try await downloader.download(
-                    from: url,
-                    expectedBytes: file.byteCount,
-                    onProgress: { [weak self] received in
-                        Task { [weak self] in
-                            await self?.reportDownloadProgress(alreadyDone + received, total: total)
+            var lastError: ModelDownloadError?
+
+            for attempt in 1...Self.attemptsPerSource {
+                do {
+                    return try await downloader.download(
+                        from: url,
+                        expectedBytes: file.byteCount,
+                        onProgress: { [weak self] received in
+                            Task { [weak self] in
+                                await self?.reportDownloadProgress(alreadyDone + received, total: total)
+                            }
                         }
-                    }
-                )
-            } catch ModelDownloadError.cancelled {
-                throw CancellationError()
-            } catch let error as ModelDownloadError {
-                failures.append("\(url.host() ?? url.absoluteString): \(error)")
-                // Progress could go forward on an unsuccessful attempt - return
-                // it back, otherwise the indicator will move and overtake itself.
-                reportDownloadProgress(alreadyDone, total: total)
-                if index == sources.count - 1 {
-                    throw ModelStoreError.download("\(file.path): \(failures.joined(separator: "; "))")
+                    )
+                } catch ModelDownloadError.cancelled {
+                    throw CancellationError()
+                } catch let error as ModelDownloadError {
+                    lastError = error
+                    // Progress could go forward on an unsuccessful attempt - return
+                    // it back, otherwise the indicator will move and overtake itself.
+                    reportDownloadProgress(alreadyDone, total: total)
+
+                    guard Self.isTransient(error), attempt < Self.attemptsPerSource else { break }
+                    // Cancellation during the pause must still stop us: sleeping
+                    // through a cancel would delay the stop by the whole delay.
+                    try await Task.sleep(for: Self.retryDelay(retryDelay, attempt: attempt))
                 }
+            }
+
+            if let lastError {
+                failures.append("\(url.host() ?? url.absoluteString): \(lastError)")
+            }
+            if index == sources.count - 1 {
+                throw ModelStoreError.download("\(file.path): \(failures.joined(separator: "; "))")
             }
         }
 
         throw ModelStoreError.download("\(file.path): no sources left")
+    }
+
+    /// Backoff that grows, so a source under load is not hit at a fixed beat.
+    private static func retryDelay(_ base: Duration, attempt: Int) -> Duration {
+        base * attempt
     }
 
     private func reportDownloadProgress(_ received: Int64, total: Int64) {

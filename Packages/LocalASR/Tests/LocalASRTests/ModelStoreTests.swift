@@ -9,6 +9,12 @@ actor FakeDownloader: ModelDownloading {
     private var contentsByHost: [String: [String: Data]] = [:]
     private var failure: ModelDownloadError?
     private var failuresByHost: [String: ModelDownloadError] = [:]
+    /// How many more times this host should fail before it starts working.
+    ///
+    /// A flaky network is not "the mirror is down", it is "the mirror answers
+    /// on the second try". Without this the retry path cannot be tested at all.
+    private var transientFailuresByHost: [String: (remaining: Int, error: ModelDownloadError)] = [:]
+    private(set) var attemptsByHost: [String: Int] = [:]
     private(set) var requestedPaths: [String] = []
     /// Hosts are in order of access - they show whether it has reached the backup address.
     private(set) var requestedHosts: [String] = []
@@ -22,6 +28,15 @@ actor FakeDownloader: ModelDownloading {
     /// Force a specific source to fail: this is how the transition to the next one is checked.
     func setFailure(_ error: ModelDownloadError, forHost host: String) {
         failuresByHost[host] = error
+    }
+
+    /// Fail `times` in a row on this host, then behave normally.
+    func setTransientFailures(
+        _ times: Int,
+        error: ModelDownloadError = .network("A TLS error caused the secure connection to fail."),
+        forHost host: String
+    ) {
+        transientFailuresByHost[host] = (remaining: times, error: error)
     }
 
     /// Slip other content to the source: the amounts are required to catch it regardless
@@ -38,8 +53,14 @@ actor FakeDownloader: ModelDownloading {
         requestedPaths.append(url.lastPathComponent)
         let host = url.host() ?? ""
         requestedHosts.append(host)
+        attemptsByHost[host, default: 0] += 1
         if let failure { throw failure }
         if let hostFailure = failuresByHost[host] { throw hostFailure }
+        if var transient = transientFailuresByHost[host], transient.remaining > 0 {
+            transient.remaining -= 1
+            transientFailuresByHost[host] = transient
+            throw transient.error
+        }
 
         // We look for the key at the tail of the address - this way the test does not depend on the form of the link.
         let table = contentsByHost[host] ?? contents

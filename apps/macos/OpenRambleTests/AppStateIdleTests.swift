@@ -306,14 +306,19 @@ final class AppStateIdleTests: XCTestCase {
         state.installModel()
         try await waitFor("download has started") { self.harness.downloader.hasStarted }
 
-        harness.downloader.release(throwing: .network("offline test"))
+        // A permanent failure, deliberately: transient ones are retried now, and
+        // a retried download is still a download — it must not flash "failed"
+        // between attempts. 404 is not retried, so it surfaces immediately, and
+        // that is what this test is about: the failure stays on screen instead
+        // of silently resetting to "not installed".
+        harness.downloader.release(throwing: .httpStatus(404))
         try await Task.sleep(for: .milliseconds(100))
 
         guard case let .failed(.download(detail)) = state.modelState else {
             XCTFail("download error did not remain visible: \(state.modelState)")
             return
         }
-        XCTAssertTrue(detail.contains("offline test"))
+        XCTAssertTrue(detail.contains("404"), "the reason must reach the user: \(detail)")
     }
 
     // MARK: - Many cycles in a row
