@@ -24,6 +24,15 @@ public enum ModelDownloadError: Error, Sendable, Equatable {
     case cancelled
 }
 
+/// A dropped transfer plus whatever the system saved of it.
+///
+/// Internal on purpose: callers see a plain `ModelDownloadError`. Resume data
+/// is a detail of how this downloader recovers, not part of the contract.
+private struct ResumableFailure: Error {
+    let underlying: any Error
+    let resumeData: Data?
+}
+
 /// Clean network surface policy model download.
 public struct ModelDownloadPolicy: Sendable {
     public init() {}
@@ -82,6 +91,13 @@ public final class URLSessionModelDownloader: NSObject, ModelDownloading, @unche
         super.init()
     }
 
+    /// How many times a dropped transfer is picked up again.
+    ///
+    /// Only ever used when the system handed us resume data, i.e. when bytes
+    /// were actually on disk. Blind re-dialling belongs to the layer above,
+    /// which also knows about the mirror.
+    private static let resumeAttempts = 3
+
     public func download(
         from url: URL,
         expectedBytes: Int64,
@@ -91,6 +107,43 @@ public final class URLSessionModelDownloader: NSObject, ModelDownloading, @unche
         guard expectedBytes > 0 else {
             throw ModelDownloadError.unexpectedSize(expected: expectedBytes, actual: 0)
         }
+
+        // The encoder is 445 MB. Measured on a real flaky link: the transfer
+        // reached 415 MB, dropped, and the retry above started from zero —
+        // throwing away six minutes of download and, on a link that drops
+        // regularly, never finishing at all. Resume data lets the next attempt
+        // continue from where the bytes stopped instead of from nothing.
+        var resumeData: Data?
+        var lastError: any Error = ModelDownloadError.network("the download never started")
+
+        for _ in 1...Self.resumeAttempts {
+            do {
+                return try await attempt(
+                    url: url,
+                    expectedBytes: expectedBytes,
+                    resumeData: resumeData,
+                    onProgress: onProgress
+                )
+            } catch let error as ResumableFailure {
+                lastError = error.underlying
+                // No resume data means nothing is on disk to continue from.
+                // Re-dialling here would duplicate the retry above without
+                // saving a single byte, so hand the failure over instead.
+                guard let data = error.resumeData else { throw error.underlying }
+                resumeData = data
+            }
+        }
+
+        throw lastError
+    }
+
+    /// One transfer: either from scratch, or continuing a dropped one.
+    private func attempt(
+        url: URL,
+        expectedBytes: Int64,
+        resumeData: Data?,
+        onProgress: @escaping @Sendable (Int64) -> Void
+    ) async throws -> URL {
         // The delegate is assigned to the session, not to the task. The difference is not cosmetic:
         // the system gives only a rounded share to the task (measured - two updates
         // with the number "100" per file), and sessions are real bytes (89 updates per
@@ -104,7 +157,8 @@ public final class URLSessionModelDownloader: NSObject, ModelDownloading, @unche
         let session = URLSession(configuration: configuration, delegate: observer, delegateQueue: nil)
         defer { session.finishTasksAndInvalidate() }
 
-        let task = session.downloadTask(with: url)
+        let task = resumeData.map(session.downloadTask(withResumeData:))
+            ?? session.downloadTask(with: url)
 
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
@@ -146,6 +200,12 @@ private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unc
     /// There are two events - “file downloaded” and “task completed” - and on
     /// successful loading, they are both successful. Resuming the wait twice means
     /// drop the process.
+    /// Failures that are not worth continuing carry no resume data, so the
+    /// loop above hands them straight to the caller.
+    private func finishTerminal(_ error: any Error) {
+        finish(.failure(ResumableFailure(underlying: error, resumeData: nil)))
+    }
+
     private func finish(_ result: Result<URL, any Error>) {
         lock.lock()
         let continuation = self.continuation
@@ -163,7 +223,7 @@ private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unc
     ) {
         guard totalBytesWritten <= expectedBytes else {
             downloadTask.cancel()
-            finish(.failure(ModelDownloadError.unexpectedSize(expected: expectedBytes, actual: totalBytesWritten)))
+            finishTerminal(ModelDownloadError.unexpectedSize(expected: expectedBytes, actual: totalBytesWritten))
             return
         }
         onProgress(totalBytesWritten)
@@ -177,7 +237,7 @@ private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unc
         completionHandler: @escaping (URLRequest?) -> Void
     ) {
         guard let url = request.url, policy.allows(url) else {
-            finish(.failure(ModelDownloadError.unapprovedURL(request.url?.host() ?? "unknown address")))
+            finishTerminal(ModelDownloadError.unapprovedURL(request.url?.host() ?? "unknown address"))
             completionHandler(nil)
             return
         }
@@ -194,13 +254,13 @@ private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unc
         // checking checksums, but with an unclear reason.
         if let http = downloadTask.response as? HTTPURLResponse,
            !(200...299).contains(http.statusCode) {
-            finish(.failure(ModelDownloadError.httpStatus(http.statusCode)))
+            finishTerminal(ModelDownloadError.httpStatus(http.statusCode))
             return
         }
         if let expected = downloadTask.response?.expectedContentLength,
            expected >= 0,
            expected != expectedBytes {
-            finish(.failure(ModelDownloadError.unexpectedSize(expected: expectedBytes, actual: expected)))
+            finishTerminal(ModelDownloadError.unexpectedSize(expected: expectedBytes, actual: expected))
             return
         }
 
@@ -209,11 +269,11 @@ private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unc
             let values = try location.resourceValues(forKeys: [.fileSizeKey])
             actual = Int64(values.fileSize ?? -1)
         } catch {
-            finish(.failure(ModelDownloadError.network(error.localizedDescription)))
+            finishTerminal(ModelDownloadError.network(error.localizedDescription))
             return
         }
         guard actual == expectedBytes else {
-            finish(.failure(ModelDownloadError.unexpectedSize(expected: expectedBytes, actual: actual)))
+            finishTerminal(ModelDownloadError.unexpectedSize(expected: expectedBytes, actual: actual))
             return
         }
 
@@ -225,7 +285,7 @@ private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unc
             try FileManager.default.moveItem(at: location, to: destination)
             finish(.success(destination))
         } catch {
-            finish(.failure(ModelDownloadError.network(error.localizedDescription)))
+            finishTerminal(ModelDownloadError.network(error.localizedDescription))
         }
     }
 
@@ -237,14 +297,25 @@ private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unc
         guard let error else {
             // Success has already been given higher; We get here only if there is no file
             // it happened - you can’t hang on to it in silence.
-            finish(.failure(ModelDownloadError.network("the download finished without a file")))
+            finishTerminal(ModelDownloadError.network("the download finished without a file"))
             return
         }
 
         if (error as? URLError)?.code == .cancelled {
-            finish(.failure(ModelDownloadError.cancelled))
-        } else {
-            finish(.failure(ModelDownloadError.network(error.localizedDescription)))
+            // A cancel is the user's, and it carries no resume data forward:
+            // continuing later would be continuing against their command.
+            finishTerminal(ModelDownloadError.cancelled)
+            return
         }
+
+        // The system hands back what it managed to write when a transfer drops.
+        // Without this the next attempt starts from zero — measured at 415 MB
+        // of a 445 MB file thrown away.
+        let resumeData = (error as NSError)
+            .userInfo[NSURLSessionDownloadTaskResumeData] as? Data
+        finish(.failure(ResumableFailure(
+            underlying: ModelDownloadError.network(error.localizedDescription),
+            resumeData: resumeData
+        )))
     }
 }

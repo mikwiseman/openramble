@@ -94,3 +94,96 @@ final class URLSessionModelDownloaderTests: XCTestCase {
         }
     }
 }
+
+/// Continuing a dropped transfer instead of starting it over.
+///
+/// Measured on a real flaky link: the 445 MB encoder reached 415 MB, the
+/// connection dropped, and the retry started from zero. Six minutes of download
+/// thrown away, and on a link that drops regularly the install never finishes.
+final class DownloadResumeTests: XCTestCase {
+    private let url = URL(string: "https://huggingface.co/test/model.bin")!
+
+    override func tearDown() {
+        FailingURLProtocol.reset()
+    }
+
+    private func downloader() -> URLSessionModelDownloader {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [FailingURLProtocol.self]
+        return URLSessionModelDownloader(configuration: configuration)
+    }
+
+    /// A drop with nothing saved is handed straight up, without re-dialling.
+    ///
+    /// The layer above already retries and also knows about the mirror. Dialling
+    /// again here would multiply attempts without saving a single byte.
+    func testFailureWithoutResumeDataIsNotRetriedHere() async {
+        FailingURLProtocol.failEveryRequest = true
+
+        _ = try? await downloader().download(from: url, expectedBytes: 100) { _ in }
+
+        XCTAssertEqual(
+            FailingURLProtocol.requestCount, 1,
+            "nothing on disk to continue — the retry belongs to the layer that knows the mirror"
+        )
+    }
+
+    /// A cancel carries nothing forward: continuing later would continue
+    /// against the user's direct command.
+    func testCancellationIsReportedAsCancellation() async {
+        FailingURLProtocol.failWith = URLError(.cancelled)
+
+        do {
+            _ = try await downloader().download(from: url, expectedBytes: 100) { _ in }
+            XCTFail("expected a failure")
+        } catch let error as ModelDownloadError {
+            XCTAssertEqual(error, .cancelled)
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
+    /// A refused host stays one attempt: retrying it is exactly what the
+    /// network policy forbids.
+    func testDisallowedURLNeverReachesTheNetwork() async {
+        FailingURLProtocol.failEveryRequest = true
+        let outside = URL(string: "https://evil.example.com/model.bin")!
+
+        do {
+            _ = try await downloader().download(from: outside, expectedBytes: 100) { _ in }
+            XCTFail("expected a failure")
+        } catch let error as ModelDownloadError {
+            guard case .unapprovedURL = error else { return XCTFail("wrong error: \(error)") }
+            XCTAssertEqual(FailingURLProtocol.requestCount, 0, "not a single byte leaves for a refused host")
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+}
+
+private final class FailingURLProtocol: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var failEveryRequest = false
+    nonisolated(unsafe) static var failWith: (any Error)?
+    nonisolated(unsafe) static private(set) var requestCount = 0
+    nonisolated(unsafe) private static let lock = NSLock()
+
+    static func reset() {
+        lock.lock(); defer { lock.unlock() }
+        failEveryRequest = false
+        failWith = nil
+        requestCount = 0
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        Self.lock.lock()
+        Self.requestCount += 1
+        let error = Self.failWith ?? URLError(.networkConnectionLost)
+        Self.lock.unlock()
+        client?.urlProtocol(self, didFailWithError: error)
+    }
+
+    override func stopLoading() {}
+}
