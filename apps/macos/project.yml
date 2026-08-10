@@ -85,7 +85,7 @@ targets:
       properties:
         CFBundleName: "$(PRODUCT_NAME)"
         CFBundleDisplayName: "$(PRODUCT_NAME)"
-        CFBundleShortVersionString: "0.3.3"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleIconFile: AppIcon
         # The application lives in the menu bar and is not shown in the Dock.
