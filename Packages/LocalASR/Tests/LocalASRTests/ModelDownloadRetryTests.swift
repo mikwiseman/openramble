@@ -199,3 +199,105 @@ final class ModelDownloadRetryTests: XCTestCase {
         XCTAssertTrue(message.contains("github.com"))
     }
 }
+
+/// A full disk is this Mac's problem, and retrying makes it worse.
+final class LocalWriteFailureTests: XCTestCase {
+    private var root: URL!
+    private let fileA = Data("first file".utf8)
+    private let fileB = Data("second file".utf8)
+
+    override func setUpWithError() throws {
+        root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appending(path: "disk-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: root)
+    }
+
+    private func sha256(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func makeStore(_ downloader: ModelDownloading) -> ModelStore {
+        let manifest = ModelManifest(
+            modelID: "test-model",
+            repository: "acme/test",
+            revision: String(repeating: "a", count: 40),
+            fluidAudioVersion: "0.15.5",
+            quantization: "test",
+            license: "CC-BY-4.0",
+            files: [
+                .init(path: "Encoder.mlmodelc/weight.bin", byteCount: Int64(fileA.count), sha256: sha256(fileA)),
+                .init(path: "vocab.json", byteCount: Int64(fileB.count), sha256: sha256(fileB)),
+            ],
+            mirror: .init(repository: "mikwiseman/openramble", releaseTag: "models-test")
+        )
+        return ModelStore(
+            manifest: manifest,
+            layout: ModelInstallLayout(
+                root: root, modelID: manifest.modelID,
+                revision: manifest.revision, engineFolderName: "repo"
+            ),
+            downloader: downloader,
+            retryDelay: .zero
+        )
+    }
+
+    /// One attempt, not six. Before this, a disk that filled partway through the
+    /// 425 MB encoder pulled it six times — roughly 2.7 GB — and still failed.
+    func testFullDiskIsNotRetried() async {
+        let downloader = FakeDownloader(contents: [:])
+        await downloader.setFailure(
+            .localWriteFailed("The file couldn't be saved because there isn't enough space.")
+        )
+
+        await makeStore(downloader).install()
+
+        let attempts = await downloader.attemptsByHost
+        XCTAssertEqual(
+            attempts.values.reduce(0, +), 1,
+            "a full disk gets one attempt: retrying refills the disk, and the "
+                + "mirror would download the same bytes into the same full disk"
+        )
+    }
+
+    /// The reason reaches the user instead of being reported as a network fault.
+    func testFullDiskSaysSoInsteadOfBlamingTheNetwork() async {
+        let downloader = FakeDownloader(contents: [:])
+        await downloader.setFailure(.localWriteFailed("there isn't enough space"))
+
+        let store = makeStore(downloader)
+        await store.install()
+
+        let state = await store.currentState()
+        guard case let .failed(error) = state, case let .download(message) = error else {
+            return XCTFail("expected a clear failure, got \(state)")
+        }
+        XCTAssertTrue(message.contains("enough space"), "the real reason must survive: \(message)")
+    }
+
+    /// The classifier must not mistake a dropped connection for a full disk —
+    /// that would stop retrying the case retries exist for.
+    func testNetworkErrorsAreNotMistakenForDiskErrors() {
+        XCTAssertTrue(URLSessionModelDownloader.isLocalWriteFailure(
+            NSError(domain: NSCocoaErrorDomain, code: NSFileWriteOutOfSpaceError)
+        ))
+        XCTAssertTrue(URLSessionModelDownloader.isLocalWriteFailure(
+            NSError(domain: NSURLErrorDomain, code: NSURLErrorCannotWriteToFile)
+        ))
+        XCTAssertTrue(URLSessionModelDownloader.isLocalWriteFailure(
+            NSError(domain: NSPOSIXErrorDomain, code: Int(ENOSPC))
+        ))
+        XCTAssertFalse(URLSessionModelDownloader.isLocalWriteFailure(
+            NSError(domain: NSURLErrorDomain, code: NSURLErrorNetworkConnectionLost)
+        ))
+        XCTAssertFalse(URLSessionModelDownloader.isLocalWriteFailure(
+            NSError(domain: NSURLErrorDomain, code: NSURLErrorSecureConnectionFailed)
+        ))
+        XCTAssertFalse(URLSessionModelDownloader.isLocalWriteFailure(
+            NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut)
+        ))
+    }
+}

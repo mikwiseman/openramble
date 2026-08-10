@@ -21,6 +21,15 @@ public enum ModelDownloadError: Error, Sendable, Equatable {
     case httpStatus(Int)
     case unapprovedURL(String)
     case unexpectedSize(expected: Int64, actual: Int64)
+    /// The bytes arrived but this Mac could not keep them.
+    ///
+    /// Separate from `.network` because the remedy is the opposite one. A
+    /// network failure is worth another attempt; a full disk is not — every
+    /// retry pulls the file again and fills the disk again. Before this case
+    /// existed a disk that filled at 90% of the 425 MB encoder cost six
+    /// attempts and roughly 2.7 GB of downloads before failing, and the user
+    /// was told the network was at fault.
+    case localWriteFailed(String)
     case cancelled
 }
 
@@ -89,6 +98,30 @@ public final class URLSessionModelDownloader: NSObject, ModelDownloading, @unche
             self.configuration = configuration
         }
         super.init()
+    }
+
+    /// Did this fail because the bytes could not be written here?
+    ///
+    /// URLSession reports both "the server went away" and "I could not save
+    /// the file" through the same channel, and telling them apart is the only
+    /// way to stop retrying a full disk.
+    static func isLocalWriteFailure(_ error: any Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            return nsError.code == NSURLErrorCannotWriteToFile
+                || nsError.code == NSURLErrorCannotCreateFile
+                || nsError.code == NSURLErrorCannotMoveFile
+                || nsError.code == NSURLErrorCannotRemoveFile
+        }
+        if nsError.domain == NSCocoaErrorDomain {
+            return nsError.code == NSFileWriteOutOfSpaceError
+                || nsError.code == NSFileWriteNoPermissionError
+                || nsError.code == NSFileWriteVolumeReadOnlyError
+        }
+        if nsError.domain == NSPOSIXErrorDomain {
+            return nsError.code == Int(ENOSPC) || nsError.code == Int(EDQUOT)
+        }
+        return false
     }
 
     /// How many times a dropped transfer is picked up again.
@@ -285,7 +318,9 @@ private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unc
             try FileManager.default.moveItem(at: location, to: destination)
             finish(.success(destination))
         } catch {
-            finishTerminal(ModelDownloadError.network(error.localizedDescription))
+            // The download succeeded and this Mac could not store it — a full
+            // disk, not a bad connection.
+            finishTerminal(ModelDownloadError.localWriteFailed(error.localizedDescription))
         }
     }
 
@@ -308,9 +343,16 @@ private final class DownloadObserver: NSObject, URLSessionDownloadDelegate, @unc
             return
         }
 
-        // The system hands back what it managed to write when a transfer drops.
-        // Without this the next attempt starts from zero — measured at 415 MB
-        // of a 445 MB file thrown away.
+        // A failure to WRITE is this Mac's problem, not the network's, and the
+        // two want opposite responses. Retrying a full disk just refills it.
+        if URLSessionModelDownloader.isLocalWriteFailure(error) {
+            finishTerminal(ModelDownloadError.localWriteFailed(error.localizedDescription))
+            return
+        }
+
+        // The system hands back what it managed to write when a transfer drops,
+        // so the next attempt can continue from those bytes rather than from
+        // nothing.
         let resumeData = (error as NSError)
             .userInfo[NSURLSessionDownloadTaskResumeData] as? Data
         finish(.failure(ResumableFailure(

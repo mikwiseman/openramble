@@ -97,6 +97,10 @@ public actor ModelStore {
             return code == 408 || code == 429 || (500...599).contains(code)
         case .unapprovedURL, .unexpectedSize, .cancelled:
             return false
+        case .localWriteFailed:
+            // Every retry downloads the file again and fills the disk again.
+            // The remedy is free space, and only the person can provide it.
+            return false
         }
     }
     private let verifier: ModelVerifier
@@ -602,6 +606,11 @@ public actor ModelStore {
                     )
                 } catch ModelDownloadError.cancelled {
                     throw CancellationError()
+                } catch let ModelDownloadError.localWriteFailed(reason) {
+                    // The disk is full no matter which mirror the bytes come
+                    // from. Walking to the next source would download the file
+                    // a second time and fail in exactly the same place.
+                    throw ModelStoreError.download("\(file.path): \(reason)")
                 } catch let error as ModelDownloadError {
                     lastError = error
                     // Progress could go forward on an unsuccessful attempt - return
