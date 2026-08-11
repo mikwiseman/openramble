@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.3.7</title>
-      <pubDate>Tue, 11 Aug 2026 15:05:58 +0300</pubDate>
-      <sparkle:version>12</sparkle:version>
-      <sparkle:shortVersionString>0.3.7</sparkle:shortVersionString>
+      <title>0.3.8</title>
+      <pubDate>Tue, 11 Aug 2026 21:32:54 +0300</pubDate>
+      <sparkle:version>13</sparkle:version>
+      <sparkle:shortVersionString>0.3.8</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.3.7&lt;/h2&gt;&lt;p&gt;## Responsive menu bar and hotkey&lt;/p&gt;&lt;p&gt;The menu bar indicator is now deliberately simple: a steady blue dot while&lt;/p&gt;&lt;p&gt;recording, a steady green dot while speech is being processed, and no dot when&lt;/p&gt;&lt;p&gt;OpenRamble is ready.&lt;/p&gt;&lt;p&gt;This removes an overly frequent menu bar animation that could consume a full&lt;/p&gt;&lt;p&gt;CPU core and make both the menu and the global dictation hotkey stop responding.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.3.7/OpenRamble-0.3.7.dmg" length="4738367" type="application/octet-stream" sparkle:edSignature="738LNZU/Osvz+ed57AFyyFYZnGBKB4R5LH7whwH4b2LYXOAUqlfGJtA1YQGboEcdNOoJayzEA9c+6ZLbsK3RDg==" />
+      <description>&lt;h2&gt;OpenRamble 0.3.8&lt;/h2&gt;&lt;p&gt;## Focused dictation feedback&lt;/p&gt;&lt;p&gt;Recording now uses a compact system-material HUD with a live waveform and&lt;/p&gt;&lt;p&gt;elapsed time, including native Liquid Glass on macOS 26. Processing stays&lt;/p&gt;&lt;p&gt;deliberately quiet, and the HUD disappears as soon as insertion begins. The old&lt;/p&gt;&lt;p&gt;post-insertion speed banner is gone, so your text is the only success&lt;/p&gt;&lt;p&gt;confirmation you see.&lt;/p&gt;&lt;p&gt;## Simpler setup and settings&lt;/p&gt;&lt;p&gt;First-run setup is now three focused steps: introduction, permissions and local&lt;/p&gt;&lt;p&gt;model, then a real test dictation. Settings are reorganized around the shortcut,&lt;/p&gt;&lt;p&gt;behavior, privacy, recognition, model, personal dictionary, updates, and an&lt;/p&gt;&lt;p&gt;informative About page.&lt;/p&gt;&lt;p&gt;## Better technical dictation&lt;/p&gt;&lt;p&gt;OpenRamble now recognizes and formats a broader set of common development terms&lt;/p&gt;&lt;p&gt;without requiring personal dictionary entries. Conservative exact repairs keep&lt;/p&gt;&lt;p&gt;ordinary Russian words from being rewritten as similar-looking product names;&lt;/p&gt;&lt;p&gt;your personal replacements still take priority.&lt;/p&gt;&lt;p&gt;## Accessibility and polish&lt;/p&gt;&lt;p&gt;Glass and standard materials adapt to Reduce Transparency and Increase Contrast,&lt;/p&gt;&lt;p&gt;step transitions respect Reduce Motion, dictionary entries can be added with&lt;/p&gt;&lt;p&gt;Return, and VoiceOver feedback is clearer across recording, permissions, setup,&lt;/p&gt;&lt;p&gt;and recovery states.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.3.8/OpenRamble-0.3.8.dmg" length="4756871" type="application/octet-stream" sparkle:edSignature="OFClNaXRXp+BMmKopuIM1rRM1bf3iFJ9C8/Lpsdtv9xpdCi5LLp0Zsn9bsrt5Z+T6LArDcmMvGJViIjpTgODBA==" />
     </item>
   </channel>
 </rss>
