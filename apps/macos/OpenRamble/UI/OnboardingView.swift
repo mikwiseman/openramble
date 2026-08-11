@@ -89,8 +89,7 @@ struct OnboardingView: View {
     private var content: some View {
         switch step {
         case .welcome: welcome
-        case .permissions: permissions
-        case .model: model
+        case .setup: setup
         case .tryIt: tryIt
         }
     }
@@ -129,16 +128,16 @@ struct OnboardingView: View {
         }
     }
 
-    private var permissions: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Two permissions")
+    private var setup: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Set up OpenRamble")
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Both are granted in System Settings. We'll show you exactly where.")
+            Text("Two permissions and one local model. Speech never leaves this Mac.")
                 .foregroundStyle(.secondary)
 
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 OnboardingPermission(
                     status: PermissionStatus(
                         title: "Microphone",
@@ -154,6 +153,26 @@ struct OnboardingView: View {
                     ),
                     action: performAccessibilityAction
                 )
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Offline recognition", systemImage: "waveform")
+                        .font(.headline)
+                    ModelStatusView(
+                        status: ModelStatus.make(
+                            state: state.modelState,
+                            isPreparingEngine: state.isPreparingEngine,
+                            preparation: state.enginePreparation,
+                            place: .onboarding,
+                            downloadMegabytes: state.remainingDownloadMegabytes
+                        ),
+                        install: state.installModel,
+                        cancel: state.cancelModelInstall,
+                        delete: state.deleteModel
+                    )
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .glassSurface(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
             if needsAccessibilityRepair {
@@ -168,7 +187,7 @@ struct OnboardingView: View {
                 .font(.caption)
             }
 
-            Text("A separate “Input Monitoring” permission is not needed. The app doesn't store or transmit keystrokes — it only looks for your hotkey.")
+            Text("Input Monitoring is not needed. Accessibility is used only for the chosen hotkey and finished-text insertion.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -197,29 +216,6 @@ struct OnboardingView: View {
             showAccessibilityRepairConfirmation = true
         case .repairing, .granted:
             break
-        }
-    }
-
-    private var model: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Recognition model")
-                .font(.title2.bold())
-                .accessibilityAddTraits(.isHeader)
-
-            ModelStatusView(
-                status: ModelStatus.make(
-                    state: state.modelState,
-                    isPreparingEngine: state.isPreparingEngine,
-                    preparation: state.enginePreparation,
-                    place: .onboarding,
-                    downloadMegabytes: state.remainingDownloadMegabytes
-                ),
-                install: state.installModel,
-                cancel: state.cancelModelInstall,
-                delete: state.deleteModel
-            )
-
-            Spacer()
         }
     }
 
@@ -296,7 +292,7 @@ struct OnboardingView: View {
         .buttonStyle(.borderedProminent)
         // Default button: Return takes the master forward. Previously the main thing
         // the action of the entire installation was not accessible from the keyboard - Return is not
-        // did nothing, and it was impossible to walk four steps without a mouse. On the last
+        // did nothing, and it was impossible to walk the setup without a mouse. On the last
         // in the step the focus is on the sample field, and Return goes to the field, not the button.
         .keyboardShortcut(.defaultAction)
         .disabled(blockReason != nil)
@@ -396,6 +392,6 @@ private struct OnboardingPermission: View {
             }
         }
         .padding(12)
-        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+        .glassSurface(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

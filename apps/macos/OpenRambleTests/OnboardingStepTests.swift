@@ -29,10 +29,9 @@ final class OnboardingStepTests: XCTestCase {
     // MARK: - Steps
 
     func testScenario001() {
-        XCTAssertEqual(OnboardingStep.allCases.count, 4)
-        XCTAssertEqual(OnboardingStep.welcome.next, .permissions)
-        XCTAssertEqual(OnboardingStep.permissions.next, .model)
-        XCTAssertEqual(OnboardingStep.model.next, .tryIt)
+        XCTAssertEqual(OnboardingStep.allCases.count, 3)
+        XCTAssertEqual(OnboardingStep.welcome.next, .setup)
+        XCTAssertEqual(OnboardingStep.setup.next, .tryIt)
         XCTAssertNil(OnboardingStep.tryIt.next)
     }
 
@@ -43,23 +42,23 @@ final class OnboardingStepTests: XCTestCase {
         XCTAssertFalse(OnboardingStep.welcome.hasPrevious)
         XCTAssertNil(OnboardingStep.welcome.previous)
 
-        XCTAssertTrue(OnboardingStep.permissions.hasPrevious)
-        XCTAssertEqual(OnboardingStep.permissions.previous, .welcome)
-        XCTAssertEqual(OnboardingStep.tryIt.previous, .model)
+        XCTAssertTrue(OnboardingStep.setup.hasPrevious)
+        XCTAssertEqual(OnboardingStep.setup.previous, .welcome)
+        XCTAssertEqual(OnboardingStep.tryIt.previous, .setup)
     }
 
     func testScenario003() {
         XCTAssertEqual(OnboardingStep.welcome.nextButtonTitle, "Continue")
-        XCTAssertEqual(OnboardingStep.model.nextButtonTitle, "Continue")
+        XCTAssertEqual(OnboardingStep.setup.nextButtonTitle, "Continue")
         XCTAssertEqual(OnboardingStep.tryIt.nextButtonTitle, "Done")
     }
 
     func testScenario004() {
-        XCTAssertEqual(OnboardingStep.welcome.progressText, "1 of 4")
-        XCTAssertEqual(OnboardingStep.tryIt.progressText, "4 of 4")
-        // "1 of 4" without the word "step" VoiceOver reads like a couple of numbers out of nowhere.
-        XCTAssertEqual(OnboardingStep.welcome.progressAccessibilityLabel, "Step 1 of 4")
-        XCTAssertEqual(OnboardingStep.tryIt.progressAccessibilityLabel, "Step 4 of 4")
+        XCTAssertEqual(OnboardingStep.welcome.progressText, "1 of 3")
+        XCTAssertEqual(OnboardingStep.tryIt.progressText, "3 of 3")
+        // "1 of 3" without the word "step" VoiceOver reads like a couple of numbers out of nowhere.
+        XCTAssertEqual(OnboardingStep.welcome.progressAccessibilityLabel, "Step 1 of 3")
+        XCTAssertEqual(OnboardingStep.tryIt.progressAccessibilityLabel, "Step 3 of 3")
     }
 
     // MARK: - Who lets in next
@@ -79,29 +78,29 @@ final class OnboardingStepTests: XCTestCase {
     // MARK: - Permissions
 
     func testScenario007() {
-        let text = reason(.permissions, microphone: false, accessibility: false)
+        let text = reason(.setup, microphone: false, accessibility: false)
         XCTAssertEqual(text, "Two permissions left to grant — Microphone and Accessibility.")
     }
 
     func testScenario008() {
-        XCTAssertEqual(reason(.permissions, microphone: false, accessibility: true), "Microphone is still needed.")
+        XCTAssertEqual(reason(.setup, microphone: false, accessibility: true), "Microphone is still needed.")
     }
 
     func testScenario009() {
         XCTAssertEqual(
-            reason(.permissions, microphone: true, accessibility: false),
+            reason(.setup, microphone: true, accessibility: false),
             "Accessibility is still needed."
         )
     }
 
     func testScenario010() {
-        XCTAssertNil(reason(.permissions, microphone: true, accessibility: true))
+        XCTAssertNil(reason(.setup, microphone: true, accessibility: true))
         XCTAssertTrue(
             OnboardingGate.canAdvance(
-                step: .permissions,
+                step: .setup,
                 microphoneGranted: true,
                 accessibilityGranted: true,
-                modelState: .notInstalled
+                modelState: ready
             )
         )
     }
@@ -110,31 +109,31 @@ final class OnboardingStepTests: XCTestCase {
 
     func testScenario011() {
         XCTAssertEqual(
-            reason(.model, model: .notInstalled),
+            reason(.setup, model: .notInstalled),
             "Download the model first — without it there is nothing to recognize with."
         )
         XCTAssertEqual(
-            reason(.model, model: .downloading(receivedBytes: 1, totalBytes: 2)),
+            reason(.setup, model: .downloading(receivedBytes: 1, totalBytes: 2)),
             "Wait for the download to finish."
         )
         XCTAssertEqual(
-            reason(.model, model: .verifying(checked: 1, total: 12)),
+            reason(.setup, model: .verifying(checked: 1, total: 12)),
             "The download is being verified."
         )
         XCTAssertEqual(
-            reason(.model, model: .failed(.download("no network"))),
+            reason(.setup, model: .failed(.download("no network"))),
             "The download failed. Try again."
         )
-        XCTAssertEqual(reason(.model, model: .deleting), "The model is being deleted.")
+        XCTAssertEqual(reason(.setup, model: .deleting), "The model is being deleted.")
     }
 
     func testScenario012() {
-        XCTAssertNil(reason(.model, model: ready))
+        XCTAssertNil(reason(.setup, model: ready))
     }
 
     func testScenario013() {
         XCTAssertEqual(
-            reason(.model, model: ready, engineReady: false),
+            reason(.setup, model: ready, engineReady: false),
             "Wait for the model to finish preparing for first use."
         )
     }

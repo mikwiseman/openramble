@@ -8,8 +8,7 @@ import LocalASR
 /// there may be no verification at all.
 enum OnboardingStep: Int, CaseIterable, Sendable {
     case welcome
-    case permissions
-    case model
+    case setup
     case tryIt
 
     var next: OnboardingStep? { OnboardingStep(rawValue: rawValue + 1) }
@@ -60,17 +59,17 @@ enum OnboardingGate {
                 ? nil
                 : "Try dictation first, or press “Skip the try-out”."
 
-        case .permissions:
-            // We proceed further only when both permissions have been issued: next step
-            // without them it won’t show anything, and the person will decide that everything is broken.
+        case .setup:
+            // Permissions and the local model are one setup job. Keeping them on
+            // separate pages created an almost empty “Model ready” step for existing
+            // installs and made the shortest path feel longer than it is.
             switch (microphoneGranted, accessibilityGranted) {
-            case (true, true): return nil
+            case (true, true): break
             case (false, false): return "Two permissions left to grant — Microphone and Accessibility."
             case (false, true): return "Microphone is still needed."
             case (true, false): return "Accessibility is still needed."
             }
 
-        case .model:
             switch modelState {
             case .ready: return engineReady ? nil : "Wait for the model to finish preparing for first use."
             case .notInstalled: return "Download the model first — without it there is nothing to recognize with."
