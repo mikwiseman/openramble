@@ -103,11 +103,10 @@ targets:
         # Where is the list of versions. A regular static file on GitHub Pages,
         # The product does not have any server.
         SUFeedURL: https://mikwiseman.github.io/openramble/appcast.xml
-        # Autocheck is disabled. The key is required in this form: without it
-        # On the second launch, Sparkle will ask “should you check for updates?” and by
-        # will enable checks by default. The product promises “a network only according to your
-        # team" - an application that goes online at startup, this is a promise
-        # violates. The user enables the checks himself in the settings.
+        # Automatic checks are enabled deliberately so security fixes reach people.
+        # The setting is explicit to avoid Sparkle showing an unexpected policy modal
+        # during a person's first minutes with the app. Settings can silence scheduled
+        # checks completely; device profile reporting and automatic installs stay off.
         SUEnableAutomaticChecks: true
         # Do not send system report (Mac model, OS version, language, CPU).
         # Along with the update request, only the IP and application version are sent.

@@ -114,7 +114,7 @@ struct OnboardingView: View {
                 )
                 OnboardingPoint(
                     symbol: "arrow.down.circle",
-                    text: "The app goes online only on your command: to download the model and, if you turn it on, to check for updates."
+                    text: "Network access is limited to model downloads and a small daily update check that you can turn off."
                 )
                 OnboardingPoint(
                     // An open lock is read as “unprotected” - exactly the opposite.
