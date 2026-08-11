@@ -35,5 +35,7 @@ grep -Fq 'APP_NAME="OpenRamble"' "$RELEASE_SCRIPT" \
   || fail_test "release.sh still publishes the old product name"
 grep -Fq 'DMG_BASENAME="OpenRamble"' "$BUILD_SCRIPT" \
   || fail_test "production DMG still uses the old product name"
+grep -Fq 'if [[ "$RELEASE_KEYCHAIN_ACTIVE" == "1" ]]; then' "$BUILD_SCRIPT" \
+  || fail_test "legacy Developer ID signing still expands an empty keychain array under nounset"
 
 printf 'PASS: autonomous release keeps machine-verifiable artifact gates\n'
