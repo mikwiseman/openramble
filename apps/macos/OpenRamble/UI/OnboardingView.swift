@@ -4,8 +4,7 @@ import SwiftUI
 
 /// First launch: from installation to the first dictated phrase.
 ///
-/// The order of steps is chosen so that the model is loaded in the background while the person
-/// reads and issues permissions - otherwise it would just look at the indicator.
+/// Three focused steps take a person from installation to a verified first dictation.
 struct OnboardingView: View {
     @ObservedObject var state: AppState
     let onFinish: () -> Void
@@ -70,7 +69,10 @@ struct OnboardingView: View {
             }
             .padding()
         }
-        .frame(width: 560, height: 420)
+        // The combined setup step contains two permission rows and every model
+        // state, including repair and download progress. Keep enough vertical
+        // room for those controls without making the first-run window feel large.
+        .frame(width: 560, height: 520)
         .confirmationDialog(
             "Repair Accessibility access?",
             isPresented: $showAccessibilityRepairConfirmation,

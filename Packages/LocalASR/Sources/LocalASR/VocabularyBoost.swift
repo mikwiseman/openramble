@@ -74,7 +74,11 @@ extension VocabularyBoost {
     /// a list of three words knew nothing about them. The reason why such
     /// terms are excluded altogether - in the documentation for the flag itself.
     static func unboostable(_ replacements: [DictionaryReplacement]) -> Set<String> {
-        Set(replacements.filter(\.noAcousticBoost).map(\.written))
+        Set(
+            replacements
+                .filter(\.noAcousticBoost)
+                .map { $0.written.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        )
     }
 
     /// Set according to the user's dictionary: starting terms plus his own
@@ -87,13 +91,40 @@ extension VocabularyBoost {
         // Marked by a person plus marked in the workpiece: custom
         // the record “deploy → deploy” does not have the right to return deploy to acoustics
         // only because there is no checkmark in it.
-        let blocked = unboostable(replacements).union(unboostable(StarterDictionary.developer))
-        let userTerms = replacements
-            .filter { !blocked.contains($0.written) }
-            .filter { $0.written.contains { $0.isLetter && $0.isASCII } }
-            .filter { !known.contains($0.written.lowercased()) }
-            .map { Term(text: $0.written, aliases: [$0.spoken]) }
-        return VocabularyBoost(terms: defaults.terms + userTerms)
+        // A personal text-only mark blocks that canonical term completely. For
+        // built-ins, block only canonical terms with no safe acoustic spelling;
+        // one exact-only repair must not suppress the other measured aliases.
+        let starterWritten = Set(StarterDictionary.developer.map { $0.written.lowercased() })
+        let unsafeStarterOnly = starterWritten.subtracting(known)
+        let blocked = unboostable(replacements).union(unsafeStarterOnly)
+
+        // Preserve the person's entry order while grouping aliases by canonical
+        // spelling. A personal pronunciation of an existing built-in term must
+        // extend that term instead of being discarded as a duplicate.
+        var grouped: [(key: String, text: String, aliases: [String])] = []
+        var groupedIndex: [String: Int] = [:]
+        for replacement in replacements {
+            let text = replacement.written.trimmingCharacters(in: .whitespacesAndNewlines)
+            let key = text.lowercased()
+            guard !blocked.contains(key) else { continue }
+            guard text.contains(where: { $0.isLetter && $0.isASCII }) else { continue }
+
+            if let index = groupedIndex[key] {
+                grouped[index].aliases.append(replacement.spoken)
+            } else {
+                groupedIndex[key] = grouped.count
+                grouped.append((key, text, [replacement.spoken]))
+            }
+        }
+
+        let mergedDefaults = defaults.terms.map { term in
+            guard let index = groupedIndex[term.text.lowercased()] else { return term }
+            return Term(text: term.text, aliases: term.aliases + grouped[index].aliases)
+        }
+        let userTerms = grouped
+            .filter { !known.contains($0.key) }
+            .map { Term(text: $0.text, aliases: $0.aliases) }
+        return VocabularyBoost(terms: mergedDefaults + userTerms)
     }
 
     /// Ready-made set for the developer's dictionary: Latin term plus it

@@ -7,8 +7,8 @@ import Foundation
 /// models, but natural behavior: inside the Russian phrase she should write
 /// Cyrillic.
 ///
-/// The dictionary returns the terms to their normal form. The set is offered at first
-/// run and edited however you like - it’s just a template, not something built-in.
+/// The dictionary returns the terms to their normal form. Safe terms are built into
+/// every recognition pipeline; personal replacements remain separate and take priority.
 public enum StarterDictionary {
     /// Developer terms.
     public static var developer: [DictionaryReplacement] {

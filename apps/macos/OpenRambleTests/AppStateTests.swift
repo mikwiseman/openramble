@@ -846,7 +846,7 @@ final class AppStateTests: XCTestCase {
         defaults.set(Data(future.utf8), forKey: "replacements")
 
         let state = makeState()
-        state.addStarterDictionary()
+        state.addReplacement(spoken: "future", written: "Future")
 
         XCTAssertFalse(state.isDictionaryEditable)
         XCTAssertEqual(
@@ -864,17 +864,6 @@ final class AppStateTests: XCTestCase {
 
         XCTAssertEqual(state.replacements.map(\.written), ["deploy"])
         XCTAssertEqual(makeState().replacements.map(\.written), ["deploy"])
-    }
-
-    func testScenario051() {
-        let state = makeState()
-        let available = state.availableStarterCount
-        XCTAssertGreaterThan(available, 0)
-
-        state.addStarterDictionary()
-
-        XCTAssertEqual(state.replacements.count, available)
-        XCTAssertEqual(state.availableStarterCount, 0)
     }
 
     func testScenario062() async throws {

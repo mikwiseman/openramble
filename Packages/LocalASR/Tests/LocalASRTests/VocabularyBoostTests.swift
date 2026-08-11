@@ -72,7 +72,7 @@ final class VocabularyBoostTests: XCTestCase {
             DictionaryReplacement(spoken: "\u{0433}\u{0440}\u{0430}\u{0444}\u{0430}\u{043D}\u{0430}", written: "Grafana"),
             // dangerous - the blank holds a flag on it, and the record of the person is his
             // does not cancel
-            DictionaryReplacement(spoken: "\u{0434}\u{0435}\u{043F}\u{043B}\u{043E}\u{0439}", written: "deploy"),
+            DictionaryReplacement(spoken: "\u{0434}\u{0435}\u{043F}\u{043B}\u{043E}\u{0439}", written: "Deploy"),
             // without Latin is not a term
             DictionaryReplacement(spoken: "\u{043A}\u{0430}\u{043A} \u{0441}\u{043B}\u{044B}\u{0448}\u{0438}\u{0442}\u{0441}\u{044F}", written: "\u{043A}\u{0430}\u{043A} \u{043F}\u{0438}\u{0448}\u{0435}\u{0442}\u{0441}\u{044F}"),
             // its own dangerous term: previously a person could not exclude anything
@@ -81,10 +81,12 @@ final class VocabularyBoostTests: XCTestCase {
 
         let texts = boost.terms.map(\.text)
         XCTAssertTrue(texts.contains("Grafana"))
-        XCTAssertFalse(texts.contains("deploy"))
+        XCTAssertFalse(texts.contains { $0.lowercased() == "deploy" })
         XCTAssertFalse(texts.contains("\u{043A}\u{0430}\u{043A} \u{043F}\u{0438}\u{0448}\u{0435}\u{0442}\u{0441}\u{044F}"))
         XCTAssertFalse(texts.contains("Kassa"), "\u{0447}\u{0435}\u{043B}\u{043E}\u{0432}\u{0435}\u{043A} \u{043E}\u{0442}\u{043C}\u{0435}\u{0442}\u{0438}\u{043B} \u{0442}\u{0435}\u{0440}\u{043C}\u{0438}\u{043D} — \u{0432} \u{0430}\u{043A}\u{0443}\u{0441}\u{0442}\u{0438}\u{043A}\u{0443} \u{043E}\u{043D} \u{043D}\u{0435} \u{0438}\u{0434}\u{0451}\u{0442}")
         XCTAssertEqual(texts.filter { $0.lowercased() == "postgres" }.count, 1)
+        let postgres = boost.terms.first { $0.text == "Postgres" }
+        XCTAssertTrue(postgres?.aliases.contains("\u{043F}\u{043E}\u{0443}\u{0441}\u{0442} \u{0433}\u{0435}\u{0440}\u{0437}") == true)
         let grafana = boost.terms.first { $0.text == "Grafana" }
         XCTAssertEqual(grafana?.aliases, ["\u{0433}\u{0440}\u{0430}\u{0444}\u{0430}\u{043D}\u{0430}"])
     }

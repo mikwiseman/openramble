@@ -45,7 +45,7 @@ private struct GlassSurfaceModifier<S: Shape>: ViewModifier {
                 .background(.regularMaterial, in: shape)
                 .overlay {
                     shape.stroke(
-                        .white.opacity(contrast == .increased ? 0.28 : 0.12),
+                        .primary.opacity(contrast == .increased ? 0.28 : 0.12),
                         lineWidth: 0.5
                     )
                 }

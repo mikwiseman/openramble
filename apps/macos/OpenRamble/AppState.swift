@@ -1722,20 +1722,6 @@ public final class AppState: ObservableObject {
         updateReplacements(updated)
     }
 
-    /// Add a ready-made set of developer terms.
-    ///
-    /// The model writes Anglicisms as she hears them in Russian speech: “pull request”
-    /// becomes "pull request". The set returns them to their normal appearance. Already started
-    /// We don’t touch the replacement by the user - ours is more important than the workpiece.
-    public func addStarterDictionary() {
-        updateReplacements(replacements + StarterDictionary.missing(from: replacements))
-    }
-
-    /// How many prepared terms have not yet been added.
-    public var availableStarterCount: Int {
-        StarterDictionary.missing(from: replacements).count
-    }
-
     private func updateReplacements(_ updated: [DictionaryReplacement]) {
         guard let problem = dictionaryProblem else {
             do {

@@ -26,11 +26,10 @@ final class TermDictionaryEndToEndTests: EndToEndScenario {
 
     /// Eleven phrases with developer terms - all the way to insertion.
     ///
-    /// Half of the terms are received, half are not, and the second half are marked
-    /// `XCTExpectFailure`. This is not fitting an expectation to a model: the expectation is here
-    /// just a product (“said Sentry, got Sentry”), simply known
-    /// the hole stays red without dropping the run. We fixed one - it will fall exactly
-    /// a line with the words “expected failure not recorded”, and it’s time to update the set.
+    /// Known unresolved terms are marked with `XCTExpectFailure`. This is not fitting
+    /// an expectation to a model: the expectation remains the product promise (“said
+    /// Sentry, got Sentry”), while each measured gap stays visible without hiding
+    /// regressions in terms that already work.
     func testStarterDictionaryOnRealModelOutput() async throws {
         let probes = [
             Probe("\u{0421}\u{043E}\u{0431}\u{0435}\u{0440}\u{0438} build \u{0438} \u{0432}\u{044B}\u{043B}\u{043E}\u{0436}\u{0438} release.", converted: ["build", "release"]),

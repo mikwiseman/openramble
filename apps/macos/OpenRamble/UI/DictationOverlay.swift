@@ -272,8 +272,8 @@ final class OverlayModel: ObservableObject {
 
     /// Show elapsed time.
     ///
-    /// While recording, the counter is still kept for VoiceOver even though the
-    /// visible HUD is now only a waveform.
+    /// While recording, the counter drives both the visible duration and the
+    /// VoiceOver label without requiring a redraw loop in the menu bar.
     private func setElapsed(_ value: TimeInterval, ticking: Bool) {
         elapsed = value
 

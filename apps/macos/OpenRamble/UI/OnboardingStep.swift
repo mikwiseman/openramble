@@ -29,7 +29,7 @@ enum OnboardingStep: Int, CaseIterable, Sendable {
 
     /// The same thing in words.
     ///
-    /// "1 of 4" without the word "step" VoiceOver reads like a couple of numbers out of nowhere.
+    /// "1 of 3" without the word "step" VoiceOver reads like a couple of numbers out of nowhere.
     var progressAccessibilityLabel: String {
         "Step \(rawValue + 1) of \(Self.allCases.count)"
     }
