@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.3.6</title>
-      <pubDate>Tue, 11 Aug 2026 12:30:57 +0300</pubDate>
-      <sparkle:version>11</sparkle:version>
-      <sparkle:shortVersionString>0.3.6</sparkle:shortVersionString>
+      <title>0.3.7</title>
+      <pubDate>Tue, 11 Aug 2026 15:05:58 +0300</pubDate>
+      <sparkle:version>12</sparkle:version>
+      <sparkle:shortVersionString>0.3.7</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.3.6&lt;/h2&gt;&lt;p&gt;## Clearer, quieter recording feedback&lt;/p&gt;&lt;p&gt;The floating recording panel now shows a live waveform from the microphone&lt;/p&gt;&lt;p&gt;signal instead of partial recognition text, a listening label, and elapsed&lt;/p&gt;&lt;p&gt;seconds. The separate live-preview recognition path and its setting are gone,&lt;/p&gt;&lt;p&gt;so OpenRamble no longer runs a second recognition stream while you speak.&lt;/p&gt;&lt;p&gt;The menu bar keeps the same OpenRamble mark in every state. A small blue dot&lt;/p&gt;&lt;p&gt;pulses while recording, stays steady while text is being prepared, and briefly&lt;/p&gt;&lt;p&gt;turns green only after a successful insertion.&lt;/p&gt;&lt;p&gt;The floating panel now disappears before insertion instead of showing a&lt;/p&gt;&lt;p&gt;redundant completion state over the destination application. Silence and error&lt;/p&gt;&lt;p&gt;messages remain visible and available to VoiceOver.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.3.6/OpenRamble-0.3.6.dmg" length="4742640" type="application/octet-stream" sparkle:edSignature="RugBPpEpkXoGwh2ctUDdoOHK47Jsl4sz7sBwTB39MDcKhlk9ndjlnoficjNTWFiggICHgLaztj23rvKILhgFBQ==" />
+      <description>&lt;h2&gt;OpenRamble 0.3.7&lt;/h2&gt;&lt;p&gt;## Responsive menu bar and hotkey&lt;/p&gt;&lt;p&gt;The menu bar indicator is now deliberately simple: a steady blue dot while&lt;/p&gt;&lt;p&gt;recording, a steady green dot while speech is being processed, and no dot when&lt;/p&gt;&lt;p&gt;OpenRamble is ready.&lt;/p&gt;&lt;p&gt;This removes an overly frequent menu bar animation that could consume a full&lt;/p&gt;&lt;p&gt;CPU core and make both the menu and the global dictation hotkey stop responding.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.3.7/OpenRamble-0.3.7.dmg" length="4738367" type="application/octet-stream" sparkle:edSignature="738LNZU/Osvz+ed57AFyyFYZnGBKB4R5LH7whwH4b2LYXOAUqlfGJtA1YQGboEcdNOoJayzEA9c+6ZLbsK3RDg==" />
     </item>
   </channel>
 </rss>
