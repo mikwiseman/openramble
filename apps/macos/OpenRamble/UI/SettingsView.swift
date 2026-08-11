@@ -399,17 +399,15 @@ private struct DictionarySettings: View {
                 // will lose which of the two fields it is in.
                 TextField("Heard as", text: $spoken)
                     .accessibilityLabel("Heard as")
+                    .onSubmit(addReplacement)
                 Image(systemName: "arrow.right")
                     .foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
                 TextField("Write as", text: $written)
                     .accessibilityLabel("Write as")
-                Button("Add") {
-                    state.addReplacement(spoken: spoken, written: written)
-                    spoken = ""
-                    written = ""
-                }
-                .disabled(spoken.isEmpty || written.isEmpty || !state.isDictionaryEditable)
+                    .onSubmit(addReplacement)
+                Button("Add", action: addReplacement)
+                .disabled(!canAddReplacement)
                 .accessibilityLabel("Add replacement")
                 .accessibilityHint(
                     state.isDictionaryEditable
@@ -419,6 +417,19 @@ private struct DictionarySettings: View {
             }
             .padding()
         }
+    }
+
+    private var canAddReplacement: Bool {
+        !spoken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !written.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && state.isDictionaryEditable
+    }
+
+    private func addReplacement() {
+        guard canAddReplacement else { return }
+        state.addReplacement(spoken: spoken, written: written)
+        spoken = ""
+        written = ""
     }
 }
 
