@@ -37,5 +37,12 @@ grep -Fq 'DMG_BASENAME="OpenRamble"' "$BUILD_SCRIPT" \
   || fail_test "production DMG still uses the old product name"
 grep -Fq 'if [[ "$RELEASE_KEYCHAIN_ACTIVE" == "1" ]]; then' "$BUILD_SCRIPT" \
   || fail_test "legacy Developer ID signing still expands an empty keychain array under nounset"
+grep -Fq 'CODESIGN_ARGS=(--force)' "$BUILD_SCRIPT" \
+  || fail_test "codesign arguments are not initialized for the legacy login-keychain path"
+grep -Fq 'CODESIGN_ARGS+=("${CODESIGN_KEYCHAIN_ARGS[@]}")' "$BUILD_SCRIPT" \
+  || fail_test "release-keychain codesign arguments are not appended conditionally"
+if grep -Fq 'codesign --force "${CODESIGN_KEYCHAIN_ARGS[@]}"' "$BUILD_SCRIPT"; then
+  fail_test "legacy Developer ID codesign still expands an empty keychain array under nounset"
+fi
 
 printf 'PASS: autonomous release keeps machine-verifiable artifact gates\n'
