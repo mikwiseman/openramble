@@ -34,12 +34,11 @@ final class OverlayContentTests: XCTestCase {
 
     // MARK: - Seconds
 
-    /// Listening is visualized by the live waveform. The duration remains useful
-    /// while the finished recording is being transcribed, but must not compete with
-    /// the waveform while the person is speaking.
+    /// Duration is drawn beside the live waveform by the view. The content model does
+    /// not present the finished recording length as if it were transcription progress.
     func testScenario003() {
         XCTAssertNil(content(.listening, elapsed: 7).subtitle)
-        XCTAssertEqual(content(.transcribing, elapsed: 12.4).subtitle, "12 s")
+        XCTAssertNil(content(.transcribing, elapsed: 12.4).subtitle)
         XCTAssertNil(content(.preparing, elapsed: 3).subtitle)
         XCTAssertNil(content(.inserting, elapsed: 3).subtitle)
         XCTAssertNil(content(.idle, elapsed: 3).subtitle)

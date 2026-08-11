@@ -60,7 +60,7 @@ public final class DictationOverlay: OverlayPresenting {
     private func showPanel() {
         if panel == nil {
             let panel = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 280, height: 64),
+                contentRect: NSRect(x: 0, y: 0, width: 244, height: 52),
                 styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
                 defer: false
@@ -320,41 +320,76 @@ private struct OverlayView: View {
     var body: some View {
         let content = model.content
 
-        return Group {
-            if model.state == .listening, !model.showsSilenceHint {
-                RecordingWaveform(samples: model.waveformSamples, color: .blue)
+        return HStack(spacing: 10) {
+            if model.showsSilenceHint {
+                Image(systemName: "mic.slash.fill")
+                    .foregroundStyle(.orange)
+                    .font(.system(size: 14, weight: .semibold))
+                Text(OverlayModel.silenceHint)
+                    .font(.system(size: 13, weight: .medium))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if model.notice != nil {
+                Image(systemName: icon(for: content.tone))
+                    .foregroundStyle(color(for: content.tone))
+                    .font(.system(size: 14, weight: .semibold))
+                Text(content.title)
+                    .font(.system(size: 13, weight: .medium))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if model.state == .listening {
+                Circle()
+                    .fill(.red)
+                    .frame(width: 8, height: 8)
+                    .accessibilityHidden(true)
+                RecordingWaveform(
+                    samples: Array(model.waveformSamples.suffix(24)),
+                    color: .red
+                )
+                .frame(width: 136, height: 28)
+                Text(elapsedText)
+                    .font(.system(size: 12, weight: .medium, design: .rounded).monospacedDigit())
+                    .foregroundStyle(.secondary)
             } else {
-                HStack(alignment: .top, spacing: 12) {
-                    Circle()
-                        .fill(color(for: content.tone))
-                        .frame(width: 10, height: 10)
-                        .padding(.top, 3)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(model.showsSilenceHint ? OverlayModel.silenceHint : content.title)
-                            .font(.system(size: 13, weight: .medium))
-                            .fixedSize(horizontal: false, vertical: true)
-                        if let subtitle = content.subtitle {
-                            Text(subtitle)
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    Spacer(minLength: 0)
-                }
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityHidden(true)
+                Text(content.title)
+                    .font(.system(size: 13, weight: .medium))
             }
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .frame(
-            width: model.state == .listening ? 360 : 280,
+            width: preferredWidth,
             alignment: .leading
         )
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .glassSurface(RoundedRectangle(cornerRadius: 18, style: .continuous))
         // The panel is read by one element: a colored dot and a counter
         //separately do not mean anything.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(model.accessibilityLabel)
+    }
+
+    private var preferredWidth: CGFloat {
+        if model.showsSilenceHint || model.notice != nil { return 320 }
+        if model.state == .listening { return 244 }
+        return 220
+    }
+
+    private var elapsedText: String {
+        let total = Int(max(0, model.elapsed).rounded(.down))
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+
+    private func icon(for tone: OverlayContent.Tone) -> String {
+        switch tone {
+        case .failure: return "xmark.circle.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .info: return "info.circle.fill"
+        case .idle: return "checkmark.circle.fill"
+        case .recording: return "mic.fill"
+        case .working: return "waveform"
+        }
     }
 
     private func color(for tone: OverlayContent.Tone) -> Color {
