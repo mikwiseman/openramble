@@ -291,8 +291,8 @@ final class MenuBarActivityTests: XCTestCase {
     }
 
     func testScenario033() {
-        XCTAssertEqual(MenuBarStatus.color(activity: .recording), .blue)
-        XCTAssertEqual(MenuBarStatus.color(activity: .processing), .green)
+        XCTAssertEqual(MenuBarStatus.color(activity: .recording), .red)
+        XCTAssertEqual(MenuBarStatus.color(activity: .processing), .blue)
         XCTAssertEqual(MenuBarStatus.color(activity: .hidden), .clear)
     }
 

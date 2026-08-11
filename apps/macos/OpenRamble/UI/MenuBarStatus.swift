@@ -39,8 +39,8 @@ enum MenuBarStatus {
 
     static func color(activity: MenuBarActivity) -> Color {
         switch activity {
-        case .recording: return .blue
-        case .processing: return .green
+        case .recording: return .red
+        case .processing: return .blue
         case .hidden: return .clear
         }
     }
