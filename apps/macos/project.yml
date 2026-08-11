@@ -144,6 +144,23 @@ targets:
           # Entry point: `@main` in the test bundle is not needed and gets in the way.
           - "OpenRambleApp.swift"
           - "Info.plist"
+    preBuildScripts:
+      # The menu bar label must remain state-driven. Enforce the architectural
+      # invariant while Xcode still has source access; the xctest process may be
+      # denied access to a checkout stored in the user's Documents folder.
+      - name: Verify state-driven menu bar label
+        inputFiles:
+          - "$(SRCROOT)/OpenRamble/UI/MenuBarLabel.swift"
+        outputFiles:
+          - "$(DERIVED_FILE_DIR)/menu-bar-label-static-check"
+        script: |
+          set -euo pipefail
+          source_file="$SRCROOT/OpenRamble/UI/MenuBarLabel.swift"
+          if /usr/bin/grep -En 'TimelineView|Timer|Task\.sleep' "$source_file"; then
+            echo "error: MenuBarLabel must not own a redraw loop or delayed task." >&2
+            exit 1
+          fi
+          /usr/bin/touch "$SCRIPT_OUTPUT_FILE_0"
     dependencies:
       - package: DictationCore
         product: DictationCore

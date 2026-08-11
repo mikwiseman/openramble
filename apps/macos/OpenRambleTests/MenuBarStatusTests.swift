@@ -317,16 +317,12 @@ final class MenuBarActivityTests: XCTestCase {
         XCTAssertNotEqual(recording, processing, "recording and processing must render different colors")
     }
 
+    @MainActor
     func testScenario036() throws {
-        let sourceURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("OpenRamble/UI/MenuBarLabel.swift")
-        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let first = try renderLabel(state: .listening)
+        let second = try renderLabel(state: .listening)
 
-        XCTAssertFalse(source.contains("TimelineView"), "the system status item must not redraw on a timeline")
-        XCTAssertFalse(source.contains("Timer"), "the system status item must not own a repeating timer")
-        XCTAssertFalse(source.contains("Task.sleep"), "the system status item must not schedule delayed redraws")
+        XCTAssertEqual(first, second, "unchanged dictation state must render an identical status item")
     }
 
     @MainActor
