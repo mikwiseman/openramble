@@ -264,6 +264,21 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertFalse(model.showsSilenceHint)
     }
 
+    func testSilenceHintCannotMaskProcessingOrFailure() {
+        model.show(.listening, elapsed: 0)
+        model.showSilenceHint()
+
+        model.show(.transcribing, elapsed: 0)
+        XCTAssertFalse(model.showsSilenceHint)
+        XCTAssertEqual(model.content.title, "Transcribing…")
+
+        model.show(.listening, elapsed: 0)
+        model.showSilenceHint()
+        model.showNotice(DictationNotice(kind: .failure, message: "Microphone disconnected."))
+        XCTAssertFalse(model.showsSilenceHint)
+        XCTAssertEqual(model.content.title, "Microphone disconnected.")
+    }
+
     // MARK: - Waveform
 
     func testScenario024() {
@@ -302,5 +317,33 @@ final class OverlayModelTests: XCTestCase {
 
         XCTAssertFalse(model.isVisible, "insertion happens in the destination app, not in the HUD")
         XCTAssertFalse(model.isTicking)
+    }
+
+    func testScenario027() async throws {
+        let notice = DictationNotice(kind: .warning, message: "Check the microphone.")
+        model.showNotice(notice)
+        try await Task.sleep(for: .milliseconds(220))
+
+        model.showNotice(notice)
+
+        XCTAssertEqual(
+            announcer.messages,
+            ["Check the microphone.", "Check the microphone."],
+            "an identical warning in a later impression must be announced again"
+        )
+    }
+
+    func testNoticeDuringRecordingReturnsToLiveHUDAfterExpiry() async throws {
+        model.show(.listening, elapsed: 3)
+        model.showNotice(DictationNotice(kind: .info, message: "Copied."))
+
+        try await Task.sleep(for: .milliseconds(650))
+
+        XCTAssertEqual(model.state, .listening)
+        XCTAssertNil(model.notice)
+        XCTAssertTrue(model.isVisible)
+        XCTAssertTrue(model.isTicking)
+        XCTAssertEqual(model.content.title, "Listening")
+        XCTAssertGreaterThan(model.elapsed, 3.4, "notice time must remain part of recording time")
     }
 }

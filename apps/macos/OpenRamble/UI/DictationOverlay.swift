@@ -72,6 +72,9 @@ public final class DictationOverlay: OverlayPresenting {
             panel.backgroundColor = .clear
             panel.isOpaque = false
             panel.hasShadow = true
+            // The HUD is status feedback, not a control. It must never eat a click
+            // intended for the application underneath it.
+            panel.ignoresMouseEvents = true
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
             let hosting = NSHostingView(rootView: OverlayView(model: model))
             // The panel grows behind the content: a two-line message has no
@@ -200,6 +203,10 @@ final class OverlayModel: ObservableObject {
         if state == .listening {
             waveformSamples = Array(repeating: 0, count: Self.waveformSampleCount)
             showsSilenceHint = false
+        } else {
+            // A silence warning belongs only to the live recording it measured.
+            // It must never cover processing or an error from the next state.
+            showsSilenceHint = false
         }
         setElapsed(elapsed, ticking: state == .listening)
         setVisible(true)
@@ -238,7 +245,11 @@ final class OverlayModel: ObservableObject {
     /// Show the message and remove it after the specified time.
     func showNotice(_ notice: DictationNotice) {
         cancelAutoHide()
-        setElapsed(elapsed, ticking: false)
+        // Keep the recording clock alive behind a transient notice. The notice
+        // does not display elapsed time, but returning to the HUD must not lose
+        // the seconds during which it was visible.
+        setElapsed(elapsed, ticking: state == .listening)
+        showsSilenceHint = false
         self.notice = notice
         setVisible(true)
         announceContent()
@@ -252,7 +263,20 @@ final class OverlayModel: ObservableObject {
             // removes the next message from the screen.
             guard let self, !Task.isCancelled else { return }
             self.notice = nil
-            self.setVisible(false)
+            // The same warning in a later session is new information. Keep
+            // de-duplication only for repeated updates within one impression.
+            self.lastAnnouncement = nil
+            switch self.state {
+            case .preparing, .listening, .transcribing:
+                // An unrelated menu action can show a notice while the microphone
+                // keeps running. Return to the underlying session instead of
+                // silently removing its HUD and elapsed timer.
+                self.setElapsed(self.elapsed, ticking: self.state == .listening)
+                self.setVisible(true)
+                self.announceContent()
+            case .idle, .inserting:
+                self.setVisible(false)
+            }
         }
     }
 
@@ -324,16 +348,16 @@ private struct OverlayView: View {
             if model.showsSilenceHint {
                 Image(systemName: "mic.slash.fill")
                     .foregroundStyle(.orange)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.body.weight(.semibold))
                 Text(OverlayModel.silenceHint)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.callout.weight(.medium))
                     .fixedSize(horizontal: false, vertical: true)
             } else if model.notice != nil {
                 Image(systemName: icon(for: content.tone))
                     .foregroundStyle(color(for: content.tone))
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.body.weight(.semibold))
                 Text(content.title)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.callout.weight(.medium))
                     .fixedSize(horizontal: false, vertical: true)
             } else if model.state == .listening {
                 Circle()
@@ -346,14 +370,14 @@ private struct OverlayView: View {
                 )
                 .frame(width: 136, height: 28)
                 Text(elapsedText)
-                    .font(.system(size: 12, weight: .medium, design: .rounded).monospacedDigit())
+                    .font(.caption.weight(.medium).monospacedDigit())
                     .foregroundStyle(.secondary)
             } else {
                 ProgressView()
                     .controlSize(.small)
                     .accessibilityHidden(true)
                 Text(content.title)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.callout.weight(.medium))
             }
             Spacer(minLength: 0)
         }

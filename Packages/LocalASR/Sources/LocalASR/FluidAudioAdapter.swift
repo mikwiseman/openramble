@@ -222,8 +222,10 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     /// if they are missing.
     public func loadVocabularyModels(from directory: URL, boost: VocabularyBoost) async throws {
         ModelHub.offlineMode = true
+        try Task.checkCancellation()
 
         guard !boost.isEmpty else {
+            try Task.checkCancellation()
             vocabulary = nil
             ctcModels = nil
             ctcTokenizer = nil
@@ -245,6 +247,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             } catch {
                 throw ASREngineError.modelsUnavailable(error.localizedDescription)
             }
+            try Task.checkCancellation()
             ctcModels = models
             ctcTokenizer = tokenizer
             ctcDirectory = directory
@@ -295,6 +298,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
 
         // Substitution entirely and with the last action: recognition started before
         // of this line, it will be completed on the previous set, the next one will be taken by the new one.
+        try Task.checkCancellation()
         vocabulary = VocabularyHelper(
             spotter: spotter,
             context: context,

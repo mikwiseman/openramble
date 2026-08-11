@@ -16,7 +16,8 @@ public enum StarterDictionary {
             DictionaryReplacement(
                 spoken: $0.0,
                 written: $0.1,
-                noAcousticBoost: unboostable.contains($0.1)
+                noAcousticBoost: unboostable.contains($0.1),
+                allowsPhoneticMatching: !nonPhonetic.contains($0.1)
             )
         }
             + literal.map {
@@ -24,7 +25,8 @@ public enum StarterDictionary {
                     spoken: $0.0,
                     written: $0.1,
                     inflects: false,
-                    noAcousticBoost: unboostable.contains($0.1)
+                    noAcousticBoost: unboostable.contains($0.1),
+                    allowsPhoneticMatching: !nonPhonetic.contains($0.1)
                 )
             }
             + postprocessingOnly.map {
@@ -50,6 +52,9 @@ public enum StarterDictionary {
     /// Details why these three: `DictionaryReplacement.noAcousticBoost`
     /// and docs/benchmarks.md.
     private static let unboostable: Set<String> = ["deploy", "Sentry", "commit"]
+    /// These two phonetic keys collide with ordinary Russian words: “в центре”
+    /// and “наблюдение комет”. Measured decoder spellings live as exact rules below.
+    private static let nonPhonetic: Set<String> = ["Sentry", "commit"]
 
     /// The term in ordinary Russian writing - with all cases.
     ///
@@ -118,8 +123,8 @@ public enum StarterDictionary {
     /// the basis of “comets-” turned “we looked at a comet” into “we looked at
     /// commit". The cost of failure is measured and small - one phrase out of thirty
     /// (“in commit” is no longer recognized), and fifteen ordinary Russians were saved
-    /// words. The “commit” itself and the “commit” heard are still recognizable: the exact
-    /// form and phonetics work, declension doesn’t.
+    /// words. The exact “коммит” and measured contextual decoder spellings are
+    /// still repaired; broad phonetic matching is deliberately disabled.
     ///
     /// The second pass of the dictionary - phonetic - makes most of these entries
     /// unnecessary: “diploy” and “depla” are recognized from “deploy” themselves. Stayed here
@@ -129,7 +134,6 @@ public enum StarterDictionary {
         ("\u{043F}\u{0443}\u{043B}\u{0440}\u{0435}\u{043A}\u{0432}\u{0435}\u{0441}\u{0442}", "pull request"),
         ("\u{043C}\u{0435}\u{0440}\u{0434}\u{0436}", "merge"),
         ("\u{043A}\u{043E}\u{043C}\u{043C}\u{0438}\u{0442}", "commit"),
-        ("\u{043A}\u{043E}\u{043C}\u{0435}\u{0442}", "commit"),
         ("\u{0431}\u{0440}\u{0430}\u{043D}\u{043D}\u{0438}\u{0447}", "branch"),
         ("\u{0440}\u{0435}\u{0431}\u{0435}\u{0439}\u{0437}\u{043D}\u{0443}\u{0442}\u{044C}", "rebase"),
         ("\u{043A}\u{043E}\u{0442} \u{0440}\u{0435}\u{0432}\u{044C}\u{044E}", "code review"),
@@ -155,7 +159,10 @@ public enum StarterDictionary {
     /// are never used to bias recognition.
     private static let postprocessingOnly: [(String, String)] = [
         ("\u{0444}\u{0438}\u{0447}\u{0435}\u{0440} \u{0444}\u{043B}\u{044D}\u{043A}", "feature flag"),
-        ("\u{044D}\u{043C}\u{0438}\u{0442}", "commit"),
+        ("\u{043A}\u{043E}\u{043C}\u{0438}\u{0442}", "commit"),
+        // The model hears “commit в branch” as “эмит в branch”. A bare
+        // “эмит” remains untouched because `emit` is a distinct developer term.
+        ("\u{044D}\u{043C}\u{0438}\u{0442} \u{0432}", "commit \u{0432}"),
         ("\u{0431}\u{0440}\u{0430}\u{043D}\u{0434}\u{0436}", "branch"),
         ("\u{043F}\u{043E}\u{0435}\u{0437}\u{0434} \u{0433}\u{0435}\u{0440}\u{0437}", "Postgres"),
         ("\u{043A}\u{044D}\u{0448}\u{0432}\u{0435}\u{0440}\u{0431}\u{0438}\u{0441}", "\u{043A}\u{044D}\u{0448} \u{0432} Redis"),

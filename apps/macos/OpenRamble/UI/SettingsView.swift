@@ -393,27 +393,31 @@ private struct DictionarySettings: View {
 
             Divider()
 
-            HStack {
-                // Signature of the fields only in the form of a hint inside the frame: empty
-                // VoiceOver will read the field, but the filled-in field will no longer be read, and the person
-                // will lose which of the two fields it is in.
-                TextField("Heard as", text: $spoken)
-                    .accessibilityLabel("Heard as")
-                    .onSubmit(addReplacement)
+            HStack(alignment: .bottom, spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Heard as")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("Spoken phrase", text: $spoken)
+                        .accessibilityLabel("Heard as")
+                        .onSubmit(addReplacement)
+                }
                 Image(systemName: "arrow.right")
                     .foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
-                TextField("Write as", text: $written)
-                    .accessibilityLabel("Write as")
-                    .onSubmit(addReplacement)
+                    .padding(.bottom, 5)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Write as")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("Final spelling", text: $written)
+                        .accessibilityLabel("Write as")
+                        .onSubmit(addReplacement)
+                }
                 Button("Add", action: addReplacement)
-                .disabled(!canAddReplacement)
-                .accessibilityLabel("Add replacement")
-                .accessibilityHint(
-                    state.isDictionaryEditable
-                        ? "Fill in both fields"
-                        : "The dictionary can't be edited until the previous data has been read"
-                )
+                    .disabled(!canAddReplacement)
+                    .accessibilityLabel("Add replacement")
+                    .accessibilityHint(addReplacementHint)
             }
             .padding()
         }
@@ -423,6 +427,15 @@ private struct DictionarySettings: View {
         !spoken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !written.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && state.isDictionaryEditable
+    }
+
+    private var addReplacementHint: String {
+        if !state.isDictionaryEditable {
+            return "The dictionary can't be edited until the previous data has been read"
+        }
+        return canAddReplacement
+            ? "Adds this replacement to future dictations"
+            : "Fill in both fields"
     }
 
     private func addReplacement() {

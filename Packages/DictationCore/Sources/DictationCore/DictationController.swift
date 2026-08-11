@@ -165,7 +165,12 @@ public final class DictationController {
         targetApplication = inserter.frontmostApplication()
         state = .preparing
 
-        Task { await startCapture(session: session) }
+        Task {
+            // A capture device can take a noticeable fraction of a second to wake up.
+            // Acknowledge the hotkey before that wait so the gesture never feels lost.
+            await overlay.present(.preparing, elapsed: 0)
+            await startCapture(session: session)
+        }
     }
 
     private func startCapture(session: Int) async {

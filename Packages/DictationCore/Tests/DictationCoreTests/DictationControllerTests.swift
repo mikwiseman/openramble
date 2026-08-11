@@ -160,6 +160,12 @@ final class DictationControllerTests: XCTestCase {
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()
         XCTAssertEqual(controller.state, .listening)
+        let firstPresentedStates = await overlay.presentedStates.prefix(2)
+        XCTAssertEqual(
+            firstPresentedStates,
+            [.preparing, .listening],
+            "the hotkey must receive immediate visual acknowledgement before capture is ready"
+        )
 
         controller.stop()
         await settle()

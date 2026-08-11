@@ -122,4 +122,18 @@ final class VocabularyBoostTests: XCTestCase {
             "a personal text-only mark must disable even a safe built-in acoustic term"
         )
     }
+
+    func testScenario010() throws {
+        let first = "\u{043F}\u{043E}\u{0443}\u{0441}\u{0442} \u{0433}\u{0435}\u{0440}\u{0437}"
+        let second = "\u{043F}\u{043E}\u{0441}\u{0442} \u{0433}\u{0438}"
+        let boost = VocabularyBoost.withUserReplacements([
+            DictionaryReplacement(spoken: first, written: "Postgres"),
+            DictionaryReplacement(spoken: first, written: "POSTGRES"),
+            DictionaryReplacement(spoken: second, written: "Postgres"),
+        ])
+
+        let postgres = try XCTUnwrap(boost.terms.first { $0.text == "Postgres" })
+        XCTAssertEqual(postgres.aliases.filter { $0 == first || $0 == second }, [first, second])
+        XCTAssertEqual(boost.terms.filter { $0.text.lowercased() == "postgres" }.count, 1)
+    }
 }

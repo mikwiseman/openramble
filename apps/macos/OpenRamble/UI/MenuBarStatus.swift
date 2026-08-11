@@ -3,8 +3,17 @@ import SwiftUI
 
 enum MenuBarActivity: Equatable {
     case hidden
+    case preparing
     case recording
     case processing
+}
+
+enum MenuBarActivityBadge: Equatable {
+    case hidden
+    case preparingRing
+    case recordingDot
+    case processingBar
+    case recoveryWarning
 }
 
 /// The menu bar identity and what it says about the current app state.
@@ -31,17 +40,32 @@ enum MenuBarStatus {
 
     static func activity(state: DictationState) -> MenuBarActivity {
         switch state {
+        case .preparing: return .preparing
         case .listening: return .recording
         case .transcribing, .inserting: return .processing
-        case .idle, .preparing: return .hidden
+        case .idle: return .hidden
         }
     }
 
     static func color(activity: MenuBarActivity) -> Color {
         switch activity {
+        case .preparing: return .secondary
         case .recording: return .red
         case .processing: return .blue
         case .hidden: return .clear
+        }
+    }
+
+    /// Recording and processing remain distinguishable without color.
+    static func badge(
+        activity: MenuBarActivity,
+        hasRecoveredWork: Bool = false
+    ) -> MenuBarActivityBadge {
+        switch activity {
+        case .preparing: return .preparingRing
+        case .recording: return .recordingDot
+        case .processing: return .processingBar
+        case .hidden: return hasRecoveredWork ? .recoveryWarning : .hidden
         }
     }
 
@@ -109,7 +133,7 @@ enum MenuBarStatus {
                 ? "Listening — press \(hotkeyTitle) to finish"
                 : "Listening"
         case .transcribing: return "Transcribing…"
-        case .inserting: return "Ready"
+        case .inserting: return "Finishing insertion…"
         }
     }
 }

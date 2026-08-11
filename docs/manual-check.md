@@ -15,20 +15,29 @@ for the check.
    both remain ready and recognition still works with Wi-Fi off.
 4. Check onboarding, every Settings tab, the menu, permission errors, model
    progress/errors, an empty/populated dictionary, and the recovery menu in
-   light and dark appearances at the smallest supported display scale.
+   light and dark appearances at the smallest supported display scale. Repeat
+   at 200%/the largest macOS Text Size and confirm content remains reachable
+   without clipped labels or controls.
 5. Repeat the transient HUD check with Reduce Motion, Reduce Transparency, and
    Increase Contrast enabled. Confirm recording is identifiable without color,
    VoiceOver announces recording/transcribing/errors once, and no text is exposed
-   in the HUD or screen sharing.
+   in the HUD or screen sharing. Click through the visible HUD into the app below;
+   it must never intercept the click. Let an identical warning auto-hide twice
+   and confirm VoiceOver announces both impressions.
 6. Dictate short, long, Russian, English, mixed-language, punctuation, technical
    vocabulary, silence, and immediate-release samples into TextEdit, Safari, and
    a code editor using hold-to-talk. Confirm the compact HUD disappears as soon
-   as insertion starts; a successful paste must not leave a banner behind.
+   as insertion starts; a successful paste must not leave a banner behind. In
+   the dictionary form, confirm Return submits a populated pair and does not add
+   an empty or half-filled replacement.
 7. Double-press the hotkey to start hands-free recording, then press once to
    stop. Confirm Escape and a conflicting shortcut cancel without inserting text.
 8. Switch focus during transcription and verify insertion returns to the field
    where dictation began. Cover rich text, a multiline field, an empty field, a
    secure field, and a destination that rejects paste.
+   With two displays, repeat while the keyboard focus and pointer are on different
+   screens; verify insertion still targets the original field and the HUD stays
+   visible without stealing focus.
 9. Confirm clipboard text, rich content, files, and multiple items are restored
    after insertion and do not appear on another device through Universal
    Clipboard. Verify password-manager values, lazy file promises, and content

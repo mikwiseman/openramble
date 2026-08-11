@@ -12,6 +12,8 @@ struct MenuContent: View {
     let showOnboarding: () -> Void
     @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
+    @State private var showDeleteTextConfirmation = false
+    @State private var showDeleteRecordingConfirmation = false
 
     var body: some View {
         Text(
@@ -53,6 +55,12 @@ struct MenuContent: View {
             }
         }
 
+        if state.canCopyRawDictation {
+            Button("Copy last dictation verbatim") {
+                state.copyRawDictation()
+            }
+        }
+
         if state.recoveredText != nil {
             Divider()
             // The title above the buttons is the same as the block with the entry below. Without him three
@@ -60,9 +68,27 @@ struct MenuContent: View {
             // the explanation has long since left the screen by this point.
             Text("Uninserted text")
             Button("Retry insert") { state.retryRecoveredText() }
+                .disabled(state.dictationState != .idle)
+                .accessibilityHint(
+                    state.dictationState == .idle
+                        ? "Attempts to insert the saved text into the current field"
+                        : "Finish or cancel the current dictation first"
+                )
             Button("Copy text") { state.copyRecoveredText() }
             Button("Delete saved text", role: .destructive) {
-                state.deleteRecoveredText()
+                showDeleteTextConfirmation = true
+            }
+            .confirmationDialog(
+                "Delete the only saved copy of this text?",
+                isPresented: $showDeleteTextConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete saved text", role: .destructive) {
+                    state.deleteRecoveredText()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This cannot be undone. Copy the text first if you may need it.")
             }
         }
 
@@ -71,7 +97,21 @@ struct MenuContent: View {
             Text("Local recording after a failure")
             Button("Retry transcription") { state.retryRecoveredRecording() }
                 .disabled(!state.modelState.isReady || state.dictationState != .idle)
-            Button("Delete recording") { state.deleteRecoveredRecording() }
+            Button("Delete recording", role: .destructive) {
+                showDeleteRecordingConfirmation = true
+            }
+            .confirmationDialog(
+                "Delete the only saved copy of this recording?",
+                isPresented: $showDeleteRecordingConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete recording", role: .destructive) {
+                    state.deleteRecoveredRecording()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This cannot be undone. Retry transcription first if you may need the dictation.")
+            }
         }
 
         Divider()

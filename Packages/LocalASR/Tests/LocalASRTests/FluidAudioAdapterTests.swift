@@ -115,6 +115,26 @@ final class FluidAudioAdapterTests: XCTestCase {
         XCTAssertLessThan(ceiling, 1_870, "\u{041F}\u{043E}\u{0442}\u{043E}\u{043B}\u{043E}\u{043A} \u{0432}\u{044B}\u{0448}\u{0435} \u{043C}\u{0430}\u{043A}\u{0441}\u{0438}\u{043C}\u{0443}\u{043C}\u{0430} \u{043E}\u{043A}\u{043D}\u{0430} — \u{044D}\u{0442}\u{043E} \u{043E}\u{0442}\u{0441}\u{0443}\u{0442}\u{0441}\u{0442}\u{0432}\u{0438}\u{0435} \u{0437}\u{0430}\u{0449}\u{0438}\u{0442}\u{044B}")
     }
 
+    func testCancelledVocabularyRebuildStopsBeforeMutatingTheAdapter() async throws {
+        let adapter = FluidAudioAdapter()
+        let task = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            try await adapter.loadVocabularyModels(
+                from: URL(fileURLWithPath: "/tmp/cancelled-vocabulary-rebuild"),
+                boost: VocabularyBoost(terms: [])
+            )
+        }
+
+        do {
+            try await task.value
+            XCTFail("a cancelled rebuild must not reach vocabulary assignment")
+        } catch is CancellationError {
+            // Expected: the checkpoint precedes even the empty-list mutation.
+        }
+        let count = await adapter.boostedTermCount
+        XCTAssertEqual(count, 0)
+    }
+
     /// Folder of the installed prompt or an intelligible omission.
     private func ctcDirectoryOrSkip() throws -> URL {
         if let override = ProcessInfo.processInfo.environment["WAI_CTC_DIR"] {
