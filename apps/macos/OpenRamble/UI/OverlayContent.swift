@@ -89,7 +89,9 @@ struct OverlayContent: Equatable {
         case .transcribing:
             return OverlayContent(
                 title: "Transcribing…",
-                subtitle: shortSeconds(elapsed),
+                // The number is the length of the finished recording, not progress.
+                // Showing it next to a spinner looks like a processing timer and is misleading.
+                subtitle: nil,
                 tone: .working,
                 accessibilityLabel: "Recording stopped, transcribing speech",
                 announcement: "Recording stopped, transcribing speech",
@@ -114,11 +116,6 @@ struct OverlayContent: Equatable {
         case .warning: return .warning
         case .failure: return .failure
         }
-    }
-
-    /// Counter on the panel. In short - there is no place there.
-    private static func shortSeconds(_ elapsed: TimeInterval) -> String {
-        String(format: "%.0f s", max(0, elapsed))
     }
 
     /// The same number in words.

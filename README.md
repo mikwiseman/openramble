@@ -9,16 +9,16 @@ your Mac and inserts the text at the current cursor.
 [Latest release](https://github.com/mikwiseman/openramble/releases/latest) ·
 [Sparkle feed](https://mikwiseman.github.io/openramble/appcast.xml)
 
-OpenRamble is currently a public beta. Version 0.3.6 is signed with Developer
-ID, notarized by Apple, and distributed as a universal update to existing beta
-installations.
+OpenRamble is currently a public beta. Each published build is signed with
+Developer ID, notarized by Apple, and distributed as a universal update to
+existing beta installations.
 
 ## Privacy
 
 Recognition runs locally. Audio is not uploaded, accounts are not required,
 and the app contains no analytics or crash-reporting SDK.
 
-The app only uses the network for actions initiated by the user:
+Recognition never uses the network. The following maintenance actions can:
 
 | Action | Destination | Data visible to the service |
 |---|---|---|
@@ -27,7 +27,7 @@ The app only uses the network for actions initiated by the user:
 | Download an update | GitHub Releases | IP address and download request |
 
 OpenRamble checks for updates automatically, so a fix reaches you without you
-having to go looking for it. Turn it off in Settings → General → Updates.
+having to go looking for it. Turn scheduled checks off in Settings → Updates.
 
 Two things stay off regardless: no report about your Mac, its system version or
 language is sent with the check, and nothing installs on its own — an update

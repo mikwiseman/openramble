@@ -217,6 +217,7 @@ enum PhoneticMatching {
         var ambiguousInflected: Set<String> = []
 
         for replacement in replacements {
+            guard replacement.allowsPhoneticMatching else { continue }
             let spoken = replacement.spoken.trimmingCharacters(in: .whitespaces)
             // The empty right side is a way to cross out a filler word. Accurate
             // coincidence is capable of this, phonetic selection is not: deletion is not possible

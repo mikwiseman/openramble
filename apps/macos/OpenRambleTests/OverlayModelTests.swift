@@ -264,6 +264,33 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertFalse(model.showsSilenceHint)
     }
 
+    func testSilenceHintCannotMaskProcessingOrFailure() {
+        model.show(.listening, elapsed: 0)
+        model.showSilenceHint()
+
+        model.show(.transcribing, elapsed: 0)
+        XCTAssertFalse(model.showsSilenceHint)
+        XCTAssertEqual(model.content.title, "Transcribing…")
+
+        model.show(.listening, elapsed: 0)
+        model.showSilenceHint()
+        model.showNotice(DictationNotice(kind: .failure, message: "Microphone disconnected."))
+        XCTAssertFalse(model.showsSilenceHint)
+        XCTAssertEqual(model.content.title, "Microphone disconnected.")
+    }
+
+    func testSilenceHintCannotMaskNoticeAlreadyOnScreen() {
+        model.show(.listening, elapsed: 0)
+        model.showNotice(DictationNotice(kind: .failure, message: "Microphone disconnected."))
+        announcer.reset()
+
+        model.showSilenceHint()
+
+        XCTAssertFalse(model.showsSilenceHint)
+        XCTAssertEqual(model.content.title, "Microphone disconnected.")
+        XCTAssertEqual(announcer.messages, [], "the silence poll must not interrupt an active notice")
+    }
+
     // MARK: - Waveform
 
     func testScenario024() {
@@ -303,72 +330,32 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertFalse(model.isVisible, "insertion happens in the destination app, not in the HUD")
         XCTAssertFalse(model.isTicking)
     }
-}
 
-/// Speed line in the panel: lives on its own, yields to the message, does not worry
-/// new dictation.
-@MainActor
-final class OverlaySpeedTests: XCTestCase {
-    private func makeModel() -> OverlayModel {
-        OverlayModel(
-            announcer: FakeAnnouncer(),
-            noticeDuration: .milliseconds(40),
-            speedDuration: .milliseconds(40)
+    func testScenario027() async throws {
+        let notice = DictationNotice(kind: .warning, message: "Check the microphone.")
+        model.showNotice(notice)
+        try await Task.sleep(for: .milliseconds(220))
+
+        model.showNotice(notice)
+
+        XCTAssertEqual(
+            announcer.messages,
+            ["Check the microphone.", "Check the microphone."],
+            "an identical warning in a later impression must be announced again"
         )
     }
 
-    private let readout = SpeedReadout(
-        line: "stop → text: 153 ms",
-        accessibilityLabel: "Text ready 153 milliseconds after you released the key"
-    )
+    func testNoticeDuringRecordingReturnsToLiveHUDAfterExpiry() async throws {
+        model.show(.listening, elapsed: 3)
+        model.showNotice(DictationNotice(kind: .info, message: "Copied."))
 
-    /// The panel is extinguished by cleaning the session a few lines after the report -
-    /// without this link, the number would blink and disappear.
-    func testScenario020() async throws {
-        let model = makeModel()
-        model.showSpeed(readout)
-        model.hide()
+        try await Task.sleep(for: .milliseconds(650))
 
-        XCTAssertTrue(model.isVisible, "cleaning does not have the right to erase the number immediately")
-        XCTAssertEqual(model.speedLine, "stop → text: 153 ms")
-
-        try await Task.sleep(for: .milliseconds(150))
-        XCTAssertNil(model.speedLine)
-        XCTAssertFalse(model.isVisible)
-    }
-
-    /// The error message is more important than the showcase.
-    func testScenario021() {
-        let model = makeModel()
-        model.showSpeed(readout)
-        model.showNotice(DictationNotice(kind: .failure, message: "Not inserted"))
-
-        XCTAssertNil(model.speedLine)
-        XCTAssertNotNil(model.notice)
-    }
-
-    func testScenario022() {
-        let model = makeModel()
-        model.showSpeed(readout)
-        model.show(.listening, elapsed: 0)
-
-        XCTAssertNil(model.speedLine, "the number of the previous dictation has no relation to the new one")
-    }
-
-    /// The number is included in the label, but is not spoken out loud: read it after
-    /// each dictation would be intrusive, but finding it with the cursor would not.
-    func testScenario023() {
-        let announcer = FakeAnnouncer()
-        let model = OverlayModel(
-            announcer: announcer,
-            noticeDuration: .milliseconds(40),
-            speedDuration: .milliseconds(40)
-        )
-        let before = announcer.messages.count
-
-        model.showSpeed(readout)
-
-        XCTAssertEqual(announcer.messages.count, before, "out loud - silent")
-        XCTAssertTrue(model.accessibilityLabel.contains("153 milliseconds"))
+        XCTAssertEqual(model.state, .listening)
+        XCTAssertNil(model.notice)
+        XCTAssertTrue(model.isVisible)
+        XCTAssertTrue(model.isTicking)
+        XCTAssertEqual(model.content.title, "Listening")
+        XCTAssertGreaterThan(model.elapsed, 3.4, "notice time must remain part of recording time")
     }
 }

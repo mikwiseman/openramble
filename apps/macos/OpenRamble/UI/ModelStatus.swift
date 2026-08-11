@@ -117,7 +117,10 @@ struct ModelStatus: Equatable {
                 progressLabel: label,
                 actions: [.cancel],
                 tone: .neutral,
-                announcement: "Downloading model, \(label)"
+                // Exact progress stays available on the ProgressView. Keeping the
+                // proactive announcement stable prevents VoiceOver from speaking
+                // on every network progress callback.
+                announcement: "Downloading model"
             )
 
         case let .verifying(checked, total):
@@ -129,7 +132,7 @@ struct ModelStatus: Equatable {
                 progressLabel: label,
                 actions: [],
                 tone: .neutral,
-                announcement: "Verifying download, \(label)"
+                announcement: "Verifying download"
             )
 
         case .ready:

@@ -130,6 +130,34 @@ public struct AppEnvironment {
     }
 }
 
+/// Pure deadline logic for the rolling silence hint. Keeping time decisions out
+/// of the async polling loop makes resets and boundaries deterministic to test.
+struct SilenceFeedbackPolicy: Equatable {
+    static let signalThreshold: Float = 0.02
+    static let silenceInterval: TimeInterval = 2
+
+    private(set) var lastAudibleInputUptime: TimeInterval?
+
+    mutating func start(at uptime: TimeInterval) {
+        lastAudibleInputUptime = uptime
+    }
+
+    mutating func stop() {
+        lastAudibleInputUptime = nil
+    }
+
+    mutating func registerInput(peak: Float, at uptime: TimeInterval) {
+        if peak > Self.signalThreshold {
+            lastAudibleInputUptime = uptime
+        }
+    }
+
+    func shouldShowHint(at uptime: TimeInterval) -> Bool {
+        guard let lastAudibleInputUptime else { return false }
+        return uptime - lastAudibleInputUptime >= Self.silenceInterval
+    }
+}
+
 /// All application state in one place.
 ///
 /// Links hotkey, audio capture, recognition and insertion. Herself
@@ -299,8 +327,13 @@ public final class AppState: ObservableObject {
     private var isRecoveryOperationActive = false
     /// A message that waits for the end of the session.
     private var noticeAfterSession: DictationNotice?
-    /// The delayed “no sound” prompt is canceled by the first live signal.
+    /// Rolling “no sound” feedback: a live signal resets the deadline rather
+    /// than disabling detection for the rest of a long recording.
     private var silenceHintTask: Task<Void, Never>?
+    private var silenceFeedbackPolicy = SilenceFeedbackPolicy()
+    /// Only the newest personal-dictionary snapshot may reach the acoustic model.
+    private var vocabularyRebuildTask: Task<Void, Never>?
+    private var vocabularyRevision = 0
 
     /// Observer of edits of inserted text - learns the dictionary automatically.
     private let editWatcher: EditLearningWatcher
@@ -324,18 +357,6 @@ public final class AppState: ObservableObject {
     nonisolated static let learnFromEditsKey = "learnFromEdits"
 
 
-    /// Whether to show “stop → text: N ms” after insertion.
-    ///
-    /// Showcase: the number is the main argument of the product, and it should be on the screen.
-    /// But it’s still a decoration on top of someone else’s window, so there’s a switch.
-    @Published public var showSpeedReadout: Bool {
-        didSet {
-            guard oldValue != showSpeedReadout else { return }
-            defaults.set(showSpeedReadout, forKey: Self.showSpeedReadoutKey)
-        }
-    }
-    nonisolated static let showSpeedReadoutKey = "showSpeedReadout"
-
     /// Last speed measurement. Only in memory, only numbers.
     @Published public private(set) var lastSpeed: DictationSpeedReport?
 
@@ -344,10 +365,11 @@ public final class AppState: ObservableObject {
     /// is silent, and there is no one to explain why.
     @Published public var launchAtLogin: Bool {
         didSet {
-            guard oldValue != launchAtLogin else { return }
+            guard oldValue != launchAtLogin, !isReconcilingLaunchAtLogin else { return }
             applyLaunchAtLogin()
         }
     }
+    private var isReconcilingLaunchAtLogin = false
     private var didCompleteInitialPermissionRefresh = false
 
     // Timers and subscriptions are marked `nonisolated(unsafe)` because they are removed
@@ -371,6 +393,10 @@ public final class AppState: ObservableObject {
 
     /// Whether the duration limit is being checked. It shouldn't be at rest.
     public var isCountingDuration: Bool { durationTimer != nil }
+
+    /// The silence watcher exists only while recording. Exposed for the same
+    /// idle-state verification as the duration and permission timers above.
+    public var isWatchingSilence: Bool { silenceHintTask != nil }
 
     /// Warning about the selected key, if any.
     public var hotkeyWarning: String? {
@@ -398,9 +424,6 @@ public final class AppState: ObservableObject {
         editWatcher = EditLearningWatcher(reader: environment.focusedFieldReader)
         // No key = disabled: `bool(forKey:)` returns false. This
         // reads someone else's window and therefore requires an explicit opt-in.
-        showSpeedReadout = environment.defaults.object(forKey: Self.showSpeedReadoutKey) == nil
-            ? true
-            : environment.defaults.bool(forKey: Self.showSpeedReadoutKey)
         learnFromEdits = environment.defaults.bool(forKey: Self.learnFromEditsKey)
         launchAtLogin = SMAppService.mainApp.status == .enabled
         paths = environment.paths
@@ -450,6 +473,8 @@ public final class AppState: ObservableObject {
         // not from waking up.
         permissionTimer?.invalidate()
         durationTimer?.invalidate()
+        silenceHintTask?.cancel()
+        vocabularyRebuildTask?.cancel()
         for observer in systemObservers {
             observer.center.removeObserver(observer.token)
         }
@@ -558,10 +583,9 @@ public final class AppState: ObservableObject {
                 }
             }
             controller.onSpeed = { [weak self] report in
-                guard let self else { return }
-                self.lastSpeed = report
-                guard self.showSpeedReadout, let readout = SpeedReadout.make(report) else { return }
-                (self.overlay as? SpeedPresenting)?.showSpeed(readout)
+                // Keep the measurement for diagnostics and performance tests, but do
+                // not cover the destination app after text has already arrived.
+                self?.lastSpeed = report
             }
             controller.onDictationCompleted = { [weak self] provenance in
                 self?.lastDictation = LastDictation(
@@ -1141,11 +1165,20 @@ public final class AppState: ObservableObject {
 
         if !didCompleteInitialPermissionRefresh {
             didCompleteInitialPermissionRefresh = true
-            if !accessibility || !microphone {
+            // First launch already presents the setup window. A status-bar HUD on
+            // top of it duplicates the same work and competes for attention.
+            if defaults.bool(forKey: "onboardingCompleted"), !accessibility || !microphone {
+                let missingAccess: String
+                switch (microphone, accessibility) {
+                case (false, false): missingAccess = "Microphone and Accessibility access"
+                case (false, true): missingAccess = "Microphone access"
+                case (true, false): missingAccess = "Accessibility access"
+                case (true, true): return
+                }
                 notify(
                     DictationNotice(
                         kind: .warning,
-                        message: "Dictation is off: grant Accessibility and Microphone access in System Settings."
+                        message: "Dictation is off: grant \(missingAccess) in System Settings."
                     )
                 )
             }
@@ -1529,16 +1562,23 @@ public final class AppState: ObservableObject {
     private func rebuildVocabularyBoost() {
         guard isEngineReady, let transcriber, let vocabularyDirectory else { return }
         let currentReplacements = replacements
-        Task { [weak self] in
+        vocabularyRevision += 1
+        let revision = vocabularyRevision
+        vocabularyRebuildTask?.cancel()
+        vocabularyRebuildTask = Task { [weak self] in
             do {
+                try Task.checkCancellation()
                 try await transcriber.prepareVocabulary(
                     modelDirectory: vocabularyDirectory,
                     boost: .withUserReplacements(currentReplacements)
                 )
+                try Task.checkCancellation()
             } catch {
+                guard !Task.isCancelled else { return }
                 // The acoustics have not been reassembled - text replacements are already working, and
                 // the only honest reaction is to say, and not roll back the edit.
                 await MainActor.run { [weak self] in
+                    guard self?.vocabularyRevision == revision else { return }
                     self?.notify(
                         DictationNotice(
                             kind: .warning,
@@ -1558,22 +1598,31 @@ public final class AppState: ObservableObject {
     private func updateRecordingFeedback(for state: DictationState) {
         silenceHintTask?.cancel()
         silenceHintTask = nil
+        silenceFeedbackPolicy.stop()
         guard state == .listening else { return }
 
+        silenceFeedbackPolicy.start(at: ProcessInfo.processInfo.systemUptime)
         silenceHintTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(2))
-            guard !Task.isCancelled else { return }
-            (self?.overlay as? RecordingFeedbackPresenting)?.showSilenceHint()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(500))
+                guard !Task.isCancelled, let self else { return }
+                if self.silenceFeedbackPolicy.shouldShowHint(
+                    at: ProcessInfo.processInfo.systemUptime
+                ) {
+                    (self.overlay as? RecordingFeedbackPresenting)?.showSilenceHint()
+                }
+            }
         }
     }
 
-    /// Peak level from the microphone. A real signal also cancels the silence hint.
+    /// Peak level from the microphone. A real signal hides the current warning
+    /// and starts a fresh silence interval.
     private func registerInputLevel(_ peak: Float) {
         (overlay as? RecordingFeedbackPresenting)?.updateInputLevel(peak)
-        if peak > 0.02 {
-            silenceHintTask?.cancel()
-            silenceHintTask = nil
-        }
+        silenceFeedbackPolicy.registerInput(
+            peak: peak,
+            at: ProcessInfo.processInfo.systemUptime
+        )
     }
 
     /// Registration error visible: silently leave a person without autostart -
@@ -1586,6 +1635,12 @@ public final class AppState: ObservableObject {
                 try SMAppService.mainApp.unregister()
             }
         } catch {
+            let actual = SMAppService.mainApp.status == .enabled
+            if launchAtLogin != actual {
+                isReconcilingLaunchAtLogin = true
+                launchAtLogin = actual
+                isReconcilingLaunchAtLogin = false
+            }
             notify(
                 DictationNotice(
                     kind: .warning,
@@ -1646,7 +1701,12 @@ public final class AppState: ObservableObject {
     /// Generic assembly makes "both paths are the same" a property of the code, not something that
     /// must be remembered when ruling one of two places.
     private func makePipeline() -> TextPipeline {
-        TextPipeline(replacements: replacements)
+        // Safe built-in technical vocabulary is part of recognition, not a
+        // hidden setup chore. Personal entries win when they use the same
+        // heard spelling.
+        TextPipeline(
+            replacements: StarterDictionary.missing(from: replacements) + replacements
+        )
     }
 
     // MARK: - Dictionary
@@ -1731,20 +1791,6 @@ public final class AppState: ObservableObject {
         var updated = replacements
         updated.remove(atOffsets: offsets)
         updateReplacements(updated)
-    }
-
-    /// Add a ready-made set of developer terms.
-    ///
-    /// The model writes Anglicisms as she hears them in Russian speech: “pull request”
-    /// becomes "pull request". The set returns them to their normal appearance. Already started
-    /// We don’t touch the replacement by the user - ours is more important than the workpiece.
-    public func addStarterDictionary() {
-        updateReplacements(replacements + StarterDictionary.missing(from: replacements))
-    }
-
-    /// How many prepared terms have not yet been added.
-    public var availableStarterCount: Int {
-        StarterDictionary.missing(from: replacements).count
     }
 
     private func updateReplacements(_ updated: [DictionaryReplacement]) {

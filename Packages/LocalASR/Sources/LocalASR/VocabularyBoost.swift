@@ -74,7 +74,11 @@ extension VocabularyBoost {
     /// a list of three words knew nothing about them. The reason why such
     /// terms are excluded altogether - in the documentation for the flag itself.
     static func unboostable(_ replacements: [DictionaryReplacement]) -> Set<String> {
-        Set(replacements.filter(\.noAcousticBoost).map(\.written))
+        Set(
+            replacements
+                .filter(\.noAcousticBoost)
+                .map { $0.written.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        )
     }
 
     /// Set according to the user's dictionary: starting terms plus his own
@@ -87,26 +91,90 @@ extension VocabularyBoost {
         // Marked by a person plus marked in the workpiece: custom
         // the record “deploy → deploy” does not have the right to return deploy to acoustics
         // only because there is no checkmark in it.
-        let blocked = unboostable(replacements).union(unboostable(StarterDictionary.developer))
-        let userTerms = replacements
-            .filter { !blocked.contains($0.written) }
-            .filter { $0.written.contains { $0.isLetter && $0.isASCII } }
-            .filter { !known.contains($0.written.lowercased()) }
-            .map { Term(text: $0.written, aliases: [$0.spoken]) }
-        return VocabularyBoost(terms: defaults.terms + userTerms)
+        // A personal text-only mark blocks that canonical term completely. For
+        // built-ins, block only canonical terms with no safe acoustic spelling;
+        // one exact-only repair must not suppress the other measured aliases.
+        let starterWritten = Set(StarterDictionary.developer.map { $0.written.lowercased() })
+        let unsafeStarterOnly = starterWritten.subtracting(known)
+        let blocked = unboostable(replacements).union(unsafeStarterOnly)
+
+        // The text pipeline gives a personal rule ownership of its heard
+        // spelling. Give the acoustic pipeline the same precedence: one alias
+        // must never point at both a built-in term and a different personal
+        // canonical value, or the built-in may win before text replacement can
+        // see the original spelling.
+        var personalAliasOwner: [String: String] = [:]
+        for replacement in replacements {
+            let canonical = replacement.written
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            let alias = replacement.spoken
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            guard !canonical.isEmpty, !alias.isEmpty else { continue }
+            guard replacement.written.contains(where: { $0.isLetter && $0.isASCII }) else { continue }
+            personalAliasOwner[alias] = personalAliasOwner[alias] ?? canonical
+        }
+
+        // Preserve the person's entry order while grouping aliases by canonical
+        // spelling. A personal pronunciation of an existing built-in term must
+        // extend that term instead of being discarded as a duplicate.
+        var grouped: [(key: String, text: String, aliases: [String])] = []
+        var groupedIndex: [String: Int] = [:]
+        for replacement in replacements {
+            let text = replacement.written.trimmingCharacters(in: .whitespacesAndNewlines)
+            let key = text.lowercased()
+            guard !blocked.contains(key) else { continue }
+            guard text.contains(where: { $0.isLetter && $0.isASCII }) else { continue }
+
+            let aliasKey = replacement.spoken
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            guard personalAliasOwner[aliasKey] == key else { continue }
+
+            if let index = groupedIndex[key] {
+                grouped[index].aliases.append(replacement.spoken)
+            } else {
+                groupedIndex[key] = grouped.count
+                grouped.append((key, text, [replacement.spoken]))
+            }
+        }
+
+        let mergedDefaults = defaults.terms.compactMap { term -> Term? in
+            let key = term.text.lowercased()
+            guard !blocked.contains(key) else { return nil }
+            if let owner = personalAliasOwner[key], owner != key { return nil }
+
+            let aliases = term.aliases.filter { alias in
+                let aliasKey = alias.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                guard let owner = personalAliasOwner[aliasKey] else { return true }
+                return owner == key
+            }
+            guard let index = groupedIndex[key] else {
+                return Term(text: term.text, aliases: aliases)
+            }
+            return Term(text: term.text, aliases: aliases + grouped[index].aliases)
+        }
+        let userTerms = grouped
+            .filter { !known.contains($0.key) }
+            .map { Term(text: $0.text, aliases: $0.aliases) }
+        return VocabularyBoost(terms: mergedDefaults + userTerms)
     }
 
     /// Ready-made set for the developer's dictionary: Latin term plus it
     /// Cyrillic spellings as pseudonyms - a bridge from sound to Latin.
     public static func developerDefault() -> VocabularyBoost {
         let starter = StarterDictionary.developer
-        let blocked = unboostable(starter)
         let grouped = Dictionary(grouping: starter, by: \.written)
         return VocabularyBoost(
             terms: grouped
-                .filter { !blocked.contains($0.key) }
-                .map { written, group in
-                    Term(text: written, aliases: group.map(\.spoken))
+                .compactMap { written, group in
+                    // `noAcousticBoost` belongs to a spelling. A measured exact
+                    // decoder repair may be unsafe as an acoustic alias while the
+                    // canonical term and its normal aliases remain useful.
+                    let aliases = group.filter { !$0.noAcousticBoost }
+                    guard !aliases.isEmpty else { return nil }
+                    return Term(text: written, aliases: aliases.map(\.spoken))
                 }
                 .sorted { $0.text < $1.text }
         )

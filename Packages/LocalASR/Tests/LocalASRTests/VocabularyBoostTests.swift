@@ -56,6 +56,10 @@ final class VocabularyBoostTests: XCTestCase {
         // recognition; both serve as bridges and both should go into the set.
         let kubernetes = boost.terms.first { $0.text == "Kubernetes" }
         XCTAssertEqual(Set(kubernetes?.aliases ?? []), ["\u{043A}\u{0443}\u{0431}\u{0435}\u{0440}\u{043D}\u{0435}\u{0442}\u{0435}\u{0441}", "\u{043A}\u{0443}\u{0431}\u{0435}\u{0440}\u{043D}\u{0435}\u{0442}\u{0438}\u{0441}"])
+        XCTAssertFalse(
+            boost.terms.first { $0.text == "code review" }?.aliases.contains("\u{043A}\u{043E}\u{0443}\u{0442}\u{0440}\u{0438}\u{0432}\u{044C}\u{044E}") ?? true,
+            "an exact decoder repair must not become an acoustic bias"
+        )
     }
 
     /// User substitutions - including those learned from edits - go into
@@ -68,7 +72,7 @@ final class VocabularyBoostTests: XCTestCase {
             DictionaryReplacement(spoken: "\u{0433}\u{0440}\u{0430}\u{0444}\u{0430}\u{043D}\u{0430}", written: "Grafana"),
             // dangerous - the blank holds a flag on it, and the record of the person is his
             // does not cancel
-            DictionaryReplacement(spoken: "\u{0434}\u{0435}\u{043F}\u{043B}\u{043E}\u{0439}", written: "deploy"),
+            DictionaryReplacement(spoken: "\u{0434}\u{0435}\u{043F}\u{043B}\u{043E}\u{0439}", written: "Deploy"),
             // without Latin is not a term
             DictionaryReplacement(spoken: "\u{043A}\u{0430}\u{043A} \u{0441}\u{043B}\u{044B}\u{0448}\u{0438}\u{0442}\u{0441}\u{044F}", written: "\u{043A}\u{0430}\u{043A} \u{043F}\u{0438}\u{0448}\u{0435}\u{0442}\u{0441}\u{044F}"),
             // its own dangerous term: previously a person could not exclude anything
@@ -77,10 +81,12 @@ final class VocabularyBoostTests: XCTestCase {
 
         let texts = boost.terms.map(\.text)
         XCTAssertTrue(texts.contains("Grafana"))
-        XCTAssertFalse(texts.contains("deploy"))
+        XCTAssertFalse(texts.contains { $0.lowercased() == "deploy" })
         XCTAssertFalse(texts.contains("\u{043A}\u{0430}\u{043A} \u{043F}\u{0438}\u{0448}\u{0435}\u{0442}\u{0441}\u{044F}"))
         XCTAssertFalse(texts.contains("Kassa"), "\u{0447}\u{0435}\u{043B}\u{043E}\u{0432}\u{0435}\u{043A} \u{043E}\u{0442}\u{043C}\u{0435}\u{0442}\u{0438}\u{043B} \u{0442}\u{0435}\u{0440}\u{043C}\u{0438}\u{043D} — \u{0432} \u{0430}\u{043A}\u{0443}\u{0441}\u{0442}\u{0438}\u{043A}\u{0443} \u{043E}\u{043D} \u{043D}\u{0435} \u{0438}\u{0434}\u{0451}\u{0442}")
         XCTAssertEqual(texts.filter { $0.lowercased() == "postgres" }.count, 1)
+        let postgres = boost.terms.first { $0.text == "Postgres" }
+        XCTAssertTrue(postgres?.aliases.contains("\u{043F}\u{043E}\u{0443}\u{0441}\u{0442} \u{0433}\u{0435}\u{0440}\u{0437}") == true)
         let grafana = boost.terms.first { $0.text == "Grafana" }
         XCTAssertEqual(grafana?.aliases, ["\u{0433}\u{0440}\u{0430}\u{0444}\u{0430}\u{043D}\u{0430}"])
     }
@@ -100,5 +106,63 @@ final class VocabularyBoostTests: XCTestCase {
         let boost = VocabularyBoost(terms: [.init(text: "GitHub")])
 
         XCTAssertEqual(boost.terms.first?.aliases, [])
+    }
+
+    func testScenario009() {
+        let boost = VocabularyBoost.withUserReplacements([
+            DictionaryReplacement(
+                spoken: "\u{043F}\u{043E}\u{0441}\u{0442}\u{0433}\u{0440}\u{0435}\u{0441}",
+                written: "Postgres",
+                noAcousticBoost: true
+            )
+        ])
+
+        XCTAssertFalse(
+            boost.terms.contains { $0.text.lowercased() == "postgres" },
+            "a personal text-only mark must disable even a safe built-in acoustic term"
+        )
+    }
+
+    func testScenario010() throws {
+        let first = "\u{043F}\u{043E}\u{0443}\u{0441}\u{0442} \u{0433}\u{0435}\u{0440}\u{0437}"
+        let second = "\u{043F}\u{043E}\u{0441}\u{0442} \u{0433}\u{0438}"
+        let boost = VocabularyBoost.withUserReplacements([
+            DictionaryReplacement(spoken: first, written: "Postgres"),
+            DictionaryReplacement(spoken: first, written: "POSTGRES"),
+            DictionaryReplacement(spoken: second, written: "Postgres"),
+        ])
+
+        let postgres = try XCTUnwrap(boost.terms.first { $0.text == "Postgres" })
+        XCTAssertEqual(postgres.aliases.filter { $0 == first || $0 == second }, [first, second])
+        XCTAssertEqual(boost.terms.filter { $0.text.lowercased() == "postgres" }.count, 1)
+    }
+
+    func testPersonalAliasOverridesDifferentBuiltInCanonical() throws {
+        let spoken = "\u{0444}\u{0438}\u{0447}\u{0430} \u{0444}\u{043B}\u{0430}\u{0433}"
+        let boost = VocabularyBoost.withUserReplacements([
+            DictionaryReplacement(spoken: spoken, written: "launch switch"),
+        ])
+
+        let personal = try XCTUnwrap(boost.terms.first { $0.text == "launch switch" })
+        XCTAssertTrue(personal.aliases.contains(spoken))
+        XCTAssertFalse(
+            boost.terms.contains { term in
+                term.text == "feature flag" && term.aliases.contains(spoken)
+            },
+            "one acoustic alias must not point at both the built-in and personal canonical values"
+        )
+        XCTAssertEqual(boost.terms.filter { $0.aliases.contains(spoken) }.map(\.text), ["launch switch"])
+
+        let textOnly = VocabularyBoost.withUserReplacements([
+            DictionaryReplacement(
+                spoken: spoken,
+                written: "launch switch",
+                noAcousticBoost: true
+            ),
+        ])
+        XCTAssertFalse(
+            textOnly.terms.contains { $0.aliases.contains(spoken) },
+            "a text-only personal rule must still remove a conflicting built-in acoustic alias"
+        )
     }
 }

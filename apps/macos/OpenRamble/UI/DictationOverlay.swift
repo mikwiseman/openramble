@@ -23,13 +23,11 @@ public final class DictationOverlay: OverlayPresenting {
 
     public init(
         announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
-        noticeDuration: Duration = .seconds(4),
-        speedDuration: Duration = .seconds(2)
+        noticeDuration: Duration = .seconds(4)
     ) {
         model = OverlayModel(
             announcer: announcer,
-            noticeDuration: noticeDuration,
-            speedDuration: speedDuration
+            noticeDuration: noticeDuration
         )
         model.onVisibilityChange = { [weak self] visible in
             if visible {
@@ -62,7 +60,7 @@ public final class DictationOverlay: OverlayPresenting {
     private func showPanel() {
         if panel == nil {
             let panel = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 280, height: 64),
+                contentRect: NSRect(x: 0, y: 0, width: 244, height: 52),
                 styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
                 defer: false
@@ -74,6 +72,9 @@ public final class DictationOverlay: OverlayPresenting {
             panel.backgroundColor = .clear
             panel.isOpaque = false
             panel.hasShadow = true
+            // The HUD is status feedback, not a control. It must never eat a click
+            // intended for the application underneath it.
+            panel.ignoresMouseEvents = true
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
             let hosting = NSHostingView(rootView: OverlayView(model: model))
             // The panel grows behind the content: a two-line message has no
@@ -137,13 +138,6 @@ protocol RecordingFeedbackPresenting: AnyObject {
     func showSilenceHint()
 }
 
-/// The edge of the speed showcase is modeled after `RecordingFeedbackPresenting` and for the same reason:
-/// This is a decoration on top of the dictation, not part of the kernel contract.
-@MainActor
-protocol SpeedPresenting: AnyObject {
-    func showSpeed(_ readout: SpeedReadout)
-}
-
 @MainActor
 final class OverlayModel: ObservableObject {
     @Published private(set) var state: DictationState = .idle
@@ -157,10 +151,6 @@ final class OverlayModel: ObservableObject {
     )
     /// We listen for more than two seconds, but there is no signal: most likely, the wrong microphone.
     @Published private(set) var showsSilenceHint = false
-    /// The line “stop → text: N ms” after successful insertion. Lives for a couple of seconds.
-    @Published private(set) var speedLine: String?
-    private var speedHide: Task<Void, Never>?
-
     /// Whether the panel should be on the screen. Shown by its owner.
     private(set) var isVisible = false
     var onVisibilityChange: ((Bool) -> Void)?
@@ -174,7 +164,6 @@ final class OverlayModel: ObservableObject {
 
     private let announcer: any AccessibilityAnnouncing
     private let noticeDuration: Duration
-    private let speedDuration: Duration
     /// Marked `nonisolated(unsafe)` because the timer removes `deinit`, and it has
     /// isolated class - outside of isolation. They touch him only from the main
     /// stream: the panel lives entirely on it.
@@ -187,12 +176,10 @@ final class OverlayModel: ObservableObject {
 
     init(
         announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
-        noticeDuration: Duration = .seconds(4),
-        speedDuration: Duration = .seconds(2)
+        noticeDuration: Duration = .seconds(4)
     ) {
         self.announcer = announcer
         self.noticeDuration = noticeDuration
-        self.speedDuration = speedDuration
     }
 
     deinit {
@@ -216,29 +203,22 @@ final class OverlayModel: ObservableObject {
         if state == .listening {
             waveformSamples = Array(repeating: 0, count: Self.waveformSampleCount)
             showsSilenceHint = false
-            // And the last number too: it’s about the last dictation.
-            clearSpeed()
+        } else {
+            // A silence warning belongs only to the live recording it measured.
+            // It must never cover processing or an error from the next state.
+            showsSilenceHint = false
         }
         setElapsed(elapsed, ticking: state == .listening)
         setVisible(true)
         announceContent()
     }
 
-    /// Panel shortcut for VoiceOver - along with a silent prompt if present.
-    /// Panel shortcut for VoiceOver.
-    ///
-    /// Speed comes here - but not in ads. Number spoken out loud
-    /// after each dictation, it would be intrusive; find it with the VoiceOver cursor,
-    /// if you suddenly need it, no.
+    /// Panel shortcut for VoiceOver, including the silence prompt if present.
     var accessibilityLabel: String {
         var base = content.accessibilityLabel
         if showsSilenceHint { base = "\(Self.silenceHint) \(base)" }
-        if let speedAccessibilityLabel { base = "\(base) \(speedAccessibilityLabel)" }
         return base
     }
-
-    /// Verbal form of the speed string: "ms" is read by the synthesizer as "emes".
-    private(set) var speedAccessibilityLabel: String?
 
     func updateInputLevel(_ level: Float) {
         guard state == .listening else { return }
@@ -254,7 +234,7 @@ final class OverlayModel: ObservableObject {
     /// they cannot see the flat waveform, and without an announcement learn about the
     /// dead microphone only by an empty result at the end.
     func showSilenceHint() {
-        guard state == .listening, !showsSilenceHint else { return }
+        guard state == .listening, notice == nil, !showsSilenceHint else { return }
         showsSilenceHint = true
         announcer.announce(Self.silenceHint, urgent: true)
     }
@@ -265,9 +245,11 @@ final class OverlayModel: ObservableObject {
     /// Show the message and remove it after the specified time.
     func showNotice(_ notice: DictationNotice) {
         cancelAutoHide()
-        // The error message is more important than the showcase: the number gives way to it.
-        clearSpeed()
-        setElapsed(elapsed, ticking: false)
+        // Keep the recording clock alive behind a transient notice. The notice
+        // does not display elapsed time, but returning to the HUD must not lose
+        // the seconds during which it was visible.
+        setElapsed(elapsed, ticking: state == .listening)
+        showsSilenceHint = false
         self.notice = notice
         setVisible(true)
         announceContent()
@@ -281,45 +263,30 @@ final class OverlayModel: ObservableObject {
             // removes the next message from the screen.
             guard let self, !Task.isCancelled else { return }
             self.notice = nil
-            self.setVisible(false)
+            // The same warning in a later session is new information. Keep
+            // de-duplication only for repeated updates within one impression.
+            self.lastAnnouncement = nil
+            switch self.state {
+            case .preparing, .listening, .transcribing:
+                // An unrelated menu action can show a notice while the microphone
+                // keeps running. Return to the underlying session instead of
+                // silently removing its HUD and elapsed timer.
+                self.setElapsed(self.elapsed, ticking: self.state == .listening)
+                self.setVisible(true)
+                self.announceContent()
+            case .idle, .inserting:
+                self.setVisible(false)
+            }
         }
-    }
-
-    /// Show how long it took “let go → text in place.”
-    ///
-    /// Keeps the panel on the screen itself: `cleanup` calls `dismiss` via
-    /// a few lines after the report, and without this the number would blink and disappear.
-    func showSpeed(_ readout: SpeedReadout) {
-        speedHide?.cancel()
-        speedLine = readout.line
-        speedAccessibilityLabel = readout.accessibilityLabel
-        setVisible(true)
-        let duration = speedDuration
-        speedHide = Task { [weak self] in
-            try? await Task.sleep(for: duration)
-            // Cancellation check is required: `try?` swallows it along with the error,
-            // and the canceled task would otherwise have taken away the next number.
-            guard let self, !Task.isCancelled else { return }
-            self.speedLine = nil
-            self.setVisible(false)
-        }
-    }
-
-    private func clearSpeed() {
-        speedHide?.cancel()
-        speedHide = nil
-        speedLine = nil
-        speedAccessibilityLabel = nil
     }
 
     /// Remove the panel.
     ///
     /// The message remains on the screen: the person must have time to read it, but
-    /// cleanup after the session comes right after him. The same goes for the speed line:
-    /// her showing comes from the same cleaning as the request to turn off the panel.
+    /// cleanup after the session comes right after it.
     func hide() {
         setElapsed(elapsed, ticking: false)
-        guard notice == nil, speedLine == nil else { return }
+        guard notice == nil else { return }
         cancelAutoHide()
         setVisible(false)
         // The next dictation must appear again, even if the state
@@ -329,8 +296,8 @@ final class OverlayModel: ObservableObject {
 
     /// Show elapsed time.
     ///
-    /// While recording, the counter is still kept for VoiceOver even though the
-    /// visible HUD is now only a waveform.
+    /// While recording, the counter drives both the visible duration and the
+    /// VoiceOver label without requiring a redraw loop in the menu bar.
     private func setElapsed(_ value: TimeInterval, ticking: Bool) {
         elapsed = value
 
@@ -377,46 +344,76 @@ private struct OverlayView: View {
     var body: some View {
         let content = model.content
 
-        return Group {
-            if model.state == .listening, !model.showsSilenceHint {
-                RecordingWaveform(samples: model.waveformSamples, color: .blue)
+        return HStack(spacing: 10) {
+            if model.showsSilenceHint {
+                Image(systemName: "mic.slash.fill")
+                    .foregroundStyle(.orange)
+                    .font(.body.weight(.semibold))
+                Text(OverlayModel.silenceHint)
+                    .font(.callout.weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if model.notice != nil {
+                Image(systemName: icon(for: content.tone))
+                    .foregroundStyle(color(for: content.tone))
+                    .font(.body.weight(.semibold))
+                Text(content.title)
+                    .font(.callout.weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if model.state == .listening {
+                Circle()
+                    .fill(.red)
+                    .frame(width: 8, height: 8)
+                    .accessibilityHidden(true)
+                RecordingWaveform(
+                    samples: Array(model.waveformSamples.suffix(24)),
+                    color: .red
+                )
+                .frame(width: 136, height: 28)
+                Text(elapsedText)
+                    .font(.caption.weight(.medium).monospacedDigit())
+                    .foregroundStyle(.secondary)
             } else {
-                HStack(alignment: .top, spacing: 12) {
-                    Circle()
-                        .fill(color(for: content.tone))
-                        .frame(width: 10, height: 10)
-                        .padding(.top, 3)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(model.showsSilenceHint ? OverlayModel.silenceHint : content.title)
-                            .font(.system(size: 13, weight: .medium))
-                            .fixedSize(horizontal: false, vertical: true)
-                        if let subtitle = content.subtitle {
-                            Text(subtitle)
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        if let speedLine = model.speedLine {
-                            Text(speedLine)
-                                .font(.system(size: 11, weight: .medium).monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    Spacer(minLength: 0)
-                }
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityHidden(true)
+                Text(content.title)
+                    .font(.callout.weight(.medium))
             }
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .frame(
-            width: model.state == .listening || model.speedLine != nil ? 360 : 280,
+            width: preferredWidth,
             alignment: .leading
         )
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .glassSurface(RoundedRectangle(cornerRadius: 18, style: .continuous))
         // The panel is read by one element: a colored dot and a counter
         //separately do not mean anything.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(model.accessibilityLabel)
+    }
+
+    private var preferredWidth: CGFloat {
+        if model.showsSilenceHint || model.notice != nil { return 320 }
+        if model.state == .listening { return 244 }
+        return 220
+    }
+
+    private var elapsedText: String {
+        let total = Int(max(0, model.elapsed).rounded(.down))
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+
+    private func icon(for tone: OverlayContent.Tone) -> String {
+        switch tone {
+        case .failure: return "xmark.circle.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .info: return "info.circle.fill"
+        case .idle: return "checkmark.circle.fill"
+        case .recording: return "mic.fill"
+        case .working: return "waveform"
+        }
     }
 
     private func color(for tone: OverlayContent.Tone) -> Color {
@@ -439,11 +436,5 @@ extension DictationOverlay: RecordingFeedbackPresenting {
 
     func showSilenceHint() {
         model.showSilenceHint()
-    }
-}
-
-extension DictationOverlay: SpeedPresenting {
-    func showSpeed(_ readout: SpeedReadout) {
-        model.showSpeed(readout)
     }
 }

@@ -107,6 +107,46 @@ final class VocabularyBoostEndToEndTests: XCTestCase {
         )
     }
 
+    /// The shipping combination is the acoustic helper followed by the safe
+    /// built-in text repairs. This holds the decoder spellings measured on this
+    /// model, including variants that appear only when the helper is enabled.
+    func testScenario003() async throws {
+        let cases: [(String, [String])] = [
+            ("\u{0412}\u{043A}\u{043B}\u{044E}\u{0447}\u{0438} feature flag \u{043D}\u{0430} staging.", ["feature flag", "staging"]),
+            ("\u{041E}\u{0448}\u{0438}\u{0431}\u{043A}\u{0430} \u{043F}\u{0440}\u{0438}\u{043B}\u{0435}\u{0442}\u{0435}\u{043B}\u{0430} \u{0432} Sentry, \u{043F}\u{043E}\u{0441}\u{043C}\u{043E}\u{0442}\u{0440}\u{0438} \u{043B}\u{043E}\u{0433}\u{0438} \u{0432} Docker \u{0438} \u{0432} Kubernetes.", ["Docker", "Kubernetes"]),
+            ("\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} commit \u{0432} branch, \u{043F}\u{043E}\u{0442}\u{043E}\u{043C} rebase \u{0438} merge.", ["commit", "branch", "rebase", "merge"]),
+            ("\u{0414}\u{0430}\u{043D}\u{043D}\u{044B}\u{0435} \u{0432} Postgres, \u{043A}\u{044D}\u{0448} \u{0432} Redis.", ["Postgres", "Redis"]),
+            ("\u{041E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} Xcode \u{0438} \u{0441}\u{043E}\u{0431}\u{0435}\u{0440}\u{0438} \u{043F}\u{0440}\u{043E}\u{0435}\u{043A}\u{0442}.", ["Xcode"]),
+            ("\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} code review \u{0434}\u{043E} \u{043E}\u{0431}\u{0435}\u{0434}\u{0430}.", ["code review"]),
+        ]
+        let pipeline = TextPipeline(replacements: StarterDictionary.developer)
+
+        for (phrase, expected) in cases {
+            let recording = try await synthesize(phrase)
+            let raw = try await transcriber.transcribe(fileURL: recording)
+            let output = pipeline.process(raw.text).text
+
+            for term in expected {
+                XCTAssertTrue(output.contains(term), "\(term) did not survive the shipping path: \(output)")
+            }
+        }
+    }
+
+    /// Ambiguous ordinary words are more important than forcing a technical term.
+    /// These are the two tempting boosts that were measured and deliberately rejected.
+    func testScenario004() async throws {
+        let recording = try await synthesize(
+            "\u{041C}\u{044B} \u{0432}\u{0441}\u{0442}\u{0440}\u{0435}\u{0442}\u{0438}\u{043B}\u{0438}\u{0441}\u{044C} \u{0432} \u{0446}\u{0435}\u{043D}\u{0442}\u{0440}\u{0435} \u{0433}\u{043E}\u{0440}\u{043E}\u{0434}\u{0430}. \u{041F}\u{0438}\u{0442}\u{043E}\u{043D} \u{0441}\u{0436}\u{0430}\u{043B} \u{0434}\u{043E}\u{0431}\u{044B}\u{0447}\u{0443} \u{0438} \u{0437}\u{0430}\u{043C}\u{0435}\u{0440}."
+        )
+        let raw = try await transcriber.transcribe(fileURL: recording)
+        let output = TextPipeline(replacements: StarterDictionary.developer).process(raw.text).text
+
+        XCTAssertTrue(output.lowercased().contains("\u{0432} \u{0446}\u{0435}\u{043D}\u{0442}\u{0440}\u{0435}"), output)
+        XCTAssertTrue(output.lowercased().contains("\u{043F}\u{0438}\u{0442}\u{043E}\u{043D}"), output)
+        XCTAssertFalse(output.contains("Sentry"), output)
+        XCTAssertFalse(output.contains("Python"), output)
+    }
+
     // MARK: - Synthesis
 
     private func synthesize(_ text: String) async throws -> URL {

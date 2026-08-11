@@ -70,6 +70,10 @@ final class MenuBarStatusTests: XCTestCase {
             MenuBarStatus.statusLine(state: .listening, isDictationReady: true, isHandsFreeActive: false, hotkeyTitle: "Fn (🌐)"),
             "Listening"
         )
+        XCTAssertEqual(
+            MenuBarStatus.statusLine(state: .inserting, isDictationReady: true, isHandsFreeActive: false, hotkeyTitle: "Fn (🌐)"),
+            "Finishing insertion…"
+        )
     }
 }
 
@@ -284,16 +288,25 @@ final class MenuBarBrandIconTests: XCTestCase {
 final class MenuBarActivityTests: XCTestCase {
     func testScenario032() {
         XCTAssertEqual(MenuBarStatus.activity(state: .idle), .hidden)
-        XCTAssertEqual(MenuBarStatus.activity(state: .preparing), .hidden)
+        XCTAssertEqual(MenuBarStatus.activity(state: .preparing), .preparing)
         XCTAssertEqual(MenuBarStatus.activity(state: .listening), .recording)
         XCTAssertEqual(MenuBarStatus.activity(state: .transcribing), .processing)
         XCTAssertEqual(MenuBarStatus.activity(state: .inserting), .processing)
     }
 
     func testScenario033() {
-        XCTAssertEqual(MenuBarStatus.color(activity: .recording), .blue)
-        XCTAssertEqual(MenuBarStatus.color(activity: .processing), .green)
+        XCTAssertEqual(MenuBarStatus.color(activity: .preparing), .secondary)
+        XCTAssertEqual(MenuBarStatus.color(activity: .recording), .red)
+        XCTAssertEqual(MenuBarStatus.color(activity: .processing), .blue)
         XCTAssertEqual(MenuBarStatus.color(activity: .hidden), .clear)
+        XCTAssertEqual(MenuBarStatus.badge(activity: .preparing), .preparingRing)
+        XCTAssertEqual(MenuBarStatus.badge(activity: .recording), .recordingDot)
+        XCTAssertEqual(MenuBarStatus.badge(activity: .processing), .processingBar)
+        XCTAssertEqual(MenuBarStatus.badge(activity: .hidden), .hidden)
+        XCTAssertEqual(
+            MenuBarStatus.badge(activity: .hidden, hasRecoveredWork: true),
+            .recoveryWarning
+        )
     }
 
     func testScenario034() {
@@ -309,33 +322,36 @@ final class MenuBarActivityTests: XCTestCase {
     @MainActor
     func testScenario035() throws {
         let idle = try renderLabel(state: .idle)
+        let recovery = try renderLabel(state: .idle, hasRecoveredWork: true)
+        let preparing = try renderLabel(state: .preparing)
         let recording = try renderLabel(state: .listening)
         let processing = try renderLabel(state: .transcribing)
 
+        XCTAssertNotEqual(preparing, idle, "preparing must acknowledge the hotkey immediately")
+        XCTAssertNotEqual(recovery, idle, "recovered work must remain visible after the HUD disappears")
         XCTAssertNotEqual(recording, idle, "recording must add an indicator to the rendered label")
         XCTAssertNotEqual(processing, idle, "processing must add an indicator to the rendered label")
-        XCTAssertNotEqual(recording, processing, "recording and processing must render different colors")
-    }
-
-    func testScenario036() throws {
-        let sourceURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("OpenRamble/UI/MenuBarLabel.swift")
-        let source = try String(contentsOf: sourceURL, encoding: .utf8)
-
-        XCTAssertFalse(source.contains("TimelineView"), "the system status item must not redraw on a timeline")
-        XCTAssertFalse(source.contains("Timer"), "the system status item must not own a repeating timer")
-        XCTAssertFalse(source.contains("Task.sleep"), "the system status item must not schedule delayed redraws")
+        XCTAssertNotEqual(recording, processing, "recording and processing must render different shapes")
     }
 
     @MainActor
-    private func renderLabel(state: DictationState) throws -> Data {
+    func testScenario036() throws {
+        let first = try renderLabel(state: .listening)
+        let second = try renderLabel(state: .listening)
+
+        XCTAssertEqual(first, second, "unchanged dictation state must render an identical status item")
+    }
+
+    @MainActor
+    private func renderLabel(
+        state: DictationState,
+        hasRecoveredWork: Bool = false
+    ) throws -> Data {
         let renderer = ImageRenderer(
             content: MenuBarLabel(
                 state: state,
                 isDictationReady: true,
-                hasRecoveredWork: false
+                hasRecoveredWork: hasRecoveredWork
             )
             .frame(width: 22, height: 22)
         )

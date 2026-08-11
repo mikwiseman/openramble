@@ -89,6 +89,34 @@ final class AppStateIdleTests: XCTestCase {
         XCTAssertFalse(state.isCountingDuration, "the timer continues to wake the process after dictation")
     }
 
+    func testSilenceFeedbackPolicyResetsOnSoundAndStopsDeterministically() {
+        var policy = SilenceFeedbackPolicy()
+        policy.start(at: 100)
+
+        XCTAssertFalse(policy.shouldShowHint(at: 101.999))
+        XCTAssertTrue(policy.shouldShowHint(at: 102))
+
+        policy.registerInput(peak: 0.4, at: 101.5)
+        XCTAssertFalse(policy.shouldShowHint(at: 103.499))
+        XCTAssertTrue(policy.shouldShowHint(at: 103.5))
+
+        policy.stop()
+        XCTAssertFalse(policy.shouldShowHint(at: 1_000))
+    }
+
+    func testSilenceWatcherExistsOnlyWhileRecording() async throws {
+        let state = try await makeReadyState()
+        XCTAssertFalse(state.isWatchingSilence)
+
+        monitor.onPress?()
+        try await waitFor("recording has started") { state.dictationState == .listening }
+        XCTAssertTrue(state.isWatchingSilence)
+
+        monitor.onRelease?()
+        try await waitFor("dictation ended") { state.dictationState == .idle }
+        XCTAssertFalse(state.isWatchingSilence)
+    }
+
     // MARK: - Microphone
 
     /// Direct product promise: The recording light turns off when we're not listening.

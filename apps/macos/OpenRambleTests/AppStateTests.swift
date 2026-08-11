@@ -39,6 +39,56 @@ final class AppStateTests: XCTestCase {
 
     // MARK: - Permissions
 
+    func testFirstLaunchDoesNotCoverOnboardingWithPermissionNotice() async {
+        permissions.microphoneGranted = false
+        permissions.accessibilityGranted = false
+
+        _ = makeState()
+        await Task.yield()
+
+        let notices = await overlay.notices
+        XCTAssertTrue(notices.isEmpty)
+    }
+
+    func testReturningUserSeesOnlyTheMissingPermissionNamed() async {
+        defaults.set(true, forKey: "onboardingCompleted")
+        permissions.microphoneGranted = true
+        permissions.accessibilityGranted = false
+
+        _ = makeState()
+        for _ in 0..<20 where await overlay.notices.isEmpty { await Task.yield() }
+
+        let message = await overlay.notices.first?.message
+        XCTAssertEqual(message, "Dictation is off: grant Accessibility access in System Settings.")
+    }
+
+    func testReturningUserMicrophoneNoticeNamesOnlyMicrophone() async {
+        defaults.set(true, forKey: "onboardingCompleted")
+        permissions.microphoneGranted = false
+        permissions.accessibilityGranted = true
+
+        _ = makeState()
+        for _ in 0..<20 where await overlay.notices.isEmpty { await Task.yield() }
+
+        let message = await overlay.notices.first?.message
+        XCTAssertEqual(message, "Dictation is off: grant Microphone access in System Settings.")
+    }
+
+    func testReturningUserBothPermissionsNoticeNamesBoth() async {
+        defaults.set(true, forKey: "onboardingCompleted")
+        permissions.microphoneGranted = false
+        permissions.accessibilityGranted = false
+
+        _ = makeState()
+        for _ in 0..<20 where await overlay.notices.isEmpty { await Task.yield() }
+
+        let message = await overlay.notices.first?.message
+        XCTAssertEqual(
+            message,
+            "Dictation is off: grant Microphone and Accessibility access in System Settings."
+        )
+    }
+
     func testScenario002() {
         permissions.accessibilityGranted = false
 
@@ -644,7 +694,7 @@ final class AppStateTests: XCTestCase {
 
     func testScenario036() async throws {
         try installModelMarker()
-        let spokenTerm = "\u{043F}\u{043E}\u{0441}\u{0442}\u{0433}\u{0440}\u{0435}\u{0441}"
+        let spokenTerm = "\u{0437}\u{0435}\u{0442}\u{0430}\u{043F}\u{0440}\u{0430}\u{0439}\u{043C}"
         harness.transcription.text = "open \(spokenTerm) port and check the indexes"
         let state = makeState()
         await state.refreshModelState()
@@ -665,25 +715,16 @@ final class AppStateTests: XCTestCase {
 
         // The person corrected the term - the dictionary learned exactly this pair.
         let learned = state.learnCorrections(
-            editedText: last.insertedText.replacingOccurrences(of: spokenTerm, with: "Postgres")
+            editedText: last.insertedText.replacingOccurrences(of: spokenTerm, with: "ZetaPrime")
         )
 
         XCTAssertEqual(learned, 1)
-        XCTAssertTrue(state.replacements.contains { $0.spoken == spokenTerm && $0.written == "Postgres" })
+        XCTAssertTrue(state.replacements.contains { $0.spoken == spokenTerm && $0.written == "ZetaPrime" })
 
         // Repeating the same edit does not produce duplicates.
         XCTAssertEqual(state.learnCorrections(
-            editedText: last.insertedText.replacingOccurrences(of: spokenTerm, with: "Postgres")
+            editedText: last.insertedText.replacingOccurrences(of: spokenTerm, with: "ZetaPrime")
         ), 0)
-    }
-
-    func testScenario037() {
-        let state = makeState()
-        XCTAssertTrue(state.showSpeedReadout, "showcase is enabled by default - the number is the argument")
-
-        state.showSpeedReadout = false
-        XCTAssertFalse(harness.defaults.bool(forKey: AppState.showSpeedReadoutKey))
-        XCTAssertFalse(makeState().showSpeedReadout)
     }
 
     func testScenario038() {
@@ -855,7 +896,7 @@ final class AppStateTests: XCTestCase {
         defaults.set(Data(future.utf8), forKey: "replacements")
 
         let state = makeState()
-        state.addStarterDictionary()
+        state.addReplacement(spoken: "future", written: "Future")
 
         XCTAssertFalse(state.isDictionaryEditable)
         XCTAssertEqual(
@@ -875,15 +916,42 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(makeState().replacements.map(\.written), ["deploy"])
     }
 
-    func testScenario051() {
+    func testScenario062() async throws {
+        try installModelMarker()
+        harness.transcription.text = "\u{0412}\u{043A}\u{043B}\u{044E}\u{0447}\u{0438} \u{0444}\u{0438}\u{0447}\u{0435}\u{0440} \u{0444}\u{043B}\u{044D}\u{043A} \u{043D}\u{0430} staging"
         let state = makeState()
-        let available = state.availableStarterCount
-        XCTAssertGreaterThan(available, 0)
+        XCTAssertTrue(state.replacements.isEmpty, "built-in vocabulary must not clutter personal replacements")
+        await state.refreshModelState()
 
-        state.addStarterDictionary()
+        try await dictateOnce(state)
 
-        XCTAssertEqual(state.replacements.count, available)
-        XCTAssertEqual(state.availableStarterCount, 0)
+        let inserted = await harness.inserter.insertedTexts
+        XCTAssertEqual(inserted.last, "\u{0412}\u{043A}\u{043B}\u{044E}\u{0447}\u{0438} feature flag \u{043D}\u{0430} staging")
+    }
+
+    func testScenario063() async throws {
+        try installModelMarker()
+        harness.transcription.text = "\u{0444}\u{0438}\u{0447}\u{0435}\u{0440} \u{0444}\u{043B}\u{044D}\u{043A}"
+        let state = makeState()
+        state.addReplacement(spoken: "\u{0444}\u{0438}\u{0447}\u{0435}\u{0440} \u{0444}\u{043B}\u{044D}\u{043A}", written: "launch switch")
+        await state.refreshModelState()
+
+        try await dictateOnce(state)
+
+        let inserted = await harness.inserter.insertedTexts
+        XCTAssertEqual(inserted.last, "Launch switch", "a personal replacement wins over the built-in spelling")
+    }
+
+    func testScenario064() async throws {
+        try installModelMarker()
+        let state = makeState()
+        await state.refreshModelState()
+
+        try await dictateOnce(state)
+
+        XCTAssertNotNil(state.lastSpeed, "performance diagnostics stay available in memory")
+        let dismissCount = await overlay.dismissCount
+        XCTAssertGreaterThan(dismissCount, 0, "successful insertion dismisses instead of showing a result banner")
     }
 
     // MARK: - Cleaning
@@ -1066,8 +1134,13 @@ final class VocabularyRebuildTests: XCTestCase {
         private let lock = NSLock()
         private var _prepares = 0
         private var _lastTermCount = -1
+        private var _delayNext = false
+        private var _delayedStarts = 0
         var prepares: Int { lock.withLock { _prepares } }
         var lastTermCount: Int { lock.withLock { _lastTermCount } }
+        var delayedStarts: Int { lock.withLock { _delayedStarts } }
+
+        func delayNextRebuild() { lock.withLock { _delayNext = true } }
 
         func loadModels(from directory: URL) async throws {}
         func transcribe(samples: [Float]) async throws -> ASRResult {
@@ -1078,8 +1151,16 @@ final class VocabularyRebuildTests: XCTestCase {
         }
         func unload() async {}
         func loadVocabularyModels(from directory: URL, boost: VocabularyBoost) async throws {
-            lock.withLock {
+            let shouldDelay = lock.withLock {
                 _prepares += 1
+                let value = _delayNext
+                _delayNext = false
+                if value { _delayedStarts += 1 }
+                return value
+            }
+            if shouldDelay { try await Task.sleep(for: .milliseconds(150)) }
+            try Task.checkCancellation()
+            lock.withLock {
                 _lastTermCount = boost.terms.count
             }
         }
@@ -1110,6 +1191,39 @@ final class VocabularyRebuildTests: XCTestCase {
         XCTAssertGreaterThan(
             engine.prepares, after,
             "Text replacement works immediately - acoustics has no right to wait for a restart"
+        )
+    }
+
+    func testRapidDictionaryEditsLeaveTheNewestAcousticSnapshotInstalled() async throws {
+        let harness = try AppHarness()
+        defer { harness.tearDown() }
+        try harness.installModelMarker()
+        let engine = RebuildCountingEngine()
+        harness.warmUpEngine = engine
+        let state = harness.makeState()
+
+        for _ in 0..<400 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        let baseline = engine.lastTermCount
+        engine.delayNextRebuild()
+
+        state.addReplacement(spoken: "alpha spoken", written: "AlphaCanonical")
+        for _ in 0..<200 where engine.delayedStarts == 0 { await Task.yield() }
+        state.addReplacement(spoken: "beta spoken", written: "BetaCanonical")
+
+        for _ in 0..<400 where engine.lastTermCount != baseline + 2 {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        try? await Task.sleep(for: .milliseconds(200))
+
+        XCTAssertEqual(engine.lastTermCount, baseline + 2, "an older rebuild completed after the newest edit")
+        let notices = await harness.overlay.notices
+        XCTAssertFalse(
+            notices.contains { $0.message.contains("acoustic boosting") },
+            "cancellation of an obsolete rebuild must stay silent"
         )
     }
 }

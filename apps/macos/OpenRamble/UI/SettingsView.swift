@@ -1,3 +1,4 @@
+import AppKit
 import DictationCore
 import LocalASR
 import SwiftUI
@@ -23,7 +24,7 @@ struct SettingsView: View {
             AboutView()
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 520, height: 460)
+        .frame(width: 620, height: 500)
     }
 }
 
@@ -35,7 +36,7 @@ private struct GeneralSettings: View {
 
     var body: some View {
         Form {
-            Section {
+            Section("Shortcut") {
                 Picker("Dictation key", selection: $state.hotkey) {
                     ForEach(DictationHotkey.allCases, id: \.self) { key in
                         Text(key.title).tag(key)
@@ -43,7 +44,7 @@ private struct GeneralSettings: View {
                 }
                 .accessibilityHint("The key you hold down while dictating")
 
-                Text("Hold the key and speak. Double-press to dictate without holding — recording then stops on the next press.")
+                Text("Hold to talk, or double-press for hands-free dictation. Press once more to finish.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -65,41 +66,29 @@ private struct GeneralSettings: View {
                 }
             }
 
-            Section {
+            Section("Behavior") {
                 // Autorun was written and worked, but it was impossible to enable it
                 // nowhere: hotkey utility, not survived
                 // reboot, indistinguishable from a broken one - the key is just
                 // is silent, and there is no one to explain it to.
                 Toggle("Launch at login", isOn: $state.launchAtLogin)
                     .accessibilityHint("Starts OpenRamble automatically when you log in")
-                Text("A dictation key only works while the app is running. Without this, the key stops working after every restart.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section {
                 Toggle("Play sounds when recording starts and stops", isOn: $state.soundsEnabled)
                     .accessibilityHint("A short tone when recording starts and when it stops")
-
-                Toggle("Show how long it took", isOn: $state.showSpeedReadout)
-                    .accessibilityHint("Shows the time from releasing the key to the text appearing")
-                Text("After each dictation the panel briefly shows the time from releasing the key to the text landing in your app. Measured, not estimated.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
-            Section {
+            Section("Private personalization") {
                 // The only place where the application reads the content of someone else's
                 // windows. Off by default, and the caption says exactly that
                 // exactly read - otherwise the choice is not conscious.
                 Toggle("Learn from your edits", isOn: $state.learnFromEdits)
                     .accessibilityHint("Reads back the field it pasted into, to learn words you fix by hand")
-                Text("After pasting, OpenRamble re-reads that one text field twice — at 8 and 25 seconds — to see whether you corrected a word, and adds the pair to your dictionary. It reads only the field it pasted into, only in that window, and nothing leaves your Mac. Off by default: this is the one thing the app reads inside another app's window.")
+                Text("Off by default. After a paste, OpenRamble can re-read only that field at 8 and 25 seconds to learn a correction. The content stays on this Mac.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section {
+            Section("Recognition") {
                 Picker("Recognition language", selection: $state.recognitionLanguage) {
                     Text("Automatic — recommended").tag(String?.none)
                     ForEach(RecognitionLanguages.options) { option in
@@ -107,18 +96,15 @@ private struct GeneralSettings: View {
                     }
                 }
                 .accessibilityHint("Language the engine listens for; Automatic detects it from your voice")
-                Text("Automatic detects the language from your voice, including mixed phrases. Pick a specific language only when detection keeps guessing wrong — it narrows recognition to that language alone.")
+                Text("Automatic handles mixed-language speech. Choose one language only if detection repeatedly guesses wrong.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section("Text insertion") {
-                Text("OpenRamble briefly uses the clipboard to paste, then restores its previous contents in the background.")
+            Section("Permissions & insertion") {
+                Text("Finished text is pasted through the clipboard; its previous contents are restored shortly afterward.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-            }
-
-            Section("Permissions") {
                 PermissionRow(
                     status: PermissionStatus.accessibility(
                         state: state.accessibilityState,
@@ -197,7 +183,7 @@ private struct UpdateSettings: View {
 
     var body: some View {
         Form {
-            Section {
+            Section("Automatic checks") {
                 // The switch goes out along with the update mechanism. Otherwise
                 // it turned out to be a silent lie: next to it it says “no updates
                 // work”, the person clicks the switch, the text below it
@@ -206,7 +192,7 @@ private struct UpdateSettings: View {
                 Toggle("Check for updates automatically", isOn: $updater.automaticChecksEnabled)
                     .accessibilityHint("The only switch that changes the app's network behavior")
                     .disabled(updater.startupFailure != nil)
-                Text("Off by default. When on, the app downloads a small version list from GitHub once a day. Apart from the model download and the update itself, there are no other network requests: only your IP address and the app version are sent — no details about your computer, and nothing you dictated.")
+                Text("On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled network access.")
                     .font(.caption)
                     .foregroundStyle(updater.startupFailure == nil ? .secondary : .tertiary)
 
@@ -278,7 +264,7 @@ private struct ModelSettings: View {
 
     var body: some View {
         Form {
-            Section {
+            Section("On-device recognition") {
                 ModelStatusView(
                     status: ModelStatus.make(
                         state: state.modelState,
@@ -297,8 +283,10 @@ private struct ModelSettings: View {
                 )
             }
 
-            Section {
-                Text("Parakeet TDT 0.6B v3 is a multilingual recognition model that runs locally on your Mac.")
+            Section("Model details") {
+                LabeledContent("Engine", value: "Parakeet TDT 0.6B v3")
+                LabeledContent("Processing", value: "Entirely on this Mac")
+                Text("Once downloaded and verified, recognition works offline. Audio is not uploaded.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -328,7 +316,7 @@ private struct DictionarySettings: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Replacements apply to the recognized text. Useful for names the model hears differently.")
+                Text("Common technical terms are handled automatically. Add personal names or phrases the model hears differently.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -356,7 +344,7 @@ private struct DictionarySettings: View {
             // I saw in this place just a half-window gap without a single word.
             if state.replacements.isEmpty {
                 VStack(spacing: 4) {
-                    Text("No replacements yet")
+                    Text("No personal replacements yet")
                         .font(.headline)
                         .foregroundStyle(.secondary)
                     Text("Add a pair below: what the model hears on the left, what should be written on the right.")
@@ -405,32 +393,56 @@ private struct DictionarySettings: View {
 
             Divider()
 
-            HStack {
-                // Signature of the fields only in the form of a hint inside the frame: empty
-                // VoiceOver will read the field, but the filled-in field will no longer be read, and the person
-                // will lose which of the two fields it is in.
-                TextField("Heard as", text: $spoken)
-                    .accessibilityLabel("Heard as")
+            HStack(alignment: .bottom, spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Heard as")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("Spoken phrase", text: $spoken)
+                        .accessibilityLabel("Heard as")
+                        .onSubmit(addReplacement)
+                }
                 Image(systemName: "arrow.right")
                     .foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
-                TextField("Write as", text: $written)
-                    .accessibilityLabel("Write as")
-                Button("Add") {
-                    state.addReplacement(spoken: spoken, written: written)
-                    spoken = ""
-                    written = ""
+                    .padding(.bottom, 5)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Write as")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("Final spelling", text: $written)
+                        .accessibilityLabel("Write as")
+                        .onSubmit(addReplacement)
                 }
-                .disabled(spoken.isEmpty || written.isEmpty || !state.isDictionaryEditable)
-                .accessibilityLabel("Add replacement")
-                .accessibilityHint(
-                    state.isDictionaryEditable
-                        ? "Fill in both fields"
-                        : "The dictionary can't be edited until the previous data has been read"
-                )
+                Button("Add", action: addReplacement)
+                    .disabled(!canAddReplacement)
+                    .accessibilityLabel("Add replacement")
+                    .accessibilityHint(addReplacementHint)
             }
             .padding()
         }
+    }
+
+    private var canAddReplacement: Bool {
+        !spoken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !written.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && state.isDictionaryEditable
+    }
+
+    private var addReplacementHint: String {
+        if !state.isDictionaryEditable {
+            return "The dictionary can't be edited until the previous data has been read"
+        }
+        return canAddReplacement
+            ? "Adds this replacement to future dictations"
+            : "Fill in both fields"
+    }
+
+    private func addReplacement() {
+        guard canAddReplacement else { return }
+        state.addReplacement(spoken: spoken, written: written)
+        spoken = ""
+        written = ""
     }
 }
 
@@ -447,49 +459,60 @@ private struct AboutView: View {
         return "Version \(marketing) (\(build))"
     }
 
+    @State private var showsCredits = false
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("OpenRamble")
-                .font(.title2.bold())
-                .accessibilityAddTraits(.isHeader)
-            Text("Dictation that runs entirely on your Mac.")
-                .foregroundStyle(.secondary)
-            Text(version)
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(spacing: 16) {
+                Image(nsImage: NSApplication.shared.applicationIconImage)
+                    .resizable()
+                    .frame(width: 64, height: 64)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("OpenRamble")
+                        .font(.title2.bold())
+                        .accessibilityAddTraits(.isHeader)
+                    Text("Private dictation for your Mac")
+                        .foregroundStyle(.secondary)
+                    Text(version)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+            }
+
+            Divider()
+
+            Label {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Speech stays on this Mac")
+                        .font(.headline)
+                    Text("No account, analytics, or cloud transcription. Network access is limited to model downloads and update checks.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } icon: {
+                Image(systemName: "lock.shield.fill")
+                    .foregroundStyle(.green)
+                    .font(.title2)
+            }
+            .accessibilityElement(children: .combine)
+
+            DisclosureGroup("Model and library credits", isExpanded: $showsCredits) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Parakeet TDT 0.6B v3 and Parakeet TDT-CTC 110M © NVIDIA, licensed under CC BY 4.0. Core ML conversions by FluidInference.")
+                    Text("FluidAudio is licensed under Apache 2.0. Sparkle is licensed under MIT.")
+                }
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .textSelection(.enabled)
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("What goes over the network")
-                    .font(.headline)
-                    .accessibilityAddTraits(.isHeader)
-                Text("The model download you start yourself, and the update check if you turned it on. Nothing else: your speech, text, and keystrokes are never sent anywhere and never stored anywhere except your computer.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                .padding(.top, 6)
             }
 
-            Divider()
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Recognition models")
-                    .font(.headline)
-                    .accessibilityAddTraits(.isHeader)
-                Text("Parakeet TDT 0.6B v3 © NVIDIA, licensed under CC BY 4.0. Converted to Core ML and quantized with a 6-bit palette by the FluidInference project.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("Parakeet TDT-CTC 110M © NVIDIA, licensed under CC BY 4.0 — the acoustic vocabulary helper. Converted to Core ML by the FluidInference project.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("Libraries: FluidAudio (Apache 2.0), Sparkle (MIT).")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            Link("View source on GitHub", destination: URL(string: "https://github.com/mikwiseman/openramble")!)
 
             Spacer()
         }
-        .padding()
+        .padding(28)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

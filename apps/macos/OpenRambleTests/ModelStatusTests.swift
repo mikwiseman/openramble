@@ -37,7 +37,7 @@ final class ModelStatusTests: XCTestCase {
         XCTAssertEqual(status.progress ?? 0, 0.248, accuracy: 0.01)
         // The only action is to honestly stop the download and remove partial.
         XCTAssertEqual(status.actions, [.cancel])
-        XCTAssertEqual(status.announcement, "Downloading model, 120 of 483 MB")
+        XCTAssertEqual(status.announcement, "Downloading model")
     }
 
     func testScenario003() {
@@ -47,6 +47,12 @@ final class ModelStatusTests: XCTestCase {
         XCTAssertEqual(status.progressLabel, "File 3 of 12")
         XCTAssertEqual(status.progress ?? 0, 0.25, accuracy: 0.001)
         XCTAssertEqual(status.actions, [])
+        XCTAssertEqual(status.announcement, "Verifying download")
+        XCTAssertEqual(
+            self.status(.verifying(checked: 11, total: 12)).announcement,
+            status.announcement,
+            "verification progress must not flood VoiceOver"
+        )
     }
 
     func testScenario004() {

@@ -30,6 +30,19 @@ final class StarterDictionaryTests: XCTestCase {
         XCTAssertEqual(pipeline.process("\u{0437}\u{0430}\u{043A}\u{0438}\u{043D}\u{0443}\u{043B} \u{043F}\u{0443}\u{043B} \u{0440}\u{0435}\u{043A}\u{0432}\u{0435}\u{0441}\u{0442}").text, "\u{0417}\u{0430}\u{043A}\u{0438}\u{043D}\u{0443}\u{043B} pull request")
     }
 
+    func testCommitDecoderErrorRequiresCommitContext() {
+        let pipeline = TextPipeline(replacements: StarterDictionary.developer)
+
+        XCTAssertEqual(
+            pipeline.process("\u{0441}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} \u{044D}\u{043C}\u{0438}\u{0442} \u{0432} branch").text,
+            "\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} commit \u{0432} branch"
+        )
+        XCTAssertEqual(
+            pipeline.process("\u{044D}\u{043C}\u{0438}\u{0442} \u{0441}\u{043E}\u{0431}\u{044B}\u{0442}\u{0438}\u{0435}").text,
+            "\u{042D}\u{043C}\u{0438}\u{0442} \u{0441}\u{043E}\u{0431}\u{044B}\u{0442}\u{0438}\u{0435}"
+        )
+    }
+
     func testDoesNotTouchWordsInsideOtherWords() {
         let pipeline = TextPipeline(replacements: StarterDictionary.developer)
 
@@ -94,20 +107,28 @@ final class StarterDictionaryBoostFlagTests: XCTestCase {
         let flagged = Set(
             StarterDictionary.developer.filter(\.noAcousticBoost).map(\.written)
         )
-        XCTAssertEqual(flagged, ["deploy", "Sentry", "commit"])
+        XCTAssertTrue(flagged.isSuperset(of: ["deploy", "Sentry", "commit"]))
     }
 
-    /// All spellings of the dangerous term are marked, not just the first one: “commit” and
-    /// "comets" lead to one `commit`, and omitting any would bring it back.
+    /// Dangerous terms cannot reach acoustics. The two whose phonetic keys are
+    /// ordinary Russian words are also exact-only.
     func testEverySpellingOfAFlaggedTermIsFlagged() {
         for term in StarterDictionary.developer where ["deploy", "Sentry", "commit"].contains(term.written) {
             XCTAssertTrue(term.noAcousticBoost, "\(term.spoken) → \(term.written)")
+            if ["Sentry", "commit"].contains(term.written) {
+                XCTAssertFalse(term.allowsPhoneticMatching, "\(term.spoken) → \(term.written)")
+            }
         }
     }
 
     func testOrdinaryTermsAreStillBoosted() {
-        for term in StarterDictionary.developer where term.written == "Postgres" || term.written == "Docker" {
-            XCTAssertFalse(term.noAcousticBoost, term.written)
+        for written in ["Postgres", "Kubernetes", "code review"] {
+            XCTAssertTrue(
+                StarterDictionary.developer.contains {
+                    $0.written == written && !$0.noAcousticBoost
+                },
+                "\(written) must retain at least one measured acoustic alias"
+            )
         }
     }
 
@@ -120,14 +141,34 @@ final class StarterDictionaryBoostFlagTests: XCTestCase {
         let decoded = try JSONDecoder().decode(DictionaryReplacement.self, from: Data(json.utf8))
         XCTAssertFalse(decoded.noAcousticBoost)
         XCTAssertTrue(decoded.inflects)
+        XCTAssertTrue(decoded.allowsPhoneticMatching)
     }
 
     func testFlagSurvivesRoundTrip() throws {
         let original = DictionaryReplacement(
-            spoken: "\u{043A}\u{0430}\u{0441}\u{0441}\u{0430}", written: "Kassa", inflects: false, noAcousticBoost: true
+            spoken: "\u{043A}\u{0430}\u{0441}\u{0441}\u{0430}",
+            written: "Kassa",
+            inflects: false,
+            noAcousticBoost: true,
+            allowsPhoneticMatching: false
         )
         let data = try JSONEncoder().encode(original)
         let restored = try JSONDecoder().decode(DictionaryReplacement.self, from: data)
         XCTAssertEqual(restored, original)
+    }
+
+    func testMeasuredDecoderRepairsAreExactOnly() throws {
+        let repair = try XCTUnwrap(
+            StarterDictionary.developer.first { $0.spoken == "\u{043A}\u{043E}\u{0443}\u{0442}\u{0440}\u{0438}\u{0432}\u{044C}\u{044E}" }
+        )
+        XCTAssertFalse(repair.allowsPhoneticMatching)
+        XCTAssertEqual(
+            DictionaryReplacements.apply([repair], to: "\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} \u{043A}\u{043E}\u{0443}\u{0442}\u{0440}\u{0438}\u{0432}\u{044C}\u{044E}"),
+            "\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} code review"
+        )
+        XCTAssertEqual(
+            DictionaryReplacements.apply([repair], to: "\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} \u{043A}\u{0430}\u{0443}\u{0442}\u{0440}\u{0435}\u{0432}\u{044C}\u{044E}"),
+            "\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} \u{043A}\u{0430}\u{0443}\u{0442}\u{0440}\u{0435}\u{0432}\u{044C}\u{044E}"
+        )
     }
 }
