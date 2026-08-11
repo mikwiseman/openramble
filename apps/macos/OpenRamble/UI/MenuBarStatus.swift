@@ -1,47 +1,25 @@
 import DictationCore
 
-/// The menu bar icon and what they say about it.
+/// The menu bar identity and what it says about the current app state.
 ///
 /// The icon is the only permanent presence of the application on the screen. Picture
-/// without a description for a blind person does not exist at all: VoiceOver will read
-/// name of the system symbol like “mic.slash” or remain silent.
+/// without a description for a blind person does not exist at all, so the brand mark is
+/// paired with a state-specific accessibility label below.
 enum MenuBarStatus {
-    /// The brand mark, shown when nothing is happening.
+    /// The brand mark shown in every state.
     ///
-    /// The menu bar is the only permanent presence this app has, so at rest it
-    /// should say whose it is. It gives that up the moment there is something
-    /// to report: a microphone that is listening, or work left unfinished, has
-    /// to be visible at a glance, and a logo cannot say either.
+    /// macOS already adds its own microphone privacy indicator while recording.
+    /// Swapping this mark for another microphone made one app look like two
+    /// microphone tools. The overlay, menu copy and accessibility label report
+    /// recording, setup and recovery state without replacing the app identity.
     static let brandIconName = "BrandIconMenuBar"
-
-    static func usesBrandIcon(
-        state: DictationState,
-        isDictationReady: Bool,
-        hasRecoveredWork: Bool = false
-    ) -> Bool {
-        state == .idle && isDictationReady && !hasRecoveredWork
-    }
 
     static func iconName(
         state: DictationState,
         isDictationReady: Bool,
         hasRecoveredWork: Bool = false
     ) -> String {
-        switch state {
-        case .listening: return "mic.fill"
-        case .transcribing, .inserting: return "waveform"
-        case .preparing, .idle:
-            // The saved text or entry is visible only inside the menu - and the menu
-            // open when they suspect something. Exclamation badge on
-            //wave is the only way to say “there is unfinished work”
-            // to a person who doesn’t look at the menu. Symbol name is fixed
-            // existence test: a non-existent name gives an empty icon,
-            // what's worse than not having a badge.
-            if hasRecoveredWork, state == .idle {
-                return "waveform.badge.exclamationmark"
-            }
-            return isDictationReady ? "mic" : "mic.slash"
-        }
+        brandIconName
     }
 
     /// Icon shortcut. Starts with the application name: there are many icons in the menu bar,

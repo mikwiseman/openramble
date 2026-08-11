@@ -17,29 +17,20 @@ struct OpenRambleApp: App {
                 showOnboarding: { onboardingCompleted = false }
             )
         } label: {
-            Group {
-                if MenuBarStatus.usesBrandIcon(
+            // A 22pt template asset, so macOS tints it for light, dark and the
+            // highlighted menu the same way it tints a symbol. macOS supplies
+            // its own microphone privacy indicator while recording; this mark
+            // stays stable so one app does not look like two microphone tools.
+            Image(
+                MenuBarStatus.iconName(
                     state: state.dictationState,
                     isDictationReady: state.isDictationReady,
                     hasRecoveredWork: state.recoveredText != nil
                         || state.recoveredRecording != nil
-                ) {
-                    // A 22pt template asset, so macOS tints it for light, dark
-                    // and the highlighted menu the same way it tints a symbol.
-                    Image(MenuBarStatus.brandIconName)
-                } else {
-                    Image(
-                        systemName: MenuBarStatus.iconName(
-                            state: state.dictationState,
-                            isDictationReady: state.isDictationReady,
-                            hasRecoveredWork: state.recoveredText != nil
-                                || state.recoveredRecording != nil
-                        )
-                    )
-                }
-            }
+                )
+            )
             // The icon is the only permanent presence of the application on
-            // screen. Without a shortcut, VoiceOver reads the name of the system symbol.
+            // screen. The accessible label below still reports every state.
             .accessibilityLabel(
                 MenuBarStatus.accessibilityLabel(
                     state: state.dictationState,
