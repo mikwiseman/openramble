@@ -223,6 +223,11 @@ fi
 if [[ -n "$DEVELOPER_ID" ]]; then
   echo "→ I sign"
 
+  CODESIGN_ARGS=(--force)
+  if [[ "$RELEASE_KEYCHAIN_ACTIVE" == "1" ]]; then
+    CODESIGN_ARGS+=("${CODESIGN_KEYCHAIN_ARGS[@]}")
+  fi
+
   # You need to sign from the inside out, each nested component separately.
   # Order and composition - from Sparkle documentation (sparkle-project.org, section
   # about the sandbox and signature of components).
@@ -238,7 +243,7 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   SPARKLE_VERSION="$SPARKLE/Versions/B"
 
   sign() {
-    codesign --force "${CODESIGN_KEYCHAIN_ARGS[@]}" \
+    codesign "${CODESIGN_ARGS[@]}" \
       --options runtime --timestamp --sign "$DEVELOPER_ID" "$@"
   }
 
@@ -347,7 +352,7 @@ rm -rf "$STAGING"
 
 if [[ -n "$DEVELOPER_ID" ]]; then
   echo "→ Signing DMG"
-  codesign --force "${CODESIGN_KEYCHAIN_ARGS[@]}" \
+  codesign "${CODESIGN_ARGS[@]}" \
     --timestamp --sign "$DEVELOPER_ID" "$DMG_PATH"
   codesign --verify --verbose=2 "$DMG_PATH"
 fi
