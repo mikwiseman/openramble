@@ -279,3 +279,34 @@ final class MenuBarBrandIconTests: XCTestCase {
         XCTAssertTrue(image.isTemplate, "the icon must follow the menu bar's appearance")
     }
 }
+
+final class MenuBarActivityTests: XCTestCase {
+    func testScenario032() {
+        XCTAssertEqual(MenuBarStatus.activity(state: .idle, showsSuccess: false), .hidden)
+        XCTAssertEqual(MenuBarStatus.activity(state: .preparing, showsSuccess: false), .hidden)
+        XCTAssertEqual(MenuBarStatus.activity(state: .listening, showsSuccess: false), .recording)
+        XCTAssertEqual(MenuBarStatus.activity(state: .transcribing, showsSuccess: false), .processing)
+        XCTAssertEqual(MenuBarStatus.activity(state: .inserting, showsSuccess: false), .processing)
+    }
+
+    func testScenario033() {
+        XCTAssertEqual(MenuBarStatus.activity(state: .idle, showsSuccess: true), .success)
+        XCTAssertEqual(MenuBarStatus.activity(state: .inserting, showsSuccess: true), .success)
+        XCTAssertEqual(
+            MenuBarStatus.activity(state: .listening, showsSuccess: true),
+            .recording,
+            "a new recording must replace the tail of the previous success"
+        )
+    }
+
+    func testScenario034() {
+        XCTAssertEqual(
+            MenuBarStatus.accessibilityLabel(
+                state: .idle,
+                isDictationReady: true,
+                showsSuccess: true
+            ),
+            "OpenRamble: text inserted"
+        )
+    }
+}

@@ -1,5 +1,12 @@
 import DictationCore
 
+enum MenuBarActivity: Equatable {
+    case hidden
+    case recording
+    case processing
+    case success
+}
+
 /// The menu bar identity and what it says about the current app state.
 ///
 /// The icon is the only permanent presence of the application on the screen. Picture
@@ -22,17 +29,36 @@ enum MenuBarStatus {
         brandIconName
     }
 
+    static func activity(
+        state: DictationState,
+        showsSuccess: Bool
+    ) -> MenuBarActivity {
+        // A new recording always outranks the tail of the previous success.
+        if state == .listening { return .recording }
+        if showsSuccess { return .success }
+
+        switch state {
+        case .transcribing, .inserting: return .processing
+        case .idle, .preparing, .listening: return .hidden
+        }
+    }
+
     /// Icon shortcut. Starts with the application name: there are many icons in the menu bar,
     /// and “recording in progress” says nothing without the owner.
     static func accessibilityLabel(
         state: DictationState,
         isDictationReady: Bool,
-        hasRecoveredWork: Bool = false
+        hasRecoveredWork: Bool = false,
+        showsSuccess: Bool = false
     ) -> String {
+        if showsSuccess, state != .listening {
+            return "OpenRamble: text inserted"
+        }
+
         switch state {
         case .listening: return "OpenRamble: recording"
         case .transcribing: return "OpenRamble: transcribing speech"
-        case .inserting: return "OpenRamble: ready to dictate"
+        case .inserting: return "OpenRamble: inserting text"
         case .preparing: return "OpenRamble: turning on the microphone"
         case .idle:
             // The badge on the icon must also sound for VoiceOver: picture without

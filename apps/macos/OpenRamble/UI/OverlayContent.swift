@@ -77,7 +77,7 @@ struct OverlayContent: Equatable {
             let seconds = spokenSeconds(elapsed)
             return OverlayContent(
                 title: "Listening",
-                subtitle: shortSeconds(elapsed),
+                subtitle: nil,
                 tone: .recording,
                 accessibilityLabel: "Recording, \(seconds).",
                 // The main announcement throughout the application: without it, you are blind

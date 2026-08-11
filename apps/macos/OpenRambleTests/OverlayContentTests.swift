@@ -32,14 +32,13 @@ final class OverlayContentTests: XCTestCase {
         XCTAssertEqual(content(.idle).tone, .idle)
     }
 
-    // MARK: - Seconds counter
+    // MARK: - Seconds
 
-    /// Seconds are the only sign that the recording is really going on.
+    /// Listening is visualized by the live waveform. The duration remains useful
+    /// while the finished recording is being transcribed, but must not compete with
+    /// the waveform while the person is speaking.
     func testScenario003() {
-        XCTAssertEqual(
-            content(.listening, elapsed: 7).subtitle,
-            "7 s"
-        )
+        XCTAssertNil(content(.listening, elapsed: 7).subtitle)
         XCTAssertEqual(content(.transcribing, elapsed: 12.4).subtitle, "12 s")
         XCTAssertNil(content(.preparing, elapsed: 3).subtitle)
         XCTAssertNil(content(.inserting, elapsed: 3).subtitle)
@@ -47,10 +46,7 @@ final class OverlayContentTests: XCTestCase {
     }
 
     func testScenario004() {
-        XCTAssertEqual(
-            content(.listening, elapsed: -2).subtitle,
-            "0 s"
-        )
+        XCTAssertNil(content(.listening, elapsed: -2).subtitle)
     }
 
     /// "5 s" VoiceOver reads as "5 es".

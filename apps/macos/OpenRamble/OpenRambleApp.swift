@@ -17,27 +17,14 @@ struct OpenRambleApp: App {
                 showOnboarding: { onboardingCompleted = false }
             )
         } label: {
-            // A 22pt template asset, so macOS tints it for light, dark and the
-            // highlighted menu the same way it tints a symbol. macOS supplies
-            // its own microphone privacy indicator while recording; this mark
-            // stays stable so one app does not look like two microphone tools.
-            Image(
-                MenuBarStatus.iconName(
-                    state: state.dictationState,
-                    isDictationReady: state.isDictationReady,
-                    hasRecoveredWork: state.recoveredText != nil
-                        || state.recoveredRecording != nil
-                )
-            )
-            // The icon is the only permanent presence of the application on
-            // screen. The accessible label below still reports every state.
-            .accessibilityLabel(
-                MenuBarStatus.accessibilityLabel(
-                    state: state.dictationState,
-                    isDictationReady: state.isDictationReady,
-                    hasRecoveredWork: state.recoveredText != nil
-                        || state.recoveredRecording != nil
-                )
+            // The brand remains stable. A small status dot carries the temporary
+            // recording, processing and successful-insertion states.
+            MenuBarLabel(
+                state: state.dictationState,
+                isDictationReady: state.isDictationReady,
+                hasRecoveredWork: state.recoveredText != nil
+                    || state.recoveredRecording != nil,
+                successfulInsertionCount: state.successfulDictationCount
             )
             .task {
                 // The first launch must show the setting itself. Without this

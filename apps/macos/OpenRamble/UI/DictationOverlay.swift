@@ -81,8 +81,7 @@ public final class DictationOverlay: OverlayPresenting {
             hosting.sizingOptions = .preferredContentSize
             panel.contentView = hosting
             // The window keeps the upper left corner in place when resizing. Width
-            // it changes right during dictation: with the first recognized word
-            // a preview appears and the panel changes from 280 pixels to 360.
+            // changes when the compact status turns into the recording waveform.
             // Without recalculation, she moved 80 points to the right of the center of the screen -
             // exactly at the moment when a person looks at her. We count by
             // the fact of the size change, and not just a guess about it: the size itself
@@ -130,16 +129,15 @@ public final class DictationOverlay: OverlayPresenting {
 /// Lives separately from `NSPanel` intentionally. The window requires a graphics session, and
 /// display rules - seconds counter, auto-hide message, advertisements for
 /// VoiceOver - checked without it.
-/// Preview edge: decoration on top of dictation, so separate protocol,
+/// Recording-feedback edge: decoration on top of dictation, so separate protocol,
 /// not a kernel extension. The fake overlay in tests records calls.
 @MainActor
-protocol PreviewPresenting: AnyObject {
-    func updatePreview(confirmed: String, volatile: String)
+protocol RecordingFeedbackPresenting: AnyObject {
     func updateInputLevel(_ level: Float)
     func showSilenceHint()
 }
 
-/// The edge of the speed showcase is modeled after `PreviewPresenting` and for the same reason:
+/// The edge of the speed showcase is modeled after `RecordingFeedbackPresenting` and for the same reason:
 /// This is a decoration on top of the dictation, not part of the kernel contract.
 @MainActor
 protocol SpeedPresenting: AnyObject {
@@ -151,20 +149,17 @@ final class OverlayModel: ObservableObject {
     @Published private(set) var state: DictationState = .idle
     @Published private(set) var elapsed: TimeInterval = 0
     @Published private(set) var notice: DictationNotice?
-    /// Live preview: established text and a tail that is still changing.
-    /// Appears with the first word, not with the microphone turned on: empty frame
-    /// expectations are stage excitement, not help.
-    @Published private(set) var previewConfirmed: String = ""
-    @Published private(set) var previewVolatile: String = ""
-    /// Microphone level peak (0...1) - the recording point pulsates along with the voice.
-    @Published private(set) var inputLevel: Float = 0
+    static let waveformSampleCount = 48
+    /// Recent microphone peaks (0...1), oldest first.
+    @Published private(set) var waveformSamples = Array(
+        repeating: Float(0),
+        count: OverlayModel.waveformSampleCount
+    )
     /// We listen for more than two seconds, but there is no signal: most likely, the wrong microphone.
     @Published private(set) var showsSilenceHint = false
     /// The line “stop → text: N ms” after successful insertion. Lives for a couple of seconds.
     @Published private(set) var speedLine: String?
     private var speedHide: Task<Void, Never>?
-
-    var hasPreview: Bool { !previewConfirmed.isEmpty || !previewVolatile.isEmpty }
 
     /// Whether the panel should be on the screen. Shown by its owner.
     private(set) var isVisible = false
@@ -212,11 +207,14 @@ final class OverlayModel: ObservableObject {
         cancelAutoHide()
         self.state = state
         notice = nil
+        // Once text is recognized, the destination application is the only
+        // useful feedback surface. Do not cover it with a redundant insertion HUD.
+        if state == .inserting {
+            hide()
+            return
+        }
         if state == .listening {
-            // New entry - the previous preview is not allowed to blink.
-            previewConfirmed = ""
-            previewVolatile = ""
-            inputLevel = 0
+            waveformSamples = Array(repeating: 0, count: Self.waveformSampleCount)
             showsSilenceHint = false
             // And the last number too: it’s about the last dictation.
             clearSpeed()
@@ -224,14 +222,6 @@ final class OverlayModel: ObservableObject {
         setElapsed(elapsed, ticking: state == .listening)
         setVisible(true)
         announceContent()
-    }
-
-    /// Update preview. VoiceOver is intentionally silent: read stream
-    /// changing words over a person’s own speech is absurd.
-    func updatePreview(confirmed: String, volatile: String) {
-        previewConfirmed = confirmed
-        previewVolatile = volatile
-        if !confirmed.isEmpty || !volatile.isEmpty { showsSilenceHint = false }
     }
 
     /// Panel shortcut for VoiceOver - along with a silent prompt if present.
@@ -251,18 +241,20 @@ final class OverlayModel: ObservableObject {
     private(set) var speedAccessibilityLabel: String?
 
     func updateInputLevel(_ level: Float) {
-        inputLevel = min(1, max(0, level))
+        guard state == .listening else { return }
+        let sample = min(1, max(0, level))
+        waveformSamples.removeFirst()
+        waveformSamples.append(sample)
+        if sample > 0.02 { showsSilenceHint = false }
     }
 
     /// There has been no signal for longer than the threshold - talk about the microphone.
     ///
-    /// Announced out loud, as opposed to previewed. Preview read
-    /// it is impossible - this is a stream of words on top of a person’s own speech; and here
-    /// “the microphone can’t hear you” is the most important thing for a blind person: he doesn’t see anything
-    /// pulse point, no empty preview, and without announcement learns about
+    /// “The microphone can't hear you” is the most important thing for a blind person:
+    /// they cannot see the flat waveform, and without an announcement learn about the
     /// dead microphone only by an empty result at the end.
     func showSilenceHint() {
-        guard state == .listening, !hasPreview, !showsSilenceHint else { return }
+        guard state == .listening, !showsSilenceHint else { return }
         showsSilenceHint = true
         announcer.announce(Self.silenceHint, urgent: true)
     }
@@ -337,10 +329,8 @@ final class OverlayModel: ObservableObject {
 
     /// Show elapsed time.
     ///
-    /// While the recording is in progress, the counter is kept by the panel itself. Otherwise it would show "0 s"
-    /// entire dictation: the kernel announces the start of recording once and the next time
-    /// comes into contact after its end - that is, exactly when the counter
-    /// is no longer needed. Seconds here are the only sign that the recording is really going on.
+    /// While recording, the counter is still kept for VoiceOver even though the
+    /// visible HUD is now only a waveform.
     private func setElapsed(_ value: TimeInterval, ticking: Bool) {
         elapsed = value
 
@@ -382,85 +372,44 @@ final class OverlayModel: ObservableObject {
 }
 
 private struct OverlayView: View {
-    /// How much of the running transcript stays on screen.
-    ///
-    /// Two lines showed the tail of a sentence and nothing else — the person
-    /// saw a fragment and could not tell whether the rest had been heard at
-    /// all. Six lines hold a couple of sentences at this width, which is what
-    /// someone actually wants to check mid-dictation.
-    ///
-    /// Bounded rather than unlimited on purpose: this panel floats over another
-    /// application's window, and a minute of speech would cover the screen the
-    /// person is dictating into. The newest words are kept (`truncationMode`
-    /// is `.head`) because that is the part still being decided.
-    static let previewLineLimit = 6
-
     @ObservedObject var model: OverlayModel
-    /// “Reduce movement”: the pulse point is a decoration, and the person who
-    /// turned off motion in universal access, no need to look at it.
-    /// The color of the dot remains: it carries meaning, not movement.
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let content = model.content
-        let pulse = model.state == .listening && !reduceMotion
 
-        return HStack(alignment: .top, spacing: 12) {
-            Circle()
-                .fill(color(for: content.tone))
-                .frame(width: 10, height: 10)
-                // The point breathes along with the voice: it is clear that the microphone hears.
-                .scaleEffect(pulse ? 1 + CGFloat(model.inputLevel) * 0.6 : 1)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: model.inputLevel)
-                .padding(.top, 3)
-            VStack(alignment: .leading, spacing: 2) {
-                if model.state == .listening, model.hasPreview {
-                    previewText
-                        .font(.system(size: 13, weight: .medium))
-                        .lineLimit(OverlayView.previewLineLimit)
-                        .truncationMode(.head)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    Text(model.showsSilenceHint ? OverlayModel.silenceHint : content.title)
-                        .font(.system(size: 13, weight: .medium))
-                        .fixedSize(horizontal: false, vertical: true)
-                    if let subtitle = content.subtitle {
-                        Text(subtitle)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+        return Group {
+            if model.state == .listening, !model.showsSilenceHint {
+                RecordingWaveform(samples: model.waveformSamples, color: .blue)
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    Circle()
+                        .fill(color(for: content.tone))
+                        .frame(width: 10, height: 10)
+                        .padding(.top, 3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(model.showsSilenceHint ? OverlayModel.silenceHint : content.title)
+                            .font(.system(size: 13, weight: .medium))
                             .fixedSize(horizontal: false, vertical: true)
+                        if let subtitle = content.subtitle {
+                            Text(subtitle)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if let speedLine = model.speedLine {
+                            Text(speedLine)
+                                .font(.system(size: 11, weight: .medium).monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                }
-                if model.hasPreview, model.state != .listening {
-                    // The tail of the hypothesis matters more than its beginning,
-                    // so the end is what stays. No scrolling and no per-word
-                    // animation: the text is still changing under the cursor.
-                    (Text(model.previewConfirmed)
-                        + Text(model.previewConfirmed.isEmpty || model.previewVolatile.isEmpty ? "" : " ")
-                        + Text(model.previewVolatile).foregroundStyle(.secondary))
-                        .font(.system(size: 12))
-                        .lineLimit(OverlayView.previewLineLimit)
-                        .truncationMode(.head)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        // During recognition, the text remains, but is muted:
-                        // emptiness would be read as “my words are gone.”
-                        .opacity(model.state == .transcribing ? 0.5 : 1)
-                }
-                if let speedLine = model.speedLine {
-                    // Neither `.transition` nor `.animation`: the string is just
-                    // appears and just disappears. This is compatibility with
-                    // reduceMotion - there is nothing to suppress.
-                    Text(speedLine)
-                        .font(.system(size: 11, weight: .medium).monospacedDigit())
-                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
                 }
             }
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .frame(
-            width: model.state == .listening || model.hasPreview || model.speedLine != nil ? 360 : 280,
+            width: model.state == .listening || model.speedLine != nil ? 360 : 280,
             alignment: .leading
         )
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
@@ -468,12 +417,6 @@ private struct OverlayView: View {
         //separately do not mean anything.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(model.accessibilityLabel)
-    }
-
-    private var previewText: Text {
-        (Text(model.previewConfirmed)
-            + Text(model.previewConfirmed.isEmpty || model.previewVolatile.isEmpty ? "" : " ")
-            + Text(model.previewVolatile).foregroundStyle(.secondary))
     }
 
     private func color(for tone: OverlayContent.Tone) -> Color {
@@ -489,11 +432,7 @@ private struct OverlayView: View {
 }
 
 
-extension DictationOverlay: PreviewPresenting {
-    func updatePreview(confirmed: String, volatile: String) {
-        model.updatePreview(confirmed: confirmed, volatile: volatile)
-    }
-
+extension DictationOverlay: RecordingFeedbackPresenting {
     func updateInputLevel(_ level: Float) {
         model.updateInputLevel(level)
     }

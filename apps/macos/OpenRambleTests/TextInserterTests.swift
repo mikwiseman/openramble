@@ -195,8 +195,9 @@ final class TextInserterTests: XCTestCase {
         let task = Task {
             try await inserter.insert("hello", into: target)
         }
-        for _ in 0..<100 where system.postedKeys.isEmpty {
-            await Task.yield()
+        let deadline = ContinuousClock.now + .seconds(1)
+        while system.postedKeys.isEmpty, ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(1))
         }
         XCTAssertEqual(system.postedKeys.count, 1, "the test must be canceled after Cmd+V")
 

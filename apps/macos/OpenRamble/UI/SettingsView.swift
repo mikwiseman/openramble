@@ -81,14 +81,6 @@ private struct GeneralSettings: View {
                 Toggle("Play sounds when recording starts and stops", isOn: $state.soundsEnabled)
                     .accessibilityHint("A short tone when recording starts and when it stops")
 
-                // The preview is described in the code as a decoration that can be
-                // turn it off - but there was no switch.
-                Toggle("Show recognized words while you speak", isOn: $state.showLivePreview)
-                    .accessibilityHint("Shows the text being recognized inside the dictation panel")
-                Text("The dictation panel shows the text as it is recognized. Turn this off if you'd rather not see it on screen.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
                 Toggle("Show how long it took", isOn: $state.showSpeedReadout)
                     .accessibilityHint("Shows the time from releasing the key to the text appearing")
                 Text("After each dictation the panel briefly shows the time from releasing the key to the text landing in your app. Measured, not estimated.")
