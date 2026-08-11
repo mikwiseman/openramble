@@ -89,34 +89,32 @@ final class AppStateIdleTests: XCTestCase {
         XCTAssertFalse(state.isCountingDuration, "the timer continues to wake the process after dictation")
     }
 
-    func testRollingSilenceFeedbackResetsOnSoundAndStopsWithRecording() async throws {
-        let feedback = FakeRecordingFeedbackOverlay()
-        harness.overlayOverride = feedback
-        let state = try await makeReadyState(recordingDuration: 2)
+    func testSilenceFeedbackPolicyResetsOnSoundAndStopsDeterministically() {
+        var policy = SilenceFeedbackPolicy()
+        policy.start(at: 100)
+
+        XCTAssertFalse(policy.shouldShowHint(at: 101.999))
+        XCTAssertTrue(policy.shouldShowHint(at: 102))
+
+        policy.registerInput(peak: 0.4, at: 101.5)
+        XCTAssertFalse(policy.shouldShowHint(at: 103.499))
+        XCTAssertTrue(policy.shouldShowHint(at: 103.5))
+
+        policy.stop()
+        XCTAssertFalse(policy.shouldShowHint(at: 1_000))
+    }
+
+    func testSilenceWatcherExistsOnlyWhileRecording() async throws {
+        let state = try await makeReadyState()
+        XCTAssertFalse(state.isWatchingSilence)
 
         monitor.onPress?()
         try await waitFor("recording has started") { state.dictationState == .listening }
-
-        // A signal just before the original two-second deadline must start a new interval.
-        try await Task.sleep(for: .milliseconds(1_250))
-        harness.audioSamples.emit([0.4])
-        try await Task.sleep(for: .milliseconds(1_050))
-        XCTAssertEqual(feedback.silenceHintCount, 0)
-
-        try await waitFor("silence hint after the reset deadline") {
-            feedback.silenceHintCount == 1
-        }
+        XCTAssertTrue(state.isWatchingSilence)
 
         monitor.onRelease?()
         try await waitFor("dictation ended") { state.dictationState == .idle }
-        feedback.hideSilenceHint()
-        try await Task.sleep(for: .milliseconds(700))
-
-        XCTAssertEqual(
-            feedback.silenceHintCount,
-            1,
-            "leaving listening must cancel the rolling silence task"
-        )
+        XCTAssertFalse(state.isWatchingSilence)
     }
 
     // MARK: - Microphone

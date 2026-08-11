@@ -330,46 +330,6 @@ actor FakeOverlay: OverlayPresenting {
     func presentNotice(_ notice: DictationNotice) async { notices.append(notice) }
 }
 
-/// Overlay edge that also exposes the recording-feedback channel used by AppState.
-@MainActor
-final class FakeRecordingFeedbackOverlay: OverlayPresenting, RecordingFeedbackPresenting, @unchecked Sendable {
-    private(set) var silenceHintCount = 0
-    private var isShowingSilenceHint = false
-
-    nonisolated func present(_ state: DictationState, elapsed: TimeInterval) async {}
-    nonisolated func dismiss() async {}
-    nonisolated func presentNotice(_ notice: DictationNotice) async {}
-
-    func updateInputLevel(_ level: Float) {
-        if level > 0.02 { isShowingSilenceHint = false }
-    }
-
-    func showSilenceHint() {
-        guard !isShowingSilenceHint else { return }
-        isShowingSilenceHint = true
-        silenceHintCount += 1
-    }
-
-    func hideSilenceHint() {
-        isShowingSilenceHint = false
-    }
-}
-
-/// Installs and drives the sample callback supplied to the capture factory.
-final class FakeAudioSampleEmitter: @unchecked Sendable {
-    private let lock = NSLock()
-    private var handler: (@Sendable ([Float]) -> Void)?
-
-    func install(_ handler: @escaping @Sendable ([Float]) -> Void) {
-        lock.withLock { self.handler = handler }
-    }
-
-    func emit(_ samples: [Float]) {
-        let handler = lock.withLock { self.handler }
-        handler?(samples)
-    }
-}
-
 // MARK: - Permissions and key monitor
 
 @MainActor
@@ -474,7 +434,6 @@ final class AppHarness {
     let accessibilityManager = FakeAccessibilityManager()
     let monitor = FakeHotkeyMonitor()
     let overlay = FakeOverlay()
-    let audioSamples = FakeAudioSampleEmitter()
     let capture = FakeCapture()
     let inserter = FakeInserter()
     let workspaceNotifications = NotificationCenter()
@@ -484,7 +443,6 @@ final class AppHarness {
     /// Zero - permission polling is disabled: in the check they are changed by us, not
     /// system.
     var permissionPollInterval: TimeInterval = 0
-    var overlayOverride: (any OverlayPresenting)?
 
     init() throws {
         root = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -560,8 +518,7 @@ final class AppHarness {
     var warmUpEngine: (any ASREngineAdapting)?
 
     func makeState() -> AppState {
-        let selectedOverlay = overlayOverride ?? overlay
-        return AppState(
+        AppState(
             environment: AppEnvironment(
                 defaults: defaults,
                 paths: AppPaths(root: root),
@@ -569,11 +526,8 @@ final class AppHarness {
                 accessibilityManager: accessibilityManager,
                 hotkeyMonitor: monitor,
                 inserter: inserter,
-                overlay: selectedOverlay,
-                makeCapture: { [capture, audioSamples] _, _, onSamples in
-                    audioSamples.install(onSamples)
-                    return capture
-                },
+                overlay: overlay,
+                makeCapture: { [capture] _, _, _ in capture },
                 transcribe: { [transcription] _, _ in
                     { _ in
                         if let delay = transcription.delay {

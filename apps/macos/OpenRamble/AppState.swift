@@ -130,6 +130,34 @@ public struct AppEnvironment {
     }
 }
 
+/// Pure deadline logic for the rolling silence hint. Keeping time decisions out
+/// of the async polling loop makes resets and boundaries deterministic to test.
+struct SilenceFeedbackPolicy: Equatable {
+    static let signalThreshold: Float = 0.02
+    static let silenceInterval: TimeInterval = 2
+
+    private(set) var lastAudibleInputUptime: TimeInterval?
+
+    mutating func start(at uptime: TimeInterval) {
+        lastAudibleInputUptime = uptime
+    }
+
+    mutating func stop() {
+        lastAudibleInputUptime = nil
+    }
+
+    mutating func registerInput(peak: Float, at uptime: TimeInterval) {
+        if peak > Self.signalThreshold {
+            lastAudibleInputUptime = uptime
+        }
+    }
+
+    func shouldShowHint(at uptime: TimeInterval) -> Bool {
+        guard let lastAudibleInputUptime else { return false }
+        return uptime - lastAudibleInputUptime >= Self.silenceInterval
+    }
+}
+
 /// All application state in one place.
 ///
 /// Links hotkey, audio capture, recognition and insertion. Herself
@@ -302,7 +330,7 @@ public final class AppState: ObservableObject {
     /// Rolling “no sound” feedback: a live signal resets the deadline rather
     /// than disabling detection for the rest of a long recording.
     private var silenceHintTask: Task<Void, Never>?
-    private var lastAudibleInputUptime: TimeInterval?
+    private var silenceFeedbackPolicy = SilenceFeedbackPolicy()
     /// Only the newest personal-dictionary snapshot may reach the acoustic model.
     private var vocabularyRebuildTask: Task<Void, Never>?
     private var vocabularyRevision = 0
@@ -365,6 +393,10 @@ public final class AppState: ObservableObject {
 
     /// Whether the duration limit is being checked. It shouldn't be at rest.
     public var isCountingDuration: Bool { durationTimer != nil }
+
+    /// The silence watcher exists only while recording. Exposed for the same
+    /// idle-state verification as the duration and permission timers above.
+    public var isWatchingSilence: Bool { silenceHintTask != nil }
 
     /// Warning about the selected key, if any.
     public var hotkeyWarning: String? {
@@ -1566,17 +1598,17 @@ public final class AppState: ObservableObject {
     private func updateRecordingFeedback(for state: DictationState) {
         silenceHintTask?.cancel()
         silenceHintTask = nil
-        lastAudibleInputUptime = nil
+        silenceFeedbackPolicy.stop()
         guard state == .listening else { return }
 
-        lastAudibleInputUptime = ProcessInfo.processInfo.systemUptime
+        silenceFeedbackPolicy.start(at: ProcessInfo.processInfo.systemUptime)
         silenceHintTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(500))
-                guard !Task.isCancelled, let self,
-                      let lastAudibleInputUptime = self.lastAudibleInputUptime
-                else { return }
-                if ProcessInfo.processInfo.systemUptime - lastAudibleInputUptime >= 2 {
+                guard !Task.isCancelled, let self else { return }
+                if self.silenceFeedbackPolicy.shouldShowHint(
+                    at: ProcessInfo.processInfo.systemUptime
+                ) {
                     (self.overlay as? RecordingFeedbackPresenting)?.showSilenceHint()
                 }
             }
@@ -1587,9 +1619,10 @@ public final class AppState: ObservableObject {
     /// and starts a fresh silence interval.
     private func registerInputLevel(_ peak: Float) {
         (overlay as? RecordingFeedbackPresenting)?.updateInputLevel(peak)
-        if peak > 0.02 {
-            lastAudibleInputUptime = ProcessInfo.processInfo.systemUptime
-        }
+        silenceFeedbackPolicy.registerInput(
+            peak: peak,
+            at: ProcessInfo.processInfo.systemUptime
+        )
     }
 
     /// Registration error visible: silently leave a person without autostart -
