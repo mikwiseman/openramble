@@ -1,6 +1,7 @@
 import AppKit
 import LocalASR
 import DictationCore
+import SwiftUI
 import XCTest
 
 /// The menu bar icon is the only persistent presence of the application.
@@ -282,31 +283,63 @@ final class MenuBarBrandIconTests: XCTestCase {
 
 final class MenuBarActivityTests: XCTestCase {
     func testScenario032() {
-        XCTAssertEqual(MenuBarStatus.activity(state: .idle, showsSuccess: false), .hidden)
-        XCTAssertEqual(MenuBarStatus.activity(state: .preparing, showsSuccess: false), .hidden)
-        XCTAssertEqual(MenuBarStatus.activity(state: .listening, showsSuccess: false), .recording)
-        XCTAssertEqual(MenuBarStatus.activity(state: .transcribing, showsSuccess: false), .processing)
-        XCTAssertEqual(MenuBarStatus.activity(state: .inserting, showsSuccess: false), .processing)
+        XCTAssertEqual(MenuBarStatus.activity(state: .idle), .hidden)
+        XCTAssertEqual(MenuBarStatus.activity(state: .preparing), .hidden)
+        XCTAssertEqual(MenuBarStatus.activity(state: .listening), .recording)
+        XCTAssertEqual(MenuBarStatus.activity(state: .transcribing), .processing)
+        XCTAssertEqual(MenuBarStatus.activity(state: .inserting), .processing)
     }
 
     func testScenario033() {
-        XCTAssertEqual(MenuBarStatus.activity(state: .idle, showsSuccess: true), .success)
-        XCTAssertEqual(MenuBarStatus.activity(state: .inserting, showsSuccess: true), .success)
-        XCTAssertEqual(
-            MenuBarStatus.activity(state: .listening, showsSuccess: true),
-            .recording,
-            "a new recording must replace the tail of the previous success"
-        )
+        XCTAssertEqual(MenuBarStatus.color(activity: .recording), .blue)
+        XCTAssertEqual(MenuBarStatus.color(activity: .processing), .green)
+        XCTAssertEqual(MenuBarStatus.color(activity: .hidden), .clear)
     }
 
     func testScenario034() {
         XCTAssertEqual(
             MenuBarStatus.accessibilityLabel(
                 state: .idle,
-                isDictationReady: true,
-                showsSuccess: true
+                isDictationReady: true
             ),
-            "OpenRamble: text inserted"
+            "OpenRamble: ready to dictate"
         )
+    }
+
+    @MainActor
+    func testScenario035() throws {
+        let idle = try renderLabel(state: .idle)
+        let recording = try renderLabel(state: .listening)
+        let processing = try renderLabel(state: .transcribing)
+
+        XCTAssertNotEqual(recording, idle, "recording must add an indicator to the rendered label")
+        XCTAssertNotEqual(processing, idle, "processing must add an indicator to the rendered label")
+        XCTAssertNotEqual(recording, processing, "recording and processing must render different colors")
+    }
+
+    func testScenario036() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("OpenRamble/UI/MenuBarLabel.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertFalse(source.contains("TimelineView"), "the system status item must not redraw on a timeline")
+        XCTAssertFalse(source.contains("Timer"), "the system status item must not own a repeating timer")
+        XCTAssertFalse(source.contains("Task.sleep"), "the system status item must not schedule delayed redraws")
+    }
+
+    @MainActor
+    private func renderLabel(state: DictationState) throws -> Data {
+        let renderer = ImageRenderer(
+            content: MenuBarLabel(
+                state: state,
+                isDictationReady: true,
+                hasRecoveredWork: false
+            )
+            .frame(width: 22, height: 22)
+        )
+        renderer.scale = 2
+        return try XCTUnwrap(renderer.nsImage?.tiffRepresentation)
     }
 }

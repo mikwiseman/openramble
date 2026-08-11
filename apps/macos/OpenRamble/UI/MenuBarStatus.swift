@@ -1,10 +1,10 @@
 import DictationCore
+import SwiftUI
 
 enum MenuBarActivity: Equatable {
     case hidden
     case recording
     case processing
-    case success
 }
 
 /// The menu bar identity and what it says about the current app state.
@@ -29,17 +29,19 @@ enum MenuBarStatus {
         brandIconName
     }
 
-    static func activity(
-        state: DictationState,
-        showsSuccess: Bool
-    ) -> MenuBarActivity {
-        // A new recording always outranks the tail of the previous success.
-        if state == .listening { return .recording }
-        if showsSuccess { return .success }
-
+    static func activity(state: DictationState) -> MenuBarActivity {
         switch state {
+        case .listening: return .recording
         case .transcribing, .inserting: return .processing
-        case .idle, .preparing, .listening: return .hidden
+        case .idle, .preparing: return .hidden
+        }
+    }
+
+    static func color(activity: MenuBarActivity) -> Color {
+        switch activity {
+        case .recording: return .blue
+        case .processing: return .green
+        case .hidden: return .clear
         }
     }
 
@@ -48,13 +50,8 @@ enum MenuBarStatus {
     static func accessibilityLabel(
         state: DictationState,
         isDictationReady: Bool,
-        hasRecoveredWork: Bool = false,
-        showsSuccess: Bool = false
+        hasRecoveredWork: Bool = false
     ) -> String {
-        if showsSuccess, state != .listening {
-            return "OpenRamble: text inserted"
-        }
-
         switch state {
         case .listening: return "OpenRamble: recording"
         case .transcribing: return "OpenRamble: transcribing speech"

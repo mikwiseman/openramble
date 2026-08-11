@@ -23,8 +23,7 @@ struct OpenRambleApp: App {
                 state: state.dictationState,
                 isDictationReady: state.isDictationReady,
                 hasRecoveredWork: state.recoveredText != nil
-                    || state.recoveredRecording != nil,
-                successfulInsertionCount: state.successfulDictationCount
+                    || state.recoveredRecording != nil
             )
             .task {
                 // The first launch must show the setting itself. Without this
