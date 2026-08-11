@@ -21,8 +21,8 @@ public struct AppEnvironment {
     public var hotkeyMonitor: any HotkeyMonitoring
     public var inserter: any TextInserting
     public var overlay: any OverlayPresenting
-    /// Capture factory: recording folder, crash handler and live listener
-    /// samples (for preview and microphone level).
+    /// Capture factory: recording folder, crash handler and live microphone samples
+    /// used by the recording waveform.
     public var makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void, @escaping @Sendable ([Float]) -> Void) -> any AudioCapturing
     /// How to recognize. Same system edge as microphone and insert: in
     /// in the application this is a model on disk, in the test this is a previously known answer. Without
@@ -301,10 +301,6 @@ public final class AppState: ObservableObject {
     private var noticeAfterSession: DictationNotice?
     /// The delayed “no sound” prompt is canceled by the first live signal.
     private var silenceHintTask: Task<Void, Never>?
-    /// Owns preview startup until it reaches the engine. Cancellation closes the
-    /// scheduling gap where recording can finish before this task begins running.
-    private var previewStartTask: Task<Void, Never>?
-    private var previewStartGeneration = 0
 
     /// Observer of edits of inserted text - learns the dictionary automatically.
     private let editWatcher: EditLearningWatcher
@@ -342,34 +338,6 @@ public final class AppState: ObservableObject {
 
     /// Last speed measurement. Only in memory, only numbers.
     @Published public private(set) var lastSpeed: DictationSpeedReport?
-
-    /// Live preview of recognition in the panel. Decoration - turns off.
-    @Published public var showLivePreview: Bool {
-        didSet {
-            guard oldValue != showLivePreview else { return }
-            defaults.set(showLivePreview, forKey: Self.showLivePreviewKey)
-            // Turned off in the middle of dictation - the preview goes out now, not
-            // "sometime when the state changes." The person unchecked the box to
-            // the text disappeared from the screen immediately.
-            if !showLivePreview {
-                previewFeedGate.close()
-                (overlay as? PreviewPresenting)?.updatePreview(confirmed: "", volatile: "")
-                stopLivePreview()
-            } else if dictationState == .listening {
-                previewFeedGate.open()
-                updateLivePreview(for: .listening)
-            }
-        }
-    }
-    nonisolated static let showLivePreviewKey = "showLivePreview"
-
-    /// Tap between audio stream and preview.
-    ///
-    /// The capture callback lives outside the main actor and cannot read @Published:
-    /// the shutter is the only point of truth accessible from both sides. Closed -
-    /// and for each of ~23 frames per second a task is not created for the sake of calling,
-    /// which would still end in nothing.
-    private let previewFeedGate = PreviewFeedGate()
 
     /// Start at login. An app without a Dock icon that doesn't
     /// started after reboot, indistinguishable from broken: key
@@ -427,17 +395,9 @@ public final class AppState: ObservableObject {
         recognitionLanguage = storedLanguage.flatMap {
             FluidAudioAdapter.supportedLanguageHints.contains($0) ? $0 : nil
         }
-        showLivePreview = environment.defaults.object(forKey: Self.showLivePreviewKey) == nil
-            ? true
-            : environment.defaults.bool(forKey: Self.showLivePreviewKey)
-        // The observer comes before the flag: its `didSet` refers to the observer, and
-        // although property observers are not triggered during initialization, order,
-        // which reads as safe, safer than the order we need
-        // keep in mind.
         editWatcher = EditLearningWatcher(reader: environment.focusedFieldReader)
         // No key = disabled: `bool(forKey:)` returns false. This
-        // deliberately different from `showLivePreview` above - that's decoration and
-        // enabled by default, but this one reads someone else's window.
+        // reads someone else's window and therefore requires an explicit opt-in.
         showSpeedReadout = environment.defaults.object(forKey: Self.showSpeedReadoutKey) == nil
             ? true
             : environment.defaults.bool(forKey: Self.showSpeedReadoutKey)
@@ -501,7 +461,6 @@ public final class AppState: ObservableObject {
         let sounds = SystemSounds(enabled: { [weak self] in self?.soundsEnabled ?? true })
 
         do {
-            let previewFeed = transcriber
             let capture = makeCapture(
                 try paths.takes(),
                 { [weak self] error in
@@ -514,14 +473,11 @@ public final class AppState: ObservableObject {
                         )
                     }
                 },
-                { [weak self, previewFeed, previewFeedGate] samples in
-                    // Live readings: in the preview and in the level indicator.
-                    // The peak is sufficient - the RMS here is not more accurate to the eye.
+                { [weak self] samples in
+                    // The peak is sufficient for the waveform; RMS would hide short
+                    // consonant transients that make the live signal feel responsive.
                     let peak = samples.reduce(Float(0)) { max($0, abs($1)) }
                     Task { @MainActor in self?.registerInputLevel(peak) }
-                    if let previewFeed, previewFeedGate.isOpen {
-                        Task { await previewFeed.feedPreview(samples: samples) }
-                    }
                 }
             )
             let recordingRecovery = RecordingRecoveryStore(directory: try paths.audioRecovery())
@@ -577,7 +533,7 @@ public final class AppState: ObservableObject {
                 self?.dictationState = state
                 self?.updateDurationTimer(for: state)
                 self?.flushNoticeAfterSession(state)
-                self?.updateLivePreview(for: state)
+                self?.updateRecordingFeedback(for: state)
             }
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
@@ -1597,74 +1553,23 @@ public final class AppState: ObservableObject {
 
     // MARK: - Duration limit
 
-    // MARK: - Live preview
+    // MARK: - Recording feedback
 
-    /// Recording started - enable preview; The recording has ended - turn it off.
-    ///
-    /// Preview is a decoration: his refusal has no right to touch the dictation,
-    /// therefore start errors do not pop up with the message - lack of text in
-    /// the panel is visible by itself, and the insertion works as before.
-    private func updateLivePreview(for state: DictationState) {
-        // The setting closes only LAUNCH. The stop must always go:
-        // previously guard was at the input, and the preview was turned off in the middle
-        // dictation meant that stopPreview would never be called - second
-        // The ASR session and its task lived forever, and the panel continued to show
-        // preview with the checkbox unchecked.
-        guard let transcriber else { return }
-        switch state {
-        case .preparing where showLivePreview:
-            // Start loading the preview pipeline while the microphone is opening so
-            // the first audio frames do not pay model-setup latency.
-            previewFeedGate.open()
-            startLivePreview(using: transcriber)
-        case .listening where showLivePreview:
-            previewFeedGate.open()
-            silenceHintTask?.cancel()
-            silenceHintTask = Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(2))
-                guard !Task.isCancelled else { return }
-                (self?.overlay as? PreviewPresenting)?.showSilenceHint()
-            }
-            startLivePreview(using: transcriber)
-        case .listening:
-            break
-        default:
-            previewFeedGate.close()
-            silenceHintTask?.cancel()
-            silenceHintTask = nil
-            stopLivePreview()
-        }
-    }
+    private func updateRecordingFeedback(for state: DictationState) {
+        silenceHintTask?.cancel()
+        silenceHintTask = nil
+        guard state == .listening else { return }
 
-    private func startLivePreview(using transcriber: LocalTranscriber) {
-        guard previewStartTask == nil else { return }
-        previewStartGeneration &+= 1
-        let generation = previewStartGeneration
-        previewStartTask = Task { @MainActor [weak self] in
+        silenceHintTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2))
             guard !Task.isCancelled else { return }
-            try? await transcriber.startPreview { confirmed, volatile in
-                Task { @MainActor in
-                    (self?.overlay as? PreviewPresenting)?
-                        .updatePreview(confirmed: confirmed, volatile: volatile)
-                }
-            }
-            guard let self, self.previewStartGeneration == generation else { return }
-            self.previewStartTask = nil
+            (self?.overlay as? RecordingFeedbackPresenting)?.showSilenceHint()
         }
     }
 
-    private func stopLivePreview() {
-        previewStartGeneration &+= 1
-        previewStartTask?.cancel()
-        previewStartTask = nil
-        guard let transcriber else { return }
-        Task { await transcriber.stopPreview() }
-    }
-
-    /// Peak level from the microphone - to the pulse of the recording point. The signal is louder than the threshold
-    /// cancels the "no sound" prompt.
+    /// Peak level from the microphone. A real signal also cancels the silence hint.
     private func registerInputLevel(_ peak: Float) {
-        (overlay as? PreviewPresenting)?.updateInputLevel(peak)
+        (overlay as? RecordingFeedbackPresenting)?.updateInputLevel(peak)
         if peak > 0.02 {
             silenceHintTask?.cancel()
             silenceHintTask = nil

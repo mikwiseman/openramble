@@ -1031,51 +1031,9 @@ final class RecoveredFileTests: XCTestCase {
     }
 }
 
-/// Live preview and saved recognition language.
+/// Saved recognition language.
 @MainActor
-final class LivePreviewToggleTests: XCTestCase {
-    /// An engine that remembers preview commands.
-    private final class PreviewEngine: ASREngineAdapting, LivePreviewCapable, @unchecked Sendable {
-        private let lock = NSLock()
-        private var _stops = 0
-        var stopCount: Int { lock.withLock { _stops } }
-
-        func loadModels(from directory: URL) async throws {}
-        func transcribe(samples: [Float]) async throws -> ASRResult {
-            ASRResult(text: "", audioDuration: 0, processingDuration: 0)
-        }
-        func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
-            ASRResult(text: "", audioDuration: 0, processingDuration: 0)
-        }
-        func unload() async {}
-        func startPreview(
-            onUpdate: @escaping @Sendable (_ confirmed: String, _ volatile: String) -> Void
-        ) async throws {}
-        func feedPreview(samples: [Float]) async {}
-        func stopPreview() async { lock.withLock { _stops += 1 } }
-    }
-
-    func testScenario057() async throws {
-        let harness = try AppHarness()
-        defer { harness.tearDown() }
-        let engine = PreviewEngine()
-        harness.warmUpEngine = engine
-        let state = harness.makeState()
-        XCTAssertTrue(state.showLivePreview, "Preview is enabled by default")
-
-        state.showLivePreview = false
-
-        // The stop is done by an asynchronous task - we wait by polling, not by sleep.
-        for _ in 0..<200 where engine.stopCount == 0 {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        XCTAssertGreaterThanOrEqual(
-            engine.stopCount, 1,
-            "Disabling preview must stop it immediately, not after another state change."
-        )
-    }
-
+final class RecognitionLanguageTests: XCTestCase {
     func testScenario058() throws {
         let harness = try AppHarness()
         defer { harness.tearDown() }

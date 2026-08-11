@@ -227,14 +227,13 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(announcer.messages.count, 1)
     }
 
-    /// The words are sent - it means the microphone hears, and take the hint about silence
-    /// out of nowhere.
+    /// A real microphone signal removes the silence hint immediately.
     func testScenario017() {
         model.show(.listening, elapsed: 0)
-        model.updatePreview(confirmed: "hello", volatile: "")
+        model.showSilenceHint()
         announcer.reset()
 
-        model.showSilenceHint()
+        model.updateInputLevel(0.2)
 
         XCTAssertFalse(model.showsSilenceHint)
         XCTAssertEqual(announcer.messages, [])
@@ -263,6 +262,46 @@ final class OverlayModelTests: XCTestCase {
         model.show(.listening, elapsed: 0)
 
         XCTAssertFalse(model.showsSilenceHint)
+    }
+
+    // MARK: - Waveform
+
+    func testScenario024() {
+        model.show(.listening, elapsed: 0)
+
+        XCTAssertEqual(model.waveformSamples.count, OverlayModel.waveformSampleCount)
+        XCTAssertTrue(model.waveformSamples.allSatisfy { $0 == 0 })
+
+        model.updateInputLevel(-1)
+        model.updateInputLevel(0.25)
+        model.updateInputLevel(2)
+
+        XCTAssertEqual(model.waveformSamples.count, OverlayModel.waveformSampleCount)
+        XCTAssertEqual(Array(model.waveformSamples.suffix(3)), [0, 0.25, 1])
+    }
+
+    func testScenario025() {
+        model.show(.listening, elapsed: 0)
+        model.updateInputLevel(0.5)
+        XCTAssertEqual(model.waveformSamples.last, 0.5)
+
+        model.hide()
+        model.show(.listening, elapsed: 0)
+
+        XCTAssertTrue(
+            model.waveformSamples.allSatisfy { $0 == 0 },
+            "a new dictation must not begin with the previous voice shape"
+        )
+    }
+
+    func testScenario026() {
+        model.show(.transcribing, elapsed: 2)
+        XCTAssertTrue(model.isVisible)
+
+        model.show(.inserting, elapsed: 2)
+
+        XCTAssertFalse(model.isVisible, "insertion happens in the destination app, not in the HUD")
+        XCTAssertFalse(model.isTicking)
     }
 }
 
