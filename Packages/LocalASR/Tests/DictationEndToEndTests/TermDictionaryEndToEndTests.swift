@@ -42,8 +42,7 @@ final class TermDictionaryEndToEndTests: EndToEndScenario {
             Probe("\u{0412}\u{044B}\u{043A}\u{0430}\u{0442}\u{0438} rollback \u{0431}\u{0435}\u{0437} downtime.", converted: ["rollback", "downtime"]),
             Probe(
                 "\u{0412}\u{043A}\u{043B}\u{044E}\u{0447}\u{0438} feature flag \u{043D}\u{0430} staging.",
-                converted: ["staging"],
-                gaps: [("feature flag", "\u{0444}\u{0438}\u{0447}\u{0435}\u{0440} \u{0444}\u{043B}\u{044D}\u{043A}")]
+                converted: ["feature flag", "staging"]
             ),
             Probe(
                 "\u{042F} \u{043F}\u{043E}\u{043F}\u{0440}\u{0430}\u{0432}\u{0438}\u{043B} backend \u{043D}\u{0430} Python, \u{0434}\u{043E}\u{0431}\u{0430}\u{0432}\u{0438}\u{043B} endpoint \u{0438} \u{043D}\u{0430}\u{043F}\u{0438}\u{0441}\u{0430}\u{043B} hotfix.",
@@ -59,30 +58,23 @@ final class TermDictionaryEndToEndTests: EndToEndScenario {
             ),
             Probe(
                 "\u{041E}\u{0448}\u{0438}\u{0431}\u{043A}\u{0430} \u{043F}\u{0440}\u{0438}\u{043B}\u{0435}\u{0442}\u{0435}\u{043B}\u{0430} \u{0432} Sentry, \u{043F}\u{043E}\u{0441}\u{043C}\u{043E}\u{0442}\u{0440}\u{0438} \u{043B}\u{043E}\u{0433}\u{0438} \u{0432} Docker \u{0438} \u{0432} Kubernetes.",
+                converted: ["Docker", "Kubernetes"],
                 gaps: [
                     // Conscious refusal, recorded in docs/benchmarks.md: “center” -
                     // an ordinary Russian word, and the replacement would break “in the city center.”
                     ("Sentry", "\u{0446}\u{0435}\u{043D}\u{0442}\u{0440}\u{0435}"),
-                    ("Docker", "\u{0414}\u{0430}\u{043A}\u{0430}\u{0440}\u{044B}"),
-                    ("Kubernetes", "\u{041A}\u{044C}\u{044E}\u{0431}\u{0435}\u{0440}\u{043D}\u{0438}\u{0446}"),
                 ]
             ),
             Probe(
                 "\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} commit \u{0432} branch, \u{043F}\u{043E}\u{0442}\u{043E}\u{043C} rebase \u{0438} merge.",
-                converted: ["commit", "rebase", "merge"],
-                gaps: [
-                    // “Brunch” has been removed from the set: it is a common Russian word in
-                    // in the instrumental case - “brunch” from “abuse”. The model is also
-                    // writes "branj".
-                    ("branch", "\u{0431}\u{0440}\u{0430}\u{043D}\u{0434}\u{0436}"),
-                ]
+                converted: ["commit", "branch", "rebase", "merge"]
             ),
             Probe(
                 "\u{0414}\u{0430}\u{043D}\u{043D}\u{044B}\u{0435} \u{0432} Postgres, \u{043A}\u{044D}\u{0448} \u{0432} Redis.",
-                gaps: [("Postgres", "\u{043F}\u{043E}\u{0435}\u{0437}\u{0434} \u{0413}\u{0435}\u{0440}\u{0437}"), ("Redis", "\u{043A}\u{044D}\u{0448}\u{0432}\u{0435}\u{0440}\u{0431}\u{0438}\u{0441}")]
+                converted: ["Postgres", "Redis"]
             ),
-            Probe("\u{041E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} Xcode \u{0438} \u{0441}\u{043E}\u{0431}\u{0435}\u{0440}\u{0438} \u{043F}\u{0440}\u{043E}\u{0435}\u{043A}\u{0442}.", gaps: [("Xcode", "\u{044D}\u{043A}\u{0441}\u{043A}\u{043E}\u{0443}\u{0442}")]),
-            Probe("\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} code review \u{0434}\u{043E} \u{043E}\u{0431}\u{0435}\u{0434}\u{0430}.", gaps: [("code review", "\u{043A}\u{043E}\u{0443}\u{0442}\u{0440}\u{0438}\u{0432}\u{044C}\u{044E}")]),
+            Probe("\u{041E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} Xcode \u{0438} \u{0441}\u{043E}\u{0431}\u{0435}\u{0440}\u{0438} \u{043F}\u{0440}\u{043E}\u{0435}\u{043A}\u{0442}.", converted: ["Xcode"]),
+            Probe("\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} code review \u{0434}\u{043E} \u{043E}\u{0431}\u{0435}\u{0434}\u{0430}.", converted: ["code review"]),
         ]
 
         var report: [String] = []

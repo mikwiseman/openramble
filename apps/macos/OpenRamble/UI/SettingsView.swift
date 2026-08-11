@@ -316,7 +316,7 @@ private struct DictionarySettings: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Replacements apply to the recognized text. Useful for names the model hears differently.")
+                Text("Common technical terms are handled automatically. Add personal names or phrases the model hears differently.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -344,7 +344,7 @@ private struct DictionarySettings: View {
             // I saw in this place just a half-window gap without a single word.
             if state.replacements.isEmpty {
                 VStack(spacing: 4) {
-                    Text("No replacements yet")
+                    Text("No personal replacements yet")
                         .font(.headline)
                         .foregroundStyle(.secondary)
                     Text("Add a pair below: what the model hears on the left, what should be written on the right.")

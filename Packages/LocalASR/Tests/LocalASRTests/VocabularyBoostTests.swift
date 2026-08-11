@@ -56,6 +56,10 @@ final class VocabularyBoostTests: XCTestCase {
         // recognition; both serve as bridges and both should go into the set.
         let kubernetes = boost.terms.first { $0.text == "Kubernetes" }
         XCTAssertEqual(Set(kubernetes?.aliases ?? []), ["\u{043A}\u{0443}\u{0431}\u{0435}\u{0440}\u{043D}\u{0435}\u{0442}\u{0435}\u{0441}", "\u{043A}\u{0443}\u{0431}\u{0435}\u{0440}\u{043D}\u{0435}\u{0442}\u{0438}\u{0441}"])
+        XCTAssertFalse(
+            boost.terms.first { $0.text == "code review" }?.aliases.contains("\u{043A}\u{043E}\u{0443}\u{0442}\u{0440}\u{0438}\u{0432}\u{044C}\u{044E}") ?? true,
+            "an exact decoder repair must not become an acoustic bias"
+        )
     }
 
     /// User substitutions - including those learned from edits - go into

@@ -644,7 +644,7 @@ final class AppStateTests: XCTestCase {
 
     func testScenario036() async throws {
         try installModelMarker()
-        let spokenTerm = "\u{043F}\u{043E}\u{0441}\u{0442}\u{0433}\u{0440}\u{0435}\u{0441}"
+        let spokenTerm = "\u{0437}\u{0435}\u{0442}\u{0430}\u{043F}\u{0440}\u{0430}\u{0439}\u{043C}"
         harness.transcription.text = "open \(spokenTerm) port and check the indexes"
         let state = makeState()
         await state.refreshModelState()
@@ -665,15 +665,15 @@ final class AppStateTests: XCTestCase {
 
         // The person corrected the term - the dictionary learned exactly this pair.
         let learned = state.learnCorrections(
-            editedText: last.insertedText.replacingOccurrences(of: spokenTerm, with: "Postgres")
+            editedText: last.insertedText.replacingOccurrences(of: spokenTerm, with: "ZetaPrime")
         )
 
         XCTAssertEqual(learned, 1)
-        XCTAssertTrue(state.replacements.contains { $0.spoken == spokenTerm && $0.written == "Postgres" })
+        XCTAssertTrue(state.replacements.contains { $0.spoken == spokenTerm && $0.written == "ZetaPrime" })
 
         // Repeating the same edit does not produce duplicates.
         XCTAssertEqual(state.learnCorrections(
-            editedText: last.insertedText.replacingOccurrences(of: spokenTerm, with: "Postgres")
+            editedText: last.insertedText.replacingOccurrences(of: spokenTerm, with: "ZetaPrime")
         ), 0)
     }
 
@@ -875,6 +875,32 @@ final class AppStateTests: XCTestCase {
 
         XCTAssertEqual(state.replacements.count, available)
         XCTAssertEqual(state.availableStarterCount, 0)
+    }
+
+    func testScenario062() async throws {
+        try installModelMarker()
+        harness.transcription.text = "\u{0412}\u{043A}\u{043B}\u{044E}\u{0447}\u{0438} \u{0444}\u{0438}\u{0447}\u{0435}\u{0440} \u{0444}\u{043B}\u{044D}\u{043A} \u{043D}\u{0430} staging"
+        let state = makeState()
+        XCTAssertTrue(state.replacements.isEmpty, "built-in vocabulary must not clutter personal replacements")
+        await state.refreshModelState()
+
+        try await dictateOnce(state)
+
+        let inserted = await harness.inserter.insertedTexts
+        XCTAssertEqual(inserted.last, "\u{0412}\u{043A}\u{043B}\u{044E}\u{0447}\u{0438} feature flag \u{043D}\u{0430} staging")
+    }
+
+    func testScenario063() async throws {
+        try installModelMarker()
+        harness.transcription.text = "\u{0444}\u{0438}\u{0447}\u{0435}\u{0440} \u{0444}\u{043B}\u{044D}\u{043A}"
+        let state = makeState()
+        state.addReplacement(spoken: "\u{0444}\u{0438}\u{0447}\u{0435}\u{0440} \u{0444}\u{043B}\u{044D}\u{043A}", written: "launch switch")
+        await state.refreshModelState()
+
+        try await dictateOnce(state)
+
+        let inserted = await harness.inserter.insertedTexts
+        XCTAssertEqual(inserted.last, "Launch switch", "a personal replacement wins over the built-in spelling")
     }
 
     // MARK: - Cleaning

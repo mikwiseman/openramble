@@ -34,19 +34,28 @@ public struct DictionaryReplacement: Codable, Sendable, Equatable, Identifiable 
     /// A person’s own terms have never been included in it, but add your own
     /// he couldn't at all.
     public var noAcousticBoost: Bool
+    /// Whether this spelling may be used as a fuzzy phonetic candidate.
+    ///
+    /// Exact decoder repairs are deliberately literal. Feeding a strange merged
+    /// phrase into the fuzzy matcher widens its blast radius beyond the measured
+    /// output it was added for. Personal replacements keep the historical `true`
+    /// default.
+    public var allowsPhoneticMatching: Bool
 
     public init(
         id: UUID = UUID(),
         spoken: String,
         written: String,
         inflects: Bool = true,
-        noAcousticBoost: Bool = false
+        noAcousticBoost: Bool = false,
+        allowsPhoneticMatching: Bool = true
     ) {
         self.id = id
         self.spoken = spoken
         self.written = written
         self.inflects = inflects
         self.noAcousticBoost = noAcousticBoost
+        self.allowsPhoneticMatching = allowsPhoneticMatching
     }
 
     /// Your own analysis is needed because of `inflects` and `noAcousticBoost`: in dictionaries,
@@ -60,6 +69,10 @@ public struct DictionaryReplacement: Codable, Sendable, Equatable, Identifiable 
         written = try container.decode(String.self, forKey: .written)
         inflects = try container.decodeIfPresent(Bool.self, forKey: .inflects) ?? true
         noAcousticBoost = try container.decodeIfPresent(Bool.self, forKey: .noAcousticBoost) ?? false
+        allowsPhoneticMatching = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .allowsPhoneticMatching
+        ) ?? true
     }
 }
 

@@ -100,13 +100,16 @@ extension VocabularyBoost {
     /// Cyrillic spellings as pseudonyms - a bridge from sound to Latin.
     public static func developerDefault() -> VocabularyBoost {
         let starter = StarterDictionary.developer
-        let blocked = unboostable(starter)
         let grouped = Dictionary(grouping: starter, by: \.written)
         return VocabularyBoost(
             terms: grouped
-                .filter { !blocked.contains($0.key) }
-                .map { written, group in
-                    Term(text: written, aliases: group.map(\.spoken))
+                .compactMap { written, group in
+                    // `noAcousticBoost` belongs to a spelling. A measured exact
+                    // decoder repair may be unsafe as an acoustic alias while the
+                    // canonical term and its normal aliases remain useful.
+                    let aliases = group.filter { !$0.noAcousticBoost }
+                    guard !aliases.isEmpty else { return nil }
+                    return Term(text: written, aliases: aliases.map(\.spoken))
                 }
                 .sorted { $0.text < $1.text }
         )

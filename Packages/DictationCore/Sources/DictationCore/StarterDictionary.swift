@@ -27,6 +27,18 @@ public enum StarterDictionary {
                     noAcousticBoost: unboostable.contains($0.1)
                 )
             }
+            + postprocessingOnly.map {
+                // These are exact, measured decoder spellings. They repair text
+                // safely after recognition but are intentionally kept out of the
+                // acoustic hint: several are fragments of ordinary Russian words.
+                DictionaryReplacement(
+                    spoken: $0.0,
+                    written: $0.1,
+                    inflects: false,
+                    noAcousticBoost: true,
+                    allowsPhoneticMatching: false
+                )
+            }
     }
 
     /// Terms whose Cyrillic sound is an ordinary Russian word.
@@ -136,6 +148,22 @@ public enum StarterDictionary {
         ("\u{0431}\u{044D}\u{043A}\u{0438}\u{043D}\u{0433}", "backend"),
         ("\u{0444}\u{0440}\u{043E}\u{043D}\u{0442}\u{0438}\u{043D}\u{0433}", "frontend"),
         ("\u{0442}\u{0430}\u{0439}\u{043F}-\u{0441}\u{043A}\u{0440}\u{0438}\u{043F}\u{0442}", "TypeScript"),
+    ]
+
+    /// Exact decoder errors that are specific enough to repair without changing
+    /// ordinary Russian speech. Unlike the acoustic aliases above, these strings
+    /// are never used to bias recognition.
+    private static let postprocessingOnly: [(String, String)] = [
+        ("\u{0444}\u{0438}\u{0447}\u{0435}\u{0440} \u{0444}\u{043B}\u{044D}\u{043A}", "feature flag"),
+        ("\u{044D}\u{043C}\u{0438}\u{0442}", "commit"),
+        ("\u{0431}\u{0440}\u{0430}\u{043D}\u{0434}\u{0436}", "branch"),
+        ("\u{043F}\u{043E}\u{0435}\u{0437}\u{0434} \u{0433}\u{0435}\u{0440}\u{0437}", "Postgres"),
+        ("\u{043A}\u{044D}\u{0448}\u{0432}\u{0435}\u{0440}\u{0431}\u{0438}\u{0441}", "\u{043A}\u{044D}\u{0448} \u{0432} Redis"),
+        ("\u{043A}\u{044D}\u{0448}\u{0432}\u{0435}\u{0440}\u{0434}\u{0438}\u{0441}", "\u{043A}\u{044D}\u{0448} \u{0432} Redis"),
+        ("\u{044D}\u{043A}\u{0441}\u{043A}\u{043E}\u{0443}\u{0442}", "Xcode"),
+        ("\u{043A}\u{043E}\u{0443}\u{0442}\u{0440}\u{0438}\u{0432}\u{044C}\u{044E}", "code review"),
+        ("\u{0434}\u{0430}\u{043A}\u{0430}\u{0440}\u{044B} \u{0432} \u{043A}\u{044C}\u{044E}\u{0431}\u{0435}\u{0440}\u{043D}\u{0438}\u{0446}", "Docker \u{0438} \u{0432} Kubernetes"),
+        ("\u{0434}\u{0430}\u{043A}\u{0430}\u{0440}\u{0435}\u{0432}\u{043A}\u{0438} \u{0443}\u{0431}\u{0435}\u{0440}\u{043D}\u{0438}\u{0442}", "Docker \u{0438} Kubernetes"),
     ]
 
     /// Replacements that the user does not yet have.

@@ -1630,7 +1630,12 @@ public final class AppState: ObservableObject {
     /// Generic assembly makes "both paths are the same" a property of the code, not something that
     /// must be remembered when ruling one of two places.
     private func makePipeline() -> TextPipeline {
-        TextPipeline(replacements: replacements)
+        // Safe built-in technical vocabulary is part of recognition, not a
+        // hidden setup chore. Personal entries win when they use the same
+        // heard spelling.
+        TextPipeline(
+            replacements: StarterDictionary.missing(from: replacements) + replacements
+        )
     }
 
     // MARK: - Dictionary
