@@ -90,8 +90,10 @@ xcodebuild -resolvePackageDependencies \
   -clonedSourcePackagesDirPath "$PACKAGE_CACHE" >/dev/null
 
 if [[ -n "$DEVELOPER_ID" ]]; then
-  SIGN_ARGS=(CODE_SIGN_IDENTITY="$DEVELOPER_ID" CODE_SIGN_STYLE=Manual \
-    "${XCODE_KEYCHAIN_SIGN_ARGS[@]}")
+  SIGN_ARGS=(CODE_SIGN_IDENTITY="$DEVELOPER_ID" CODE_SIGN_STYLE=Manual)
+  if [[ "$RELEASE_KEYCHAIN_ACTIVE" == "1" ]]; then
+    SIGN_ARGS+=("${XCODE_KEYCHAIN_SIGN_ARGS[@]}")
+  fi
 else
   echo "Developer ID is not specified - I am collecting a separate Debug-probe OpenRambleDev"
   SIGN_ARGS=(CODE_SIGNING_ALLOWED=NO)
