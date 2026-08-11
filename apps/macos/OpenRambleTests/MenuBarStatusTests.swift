@@ -6,21 +6,25 @@ import XCTest
 /// The menu bar icon is the only persistent presence of the application.
 ///
 /// A picture without a description does not exist at all for a blind person: VoiceOver
-/// will read the name of the system symbol or remain silent.
+/// must still describe the current state even though the branded picture stays stable.
 final class MenuBarStatusTests: XCTestCase {
     func testScenario001() {
-        XCTAssertEqual(MenuBarStatus.iconName(state: .listening, isDictationReady: true), "mic.fill")
-        XCTAssertEqual(MenuBarStatus.iconName(state: .transcribing, isDictationReady: true), "waveform")
-        XCTAssertEqual(MenuBarStatus.iconName(state: .inserting, isDictationReady: true), "waveform")
-        XCTAssertEqual(MenuBarStatus.iconName(state: .idle, isDictationReady: true), "mic")
+        for state in [DictationState.idle, .preparing, .listening, .transcribing, .inserting] {
+            XCTAssertEqual(
+                MenuBarStatus.iconName(state: state, isDictationReady: true),
+                MenuBarStatus.brandIconName,
+                "\(state) must keep the OpenRamble identity"
+            )
+        }
     }
 
-    /// An unconfigured application must have a different icon.
-    ///
-    /// Otherwise, the person will hold the key and not understand why nothing
-    /// happens.
+    /// Setup state belongs in the menu copy and accessibility label, not in a
+    /// generic microphone glyph that makes OpenRamble impossible to identify.
     func testScenario002() {
-        XCTAssertEqual(MenuBarStatus.iconName(state: .idle, isDictationReady: false), "mic.slash")
+        XCTAssertEqual(
+            MenuBarStatus.iconName(state: .idle, isDictationReady: false),
+            MenuBarStatus.brandIconName
+        )
     }
 
     func testScenario003() {
@@ -207,56 +211,42 @@ final class MenuRecoveryLineTests: XCTestCase {
     }
 }
 
-/// Undone work badge on the menu bar icon.
+/// Recovery state in the stable menu bar identity.
 @MainActor
-final class MenuBarBadgeTests: XCTestCase {
+final class MenuBarRecoveryStatusTests: XCTestCase {
     func testScenario018() {
         XCTAssertEqual(
             MenuBarStatus.iconName(state: .idle, isDictationReady: true, hasRecoveredWork: true),
-            "waveform.badge.exclamationmark",
-            "A person who does not open the menu will otherwise not know about the saved text"
+            MenuBarStatus.brandIconName,
+            "Recovered work must not replace the only persistent app identity"
         )
     }
 
     func testScenario019() {
         XCTAssertEqual(
             MenuBarStatus.iconName(state: .listening, isDictationReady: true, hasRecoveredWork: true),
-            "mic.fill",
-            "The ongoing recording is more important than the past disaster"
+            MenuBarStatus.brandIconName
         )
         XCTAssertEqual(
             MenuBarStatus.iconName(state: .transcribing, isDictationReady: true, hasRecoveredWork: true),
-            "waveform"
+            MenuBarStatus.brandIconName
         )
     }
 
     func testScenario020() {
-        // Non-existent SF Symbol name gives an EMPTY icon in the menu bar - worse
-        // lack of badge. The test nails the name to the reality of the system.
-        let name = MenuBarStatus.iconName(state: .idle, isDictationReady: true, hasRecoveredWork: true)
-        XCTAssertNotNil(
-            NSImage(systemSymbolName: name, accessibilityDescription: nil),
-            "The character '\(name)' does not exist in this version of macOS"
-        )
-    }
-
-    func testScenario021() {
         for state in [DictationState.idle, .preparing, .listening, .transcribing, .inserting] {
             for ready in [true, false] {
                 for recovered in [true, false] {
                     let name = MenuBarStatus.iconName(
                         state: state, isDictationReady: ready, hasRecoveredWork: recovered
                     )
-                    XCTAssertNotNil(
-                        NSImage(systemSymbolName: name, accessibilityDescription: nil),
-                        "The character '\(name)' does not exist"
-                    )
+                    XCTAssertEqual(name, MenuBarStatus.brandIconName)
                 }
             }
         }
     }
 
-    func testScenario022() {
+    func testScenario021() {
         let label = MenuBarStatus.accessibilityLabel(
             state: .idle, isDictationReady: true, hasRecoveredWork: true
         )
@@ -264,47 +254,15 @@ final class MenuBarBadgeTests: XCTestCase {
     }
 }
 
-/// The brand mark in the menu bar, and when it steps aside.
+/// The brand mark in the menu bar.
 final class MenuBarBrandIconTests: XCTestCase {
-    /// At rest the menu bar says whose app this is.
-    func testScenario030() {
-        XCTAssertTrue(
-            MenuBarStatus.usesBrandIcon(state: .idle, isDictationReady: true)
-        )
-    }
-
-    /// A live microphone outranks the logo. Whether the app is recording has to
-    /// be readable at a glance, and a brand mark cannot say it.
-    func testScenario031() {
-        for state in [DictationState.listening, .transcribing, .inserting, .preparing] {
-            XCTAssertFalse(
-                MenuBarStatus.usesBrandIcon(state: state, isDictationReady: true),
-                "\(state) has something to report"
-            )
-        }
-    }
-
-    /// So does something being wrong, or work left unfinished.
-    func testScenario032() {
-        XCTAssertFalse(
-            MenuBarStatus.usesBrandIcon(state: .idle, isDictationReady: false),
-            "dictation is not available — the icon must show it"
-        )
-        XCTAssertFalse(
-            MenuBarStatus.usesBrandIcon(
-                state: .idle, isDictationReady: true, hasRecoveredWork: true
-            ),
-            "unfinished work must stay visible without opening the menu"
-        )
-    }
-
     /// The asset name is what SwiftUI looks up; a typo shows an empty icon.
     ///
     /// Loaded from this bundle rather than through `NSImage(named:)`, because
     /// these tests build without a host app — `Bundle.main` is then the xctest
     /// tool, and the lookup would fail for a reason that has nothing to do with
     /// whether the asset ships.
-    func testScenario033() {
+    func testScenario030() {
         XCTAssertEqual(MenuBarStatus.brandIconName, "BrandIconMenuBar")
         XCTAssertNotNil(
             Bundle(for: MenuBarBrandIconTests.self).image(forResource: MenuBarStatus.brandIconName),
@@ -314,7 +272,7 @@ final class MenuBarBrandIconTests: XCTestCase {
 
     /// A template asset takes the menu bar's own tint; a non-template one would
     /// stay dark on a dark menu bar.
-    func testScenario034() throws {
+    func testScenario031() throws {
         let image = try XCTUnwrap(
             Bundle(for: MenuBarBrandIconTests.self).image(forResource: MenuBarStatus.brandIconName)
         )
