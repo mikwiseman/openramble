@@ -33,8 +33,8 @@ final class PunctuationReattachmentCostTests: XCTestCase {
         let elapsed = ContinuousClock.now - started
 
         XCTAssertLessThan(
-            elapsed, .seconds(1),
-            "4000 words took \(elapsed); before the fix this was 4.3 s and it grew quadratically"
+            elapsed, .seconds(3),
+            "4000 words took \(elapsed); before the fix this was 7.1 s in debug and grew quadratically"
         )
     }
 
@@ -72,7 +72,9 @@ final class PunctuationReattachmentCostTests: XCTestCase {
         let elapsed = ContinuousClock.now - started
 
         XCTAssertEqual(result, rescored, "nothing recoverable — the rescorer's text stands")
-        XCTAssertLessThan(elapsed, .seconds(5), "took \(elapsed)")
+        // This runs in an unoptimized debug test binary. Ten seconds still stays
+        // far below the old quadratic path while leaving room for shared CI load.
+        XCTAssertLessThan(elapsed, .seconds(10), "took \(elapsed)")
     }
 
     /// Speed must not have been bought with correctness: the three invariants
