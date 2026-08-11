@@ -172,7 +172,7 @@ struct OnboardingView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .glassSurface(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .contentSurface(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
             if needsAccessibilityRepair {
@@ -392,6 +392,6 @@ private struct OnboardingPermission: View {
             }
         }
         .padding(12)
-        .glassSurface(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .contentSurface(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

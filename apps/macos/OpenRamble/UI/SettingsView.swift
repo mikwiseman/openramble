@@ -102,7 +102,7 @@ private struct GeneralSettings: View {
             }
 
             Section("Permissions & insertion") {
-                Text("Finished text is pasted through the clipboard; its previous contents are restored immediately afterward.")
+                Text("Finished text is pasted through the clipboard; its previous contents are restored shortly afterward.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 PermissionRow(
