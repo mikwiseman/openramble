@@ -117,7 +117,8 @@ extension VocabularyBoost {
             }
         }
 
-        let mergedDefaults = defaults.terms.map { term in
+        let mergedDefaults = defaults.terms.compactMap { term -> Term? in
+            guard !blocked.contains(term.text.lowercased()) else { return nil }
             guard let index = groupedIndex[term.text.lowercased()] else { return term }
             return Term(text: term.text, aliases: term.aliases + grouped[index].aliases)
         }

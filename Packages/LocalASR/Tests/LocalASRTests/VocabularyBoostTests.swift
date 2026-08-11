@@ -107,4 +107,19 @@ final class VocabularyBoostTests: XCTestCase {
 
         XCTAssertEqual(boost.terms.first?.aliases, [])
     }
+
+    func testScenario009() {
+        let boost = VocabularyBoost.withUserReplacements([
+            DictionaryReplacement(
+                spoken: "\u{043F}\u{043E}\u{0441}\u{0442}\u{0433}\u{0440}\u{0435}\u{0441}",
+                written: "Postgres",
+                noAcousticBoost: true
+            )
+        ])
+
+        XCTAssertFalse(
+            boost.terms.contains { $0.text.lowercased() == "postgres" },
+            "a personal text-only mark must disable even a safe built-in acoustic term"
+        )
+    }
 }
