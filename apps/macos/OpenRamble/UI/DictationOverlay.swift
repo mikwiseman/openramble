@@ -23,13 +23,11 @@ public final class DictationOverlay: OverlayPresenting {
 
     public init(
         announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
-        noticeDuration: Duration = .seconds(4),
-        speedDuration: Duration = .seconds(2)
+        noticeDuration: Duration = .seconds(4)
     ) {
         model = OverlayModel(
             announcer: announcer,
-            noticeDuration: noticeDuration,
-            speedDuration: speedDuration
+            noticeDuration: noticeDuration
         )
         model.onVisibilityChange = { [weak self] visible in
             if visible {
@@ -137,13 +135,6 @@ protocol RecordingFeedbackPresenting: AnyObject {
     func showSilenceHint()
 }
 
-/// The edge of the speed showcase is modeled after `RecordingFeedbackPresenting` and for the same reason:
-/// This is a decoration on top of the dictation, not part of the kernel contract.
-@MainActor
-protocol SpeedPresenting: AnyObject {
-    func showSpeed(_ readout: SpeedReadout)
-}
-
 @MainActor
 final class OverlayModel: ObservableObject {
     @Published private(set) var state: DictationState = .idle
@@ -157,10 +148,6 @@ final class OverlayModel: ObservableObject {
     )
     /// We listen for more than two seconds, but there is no signal: most likely, the wrong microphone.
     @Published private(set) var showsSilenceHint = false
-    /// The line “stop → text: N ms” after successful insertion. Lives for a couple of seconds.
-    @Published private(set) var speedLine: String?
-    private var speedHide: Task<Void, Never>?
-
     /// Whether the panel should be on the screen. Shown by its owner.
     private(set) var isVisible = false
     var onVisibilityChange: ((Bool) -> Void)?
@@ -174,7 +161,6 @@ final class OverlayModel: ObservableObject {
 
     private let announcer: any AccessibilityAnnouncing
     private let noticeDuration: Duration
-    private let speedDuration: Duration
     /// Marked `nonisolated(unsafe)` because the timer removes `deinit`, and it has
     /// isolated class - outside of isolation. They touch him only from the main
     /// stream: the panel lives entirely on it.
@@ -187,12 +173,10 @@ final class OverlayModel: ObservableObject {
 
     init(
         announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
-        noticeDuration: Duration = .seconds(4),
-        speedDuration: Duration = .seconds(2)
+        noticeDuration: Duration = .seconds(4)
     ) {
         self.announcer = announcer
         self.noticeDuration = noticeDuration
-        self.speedDuration = speedDuration
     }
 
     deinit {
@@ -216,29 +200,18 @@ final class OverlayModel: ObservableObject {
         if state == .listening {
             waveformSamples = Array(repeating: 0, count: Self.waveformSampleCount)
             showsSilenceHint = false
-            // And the last number too: it’s about the last dictation.
-            clearSpeed()
         }
         setElapsed(elapsed, ticking: state == .listening)
         setVisible(true)
         announceContent()
     }
 
-    /// Panel shortcut for VoiceOver - along with a silent prompt if present.
-    /// Panel shortcut for VoiceOver.
-    ///
-    /// Speed comes here - but not in ads. Number spoken out loud
-    /// after each dictation, it would be intrusive; find it with the VoiceOver cursor,
-    /// if you suddenly need it, no.
+    /// Panel shortcut for VoiceOver, including the silence prompt if present.
     var accessibilityLabel: String {
         var base = content.accessibilityLabel
         if showsSilenceHint { base = "\(Self.silenceHint) \(base)" }
-        if let speedAccessibilityLabel { base = "\(base) \(speedAccessibilityLabel)" }
         return base
     }
-
-    /// Verbal form of the speed string: "ms" is read by the synthesizer as "emes".
-    private(set) var speedAccessibilityLabel: String?
 
     func updateInputLevel(_ level: Float) {
         guard state == .listening else { return }
@@ -265,8 +238,6 @@ final class OverlayModel: ObservableObject {
     /// Show the message and remove it after the specified time.
     func showNotice(_ notice: DictationNotice) {
         cancelAutoHide()
-        // The error message is more important than the showcase: the number gives way to it.
-        clearSpeed()
         setElapsed(elapsed, ticking: false)
         self.notice = notice
         setVisible(true)
@@ -285,41 +256,13 @@ final class OverlayModel: ObservableObject {
         }
     }
 
-    /// Show how long it took “let go → text in place.”
-    ///
-    /// Keeps the panel on the screen itself: `cleanup` calls `dismiss` via
-    /// a few lines after the report, and without this the number would blink and disappear.
-    func showSpeed(_ readout: SpeedReadout) {
-        speedHide?.cancel()
-        speedLine = readout.line
-        speedAccessibilityLabel = readout.accessibilityLabel
-        setVisible(true)
-        let duration = speedDuration
-        speedHide = Task { [weak self] in
-            try? await Task.sleep(for: duration)
-            // Cancellation check is required: `try?` swallows it along with the error,
-            // and the canceled task would otherwise have taken away the next number.
-            guard let self, !Task.isCancelled else { return }
-            self.speedLine = nil
-            self.setVisible(false)
-        }
-    }
-
-    private func clearSpeed() {
-        speedHide?.cancel()
-        speedHide = nil
-        speedLine = nil
-        speedAccessibilityLabel = nil
-    }
-
     /// Remove the panel.
     ///
     /// The message remains on the screen: the person must have time to read it, but
-    /// cleanup after the session comes right after him. The same goes for the speed line:
-    /// her showing comes from the same cleaning as the request to turn off the panel.
+    /// cleanup after the session comes right after it.
     func hide() {
         setElapsed(elapsed, ticking: false)
-        guard notice == nil, speedLine == nil else { return }
+        guard notice == nil else { return }
         cancelAutoHide()
         setVisible(false)
         // The next dictation must appear again, even if the state
@@ -396,11 +339,6 @@ private struct OverlayView: View {
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
-                        if let speedLine = model.speedLine {
-                            Text(speedLine)
-                                .font(.system(size: 11, weight: .medium).monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
                     }
                     Spacer(minLength: 0)
                 }
@@ -409,7 +347,7 @@ private struct OverlayView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .frame(
-            width: model.state == .listening || model.speedLine != nil ? 360 : 280,
+            width: model.state == .listening ? 360 : 280,
             alignment: .leading
         )
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
@@ -439,11 +377,5 @@ extension DictationOverlay: RecordingFeedbackPresenting {
 
     func showSilenceHint() {
         model.showSilenceHint()
-    }
-}
-
-extension DictationOverlay: SpeedPresenting {
-    func showSpeed(_ readout: SpeedReadout) {
-        model.showSpeed(readout)
     }
 }

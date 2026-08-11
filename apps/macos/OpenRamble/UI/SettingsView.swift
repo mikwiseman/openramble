@@ -80,12 +80,6 @@ private struct GeneralSettings: View {
             Section {
                 Toggle("Play sounds when recording starts and stops", isOn: $state.soundsEnabled)
                     .accessibilityHint("A short tone when recording starts and when it stops")
-
-                Toggle("Show how long it took", isOn: $state.showSpeedReadout)
-                    .accessibilityHint("Shows the time from releasing the key to the text appearing")
-                Text("After each dictation the panel briefly shows the time from releasing the key to the text landing in your app. Measured, not estimated.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
             Section {

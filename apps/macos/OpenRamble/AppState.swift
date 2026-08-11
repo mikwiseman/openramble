@@ -324,18 +324,6 @@ public final class AppState: ObservableObject {
     nonisolated static let learnFromEditsKey = "learnFromEdits"
 
 
-    /// Whether to show “stop → text: N ms” after insertion.
-    ///
-    /// Showcase: the number is the main argument of the product, and it should be on the screen.
-    /// But it’s still a decoration on top of someone else’s window, so there’s a switch.
-    @Published public var showSpeedReadout: Bool {
-        didSet {
-            guard oldValue != showSpeedReadout else { return }
-            defaults.set(showSpeedReadout, forKey: Self.showSpeedReadoutKey)
-        }
-    }
-    nonisolated static let showSpeedReadoutKey = "showSpeedReadout"
-
     /// Last speed measurement. Only in memory, only numbers.
     @Published public private(set) var lastSpeed: DictationSpeedReport?
 
@@ -398,9 +386,6 @@ public final class AppState: ObservableObject {
         editWatcher = EditLearningWatcher(reader: environment.focusedFieldReader)
         // No key = disabled: `bool(forKey:)` returns false. This
         // reads someone else's window and therefore requires an explicit opt-in.
-        showSpeedReadout = environment.defaults.object(forKey: Self.showSpeedReadoutKey) == nil
-            ? true
-            : environment.defaults.bool(forKey: Self.showSpeedReadoutKey)
         learnFromEdits = environment.defaults.bool(forKey: Self.learnFromEditsKey)
         launchAtLogin = SMAppService.mainApp.status == .enabled
         paths = environment.paths
@@ -558,10 +543,9 @@ public final class AppState: ObservableObject {
                 }
             }
             controller.onSpeed = { [weak self] report in
-                guard let self else { return }
-                self.lastSpeed = report
-                guard self.showSpeedReadout, let readout = SpeedReadout.make(report) else { return }
-                (self.overlay as? SpeedPresenting)?.showSpeed(readout)
+                // Keep the measurement for diagnostics and performance tests, but do
+                // not cover the destination app after text has already arrived.
+                self?.lastSpeed = report
             }
             controller.onDictationCompleted = { [weak self] provenance in
                 self?.lastDictation = LastDictation(

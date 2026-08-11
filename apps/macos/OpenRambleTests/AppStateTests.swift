@@ -677,15 +677,6 @@ final class AppStateTests: XCTestCase {
         ), 0)
     }
 
-    func testScenario037() {
-        let state = makeState()
-        XCTAssertTrue(state.showSpeedReadout, "showcase is enabled by default - the number is the argument")
-
-        state.showSpeedReadout = false
-        XCTAssertFalse(harness.defaults.bool(forKey: AppState.showSpeedReadoutKey))
-        XCTAssertFalse(makeState().showSpeedReadout)
-    }
-
     func testScenario038() {
         let state = makeState()
 
