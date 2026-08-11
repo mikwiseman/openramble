@@ -89,6 +89,36 @@ final class AppStateIdleTests: XCTestCase {
         XCTAssertFalse(state.isCountingDuration, "the timer continues to wake the process after dictation")
     }
 
+    func testRollingSilenceFeedbackResetsOnSoundAndStopsWithRecording() async throws {
+        let feedback = FakeRecordingFeedbackOverlay()
+        harness.overlayOverride = feedback
+        let state = try await makeReadyState(recordingDuration: 2)
+
+        monitor.onPress?()
+        try await waitFor("recording has started") { state.dictationState == .listening }
+
+        // A signal just before the original two-second deadline must start a new interval.
+        try await Task.sleep(for: .milliseconds(1_250))
+        harness.audioSamples.emit([0.4])
+        try await Task.sleep(for: .milliseconds(1_050))
+        XCTAssertEqual(feedback.silenceHintCount, 0)
+
+        try await waitFor("silence hint after the reset deadline") {
+            feedback.silenceHintCount == 1
+        }
+
+        monitor.onRelease?()
+        try await waitFor("dictation ended") { state.dictationState == .idle }
+        feedback.hideSilenceHint()
+        try await Task.sleep(for: .milliseconds(700))
+
+        XCTAssertEqual(
+            feedback.silenceHintCount,
+            1,
+            "leaving listening must cancel the rolling silence task"
+        )
+    }
+
     // MARK: - Microphone
 
     /// Direct product promise: The recording light turns off when we're not listening.

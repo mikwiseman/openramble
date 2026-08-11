@@ -279,6 +279,18 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(model.content.title, "Microphone disconnected.")
     }
 
+    func testSilenceHintCannotMaskNoticeAlreadyOnScreen() {
+        model.show(.listening, elapsed: 0)
+        model.showNotice(DictationNotice(kind: .failure, message: "Microphone disconnected."))
+        announcer.reset()
+
+        model.showSilenceHint()
+
+        XCTAssertFalse(model.showsSilenceHint)
+        XCTAssertEqual(model.content.title, "Microphone disconnected.")
+        XCTAssertEqual(announcer.messages, [], "the silence poll must not interrupt an active notice")
+    }
+
     // MARK: - Waveform
 
     func testScenario024() {

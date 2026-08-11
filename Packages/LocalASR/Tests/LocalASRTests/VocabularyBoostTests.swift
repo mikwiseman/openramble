@@ -136,4 +136,33 @@ final class VocabularyBoostTests: XCTestCase {
         XCTAssertEqual(postgres.aliases.filter { $0 == first || $0 == second }, [first, second])
         XCTAssertEqual(boost.terms.filter { $0.text.lowercased() == "postgres" }.count, 1)
     }
+
+    func testPersonalAliasOverridesDifferentBuiltInCanonical() throws {
+        let spoken = "\u{0444}\u{0438}\u{0447}\u{0430} \u{0444}\u{043B}\u{0430}\u{0433}"
+        let boost = VocabularyBoost.withUserReplacements([
+            DictionaryReplacement(spoken: spoken, written: "launch switch"),
+        ])
+
+        let personal = try XCTUnwrap(boost.terms.first { $0.text == "launch switch" })
+        XCTAssertTrue(personal.aliases.contains(spoken))
+        XCTAssertFalse(
+            boost.terms.contains { term in
+                term.text == "feature flag" && term.aliases.contains(spoken)
+            },
+            "one acoustic alias must not point at both the built-in and personal canonical values"
+        )
+        XCTAssertEqual(boost.terms.filter { $0.aliases.contains(spoken) }.map(\.text), ["launch switch"])
+
+        let textOnly = VocabularyBoost.withUserReplacements([
+            DictionaryReplacement(
+                spoken: spoken,
+                written: "launch switch",
+                noAcousticBoost: true
+            ),
+        ])
+        XCTAssertFalse(
+            textOnly.terms.contains { $0.aliases.contains(spoken) },
+            "a text-only personal rule must still remove a conflicting built-in acoustic alias"
+        )
+    }
 }

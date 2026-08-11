@@ -98,6 +98,24 @@ extension VocabularyBoost {
         let unsafeStarterOnly = starterWritten.subtracting(known)
         let blocked = unboostable(replacements).union(unsafeStarterOnly)
 
+        // The text pipeline gives a personal rule ownership of its heard
+        // spelling. Give the acoustic pipeline the same precedence: one alias
+        // must never point at both a built-in term and a different personal
+        // canonical value, or the built-in may win before text replacement can
+        // see the original spelling.
+        var personalAliasOwner: [String: String] = [:]
+        for replacement in replacements {
+            let canonical = replacement.written
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            let alias = replacement.spoken
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            guard !canonical.isEmpty, !alias.isEmpty else { continue }
+            guard replacement.written.contains(where: { $0.isLetter && $0.isASCII }) else { continue }
+            personalAliasOwner[alias] = personalAliasOwner[alias] ?? canonical
+        }
+
         // Preserve the person's entry order while grouping aliases by canonical
         // spelling. A personal pronunciation of an existing built-in term must
         // extend that term instead of being discarded as a duplicate.
@@ -109,6 +127,11 @@ extension VocabularyBoost {
             guard !blocked.contains(key) else { continue }
             guard text.contains(where: { $0.isLetter && $0.isASCII }) else { continue }
 
+            let aliasKey = replacement.spoken
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            guard personalAliasOwner[aliasKey] == key else { continue }
+
             if let index = groupedIndex[key] {
                 grouped[index].aliases.append(replacement.spoken)
             } else {
@@ -118,9 +141,19 @@ extension VocabularyBoost {
         }
 
         let mergedDefaults = defaults.terms.compactMap { term -> Term? in
-            guard !blocked.contains(term.text.lowercased()) else { return nil }
-            guard let index = groupedIndex[term.text.lowercased()] else { return term }
-            return Term(text: term.text, aliases: term.aliases + grouped[index].aliases)
+            let key = term.text.lowercased()
+            guard !blocked.contains(key) else { return nil }
+            if let owner = personalAliasOwner[key], owner != key { return nil }
+
+            let aliases = term.aliases.filter { alias in
+                let aliasKey = alias.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                guard let owner = personalAliasOwner[aliasKey] else { return true }
+                return owner == key
+            }
+            guard let index = groupedIndex[key] else {
+                return Term(text: term.text, aliases: aliases)
+            }
+            return Term(text: term.text, aliases: aliases + grouped[index].aliases)
         }
         let userTerms = grouped
             .filter { !known.contains($0.key) }

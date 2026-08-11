@@ -234,7 +234,7 @@ final class OverlayModel: ObservableObject {
     /// they cannot see the flat waveform, and without an announcement learn about the
     /// dead microphone only by an empty result at the end.
     func showSilenceHint() {
-        guard state == .listening, !showsSilenceHint else { return }
+        guard state == .listening, notice == nil, !showsSilenceHint else { return }
         showsSilenceHint = true
         announcer.announce(Self.silenceHint, urgent: true)
     }
