@@ -5,10 +5,12 @@ receive text in the active application.
 
 ## Network boundary
 
-The shipping app has exactly two user-initiated network features:
+The shipping app has exactly two network areas:
 
-1. Model downloads through `LocalASR/ModelDownloading.swift`.
+1. Explicit model downloads through `LocalASR/ModelDownloading.swift`.
 2. Sparkle update checks and downloads through `SparkleUpdater.swift`.
+   Scheduled checks are enabled by default and can be disabled in Settings;
+   downloading and installing an update always requires a click.
 
 No other shipping code may access the network. The complete denied API list is
 maintained in `scripts/check-network-surface.sh` and enforced by CI. Update the

@@ -5,8 +5,9 @@ and text stay on the user's Mac.
 
 ## Non-negotiable boundaries
 
-- Network access is limited to explicit model downloads and user-enabled
-  Sparkle updates.
+- Network access is limited to explicit model downloads and Sparkle updates.
+  Scheduled update checks are enabled by default and can be disabled in
+  Settings; downloading and installing an update always requires a click.
 - Do not add analytics, telemetry, cloud sync, crash-reporting services, or new
   dependencies without prior discussion.
 - Do not log speech, recognized text, keystrokes, or user file names.
