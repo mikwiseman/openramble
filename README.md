@@ -9,7 +9,7 @@ your Mac and inserts the text at the current cursor.
 [Latest release](https://github.com/mikwiseman/openramble/releases/latest) ·
 [Sparkle feed](https://mikwiseman.github.io/openramble/appcast.xml)
 
-OpenRamble is currently a public beta. Version 0.3.3 is signed with Developer
+OpenRamble is currently a public beta. Version 0.3.4 is signed with Developer
 ID, notarized by Apple, and distributed as a universal update to existing beta
 installations.
 

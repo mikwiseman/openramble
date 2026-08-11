@@ -70,7 +70,7 @@ Sparkle EdDSA, verifies the embedded public key, and updates
 Upload the exact verified image and use the matching English notes:
 
 ```bash
-VERSION=0.3.3
+VERSION=0.3.4
 gh release create "v$VERSION" \
   "artifacts/dmg/OpenRamble-$VERSION.dmg" \
   --repo mikwiseman/openramble \
