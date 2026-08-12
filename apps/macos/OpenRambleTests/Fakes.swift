@@ -28,6 +28,13 @@ func writeAbandonedTestWAV(to url: URL, sampleBytes: Int = 3200) throws {
     u32(0)
     data.append(Data(repeating: 7, count: sampleBytes))
     try data.write(to: url)
+    // A crash leftover is old by the time the app relaunches. A fresh file
+    // would be skipped by the import's live-recording guard — another running
+    // instance may still be writing it.
+    try FileManager.default.setAttributes(
+        [.modificationDate: Date().addingTimeInterval(-120)],
+        ofItemAtPath: url.path
+    )
 }
 
 // False edges of the system.

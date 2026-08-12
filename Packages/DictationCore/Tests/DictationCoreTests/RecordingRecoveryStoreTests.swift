@@ -21,7 +21,17 @@ final class RecordingRecoveryStoreTests: XCTestCase {
     private func take(_ name: String, bytes: Int = 8) throws -> URL {
         let url = takes.appending(path: name)
         try Data(repeating: 7, count: bytes).write(to: url)
+        try backdate(url)
         return url
+    }
+
+    /// A crash leftover is old by the time the app relaunches; a fresh file is
+    /// protected by the live-recording guard and must be aged explicitly.
+    private func backdate(_ url: URL, by seconds: TimeInterval = 120) throws {
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date().addingTimeInterval(-seconds)],
+            ofItemAtPath: url.path
+        )
     }
 
     /// Header that WAVWriter managed to write before process kill: format
@@ -49,7 +59,30 @@ final class RecordingRecoveryStoreTests: XCTestCase {
         data.append(Data(repeating: 7, count: sampleBytes))
         let url = takes.appending(path: name)
         try data.write(to: url)
+        try backdate(url)
         return url
+    }
+
+    /// A take written moments ago may be the live recording of another
+    /// running instance sharing this folder (debug build next to the release
+    /// build). The import must leave it exactly where it is — repairing or
+    /// deleting it would steal the file out from under the recorder
+    /// mid-dictation.
+    func testImportLeavesFreshTakeAloneItMayBeALiveRecording() async throws {
+        let store = RecordingRecoveryStore(directory: recovered)
+        let live = takes.appending(path: "take-live.wav")
+        try Data(repeating: 7, count: 64_000).write(to: live)
+
+        let result = try await store.importAbandoned(from: takes)
+
+        XCTAssertEqual(result.newlyImportedCount, 0)
+        XCTAssertEqual(result.discardedCorruptCount, 0)
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: live.path),
+            "a possibly-live take must stay in place, byte for byte"
+        )
+        let kept = try await store.recordings()
+        XCTAssertTrue(kept.isEmpty)
     }
 
     func testPreserveMovesWAVOutOfActiveTakes() async throws {
