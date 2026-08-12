@@ -24,11 +24,11 @@ struct ModelStatus: Equatable {
         /// only the remainder - when the hint is downloaded after the update.
         func title(downloadMegabytes: Int) -> String {
             switch self {
-            case .install: return "Download model — \(downloadMegabytes) MB"
-            case .retry: return "Try again"
-            case .repair: return "Redownload model — \(downloadMegabytes) MB"
-            case .cancel: return "Cancel download"
-            case .delete: return "Delete model"
+            case .install: return "Download Model — \(downloadMegabytes) MB"
+            case .retry: return "Try Again"
+            case .repair: return "Redownload Model — \(downloadMegabytes) MB"
+            case .cancel: return "Cancel Download"
+            case .delete: return "Delete Model"
             }
         }
 

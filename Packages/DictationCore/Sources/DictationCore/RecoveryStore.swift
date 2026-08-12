@@ -12,10 +12,17 @@ public protocol RecordingRecoveryStoring: Sendable {
 
 public struct AbandonedRecordingImportResult: Sendable, Equatable {
     public let recordings: [URL]
+    /// How many recordings this very import rescued.
+    ///
+    /// Tells "something happened right now" apart from "left over from last
+    /// week": an old leftover is not an event of this launch, and announcing
+    /// it again would be a made-up error.
+    public let newlyImportedCount: Int
     public let discardedCorruptCount: Int
 
-    public init(recordings: [URL], discardedCorruptCount: Int) {
+    public init(recordings: [URL], newlyImportedCount: Int, discardedCorruptCount: Int) {
         self.recordings = recordings
+        self.newlyImportedCount = newlyImportedCount
         self.discardedCorruptCount = discardedCorruptCount
     }
 }
@@ -62,6 +69,7 @@ public actor RecordingRecoveryStore: RecordingRecoveryStoring {
         guard fileManager.fileExists(atPath: takesDirectory.path) else {
             return AbandonedRecordingImportResult(
                 recordings: try recordings(),
+                newlyImportedCount: 0,
                 discardedCorruptCount: 0
             )
         }
@@ -69,11 +77,24 @@ public actor RecordingRecoveryStore: RecordingRecoveryStoring {
             at: takesDirectory,
             includingPropertiesForKeys: nil
         )
+        var newlyImportedCount = 0
         var discardedCorruptCount = 0
         for entry in entries where entry.pathExtension.lowercased() == "wav" {
             do {
-                try repairAbandonedWAV(at: entry)
-                _ = try preserve(entry)
+                let payloadBytes = try repairAbandonedWAV(at: entry)
+                // A fragment shorter than the recognition minimum is an
+                // accidental key press that outlived a kill, not lost speech.
+                // The main dictation path deletes such takes silently; the
+                // import must behave the same — otherwise every launch shows
+                // "a recording after a failure" whose retry can only ever
+                // produce an empty result.
+                guard DictationDurationPolicy.isWorthTranscribing(
+                    duration: TimeInterval(payloadBytes) / TimeInterval(Self.bytesPerSecond)
+                ) else {
+                    try fileManager.removeItem(at: entry)
+                    continue
+                }
+                if try preserve(entry) != nil { newlyImportedCount += 1 }
             } catch let error as CocoaError where error.code == .fileReadCorruptFile {
                 // An exactly unusable fragment should not block the rest
                 // records after crash. This is just the native WAVWriter file from
@@ -85,16 +106,25 @@ public actor RecordingRecoveryStore: RecordingRecoveryStoring {
         }
         return AbandonedRecordingImportResult(
             recordings: try recordings(),
+            newlyImportedCount: newlyImportedCount,
             discardedCorruptCount: discardedCorruptCount
         )
     }
+
+    /// Byte rate of our own WAVWriter stream: 16 kHz × 16-bit × mono.
+    /// The format is pinned by the header check in `repairAbandonedWAV`.
+    private static let bytesPerSecond: Int64 = 32_000
 
     /// WAVWriter first puts a 44-byte header with zero dimensions and
     /// fixes them in `close()`. After kill/crash PCM is already on the disk, but without
     /// of this fix, the system decoder considers the entry empty. We only accept
     /// the exact format of the writer's own: someone else's or cropped file should not
     /// masquerade as a suitable Retry.
-    private func repairAbandonedWAV(at url: URL) throws {
+    ///
+    /// Returns the PCM payload size: it decides whether the recording holds
+    /// anything worth transcribing.
+    @discardableResult
+    private func repairAbandonedWAV(at url: URL) throws -> Int64 {
         let attributes = try fileManager.attributesOfItem(atPath: url.path)
         guard let fileSize = attributes[.size] as? NSNumber else {
             throw CocoaError(.fileReadUnknown)
@@ -136,6 +166,7 @@ public actor RecordingRecoveryStore: RecordingRecoveryStoring {
             try? handle.close()
             throw error
         }
+        return payloadBytes
     }
 
     private func readUInt16(_ data: Data, at offset: Int) -> UInt16 {

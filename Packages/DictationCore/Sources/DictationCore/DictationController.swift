@@ -524,9 +524,9 @@ public final class DictationController {
         let message: String
         if let insertion = error as? TextInsertionError, insertion == .secureInputActive {
             // Not a failure, but a normal situation: the password field is active.
-            message = "Text not inserted: secure input is active. Copy and Retry are in the menu."
+            message = "Text not inserted: secure input is active. Your text is saved in the menu."
         } else {
-            message = "The text couldn't be inserted. Copy and Retry are in the menu."
+            message = "The text couldn't be inserted. It's saved in the menu."
         }
 
         let notice = DictationNotice(kind: .warning, message: message, recoverableText: text)
@@ -615,17 +615,30 @@ public final class DictationController {
                 return
             }
 
-            var saved: URL?
-            if let recording {
-                saved = try? await self.recordingRecovery.preserve(recording.url)
+            let notice: DictationNotice
+            if let recording,
+               !DictationDurationPolicy.isWorthTranscribing(duration: recording.duration) {
+                // The device vanished a moment after the start: the take holds
+                // not a single word, there is nothing to rescue. The main path
+                // deletes such fragments silently — here we name the reason of
+                // the interruption and nothing else, otherwise a one-second
+                // device hiccup leaves a "recording for retry" whose retry can
+                // only ever produce an empty result.
+                await self.discard(recording.url)
+                notice = DictationNotice(kind: .failure, message: message)
+            } else {
+                var saved: URL?
+                if let recording {
+                    saved = try? await self.recordingRecovery.preserve(recording.url)
+                }
+                notice = DictationNotice(
+                    kind: .failure,
+                    message: saved == nil
+                        ? message + " Couldn't save the recording for retry."
+                        : message + " The recording is saved locally — you can retry or delete it.",
+                    recoveryAudio: saved
+                )
             }
-            let notice = DictationNotice(
-                kind: .failure,
-                message: saved == nil
-                    ? message + " Couldn't save the recording for retry."
-                    : message + " The recording is saved locally — you can retry or delete it.",
-                recoveryAudio: saved
-            )
             await self.report(notice)
             await self.cleanup(session: session)
         }

@@ -296,6 +296,55 @@ final class RecordingCleanupTests: XCTestCase {
         XCTAssertEqual(controller.state, .idle)
     }
 
+    /// The device vanished a moment after the start — nothing to rescue.
+    ///
+    /// A fragment shorter than the recognition minimum is silently deleted by
+    /// the main path: the person lost nothing. Rescue must behave the same,
+    /// otherwise a one-second device hiccup leaves a "recording for retry"
+    /// whose retry forever produces an empty result.
+    func testRescueOfTooShortRecordingDiscardsInsteadOfSaving() async throws {
+        let capture = FileCapture(directory: directory, duration: 0.1)
+        let recovered = directory.appending(path: "RecoveredAudio", directoryHint: .isDirectory)
+        let overlay = CollectingOverlay()
+        var notices: [DictationNotice] = []
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in ASRResult(text: "recognized", audioDuration: 3, processingDuration: 0.1) },
+            inserter: FakeInserter(),
+            overlay: overlay,
+            sounds: FakeSounds(),
+            recordingRecovery: RecordingRecoveryStore(directory: recovered)
+        )
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        XCTAssertEqual(controller.state, .listening)
+
+        controller.preserveActiveRecording(reason: "The device disconnected.")
+        for _ in 0..<100 where controller.state != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        let saved = (try? FileManager.default.contentsOfDirectory(at: recovered, includingPropertiesForKeys: nil))?
+            .filter { $0.pathExtension == "wav" } ?? []
+        XCTAssertTrue(saved.isEmpty, "A fragment below the minimum is not saved: \(saved)")
+        let takes = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "wav" }
+        XCTAssertTrue(takes.isEmpty, "And it does not stay in Takes either: \(takes)")
+
+        XCTAssertTrue(notices.allSatisfy { $0.recoveryAudio == nil })
+        XCTAssertTrue(
+            notices.contains { $0.message.contains("The device disconnected.") },
+            "The reason of the interruption must still be named: \(notices.map(\.message))"
+        )
+        XCTAssertFalse(
+            notices.contains { $0.message.contains("saved locally") || $0.message.contains("Couldn't save") },
+            "Nothing to say about rescuing a recording that does not exist: \(notices.map(\.message))"
+        )
+    }
+
     func testRecordingIsDeletedWhenCancelledDuringTranscription() async throws {
         // Cancellation occurs when the record is already closed and is on disk: abort
         // there is nothing here, but it is necessary to delete it.

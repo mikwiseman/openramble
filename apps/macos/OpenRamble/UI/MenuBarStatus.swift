@@ -116,7 +116,7 @@ enum MenuBarStatus {
             // The text is more important than the record: it has already been recognized, and before the finished result
             // the person has one menu item left.
             if hasRecoveredText {
-                return "Text ready to copy or retry"
+                return "Last dictation wasn't inserted"
             }
             if hasRecoveredRecording {
                 return "A recording is waiting to be transcribed"

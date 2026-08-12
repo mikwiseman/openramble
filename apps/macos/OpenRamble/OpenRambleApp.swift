@@ -47,6 +47,9 @@ struct OpenRambleApp: App {
             OnboardingView(state: state) { onboardingCompleted = true }
         }
         .windowResizability(.contentSize)
+        // No title bar strip: the first-run wizard has neither a document nor
+        // a name worth showing — only content.
+        .windowStyle(.hiddenTitleBar)
 
         Settings {
             SettingsView(state: state)
