@@ -9,7 +9,10 @@ to GitHub Releases, and listed in the GitHub Pages appcast.
 - Repository: `mikwiseman/openramble`
 - Bundle identifier: `is.waiwai.dictation`
 - Sparkle feed: `https://mikwiseman.github.io/openramble/appcast.xml`
-- Download page: `https://wai.computer/openramble/`
+- Download page: `https://waiwai.is/ramble` — the product's main landing. It
+  pins the version, the build number and the DMG link, so every release must
+  update it (`apps/web/src/app/ww/ramble/page.tsx` in `wai-web`, guarded by
+  `page.content.test.ts`).
 - DMG name: `OpenRamble-<version>.dmg`
 
 Do not change the production bundle identifier. Existing Accessibility grants
@@ -93,6 +96,7 @@ feed must exactly match the uploaded DMG.
 2. `spctl --assess --type install --verbose=2` accepts the DMG.
 3. The app inside the mounted image has the expected bundle identifier,
    version, build, update URL, and public key.
-4. The public landing page downloads the same DMG.
+4. The main landing at `https://waiwai.is/ramble` shows this version and build
+   and downloads the same DMG.
 5. An older installed build can discover and install the update through
    Sparkle.

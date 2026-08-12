@@ -5,7 +5,7 @@ Private, local dictation for Apple Silicon Macs.
 Hold a hotkey, speak, and release it. OpenRamble transcribes the recording on
 your Mac and inserts the text at the current cursor.
 
-[Download OpenRamble](https://wai.computer/openramble/) ·
+[Download OpenRamble](https://waiwai.is/ramble) ·
 [Latest release](https://github.com/mikwiseman/openramble/releases/latest) ·
 [Sparkle feed](https://mikwiseman.github.io/openramble/appcast.xml)
 
