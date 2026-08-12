@@ -350,16 +350,32 @@ private struct DictionarySettings: View {
             }
 
             Section("Add replacement") {
-                TextField("Heard as", text: $spoken, prompt: Text("Spoken phrase"))
-                    .accessibilityLabel("Heard as")
-                    .onSubmit(addReplacement)
-                TextField("Write as", text: $written, prompt: Text("Final spelling"))
-                    .accessibilityLabel("Write as")
-                    .onSubmit(addReplacement)
-                Button("Add", action: addReplacement)
-                    .disabled(!canAddReplacement)
-                    .accessibilityLabel("Add replacement")
-                    .accessibilityHint(addReplacementHint)
+                // A composer, not a settings value: the grouped form's default
+                // trailing-aligned fields are for tweaking short values, and
+                // typing a new phrase against the right edge reads backwards.
+                // Two bordered leading fields mirror the rows above — what is
+                // heard flows into what gets written.
+                HStack(spacing: 8) {
+                    TextField("Heard as", text: $spoken, prompt: Text("Spoken phrase"))
+                        .textFieldStyle(.roundedBorder)
+                        .labelsHidden()
+                        .accessibilityLabel("Heard as")
+                        .onSubmit(addReplacement)
+                    Image(systemName: "arrow.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                    TextField("Write as", text: $written, prompt: Text("Final spelling"))
+                        .textFieldStyle(.roundedBorder)
+                        .labelsHidden()
+                        .accessibilityLabel("Write as")
+                        .onSubmit(addReplacement)
+                    Button("Add", action: addReplacement)
+                        .disabled(!canAddReplacement)
+                        .accessibilityLabel("Add replacement")
+                        .accessibilityHint(addReplacementHint)
+                }
+                .padding(.vertical, 2)
             }
         }
         .formStyle(.grouped)

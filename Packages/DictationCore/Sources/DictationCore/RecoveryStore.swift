@@ -78,11 +78,23 @@ public actor RecordingRecoveryStore: RecordingRecoveryStoring {
         }
         let entries = try fileManager.contentsOfDirectory(
             at: takesDirectory,
-            includingPropertiesForKeys: nil
+            includingPropertiesForKeys: [.contentModificationDateKey]
         )
         var newlyImportedCount = 0
         var discardedCorruptCount = 0
         for entry in entries where entry.pathExtension.lowercased() == "wav" {
+            // A take modified moments ago is not abandoned — it may be the
+            // live recording of ANOTHER running instance (a debug build and
+            // the release build share this folder). Touching it would steal
+            // the file out from under the recorder mid-dictation. A genuine
+            // crash leftover ages past this window and is picked up on the
+            // next launch.
+            if let modified = try? entry.resourceValues(
+                forKeys: [.contentModificationDateKey]
+            ).contentModificationDate,
+               Date().timeIntervalSince(modified) < Self.abandonedMinimumAge {
+                continue
+            }
             do {
                 let payloadBytes = try repairAbandonedWAV(at: entry)
                 // A fragment shorter than the recognition minimum is an
@@ -123,6 +135,11 @@ public actor RecordingRecoveryStore: RecordingRecoveryStoring {
     /// Byte rate of our own WAVWriter stream: 16 kHz × 16-bit × mono.
     /// The format is pinned by the header check in `repairAbandonedWAV`.
     private static let bytesPerSecond: Int64 = 32_000
+
+    /// How old a take must be before the import may treat it as abandoned.
+    /// Longer than any realistic gap between writes of a live recording,
+    /// far shorter than the time to relaunch after a real crash.
+    static let abandonedMinimumAge: TimeInterval = 60
 
     /// WAVWriter first puts a 44-byte header with zero dimensions and
     /// fixes them in `close()`. After kill/crash PCM is already on the disk, but without
