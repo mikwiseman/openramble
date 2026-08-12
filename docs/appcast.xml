@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.3.9</title>
-      <pubDate>Wed, 12 Aug 2026 09:34:08 +0300</pubDate>
-      <sparkle:version>14</sparkle:version>
-      <sparkle:shortVersionString>0.3.9</sparkle:shortVersionString>
+      <title>0.3.10</title>
+      <pubDate>Wed, 12 Aug 2026 12:26:06 +0300</pubDate>
+      <sparkle:version>15</sparkle:version>
+      <sparkle:shortVersionString>0.3.10</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.3.9&lt;/h2&gt;&lt;p&gt;## Recovery without invented errors&lt;/p&gt;&lt;p&gt;Launching the app no longer shows &amp;quot;a recording was found after an&lt;/p&gt;&lt;p&gt;interruption&amp;quot; for recordings rescued on earlier launches — only a genuinely&lt;/p&gt;&lt;p&gt;new rescue is announced, and older recordings simply stay available in the&lt;/p&gt;&lt;p&gt;menu. Fragments too short to contain speech (an accidental key press that&lt;/p&gt;&lt;p&gt;survived a crash) are cleaned up silently instead of becoming a permanent&lt;/p&gt;&lt;p&gt;&amp;quot;recording after a failure&amp;quot;. Retrying a saved recording that contains no&lt;/p&gt;&lt;p&gt;recognizable speech now says so plainly and deletes it, instead of failing&lt;/p&gt;&lt;p&gt;forever.&lt;/p&gt;&lt;p&gt;## Quieter, clearer menu&lt;/p&gt;&lt;p&gt;The menu bar menu drops its section headers: saved-work actions now name&lt;/p&gt;&lt;p&gt;themselves — &amp;quot;Insert Saved Text&amp;quot;, &amp;quot;Copy Saved Text&amp;quot;, &amp;quot;Transcribe Saved&lt;/p&gt;&lt;p&gt;Recording&amp;quot; — and every item uses standard macOS capitalization. Error&lt;/p&gt;&lt;p&gt;messages point at the menu instead of item names that no longer exist.&lt;/p&gt;&lt;p&gt;## Calmer recording feedback&lt;/p&gt;&lt;p&gt;The &amp;quot;No sound detected&amp;quot; warning is gone. Pausing to think before a phrase is&lt;/p&gt;&lt;p&gt;normal dictation, not an error — the live waveform already shows whether the&lt;/p&gt;&lt;p&gt;microphone hears you, and a genuinely silent take ends with an honest&lt;/p&gt;&lt;p&gt;&amp;quot;Nothing was recognized&amp;quot;.&lt;/p&gt;&lt;p&gt;## A more welcoming first launch&lt;/p&gt;&lt;p&gt;Onboarding opens with a breathing microphone crest and a cleaner window&lt;/p&gt;&lt;p&gt;without a title bar. Steps slide like pages — forward and back along the same&lt;/p&gt;&lt;p&gt;path, instantly when Reduce Motion is on — with progress dots that VoiceOver&lt;/p&gt;&lt;p&gt;reads as &amp;quot;Step N of 3&amp;quot;. The Continue button uses native Liquid Glass on&lt;/p&gt;&lt;p&gt;macOS 26.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.3.9/OpenRamble-0.3.9.dmg" length="4772716" type="application/octet-stream" sparkle:edSignature="mdnTzADo6ydbEzVcdxt1CqLUR3ds1+uPhjGvFGQf3SDPcDEWvWmge9sB/x7w17gKKuzeLRgZ6RYcG5ZSsv52Cw==" />
+      <description>&lt;h2&gt;OpenRamble 0.3.10&lt;/h2&gt;&lt;p&gt;## Finishing touches&lt;/p&gt;&lt;p&gt;After a successful first dictation, onboarding now says where the app&lt;/p&gt;&lt;p&gt;lives — in the menu bar at the top of the screen — so the closing window&lt;/p&gt;&lt;p&gt;never reads as a vanished app. The try-out skip is a quiet button instead&lt;/p&gt;&lt;p&gt;of a link, and window activation uses the current macOS API throughout.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.3.10/OpenRamble-0.3.10.dmg" length="4774063" type="application/octet-stream" sparkle:edSignature="AnNTFUyQjsIV58/e/NBWZaAsdVGdH96LcQDjsS7F91OVpUsCS6NcbWmjILsry1deIqbrScfDfwlkYn/lvRcEAg==" />
     </item>
   </channel>
 </rss>
