@@ -1620,6 +1620,79 @@ public final class AppState: ObservableObject {
         updateReplacements(replacements + [DictionaryReplacement(spoken: spoken, written: written)])
     }
 
+    /// The dictionary as a portable file — personal terms are the one piece
+    /// of dictation state worth carrying to another Mac.
+    public func exportedDictionary() throws -> Data {
+        try DictionaryTransfer.export(replacements)
+    }
+
+    /// Merge a dictionary file into the current replacements.
+    ///
+    /// Imports never destroy: existing entries are edited in place when the
+    /// file knows the same spoken phrase, everything else is appended. The
+    /// outcome is always named — including "nothing changed".
+    public func importDictionary(from data: Data) {
+        guard dictionaryProblem == nil else {
+            notify(DictationNotice(kind: .warning, message: dictionaryProblem?.message ?? ""))
+            return
+        }
+        let merged: DictionaryTransfer.MergeResult
+        do {
+            merged = DictionaryTransfer.merge(
+                existing: replacements,
+                imported: try DictionaryTransfer.read(data)
+            )
+        } catch {
+            notify(
+                DictationNotice(
+                    kind: .failure,
+                    message: (error as? LocalizedError)?.errorDescription
+                        ?? "The dictionary file couldn't be read."
+                )
+            )
+            return
+        }
+        guard merged.added > 0 || merged.updated > 0 else {
+            notify(
+                DictationNotice(
+                    kind: .info,
+                    message: "Nothing to import — every phrase in the file is already in the dictionary."
+                )
+            )
+            return
+        }
+        updateReplacements(merged.replacements)
+        // updateReplacements reports its own save failure and leaves the list
+        // untouched; announce success only when the merge actually landed.
+        guard replacements == merged.replacements else { return }
+        notify(
+            DictationNotice(
+                kind: .info,
+                message: importSummary(added: merged.added, updated: merged.updated)
+            )
+        )
+    }
+
+    /// The file dialogs live in the view; their failures surface through the
+    /// same channel as every other notice.
+    public func reportDictionaryFileProblem(_ message: String) {
+        notify(DictationNotice(kind: .failure, message: message))
+    }
+
+    private func importSummary(added: Int, updated: Int) -> String {
+        let phrases = { (count: Int) in count == 1 ? "1 phrase" : "\(count) phrases" }
+        switch (added > 0, updated > 0) {
+        case (true, true):
+            return "Imported \(phrases(added)), updated \(phrases(updated))."
+        case (true, false):
+            return "Imported \(phrases(added))."
+        case (false, true):
+            return "Updated \(phrases(updated)) from the file."
+        case (false, false):
+            return "Nothing to import."
+        }
+    }
+
     public func removeReplacements(at offsets: IndexSet) {
         var updated = replacements
         updated.remove(atOffsets: offsets)
