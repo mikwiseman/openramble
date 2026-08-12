@@ -3,6 +3,11 @@ import DictationCore
 import LocalASR
 import SwiftUI
 
+/// Four tabs: what you press, what it hears, what it writes, what it is.
+///
+/// Every tab is a grouped Form and every explanation is a Section footer —
+/// the native settings shape on modern macOS. No glass inside: settings are
+/// content, and Liquid Glass belongs to floating controls.
 struct SettingsView: View {
     @ObservedObject var state: AppState
 
@@ -10,25 +15,18 @@ struct SettingsView: View {
         TabView {
             GeneralSettings(state: state)
                 .tabItem { Label("General", systemImage: "gearshape") }
-            ModelSettings(state: state)
-                .tabItem { Label("Model", systemImage: "waveform") }
+            RecognitionSettings(state: state)
+                .tabItem { Label("Recognition", systemImage: "waveform") }
             DictionarySettings(state: state)
                 .tabItem { Label("Dictionary", systemImage: "character.book.closed") }
-            // Updates are the only thing the application does online without
-            // direct command, and previously this switch was the fifth section
-            // "General": in a window 400 pixels high, it would appear below the fold, and
-            // the person who came to the settings specifically for him saw a page without
-            //him. A separate tab puts it where people are looking for it.
-            UpdateSettings(updater: state.updater)
-                .tabItem { Label("Updates", systemImage: "arrow.triangle.2.circlepath") }
-            AboutView()
+            AboutView(updater: state.updater)
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 620, height: 500)
     }
 }
 
-// MARK: - Main
+// MARK: - General
 
 private struct GeneralSettings: View {
     @ObservedObject var state: AppState
@@ -36,17 +34,13 @@ private struct GeneralSettings: View {
 
     var body: some View {
         Form {
-            Section("Shortcut") {
+            Section {
                 Picker("Dictation key", selection: $state.hotkey) {
                     ForEach(DictationHotkey.allCases, id: \.self) { key in
                         Text(key.title).tag(key)
                     }
                 }
                 .accessibilityHint("The key you hold down while dictating")
-
-                Text("Hold to talk, or double-press for hands-free dictation. Press once more to finish.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
 
                 if let warning = state.hotkeyWarning {
                     // Fn is the only key in the list that has its own
@@ -59,11 +53,15 @@ private struct GeneralSettings: View {
                             .foregroundStyle(.secondary)
                     } icon: {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(StatusColorRole.attention.color)
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Key warning. \(warning)")
                 }
+            } header: {
+                Text("Shortcut")
+            } footer: {
+                Text("Hold to talk, or double-press for hands-free dictation. Press once more to finish.")
             }
 
             Section("Behavior") {
@@ -77,38 +75,11 @@ private struct GeneralSettings: View {
                     .accessibilityHint("A short tone when recording starts and when it stops")
             }
 
-            Section("Private personalization") {
-                // The only place where the application reads the content of someone else's
-                // windows. Off by default, and the caption says exactly that
-                // exactly read - otherwise the choice is not conscious.
-                Toggle("Learn from your edits", isOn: $state.learnFromEdits)
-                    .accessibilityHint("Reads back the field it pasted into, to learn words you fix by hand")
-                Text("Off by default. After a paste, OpenRamble can re-read only that field at 8 and 25 seconds to learn a correction. The content stays on this Mac.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Recognition") {
-                Picker("Recognition language", selection: $state.recognitionLanguage) {
-                    Text("Automatic — recommended").tag(String?.none)
-                    ForEach(RecognitionLanguages.options) { option in
-                        Text(option.name).tag(String?.some(option.code))
-                    }
-                }
-                .accessibilityHint("Language the engine listens for; Automatic detects it from your voice")
-                Text("Automatic handles mixed-language speech. Choose one language only if detection repeatedly guesses wrong.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Permissions & insertion") {
-                Text("Finished text is pasted through the clipboard; its previous contents are restored shortly afterward.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            Section {
                 PermissionRow(
                     status: PermissionStatus.accessibility(
                         state: state.accessibilityState,
-                        detail: "Needed to hear the hotkey and insert text.",
+                        detail: "Notices your dictation key and types the finished text at your cursor.",
                     ),
                     action: performAccessibilityAction
                 )
@@ -125,11 +96,15 @@ private struct GeneralSettings: View {
                 PermissionRow(
                     status: PermissionStatus(
                         title: "Microphone",
-                        detail: "Needed to record your speech.",
+                        detail: "Hears you only while you hold the dictation key.",
                         granted: state.microphoneGranted
                     ),
                     action: state.requestMicrophone
                 )
+            } header: {
+                Text("Permissions")
+            } footer: {
+                Text("Finished text is pasted through the clipboard; its previous contents are restored shortly afterward.")
             }
         }
         .formStyle(.grouped)
@@ -175,54 +150,6 @@ private struct GeneralSettings: View {
     }
 }
 
-// MARK: - Updates
-
-private struct UpdateSettings: View {
-    // Sparkle reports its changes itself; they would not have reached through AppState.
-    @ObservedObject var updater: SparkleUpdater
-
-    var body: some View {
-        Form {
-            Section("Automatic checks") {
-                // The switch goes out along with the update mechanism. Otherwise
-                // it turned out to be a silent lie: next to it it says “no updates
-                // work”, the person clicks the switch, the text below it
-                // promises daily checks - and the setup goes into
-                // the mechanism is not running and does nothing.
-                Toggle("Check for updates automatically", isOn: $updater.automaticChecksEnabled)
-                    .accessibilityHint("The only switch that changes the app's network behavior")
-                    .disabled(updater.startupFailure != nil)
-                Text("On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled network access.")
-                    .font(.caption)
-                    .foregroundStyle(updater.startupFailure == nil ? .secondary : .tertiary)
-
-                HStack {
-                    Button("Check now", action: updater.checkForUpdates)
-                        .disabled(!updater.canCheckForUpdates)
-                    Spacer()
-                }
-            }
-
-            if let failure = updater.startupFailure {
-                Section {
-                    // You can’t be silent: otherwise a person will think that
-                    // updates come, but they don't arrive.
-                    VStack(alignment: .leading, spacing: 2) {
-                        Label("Updates are not working", systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                        Text(failure)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Updates are not working. \(failure)")
-                }
-            }
-        }
-        .formStyle(.grouped)
-    }
-}
-
 private struct PermissionRow: View {
     let status: PermissionStatus
     let action: () -> Void
@@ -245,7 +172,7 @@ private struct PermissionRow: View {
                     .accessibilityLabel(status.actionAccessibilityLabel ?? title)
             } else {
                 Label("Granted", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(StatusColorRole.success.color)
                     .labelStyle(.iconOnly)
                     .font(.title3)
                     // The checkmark has already been read as a string value: second time
@@ -256,15 +183,29 @@ private struct PermissionRow: View {
     }
 }
 
-// MARK: - Model
+// MARK: - Recognition
 
-private struct ModelSettings: View {
+private struct RecognitionSettings: View {
     @ObservedObject var state: AppState
     @State private var showDeleteConfirmation = false
 
     var body: some View {
         Form {
-            Section("On-device recognition") {
+            Section {
+                Picker("Recognition language", selection: $state.recognitionLanguage) {
+                    Text("Automatic — recommended").tag(String?.none)
+                    ForEach(RecognitionLanguages.options) { option in
+                        Text(option.name).tag(String?.some(option.code))
+                    }
+                }
+                .accessibilityHint("Language the engine listens for; Automatic detects it from your voice")
+            } header: {
+                Text("Language")
+            } footer: {
+                Text("Automatic handles mixed-language speech. Choose one language only if detection repeatedly guesses wrong.")
+            }
+
+            Section {
                 ModelStatusView(
                     status: ModelStatus.make(
                         state: state.modelState,
@@ -281,14 +222,22 @@ private struct ModelSettings: View {
                     // ask.
                     delete: { showDeleteConfirmation = true }
                 )
+            } header: {
+                Text("Speech model")
+            } footer: {
+                Text("Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. A recording is kept only if its transcription fails, then deleted automatically after a few days.")
             }
 
-            Section("Model details") {
-                LabeledContent("Engine", value: "Parakeet TDT 0.6B v3")
-                LabeledContent("Processing", value: "Entirely on this Mac")
-                Text("Once downloaded and verified, recognition works offline. Audio is not uploaded.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            Section {
+                // The only place where the application reads the content of someone else's
+                // windows. Off by default, and the footer says exactly what is
+                // read - otherwise the choice is not conscious.
+                Toggle("Learn from your edits", isOn: $state.learnFromEdits)
+                    .accessibilityHint("Reads back the field it pasted into, to learn words you fix by hand")
+            } header: {
+                Text("Personalization")
+            } footer: {
+                Text("Off by default. After a paste, OpenRamble can re-read only that field at 8 and 25 seconds to learn a correction. The content stays on this Mac.")
             }
         }
         .formStyle(.grouped)
@@ -314,50 +263,42 @@ private struct DictionarySettings: View {
     @State private var written = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Common technical terms are handled automatically. Add personal names or phrases the model hears differently.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                if let problem = state.dictionaryProblem {
+        Form {
+            if let problem = state.dictionaryProblem {
+                Section {
                     // The dictionary is write-locked. You have to say this
                     // here: the person stands exactly on the page where he is going
                     // edit it, and must find out before you start.
                     VStack(alignment: .leading, spacing: 2) {
                         Label("Dictionary can't be edited", systemImage: "lock.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(StatusColorRole.attention.color)
                         Text(problem.message)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    .padding(10)
-                    .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Dictionary can't be edited. \(problem.message)")
                 }
-
             }
-            .padding()
 
-            // An empty dictionary is common for a new person, and it used to be
-            // I saw in this place just a half-window gap without a single word.
-            if state.replacements.isEmpty {
-                VStack(spacing: 4) {
-                    Text("No personal replacements yet")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
-                    Text("Add a pair below: what the model hears on the left, what should be written on the right.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.horizontal, 40)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .accessibilityElement(children: .combine)
-            } else {
-                List {
+            Section {
+                // An empty dictionary is common for a new person, and it used
+                // to be just a half-window gap without a single word.
+                if state.replacements.isEmpty {
+                    VStack(spacing: 4) {
+                        Text("No personal replacements yet")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                        Text("Add a pair below: what the model hears on the left, what should be written on the right.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .accessibilityElement(children: .combine)
+                } else {
                     ForEach(state.replacements) { replacement in
                         HStack {
                             Text(replacement.spoken)
@@ -374,11 +315,26 @@ private struct DictionarySettings: View {
                                 Text("text only")
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
+                            } else {
+                                Spacer(minLength: 8)
                             }
+                            // A visible way out for every row: the delete key
+                            // works too, but nobody can discover that.
+                            Button {
+                                removeReplacement(replacement)
+                            } label: {
+                                Image(systemName: "minus.circle")
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(!state.isDictionaryEditable)
+                            .accessibilityLabel(
+                                "Delete replacement “\(replacement.spoken)” to “\(replacement.written)”"
+                            )
                         }
-                        // The entire line is read: "sentry", arrow and "Sentry"
-                        // separately do not mean anything.
-                        .accessibilityElement(children: .ignore)
+                        // The row is read whole: "sentry", arrow and "Sentry"
+                        // separately do not mean anything. The delete button
+                        // stays its own element.
+                        .accessibilityElement(children: .contain)
                         .accessibilityLabel(
                             replacement.noAcousticBoost
                                 ? "Heard as “\(replacement.spoken)”, written as “\(replacement.written)”, text only — not used to help recognition"
@@ -387,40 +343,31 @@ private struct DictionarySettings: View {
                     }
                     .onDelete(perform: state.removeReplacements)
                 }
-                .disabled(!state.isDictionaryEditable)
-                .accessibilityLabel("Replacement list")
+            } header: {
+                Text("Replacements")
+            } footer: {
+                Text("Common technical terms are handled automatically. Add personal names or phrases the model hears differently.")
             }
 
-            Divider()
-
-            HStack(alignment: .bottom, spacing: 8) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Heard as")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    TextField("Spoken phrase", text: $spoken)
-                        .accessibilityLabel("Heard as")
-                        .onSubmit(addReplacement)
-                }
-                Image(systemName: "arrow.right")
-                    .foregroundStyle(.tertiary)
-                    .accessibilityHidden(true)
-                    .padding(.bottom, 5)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Write as")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    TextField("Final spelling", text: $written)
-                        .accessibilityLabel("Write as")
-                        .onSubmit(addReplacement)
-                }
+            Section("Add replacement") {
+                TextField("Heard as", text: $spoken, prompt: Text("Spoken phrase"))
+                    .accessibilityLabel("Heard as")
+                    .onSubmit(addReplacement)
+                TextField("Write as", text: $written, prompt: Text("Final spelling"))
+                    .accessibilityLabel("Write as")
+                    .onSubmit(addReplacement)
                 Button("Add", action: addReplacement)
                     .disabled(!canAddReplacement)
                     .accessibilityLabel("Add replacement")
                     .accessibilityHint(addReplacementHint)
             }
-            .padding()
         }
+        .formStyle(.grouped)
+    }
+
+    private func removeReplacement(_ replacement: DictionaryReplacement) {
+        guard let index = state.replacements.firstIndex(of: replacement) else { return }
+        state.removeReplacements(at: IndexSet(integer: index))
     }
 
     private var canAddReplacement: Bool {
@@ -449,6 +396,9 @@ private struct DictionarySettings: View {
 // MARK: - About the program
 
 private struct AboutView: View {
+    // Sparkle reports its changes itself; they would not have reached through AppState.
+    @ObservedObject var updater: SparkleUpdater
+
     /// Version and build number. The first thing asked in any bug report is
     /// and the only place where this could be read is not in the application
     /// it was completely: there is no icon in the Dock, “About” from the main menu is unreachable.
@@ -462,57 +412,87 @@ private struct AboutView: View {
     @State private var showsCredits = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack(spacing: 16) {
-                Image(nsImage: NSApplication.shared.applicationIconImage)
-                    .resizable()
-                    .frame(width: 64, height: 64)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("OpenRamble")
-                        .font(.title2.bold())
-                        .accessibilityAddTraits(.isHeader)
-                    Text("Private dictation for your Mac")
-                        .foregroundStyle(.secondary)
-                    Text(version)
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
+        Form {
+            Section {
+                HStack(spacing: 16) {
+                    Image(nsImage: NSApplication.shared.applicationIconImage)
+                        .resizable()
+                        .frame(width: 64, height: 64)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("OpenRamble")
+                            .font(.title2.bold())
+                            .accessibilityAddTraits(.isHeader)
+                        Text("Private dictation for your Mac")
+                            .foregroundStyle(.secondary)
+                        Text(version)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
                 }
+                .padding(.vertical, 4)
             }
 
-            Divider()
+            Section {
+                // The switch goes out along with the update mechanism. Otherwise
+                // it turned out to be a silent lie: next to it it says “no updates
+                // work”, the person clicks the switch, the text below it
+                // promises daily checks - and the setup goes into
+                // the mechanism is not running and does nothing.
+                Toggle("Check for updates automatically", isOn: $updater.automaticChecksEnabled)
+                    .accessibilityHint("The only switch that changes the app's network behavior")
+                    .disabled(updater.startupFailure != nil)
+                Button("Check Now", action: updater.checkForUpdates)
+                    .disabled(!updater.canCheckForUpdates)
+                if let failure = updater.startupFailure {
+                    // You can’t be silent: otherwise a person will think that
+                    // updates come, but they don't arrive.
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("Updates are not working", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(StatusColorRole.attention.color)
+                        Text(failure)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Updates are not working. \(failure)")
+                }
+            } header: {
+                Text("Updates")
+            } footer: {
+                Text("On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled network access.")
+            }
 
-            Label {
-                VStack(alignment: .leading, spacing: 3) {
+            Section {
+                Label {
                     Text("Speech stays on this Mac")
                         .font(.headline)
-                    Text("No account, analytics, or cloud transcription. Network access is limited to model downloads and update checks.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "lock.shield.fill")
+                        .foregroundStyle(StatusColorRole.success.color)
+                        .font(.title3)
                 }
-            } icon: {
-                Image(systemName: "lock.shield.fill")
-                    .foregroundStyle(.green)
-                    .font(.title2)
-            }
-            .accessibilityElement(children: .combine)
-
-            DisclosureGroup("Model and library credits", isExpanded: $showsCredits) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Parakeet TDT 0.6B v3 and Parakeet TDT-CTC 110M © NVIDIA, licensed under CC BY 4.0. Core ML conversions by FluidInference.")
-                    Text("FluidAudio is licensed under Apache 2.0. Sparkle is licensed under MIT.")
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.top, 6)
+                .accessibilityElement(children: .combine)
+            } header: {
+                Text("Privacy")
+            } footer: {
+                Text("No account, analytics, or cloud transcription. Network access is limited to model downloads and update checks.")
             }
 
-            Link("View source on GitHub", destination: URL(string: "https://github.com/mikwiseman/openramble")!)
-
-            Spacer()
+            Section("Credits") {
+                DisclosureGroup("Model and library credits", isExpanded: $showsCredits) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Parakeet TDT 0.6B v3 and Parakeet TDT-CTC 110M © NVIDIA, licensed under CC BY 4.0. Core ML conversions by FluidInference.")
+                        Text("FluidAudio is licensed under Apache 2.0. Sparkle is licensed under MIT.")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 6)
+                }
+                Link("View source on GitHub", destination: URL(string: "https://github.com/mikwiseman/openramble")!)
+            }
         }
-        .padding(28)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .formStyle(.grouped)
     }
 }

@@ -368,11 +368,11 @@ public final class DictationController {
             do {
                 saved = try await recordingRecovery.preserve(recording.url)
                 suffix = saved == nil
-                    ? " Couldn't save the recording for retry."
-                    : " The recording is saved locally — you can retry or delete it."
+                    ? " The recording couldn't be kept."
+                    : " The recording is kept on this Mac for a few days."
             } catch {
                 saved = nil
-                suffix = " The recording is still on disk, but preparing Retry/Delete failed: \(error.localizedDescription)"
+                suffix = " The recording is still on disk, but safekeeping failed: \(error.localizedDescription)"
             }
             let notice = DictationNotice(
                 kind: .failure,
@@ -634,8 +634,8 @@ public final class DictationController {
                 notice = DictationNotice(
                     kind: .failure,
                     message: saved == nil
-                        ? message + " Couldn't save the recording for retry."
-                        : message + " The recording is saved locally — you can retry or delete it.",
+                        ? message + " The recording couldn't be kept."
+                        : message + " The recording is kept on this Mac for a few days.",
                     recoveryAudio: saved
                 )
             }

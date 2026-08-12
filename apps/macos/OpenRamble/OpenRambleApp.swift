@@ -9,28 +9,34 @@ struct OpenRambleApp: App {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        // The application lives in the menu bar: dictation does not have its own window, it
-        // works on top of where the user is now.
+        // The application lives in the menu bar: dictation does not have its own
+        // window, it works on top of where the user is now.
         MenuBarExtra {
             MenuContent(
                 state: state,
                 showOnboarding: { onboardingCompleted = false }
             )
         } label: {
-            // The brand remains stable. A small status dot carries the temporary
-            // recording, processing and successful-insertion states.
+            // The brand mark is permanent. A small dot over its corner carries
+            // the temporary states: red while recording, blue while working on
+            // speech, orange when something waits for the person.
             MenuBarLabel(
                 state: state.dictationState,
                 isDictationReady: state.isDictationReady,
-                hasRecoveredWork: state.recoveredText != nil
-                    || state.recoveredRecording != nil
+                hasRecoveredWork: state.recoveredText != nil,
+                setupNeedsAttention: MenuBarStatus.setupNeedsUserAction(
+                    accessibilityState: state.accessibilityState,
+                    microphoneGranted: state.microphoneGranted,
+                    modelState: state.modelState
+                )
             )
             .task {
-                // The first launch must show the setting itself. Without this
-                // the application silently goes to the menu bar: there is no icon in the dock,
-                // there is no window, and the person who just dragged it out
-                // image, does not see anything at all - neither permissions, nor model,
-                // without which dictation does not work.
+                // The first launch must show the setup itself. Without this
+                // the application silently goes to the menu bar: there is no
+                // icon in the dock, there is no window, and the person who
+                // just dragged the app out of the image sees nothing at all —
+                // neither permissions nor the model, without which dictation
+                // does not work.
                 guard !onboardingCompleted else { return }
                 openWindow(id: "onboarding")
                 NSApp.activate()
@@ -39,10 +45,9 @@ struct OpenRambleApp: App {
 
         // The content here is unconditional. While it was hiding behind
         // `if !onboardingCompleted`, macOS kept the scene itself: after
-        // settings in the “Window” menu there was a “Welcome” item, and it opened a window
-        // size 0x0 - a frame without content, from which there is nothing to close and
-        // it’s not clear what it was. Now the same point honestly shows
-        // setup again, exactly like “Run setup again” in the menu bar.
+        // setup the "Window" menu had a "Welcome" item that opened a 0x0
+        // frame without content. Now the same item honestly shows setup
+        // again, exactly like "Finish Setting Up…" in the menu bar.
         Window("Welcome", id: "onboarding") {
             OnboardingView(state: state) { onboardingCompleted = true }
         }

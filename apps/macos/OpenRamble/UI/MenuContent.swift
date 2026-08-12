@@ -2,50 +2,82 @@ import AppKit
 import DictationCore
 import SwiftUI
 
-/// Menu in the menu bar - the entire application interface at rest.
+/// Menu in the menu bar — the entire application interface at rest.
 ///
-/// Lies separately from the entry point intentionally: `OpenRambleApp.swift` does not
-/// is compiled into a test target (there is `@main`), and everything that a person sees here is
-/// must be checked.
+/// Lives separately from the entry point intentionally: `OpenRambleApp.swift`
+/// is not compiled into the test target (it holds `@main`), and everything a
+/// person sees here must be checked.
+///
+/// Which rows appear when is decided by `MenuSections`, a pure type with its
+/// own tests; this view only knows how each row looks and what it calls.
 struct MenuContent: View {
     @ObservedObject var state: AppState
     let showOnboarding: () -> Void
     @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
-    @State private var showDeleteTextConfirmation = false
-    @State private var showDeleteRecordingConfirmation = false
 
     var body: some View {
-        Text(
-            MenuBarStatus.statusLine(
-                state: state.dictationState,
-                isDictationReady: state.isDictationReady,
-                isHandsFreeActive: state.isHandsFreeActive,
-                hotkeyTitle: state.hotkey.title,
-                hasRecoveredText: state.recoveredText != nil,
-                hasRecoveredRecording: state.recoveredRecording != nil
-            )
+        let sections = MenuSections.sections(
+            state: state.dictationState,
+            isDictationReady: state.isDictationReady,
+            hasRecoveredText: state.recoveredText != nil,
+            hasRecents: !state.recentDictations.isEmpty,
+            canCopyAsSpoken: state.canCopyRawDictation
         )
 
-        if state.dictationState == .preparing || state.dictationState == .listening {
-            Divider()
+        ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
+            if index > 0 { Divider() }
+            ForEach(Array(section.enumerated()), id: \.offset) { _, row in
+                rowView(row)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func rowView(_ row: MenuRow) -> some View {
+        switch row {
+        case .statusLine:
+            Text(
+                MenuBarStatus.statusLine(
+                    state: state.dictationState,
+                    isDictationReady: state.isDictationReady,
+                    isHandsFreeActive: state.isHandsFreeActive,
+                    hotkeyTitle: state.hotkey.title,
+                    hasRecoveredText: state.recoveredText != nil
+                )
+            )
+
+        case .stopAndInsert:
             Button("Stop and Insert") { state.finishCurrentDictation() }
+
+        case .cancelDictation:
             Button("Cancel Dictation", role: .destructive) {
                 state.cancelCurrentDictation()
             }
-        }
 
-        if !state.isDictationReady {
-            Divider()
+        case .setupHints:
             setupHints
-            Button("Run Setup Again…") {
+
+        case .finishSetup:
+            Button("Finish Setting Up…") {
                 showOnboarding()
                 openWindow(id: "onboarding")
+                // Without this the window opens behind whatever the person was
+                // working in: the app has no Dock icon (LSUIElement), so macOS
+                // does not bring it forward on its own.
+                NSApp.activate()
             }
-        }
 
-        if !state.recentDictations.isEmpty {
-            Divider()
+        case .insertLastDictation:
+            Button("Insert Last Dictation") { state.retryRecoveredText() }
+                .disabled(state.dictationState != .idle)
+                .accessibilityHint(
+                    state.dictationState == .idle
+                        ? "Attempts to insert the saved text into the current field"
+                        : "Finish or cancel the current dictation first"
+                )
+
+        case .recentDictations:
             Menu("Recent Dictations") {
                 ForEach(state.recentDictations) { dictation in
                     Button(dictation.menuTitle) {
@@ -53,79 +85,26 @@ struct MenuContent: View {
                     }
                 }
             }
-        }
 
-        if state.canCopyRawDictation {
-            Button("Copy Last Dictation Verbatim") {
-                state.copyRawDictation()
-            }
-        }
+        case .copyLastAsSpoken:
+            // What the person said before the dictionary and cosmetics.
+            // Appears only when it differs from the inserted text — otherwise
+            // it would be a duplicate of the last recent dictation.
+            Button("Copy Last as Spoken") { state.copyRawDictation() }
 
-        // Rescued work — without section headers: the first menu line already
-        // named the trouble, and the items name themselves. A header above
-        // three buttons overloaded the menu and read as one more error.
-        if state.recoveredText != nil {
-            Divider()
-            Button("Insert Saved Text") { state.retryRecoveredText() }
-                .disabled(state.dictationState != .idle)
-                .accessibilityHint(
-                    state.dictationState == .idle
-                        ? "Attempts to insert the saved text into the current field"
-                        : "Finish or cancel the current dictation first"
-                )
-            Button("Copy Saved Text") { state.copyRecoveredText() }
-            Button("Delete Saved Text", role: .destructive) {
-                showDeleteTextConfirmation = true
+        case .settings:
+            Button("Settings…") {
+                openSettings()
+                // Same LSUIElement fix as "Finish Setting Up…": otherwise the
+                // window opens behind the frontmost app.
+                NSApp.activate()
             }
-            .confirmationDialog(
-                "Delete the only saved copy of this text?",
-                isPresented: $showDeleteTextConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Delete Saved Text", role: .destructive) {
-                    state.deleteRecoveredText()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This cannot be undone. Copy the text first if you may need it.")
-            }
-        }
-
-        if state.recoveredRecording != nil {
-            Divider()
-            Button("Transcribe Saved Recording") { state.retryRecoveredRecording() }
-                .disabled(!state.modelState.isReady || state.dictationState != .idle)
-            Button("Delete Saved Recording", role: .destructive) {
-                showDeleteRecordingConfirmation = true
-            }
-            .confirmationDialog(
-                "Delete the only saved copy of this recording?",
-                isPresented: $showDeleteRecordingConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Delete Saved Recording", role: .destructive) {
-                    state.deleteRecoveredRecording()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This cannot be undone. Transcribe it first if you may need the dictation.")
-            }
-        }
-
-        Divider()
-
-        Button("Settings…") {
-            openSettings()
-            // Without this the window opens behind whatever the person was
-            // working in: the app has no Dock icon (LSUIElement), so macOS does
-            // not bring it forward on its own, and they have to hide other apps
-            // to find the settings they just asked for.
-            NSApp.activate()
-        }
             .keyboardShortcut(",", modifiers: .command)
 
-        Button("Quit OpenRamble") { NSApplication.shared.terminate(nil) }
-            .keyboardShortcut("q", modifiers: .command)
+        case .quit:
+            Button("Quit OpenRamble") { NSApplication.shared.terminate(nil) }
+                .keyboardShortcut("q", modifiers: .command)
+        }
     }
 
     @ViewBuilder
@@ -149,14 +128,13 @@ struct MenuContent: View {
         if !state.microphoneGranted {
             Button("Allow Microphone") { state.requestMicrophone() }
         }
-        // Via the same type as both screens. Previously, the menu knew about model one
-        // boolean “ready or not” and suggested “Download” even in the middle of downloading -
-        // the click went to nowhere, and the first line of the menu said
-        // “Need setup”, without even mentioning that the download is in progress.
-        // The volume is transferred, not taken by default. Without it the button in the menu
-        // always promised 586 MB - a full installation - even when you need to download more
-        // one hint for ~103 MB. This figure is used to decide whether to go ahead with the road.
-        // or a slow network, and it is impossible to make mistakes in it five times.
+        // Via the same type as both screens. Previously, the menu knew one
+        // boolean about the model and suggested "Download" even mid-download —
+        // the click went nowhere while the first line said "Setup needed"
+        // without even mentioning the running download.
+        // The remaining volume is passed in, not defaulted: the button must
+        // name the actual download (~103 MB after an update), not always the
+        // full 586 MB — people decide about hotel Wi-Fi with this number.
         let model = ModelStatus.make(
             state: state.modelState,
             isPreparingEngine: state.isPreparingEngine,

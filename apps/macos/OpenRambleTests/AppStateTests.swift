@@ -37,6 +37,12 @@ final class AppStateTests: XCTestCase {
 
     private func installModelMarker() throws { try harness.installModelMarker() }
 
+    /// WAVs quietly kept for safety after failures and interruptions.
+    private func recoveryFiles() -> [String] {
+        guard let directory = try? AppPaths(root: root).audioRecovery() else { return [] }
+        return (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+    }
+
     // MARK: - Permissions
 
     func testFirstLaunchDoesNotCoverOnboardingWithPermissionNotice() async {
@@ -265,15 +271,14 @@ final class AppStateTests: XCTestCase {
 
         permissions.accessibilityGranted = false
         state.refreshPermissions()
-        for _ in 0..<60 where state.recoveredRecording == nil {
+        for _ in 0..<60 where recoveryFiles().isEmpty {
             await Task.yield()
             try await Task.sleep(for: .milliseconds(5))
         }
 
         XCTAssertFalse(monitor.isRunning)
         XCTAssertEqual(state.dictationState, .idle)
-        XCTAssertNotNil(state.recoveredRecording)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: state.recoveredRecording?.path ?? ""))
+        XCTAssertFalse(recoveryFiles().isEmpty, "the interrupted take must be kept on disk")
     }
 
     func testScenario014() async throws {
@@ -289,15 +294,14 @@ final class AppStateTests: XCTestCase {
 
         permissions.microphoneGranted = false
         state.refreshPermissions()
-        for _ in 0..<60 where state.recoveredRecording == nil {
+        for _ in 0..<60 where recoveryFiles().isEmpty {
             await Task.yield()
             try await Task.sleep(for: .milliseconds(5))
         }
 
         XCTAssertEqual(state.dictationState, .idle)
         XCTAssertFalse(state.isDictationReady)
-        XCTAssertNotNil(state.recoveredRecording)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: state.recoveredRecording?.path ?? ""))
+        XCTAssertFalse(recoveryFiles().isEmpty, "the interrupted take must be kept on disk")
     }
 
     func testScenario015() async throws {
@@ -956,49 +960,51 @@ final class AppStateTests: XCTestCase {
 
     // MARK: - Cleaning
 
-    /// Records that survived after the application crashed become an explicit Retry/Delete.
+    /// Records that survived an application crash are tidied up quietly:
+    /// header repaired, moved to safekeeping, nothing announced. A broken
+    /// last dictation already surfaced when it happened; a launch-time
+    /// announcement with no action attached would be noise.
     func testScenario052() async throws {
         let paths = AppPaths(root: root)
         let orphan = try paths.takes().appending(path: "take-old.wav")
         try writeAbandonedTestWAV(to: orphan, sampleBytes: 32_000)
 
-        let state = makeState()
-        for _ in 0..<40 where state.recoveredRecording == nil {
+        _ = makeState()
+        for _ in 0..<40 where recoveryFiles().isEmpty {
             await Task.yield()
             try await Task.sleep(for: .milliseconds(5))
         }
 
         XCTAssertFalse(FileManager.default.fileExists(atPath: orphan.path))
-        XCTAssertNotNil(state.recoveredRecording)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: state.recoveredRecording?.path ?? ""))
-        let repaired = try Data(contentsOf: XCTUnwrap(state.recoveredRecording))
+        let kept = recoveryFiles()
+        XCTAssertEqual(kept.count, 1, "the take must move into safekeeping")
+        let repaired = try Data(
+            contentsOf: paths.audioRecovery().appending(path: XCTUnwrap(kept.first))
+        )
         let payloadSize = repaired[40..<44].withUnsafeBytes {
             UInt32(littleEndian: $0.load(as: UInt32.self))
         }
-        XCTAssertEqual(payloadSize, 32_000)
-        // The rescue happened right now — this is announced.
+        XCTAssertEqual(payloadSize, 32_000, "the interrupted WAV header must be repaired")
         let notices = await overlay.notices
-        XCTAssertTrue(notices.contains { $0.message.contains("interruption") })
+        XCTAssertTrue(notices.isEmpty, "safekeeping is silent: \(notices.map(\.message))")
     }
 
-    /// A leftover from a previous launch is not an event of this one.
-    ///
-    /// Every launch used to announce "a recording was found after a failure"
-    /// even when the failure was a week old: the person saw an error where
-    /// nothing had happened. The old recording stays available in the menu —
-    /// silently.
+    /// A leftover from a previous launch stays kept — silently.
     func testLeftoverRecordingIsNotAnnouncedOnEveryLaunch() async throws {
         let paths = AppPaths(root: root)
         let leftover = try paths.audioRecovery().appending(path: "recording-old.wav")
         try Data(repeating: 7, count: 64_000).write(to: leftover)
 
         let state = makeState()
-        for _ in 0..<40 where state.recoveredRecording == nil {
+        for _ in 0..<30 {
             await Task.yield()
             try await Task.sleep(for: .milliseconds(5))
         }
 
-        XCTAssertNotNil(state.recoveredRecording, "The recording stays available in the menu")
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: leftover.path),
+            "a fresh leftover stays within the retention window"
+        )
         let notices = await overlay.notices
         XCTAssertTrue(
             notices.isEmpty,
@@ -1023,44 +1029,11 @@ final class AppStateTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(5))
         }
 
-        XCTAssertNil(state.recoveredRecording)
+        XCTAssertTrue(recoveryFiles().isEmpty)
         XCTAssertFalse(FileManager.default.fileExists(atPath: blip.path))
         let notices = await overlay.notices
         XCTAssertTrue(notices.isEmpty, "A fragment is not an event: \(notices.map(\.message))")
-    }
-
-    /// Retrying a recording in which nothing was recognized is not an error.
-    ///
-    /// The main path says "nothing was recognized" and deletes the take. The
-    /// menu retry used to show "Retry transcription failed" on the same outcome
-    /// and keep the recording forever: a dead end whose only exit was manual
-    /// deletion.
-    func testRetryOfSilentRecordingDeletesItWithoutAnError() async throws {
-        try installModelMarker()
-        let paths = AppPaths(root: root)
-        let leftover = try paths.audioRecovery().appending(path: "recording-silent.wav")
-        try Data(repeating: 7, count: 64_000).write(to: leftover)
-        harness.transcription.text = ""
-
-        let state = makeState()
-        await state.refreshModelState()
-        for _ in 0..<40 where state.recoveredRecording == nil {
-            await Task.yield()
-            try await Task.sleep(for: .milliseconds(5))
-        }
-        XCTAssertNotNil(state.recoveredRecording)
-
-        state.retryRecoveredRecording()
-        for _ in 0..<60 where state.recoveredRecording != nil {
-            await Task.yield()
-            try await Task.sleep(for: .milliseconds(5))
-        }
-
-        XCTAssertNil(state.recoveredRecording, "A silent recording is not stored forever")
-        XCTAssertFalse(FileManager.default.fileExists(atPath: leftover.path))
-        XCTAssertEqual(state.lastNotice?.kind, .info)
-        XCTAssertEqual(state.lastNotice?.message.contains("Nothing was recognized"), true)
-        XCTAssertEqual(state.dictationState, .idle)
+        XCTAssertNil(state.lastNotice)
     }
 }
 
@@ -1121,7 +1094,29 @@ final class RecoveredFileTests: XCTestCase {
         XCTAssertEqual(state.recoveredText, "Ping test")
     }
 
+    /// Failed-insert words join Recent Dictations at failure time.
+    ///
+    /// The single recovery slot is overwritten by the next failure; without
+    /// this copy the first failure's words would silently vanish. This is
+    /// also why the menu needs no Copy/Delete items for saved text: the words
+    /// are copyable from Recent Dictations like any other dictation.
     func testScenario055() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+
+        XCTAssertEqual(state.recoveredText, "Ping test")
+        XCTAssertEqual(state.recentDictations.map(\.text), ["Ping test"])
+    }
+
+    /// Retrying and failing again must not fill the history with copies.
+    func testFailedRetryDoesNotDuplicateHistory() async throws {
         try harness.installModelMarker()
         let state = harness.makeState()
         await state.refreshModelState()
@@ -1133,9 +1128,43 @@ final class RecoveredFileTests: XCTestCase {
         await settle()
         XCTAssertEqual(state.recoveredText, "Ping test")
 
-        state.deleteRecoveredText()
+        state.retryRecoveredText()
+        await settle()
+
+        XCTAssertEqual(state.recoveredText, "Ping test", "the words stay recoverable")
+        XCTAssertEqual(
+            state.recentDictations.map(\.text), ["Ping test"],
+            "repeat failures of the same words keep one history entry"
+        )
+    }
+
+    /// A successful retry closes the recovery without double bookkeeping.
+    func testSuccessfulRetryKeepsOneHistoryEntryAndClearsStaleProvenance() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+        XCTAssertEqual(state.recoveredText, "Ping test")
+        await harness.inserter.setError(nil)
+
+        state.retryRecoveredText()
+        await settle()
 
         XCTAssertNil(state.recoveredText)
+        XCTAssertEqual(
+            state.recentDictations.map(\.text), ["Ping test"],
+            "the words entered history at failure time; success must not append again"
+        )
+        XCTAssertNil(
+            state.lastDictation,
+            "recovered text has no raw provenance — Copy Last as Spoken must not offer the previous dictation's words"
+        )
+        XCTAssertFalse(state.canCopyRawDictation)
     }
 
     func testScenario056() async throws {

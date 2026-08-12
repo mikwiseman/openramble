@@ -88,4 +88,14 @@ final class CopyRawTests: XCTestCase {
         XCTAssertEqual(state.lastDictation?.provenance.raw, "second phrase")
         XCTAssertEqual(state.recentDictations.map(\.text), ["Second phrase", "First phrase"])
     }
+
+    /// When cosmetics and the dictionary changed nothing, the item would be a
+    /// duplicate of the last recent dictation — it must not appear.
+    func testScenario005() async throws {
+        let state = try await dictate("Postgres")
+
+        let last = try XCTUnwrap(state.lastDictation)
+        XCTAssertEqual(last.provenance.raw, last.insertedText)
+        XCTAssertFalse(state.canCopyRawDictation)
+    }
 }

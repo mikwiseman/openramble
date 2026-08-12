@@ -5,6 +5,13 @@ enum RecordingWaveformLayout {
         let normalized = CGFloat(min(1, max(0, sample)))
         return 1 + (maximum - 1) * sqrt(normalized)
     }
+
+    /// Oldest bars fade, the newest is fully opaque: the ramp gives the
+    /// rolling signal a direction without animating anything of its own.
+    static func barOpacity(index: Int, count: Int) -> Double {
+        guard count > 1 else { return 1 }
+        return 0.35 + 0.65 * Double(index + 1) / Double(count)
+    }
 }
 
 /// A rolling view of the microphone signal. Samples are drawn directly: there is
@@ -36,7 +43,9 @@ struct RecordingWaveform: View {
                 )
                 context.fill(
                     Path(roundedRect: rect, cornerRadius: min(barWidth, height) / 2),
-                    with: .color(color)
+                    with: .color(color.opacity(
+                        RecordingWaveformLayout.barOpacity(index: index, count: samples.count)
+                    ))
                 )
             }
         }

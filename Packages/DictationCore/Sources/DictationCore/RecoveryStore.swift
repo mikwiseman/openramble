@@ -67,6 +67,9 @@ public actor RecordingRecoveryStore: RecordingRecoveryStoring {
     /// Transfer WAV remaining to Takes after kill/crash/power loss.
     public func importAbandoned(from takesDirectory: URL) throws -> AbandonedRecordingImportResult {
         guard fileManager.fileExists(atPath: takesDirectory.path) else {
+            if fileManager.fileExists(atPath: directory.path) {
+                try prune()
+            }
             return AbandonedRecordingImportResult(
                 recordings: try recordings(),
                 newlyImportedCount: 0,
@@ -103,6 +106,12 @@ public actor RecordingRecoveryStore: RecordingRecoveryStoring {
                 try fileManager.removeItem(at: entry)
                 discardedCorruptCount += 1
             }
+        }
+        // Launch is the retention checkpoint. Preserving prunes too, but a
+        // quiet machine may not preserve anything for weeks — without this
+        // pass an old recording would outlive the promised retention window.
+        if fileManager.fileExists(atPath: directory.path) {
+            try prune()
         }
         return AbandonedRecordingImportResult(
             recordings: try recordings(),

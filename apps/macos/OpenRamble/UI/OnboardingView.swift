@@ -4,7 +4,10 @@ import SwiftUI
 
 /// First launch: from installation to the first dictated phrase.
 ///
-/// Three focused steps take a person from installation to a verified first dictation.
+/// Three focused steps take a person from installation to a verified first
+/// dictation. The window is one calm surface: system typography, content on
+/// quiet material cards, and exactly one Liquid Glass element — the primary
+/// button in the footer.
 struct OnboardingView: View {
     @ObservedObject var state: AppState
     let onFinish: () -> Void
@@ -37,7 +40,9 @@ struct OnboardingView: View {
             // two different ones.
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                .padding(32)
+                .padding(.horizontal, 36)
+                .padding(.top, 28)
+                .padding(.bottom, 8)
                 // Each step is its own page: forward it slides left, back it
                 // slides right — the same paths in both directions. With
                 // Reduce Motion the content swaps instantly, no sliding.
@@ -48,8 +53,8 @@ struct OnboardingView: View {
                         : .push(from: movingForward ? .trailing : .leading)
                 )
 
-            Divider()
-
+            // Whitespace separates the footer; a hairline here read as a
+            // form's edge inside a window that should feel like one surface.
             VStack(spacing: 6) {
                 ZStack {
                     // Dots hug the window center, not the neighboring buttons:
@@ -84,12 +89,13 @@ struct OnboardingView: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .accessibilityHidden(navigationBlockReason == nil)
             }
-            .padding()
+            .padding(.horizontal, 24)
+            .padding(.vertical, 14)
         }
-        // The combined setup step contains two permission rows and every model
-        // state, including repair and download progress. Keep enough vertical
-        // room for those controls without making the first-run window feel large.
-        .frame(width: 560, height: 560)
+        // The combined setup step contains three cards and every model state,
+        // including repair and download progress. Keep enough vertical room
+        // for those controls without making the first-run window feel large.
+        .frame(width: 600, height: 660)
         .confirmationDialog(
             "Repair Accessibility access?",
             isPresented: $showAccessibilityRepairConfirmation,
@@ -128,6 +134,7 @@ struct OnboardingView: View {
                     .frame(width: 76, height: 76)
                 heroGlyph
             }
+            .shadow(color: Color.accentColor.opacity(0.30), radius: 16, y: 6)
             .accessibilityHidden(true)
 
             Text("Dictation that stays on your Mac")
@@ -135,28 +142,34 @@ struct OnboardingView: View {
                 .multilineTextAlignment(.center)
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Press a key, speak, release — the text appears at your cursor. In any app.")
+            Text("Hold a key, speak, let go — the text appears at your cursor. In any app.")
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+                .frame(maxWidth: 440)
+                .fixedSize(horizontal: false, vertical: true)
 
-            Spacer(minLength: 8)
-
-            VStack(alignment: .leading, spacing: 12) {
-                OnboardingPoint(
+            // Fixed, not a Spacer: three flexible spacers would split the
+            // leftover height evenly and blow this gap wide open.
+            VStack(alignment: .leading, spacing: 14) {
+                OnboardingFeatureRow(
                     symbol: "airplane",
-                    text: "Speech is recognized by a model on your disk. Works on a plane."
+                    title: "Works on a plane",
+                    text: "Speech is recognized by a model on your disk. No internet needed."
                 )
-                OnboardingPoint(
-                    symbol: "arrow.down.circle",
-                    text: "Network access is limited to model downloads and a small daily update check that you can turn off."
-                )
-                OnboardingPoint(
-                    // An open lock is read as “unprotected” - exactly the opposite.
-                    symbol: "eye.slash",
+                OnboardingFeatureRow(
+                    // An open lock reads as “unprotected” — the opposite.
+                    symbol: "hand.raised",
+                    title: "Nothing leaves this Mac",
                     text: "No accounts, no analytics, no reports. The code is open — you can check."
                 )
+                OnboardingFeatureRow(
+                    symbol: "arrow.down.circle",
+                    title: "Network, only on your terms",
+                    text: "Used once to download the model, plus a small daily update check you can turn off."
+                )
             }
-            .font(.callout)
+            .frame(width: 420, alignment: .leading)
+            .padding(.top, 24)
 
             Spacer(minLength: 0)
         }
@@ -178,32 +191,18 @@ struct OnboardingView: View {
     }
 
     private var setup: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 20) {
             OnboardingStepHeader(
-                symbol: "lock.shield",
+                symbol: "checklist",
                 title: "Set up OpenRamble",
-                subtitle: "Two permissions and one local model. Speech never leaves this Mac."
+                subtitle: "One download, two permissions — speech never leaves this Mac."
             )
 
             VStack(spacing: 10) {
-                OnboardingPermission(
-                    status: PermissionStatus(
-                        title: "Microphone",
-                        detail: "To hear your speech.",
-                        granted: state.microphoneGranted
-                    ),
-                    action: state.requestMicrophone
-                )
-                OnboardingPermission(
-                    status: PermissionStatus.accessibility(
-                        state: state.accessibilityState,
-                        detail: "To hear the hotkey and insert the finished text.",
-                    ),
-                    action: performAccessibilityAction
-                )
-
+                // The model goes first: the 586 MB download runs while the
+                // person makes the System Settings round-trips below it.
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("Offline recognition", systemImage: "waveform")
+                    Label("Speech model", systemImage: "waveform")
                         .font(.headline)
                     ModelStatusView(
                         status: ModelStatus.make(
@@ -218,9 +217,25 @@ struct OnboardingView: View {
                         delete: state.deleteModel
                     )
                 }
-                .padding(12)
+                .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentSurface(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                OnboardingPermission(
+                    status: PermissionStatus(
+                        title: "Microphone",
+                        detail: "Hears you only while you hold the dictation key.",
+                        granted: state.microphoneGranted
+                    ),
+                    action: state.requestMicrophone
+                )
+                OnboardingPermission(
+                    status: PermissionStatus.accessibility(
+                        state: state.accessibilityState,
+                        detail: "Notices your dictation key and types the finished text at your cursor.",
+                    ),
+                    action: performAccessibilityAction
+                )
             }
 
             if needsAccessibilityRepair {
@@ -235,7 +250,7 @@ struct OnboardingView: View {
                 .font(.caption)
             }
 
-            Text("Input Monitoring is not needed. Accessibility is used only for the chosen hotkey and finished-text insertion.")
+            Text("Input Monitoring is not needed. Accessibility is used only for the dictation key and for inserting finished text.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -270,9 +285,9 @@ struct OnboardingView: View {
     private var tryIt: some View {
         VStack(alignment: .leading, spacing: 16) {
             OnboardingStepHeader(
-                symbol: "mic",
+                symbol: "keyboard",
                 title: "Try it",
-                subtitle: nil
+                subtitle: "Hold \(state.hotkey.title), say a few words, let go — the text lands in the field below."
             )
 
             Picker("Dictation key", selection: $state.hotkey) {
@@ -291,14 +306,11 @@ struct OnboardingView: View {
                         .foregroundStyle(.secondary)
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(StatusColorRole.attention.color)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Key warning. \(warning)")
             }
-
-            Text("Hold \(state.hotkey.title), say something, and release. The text will appear in the field below.")
-                .foregroundStyle(.secondary)
 
             // Sample field. Present, with variable text: it used to be
             // tied to a constant, and what was dictated did not appear in it
@@ -308,7 +320,9 @@ struct OnboardingView: View {
             TextEditor(text: $trial)
                 .frame(height: 90)
                 .focused($trialFocused)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .contentSurface(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .onAppear { trialFocused = true }
                 .accessibilityLabel("Trial dictation field")
 
@@ -317,7 +331,7 @@ struct OnboardingView: View {
             if state.dictationState == .listening {
                 HStack(spacing: 8) {
                     Circle()
-                        .fill(.red)
+                        .fill(StatusColorRole.recording.color)
                         .frame(width: 8, height: 8)
                     Text("Listening…")
                         .foregroundStyle(.secondary)
@@ -328,19 +342,29 @@ struct OnboardingView: View {
 
             if trialSucceeded {
                 Label("Done — dictation works", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(StatusColorRole.success.color)
                 // “Done” closes the window, and the app has no Dock icon: say
                 // where it lives, or the person loses it right here.
                 Text("OpenRamble lives in your menu bar at the top of the screen.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Button("Skip the try-out") { finishOnboarding() }
-                    .buttonStyle(.borderless)
-                    .disabled(isDictationBusy)
-                    .accessibilityHint(
-                        isDictationBusy ? "Finish or cancel the current dictation first" : ""
-                    )
+                HStack(spacing: 12) {
+                    Button("Skip the try-out") { finishOnboarding() }
+                        .buttonStyle(.borderless)
+                        .disabled(isDictationBusy)
+                        .accessibilityHint(
+                            isDictationBusy ? "Finish or cancel the current dictation first" : ""
+                        )
+                    // The escape hatch: while dictation runs, Back, Next and
+                    // Skip are all disabled — without this button a stuck
+                    // trial locks the whole window.
+                    if isDictationBusy {
+                        Button("Cancel Dictation") { state.cancelCurrentDictation() }
+                            .buttonStyle(.bordered)
+                            .accessibilityHint("Stops the current dictation so you can continue setup.")
+                    }
+                }
             }
 
             Spacer()
@@ -422,16 +446,17 @@ struct OnboardingView: View {
     }
 }
 
-/// Step header: symbol, title, explanation — one drawing for all steps.
+/// Step header: symbol, title, explanation — one drawing for all steps,
+/// centered like macOS's own assistants.
 private struct OnboardingStepHeader: View {
     let symbol: String
     let title: String
     let subtitle: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(spacing: 8) {
             Image(systemName: symbol)
-                .font(.system(size: 28, weight: .medium))
+                .font(.system(size: 32, weight: .medium))
                 .foregroundStyle(Color.accentColor)
                 .symbolRenderingMode(.hierarchical)
                 .accessibilityHidden(true)
@@ -443,9 +468,12 @@ private struct OnboardingStepHeader: View {
             if let subtitle {
                 Text(subtitle)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 440)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -471,25 +499,36 @@ private struct OnboardingProgressDots: View {
     }
 }
 
-/// Value list item in the first step.
+/// Value list item in the first step: a short claim in the person's favor,
+/// then the fact that backs it.
 ///
-/// The icon is in a fixed-width column. Otherwise, the column width is set by yourself
-/// glyph, and `eye.slash` has it wider than `airplane`: text of the third paragraph
-/// started a few dots to the right of the first two, and the left edge of the list went
-/// torn.
-private struct OnboardingPoint: View {
+/// The icon is in a fixed-width column. Otherwise, the column width is set
+/// by the glyph itself, and glyph widths differ: the text of the third row
+/// started a few points to the right of the first two, and the left edge of
+/// the list went torn.
+private struct OnboardingFeatureRow: View {
     let symbol: String
+    let title: LocalizedStringKey
     let text: LocalizedStringKey
 
     var body: some View {
-        Label {
-            Text(text)
-                .fixedSize(horizontal: false, vertical: true)
-        } icon: {
+        HStack(alignment: .top, spacing: 12) {
             Image(systemName: symbol)
-                .foregroundStyle(.blue)
-                .frame(width: 20, alignment: .center)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+                .symbolRenderingMode(.hierarchical)
+                .frame(width: 28, alignment: .center)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.callout.weight(.semibold))
+                Text(text)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -500,12 +539,13 @@ private struct OnboardingPermission: View {
     var body: some View {
         HStack {
             Image(systemName: status.granted ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(status.granted ? .green : .secondary)
+                .foregroundStyle(status.granted ? StatusColorRole.success.color : .secondary)
                 .font(.title3)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(status.title)
+                    .font(.headline)
                 Text(status.detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -521,10 +561,11 @@ private struct OnboardingPermission: View {
 
             if let title = status.actionTitle {
                 Button(title, action: action)
+                    .buttonStyle(.bordered)
                     .accessibilityLabel(status.actionAccessibilityLabel ?? title)
             }
         }
-        .padding(12)
+        .padding(14)
         .contentSurface(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

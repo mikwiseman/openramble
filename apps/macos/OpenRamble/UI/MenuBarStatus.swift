@@ -1,76 +1,93 @@
 import DictationCore
+import LocalASR
 import SwiftUI
 
+/// What the icon is signalling right now.
 enum MenuBarActivity: Equatable {
     case hidden
-    case preparing
     case recording
-    case processing
+    case working
 }
 
-enum MenuBarActivityBadge: Equatable {
+/// The dot over the brand mark. One shape, one meaning per color — see
+/// `StatusColorRole`: red = the microphone is capturing, blue = working on
+/// speech, orange = something waits for the person.
+enum MenuBarBadge: Equatable {
     case hidden
-    case preparingRing
-    case recordingDot
-    case processingBar
-    case recoveryWarning
+    case recording
+    case working
+    case attention
 }
 
 /// The menu bar identity and what it says about the current app state.
 ///
-/// The icon is the only permanent presence of the application on the screen. Picture
-/// without a description for a blind person does not exist at all, so the brand mark is
-/// paired with a state-specific accessibility label below.
+/// The icon is the only permanent presence of the application on the screen.
+/// A picture without a description does not exist at all for a blind person,
+/// so the brand mark is paired with a state-specific accessibility label below.
 enum MenuBarStatus {
     /// The brand mark shown in every state.
     ///
     /// macOS already adds its own microphone privacy indicator while recording.
     /// Swapping this mark for another microphone made one app look like two
-    /// microphone tools. The overlay, menu copy and accessibility label report
-    /// recording, setup and recovery state without replacing the app identity.
+    /// microphone tools. The dot, menu copy and accessibility label report
+    /// state without replacing the app identity.
     static let brandIconName = "BrandIconMenuBar"
-
-    static func iconName(
-        state: DictationState,
-        isDictationReady: Bool,
-        hasRecoveredWork: Bool = false
-    ) -> String {
-        brandIconName
-    }
 
     static func activity(state: DictationState) -> MenuBarActivity {
         switch state {
-        case .preparing: return .preparing
+        // No dot until audio is actually being captured: the red dot must
+        // never lie about the microphone, and the overlay already answers the
+        // key press instantly.
+        case .preparing: return .hidden
         case .listening: return .recording
-        case .transcribing, .inserting: return .processing
+        case .transcribing, .inserting: return .working
         case .idle: return .hidden
         }
     }
 
-    static func color(activity: MenuBarActivity) -> Color {
-        switch activity {
-        case .preparing: return .secondary
-        case .recording: return .red
-        case .processing: return .blue
-        case .hidden: return .clear
-        }
-    }
-
-    /// Recording and processing remain distinguishable without color.
+    /// Recording and working stay distinguishable without color through the
+    /// accessibility label and the menu's first line; the two dots also differ
+    /// strongly in luminance for color-blind users.
     static func badge(
         activity: MenuBarActivity,
-        hasRecoveredWork: Bool = false
-    ) -> MenuBarActivityBadge {
+        needsAttention: Bool = false
+    ) -> MenuBarBadge {
         switch activity {
-        case .preparing: return .preparingRing
-        case .recording: return .recordingDot
-        case .processing: return .processingBar
-        case .hidden: return hasRecoveredWork ? .recoveryWarning : .hidden
+        case .recording: return .recording
+        case .working: return .working
+        case .hidden: return needsAttention ? .attention : .hidden
         }
     }
 
-    /// Icon shortcut. Starts with the application name: there are many icons in the menu bar,
-    /// and “recording in progress” says nothing without the owner.
+    /// Does setup wait on the person right now?
+    ///
+    /// True only for states a click can advance: a permission to grant, a
+    /// download to start, a repair to confirm. Work in progress — downloading,
+    /// verifying, deleting, repairing, engine warm-up — is the app's job, and
+    /// showing "attention" for it would train people to ignore the dot.
+    static func setupNeedsUserAction(
+        accessibilityState: AccessibilityPermissionState,
+        microphoneGranted: Bool,
+        modelState: ModelState
+    ) -> Bool {
+        if !microphoneGranted { return true }
+        switch accessibilityState {
+        case .denied, .waitingForSettings, .restartRequired, .repairRequired, .failed:
+            return true
+        case .repairing, .granted:
+            break
+        }
+        switch modelState {
+        case .notInstalled, .repairRequired, .failed:
+            return true
+        case .downloading, .verifying, .deleting, .ready:
+            return false
+        }
+    }
+
+    /// Icon description. Starts with the application name: there are many
+    /// icons in the menu bar, and "recording in progress" says nothing
+    /// without the owner.
     static func accessibilityLabel(
         state: DictationState,
         isDictationReady: Bool,
@@ -82,8 +99,8 @@ enum MenuBarStatus {
         case .inserting: return "OpenRamble: inserting text"
         case .preparing: return "OpenRamble: turning on the microphone"
         case .idle:
-            // The badge on the icon must also sound for VoiceOver: picture without
-            // there are no words for the blind.
+            // The dot on the icon must also sound for VoiceOver: a picture
+            // without words does not exist for the blind.
             if hasRecoveredWork {
                 return "OpenRamble: last dictation needs attention — open the menu"
             }
@@ -95,45 +112,37 @@ enum MenuBarStatus {
 
     /// The first line of the menu is also an explanation of what to do.
     ///
-    /// She talks about unfinished work before she talks about the key. Panel
-    /// dictations - toast: she lives for four seconds and leaves, and that’s right,
-    /// because there is nothing to close it with - it does not take focus and the close button is
-    /// it doesn’t exist, and a fireproof window on top of someone else’s work would be worse than disaster,
-    /// which it explains. So the explanation has to settle somewhere
-    /// forever, and this place is the menu: the Retry/Copy items are right below the line.
-    /// Previously, the “text not inserted” message would simply disappear, and the person who
-    /// turned away, losing both the reason and the knowledge that the text was still alive.
+    /// It talks about unfinished work before it talks about the key. The
+    /// dictation panel is a toast: it lives four seconds and leaves, so the
+    /// lasting explanation has to live somewhere permanent — the menu. The
+    /// "Insert Last Dictation" item sits right below this line.
     static func statusLine(
         state: DictationState,
         isDictationReady: Bool,
         isHandsFreeActive: Bool,
         hotkeyTitle: String,
-        hasRecoveredText: Bool = false,
-        hasRecoveredRecording: Bool = false
+        hasRecoveredText: Bool = false
     ) -> String {
         switch state {
         case .idle:
-            // The text is more important than the record: it has already been recognized, and before the finished result
-            // the person has one menu item left.
             if hasRecoveredText {
                 return "Last dictation wasn't inserted"
             }
-            if hasRecoveredRecording {
-                return "A recording is waiting to be transcribed"
-            }
+            // The idle line teaches the one gesture the app has. "Ready"
+            // alone told a new person nothing about what to do next.
             return isDictationReady
-                ? "Ready"
+                ? "Ready — hold \(hotkeyTitle) and speak"
                 : "Setup needed"
         case .preparing: return "Turning on the microphone…"
         case .listening:
-            // In non-hold mode, the key is released and recording continues.
-            // Not talking about it means leaving the person with the switch on
-            // microphone and make sure that it is already turned off.
+            // In hands-free mode the key is released and recording continues.
+            // Not saying so leaves the person with a live microphone and the
+            // belief that it is already off.
             return isHandsFreeActive
                 ? "Listening — press \(hotkeyTitle) to finish"
                 : "Listening"
         case .transcribing: return "Transcribing…"
-        case .inserting: return "Finishing insertion…"
+        case .inserting: return "Inserting…"
         }
     }
 }

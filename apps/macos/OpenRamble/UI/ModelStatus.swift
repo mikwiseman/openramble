@@ -112,7 +112,12 @@ struct ModelStatus: Equatable {
             let label = "\(megabytes(received)) of \(megabytes(total)) MB"
             return ModelStatus(
                 title: "Downloading model…",
-                detail: "You can keep working — the download won't be interrupted.",
+                // The same fact serves two different moments: in onboarding the
+                // person is mid-checklist and the download must not read as a
+                // blocker; in settings they are just visiting.
+                detail: place == .onboarding
+                    ? "Keep going — grant the permissions below while it downloads."
+                    : "You can keep working — the download won't be interrupted.",
                 progress: state.progress,
                 progressLabel: label,
                 actions: [.cancel],

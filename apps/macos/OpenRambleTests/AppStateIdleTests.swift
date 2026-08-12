@@ -233,7 +233,10 @@ final class AppStateIdleTests: XCTestCase {
         harness.notifications.post(name: .AVAudioEngineConfigurationChange, object: nil)
 
         try await waitFor("dictation ended") { state.dictationState == .idle }
-        try await waitFor("WAV available for Retry") { state.recoveredRecording != nil }
+        let recovery = try AppPaths(root: harness.root).audioRecovery()
+        try await waitFor("WAV kept for safety") {
+            ((try? FileManager.default.contentsOfDirectory(atPath: recovery.path)) ?? []).isEmpty == false
+        }
         XCTAssertEqual(state.lastNotice?.kind, .failure)
         XCTAssertEqual(state.lastNotice?.message.contains("audio device was disconnected"), true)
         let recording = await capture.isRecording

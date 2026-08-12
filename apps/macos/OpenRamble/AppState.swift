@@ -179,8 +179,6 @@ public final class AppState: ObservableObject {
 
     /// Text of unsuccessful insertion. Never written to disk.
     @Published public private(set) var recoveredText: String?
-    /// WAV after a technical error, available for Retry/Delete.
-    @Published public private(set) var recoveredRecording: URL?
     /// Whether recording occurs without holding down a key is shown in the menu.
     @Published public private(set) var isHandsFreeActive = false
     /// Only a successful insertion is considered a passed test in onboarding.
@@ -524,8 +522,14 @@ public final class AppState: ObservableObject {
             }
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
-                if let text = notice.recoverableText { self?.recoveredText = text }
-                if let audio = notice.recoveryAudio { self?.recoveredRecording = audio }
+                if let text = notice.recoverableText {
+                    self?.recoveredText = text
+                    // The words also join Recent Dictations at failure time:
+                    // the single recovery slot is overwritten by the next
+                    // failure, and without this copy the first failure's words
+                    // would silently vanish from the person's reach.
+                    self?.rememberFailedInsertion(text)
+                }
                 // The kernel explained itself. Your own explanation on top of his words would be
                 // worse than silence: the session has one reason for ending, not two.
                 self?.noticeAfterSession = nil
@@ -628,34 +632,19 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// Tidy up recordings left behind by a kill or power loss — quietly.
+    ///
+    /// The import repairs interrupted WAV headers, discards fragments too
+    /// short to hold speech, and prunes the folder by age, count and size.
+    /// Nothing is announced and no menu item appears: a broken last dictation
+    /// is a rare technical event that already surfaced the moment it happened,
+    /// and a recovery apparatus in the menu cost more attention than the words
+    /// it guarded. Files stay on disk for a few days (see
+    /// `RecordingRecoveryStore`), so nothing is silently discarded.
     private func importAbandonedRecordings() async {
         guard let recordingRecovery else { return }
         do {
-            let result = try await recordingRecovery.importAbandoned(from: paths.takes())
-            recoveredRecording = result.recordings.first
-            // Only an event of this very launch is announced: a fresh rescue
-            // or a fresh loss. A leftover from last week stays available in
-            // the menu — silently. Otherwise every launch opened with an
-            // "error" behind which nothing had happened.
-            if result.discardedCorruptCount > 0 {
-                notify(
-                    DictationNotice(
-                        kind: .failure,
-                        message: result.newlyImportedCount > 0
-                            ? "One recording was saved for retry. A damaged fragment couldn't be recovered and was deleted."
-                            : "An unfinished recording was damaged: it can't be recovered, the fragment was deleted.",
-                        recoveryAudio: result.newlyImportedCount > 0 ? recoveredRecording : nil
-                    )
-                )
-            } else if result.newlyImportedCount > 0 {
-                notify(
-                    DictationNotice(
-                        kind: .warning,
-                        message: "A local recording was found after an interruption — you can retry transcription or delete it.",
-                        recoveryAudio: recoveredRecording
-                    )
-                )
-            }
+            _ = try await recordingRecovery.importAbandoned(from: paths.takes())
         } catch {
             notify(
                 DictationNotice(
@@ -673,6 +662,20 @@ public final class AppState: ObservableObject {
         guard !trimmed.isEmpty else { return }
         successfulDictationCount += 1
         recoveredText = nil
+        prependRecentDictation(trimmed)
+    }
+
+    /// Words that failed to insert enter the history immediately.
+    ///
+    /// Idempotent across repeated failures of the same text: retrying the
+    /// insertion and failing again must not fill the history with copies.
+    private func rememberFailedInsertion(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, recentDictations.first?.text != trimmed else { return }
+        prependRecentDictation(trimmed)
+    }
+
+    private func prependRecentDictation(_ trimmed: String) {
         recentDictations.insert(RecentDictation(text: trimmed), at: 0)
         if recentDictations.count > 8 {
             recentDictations.removeLast(recentDictations.count - 8)
@@ -691,10 +694,16 @@ public final class AppState: ObservableObject {
         }
     }
 
-    /// Is there anything to copy verbatim.
+    /// Is there anything to copy as spoken.
+    ///
+    /// Only when the raw words actually differ from the inserted text: for
+    /// most dictations the dictionary and cosmetics change nothing, and the
+    /// menu item would be a duplicate of the last recent dictation.
     public var canCopyRawDictation: Bool {
-        guard let raw = lastDictation?.provenance.raw else { return false }
-        return !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard let lastDictation else { return false }
+        let raw = lastDictation.provenance.raw
+        guard !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        return raw != lastDictation.insertedText
     }
 
     /// Put in a buffer what the person said - before the dictionary and before cosmetics.
@@ -712,23 +721,13 @@ public final class AppState: ObservableObject {
         else { return }
         do {
             try HostOnlyPasteboard().copyHostOnly(raw)
-            notify(DictationNotice(kind: .info, message: "Verbatim text copied to this Mac only."))
+            notify(DictationNotice(kind: .info, message: "Copied as spoken — to this Mac only."))
         } catch {
-            notify(DictationNotice(kind: .failure, message: "Couldn't copy the verbatim text."))
+            notify(DictationNotice(kind: .failure, message: "Couldn't copy the spoken text."))
         }
     }
 
-    // MARK: - Copy / Retry / Delete recovery
-
-    public func copyRecoveredText() {
-        guard let recoveredText else { return }
-        do {
-            try HostOnlyPasteboard().copyHostOnly(recoveredText)
-            notify(DictationNotice(kind: .info, message: "Text copied to this Mac only."))
-        } catch {
-            notify(DictationNotice(kind: .failure, message: "Couldn't copy the text."))
-        }
-    }
+    // MARK: - Recovering a failed insertion
 
     public func retryRecoveredText() {
         guard dictationState == .idle,
@@ -747,7 +746,14 @@ public final class AppState: ObservableObject {
             await overlay.dismiss()
             do {
                 try await inserter.insert(recoveredText, into: target)
-                self.recordSuccessfulDictation(recoveredText)
+                // The words already joined Recent Dictations at failure time;
+                // appending again here would duplicate them. The provenance
+                // slot is cleared too: it still holds the PREVIOUS dictation,
+                // and "Copy Last as Spoken" must not offer someone else's raw
+                // text after inserting recovered words.
+                self.successfulDictationCount += 1
+                self.recoveredText = nil
+                self.lastDictation = nil
                 await overlay.dismiss()
             } catch {
                 notify(
@@ -761,151 +767,6 @@ public final class AppState: ObservableObject {
         }
     }
 
-    public func deleteRecoveredText() {
-        guard !isRecoveryOperationActive else { return }
-        recoveredText = nil
-    }
-
-    public func retryRecoveredRecording() {
-        guard dictationState == .idle,
-              !isRecoveryOperationActive,
-              modelState.isReady,
-              let url = recoveredRecording,
-              let engineDirectory,
-              let recordingRecovery
-        else { return }
-        let target = inserter.frontmostApplication()
-
-        isRecoveryOperationActive = true
-        dictationState = .transcribing
-        Task { [weak self] in
-            guard let self else { return }
-            defer {
-                self.dictationState = .idle
-                self.isRecoveryOperationActive = false
-            }
-            await overlay.present(.transcribing, elapsed: 0)
-            let recognizedText: String
-            let provenance: PipelineProvenance
-            do {
-                let result = try await transcribe(
-                    engineDirectory,
-                    { [box = UncheckedBox(defaults)] in
-                        box.value.string(forKey: Self.recognitionLanguageKey)
-                    }
-                )(url)
-                // Same pipeline as the live path, same entry
-                // origin. Without it, a replay would be left after a failure
-                // `lastDictation` from the PREVIOUS dictation - and training on
-                // edits would learn a couple from someone else’s text, that is, quietly
-                // would ruin a person's personal dictionary.
-                let run = makePipeline().run(result.text)
-                guard !run.output.text.isEmpty else {
-                    // An empty result is not a failure: the recording holds no
-                    // recognizable speech. The main path says "nothing was
-                    // recognized" and deletes the take; retry must behave the
-                    // same — otherwise it is a dead end: an "error" with an
-                    // eternal retry whose only exit is manual deletion.
-                    do {
-                        try await recordingRecovery.delete(url)
-                        recoveredRecording = try await recordingRecovery.recordings().first
-                        notify(
-                            DictationNotice(
-                                kind: .info,
-                                message: "Nothing was recognized in the saved recording — it was deleted."
-                            )
-                        )
-                    } catch {
-                        notify(
-                            DictationNotice(
-                                kind: .failure,
-                                message: "Nothing was recognized, but the local recording couldn't be deleted: \(error.localizedDescription)"
-                            )
-                        )
-                    }
-                    return
-                }
-                recognizedText = run.output.text
-                provenance = run.provenance
-            } catch {
-                notify(
-                    DictationNotice(
-                        kind: .failure,
-                        message: "Transcription failed again. The recording is still saved in the menu.",
-                        recoveryAudio: url
-                    )
-                )
-                return
-            }
-
-            dictationState = .inserting
-            await overlay.dismiss()
-            do {
-                try await inserter.insert(recognizedText, into: target)
-                recordSuccessfulDictation(recognizedText)
-                // Exactly like on a living path: the origin is recorded only
-                // after successful insertion.
-                lastDictation = LastDictation(
-                    insertedText: recognizedText,
-                    provenance: provenance
-                )
-            } catch {
-                recoveredText = recognizedText
-                do {
-                    try await recordingRecovery.delete(url)
-                    recoveredRecording = try await recordingRecovery.recordings().first
-                    notify(
-                        DictationNotice(
-                            kind: .warning,
-                            message: "The recording was transcribed, but the text wasn't inserted — it's saved in the menu.",
-                            recoverableText: recognizedText
-                        )
-                    )
-                } catch {
-                    recoveredRecording = url
-                    notify(
-                        DictationNotice(
-                            kind: .failure,
-                            message: "The text is saved in the menu, but the local WAV couldn't be deleted: \(error.localizedDescription)",
-                            recoverableText: recognizedText,
-                            recoveryAudio: url
-                        )
-                    )
-                }
-                return
-            }
-
-            do {
-                try await recordingRecovery.delete(url)
-                recoveredRecording = try await recordingRecovery.recordings().first
-                await overlay.dismiss()
-            } catch {
-                recoveredRecording = url
-                notify(
-                    DictationNotice(
-                        kind: .failure,
-                        message: "The text was inserted, but the local WAV couldn't be deleted: \(error.localizedDescription)",
-                        recoveryAudio: url
-                    )
-                )
-            }
-        }
-    }
-
-    public func deleteRecoveredRecording() {
-        guard !isRecoveryOperationActive, let url = recoveredRecording else { return }
-        isRecoveryOperationActive = true
-        Task { [weak self] in
-            guard let self else { return }
-            defer { self.isRecoveryOperationActive = false }
-            do {
-                try await recordingRecovery?.delete(url)
-                recoveredRecording = try await recordingRecovery?.recordings().first
-            } catch {
-                notify(DictationNotice(kind: .failure, message: "Couldn't delete the local recording."))
-            }
-        }
-    }
 
     /// Subscribe to what is happening to the computer outside of us.
     ///

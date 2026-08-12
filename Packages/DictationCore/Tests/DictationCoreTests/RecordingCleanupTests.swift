@@ -340,7 +340,7 @@ final class RecordingCleanupTests: XCTestCase {
             "The reason of the interruption must still be named: \(notices.map(\.message))"
         )
         XCTAssertFalse(
-            notices.contains { $0.message.contains("saved locally") || $0.message.contains("Couldn't save") },
+            notices.contains { $0.message.contains("is kept on this Mac") || $0.message.contains("couldn't be kept") },
             "Nothing to say about rescuing a recording that does not exist: \(notices.map(\.message))"
         )
     }
