@@ -122,7 +122,7 @@ public struct AppEnvironment {
             modelDownloader: URLSessionModelDownloader(),
             requestMicrophoneAccess: { await Permissions.requestMicrophone() },
             openMicrophoneSettings: Permissions.openMicrophoneSettings,
-            activateApplication: { NSApplication.shared.activate(ignoringOtherApps: true) },
+            activateApplication: { NSApplication.shared.activate() },
             workspaceNotifications: NSWorkspace.shared.notificationCenter,
             notifications: .default,
             localTranscriber: transcriber
