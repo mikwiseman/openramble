@@ -18,6 +18,28 @@ final class OverlayModelTests: XCTestCase {
         model.onVisibilityChange = { [weak self] visible in self?.visibility.append(visible) }
     }
 
+    /// Дождаться, что автоскрытие действительно случилось.
+    ///
+    /// Раньше тесты спали фиксированные 220 мс при сроке показа в 120 мс.
+    /// Запаса в 100 мс хватает на своей машине и не хватает загруженному
+    /// раннеру: сообщение ещё висело, и проверка падала на ровном месте —
+    /// так упал прогон CI на main (31569489197), хотя код был исправен.
+    /// Ждём по факту и с большим запасом: быстрая машина проходит за
+    /// те же миллисекунды, медленная — просто ждёт дольше.
+    private func waitForNoticeToHide(
+        timeout: Duration = .seconds(3),
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async throws {
+        let deadline = ContinuousClock.now.advanced(by: timeout)
+        while ContinuousClock.now < deadline {
+            if model.notice == nil { return }
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTFail("сообщение не убралось само за \(timeout)", file: file, line: line)
+    }
+
     // MARK: - Showing and cleaning
 
     func testScenario001() {
@@ -68,7 +90,7 @@ final class OverlayModelTests: XCTestCase {
         model.showNotice(DictationNotice(kind: .warning, message: "Text saved."))
         XCTAssertTrue(model.isVisible)
 
-        try await Task.sleep(for: .milliseconds(220))
+        try await waitForNoticeToHide()
 
         XCTAssertNil(model.notice)
         XCTAssertFalse(model.isVisible)
@@ -243,7 +265,10 @@ final class OverlayModelTests: XCTestCase {
     func testScenario027() async throws {
         let notice = DictationNotice(kind: .warning, message: "Check the microphone.")
         model.showNotice(notice)
-        try await Task.sleep(for: .milliseconds(220))
+        // Второе объявление возможно только после того, как первый показ
+        // закончился: пока он на экране, повтор считается дублем и молчит.
+        // Фиксированная пауза делала исход зависящим от загрузки машины.
+        try await waitForNoticeToHide()
 
         model.showNotice(notice)
 
