@@ -23,8 +23,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
-    MARKETING_VERSION: "0.3.9"
-    CURRENT_PROJECT_VERSION: "14"
+    MARKETING_VERSION: "0.3.10"
+    CURRENT_PROJECT_VERSION: "15"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     # The sandbox is turned off intentionally: dictation must insert text into other people's

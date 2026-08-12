@@ -329,9 +329,14 @@ struct OnboardingView: View {
             if trialSucceeded {
                 Label("Done — dictation works", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
+                // “Done” closes the window, and the app has no Dock icon: say
+                // where it lives, or the person loses it right here.
+                Text("OpenRamble lives in your menu bar at the top of the screen.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             } else {
                 Button("Skip the try-out") { finishOnboarding() }
-                    .buttonStyle(.link)
+                    .buttonStyle(.borderless)
                     .disabled(isDictationBusy)
                     .accessibilityHint(
                         isDictationBusy ? "Finish or cancel the current dictation first" : ""

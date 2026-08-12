@@ -33,7 +33,7 @@ struct OpenRambleApp: App {
                 // without which dictation does not work.
                 guard !onboardingCompleted else { return }
                 openWindow(id: "onboarding")
-                NSApp.activate(ignoringOtherApps: true)
+                NSApp.activate()
             }
         }
 
