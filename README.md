@@ -79,14 +79,16 @@ Application Support directory automatically. The bundle identifier remains
 - Hold the configured hotkey, speak, and release it to insert text.
 - Double-press the hotkey to record without holding it; press again to stop.
 - Press Escape while recording to cancel.
-- Use “Copy last dictation verbatim” to copy the raw recognition result before
-  dictionary replacements and typography cleanup.
+- Use “Copy Last as Spoken” to copy the raw recognition result before
+  dictionary replacements and typography cleanup. The item appears when that
+  raw text differs from what was inserted.
 - A single dictation is limited to one hour.
 
 Clipboard insertion preserves the previous clipboard contents in memory and
 restores them within two seconds. Concealed password-manager values, file
-promises, and clipboard contents larger than 16 MiB are never copied; the app
-offers Copy/Retry instead.
+promises, and clipboard contents larger than 16 MiB are never copied; the
+dictated text stays available in the menu — “Insert Last Dictation” and
+Recent Dictations — instead.
 
 ## Requirements
 
