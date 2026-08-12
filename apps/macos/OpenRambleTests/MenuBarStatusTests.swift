@@ -185,7 +185,7 @@ final class MenuRecoveryLineTests: XCTestCase {
     }
 
     func testScenario013() {
-        XCTAssertEqual(line(text: true), "Text ready to copy or retry")
+        XCTAssertEqual(line(text: true), "Last dictation wasn't inserted")
     }
 
     func testScenario014() {

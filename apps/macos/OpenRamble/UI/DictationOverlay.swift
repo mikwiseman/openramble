@@ -135,7 +135,6 @@ public final class DictationOverlay: OverlayPresenting {
 @MainActor
 protocol RecordingFeedbackPresenting: AnyObject {
     func updateInputLevel(_ level: Float)
-    func showSilenceHint()
 }
 
 @MainActor
@@ -149,8 +148,6 @@ final class OverlayModel: ObservableObject {
         repeating: Float(0),
         count: OverlayModel.waveformSampleCount
     )
-    /// We listen for more than two seconds, but there is no signal: most likely, the wrong microphone.
-    @Published private(set) var showsSilenceHint = false
     /// Whether the panel should be on the screen. Shown by its owner.
     private(set) var isVisible = false
     var onVisibilityChange: ((Bool) -> Void)?
@@ -202,45 +199,21 @@ final class OverlayModel: ObservableObject {
         }
         if state == .listening {
             waveformSamples = Array(repeating: 0, count: Self.waveformSampleCount)
-            showsSilenceHint = false
-        } else {
-            // A silence warning belongs only to the live recording it measured.
-            // It must never cover processing or an error from the next state.
-            showsSilenceHint = false
         }
         setElapsed(elapsed, ticking: state == .listening)
         setVisible(true)
         announceContent()
     }
 
-    /// Panel shortcut for VoiceOver, including the silence prompt if present.
-    var accessibilityLabel: String {
-        var base = content.accessibilityLabel
-        if showsSilenceHint { base = "\(Self.silenceHint) \(base)" }
-        return base
-    }
+    /// Panel shortcut for VoiceOver.
+    var accessibilityLabel: String { content.accessibilityLabel }
 
     func updateInputLevel(_ level: Float) {
         guard state == .listening else { return }
         let sample = min(1, max(0, level))
         waveformSamples.removeFirst()
         waveformSamples.append(sample)
-        if sample > 0.02 { showsSilenceHint = false }
     }
-
-    /// There has been no signal for longer than the threshold - talk about the microphone.
-    ///
-    /// “The microphone can't hear you” is the most important thing for a blind person:
-    /// they cannot see the flat waveform, and without an announcement learn about the
-    /// dead microphone only by an empty result at the end.
-    func showSilenceHint() {
-        guard state == .listening, notice == nil, !showsSilenceHint else { return }
-        showsSilenceHint = true
-        announcer.announce(Self.silenceHint, urgent: true)
-    }
-
-    /// Tooltip text. One for the screen and for the announcement: they can’t leave.
-    static let silenceHint = "No sound detected — check your microphone."
 
     /// Show the message and remove it after the specified time.
     func showNotice(_ notice: DictationNotice) {
@@ -249,7 +222,6 @@ final class OverlayModel: ObservableObject {
         // does not display elapsed time, but returning to the HUD must not lose
         // the seconds during which it was visible.
         setElapsed(elapsed, ticking: state == .listening)
-        showsSilenceHint = false
         self.notice = notice
         setVisible(true)
         announceContent()
@@ -345,14 +317,7 @@ private struct OverlayView: View {
         let content = model.content
 
         return HStack(spacing: 10) {
-            if model.showsSilenceHint {
-                Image(systemName: "mic.slash.fill")
-                    .foregroundStyle(.orange)
-                    .font(.body.weight(.semibold))
-                Text(OverlayModel.silenceHint)
-                    .font(.callout.weight(.medium))
-                    .fixedSize(horizontal: false, vertical: true)
-            } else if model.notice != nil {
+            if model.notice != nil {
                 Image(systemName: icon(for: content.tone))
                     .foregroundStyle(color(for: content.tone))
                     .font(.body.weight(.semibold))
@@ -395,7 +360,7 @@ private struct OverlayView: View {
     }
 
     private var preferredWidth: CGFloat {
-        if model.showsSilenceHint || model.notice != nil { return 320 }
+        if model.notice != nil { return 320 }
         if model.state == .listening { return 244 }
         return 220
     }
@@ -432,9 +397,5 @@ private struct OverlayView: View {
 extension DictationOverlay: RecordingFeedbackPresenting {
     func updateInputLevel(_ level: Float) {
         model.updateInputLevel(level)
-    }
-
-    func showSilenceHint() {
-        model.showSilenceHint()
     }
 }

@@ -130,34 +130,6 @@ public struct AppEnvironment {
     }
 }
 
-/// Pure deadline logic for the rolling silence hint. Keeping time decisions out
-/// of the async polling loop makes resets and boundaries deterministic to test.
-struct SilenceFeedbackPolicy: Equatable {
-    static let signalThreshold: Float = 0.02
-    static let silenceInterval: TimeInterval = 2
-
-    private(set) var lastAudibleInputUptime: TimeInterval?
-
-    mutating func start(at uptime: TimeInterval) {
-        lastAudibleInputUptime = uptime
-    }
-
-    mutating func stop() {
-        lastAudibleInputUptime = nil
-    }
-
-    mutating func registerInput(peak: Float, at uptime: TimeInterval) {
-        if peak > Self.signalThreshold {
-            lastAudibleInputUptime = uptime
-        }
-    }
-
-    func shouldShowHint(at uptime: TimeInterval) -> Bool {
-        guard let lastAudibleInputUptime else { return false }
-        return uptime - lastAudibleInputUptime >= Self.silenceInterval
-    }
-}
-
 /// All application state in one place.
 ///
 /// Links hotkey, audio capture, recognition and insertion. Herself
@@ -327,10 +299,6 @@ public final class AppState: ObservableObject {
     private var isRecoveryOperationActive = false
     /// A message that waits for the end of the session.
     private var noticeAfterSession: DictationNotice?
-    /// Rolling “no sound” feedback: a live signal resets the deadline rather
-    /// than disabling detection for the rest of a long recording.
-    private var silenceHintTask: Task<Void, Never>?
-    private var silenceFeedbackPolicy = SilenceFeedbackPolicy()
     /// Only the newest personal-dictionary snapshot may reach the acoustic model.
     private var vocabularyRebuildTask: Task<Void, Never>?
     private var vocabularyRevision = 0
@@ -393,10 +361,6 @@ public final class AppState: ObservableObject {
 
     /// Whether the duration limit is being checked. It shouldn't be at rest.
     public var isCountingDuration: Bool { durationTimer != nil }
-
-    /// The silence watcher exists only while recording. Exposed for the same
-    /// idle-state verification as the duration and permission timers above.
-    public var isWatchingSilence: Bool { silenceHintTask != nil }
 
     /// Warning about the selected key, if any.
     public var hotkeyWarning: String? {
@@ -473,7 +437,6 @@ public final class AppState: ObservableObject {
         // not from waking up.
         permissionTimer?.invalidate()
         durationTimer?.invalidate()
-        silenceHintTask?.cancel()
         vocabularyRebuildTask?.cancel()
         for observer in systemObservers {
             observer.center.removeObserver(observer.token)
@@ -558,7 +521,6 @@ public final class AppState: ObservableObject {
                 self?.dictationState = state
                 self?.updateDurationTimer(for: state)
                 self?.flushNoticeAfterSession(state)
-                self?.updateRecordingFeedback(for: state)
             }
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
@@ -671,21 +633,26 @@ public final class AppState: ObservableObject {
         do {
             let result = try await recordingRecovery.importAbandoned(from: paths.takes())
             recoveredRecording = result.recordings.first
-            if recoveredRecording != nil {
-                notify(
-                    DictationNotice(
-                        kind: result.discardedCorruptCount == 0 ? .warning : .failure,
-                        message: result.discardedCorruptCount == 0
-                            ? "A local recording was found after an interruption — you can retry transcription or delete it."
-                            : "One recording was saved for retry. A damaged fragment couldn't be recovered and was deleted.",
-                        recoveryAudio: recoveredRecording
-                    )
-                )
-            } else if result.discardedCorruptCount > 0 {
+            // Only an event of this very launch is announced: a fresh rescue
+            // or a fresh loss. A leftover from last week stays available in
+            // the menu — silently. Otherwise every launch opened with an
+            // "error" behind which nothing had happened.
+            if result.discardedCorruptCount > 0 {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "An unfinished recording was damaged: it can't be recovered, the fragment was deleted."
+                        message: result.newlyImportedCount > 0
+                            ? "One recording was saved for retry. A damaged fragment couldn't be recovered and was deleted."
+                            : "An unfinished recording was damaged: it can't be recovered, the fragment was deleted.",
+                        recoveryAudio: result.newlyImportedCount > 0 ? recoveredRecording : nil
+                    )
+                )
+            } else if result.newlyImportedCount > 0 {
+                notify(
+                    DictationNotice(
+                        kind: .warning,
+                        message: "A local recording was found after an interruption — you can retry transcription or delete it.",
+                        recoveryAudio: recoveredRecording
                     )
                 )
             }
@@ -786,7 +753,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .warning,
-                        message: "Retry insert failed — the text is still available via Copy and Retry.",
+                        message: "The text still couldn't be inserted — it stays in the menu.",
                         recoverableText: recoveredText
                     )
                 )
@@ -833,14 +800,38 @@ public final class AppState: ObservableObject {
                 // edits would learn a couple from someone else’s text, that is, quietly
                 // would ruin a person's personal dictionary.
                 let run = makePipeline().run(result.text)
-                guard !run.output.text.isEmpty else { throw ASREngineError.inferenceFailed("empty result") }
+                guard !run.output.text.isEmpty else {
+                    // An empty result is not a failure: the recording holds no
+                    // recognizable speech. The main path says "nothing was
+                    // recognized" and deletes the take; retry must behave the
+                    // same — otherwise it is a dead end: an "error" with an
+                    // eternal retry whose only exit is manual deletion.
+                    do {
+                        try await recordingRecovery.delete(url)
+                        recoveredRecording = try await recordingRecovery.recordings().first
+                        notify(
+                            DictationNotice(
+                                kind: .info,
+                                message: "Nothing was recognized in the saved recording — it was deleted."
+                            )
+                        )
+                    } catch {
+                        notify(
+                            DictationNotice(
+                                kind: .failure,
+                                message: "Nothing was recognized, but the local recording couldn't be deleted: \(error.localizedDescription)"
+                            )
+                        )
+                    }
+                    return
+                }
                 recognizedText = run.output.text
                 provenance = run.provenance
             } catch {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Retry transcription failed. The recording is still saved locally.",
+                        message: "Transcription failed again. The recording is still saved in the menu.",
                         recoveryAudio: url
                     )
                 )
@@ -866,7 +857,7 @@ public final class AppState: ObservableObject {
                     notify(
                         DictationNotice(
                             kind: .warning,
-                            message: "The recording was transcribed, but the text wasn't inserted — Copy and Retry are in the menu.",
+                            message: "The recording was transcribed, but the text wasn't inserted — it's saved in the menu.",
                             recoverableText: recognizedText
                         )
                     )
@@ -875,7 +866,7 @@ public final class AppState: ObservableObject {
                     notify(
                         DictationNotice(
                             kind: .failure,
-                            message: "The text is available via Copy and Retry, but the local WAV couldn't be deleted: \(error.localizedDescription)",
+                            message: "The text is saved in the menu, but the local WAV couldn't be deleted: \(error.localizedDescription)",
                             recoverableText: recognizedText,
                             recoveryAudio: url
                         )
@@ -1595,34 +1586,15 @@ public final class AppState: ObservableObject {
 
     // MARK: - Recording feedback
 
-    private func updateRecordingFeedback(for state: DictationState) {
-        silenceHintTask?.cancel()
-        silenceHintTask = nil
-        silenceFeedbackPolicy.stop()
-        guard state == .listening else { return }
-
-        silenceFeedbackPolicy.start(at: ProcessInfo.processInfo.systemUptime)
-        silenceHintTask = Task { @MainActor [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(500))
-                guard !Task.isCancelled, let self else { return }
-                if self.silenceFeedbackPolicy.shouldShowHint(
-                    at: ProcessInfo.processInfo.systemUptime
-                ) {
-                    (self.overlay as? RecordingFeedbackPresenting)?.showSilenceHint()
-                }
-            }
-        }
-    }
-
-    /// Peak level from the microphone. A real signal hides the current warning
-    /// and starts a fresh silence interval.
+    /// Peak level from the microphone — feeds the waveform in the panel.
+    ///
+    /// There is deliberately no "no sound detected" watcher here: pausing to
+    /// think before a phrase is normal speech, not an error, and a hint built
+    /// on a two-second timer fired on every such pause. A dead input is still
+    /// honestly visible — by the flat waveform during recording and by the
+    /// final "Nothing was recognized" at the end.
     private func registerInputLevel(_ peak: Float) {
         (overlay as? RecordingFeedbackPresenting)?.updateInputLevel(peak)
-        silenceFeedbackPolicy.registerInput(
-            peak: peak,
-            at: ProcessInfo.processInfo.systemUptime
-        )
     }
 
     /// Registration error visible: silently leave a person without autostart -

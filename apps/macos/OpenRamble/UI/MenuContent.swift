@@ -29,8 +29,8 @@ struct MenuContent: View {
 
         if state.dictationState == .preparing || state.dictationState == .listening {
             Divider()
-            Button("Stop and insert") { state.finishCurrentDictation() }
-            Button("Cancel and delete recording", role: .destructive) {
+            Button("Stop and Insert") { state.finishCurrentDictation() }
+            Button("Cancel Dictation", role: .destructive) {
                 state.cancelCurrentDictation()
             }
         }
@@ -38,7 +38,7 @@ struct MenuContent: View {
         if !state.isDictationReady {
             Divider()
             setupHints
-            Button("Run setup again") {
+            Button("Run Setup Again…") {
                 showOnboarding()
                 openWindow(id: "onboarding")
             }
@@ -56,26 +56,25 @@ struct MenuContent: View {
         }
 
         if state.canCopyRawDictation {
-            Button("Copy last dictation verbatim") {
+            Button("Copy Last Dictation Verbatim") {
                 state.copyRawDictation()
             }
         }
 
+        // Rescued work — without section headers: the first menu line already
+        // named the trouble, and the items name themselves. A header above
+        // three buttons overloaded the menu and read as one more error.
         if state.recoveredText != nil {
             Divider()
-            // The title above the buttons is the same as the block with the entry below. Without him three
-            // the buttons in a row do not say what they belong to, but the panel with
-            // the explanation has long since left the screen by this point.
-            Text("Uninserted text")
-            Button("Retry insert") { state.retryRecoveredText() }
+            Button("Insert Saved Text") { state.retryRecoveredText() }
                 .disabled(state.dictationState != .idle)
                 .accessibilityHint(
                     state.dictationState == .idle
                         ? "Attempts to insert the saved text into the current field"
                         : "Finish or cancel the current dictation first"
                 )
-            Button("Copy text") { state.copyRecoveredText() }
-            Button("Delete saved text", role: .destructive) {
+            Button("Copy Saved Text") { state.copyRecoveredText() }
+            Button("Delete Saved Text", role: .destructive) {
                 showDeleteTextConfirmation = true
             }
             .confirmationDialog(
@@ -83,7 +82,7 @@ struct MenuContent: View {
                 isPresented: $showDeleteTextConfirmation,
                 titleVisibility: .visible
             ) {
-                Button("Delete saved text", role: .destructive) {
+                Button("Delete Saved Text", role: .destructive) {
                     state.deleteRecoveredText()
                 }
                 Button("Cancel", role: .cancel) {}
@@ -94,10 +93,9 @@ struct MenuContent: View {
 
         if state.recoveredRecording != nil {
             Divider()
-            Text("Local recording after a failure")
-            Button("Retry transcription") { state.retryRecoveredRecording() }
+            Button("Transcribe Saved Recording") { state.retryRecoveredRecording() }
                 .disabled(!state.modelState.isReady || state.dictationState != .idle)
-            Button("Delete recording", role: .destructive) {
+            Button("Delete Saved Recording", role: .destructive) {
                 showDeleteRecordingConfirmation = true
             }
             .confirmationDialog(
@@ -105,12 +103,12 @@ struct MenuContent: View {
                 isPresented: $showDeleteRecordingConfirmation,
                 titleVisibility: .visible
             ) {
-                Button("Delete recording", role: .destructive) {
+                Button("Delete Saved Recording", role: .destructive) {
                     state.deleteRecoveredRecording()
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This cannot be undone. Retry transcription first if you may need the dictation.")
+                Text("This cannot be undone. Transcribe it first if you may need the dictation.")
             }
         }
 
@@ -135,11 +133,11 @@ struct MenuContent: View {
         if !state.accessibilityGranted {
             switch state.accessibilityState {
             case .denied:
-                Button("Grant Accessibility access") { state.requestAccessibility() }
+                Button("Grant Accessibility Access") { state.requestAccessibility() }
             case .waitingForSettings:
-                Button("Open Accessibility settings") { state.openAccessibilitySettings() }
+                Button("Open Accessibility Settings") { state.openAccessibilitySettings() }
             case .restartRequired:
-                Button("Relaunch to apply access") { state.restartForAccessibility() }
+                Button("Relaunch to Apply Access") { state.restartForAccessibility() }
             case .repairRequired, .failed:
                 Text("Accessibility access needs repair")
             case .repairing:
@@ -149,7 +147,7 @@ struct MenuContent: View {
             }
         }
         if !state.microphoneGranted {
-            Button("Allow microphone") { state.requestMicrophone() }
+            Button("Allow Microphone") { state.requestMicrophone() }
         }
         // Via the same type as both screens. Previously, the menu knew about model one
         // boolean “ready or not” and suggested “Download” even in the middle of downloading -

@@ -960,7 +960,7 @@ final class AppStateTests: XCTestCase {
     func testScenario052() async throws {
         let paths = AppPaths(root: root)
         let orphan = try paths.takes().appending(path: "take-old.wav")
-        try writeAbandonedTestWAV(to: orphan)
+        try writeAbandonedTestWAV(to: orphan, sampleBytes: 32_000)
 
         let state = makeState()
         for _ in 0..<40 where state.recoveredRecording == nil {
@@ -975,7 +975,92 @@ final class AppStateTests: XCTestCase {
         let payloadSize = repaired[40..<44].withUnsafeBytes {
             UInt32(littleEndian: $0.load(as: UInt32.self))
         }
-        XCTAssertEqual(payloadSize, 3200)
+        XCTAssertEqual(payloadSize, 32_000)
+        // The rescue happened right now — this is announced.
+        let notices = await overlay.notices
+        XCTAssertTrue(notices.contains { $0.message.contains("interruption") })
+    }
+
+    /// A leftover from a previous launch is not an event of this one.
+    ///
+    /// Every launch used to announce "a recording was found after a failure"
+    /// even when the failure was a week old: the person saw an error where
+    /// nothing had happened. The old recording stays available in the menu —
+    /// silently.
+    func testLeftoverRecordingIsNotAnnouncedOnEveryLaunch() async throws {
+        let paths = AppPaths(root: root)
+        let leftover = try paths.audioRecovery().appending(path: "recording-old.wav")
+        try Data(repeating: 7, count: 64_000).write(to: leftover)
+
+        let state = makeState()
+        for _ in 0..<40 where state.recoveredRecording == nil {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertNotNil(state.recoveredRecording, "The recording stays available in the menu")
+        let notices = await overlay.notices
+        XCTAssertTrue(
+            notices.isEmpty,
+            "The past stays quiet at launch: \(notices.map(\.message))"
+        )
+        XCTAssertNil(state.lastNotice)
+    }
+
+    /// A fragment shorter than the recognition minimum does not survive launch.
+    ///
+    /// An accidental key press killed together with the app is not "a recording
+    /// after a failure": the main path deletes such takes silently, and the
+    /// import must behave the same.
+    func testTooShortFragmentDoesNotBecomeALaunchError() async throws {
+        let paths = AppPaths(root: root)
+        let blip = try paths.takes().appending(path: "take-blip.wav")
+        try writeAbandonedTestWAV(to: blip, sampleBytes: 3200)
+
+        let state = makeState()
+        for _ in 0..<30 {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertNil(state.recoveredRecording)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: blip.path))
+        let notices = await overlay.notices
+        XCTAssertTrue(notices.isEmpty, "A fragment is not an event: \(notices.map(\.message))")
+    }
+
+    /// Retrying a recording in which nothing was recognized is not an error.
+    ///
+    /// The main path says "nothing was recognized" and deletes the take. The
+    /// menu retry used to show "Retry transcription failed" on the same outcome
+    /// and keep the recording forever: a dead end whose only exit was manual
+    /// deletion.
+    func testRetryOfSilentRecordingDeletesItWithoutAnError() async throws {
+        try installModelMarker()
+        let paths = AppPaths(root: root)
+        let leftover = try paths.audioRecovery().appending(path: "recording-silent.wav")
+        try Data(repeating: 7, count: 64_000).write(to: leftover)
+        harness.transcription.text = ""
+
+        let state = makeState()
+        await state.refreshModelState()
+        for _ in 0..<40 where state.recoveredRecording == nil {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertNotNil(state.recoveredRecording)
+
+        state.retryRecoveredRecording()
+        for _ in 0..<60 where state.recoveredRecording != nil {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertNil(state.recoveredRecording, "A silent recording is not stored forever")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: leftover.path))
+        XCTAssertEqual(state.lastNotice?.kind, .info)
+        XCTAssertEqual(state.lastNotice?.message.contains("Nothing was recognized"), true)
+        XCTAssertEqual(state.dictationState, .idle)
     }
 }
 

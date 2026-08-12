@@ -89,34 +89,6 @@ final class AppStateIdleTests: XCTestCase {
         XCTAssertFalse(state.isCountingDuration, "the timer continues to wake the process after dictation")
     }
 
-    func testSilenceFeedbackPolicyResetsOnSoundAndStopsDeterministically() {
-        var policy = SilenceFeedbackPolicy()
-        policy.start(at: 100)
-
-        XCTAssertFalse(policy.shouldShowHint(at: 101.999))
-        XCTAssertTrue(policy.shouldShowHint(at: 102))
-
-        policy.registerInput(peak: 0.4, at: 101.5)
-        XCTAssertFalse(policy.shouldShowHint(at: 103.499))
-        XCTAssertTrue(policy.shouldShowHint(at: 103.5))
-
-        policy.stop()
-        XCTAssertFalse(policy.shouldShowHint(at: 1_000))
-    }
-
-    func testSilenceWatcherExistsOnlyWhileRecording() async throws {
-        let state = try await makeReadyState()
-        XCTAssertFalse(state.isWatchingSilence)
-
-        monitor.onPress?()
-        try await waitFor("recording has started") { state.dictationState == .listening }
-        XCTAssertTrue(state.isWatchingSilence)
-
-        monitor.onRelease?()
-        try await waitFor("dictation ended") { state.dictationState == .idle }
-        XCTAssertFalse(state.isWatchingSilence)
-    }
-
     // MARK: - Microphone
 
     /// Direct product promise: The recording light turns off when we're not listening.
@@ -251,8 +223,10 @@ final class AppStateIdleTests: XCTestCase {
     ///
     /// The engine remains running, but frames no longer come into it: person
     /// speaks into silence and would only know about it by the empty result.
+    /// The recording is longer than the recognition minimum — otherwise there
+    /// is nothing to rescue.
     func testScenario014() async throws {
-        let state = try await makeReadyState()
+        let state = try await makeReadyState(recordingDuration: 2)
         monitor.onPress?()
         try await waitFor("recording has started") { state.dictationState == .listening }
 

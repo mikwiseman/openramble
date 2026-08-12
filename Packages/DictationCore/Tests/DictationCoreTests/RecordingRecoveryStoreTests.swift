@@ -65,7 +65,7 @@ final class RecordingRecoveryStoreTests: XCTestCase {
     }
 
     func testImportAbandonedKeepsCrashRecordingForRetry() async throws {
-        _ = try abandonedWAV("crash.wav")
+        _ = try abandonedWAV("crash.wav", sampleBytes: 32_000)
         let store = RecordingRecoveryStore(directory: recovered)
 
         let result = try await store.importAbandoned(from: takes)
@@ -73,17 +73,18 @@ final class RecordingRecoveryStoreTests: XCTestCase {
 
         XCTAssertEqual(recordings.count, 1)
         XCTAssertEqual(result.discardedCorruptCount, 0)
+        XCTAssertEqual(result.newlyImportedCount, 1)
         XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: takes.path).isEmpty)
         let data = try Data(contentsOf: XCTUnwrap(recordings.first))
         let riffSize = data[4..<8].withUnsafeBytes { UInt32(littleEndian: $0.load(as: UInt32.self)) }
         let payloadSize = data[40..<44].withUnsafeBytes { UInt32(littleEndian: $0.load(as: UInt32.self)) }
-        XCTAssertEqual(riffSize, 36 + 3200)
-        XCTAssertEqual(payloadSize, 3200)
+        XCTAssertEqual(riffSize, 36 + 32_000)
+        XCTAssertEqual(payloadSize, 32_000)
     }
 
     func testCorruptFragmentDoesNotBlockValidCrashRecording() async throws {
         let corrupt = try take("corrupt.wav", bytes: 10)
-        _ = try abandonedWAV("valid.wav")
+        _ = try abandonedWAV("valid.wav", sampleBytes: 32_000)
         let store = RecordingRecoveryStore(directory: recovered)
 
         let result = try await store.importAbandoned(from: takes)
@@ -92,6 +93,58 @@ final class RecordingRecoveryStoreTests: XCTestCase {
         XCTAssertEqual(result.discardedCorruptCount, 1)
         XCTAssertFalse(FileManager.default.fileExists(atPath: corrupt.path))
         XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: takes.path).isEmpty)
+    }
+
+    /// A too-short fragment is not "a recording after a failure" — it is an
+    /// accidental key press that outlived a kill. The main dictation path
+    /// deletes such takes silently; the import must behave the same. Otherwise
+    /// the next launch shows "a recording is waiting" whose retry forever
+    /// hits an empty result — an error out of thin air.
+    func testImportDeletesTooShortFragmentSilently() async throws {
+        _ = try abandonedWAV("blip.wav", sampleBytes: 3200) // 0.1 s — below the minimum
+        _ = try abandonedWAV("empty.wav", sampleBytes: 0) // header without a single frame
+        let store = RecordingRecoveryStore(directory: recovered)
+
+        let result = try await store.importAbandoned(from: takes)
+
+        XCTAssertTrue(result.recordings.isEmpty)
+        XCTAssertEqual(result.newlyImportedCount, 0)
+        XCTAssertEqual(
+            result.discardedCorruptCount, 0,
+            "A fragment is not corruption: no reason to scare with a damage message"
+        )
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: takes.path).isEmpty)
+        let saved = (try? FileManager.default.contentsOfDirectory(atPath: recovered.path)) ?? []
+        XCTAssertTrue(saved.filter { $0.hasSuffix(".wav") }.isEmpty)
+    }
+
+    /// Exactly at the minimum — already recognizable, keep it.
+    func testImportKeepsFragmentAtMinimumDuration() async throws {
+        let minimumBytes = Int(DictationDurationPolicy.minimum * 32_000)
+        _ = try abandonedWAV("edge.wav", sampleBytes: minimumBytes)
+        let store = RecordingRecoveryStore(directory: recovered)
+
+        let result = try await store.importAbandoned(from: takes)
+
+        XCTAssertEqual(result.recordings.count, 1)
+        XCTAssertEqual(result.newlyImportedCount, 1)
+    }
+
+    /// A leftover from last week is not an event of this launch.
+    ///
+    /// The app used to announce "a recording was found after an interruption"
+    /// on every start, even when the failure was a week old and nothing new
+    /// happened: the person saw an error where there was none. The count of
+    /// new imports lets the app tell "just rescued" from "old leftover".
+    func testLeftoverFromPreviousLaunchIsNotCountedAsNew() async throws {
+        let store = RecordingRecoveryStore(directory: recovered)
+        _ = try await store.preserve(try take("old.wav", bytes: 64_000))
+
+        let result = try await store.importAbandoned(from: takes)
+
+        XCTAssertEqual(result.recordings.count, 1)
+        XCTAssertEqual(result.newlyImportedCount, 0)
+        XCTAssertEqual(result.discardedCorruptCount, 0)
     }
 
     func testLimitsCountAndBytesOldestFirst() async throws {

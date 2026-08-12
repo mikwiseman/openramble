@@ -15,6 +15,10 @@ struct OnboardingView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var step: OnboardingStep = .welcome
+    /// Direction of the last navigation: forward slides left, back slides
+    /// right. Symmetric paths make the wizard predictable — a step returns
+    /// the same way it left.
+    @State private var movingForward = true
     /// What the person dictated for the test.
     @State private var trial = ""
     /// Manually typed text is not considered a test: we are waiting for a successful one
@@ -34,15 +38,24 @@ struct OnboardingView: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 .padding(32)
+                // Each step is its own page: forward it slides left, back it
+                // slides right — the same paths in both directions. With
+                // Reduce Motion the content swaps instantly, no sliding.
+                .id(step)
+                .transition(
+                    reduceMotion
+                        ? .identity
+                        : .push(from: movingForward ? .trailing : .leading)
+                )
 
             Divider()
 
             VStack(spacing: 6) {
                 ZStack {
-                    Text(step.progressText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel(step.progressAccessibilityLabel)
+                    // Dots hug the window center, not the neighboring buttons:
+                    // without the ZStack, "Back" disappearing on the first step
+                    // would shift them.
+                    OnboardingProgressDots(step: step)
 
                     HStack {
                         if step.hasPrevious {
@@ -53,6 +66,7 @@ struct OnboardingView: View {
                         Spacer()
                         nextButton
                     }
+                    .controlSize(.large)
                 }
 
                 // Why the button is disabled. Without this line a person sees a dead
@@ -75,7 +89,7 @@ struct OnboardingView: View {
         // The combined setup step contains two permission rows and every model
         // state, including repair and download progress. Keep enough vertical
         // room for those controls without making the first-run window feel large.
-        .frame(width: 560, height: 520)
+        .frame(width: 560, height: 560)
         .confirmationDialog(
             "Repair Accessibility access?",
             isPresented: $showAccessibilityRepairConfirmation,
@@ -102,17 +116,32 @@ struct OnboardingView: View {
     // MARK: - Steps
 
     private var welcome: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Dictation that never sends your speech anywhere")
-                .font(.title2.bold())
+        VStack(spacing: 16) {
+            Spacer(minLength: 0)
+
+            // The product crest. A plain system symbol in an accent circle —
+            // like macOS's own setup assistants; deliberately no glass here:
+            // Liquid Glass is the control layer, not content decoration.
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.gradient)
+                    .frame(width: 76, height: 76)
+                heroGlyph
+            }
+            .accessibilityHidden(true)
+
+            Text("Dictation that stays on your Mac")
+                .font(.largeTitle.bold())
+                .multilineTextAlignment(.center)
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Press a key, speak, release — the text appears where your cursor was. In any app.")
+            Text("Press a key, speak, release — the text appears at your cursor. In any app.")
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
 
-            Divider()
+            Spacer(minLength: 8)
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 OnboardingPoint(
                     symbol: "airplane",
                     text: "Speech is recognized by a model on your disk. Works on a plane."
@@ -129,18 +158,32 @@ struct OnboardingView: View {
             }
             .font(.callout)
 
-            Spacer()
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// The microphone on the crest breathes — barely, like an invitation to
+    /// speak. Reduce Motion and macOS 14 get a calm static symbol.
+    @ViewBuilder
+    private var heroGlyph: some View {
+        let glyph = Image(systemName: "mic.fill")
+            .font(.system(size: 34, weight: .medium))
+            .foregroundStyle(.white)
+        if #available(macOS 15.0, *), !reduceMotion {
+            glyph.symbolEffect(.breathe, options: .repeat(.continuous))
+        } else {
+            glyph
         }
     }
 
     private var setup: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Set up OpenRamble")
-                .font(.title2.bold())
-                .accessibilityAddTraits(.isHeader)
-
-            Text("Two permissions and one local model. Speech never leaves this Mac.")
-                .foregroundStyle(.secondary)
+            OnboardingStepHeader(
+                symbol: "lock.shield",
+                title: "Set up OpenRamble",
+                subtitle: "Two permissions and one local model. Speech never leaves this Mac."
+            )
 
             VStack(spacing: 10) {
                 OnboardingPermission(
@@ -226,9 +269,11 @@ struct OnboardingView: View {
 
     private var tryIt: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Try it")
-                .font(.title2.bold())
-                .accessibilityAddTraits(.isHeader)
+            OnboardingStepHeader(
+                symbol: "mic",
+                title: "Try it",
+                subtitle: nil
+            )
 
             Picker("Dictation key", selection: $state.hotkey) {
                 ForEach(DictationHotkey.allCases, id: \.self) { key in
@@ -267,10 +312,18 @@ struct OnboardingView: View {
                 .onAppear { trialFocused = true }
                 .accessibilityLabel("Trial dictation field")
 
+            // Color goes to the dot, not the words: red text reads as an
+            // error, and here everything goes as intended.
             if state.dictationState == .listening {
-                Label("Listening…", systemImage: "waveform")
-                    .foregroundStyle(.red)
-                    .accessibilityLabel("Recording")
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(.red)
+                        .frame(width: 8, height: 8)
+                    Text("Listening…")
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Recording")
             }
 
             if trialSucceeded {
@@ -299,7 +352,6 @@ struct OnboardingView: View {
                 forward()
             }
         }
-        .buttonStyle(.borderedProminent)
         // Default button: Return takes the master forward. Previously the main thing
         // the action of the entire installation was not accessible from the keyboard - Return is not
         // did nothing, and it was impossible to walk the setup without a mouse. On the last
@@ -307,6 +359,7 @@ struct OnboardingView: View {
         .keyboardShortcut(.defaultAction)
         .disabled(navigationBlockReason != nil)
         .accessibilityHint(navigationBlockReason ?? "")
+        .prominentActionButtonStyle()
     }
 
     private var navigationBlockReason: String? {
@@ -339,12 +392,14 @@ struct OnboardingView: View {
     private func forward() {
         guard let next = step.next else { return }
         if next == .tryIt { trialStartCount = state.successfulDictationCount }
+        movingForward = true
         withAnimation(stepTransition) { step = next }
     }
 
     private func back() {
         guard !isDictationBusy else { return }
         guard let previous = step.previous else { return }
+        movingForward = false
         withAnimation(stepTransition) { step = previous }
     }
 
@@ -359,6 +414,55 @@ struct OnboardingView: View {
         // The window closes here. Otherwise the screen would remain blank
         // frame after configuration is complete.
         dismiss()
+    }
+}
+
+/// Step header: symbol, title, explanation — one drawing for all steps.
+private struct OnboardingStepHeader: View {
+    let symbol: String
+    let title: String
+    let subtitle: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: symbol)
+                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+                .symbolRenderingMode(.hierarchical)
+                .accessibilityHidden(true)
+
+            Text(title)
+                .font(.title2.bold())
+                .accessibilityAddTraits(.isHeader)
+
+            if let subtitle {
+                Text(subtitle)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+/// Progress dots. The current step is a stretched capsule, like in macOS's
+/// own assistants.
+///
+/// For VoiceOver it is one element with the words "Step 2 of 3": separate
+/// dots mean nothing by ear.
+private struct OnboardingProgressDots: View {
+    let step: OnboardingStep
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(OnboardingStep.allCases, id: \.self) { candidate in
+                Capsule()
+                    .fill(candidate == step ? Color.accentColor : Color.secondary.opacity(0.35))
+                    .frame(width: candidate == step ? 18 : 6, height: 6)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(step.progressAccessibilityLabel)
+        .help(step.progressText)
     }
 }
 
