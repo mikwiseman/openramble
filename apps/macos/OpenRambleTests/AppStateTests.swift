@@ -271,7 +271,9 @@ final class AppStateTests: XCTestCase {
 
         permissions.accessibilityGranted = false
         state.refreshPermissions()
-        for _ in 0..<60 where recoveryFiles().isEmpty {
+        // The WAV reaches safekeeping before the session finishes cleaning up:
+        // wait for the idle state too, or a slow machine reads mid-teardown.
+        for _ in 0..<200 where recoveryFiles().isEmpty || state.dictationState != .idle {
             await Task.yield()
             try await Task.sleep(for: .milliseconds(5))
         }
@@ -294,7 +296,8 @@ final class AppStateTests: XCTestCase {
 
         permissions.microphoneGranted = false
         state.refreshPermissions()
-        for _ in 0..<60 where recoveryFiles().isEmpty {
+        // Same as above: safekeeping lands before the session reaches idle.
+        for _ in 0..<200 where recoveryFiles().isEmpty || state.dictationState != .idle {
             await Task.yield()
             try await Task.sleep(for: .milliseconds(5))
         }
