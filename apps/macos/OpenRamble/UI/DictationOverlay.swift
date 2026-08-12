@@ -142,7 +142,9 @@ final class OverlayModel: ObservableObject {
     @Published private(set) var state: DictationState = .idle
     @Published private(set) var elapsed: TimeInterval = 0
     @Published private(set) var notice: DictationNotice?
-    static let waveformSampleCount = 48
+    /// Exactly as many samples as the waveform draws: publishing more would
+    /// mean half the buffer is never shown.
+    static let waveformSampleCount = 24
     /// Recent microphone peaks (0...1), oldest first.
     @Published private(set) var waveformSamples = Array(
         repeating: Float(0),
@@ -312,31 +314,43 @@ final class OverlayModel: ObservableObject {
 
 private struct OverlayView: View {
     @ObservedObject var model: OverlayModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let content = model.content
 
         return HStack(spacing: 10) {
             if model.notice != nil {
-                Image(systemName: icon(for: content.tone))
-                    .foregroundStyle(color(for: content.tone))
+                Image(systemName: content.tone.iconName)
+                    .foregroundStyle(toneColor(content.tone))
                     .font(.body.weight(.semibold))
                 Text(content.title)
                     .font(.callout.weight(.medium))
                     .fixedSize(horizontal: false, vertical: true)
             } else if model.state == .listening {
                 Circle()
-                    .fill(.red)
+                    .fill(StatusColorRole.recording.color)
                     .frame(width: 8, height: 8)
                     .accessibilityHidden(true)
                 RecordingWaveform(
-                    samples: Array(model.waveformSamples.suffix(24)),
-                    color: .red
+                    samples: model.waveformSamples,
+                    color: StatusColorRole.recording.color
                 )
                 .frame(width: 136, height: 28)
                 Text(elapsedText)
                     .font(.caption.weight(.medium).monospacedDigit())
                     .foregroundStyle(.secondary)
+            } else if model.state == .transcribing {
+                // The same blue as the menu bar dot: one color for "working
+                // on speech" everywhere. The symbol animation is system-driven
+                // and lives only in this transient panel — the menu bar keeps
+                // its no-redraw-loop discipline.
+                transcribingSymbol
+                    .foregroundStyle(StatusColorRole.processing.color)
+                    .font(.body.weight(.semibold))
+                    .accessibilityHidden(true)
+                Text(content.title)
+                    .font(.callout.weight(.medium))
             } else {
                 ProgressView()
                     .controlSize(.small)
@@ -346,17 +360,27 @@ private struct OverlayView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .frame(
             width: preferredWidth,
             alignment: .leading
         )
-        .glassSurface(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .glassSurface(RoundedRectangle(cornerRadius: 20, style: .continuous))
         // The panel is read by one element: a colored dot and a counter
         //separately do not mean anything.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(model.accessibilityLabel)
+    }
+
+    @ViewBuilder
+    private var transcribingSymbol: some View {
+        if reduceMotion {
+            Image(systemName: "waveform")
+        } else {
+            Image(systemName: "waveform")
+                .symbolEffect(.variableColor.iterative)
+        }
     }
 
     private var preferredWidth: CGFloat {
@@ -370,26 +394,8 @@ private struct OverlayView: View {
         return String(format: "%d:%02d", total / 60, total % 60)
     }
 
-    private func icon(for tone: OverlayContent.Tone) -> String {
-        switch tone {
-        case .failure: return "xmark.circle.fill"
-        case .warning: return "exclamationmark.triangle.fill"
-        case .info: return "info.circle.fill"
-        case .idle: return "checkmark.circle.fill"
-        case .recording: return "mic.fill"
-        case .working: return "waveform"
-        }
-    }
-
-    private func color(for tone: OverlayContent.Tone) -> Color {
-        switch tone {
-        case .idle: return .secondary
-        case .recording: return .red
-        case .working: return .blue
-        case .info: return .blue
-        case .warning: return .orange
-        case .failure: return .red
-        }
+    private func toneColor(_ tone: OverlayContent.Tone) -> Color {
+        tone.colorRole?.color ?? .secondary
     }
 }
 

@@ -186,4 +186,25 @@ final class ModelStatusTests: XCTestCase {
             true
         )
     }
+
+    /// The downloading hint serves the moment: onboarding steers the person to
+    /// the permissions below; settings only reassures.
+    func testDownloadingDetailNamesTheNextStepOnlyDuringOnboarding() {
+        let downloading = ModelState.downloading(receivedBytes: 1_000_000, totalBytes: 483_000_000)
+        let onboarding = ModelStatus.make(
+            state: downloading, isPreparingEngine: false, place: .onboarding
+        )
+        let settings = ModelStatus.make(
+            state: downloading, isPreparingEngine: false, place: .settings
+        )
+
+        XCTAssertEqual(
+            onboarding.detail,
+            "Keep going — grant the permissions below while it downloads."
+        )
+        XCTAssertEqual(
+            settings.detail,
+            "You can keep working — the download won't be interrupted."
+        )
+    }
 }

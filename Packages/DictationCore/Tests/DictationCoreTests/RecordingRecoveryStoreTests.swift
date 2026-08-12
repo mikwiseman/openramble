@@ -185,4 +185,27 @@ final class RecordingRecoveryStoreTests: XCTestCase {
         let remaining = try await store.recordings()
         XCTAssertEqual(remaining.count, 1)
     }
+
+    /// Launch enforces retention even when nothing new is preserved.
+    ///
+    /// Preserving prunes too, but a quiet machine may not preserve anything
+    /// for weeks — the import pass at launch is what keeps the retention
+    /// promise ("kept for a few days") true.
+    func testImportPrunesExpiredRecordingsWithoutNewPreserves() async throws {
+        let store = RecordingRecoveryStore(directory: recovered)
+        _ = try await store.preserve(try take("old.wav"))
+        let before = try await store.recordings()
+        let saved = try XCTUnwrap(before.first)
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date().addingTimeInterval(-8 * 24 * 3600)],
+            ofItemAtPath: saved.path
+        )
+
+        let result = try await store.importAbandoned(from: takes)
+
+        XCTAssertEqual(result.newlyImportedCount, 0)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: saved.path))
+        let remaining = try await store.recordings()
+        XCTAssertTrue(remaining.isEmpty, "an expired recording must not outlive launch")
+    }
 }

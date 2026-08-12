@@ -6,28 +6,10 @@ import XCTest
 
 /// The menu bar icon is the only persistent presence of the application.
 ///
-/// A picture without a description does not exist at all for a blind person: VoiceOver
-/// must still describe the current state even though the branded picture stays stable.
+/// A picture without a description does not exist at all for a blind person:
+/// VoiceOver must still describe the current state even though the branded
+/// picture stays stable.
 final class MenuBarStatusTests: XCTestCase {
-    func testScenario001() {
-        for state in [DictationState.idle, .preparing, .listening, .transcribing, .inserting] {
-            XCTAssertEqual(
-                MenuBarStatus.iconName(state: state, isDictationReady: true),
-                MenuBarStatus.brandIconName,
-                "\(state) must keep the OpenRamble identity"
-            )
-        }
-    }
-
-    /// Setup state belongs in the menu copy and accessibility label, not in a
-    /// generic microphone glyph that makes OpenRamble impossible to identify.
-    func testScenario002() {
-        XCTAssertEqual(
-            MenuBarStatus.iconName(state: .idle, isDictationReady: false),
-            MenuBarStatus.brandIconName
-        )
-    }
-
     func testScenario003() {
         let states: [DictationState] = [.idle, .preparing, .listening, .transcribing, .inserting]
 
@@ -57,10 +39,11 @@ final class MenuBarStatusTests: XCTestCase {
         )
     }
 
+    /// The idle line teaches the one gesture the app has.
     func testScenario005() {
         XCTAssertEqual(
             MenuBarStatus.statusLine(state: .idle, isDictationReady: true, isHandsFreeActive: false, hotkeyTitle: "Right Command"),
-            "Ready"
+            "Ready — hold Right Command and speak"
         )
         XCTAssertEqual(
             MenuBarStatus.statusLine(state: .idle, isDictationReady: false, isHandsFreeActive: false, hotkeyTitle: "Right Command"),
@@ -72,7 +55,11 @@ final class MenuBarStatusTests: XCTestCase {
         )
         XCTAssertEqual(
             MenuBarStatus.statusLine(state: .inserting, isDictationReady: true, isHandsFreeActive: false, hotkeyTitle: "Fn (🌐)"),
-            "Finishing insertion…"
+            "Inserting…"
+        )
+        XCTAssertEqual(
+            MenuBarStatus.statusLine(state: .preparing, isDictationReady: true, isHandsFreeActive: false, hotkeyTitle: "Fn (🌐)"),
+            "Turning on the microphone…"
         )
     }
 }
@@ -169,18 +156,17 @@ final class MenuHandsFreeLineTests: XCTestCase {
 /// Undone work in the first menu line.
 ///
 /// Dictation panel - toast for four seconds. The man who turned away
-/// I used to lose both the explanation and the knowledge that the recognized text was still alive. Menu
-/// holds it as long as needed.
+/// used to lose both the explanation and the knowledge that the recognized text
+/// was still alive. The menu holds it as long as needed.
 @MainActor
 final class MenuRecoveryLineTests: XCTestCase {
-    private func line(text: Bool = false, recording: Bool = false) -> String {
+    private func line(text: Bool = false) -> String {
         MenuBarStatus.statusLine(
             state: .idle,
             isDictationReady: true,
             isHandsFreeActive: false,
             hotkeyTitle: "Right Command",
-            hasRecoveredText: text,
-            hasRecoveredRecording: recording
+            hasRecoveredText: text
         )
     }
 
@@ -188,17 +174,8 @@ final class MenuRecoveryLineTests: XCTestCase {
         XCTAssertEqual(line(text: true), "Last dictation wasn't inserted")
     }
 
-    func testScenario014() {
-        XCTAssertEqual(line(recording: true), "A recording is waiting to be transcribed")
-    }
-
-    /// The text is closer to the result than the record: all that remains is to insert it.
-    func testScenario015() {
-        XCTAssertEqual(line(text: true, recording: true), line(text: true))
-    }
-
     func testScenario016() {
-        XCTAssertEqual(line(), "Ready")
+        XCTAssertEqual(line(), "Ready — hold Right Command and speak")
     }
 
     /// While the dictation is going on, the first line about it is: saved text
@@ -219,38 +196,6 @@ final class MenuRecoveryLineTests: XCTestCase {
 /// Recovery state in the stable menu bar identity.
 @MainActor
 final class MenuBarRecoveryStatusTests: XCTestCase {
-    func testScenario018() {
-        XCTAssertEqual(
-            MenuBarStatus.iconName(state: .idle, isDictationReady: true, hasRecoveredWork: true),
-            MenuBarStatus.brandIconName,
-            "Recovered work must not replace the only persistent app identity"
-        )
-    }
-
-    func testScenario019() {
-        XCTAssertEqual(
-            MenuBarStatus.iconName(state: .listening, isDictationReady: true, hasRecoveredWork: true),
-            MenuBarStatus.brandIconName
-        )
-        XCTAssertEqual(
-            MenuBarStatus.iconName(state: .transcribing, isDictationReady: true, hasRecoveredWork: true),
-            MenuBarStatus.brandIconName
-        )
-    }
-
-    func testScenario020() {
-        for state in [DictationState.idle, .preparing, .listening, .transcribing, .inserting] {
-            for ready in [true, false] {
-                for recovered in [true, false] {
-                    let name = MenuBarStatus.iconName(
-                        state: state, isDictationReady: ready, hasRecoveredWork: recovered
-                    )
-                    XCTAssertEqual(name, MenuBarStatus.brandIconName)
-                }
-            }
-        }
-    }
-
     func testScenario021() {
         let label = MenuBarStatus.accessibilityLabel(
             state: .idle, isDictationReady: true, hasRecoveredWork: true
@@ -286,26 +231,32 @@ final class MenuBarBrandIconTests: XCTestCase {
 }
 
 final class MenuBarActivityTests: XCTestCase {
+    /// The dot never lies: no signal until audio is actually captured.
     func testScenario032() {
         XCTAssertEqual(MenuBarStatus.activity(state: .idle), .hidden)
-        XCTAssertEqual(MenuBarStatus.activity(state: .preparing), .preparing)
+        XCTAssertEqual(MenuBarStatus.activity(state: .preparing), .hidden)
         XCTAssertEqual(MenuBarStatus.activity(state: .listening), .recording)
-        XCTAssertEqual(MenuBarStatus.activity(state: .transcribing), .processing)
-        XCTAssertEqual(MenuBarStatus.activity(state: .inserting), .processing)
+        XCTAssertEqual(MenuBarStatus.activity(state: .transcribing), .working)
+        XCTAssertEqual(MenuBarStatus.activity(state: .inserting), .working)
     }
 
     func testScenario033() {
-        XCTAssertEqual(MenuBarStatus.color(activity: .preparing), .secondary)
-        XCTAssertEqual(MenuBarStatus.color(activity: .recording), .red)
-        XCTAssertEqual(MenuBarStatus.color(activity: .processing), .blue)
-        XCTAssertEqual(MenuBarStatus.color(activity: .hidden), .clear)
-        XCTAssertEqual(MenuBarStatus.badge(activity: .preparing), .preparingRing)
-        XCTAssertEqual(MenuBarStatus.badge(activity: .recording), .recordingDot)
-        XCTAssertEqual(MenuBarStatus.badge(activity: .processing), .processingBar)
+        XCTAssertEqual(MenuBarStatus.badge(activity: .recording), .recording)
+        XCTAssertEqual(MenuBarStatus.badge(activity: .working), .working)
         XCTAssertEqual(MenuBarStatus.badge(activity: .hidden), .hidden)
         XCTAssertEqual(
-            MenuBarStatus.badge(activity: .hidden, hasRecoveredWork: true),
-            .recoveryWarning
+            MenuBarStatus.badge(activity: .hidden, needsAttention: true),
+            .attention
+        )
+        // Attention waits its turn: a live session outranks it, and two
+        // signals at once would mean neither is readable.
+        XCTAssertEqual(
+            MenuBarStatus.badge(activity: .recording, needsAttention: true),
+            .recording
+        )
+        XCTAssertEqual(
+            MenuBarStatus.badge(activity: .working, needsAttention: true),
+            .working
         )
     }
 
@@ -322,16 +273,16 @@ final class MenuBarActivityTests: XCTestCase {
     @MainActor
     func testScenario035() throws {
         let idle = try renderLabel(state: .idle)
-        let recovery = try renderLabel(state: .idle, hasRecoveredWork: true)
         let preparing = try renderLabel(state: .preparing)
+        let recovery = try renderLabel(state: .idle, hasRecoveredWork: true)
         let recording = try renderLabel(state: .listening)
         let processing = try renderLabel(state: .transcribing)
 
-        XCTAssertNotEqual(preparing, idle, "preparing must acknowledge the hotkey immediately")
+        XCTAssertEqual(preparing, idle, "the dot must not claim recording before audio flows")
         XCTAssertNotEqual(recovery, idle, "recovered work must remain visible after the HUD disappears")
         XCTAssertNotEqual(recording, idle, "recording must add an indicator to the rendered label")
         XCTAssertNotEqual(processing, idle, "processing must add an indicator to the rendered label")
-        XCTAssertNotEqual(recording, processing, "recording and processing must render different shapes")
+        XCTAssertNotEqual(recording, processing, "recording and processing must render differently")
     }
 
     @MainActor
@@ -351,11 +302,83 @@ final class MenuBarActivityTests: XCTestCase {
             content: MenuBarLabel(
                 state: state,
                 isDictationReady: true,
-                hasRecoveredWork: hasRecoveredWork
+                hasRecoveredWork: hasRecoveredWork,
+                setupNeedsAttention: false
             )
             .frame(width: 22, height: 22)
         )
         renderer.scale = 2
         return try XCTUnwrap(renderer.nsImage?.tiffRepresentation)
+    }
+}
+
+/// The pre-flattened label images that carry color through MenuBarExtra.
+///
+/// MenuBarExtra template-tints SwiftUI label content, so state colors survive
+/// only inside a single non-template NSImage. These assertions pin exactly
+/// the properties that keep that mechanism working.
+@MainActor
+final class MenuBarLabelArtTests: XCTestCase {
+    func testScenario037() {
+        XCTAssertNil(MenuBarLabelArt.image(badge: .hidden), "rest uses the plain template asset")
+        for badge in [MenuBarBadge.recording, .working, .attention] {
+            let image = MenuBarLabelArt.image(badge: badge)
+            XCTAssertNotNil(image)
+            XCTAssertEqual(image?.size, NSSize(width: 22, height: 22))
+            XCTAssertEqual(
+                image?.isTemplate, false,
+                "a template composite would be tinted monochrome and lose the dot color"
+            )
+        }
+    }
+
+    /// Same state — same instance: the label swap costs nothing at render time.
+    func testScenario038() {
+        XCTAssertTrue(MenuBarLabelArt.image(badge: .recording) === MenuBarLabelArt.image(badge: .recording))
+    }
+}
+
+/// When does setup genuinely wait on the person.
+///
+/// True only for states a click can advance. Work in progress — downloads,
+/// verification, repair, deletion — must not wear the attention dot, or people
+/// learn to ignore it.
+final class SetupAttentionTests: XCTestCase {
+    private func needsAction(
+        accessibility: AccessibilityPermissionState = .granted,
+        microphone: Bool = true,
+        model: ModelState = .ready(directory: URL(fileURLWithPath: "/tmp/model"))
+    ) -> Bool {
+        MenuBarStatus.setupNeedsUserAction(
+            accessibilityState: accessibility,
+            microphoneGranted: microphone,
+            modelState: model
+        )
+    }
+
+    func testScenario040() {
+        XCTAssertFalse(needsAction(), "a fully set up app has nothing to ask")
+    }
+
+    func testScenario041() {
+        XCTAssertTrue(needsAction(accessibility: .denied))
+        XCTAssertTrue(needsAction(accessibility: .waitingForSettings))
+        XCTAssertTrue(needsAction(accessibility: .restartRequired))
+        XCTAssertTrue(needsAction(accessibility: .repairRequired))
+        XCTAssertTrue(needsAction(accessibility: .failed("boom")))
+        XCTAssertFalse(needsAction(accessibility: .repairing), "repair is running — nothing to click")
+    }
+
+    func testScenario042() {
+        XCTAssertTrue(needsAction(microphone: false))
+    }
+
+    func testScenario043() {
+        XCTAssertTrue(needsAction(model: .notInstalled))
+        XCTAssertTrue(needsAction(model: .repairRequired("bad file")))
+        XCTAssertTrue(needsAction(model: .failed(.download("offline"))))
+        XCTAssertFalse(needsAction(model: .downloading(receivedBytes: 1, totalBytes: 2)))
+        XCTAssertFalse(needsAction(model: .verifying(checked: 1, total: 2)))
+        XCTAssertFalse(needsAction(model: .deleting))
     }
 }

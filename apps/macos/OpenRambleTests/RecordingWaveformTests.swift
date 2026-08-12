@@ -26,4 +26,27 @@ final class RecordingWaveformTests: XCTestCase {
             accuracy: 0.001
         )
     }
+
+    /// The rolling signal fades toward the past: newest bar fully opaque,
+    /// oldest still readable, strictly increasing in between.
+    func testBarOpacityRampsFromFadedPastToOpaquePresent() {
+        let count = 24
+        XCTAssertEqual(
+            RecordingWaveformLayout.barOpacity(index: count - 1, count: count),
+            1.0,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            RecordingWaveformLayout.barOpacity(index: 0, count: count),
+            0.35 + 0.65 / Double(count),
+            accuracy: 0.0001
+        )
+        for index in 1..<count {
+            XCTAssertGreaterThan(
+                RecordingWaveformLayout.barOpacity(index: index, count: count),
+                RecordingWaveformLayout.barOpacity(index: index - 1, count: count)
+            )
+        }
+        XCTAssertEqual(RecordingWaveformLayout.barOpacity(index: 0, count: 1), 1.0)
+    }
 }

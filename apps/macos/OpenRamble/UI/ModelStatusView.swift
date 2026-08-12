@@ -56,10 +56,12 @@ struct ModelStatusView: View {
         switch status.tone {
         case .success:
             Label(status.title, systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
+                .foregroundStyle(StatusColorRole.success.color)
         case .failure:
+            // Attention, not destructive red: the model's failures are all
+            // recoverable with the button right below.
             Label(status.title, systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
+                .foregroundStyle(StatusColorRole.attention.color)
         case .neutral:
             Text(status.title)
         }

@@ -135,4 +135,29 @@ final class OverlayContentTests: XCTestCase {
             )
         }
     }
+
+    // MARK: - Tone rendering policy
+
+    /// One meaning per color, pinned: red only for the live microphone, blue
+    /// for working/info, orange for anything that needs the person. Failure
+    /// wears orange, not red — every failure here keeps the work recoverable.
+    func testScenario014() {
+        XCTAssertNil(OverlayContent.Tone.idle.colorRole)
+        XCTAssertEqual(OverlayContent.Tone.recording.colorRole, .recording)
+        XCTAssertEqual(OverlayContent.Tone.working.colorRole, .processing)
+        XCTAssertEqual(OverlayContent.Tone.info.colorRole, .processing)
+        XCTAssertEqual(OverlayContent.Tone.warning.colorRole, .attention)
+        XCTAssertEqual(OverlayContent.Tone.failure.colorRole, .attention)
+    }
+
+    /// Failure and warning share the triangle: both mean "look here, your
+    /// work is preserved". The old xmark read as a destructive dead end.
+    func testScenario015() {
+        XCTAssertEqual(OverlayContent.Tone.failure.iconName, "exclamationmark.triangle.fill")
+        XCTAssertEqual(OverlayContent.Tone.warning.iconName, "exclamationmark.triangle.fill")
+        XCTAssertEqual(OverlayContent.Tone.info.iconName, "info.circle.fill")
+        XCTAssertEqual(OverlayContent.Tone.recording.iconName, "mic.fill")
+        XCTAssertEqual(OverlayContent.Tone.working.iconName, "waveform")
+        XCTAssertEqual(OverlayContent.Tone.idle.iconName, "checkmark.circle.fill")
+    }
 }

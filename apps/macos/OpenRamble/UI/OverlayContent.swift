@@ -14,6 +14,31 @@ struct OverlayContent: Equatable {
         case info
         case warning
         case failure
+
+        /// The status color the panel paints this tone with; `nil` renders as
+        /// neutral secondary. Failure joins `.attention` deliberately: every
+        /// failure here is recoverable by the never-silently-discard rule, so
+        /// it is "attention + work preserved", not a destructive red — red
+        /// stays reserved for the live microphone. The warning/failure
+        /// difference survives in copy and announcement urgency.
+        var colorRole: StatusColorRole? {
+            switch self {
+            case .idle: return nil
+            case .recording: return .recording
+            case .working, .info: return .processing
+            case .warning, .failure: return .attention
+            }
+        }
+
+        var iconName: String {
+            switch self {
+            case .idle: return "checkmark.circle.fill"
+            case .recording: return "mic.fill"
+            case .working: return "waveform"
+            case .info: return "info.circle.fill"
+            case .warning, .failure: return "exclamationmark.triangle.fill"
+            }
+        }
     }
 
     var title: String
