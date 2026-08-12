@@ -2,6 +2,7 @@ import AppKit
 import DictationCore
 import LocalASR
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Four tabs: what you press, what it hears, what it writes, what it is.
 ///
@@ -261,6 +262,9 @@ private struct DictionarySettings: View {
     @ObservedObject var state: AppState
     @State private var spoken = ""
     @State private var written = ""
+    @State private var showImporter = false
+    @State private var showExporter = false
+    @State private var exportDocument: DictionaryTransferFile?
 
     var body: some View {
         Form {
@@ -344,7 +348,24 @@ private struct DictionarySettings: View {
                     .onDelete(perform: state.removeReplacements)
                 }
             } header: {
-                Text("Replacements")
+                HStack {
+                    Text("Replacements")
+                    Spacer()
+                    // The dictionary is the one piece of dictation state worth
+                    // carrying to another Mac — quiet header actions, like
+                    // System Settings' own list tools.
+                    Button("Import…") { showImporter = true }
+                        .disabled(!state.isDictionaryEditable)
+                        .accessibilityHint("Adds phrases from an OpenRamble dictionary file")
+                    Button("Export…") {
+                        guard let data = try? state.exportedDictionary() else { return }
+                        exportDocument = DictionaryTransferFile(data: data)
+                        showExporter = true
+                    }
+                    .disabled(state.replacements.isEmpty)
+                    .accessibilityHint("Saves all phrases to a file")
+                }
+                .buttonStyle(.borderless)
             } footer: {
                 Text("Common technical terms are handled automatically. Add personal names or phrases the model hears differently.")
             }
@@ -379,6 +400,42 @@ private struct DictionarySettings: View {
             }
         }
         .formStyle(.grouped)
+        .fileImporter(
+            isPresented: $showImporter,
+            allowedContentTypes: [.json]
+        ) { result in
+            switch result {
+            case let .success(url):
+                let scoped = url.startAccessingSecurityScopedResource()
+                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                // Path-based read on purpose: URL-loading APIs can reach the
+                // network, and the shipping network surface must stay exactly
+                // two places. The picker only ever hands over local files.
+                if url.isFileURL, let data = FileManager.default.contents(atPath: url.path) {
+                    state.importDictionary(from: data)
+                } else {
+                    state.reportDictionaryFileProblem("The file couldn't be opened.")
+                }
+            case let .failure(error):
+                state.reportDictionaryFileProblem(
+                    "The file couldn't be opened: \(error.localizedDescription)"
+                )
+            }
+        }
+        .fileExporter(
+            isPresented: $showExporter,
+            document: exportDocument,
+            contentType: .json,
+            defaultFilename: "OpenRamble Dictionary"
+        ) { result in
+            // The file appearing where the person chose is the success signal;
+            // only a failure needs words.
+            if case let .failure(error) = result {
+                state.reportDictionaryFileProblem(
+                    "The dictionary couldn't be exported: \(error.localizedDescription)"
+                )
+            }
+        }
     }
 
     private func removeReplacement(_ replacement: DictionaryReplacement) {
@@ -406,6 +463,25 @@ private struct DictionarySettings: View {
         state.addReplacement(spoken: spoken, written: written)
         spoken = ""
         written = ""
+    }
+}
+
+/// The dictionary file as the save panel sees it.
+private struct DictionaryTransferFile: FileDocument {
+    static let readableContentTypes: [UTType] = [.json]
+
+    var data: Data
+
+    init(data: Data) {
+        self.data = data
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        data = configuration.file.regularFileContents ?? Data()
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
     }
 }
 
