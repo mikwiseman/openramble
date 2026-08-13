@@ -568,6 +568,10 @@ private struct AboutView: View {
                 }
                 .accessibilityElement(children: .combine)
                 Button("Reveal Support Folder", action: revealSupportFolder)
+                    // The title alone does not survive into the accessibility
+                    // tree on this Form layout — VoiceOver would announce an
+                    // unnamed button.
+                    .accessibilityLabel("Reveal Support Folder")
                     .accessibilityHint("Opens the folder with downloaded models and any recordings kept after a failure")
             } header: {
                 Text("Privacy")

@@ -223,6 +223,17 @@ public struct AppPaths: Sendable {
     /// with your own folder. File system failure should be visible where we
     /// going to write, not when calculating the place name.
     public static func standard() -> AppPaths {
+        #if DEBUG
+        // Live verification must be able to point a debug build at a scratch
+        // root. A HOME override does NOT do it: this FileManager API resolves
+        // the real user record and ignores the environment, and a dev
+        // instance sharing Takes/ with the production app once swallowed a
+        // live recording. Debug builds only; release has no such path.
+        if let override = ProcessInfo.processInfo.environment["OPENRAMBLE_SUPPORT_ROOT"],
+           !override.isEmpty {
+            return AppPaths(root: URL(fileURLWithPath: override, isDirectory: true))
+        }
+        #endif
         // For Application Support in the user's domain, the list is always exactly
         // one element. There is no backup route for this case intentionally:
         // inserting something else here would mean writing data in the wrong place.

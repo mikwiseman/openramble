@@ -996,7 +996,11 @@ public final class AppState: ObservableObject {
             eventMask: [.normal, .warning, .critical],
             queue: .global(qos: .utility)
         )
-        source.setEventHandler { [weak self, weak source] in
+        // The handler runs on the utility queue. `@Sendable` is load-bearing:
+        // without it the app target's default MainActor isolation is inferred
+        // onto this closure, and the runtime kills the process the moment the
+        // first pressure event executes it off the main thread.
+        source.setEventHandler { @Sendable [weak self, weak source] in
             guard let event = source?.data else { return }
             let tier: MemoryPressureTier =
                 event.contains(.critical) ? .critical
