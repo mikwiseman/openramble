@@ -27,7 +27,10 @@ final class SoundPolicyTests: XCTestCase {
         sounds = AttentionSounds()
     }
 
-    private func makeController(recognized: String = "words") -> DictationController {
+    private func makeController(
+        recognized: String = "words",
+        allowPressReturnCommand: Bool = false
+    ) -> DictationController {
         DictationController(
             capture: capture,
             transcribe: { _ in
@@ -35,7 +38,8 @@ final class SoundPolicyTests: XCTestCase {
             },
             inserter: inserter,
             overlay: overlay,
-            sounds: sounds
+            sounds: sounds,
+            pipeline: { TextPipeline(allowPressReturnCommand: allowPressReturnCommand) }
         )
     }
 
@@ -104,6 +108,25 @@ final class SoundPolicyTests: XCTestCase {
 
         let plays = await sounds.plays
         XCTAssertEqual(plays, 0)
+    }
+
+    /// The words landed; only the Return press failed. The person sees their
+    /// text in the field — a warning is shown, but sounding it would be an
+    /// alarm about nothing lost.
+    func testLandedTextWithFailedReturnStaysSilent() async throws {
+        await inserter.setReturnError(.modifiersStillHeld)
+        let controller = makeController(
+            recognized: "\u{0433}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E} \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}",
+            allowPressReturnCommand: true
+        )
+        await runFullDictation(controller)
+
+        let inserted = await inserter.insertedTexts
+        XCTAssertFalse(inserted.isEmpty, "the text itself must have landed")
+        let notices = await overlay.notices
+        XCTAssertTrue(notices.contains { $0.kind == .warning }, "the warning is still shown")
+        let plays = await sounds.plays
+        XCTAssertEqual(plays, 0, "words in the field need no alarm")
     }
 
     /// Exactly one sound per session, no matter how many notices the failure

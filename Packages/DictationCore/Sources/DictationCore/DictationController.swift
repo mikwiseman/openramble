@@ -228,21 +228,17 @@ public final class DictationController {
         await overlay.present(.listening, elapsed: 0)
 
         // The release that came while the engine was rising is processed here -
-        // exactly once. Before the signal is intentional: wait for the first frame for the sake of
-        // there is no need for the “say” sound in a recording that has already ended, but
-        // delaying the stop due to waiting would mean holding the microphone
-        // turned on on a silent device until the frame arrives, and it
-        // may not arrive at all.
+        // exactly once.
+        //
+        // Waiting for the first recorded frame used to follow, as the gate for
+        // the start sound. The sound is gone (`Sounding`), and with it the
+        // wait: the panel's "listening" promise above is deliberately not
+        // frame-gated, because a silent device may never deliver a frame and
+        // the person must still be able to stop the session.
         if deferredStopRequested {
             deferredStopRequested = false
             finish()
-            return
         }
-
-        // The first frame is still awaited — the panel promises "speak" only
-        // once the microphone is really sending sound — but nothing is played
-        // here any more. The panel is the signal; see `Sounding`.
-        _ = await capture.waitForFirstFrame()
     }
 
     // MARK: - Stop
@@ -467,7 +463,8 @@ public final class DictationController {
             await discard(recording.url)
             let notice = DictationNotice(
                 kind: .info,
-                message: "Nothing was recognized — nothing was inserted."
+                message: "Nothing was recognized — nothing was inserted.",
+                wordsDidNotLand: true
             )
             await report(notice)
             await cleanup(session: session)
@@ -587,7 +584,12 @@ public final class DictationController {
             message = "The text couldn't be inserted. It's saved in the menu."
         }
 
-        let notice = DictationNotice(kind: .warning, message: message, recoverableText: text)
+        let notice = DictationNotice(
+            kind: .warning,
+            message: message,
+            recoverableText: text,
+            wordsDidNotLand: true
+        )
         await report(notice)
         await cleanup(session: session)
     }
@@ -643,8 +645,9 @@ public final class DictationController {
             cancel()
             let notice = DictationNotice(kind: .failure, message: message)
             noticeAfterSession = nil
-            onNotice?(notice)
-            Task { await overlay.presentNotice(notice) }
+            // Through `report`, not around it: the notice must carry the
+            // attention sound like every other surfaced failure.
+            Task { await self.report(notice) }
             return
         }
         guard finalizationTask == nil else { return }
@@ -759,7 +762,7 @@ public final class DictationController {
         if let pending = noticeAfterSession {
             noticeAfterSession = nil
             onNotice?(pending)
-            await playAttentionOnce()
+            await playAttentionOnce(for: pending)
             await overlay.presentNotice(pending)
         } else {
             await overlay.dismiss()
@@ -781,16 +784,17 @@ public final class DictationController {
     private func report(_ notice: DictationNotice) async {
         noticeAfterSession = nil
         onNotice?(notice)
-        await playAttentionOnce()
+        await playAttentionOnce(for: notice)
         await overlay.presentNotice(notice)
     }
 
-    /// One sound per session, however many notices the way out produces.
+    /// One sound per session, and only for words that never landed.
     ///
-    /// The person needs to be told once that the panel wants them; a second
-    /// chime for the same session is noise about a fact they already know.
-    private func playAttentionOnce() async {
-        guard !hasSoundedThisSession else { return }
+    /// "The text was inserted, but Return failed" or the hour-limit note are
+    /// shown, not sounded: the words are in the field, the person is looking
+    /// at them. The ear is reserved for the loss they would otherwise miss.
+    private func playAttentionOnce(for notice: DictationNotice) async {
+        guard notice.wordsDidNotLand, !hasSoundedThisSession else { return }
         hasSoundedThisSession = true
         await sounds.playAttention()
     }

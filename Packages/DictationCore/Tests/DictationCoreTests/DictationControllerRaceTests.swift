@@ -214,6 +214,8 @@ final class DictationControllerRaceTests: XCTestCase {
         let gate = Gate()
         await capture.setStartGate(gate)
         let controller = makeController()
+        var failures = 0
+        controller.onNotice = { if $0.kind == .failure { failures += 1 } }
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle(3)
@@ -228,8 +230,12 @@ final class DictationControllerRaceTests: XCTestCase {
         await gate.open()
         await quiesce(controller)
 
+        // Two outcomes are legitimate here: the stale start aborts in time and
+        // the second session records, or the capture honestly refuses the
+        // overlapping start and the second session fails with a notice. The
+        // sound must follow the notice exactly — never fire without one.
         let plays = await sounds.attentionPlays
-        XCTAssertLessThanOrEqual(plays, 1, "\u{041E}\u{0434}\u{0438}\u{043D} \u{0436}\u{0438}\u{0432}\u{043E}\u{0439} \u{0441}\u{0435}\u{0430}\u{043D}\u{0441} — \u{043E}\u{0434}\u{0438}\u{043D} \u{0437}\u{0432}\u{0443}\u{043A} \u{043D}\u{0430}\u{0447}\u{0430}\u{043B}\u{0430} \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{0438}")
+        XCTAssertEqual(plays, failures, "the attention sound plays if and only if a failure was surfaced")
 
         // The main thing: after everything has calmed down, the microphone must be turned off.
         controller.cancel()

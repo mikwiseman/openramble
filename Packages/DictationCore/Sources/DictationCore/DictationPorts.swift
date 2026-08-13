@@ -159,17 +159,28 @@ public struct DictationNotice: Sendable, Equatable {
     public let recoverableText: String?
     /// Local WAV saved after a technical failure.
     public let recoveryAudio: URL?
+    /// Whether the words failed to land where the person expected them.
+    ///
+    /// This — not the kind — decides the attention sound. "The text was
+    /// inserted, but pressing Return failed" is a warning whose words DID
+    /// land; "nothing was recognized" is mere info whose words did NOT.
+    /// A person watching their editor needs the ear only for the second.
+    public let wordsDidNotLand: Bool
 
     public init(
         kind: Kind,
         message: String,
         recoverableText: String? = nil,
-        recoveryAudio: URL? = nil
+        recoveryAudio: URL? = nil,
+        wordsDidNotLand: Bool? = nil
     ) {
         self.kind = kind
         self.message = message
         self.recoverableText = recoverableText
         self.recoveryAudio = recoveryAudio
+        // Failures lose the words by definition; anything else says so
+        // explicitly at the site that knows.
+        self.wordsDidNotLand = wordsDidNotLand ?? (kind == .failure)
     }
 }
 
