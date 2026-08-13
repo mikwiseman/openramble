@@ -38,6 +38,7 @@ func usage() -> Never {
       WAI_ASR_DUAL_DECODE=on second decoder pass with arbitration
       WAI_ASR_MAX_TOKENS ceiling of tokens per window (default: product value, 600)
       WAI_ASR_CHUNK_CONCURRENCY parallel long-form windows (default: product value, 6)
+      WAI_ASR_VOCAB_SCHEDULING candidateRegions (product default) | alwaysParallel
       WAI_ASR_LANGUAGE forced language (ru, en, ...) instead of auto
       WAI_ASR_PREWARM=on run the same inference warm-up as the shipping app
     """)
@@ -220,13 +221,26 @@ func prepareTranscriber() async throws -> LocalTranscriber {
         print("Parallel long-form windows: \(parsed)")
     }
 
+    let vocabularyScheduling: VocabularyInferenceScheduling
+    if let raw = ProcessInfo.processInfo.environment["WAI_ASR_VOCAB_SCHEDULING"] {
+        guard let parsed = VocabularyInferenceScheduling(rawValue: raw) else {
+            print("WAI_ASR_VOCAB_SCHEDULING: unknown value '\(raw)'")
+            exit(64)
+        }
+        vocabularyScheduling = parsed
+        print("Vocabulary inference scheduling: \(raw)")
+    } else {
+        vocabularyScheduling = .candidateRegions
+    }
+
     let adapter = FluidAudioAdapter(
         melChunkContext: melChunkContext,
         encoder: encoder,
         encoderPlacement: placement,
         dualDecodeArbitration: dualDecode,
         maxTokensPerChunk: maxTokens ?? FluidAudioAdapter.defaultMaxTokensPerChunk,
-        parallelChunkConcurrency: chunkConcurrency ?? FluidAudioAdapter.defaultParallelChunkConcurrency
+        parallelChunkConcurrency: chunkConcurrency ?? FluidAudioAdapter.defaultParallelChunkConcurrency,
+        vocabularyScheduling: vocabularyScheduling
     )
     let transcriber = LocalTranscriber(engine: adapter)
     let started = ContinuousClock.now

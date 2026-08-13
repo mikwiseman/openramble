@@ -118,6 +118,82 @@ final class FluidAudioAdapterTests: XCTestCase {
         XCTAssertEqual(concurrency, 6, "six windows won the measured M4 latency sweep")
     }
 
+    func testVocabularyInferenceUsesCandidateRegionsByDefault() async {
+        let adapter = FluidAudioAdapter()
+
+        let scheduling = await adapter.vocabularyInferenceScheduling
+
+        XCTAssertEqual(
+            scheduling,
+            .candidateRegions,
+            "long-form CTC should run only where the final rescorer can affect text"
+        )
+        XCTAssertEqual(
+            FluidAudioAdapter.parallelVocabularyDurationLimit,
+            15,
+            "only one CTC model window should compete speculatively with the primary decoder"
+        )
+    }
+
+    func testVocabularyOverlapUsesProbabilitySpaceMean() {
+        let merged = FluidAudioAdapter.mergeVocabularyOverlap(
+            existing: [0, -Float.infinity],
+            incoming: [logf(0.25), -Float.infinity]
+        )
+
+        XCTAssertEqual(merged[0], logf(0.625), accuracy: 0.000_001)
+        XCTAssertEqual(merged[1], -Float.infinity)
+        XCTAssertEqual(
+            FluidAudioAdapter.mergeVocabularyOverlap(existing: [1], incoming: []),
+            [1]
+        )
+    }
+
+    func testVocabularyPrefilterMatchesPinnedNormalizationAndSimilarity() {
+        XCTAssertEqual(
+            FluidAudioAdapter.normalizeVocabularyCandidate("  Q4, Foo.Bar\nBaz's-test  "),
+            "q4 foobar baz's-test"
+        )
+        XCTAssertEqual(
+            FluidAudioAdapter.vocabularyCandidateSimilarity("kitten", "sitting"),
+            4 / 7,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            FluidAudioAdapter.vocabularyCandidateSimilarity("Postgres", "Postgres"),
+            1
+        )
+    }
+
+    func testVocabularyChunkSelectionUsesOnlyRangesThatCanAffectTheScore() {
+        let sampleRate = 16_000
+        XCTAssertEqual(FluidAudioAdapter.vocabularyChunkOverlapSamples, 32_000)
+        XCTAssertEqual(
+            FluidAudioAdapter.vocabularySelectedChunkIndices(
+                audioSampleCount: 26 * sampleRate,
+                candidateRegions: [10 * sampleRate..<12 * sampleRate]
+            ),
+            [0],
+            "a candidate inside the first window must not schedule its successor"
+        )
+        XCTAssertEqual(
+            FluidAudioAdapter.vocabularySelectedChunkIndices(
+                audioSampleCount: 30 * sampleRate,
+                candidateRegions: [12 * sampleRate..<(14 * sampleRate)]
+            ),
+            [0, 1],
+            "a candidate crossing the 13-second stride boundary needs both overlapping windows"
+        )
+        XCTAssertEqual(
+            FluidAudioAdapter.vocabularySelectedChunkIndices(
+                audioSampleCount: 1_040_001,
+                candidateRegions: [64 * sampleRate..<1_040_001]
+            ),
+            [3, 4],
+            "a trailing partial chunk needs its full predecessor for the reference frame grid"
+        )
+    }
+
     /// The ceiling of tokens on the window is also a measurement output, not a taste setting.
     /// Library 150 in dense speech silently interrupt the analysis of the window: at the phrase
     /// the middle disappears, there is no error. The test guards the selected value according to
@@ -174,6 +250,79 @@ final class FluidAudioAdapterTests: XCTestCase {
             )
         }
         return directory
+    }
+
+    /// The long-form prefilter must localize a near alias instead of scheduling
+    /// CTC across the whole recording.
+    func testVocabularyCandidateRegionsLocalizeNearAlias() async throws {
+        let directory = try ctcDirectoryOrSkip()
+        let adapter = FluidAudioAdapter()
+        try await adapter.loadVocabularyModels(
+            from: directory,
+            boost: VocabularyBoost(terms: [
+                .init(text: "Postgres", aliases: ["постгрес"])
+            ])
+        )
+
+        let regions = await adapter.vocabularyCandidateRegions(
+            text: "обычная речь постгрез продолжается дальше",
+            timings: [
+                timing("▁обычная", 1.0, 1.4),
+                timing("▁речь", 1.5, 1.8),
+                timing("▁постгрез", 26.0, 26.8),
+                timing("▁продолжается", 27.0, 27.5),
+                timing("▁дальше", 27.6, 28.0),
+            ],
+            audioSampleCount: 30 * 16_000
+        )
+        XCTAssertEqual(regions.count, 1)
+        XCTAssertTrue(regions[0].contains(26 * 16_000))
+        XCTAssertGreaterThan(regions[0].lowerBound, 0)
+        XCTAssertLessThan(regions[0].upperBound, 30 * 16_000)
+
+        let unrelated = await adapter.vocabularyCandidateRegions(
+            text: "обычная речь",
+            timings: [
+                timing("▁обычная", 1.0, 1.4),
+                timing("▁речь", 1.5, 1.8),
+            ],
+            audioSampleCount: 30 * 16_000
+        )
+        let alreadyCorrect = await adapter.vocabularyCandidateRegions(
+            text: "Postgres",
+            timings: [timing("▁Postgres", 1.0, 1.8)],
+            audioSampleCount: 30 * 16_000
+        )
+        XCTAssertTrue(unrelated.isEmpty)
+        XCTAssertTrue(alreadyCorrect.isEmpty)
+        await adapter.unload()
+    }
+
+    func testVocabularyCandidateRegionsIncludeEveryMatchingOccurrence() async throws {
+        let directory = try ctcDirectoryOrSkip()
+        let adapter = FluidAudioAdapter()
+        try await adapter.loadVocabularyModels(
+            from: directory,
+            boost: VocabularyBoost(terms: [
+                .init(text: "Postgres", aliases: ["постгрес"])
+            ])
+        )
+
+        let regions = await adapter.vocabularyCandidateRegions(
+            text: "постгрез обычная речь постгрез",
+            timings: [
+                timing("▁постгрез", 12.8, 13.2),
+                timing("▁обычная", 14.0, 14.4),
+                timing("▁речь", 14.5, 14.8),
+                timing("▁постгрез", 25.8, 26.2),
+            ],
+            audioSampleCount: 30 * 16_000
+        )
+
+        XCTAssertEqual(regions.count, 2)
+        XCTAssertTrue(regions[0].contains(13 * 16_000))
+        XCTAssertTrue(regions[1].contains(26 * 16_000))
+        await adapter.unload()
     }
 
     /// Editing the dictionary must reach the acoustics without restarting.

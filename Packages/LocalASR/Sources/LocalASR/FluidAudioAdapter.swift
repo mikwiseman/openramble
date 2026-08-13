@@ -33,6 +33,18 @@ public enum EncoderPlacement: String, Sendable, CaseIterable {
     case gpu
 }
 
+/// How the optional acoustic-vocabulary pass is scheduled against the main
+/// recognizer.
+///
+/// The reference mode preserves FluidAudio's whole-file parallel pass. The
+/// shipping mode produces evidence only for the canonical long-form windows
+/// that can affect text. A single 15-second model window retains the reference
+/// parallel path; longer audio avoids speculative whole-file inference.
+public enum VocabularyInferenceScheduling: String, Sendable, CaseIterable {
+    case alwaysParallel
+    case candidateRegions
+}
+
 /// The only place in the entire project where FluidAudio is imported.
 ///
 /// Everything else - including the dictation controller and its tests - works through
@@ -54,6 +66,14 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         let rescorer: VocabularyRescorer
         let sizeConfig: ContextBiasingConstants.VocabSizeConfig
         let biasWeight: Float
+    }
+
+    /// Only the part of FluidAudio's spotting result that rescoring consumes.
+    /// Keyword detections belong to the disabled acoustic-rescue path and are
+    /// intentionally not carried through the optimized scheduler.
+    private struct VocabularyEvidence: Sendable {
+        let logProbs: [[Float]]
+        let frameDuration: Double
     }
 
     // Acoustic term hint: The CTC model looks for terms in the sound,
@@ -143,8 +163,17 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     /// the same immutable FluidAudio revision instead of patched downstream.
     private let parallelChunkConcurrency: Int
 
+    /// Scheduling policy for the auxiliary CTC vocabulary model. Kept at the
+    /// adapter boundary so the optimized path can be compared byte-for-byte
+    /// with FluidAudio's reference path in `asr-bench`.
+    private let vocabularyScheduling: VocabularyInferenceScheduling
+
     public static let defaultMaxTokensPerChunk = 600
     public static let defaultParallelChunkConcurrency = 6
+    /// Measured product crossover: retain speculative CTC only while it is a
+    /// single model window. Longer no-correction audio wins by waiting for TDT.
+    public static let parallelVocabularyDurationLimit: TimeInterval = 15
+    static let vocabularyChunkOverlapSamples = 32_000
 
     public init(
         melChunkContext: Bool = false,
@@ -152,7 +181,8 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         encoderPlacement: EncoderPlacement = .gpu,
         dualDecodeArbitration: Bool = false,
         maxTokensPerChunk: Int = FluidAudioAdapter.defaultMaxTokensPerChunk,
-        parallelChunkConcurrency: Int = FluidAudioAdapter.defaultParallelChunkConcurrency
+        parallelChunkConcurrency: Int = FluidAudioAdapter.defaultParallelChunkConcurrency,
+        vocabularyScheduling: VocabularyInferenceScheduling = .candidateRegions
     ) {
         self.melChunkContext = melChunkContext
         self.encoder = encoder
@@ -160,6 +190,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         self.dualDecodeArbitration = dualDecodeArbitration
         self.maxTokensPerChunk = maxTokensPerChunk
         self.parallelChunkConcurrency = max(1, parallelChunkConcurrency)
+        self.vocabularyScheduling = vocabularyScheduling
     }
 
     /// For a test that guards the selected ceiling.
@@ -167,6 +198,9 @@ public actor FluidAudioAdapter: ASREngineAdapting {
 
     /// For benchmark/configuration tests that guard the selected pool size.
     var longFormConcurrency: Int { parallelChunkConcurrency }
+
+    /// Test and benchmark seam for the shipping CTC scheduler.
+    var vocabularyInferenceScheduling: VocabularyInferenceScheduling { vocabularyScheduling }
 
     /// For the test that guards the GPU default.
     var placement: EncoderPlacement { encoderPlacement }
@@ -514,24 +548,67 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             // acoustic passage and text editing.
             let helper = vocabulary
 
-            // The acoustic passage of the hint depends only on the sound, and
-            // recognition - only from him. They have nothing in common
-            // so the pass starts here and goes parallel to parsing, and not
-            // after it: previously these two jobs were queued one after the other
-            // and the person was waiting for their amount. Gain measurement is in `docs/benchmarks.md`.
-            async let spotted = Self.spotKeywords(samples: samples, helper: helper)
-
-            // Each dictation is independent - we start with a clean decoder state.
+            // Construct fallible decoder state before spawning unstructured
+            // evidence work. If this fails, there is no child task to orphan.
             var state = try TdtDecoderState()
+
+            // One CTC window is cheap enough to overlap with TDT. On long audio,
+            // however, a whole-file speculative pass competes with the main
+            // decoder before it can be cancelled. The shipping scheduler starts
+            // long-form CTC only after TDT and only for canonical windows whose
+            // words pass the real rescorer's string gates.
+            let parallelCTCSampleLimit = Int(
+                Self.parallelVocabularyDurationLimit * AudioFileReader.targetSampleRate
+            )
+            let shouldRunCTCInParallel = helper != nil
+                && (vocabularyScheduling == .alwaysParallel || samples.count <= parallelCTCSampleLimit)
+            let evidenceTask = shouldRunCTCInParallel
+                ? helper.map { helper in
+                    Task { try await Self.spotKeywords(samples: samples, helper: helper) }
+                }
+                : nil
+
+            // Each dictation is independent - the state above starts clean.
             // nil - auto-detection by sound. The model covers 25 European
             // languages; a hard choice breaks mixed speech, so the hint is
             // only explicit human choice when emphasis is shifted away from autodetection.
-            let result = try await manager.transcribe(
-                samples,
-                decoderState: &state,
-                language: language
-            )
+            let result = try await {
+                do {
+                    return try await manager.transcribe(
+                        samples,
+                        decoderState: &state,
+                        language: language
+                    )
+                } catch {
+                    evidenceTask?.cancel()
+                    _ = try? await evidenceTask?.value
+                    throw error
+                }
+            }()
             decoderState = state
+
+            let spotted: VocabularyEvidence?
+            if let evidenceTask {
+                spotted = try await withTaskCancellationHandler {
+                    try await evidenceTask.value
+                } onCancel: {
+                    evidenceTask.cancel()
+                }
+            } else if let helper, vocabularyScheduling == .candidateRegions {
+                let regions = Self.vocabularyCandidateRegions(
+                    text: result.text,
+                    timings: result.tokenTimings,
+                    audioSampleCount: samples.count,
+                    helper: helper
+                )
+                spotted = try await Self.spotKeywords(
+                    samples: samples,
+                    candidateRegions: regions,
+                    helper: helper
+                )
+            } else {
+                spotted = nil
+            }
             // The prompter edits the text based on the acoustic evidence of the CTC model.
             // Timings remain from the original tokens: replacing a word does not move
             // its place in the recording, and consumers of word-by-word timings, which
@@ -539,7 +616,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             text = Self.rescore(
                 text: result.text,
                 timings: result.tokenTimings,
-                spotted: try await spotted,
+                spotted: spotted,
                 helper: helper
             ) ?? result.text
             timings = result.tokenTimings
@@ -569,13 +646,349 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     private static func spotKeywords(
         samples: [Float],
         helper: VocabularyHelper?
-    ) async throws -> CtcKeywordSpotter.SpotKeywordsResult? {
+    ) async throws -> VocabularyEvidence? {
         guard let helper else { return nil }
-        return try await helper.spotter.spotKeywordsWithLogProbs(
+        let result = try await helper.spotter.spotKeywordsWithLogProbs(
             audioSamples: samples,
             customVocabulary: helper.context,
             minScore: nil
         )
+        return VocabularyEvidence(logProbs: result.logProbs, frameDuration: result.frameDuration)
+    }
+
+    /// Produce a sparse full-timeline CTC matrix from the exact 15-second
+    /// windows used by FluidAudio 0.15.5. Every frame a candidate can inspect
+    /// is identical to the reference whole-file pass; uninspected gaps are
+    /// blank-dominant and therefore cannot create a replacement.
+    private static func spotKeywords(
+        samples: [Float],
+        candidateRegions: [Range<Int>],
+        helper: VocabularyHelper
+    ) async throws -> VocabularyEvidence? {
+        let chunkSize = ASRConstants.maxModelSamples
+        let overlap = vocabularyChunkOverlapSamples
+        guard !candidateRegions.isEmpty else { return nil }
+        guard samples.count > chunkSize else {
+            // Preserve reference behavior if scheduling constants ever drift.
+            return try await spotKeywords(samples: samples, helper: helper)
+        }
+
+        let chunks = vocabularyChunkRanges(audioSampleCount: samples.count)
+        let selected = vocabularySelectedChunkIndices(
+            audioSampleCount: samples.count,
+            candidateRegions: candidateRegions
+        )
+        guard !selected.isEmpty else { return nil }
+
+        var results: [(index: Int, evidence: VocabularyEvidence)] = []
+        for index in selected {
+            try Task.checkCancellation()
+            let chunk = chunks[index]
+            let evidence = try await vocabularyEvidenceOnly(
+                samples: Array(samples[chunk]),
+                helper: helper
+            )
+            try Task.checkCancellation()
+            guard !evidence.logProbs.isEmpty else { continue }
+            results.append((index: index, evidence: evidence))
+        }
+
+        guard
+            let full = results.first(where: {
+                let chunk = chunks[$0.index]
+                return chunk.count == chunkSize
+            }),
+            let rowWidth = results.first?.evidence.logProbs.first?.count,
+            rowWidth > helper.spotter.blankId,
+            full.evidence.frameDuration > 0
+        else { return nil }
+
+        let frameDuration = full.evidence.frameDuration
+        let overlapFrames = Int(
+            Double(overlap) / AudioFileReader.targetSampleRate / frameDuration
+        )
+        let frameStride = full.evidence.logProbs.count - overlapFrames
+        guard frameStride > 0 else { return nil }
+
+        let frameCount = results.map {
+            $0.index * frameStride + $0.evidence.logProbs.count
+        }.max() ?? 0
+        var blank = [Float](repeating: -Float.infinity, count: rowWidth)
+        blank[helper.spotter.blankId] = 0
+        var combined = [[Float]](repeating: blank, count: frameCount)
+        var filled = [Bool](repeating: false, count: frameCount)
+
+        for result in results {
+            let offset = result.index * frameStride
+            for (localIndex, row) in result.evidence.logProbs.enumerated() {
+                let globalIndex = offset + localIndex
+                guard globalIndex < combined.count else { break }
+                if filled[globalIndex] {
+                    combined[globalIndex] = mergeVocabularyOverlap(
+                        existing: combined[globalIndex],
+                        incoming: row
+                    )
+                } else {
+                    combined[globalIndex] = row
+                    filled[globalIndex] = true
+                }
+            }
+        }
+
+        return VocabularyEvidence(logProbs: combined, frameDuration: frameDuration)
+    }
+
+    /// Canonical FluidAudio 0.15.5 windows in source-sample coordinates.
+    static func vocabularyChunkRanges(audioSampleCount: Int) -> [Range<Int>] {
+        guard audioSampleCount > 0 else { return [] }
+        let chunkSize = ASRConstants.maxModelSamples
+        let stride = chunkSize - vocabularyChunkOverlapSamples
+        var chunks: [Range<Int>] = []
+        var start = 0
+        while start < audioSampleCount {
+            let end = min(start + chunkSize, audioSampleCount)
+            chunks.append(start..<end)
+            if end >= audioSampleCount { break }
+            start += stride
+        }
+        return chunks
+    }
+
+    /// A 600 ms candidate margin is wider than FluidAudio's 500 ms CTC
+    /// search margin plus one encoder frame. Therefore every chunk that can
+    /// contribute a frame to the final score overlaps the candidate range
+    /// directly; unconditional neighboring chunks would only duplicate work.
+    static func vocabularySelectedChunkIndices(
+        audioSampleCount: Int,
+        candidateRegions: [Range<Int>]
+    ) -> [Int] {
+        let chunks = vocabularyChunkRanges(audioSampleCount: audioSampleCount)
+        let directlySelected = chunks.enumerated().compactMap {
+            index, chunk in
+            candidateRegions.contains(where: { $0.overlaps(chunk) }) ? index : nil
+        }
+        var selected = Set(directlySelected)
+        for index in directlySelected where chunks[index].count < ASRConstants.maxModelSamples {
+            // The reference timeline uses frame duration from its first full
+            // chunk. A candidate isolated inside the trailing partial chunk
+            // therefore also needs its full predecessor to reconstruct the
+            // same grid and overlap.
+            if index > 0 { selected.insert(index - 1) }
+        }
+        return selected.sorted()
+    }
+
+    /// Ask the public spotter API only for its acoustic evidence. Its detection
+    /// list is consumed exclusively by FluidAudio's acoustic-rescue mode, which
+    /// this adapter disables. Passing the real term list here would repeat a
+    /// term-by-frame dynamic program after every cancellable chunk and then
+    /// discard every detection.
+    private static func vocabularyEvidenceOnly(
+        samples: [Float],
+        helper: VocabularyHelper
+    ) async throws -> VocabularyEvidence {
+        let result = try await helper.spotter.spotKeywordsWithLogProbs(
+            audioSamples: samples,
+            customVocabulary: CustomVocabularyContext(terms: []),
+            minScore: nil
+        )
+        return VocabularyEvidence(logProbs: result.logProbs, frameDuration: result.frameDuration)
+    }
+
+    /// Locate every word span that can reach constrained CTC scoring.
+    ///
+    /// A deliberately permissive string prefilter locates possible replacement
+    /// spans without running FluidAudio's constrained CTC dynamic program on a
+    /// synthetic whole-record timeline. It uses the pinned dependency's exact
+    /// normalization and Levenshtein formula with the lowest configured
+    /// candidate threshold (before stricter span/stop-word/length guards). It
+    /// can therefore schedule an unnecessary window, but cannot discard a
+    /// candidate the final rescorer would accept.
+    private static func vocabularyCandidateRegions(
+        text: String,
+        timings: [TokenTiming]?,
+        audioSampleCount: Int,
+        helper: VocabularyHelper
+    ) -> [Range<Int>] {
+        guard let timings, !text.isEmpty else { return [] }
+        let words = buildWordTimings(from: timings)
+        // The pinned rescorer has the same word-timing guard, so acoustic
+        // evidence provably cannot change text in this case.
+        guard !words.isEmpty else { return [] }
+
+        let sampleRate = AudioFileReader.targetSampleRate
+        // The rescorer converts seconds to frames with independent integer
+        // truncation. Its 500 ms search margin plus more than one native
+        // ~80 ms frame on either side keeps every inspected frame inside a
+        // selected canonical chunk.
+        let margin = 0.6
+        let similarityFloor = max(
+            helper.sizeConfig.minSimilarity,
+            helper.context.minSimilarity
+        )
+        var regions: [Range<Int>] = []
+        var seenForms = Set<String>()
+        let forms = helper.context.terms.flatMap { term -> [(form: String, canonical: String)] in
+            let canonical = normalizeVocabularyCandidate(term.text)
+            let rawForms = [term.text] + (term.aliases ?? [])
+            return rawForms.compactMap { raw in
+                let form = normalizeVocabularyCandidate(raw)
+                let key = canonical + "\u{0}" + form
+                guard !form.isEmpty, seenForms.insert(key).inserted else { return nil }
+                return (form: form, canonical: canonical)
+            }
+        }
+        var candidateCache: [String: Bool] = [:]
+
+        for startIndex in words.indices {
+            let maximumLength = min(4, words.count - startIndex)
+            for length in 1...maximumLength {
+                let slice = words[startIndex..<(startIndex + length)]
+                let phrase = normalizeVocabularyCandidate(slice.map(\.word).joined(separator: " "))
+                guard !phrase.isEmpty else { continue }
+                let canAffectText: Bool
+                if let cached = candidateCache[phrase] {
+                    canAffectText = cached
+                } else {
+                    let compound = phrase.replacingOccurrences(of: " ", with: "")
+                    canAffectText = forms.contains { candidate in
+                        // The real rescorer deliberately leaves an already-correct
+                        // canonical spelling alone. Aliases remain candidates.
+                        guard phrase != candidate.canonical else { return false }
+                        return vocabularyCandidateSimilarity(phrase, candidate.form) >= similarityFloor
+                            || vocabularyCandidateSimilarity(compound, candidate.form) >= similarityFloor
+                    }
+                    candidateCache[phrase] = canAffectText
+                }
+                guard canAffectText else { continue }
+
+                let lower = max(
+                    0,
+                    Int(floor((words[startIndex].startTime - margin) * sampleRate))
+                )
+                let upper = min(
+                    audioSampleCount,
+                    Int(ceil((words[startIndex + length - 1].endTime + margin) * sampleRate))
+                )
+                if lower < upper { regions.append(lower..<upper) }
+            }
+        }
+
+        guard !regions.isEmpty else { return [] }
+        return mergeVocabularyCandidateRegions(regions)
+    }
+
+    /// Kept byte-for-byte with FluidAudio 0.15.5's private candidate
+    /// normalization. The dependency is revision-pinned and parity tests guard
+    /// this optimization before an update can ship.
+    static func normalizeVocabularyCandidate(_ text: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "'-"))
+        var result = ""
+        var lastWasSpace = true
+        for scalar in text.lowercased().unicodeScalars {
+            if allowed.contains(scalar) {
+                result.append(Character(scalar))
+                lastWasSpace = false
+            } else if scalar == " " || scalar == "\t" || scalar == "\n" {
+                if !lastWasSpace && !result.isEmpty {
+                    result.append(" ")
+                    lastWasSpace = true
+                }
+            }
+        }
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func vocabularyCandidateSimilarity(_ left: String, _ right: String) -> Float {
+        let maximumLength = max(left.count, right.count)
+        guard maximumLength > 0 else { return 1 }
+        // Same Levenshtein result as FluidAudio's utility, but two rows instead
+        // of an allocated (m + 1) × (n + 1) matrix. This prefilter runs across
+        // every short transcript span, so allocation shape is latency-critical.
+        let leftCharacters = Array(left)
+        let rightCharacters = Array(right)
+        if leftCharacters.isEmpty { return rightCharacters.isEmpty ? 1 : 0 }
+        if rightCharacters.isEmpty { return 0 }
+
+        var previous = Array(0...rightCharacters.count)
+        var current = [Int](repeating: 0, count: rightCharacters.count + 1)
+        for leftIndex in leftCharacters.indices {
+            current[0] = leftIndex + 1
+            for rightIndex in rightCharacters.indices {
+                let substitution = previous[rightIndex]
+                    + (leftCharacters[leftIndex] == rightCharacters[rightIndex] ? 0 : 1)
+                current[rightIndex + 1] = min(
+                    previous[rightIndex + 1] + 1,
+                    current[rightIndex] + 1,
+                    substitution
+                )
+            }
+            swap(&previous, &current)
+        }
+        let distance = previous[rightCharacters.count]
+        return 1 - Float(distance) / Float(maximumLength)
+    }
+
+    /// Merge overlapping candidate windows so the chunk selector stays small
+    /// even when several aliases point to the same spoken phrase.
+    private static func mergeVocabularyCandidateRegions(
+        _ regions: [Range<Int>]
+    ) -> [Range<Int>] {
+        let sorted = regions.sorted {
+            $0.lowerBound == $1.lowerBound
+                ? $0.upperBound < $1.upperBound
+                : $0.lowerBound < $1.lowerBound
+        }
+        var merged: [Range<Int>] = []
+        for region in sorted {
+            guard let last = merged.last else {
+                merged.append(region)
+                continue
+            }
+            if region.lowerBound <= last.upperBound {
+                merged[merged.count - 1] = last.lowerBound..<max(last.upperBound, region.upperBound)
+            } else {
+                merged.append(region)
+            }
+        }
+        return merged
+    }
+
+    /// Actor-isolated test seam for candidate localization.
+    func vocabularyCandidateRegions(
+        text: String,
+        timings: [TokenTiming],
+        audioSampleCount: Int
+    ) -> [Range<Int>] {
+        guard let vocabulary else { return [] }
+        return Self.vocabularyCandidateRegions(
+            text: text,
+            timings: timings,
+            audioSampleCount: audioSampleCount,
+            helper: vocabulary
+        )
+    }
+
+    /// Log-mean-exp in probability space, matching FluidAudio 0.15.5's
+    /// `CtcKeywordSpotter.mergeOverlapFrame` exactly.
+    static func mergeVocabularyOverlap(existing: [Float], incoming: [Float]) -> [Float] {
+        let count = min(existing.count, incoming.count)
+        guard count > 0 else { return existing }
+        let log2: Float = 0.69314718
+        var merged = [Float](repeating: 0, count: count)
+        for index in 0..<count {
+            let left = existing[index]
+            let right = incoming[index]
+            let maximum = max(left, right)
+            if maximum == -Float.infinity {
+                merged[index] = -Float.infinity
+            } else {
+                merged[index] = maximum
+                    + logf(expf(left - maximum) + expf(right - maximum))
+                    - log2
+            }
+        }
+        return merged
     }
 
     /// Correct the text based on already obtained acoustic evidence.
@@ -584,7 +997,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     private static func rescore(
         text: String,
         timings: [TokenTiming]?,
-        spotted: CtcKeywordSpotter.SpotKeywordsResult?,
+        spotted: VocabularyEvidence?,
         helper: VocabularyHelper?
     ) -> String? {
         guard let helper, let spotted else { return nil }

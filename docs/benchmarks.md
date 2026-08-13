@@ -31,7 +31,7 @@ for every published result.
 Synthetic fixtures are useful for reproducibility but do not establish quality
 on live speech. Do not present synthetic scores as human-speech measurements.
 
-## OpenRamble vs Handy 0.9.5 (2026-08-13)
+## OpenRamble vs Handy 0.9.5 (2026-08-14)
 
 This is the current controlled comparison to use for product writing. It used
 an Apple M4 with 16 GB RAM on macOS 26.4, the shipping OpenRamble Core ML
@@ -43,26 +43,60 @@ measured recognitions of the identical 16 kHz mono input. `p50` is the median;
 
 | Input | Audio | OpenRamble p50 / p95 | Handy p50 / p95 | Median result |
 |---|---:|---:|---:|---:|
-| Synthetic Russian, short | 4.08 s | 0.1388 / 0.1449 s | 0.0820 / 0.1128 s | Handy 1.69× faster |
-| Synthetic Russian, medium | 36.63 s | 0.5588 / 0.5623 s | 0.5950 / 0.6042 s | OpenRamble 1.06× faster |
-| Synthetic Russian, long | 183.91 s | 2.8258 / 2.8527 s | 16.4250 / 16.9016 s | OpenRamble 5.81× faster |
+| Synthetic Russian, short | 5.74 s | 0.1583 / 0.1591 s | 0.1170 / 0.1328 s | Handy 1.35× faster |
+| Synthetic Russian, medium | 35.36 s | 0.3843 / 0.3885 s | 0.6150 / 0.6204 s | OpenRamble 1.60× faster |
+| Synthetic Russian, long | 183.41 s | 1.3070 / 1.3292 s | 17.5560 / 18.0708 s | OpenRamble 13.43× faster |
 | LibriSpeech `test-other` sample | 7.06 s | 0.1557 / 0.1575 s | 0.1100 / 0.1318 s | Handy 1.42× faster |
 | VOiCES room sample | 3.40 s | 0.1303 / 0.1329 s | 0.0690 / 0.0842 s | Handy 1.89× faster |
 
 Both apps produced zero word errors against the frozen references for the two
 real English samples. Two clips are an integration check, not a representative
 quality corpus, so this is not evidence of equal general WER. The three
-synthetic Russian clips have no quality claim. OpenRamble reached 65× real time
+synthetic Russian clips have no quality claim. Both apps produced identical
+transcript hashes on the short and medium synthetic clips. Their hashes differ
+on the repeated three-minute fixture, so its row is a latency comparison only.
+OpenRamble reached 140× real time
 on the three-minute input and used about 2.41 GB peak RSS; this run did not
 capture Handy RSS with the same measurement method, so no memory comparison is
 published.
 
-The defensible public statement from this run is: **“Up to 5.8× faster than
-Handy 0.9.5 on a tested three-minute local transcription, and 65× faster than
+The defensible public statement from this run is: **“Up to 13.4× faster than
+Handy 0.9.5 on a tested three-minute local transcription, and 140× faster than
 real time on an Apple M4.”** It must stay attached to the hardware, fixture,
 versions, and method above. The run does not support “fastest for every clip”
-or “10× faster”: Handy retains a 1.4–1.9× short-utterance advantage on this
-machine. A product target is not a benchmark result.
+or “10× faster on every clip”: Handy retains a 1.4–1.9× short-utterance
+advantage on this machine. A product target is not a benchmark result.
+
+The speedup comes from scheduling the optional CTC vocabulary model by need.
+One 15-second model window still runs alongside the primary recognizer. For
+longer audio, OpenRamble first reads the TDT transcript, applies the pinned
+rescorer's permissive string gates, and then computes only the canonical
+15-second CTC windows that could change the final text. A no-candidate
+three-minute recording therefore avoids a speculative whole-record second
+pass. If a candidate falls near an overlap, every intersecting window is kept
+and combined with FluidAudio's probability-space overlap rule. A trailing
+partial window also retains its full predecessor so the reconstructed frame
+grid remains identical to the reference.
+
+A separate 172.29-second synthetic fixture placed a real `Postgres` vocabulary
+candidate late in the recording. The optimized sparse pass and the
+reference whole-file pass produced the same transcript SHA-256
+(`70526bda7c02bdf06d3d2704833733d122884eb984d49677577a1689ccc7e861`).
+Their p50 latencies were 1.8260 seconds and 2.3470 seconds respectively. This
+is an end-to-end parity check for a late candidate, not a general quality score.
+Another 65.0000625-second fixture placed the candidate inside the final partial
+window. Selective and reference modes again produced the same transcript hash
+(`19e67ac1c731259b651d3ce6278547569b24460d42d6fe6d9f622606692121c8`);
+their p50 latencies were 0.7487 and 0.5714 seconds respectively.
+
+The scheduler makes a measured tradeoff after the single-window boundary. On
+a 25.86-second fixture containing a real vocabulary candidate, the selective
+serial pass took 0.5746 seconds versus 0.4185 seconds for speculative parallel
+CTC, with identical transcript hashes. On the ordinary 35.36-second fixture
+without a candidate, selective scheduling took 0.3843 seconds versus 0.5543
+seconds for speculative CTC. The 15-second cutoff favors the no-correction path
+while the candidate case still runs about 45× faster than real time. Both sides
+of this policy remain reproducible instead of hiding the less favorable case.
 
 The reproducible runner checkpoints atomically after every engine/fixture pair
 and stores transcript hashes rather than transcript text:
