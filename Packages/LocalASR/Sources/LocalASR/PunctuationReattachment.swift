@@ -218,7 +218,11 @@ enum PunctuationReattachment {
 
         var band = max(16, abs(rows - columns) + 8)
         let widest = max(rows, columns)
-        while band <= Self.widestAffordableBand(rows: rows, columns: columns) {
+        var cellsSpent = 0
+        while true {
+            let cells = Self.cellCount(rows: rows, columns: columns, band: band)
+            guard cells <= Self.alignmentCellBudget - cellsSpent else { break }
+            cellsSpent += cells
             if let steps = alignWithinBand(leftKeys, rightKeys, band: band) { return steps }
             if band >= widest { break }
             band = min(band * 2, widest)
@@ -230,7 +234,7 @@ enum PunctuationReattachment {
         return []
     }
 
-    /// How wide the band may get before the work stops being worth it.
+    /// How much total alignment work may happen before it stops being worth it.
     ///
     /// The band widens whenever the edit cost reaches its edge, and cost counts
     /// substitutions — so a long text the rescorer changed in many places pushes
@@ -240,12 +244,16 @@ enum PunctuationReattachment {
     /// quadrupled the time.
     ///
     /// The product cannot afford that after the key is released, so the budget
-    /// is on total cells rather than on elegance. Four million cells is about
-    /// 16 MB and a fraction of a second; beyond it the answer is not worth
-    /// waiting for.
-    private static func widestAffordableBand(rows: Int, columns: Int) -> Int {
-        let budget = 4_000_000
-        return max(16, budget / max(rows + 1, 1))
+    /// covers cells across every widening attempt, not only the final matrix.
+    /// Four million cells is about 16 MB of writes and a fraction of a second;
+    /// beyond it the answer is not worth waiting for.
+    private static let alignmentCellBudget = 4_000_000
+
+    private static func cellCount(rows: Int, columns: Int, band: Int) -> Int {
+        let drift = abs(columns - rows)
+        let width = min(columns + 1, drift + (band * 2) + 1)
+        let (cells, overflow) = (rows + 1).multipliedReportingOverflow(by: width)
+        return overflow ? Int.max : cells
     }
 
     /// One banded pass. Returns `nil` when the cost reached the band edge and

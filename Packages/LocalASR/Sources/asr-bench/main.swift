@@ -36,8 +36,10 @@ func usage() -> Never {
       WAI_ASR_ENCODER palettized6bit (default) | int4
       WAI_ASR_ENCODER_PLACEMENT neuralEngine (default) | gpu
       WAI_ASR_DUAL_DECODE=on second decoder pass with arbitration
-      WAI_ASR_MAX_TOKENS ceiling of tokens per window (default 150)
+      WAI_ASR_MAX_TOKENS ceiling of tokens per window (default: product value, 600)
+      WAI_ASR_CHUNK_CONCURRENCY parallel long-form windows (default: product value, 6)
       WAI_ASR_LANGUAGE forced language (ru, en, ...) instead of auto
+      WAI_ASR_PREWARM=on run the same inference warm-up as the shipping app
     """)
     exit(64)
 }
@@ -208,23 +210,24 @@ func prepareTranscriber() async throws -> LocalTranscriber {
         print("Token ceiling per window: \(parsed)")
     }
 
-    let adapter: FluidAudioAdapter
-    if let maxTokens {
-        adapter = FluidAudioAdapter(
-            melChunkContext: melChunkContext,
-            encoder: encoder,
-            encoderPlacement: placement,
-            dualDecodeArbitration: dualDecode,
-            maxTokensPerChunk: maxTokens
-        )
-    } else {
-        adapter = FluidAudioAdapter(
-            melChunkContext: melChunkContext,
-            encoder: encoder,
-            encoderPlacement: placement,
-            dualDecodeArbitration: dualDecode
-        )
+    var chunkConcurrency: Int?
+    if let raw = ProcessInfo.processInfo.environment["WAI_ASR_CHUNK_CONCURRENCY"] {
+        guard let parsed = Int(raw), parsed > 0 else {
+            print("WAI_ASR_CHUNK_CONCURRENCY: expected a positive number, received '\(raw)'")
+            exit(64)
+        }
+        chunkConcurrency = parsed
+        print("Parallel long-form windows: \(parsed)")
     }
+
+    let adapter = FluidAudioAdapter(
+        melChunkContext: melChunkContext,
+        encoder: encoder,
+        encoderPlacement: placement,
+        dualDecodeArbitration: dualDecode,
+        maxTokensPerChunk: maxTokens ?? FluidAudioAdapter.defaultMaxTokensPerChunk,
+        parallelChunkConcurrency: chunkConcurrency ?? FluidAudioAdapter.defaultParallelChunkConcurrency
+    )
     let transcriber = LocalTranscriber(engine: adapter)
     let started = ContinuousClock.now
     try await transcriber.prepare(modelDirectory: engineDirectory)
@@ -281,6 +284,16 @@ func prepareTranscriber() async throws -> LocalTranscriber {
                 format: "Prompt loaded in %.2f with - %d terms",
                 seconds(vocabStarted.duration(to: .now)),
                 boost.terms.count
+            )
+        )
+    }
+    if isOn("WAI_ASR_PREWARM") {
+        let warmupStarted = ContinuousClock.now
+        try await transcriber.warmUpInference()
+        print(
+            String(
+                format: "Inference warmed in %.2f s",
+                seconds(warmupStarted.duration(to: .now))
             )
         )
     }

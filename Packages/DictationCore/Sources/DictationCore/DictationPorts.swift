@@ -34,6 +34,14 @@ public protocol AudioCapturing: Sendable {
     /// Returns the address of the finished file and the duration of the recorded file.
     func stopRecording() async throws -> (url: URL, duration: TimeInterval)
 
+    /// Move the just-finished 16 kHz mono Float32 recording out of capture memory.
+    ///
+    /// A capture that can provide this lets recognition begin from the exact PCM
+    /// that was written instead of opening the finished Int16 WAV and converting
+    /// the whole recording back to Float32. The WAV remains the durable recovery
+    /// copy. Returning `nil` keeps file-only captures and test doubles compatible.
+    func takeBufferedSamples() async -> [Float]?
+
     /// Abort recording and delete file - the user canceled the dictation.
     func abortRecording() async
 
@@ -50,6 +58,9 @@ extension AudioCapturing {
     /// `nil`, not zero: an edge that cannot measure heating has no
     /// the right to look instant.
     public func startupLatency() async -> Duration? { nil }
+
+    /// File-only captures remain valid; the controller falls back to the WAV.
+    public func takeBufferedSamples() async -> [Float]? { nil }
 }
 
 public enum AudioCaptureError: Error, Sendable, Equatable {

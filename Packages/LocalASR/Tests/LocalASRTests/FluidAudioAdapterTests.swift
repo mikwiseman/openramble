@@ -110,6 +110,14 @@ final class FluidAudioAdapterTests: XCTestCase {
         XCTAssertEqual(placement, .gpu, "the predictable engine beats the occasionally-fastest one")
     }
 
+    func testLongFormConcurrencyUsesTheBenchmarkedDefault() async {
+        let adapter = FluidAudioAdapter()
+
+        let concurrency = await adapter.longFormConcurrency
+
+        XCTAssertEqual(concurrency, 6, "six windows won the measured M4 latency sweep")
+    }
+
     /// The ceiling of tokens on the window is also a measurement output, not a taste setting.
     /// Library 150 in dense speech silently interrupt the analysis of the window: at the phrase
     /// the middle disappears, there is no error. The test guards the selected value according to

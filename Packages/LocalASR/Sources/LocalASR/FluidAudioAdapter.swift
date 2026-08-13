@@ -138,22 +138,35 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     /// speed too. The numbers are in `docs/benchmarks.md`.
     private let maxTokensPerChunk: Int
 
+    /// Number of independent long-form windows submitted at once. Kept at
+    /// the adapter boundary so the shipping value can be benchmarked against
+    /// the same immutable FluidAudio revision instead of patched downstream.
+    private let parallelChunkConcurrency: Int
+
+    public static let defaultMaxTokensPerChunk = 600
+    public static let defaultParallelChunkConcurrency = 6
+
     public init(
         melChunkContext: Bool = false,
         encoder: EncoderVariant = .palettized6bit,
         encoderPlacement: EncoderPlacement = .gpu,
         dualDecodeArbitration: Bool = false,
-        maxTokensPerChunk: Int = 600
+        maxTokensPerChunk: Int = FluidAudioAdapter.defaultMaxTokensPerChunk,
+        parallelChunkConcurrency: Int = FluidAudioAdapter.defaultParallelChunkConcurrency
     ) {
         self.melChunkContext = melChunkContext
         self.encoder = encoder
         self.encoderPlacement = encoderPlacement
         self.dualDecodeArbitration = dualDecodeArbitration
         self.maxTokensPerChunk = maxTokensPerChunk
+        self.parallelChunkConcurrency = max(1, parallelChunkConcurrency)
     }
 
     /// For a test that guards the selected ceiling.
     var chunkTokenCeiling: Int { maxTokensPerChunk }
+
+    /// For benchmark/configuration tests that guard the selected pool size.
+    var longFormConcurrency: Int { parallelChunkConcurrency }
 
     /// For the test that guards the GPU default.
     var placement: EncoderPlacement { encoderPlacement }
@@ -197,6 +210,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             let manager = AsrManager(
                 config: ASRConfig(
                     tdtConfig: TdtConfig(maxTokensPerChunk: maxTokensPerChunk),
+                    parallelChunkConcurrency: parallelChunkConcurrency,
                     melChunkContext: melChunkContext,
                     dualDecodeArbitration: dualDecodeArbitration
                 )

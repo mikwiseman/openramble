@@ -1278,12 +1278,14 @@ final class VocabularyRebuildTests: XCTestCase {
         private var _prepares = 0
         private var _modelLoads = 0
         private var _unloads = 0
+        private var _inferences = 0
         private var _lastTermCount = -1
         private var _delayNext = false
         private var _delayedStarts = 0
         var prepares: Int { lock.withLock { _prepares } }
         var modelLoads: Int { lock.withLock { _modelLoads } }
         var unloads: Int { lock.withLock { _unloads } }
+        var inferences: Int { lock.withLock { _inferences } }
         var lastTermCount: Int { lock.withLock { _lastTermCount } }
         var delayedStarts: Int { lock.withLock { _delayedStarts } }
 
@@ -1293,10 +1295,12 @@ final class VocabularyRebuildTests: XCTestCase {
             lock.withLock { _modelLoads += 1 }
         }
         func transcribe(samples: [Float]) async throws -> ASRResult {
-            ASRResult(text: "", audioDuration: 0, processingDuration: 0)
+            lock.withLock { _inferences += 1 }
+            return ASRResult(text: "", audioDuration: 0, processingDuration: 0)
         }
         func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
-            ASRResult(text: "", audioDuration: 0, processingDuration: 0)
+            lock.withLock { _inferences += 1 }
+            return ASRResult(text: "", audioDuration: 0, processingDuration: 0)
         }
         // A real unload drops the acoustic boost together with the weights —
         // the marker resets so a reload must re-issue the vocabulary to pass.
@@ -1336,6 +1340,7 @@ final class VocabularyRebuildTests: XCTestCase {
             try? await Task.sleep(for: .milliseconds(5))
         }
         XCTAssertTrue(state.isEngineReady, "Warming must take place")
+        XCTAssertEqual(engine.inferences, 1, "ready means one full inference path is warm")
         let after = engine.prepares
 
         state.addReplacement(spoken: "Sentry", written: "Sentry")
@@ -1403,6 +1408,7 @@ final class VocabularyRebuildTests: XCTestCase {
         }
         XCTAssertTrue(state.isEngineReady)
         XCTAssertEqual(engine.modelLoads, 1, "the first warm-up loads the weights once")
+        XCTAssertEqual(engine.inferences, 1, "initial readiness includes an inference warm-up")
 
         state.addReplacement(spoken: "open ramble term", written: "OpenRambleTerm")
         let boosted = engine.lastTermCount + 1
@@ -1431,6 +1437,7 @@ final class VocabularyRebuildTests: XCTestCase {
         }
         XCTAssertTrue(state.isEngineReady, "the press-time reload must complete")
         XCTAssertEqual(engine.modelLoads, 2, "the reload really reloads the weights")
+        XCTAssertEqual(engine.inferences, 2, "each reloaded generation is warmed before readiness")
         XCTAssertEqual(
             engine.lastTermCount, boosted,
             "the boosted term survives the unload/reload round trip"

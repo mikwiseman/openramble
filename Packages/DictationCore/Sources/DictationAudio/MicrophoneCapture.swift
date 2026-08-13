@@ -3,6 +3,37 @@ import DictationCore
 import Foundation
 import os
 
+/// Keeps the common dictation path in memory without turning unlimited
+/// recording into unlimited resident memory. Once the cap is crossed, the
+/// durable WAV remains complete and recognition falls back to reading it.
+struct RecognitionSampleBuffer {
+    private(set) var samples: [Float]? = []
+    let maximumSamples: Int
+
+    mutating func reset() {
+        samples = []
+    }
+
+    mutating func append(_ newSamples: [Float]) {
+        guard let count = samples?.count else { return }
+        guard newSamples.count <= maximumSamples - count else {
+            samples = nil
+            return
+        }
+        samples?.append(contentsOf: newSamples)
+    }
+
+    mutating func take() -> [Float]? {
+        let result = samples
+        samples = nil
+        return result
+    }
+
+    mutating func discard() {
+        samples = nil
+    }
+}
+
 /// Record from a microphone to a file.
 ///
 /// The engine rises at the moment the key is pressed and turns off immediately after recording:
@@ -21,6 +52,10 @@ public actor MicrophoneCapture: AudioCapturing {
     private var writer: WAVWriter?
     private var converter: AVAudioConverter?
     private var writeFailure: (any Error)?
+    /// The exact Float32 PCM delivered to the WAV writer. Five minutes costs
+    /// about 19 MB and covers ordinary dictations plus the three-minute
+    /// benchmark. Longer takes retain the unlimited disk-backed behavior.
+    private var recognitionBuffer = RecognitionSampleBuffer(maximumSamples: 5 * 60 * 16_000)
 
     /// The queue of frames between the audio stream and recording to disk.
     private let sink = FrameSink()
@@ -103,6 +138,7 @@ public actor MicrophoneCapture: AudioCapturing {
         startedAt = .now
         firstBufferAt = nil
         writeFailure = nil
+        recognitionBuffer.reset()
 
         let url = directory.appending(
             path: "take-\(Int(Date().timeIntervalSince1970))-\(UUID().uuidString.prefix(8)).wav",
@@ -202,6 +238,7 @@ public actor MicrophoneCapture: AudioCapturing {
             wakeFirstFrameWaiters(arrived: true)
         }
         onSamples(samples)
+        recognitionBuffer.append(samples)
         guard let writer, writeFailure == nil else { return }
         do {
             try writer.append(samples)
@@ -240,6 +277,7 @@ public actor MicrophoneCapture: AudioCapturing {
         if let writeFailure {
             writer.discard()
             self.writer = nil
+            recognitionBuffer.discard()
             throw AudioCaptureError.writeFailed(String(describing: writeFailure))
         }
 
@@ -249,10 +287,16 @@ public actor MicrophoneCapture: AudioCapturing {
             url = try writer.close()
         } catch {
             self.writer = nil
+            recognitionBuffer.discard()
             throw AudioCaptureError.writeFailed(String(describing: error))
         }
         self.writer = nil
         return (url, duration)
+    }
+
+    public func takeBufferedSamples() async -> [Float]? {
+        guard let samples = recognitionBuffer.take(), !samples.isEmpty else { return nil }
+        return samples
     }
 
     public func abortRecording() async {
@@ -264,6 +308,7 @@ public actor MicrophoneCapture: AudioCapturing {
         await sink.cancel()
         writer?.discard()
         writer = nil
+        recognitionBuffer.discard()
     }
 
     /// Convert the incoming frame to 16 kHz mono.

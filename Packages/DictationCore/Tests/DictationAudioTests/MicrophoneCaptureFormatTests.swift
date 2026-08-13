@@ -71,4 +71,26 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
             }
         }
     }
+
+    func testRecognitionBufferMovesSamplesWithoutKeepingASecondCopy() {
+        var buffer = RecognitionSampleBuffer(maximumSamples: 4)
+        buffer.append([0.1, 0.2])
+        buffer.append([0.3, 0.4])
+
+        XCTAssertEqual(buffer.take(), [0.1, 0.2, 0.3, 0.4])
+        XCTAssertNil(buffer.take())
+    }
+
+    func testRecognitionBufferFallsBackToWAVAfterItsMemoryCap() {
+        var buffer = RecognitionSampleBuffer(maximumSamples: 3)
+        buffer.append([0.1, 0.2])
+        buffer.append([0.3, 0.4])
+        buffer.append([0.5])
+
+        XCTAssertNil(buffer.take(), "overflow must disable the in-memory path for the whole take")
+
+        buffer.reset()
+        buffer.append([0.6])
+        XCTAssertEqual(buffer.take(), [0.6], "a new take gets a fresh fast-path buffer")
+    }
 }
