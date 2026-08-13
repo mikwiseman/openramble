@@ -40,6 +40,11 @@ jobs:
           swift build --package-path Packages/LocalASR --build-tests -Xswiftc -warnings-as-errors
           swift test --package-path Packages/LocalASR
 
+      - name: AgentBridge
+        run: |
+          swift build --package-path Packages/AgentBridge --build-tests -Xswiftc -warnings-as-errors
+          swift test --package-path Packages/AgentBridge
+
   app:
     name: Application build
     runs-on: macos-26
@@ -113,6 +118,11 @@ jobs:
       # certificate.
       - name: Build an image without a signature
         run: ./scripts/build-dmg.sh
+
+      - name: Check packaged application and MCP helper
+        run: >-
+          ./scripts/smoke-installed-artifact.sh
+          artifacts/build/OpenRamble.xcarchive/Products/Applications/OpenRambleDev.app
 
       # Values on which the fate of already installed copies depends. Each
       # of which various things break: identifier - issued universal access,
