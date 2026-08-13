@@ -128,6 +128,15 @@ if [[ ! -d "$APP_PATH" ]]; then
   echo "The build did not produce the application" >&2
   exit 1
 fi
+MCP_HELPER="$APP_PATH/Contents/MacOS/openramble-mcp"
+if [[ ! -x "$MCP_HELPER" ]]; then
+  echo "The build did not embed the MCP helper" >&2
+  exit 1
+fi
+if otool -L "$MCP_HELPER" | grep -q '/Network\.framework/'; then
+  echo "The local MCP helper unexpectedly links Network.framework" >&2
+  exit 1
+fi
 
 # Binary targets dependencies can arrive universal, even when our target
 # builds arm64. We remove someone else's x86_64 before the signature; lack of arm64 - hard
@@ -273,6 +282,7 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   sign "$SPARKLE_VERSION/Autoupdate"
   sign "$SPARKLE_VERSION/Updater.app"
   sign "$SPARKLE"
+  sign --identifier "$BUNDLE_ID.mcp" "$MCP_HELPER"
 
   # Application last. We set the identifier explicitly so that it does not depend on
   # product name and build settings.
@@ -293,7 +303,8 @@ if [[ -n "$DEVELOPER_ID" ]]; then
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
     "$SPARKLE_VERSION/Autoupdate" \
     "$SPARKLE_VERSION/Updater.app" \
-    "$SPARKLE"
+    "$SPARKLE" \
+    "$MCP_HELPER"
   do
     authority=$(codesign -dvv "$component" 2>&1 | sed -n 's/^Authority=//p' | head -1)
     if [[ "$authority" != "$APP_AUTHORITY" ]]; then
@@ -331,6 +342,7 @@ else
   codesign --force --sign - "$SPARKLE_VERSION/Autoupdate"
   codesign --force --sign - "$SPARKLE_VERSION/Updater.app"
   codesign --force --sign - "$SPARKLE"
+  codesign --force --sign - --identifier "$BUNDLE_ID.mcp" "$MCP_HELPER"
   codesign --force --sign - --identifier "$BUNDLE_ID" \
     --entitlements "$APP_ENTITLEMENTS" "$APP_PATH"
   codesign --verify --deep --strict --verbose=2 "$APP_PATH"

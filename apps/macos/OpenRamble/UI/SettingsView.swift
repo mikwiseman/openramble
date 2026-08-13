@@ -4,7 +4,8 @@ import LocalASR
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Four tabs: what you press, what it hears, what it writes, what it is.
+/// Five tabs: what you press, what it hears, what it writes, agent access,
+/// and what the app is.
 ///
 /// Every tab is a grouped Form and every explanation is a Section footer —
 /// the native settings shape on modern macOS. No glass inside: settings are
@@ -20,10 +21,70 @@ struct SettingsView: View {
                 .tabItem { Label("Recognition", systemImage: "waveform") }
             DictionarySettings(state: state)
                 .tabItem { Label("Dictionary", systemImage: "character.book.closed") }
+            AgentSettings(state: state)
+                .tabItem { Label("Agents", systemImage: "terminal") }
             AboutView(updater: state.updater, revealSupportFolder: state.revealSupportFolder)
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 620, height: 500)
+    }
+}
+
+// MARK: - Agents
+
+private struct AgentSettings: View {
+    @ObservedObject var state: AppState
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Let local agents transcribe audio files", isOn: $state.agentTranscriptionEnabled)
+                    .accessibilityHint("Allows MCP clients running as your macOS user to use OpenRamble's local model")
+
+                LabeledContent("Status") {
+                    Label(statusTitle, systemImage: statusIcon)
+                        .foregroundStyle(statusColor)
+                }
+            } header: {
+                Text("Local MCP server")
+            } footer: {
+                Text("Off by default. Requests stay on this Mac, run one at a time, and live dictation always takes priority. OpenRamble never stores an agent transcript.")
+            }
+
+            Section {
+                HStack {
+                    Button("Copy Codex command", action: state.copyCodexMCPCommand)
+                    Button("Copy Claude command", action: state.copyClaudeMCPCommand)
+                    Button("Copy JSON", action: state.copyGenericMCPConfiguration)
+                }
+                Text(state.agentExecutablePath)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            } header: {
+                Text("Connect an agent")
+            } footer: {
+                Text("Run a copied command once, restart that agent, then call openramble_transcribe_audio with an absolute path to a local audio file. Codex, Claude Code, and other stdio MCP clients are supported.")
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var statusTitle: String {
+        guard state.agentTranscriptionEnabled else { return "Off" }
+        if state.isAgentTranscriptionBusy { return "Transcribing" }
+        return state.isAgentBridgeListening ? "Ready" : "Unavailable"
+    }
+
+    private var statusIcon: String {
+        guard state.agentTranscriptionEnabled else { return "circle" }
+        if state.isAgentTranscriptionBusy { return "waveform" }
+        return state.isAgentBridgeListening ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+    }
+
+    private var statusColor: Color {
+        guard state.agentTranscriptionEnabled else { return .secondary }
+        return state.isAgentBridgeListening ? StatusColorRole.success.color : StatusColorRole.attention.color
     }
 }
 
@@ -76,6 +137,12 @@ private struct GeneralSettings: View {
                     .accessibilityHint(
                         "A quiet tone when the text didn't reach the field or nothing was recognized. A dictation that works stays silent."
                     )
+                Picker("Dictation panel", selection: $state.overlayPlacement) {
+                    ForEach(DictationOverlayPlacement.allCases) { placement in
+                        Text(placement.title).tag(placement)
+                    }
+                }
+                .accessibilityHint("Places dictation feedback at the top or bottom of the active screen")
             }
 
             Section {

@@ -72,7 +72,7 @@ Check the network: curl -sSI https://github.com/sparkle-project/Sparkle/releases
 # --- Steps ------------------------------------------------------------------
 
 run_packages() {
-  for package in DictationCore LocalASR; do
+  for package in DictationCore LocalASR AgentBridge; do
     echo "→ $package"
     local log
     log=$(mktemp)
@@ -84,7 +84,9 @@ run_packages() {
        && swift test --package-path "Packages/$package" >> "$log" 2>&1; then
       # We look for the line with the counter in the entire output, not in the tail: after it
       # swift-testing prints its lines, and tail does not catch it.
-      grep -E "Executed [0-9]+ tests, with" "$log" | tail -1
+      grep -E "Executed [0-9]+ tests, with|Test run with [0-9]+ tests" "$log" \
+        | grep -v "Test run with 0 tests" \
+        | tail -1
     else
       grep -E "error:|failed" "$log" | head -20
       rm -f "$log"
@@ -113,6 +115,28 @@ run_app() {
     fail "Application tests failed."
   fi
   rm -f "$log"
+
+  echo "→ Application artifact"
+  log=$(mktemp)
+  if (cd apps/macos && xcodebuild -project OpenRamble.xcodeproj -scheme OpenRamble \
+        -configuration Debug -destination 'platform=macOS,arch=arm64' \
+        CODE_SIGNING_ALLOWED=NO build) > "$log" 2>&1; then
+    :
+  else
+    grep -E "error:" "$log" | head -20
+    rm -f "$log"
+    fail "Application artifact build failed."
+  fi
+  rm -f "$log"
+
+  local settings built_products_dir full_product_name helper
+  settings=$(cd apps/macos && xcodebuild -project OpenRamble.xcodeproj \
+    -scheme OpenRamble -configuration Debug -destination 'platform=macOS,arch=arm64' \
+    -showBuildSettings 2>/dev/null)
+  built_products_dir=$(sed -n 's/^ *BUILT_PRODUCTS_DIR = //p' <<<"$settings" | head -1)
+  full_product_name=$(sed -n 's/^ *FULL_PRODUCT_NAME = //p' <<<"$settings" | head -1)
+  helper="$built_products_dir/$full_product_name/Contents/MacOS/openramble-mcp"
+  ./scripts/test-mcp-helper.sh "$helper"
 }
 
 run_network_gate() {

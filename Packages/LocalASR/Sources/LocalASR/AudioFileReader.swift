@@ -18,21 +18,34 @@ public struct AudioFileReader: Sendable {
     public enum Failure: Error, Sendable, Equatable {
         case unreadable(String)
         case emptyFile
+        case durationExceeded(actual: TimeInterval, maximum: TimeInterval)
         case conversionFailed(String)
     }
 
     /// Read the entire file, resulting in 16 kHz mono.
-    public func samples(from url: URL) throws -> [Float] {
+    public func samples(
+        from url: URL,
+        maximumDuration: TimeInterval? = nil
+    ) throws -> [Float] {
+        try Task.checkCancellation()
         let file: AVAudioFile
         do {
             file = try AVAudioFile(forReading: url)
         } catch {
             throw Failure.unreadable(error.localizedDescription)
         }
+        try Task.checkCancellation()
 
         guard file.length > 0 else { throw Failure.emptyFile }
 
         let sourceFormat = file.processingFormat
+        guard sourceFormat.sampleRate > 0 else {
+            throw Failure.conversionFailed("the source sample rate is invalid")
+        }
+        let duration = Double(file.length) / sourceFormat.sampleRate
+        if let maximumDuration, duration > maximumDuration {
+            throw Failure.durationExceeded(actual: duration, maximum: maximumDuration)
+        }
         guard let targetFormat = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
             sampleRate: Self.targetSampleRate,
@@ -53,6 +66,7 @@ public struct AudioFileReader: Sendable {
     }
 
     private func readDirect(file: AVAudioFile, format: AVAudioFormat) throws -> [Float] {
+        try Task.checkCancellation()
         guard let buffer = AVAudioPCMBuffer(
             pcmFormat: format,
             frameCapacity: AVAudioFrameCount(file.length)
@@ -64,6 +78,7 @@ public struct AudioFileReader: Sendable {
         } catch {
             throw Failure.unreadable(error.localizedDescription)
         }
+        try Task.checkCancellation()
         guard let channel = buffer.floatChannelData?[0] else {
             throw Failure.conversionFailed("no channel data")
         }
@@ -94,6 +109,7 @@ public struct AudioFileReader: Sendable {
 
         var reachedEnd = false
         while !reachedEnd {
+            try Task.checkCancellation()
             inputBuffer.frameLength = 0
             // You can only read as long as there is something to read: beyond the end of the file
             // AVAudioFile throws an error rather than returning zero frames.
@@ -132,6 +148,7 @@ public struct AudioFileReader: Sendable {
             if status == .error {
                 throw Failure.conversionFailed("the converter returned an error")
             }
+            try Task.checkCancellation()
 
             if outputBuffer.frameLength > 0, let channel = outputBuffer.floatChannelData?[0] {
                 output.append(

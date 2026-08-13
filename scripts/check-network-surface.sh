@@ -19,7 +19,13 @@ ALLOWED='Packages/LocalASR/Sources/LocalASR/ModelDownloading.swift|SparkleUpdate
 # We only check the shipping code. The tests intentionally create a URLSession, read
 # local fixture files via Data(contentsOf:) and raise control-connect;
 # consider these seams to be the network surface of the product - a false PASS/FAIL signal.
-SHIPPING_PATHS=(Packages/DictationCore/Sources Packages/LocalASR/Sources apps/macos/OpenRamble)
+SHIPPING_PATHS=(
+  Packages/DictationCore/Sources
+  Packages/LocalASR/Sources
+  Packages/AgentBridge/Sources
+  apps/macos/OpenRamble
+  apps/macos/OpenRambleMCP
+)
 
 # Symbols that can go online.
 FORBIDDEN='URLSession|NWConnection|NWBrowser|CFNetwork|CFStream|WKWebView|NSNetService|NSURLConnection'

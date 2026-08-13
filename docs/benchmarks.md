@@ -31,7 +31,61 @@ for every published result.
 Synthetic fixtures are useful for reproducibility but do not establish quality
 on live speech. Do not present synthetic scores as human-speech measurements.
 
-## Handy parity investigation (2026-08-13)
+## OpenRamble vs Handy 0.9.5 (2026-08-13)
+
+This is the current controlled comparison to use for product writing. It used
+an Apple M4 with 16 GB RAM on macOS 26.4, the shipping OpenRamble Core ML
+pipeline with acoustic vocabulary and inference pre-warm enabled, and Handy's
+official notarized arm64 0.9.5 release with its catalog-default Parakeet v3
+Q8_0 GGUF on Metal. Each value is two unreported warm-ups followed by nine
+measured recognitions of the identical 16 kHz mono input. `p50` is the median;
+`p95` is linearly interpolated.
+
+| Input | Audio | OpenRamble p50 / p95 | Handy p50 / p95 | Median result |
+|---|---:|---:|---:|---:|
+| Synthetic Russian, short | 4.08 s | 0.1388 / 0.1449 s | 0.0820 / 0.1128 s | Handy 1.69× faster |
+| Synthetic Russian, medium | 36.63 s | 0.5588 / 0.5623 s | 0.5950 / 0.6042 s | OpenRamble 1.06× faster |
+| Synthetic Russian, long | 183.91 s | 2.8258 / 2.8527 s | 16.4250 / 16.9016 s | OpenRamble 5.81× faster |
+| LibriSpeech `test-other` sample | 7.06 s | 0.1557 / 0.1575 s | 0.1100 / 0.1318 s | Handy 1.42× faster |
+| VOiCES room sample | 3.40 s | 0.1303 / 0.1329 s | 0.0690 / 0.0842 s | Handy 1.89× faster |
+
+Both apps produced zero word errors against the frozen references for the two
+real English samples. Two clips are an integration check, not a representative
+quality corpus, so this is not evidence of equal general WER. The three
+synthetic Russian clips have no quality claim. OpenRamble reached 65× real time
+on the three-minute input and used about 2.41 GB peak RSS; this run did not
+capture Handy RSS with the same measurement method, so no memory comparison is
+published.
+
+The defensible public statement from this run is: **“Up to 5.8× faster than
+Handy 0.9.5 on a tested three-minute local transcription, and 65× faster than
+real time on an Apple M4.”** It must stay attached to the hardware, fixture,
+versions, and method above. The run does not support “fastest for every clip”
+or “10× faster”: Handy retains a 1.4–1.9× short-utterance advantage on this
+machine. A product target is not a benchmark result.
+
+The reproducible runner checkpoints atomically after every engine/fixture pair
+and stores transcript hashes rather than transcript text:
+
+```bash
+./scripts/benchmark-local-asr.py \
+  --manifest /absolute/path/to/manifest.json \
+  --openramble-bin Packages/LocalASR/.build/release/asr-bench \
+  --handy-bin /absolute/path/to/Handy.app/Contents/MacOS/handy \
+  --handy-model parakeet-tdt-0.6b-v3-Q8_0 \
+  --warmups 2 --repeats 9 \
+  --output /absolute/path/to/report.json
+```
+
+The manifest records each fixture's absolute path, source, license, optional
+frozen reference, model revisions, application commits, and release-asset and
+model SHA-256 values. This run pinned Handy source
+`db003f38b1aef4eb967ac3419bebc851d680f71c`, release asset SHA-256
+`d7b83185ebe04d67b51b668a5ac26a052128ec27ff1dd5f0da85d385aa7de7aa`,
+and Q8_0 model SHA-256
+`5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7`.
+
+## Handy backend investigation (2026-08-13)
 
 Hardware: Apple M4, 16 GB, macOS 26.4. Audio: reproducible macOS `say`
 fixtures, so these numbers establish latency only, not human-speech quality.

@@ -11,6 +11,8 @@ packages:
     path: ../../Packages/DictationCore
   LocalASR:
     path: ../../Packages/LocalASR
+  AgentBridge:
+    path: ../../Packages/AgentBridge
   # Updates. The version is pinned exactly, not `from:`: Sparkle arrives
   # a ready-made binary framework inside the application, and this version will rise
   # should be done consciously, and not on its own during the next build.
@@ -23,8 +25,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
-    MARKETING_VERSION: "0.5.1"
-    CURRENT_PROJECT_VERSION: "18"
+    MARKETING_VERSION: "0.6.0"
+    CURRENT_PROJECT_VERSION: "19"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     # The sandbox is turned off intentionally: dictation must insert text into other people's
@@ -56,12 +58,19 @@ targets:
       - path: OpenRamble/Resources/AppIcon.icns
         buildPhase: resources
     dependencies:
+      - target: OpenRambleMCP
+        embed: true
+        link: false
+        copy:
+          destination: executables
       - package: DictationCore
         product: DictationCore
       - package: DictationCore
         product: DictationAudio
       - package: LocalASR
         product: LocalASR
+      - package: AgentBridge
+        product: AgentBridge
       - package: Sparkle
         product: Sparkle
     settings:
@@ -120,6 +129,22 @@ targets:
         # will refuse to work. The procedure is in docs/release.md.
         SUPublicEDKey: "9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI="
 
+  OpenRambleMCP:
+    type: tool
+    platform: macOS
+    sources:
+      - path: OpenRambleMCP
+    dependencies:
+      - package: AgentBridge
+        product: AgentBridge
+    settings:
+      base:
+        PRODUCT_NAME: openramble-mcp
+        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.mcp
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_STRICT_CONCURRENCY: complete
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+
   # Application target tests.
   #
   # Build WITHOUT the host application (`TEST_HOST` is not set), and the sources
@@ -167,6 +192,8 @@ targets:
         product: DictationAudio
       - package: LocalASR
         product: LocalASR
+      - package: AgentBridge
+        product: AgentBridge
       - package: Sparkle
         product: Sparkle
     settings:

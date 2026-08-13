@@ -6,8 +6,16 @@ EXECUTABLE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/C
 [[ -n "$EXECUTABLE_NAME" ]] || { echo "There is no CFBundleExecutable in Info.plist." >&2; exit 1; }
 EXECUTABLE="$APP/Contents/MacOS/$EXECUTABLE_NAME"
 [[ -x "$EXECUTABLE" ]] || { echo "No executable: $EXECUTABLE" >&2; exit 1; }
+MCP_HELPER="$APP/Contents/MacOS/openramble-mcp"
+[[ -x "$MCP_HELPER" ]] || { echo "No MCP helper: $MCP_HELPER" >&2; exit 1; }
 
 codesign --verify --deep --strict --verbose=2 "$APP"
+codesign --verify --strict --verbose=2 "$MCP_HELPER"
+if otool -L "$MCP_HELPER" | grep -q '/Network\.framework/'; then
+  echo "The local MCP helper links Network.framework." >&2
+  exit 1
+fi
+"$(dirname "$0")/test-mcp-helper.sh" "$MCP_HELPER"
 
 audio_input_entitlement=$(
   codesign -d --entitlements :- "$APP" 2>/dev/null \
@@ -43,4 +51,4 @@ do
   }
 done
 
-echo "Installed artifact smoke: arm64-only, minOS 14.0, audio input entitlement, signature/resources OK."
+echo "Installed artifact smoke: arm64-only, minOS 14.0, local MCP, audio input entitlement, signature/resources OK."

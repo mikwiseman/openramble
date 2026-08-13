@@ -20,6 +20,14 @@ public final class DictationOverlay: OverlayPresenting {
     /// it is in an isolated class - outside of isolation. They only touch her from the main point
     /// stream: the panel lives entirely on it.
     nonisolated(unsafe) private var resizeObserver: (any NSObjectProtocol)?
+    nonisolated(unsafe) private var screenObserver: (any NSObjectProtocol)?
+
+    var placement: DictationOverlayPlacement = .top {
+        didSet {
+            guard oldValue != placement, panel?.isVisible == true else { return }
+            position()
+        }
+    }
 
     public init(
         announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
@@ -42,6 +50,9 @@ public final class DictationOverlay: OverlayPresenting {
         // A subscription left in the notification center survives the owner.
         if let resizeObserver {
             NotificationCenter.default.removeObserver(resizeObserver)
+        }
+        if let screenObserver {
+            NotificationCenter.default.removeObserver(screenObserver)
         }
     }
 
@@ -106,6 +117,15 @@ public final class DictationOverlay: OverlayPresenting {
             ) { [weak self] _ in
                 MainActor.assumeIsolated { self?.position() }
             }
+            // A Dock move, display reconnect or resolution change can alter
+            // `visibleFrame` without resizing this panel.
+            screenObserver = NotificationCenter.default.addObserver(
+                forName: NSApplication.didChangeScreenParametersNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.position() }
+            }
             self.panel = panel
         }
         position()
@@ -129,13 +149,16 @@ public final class DictationOverlay: OverlayPresenting {
 
         let size = panel.frame.size
         panel.setFrameOrigin(
-            NSPoint(
-                x: frame.midX - size.width / 2,
-                y: frame.maxY - size.height - 24
+            OverlayPlacementPolicy.origin(
+                placement: placement,
+                visibleFrame: frame,
+                panelSize: size
             )
         )
     }
 }
+
+extension DictationOverlay: OverlayPlacementConfiguring {}
 
 /// State of the panel: what is written on it, whether it is visible and what has already been said out loud.
 ///

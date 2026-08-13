@@ -456,7 +456,10 @@ case "transcribe", "bench":
                 let realtimeFactor = wall > 0 ? result.audioDuration / wall : 0
                 print("---")
                 print(String(format: "audio: %.2f s", result.audioDuration))
-                print(String(format: "recognized: %.2f with", wall))
+                // Four decimals keep the short-utterance distribution usable
+                // for p50/p95 comparisons; two decimals quantized away most of
+                // the difference between fast local pipelines.
+                print(String(format: "recognized: %.4f s", wall))
                 print(String(format: "%.1f times faster than real time", realtimeFactor))
                 print("words with timings: \(result.words.count)")
                 print("peak memory: \(formatBytes(peakMemoryBytes()))")

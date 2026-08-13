@@ -122,6 +122,18 @@ final class AudioFileReaderTests: XCTestCase {
 
     // MARK: - Long entries
 
+    func testDurationLimitRejectsBeforeBuildingFullSampleArray() throws {
+        let url = try writeWAV(seconds: 2, sampleRate: 48_000, channels: 2)
+
+        XCTAssertThrowsError(try reader.samples(from: url, maximumDuration: 1)) { error in
+            guard case let .durationExceeded(actual, maximum) = error as? AudioFileReader.Failure else {
+                return XCTFail("Expected duration limit, got \(error)")
+            }
+            XCTAssertEqual(actual, 2, accuracy: 0.01)
+            XCTAssertEqual(maximum, 1)
+        }
+    }
+
     func testReadsRecordingLongerThanOneConversionChunk() throws {
         // The casting occurs in pieces of 16,384 frames, and gluing the pieces together is the most
         // fragile place: the error there cuts off the end of a long dictation.

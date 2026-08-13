@@ -92,6 +92,8 @@ Application Support directory automatically. The bundle identifier remains
   dictionary replacements and typography cleanup. The item appears when that
   raw text differs from what was inserted.
 - There is no limit on how long a dictation may run.
+- Choose whether the compact dictation panel appears at the top or bottom of
+  the active display in Settings → General.
 
 Clipboard insertion preserves the previous clipboard contents in memory and
 restores them within two seconds — including screenshots and other non-text
@@ -101,6 +103,18 @@ devices or clipboard-manager history. Concealed password-manager values, file
 promises, and clipboard contents larger than 16 MiB are never copied; the
 dictated text stays available in the menu — “Insert Last Dictation” and
 Recent Dictations — instead.
+
+## Local transcription for agents
+
+OpenRamble includes an opt-in local [MCP server](docs/mcp.md), so Codex,
+Claude Code, and other stdio MCP clients can transcribe audio with the same
+on-device model. Enable it in Settings → Agents and copy the setup command for
+your client. Agent requests are bounded and serialized; a live dictation
+always takes priority.
+
+The helper does not load another model, open a network listener, or retain a
+transcript. It connects to the running app over a same-user Unix socket and
+returns text plus measured processing, queue, and total durations.
 
 ## Requirements
 
@@ -139,6 +153,7 @@ the separate name `OpenRambleDev` and bundle identifier
 - [Security policy](SECURITY.md)
 - [Manual verification](docs/manual-check.md)
 - [Release process](docs/release.md)
+- [Local transcription MCP](docs/mcp.md)
 - [Benchmark methodology](docs/benchmarks.md)
 - [Model lifecycle](docs/model-lifecycle.md)
 

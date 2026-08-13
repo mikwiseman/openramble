@@ -1,4 +1,5 @@
 import AVFoundation
+import AgentBridge
 import AppKit
 import ServiceManagement
 import DictationAudio
@@ -15,6 +16,7 @@ import os
 /// The network gate separately enforces that no transcript text is ever
 /// logged.
 let engineLog = Logger(subsystem: "is.waiwai.dictation", category: "engine")
+let agentLog = Logger(subsystem: "is.waiwai.dictation", category: "agent-bridge")
 
 extension Duration {
     /// Seconds as a plain Double, for logging and arithmetic.
@@ -263,6 +265,27 @@ public final class AppState: ObservableObject {
         }
     }
 
+    @Published public var overlayPlacement: DictationOverlayPlacement {
+        didSet {
+            guard oldValue != overlayPlacement else { return }
+            defaults.set(overlayPlacement.rawValue, forKey: Keys.overlayPlacement)
+            (overlay as? any OverlayPlacementConfiguring)?.placement = overlayPlacement
+        }
+    }
+
+    /// Explicit opt-in for processes running as this macOS user. The bridge
+    /// listener exists while the app runs so helpers can return an actionable
+    /// disabled error instead of looking crashed, but no audio is decoded off.
+    @Published public var agentTranscriptionEnabled: Bool {
+        didSet {
+            guard oldValue != agentTranscriptionEnabled else { return }
+            defaults.set(agentTranscriptionEnabled, forKey: Keys.agentTranscriptionEnabled)
+        }
+    }
+
+    @Published public private(set) var isAgentBridgeListening = false
+    @Published public private(set) var isAgentTranscriptionBusy = false
+
     /// Replacement dictionary. Changes only through the methods below: direct write bypassed
     /// would check that the dictionary can be saved at all.
     @Published public private(set) var replacements: [DictionaryReplacement]
@@ -270,6 +293,8 @@ public final class AppState: ObservableObject {
     private enum Keys {
         static let hotkey = "hotkey"
         static let sounds = "soundsEnabled"
+        static let overlayPlacement = "overlayPlacement"
+        static let agentTranscriptionEnabled = AgentBridgeProtocol.accessPreferenceKey
         static let replacements = "replacements"
         /// macOS global setup: what pressing 🌐 does.
         static let fnUsage = "AppleFnUsageType"
@@ -310,6 +335,8 @@ public final class AppState: ObservableObject {
     private var mainModelFileCount = 0
     private var vocabularyModelFileCount = 0
     private var transcriber: LocalTranscriber?
+    private var agentTranscriptionBroker: AgentTranscriptionBroker?
+    private var agentSocketServer: UnixSocketServer?
     private var recordingRecovery: RecordingRecoveryStore?
     private var engineDirectory: URL?
     private var controller: DictationController?
@@ -442,10 +469,18 @@ public final class AppState: ObservableObject {
         hotkey = DictationHotkey(rawValue: environment.defaults.string(forKey: Keys.hotkey) ?? "")
             ?? .rightCommand
         soundsEnabled = environment.defaults.object(forKey: Keys.sounds) as? Bool ?? true
+        overlayPlacement = DictationOverlayPlacement(
+            rawValue: environment.defaults.string(forKey: Keys.overlayPlacement) ?? ""
+        ) ?? .top
+        agentTranscriptionEnabled = environment.defaults.bool(
+            forKey: Keys.agentTranscriptionEnabled
+        )
 
         let loaded = replacementsStore.load()
         replacements = loaded.replacements
         dictionaryProblem = loaded.problem
+
+        (overlay as? any OverlayPlacementConfiguring)?.placement = overlayPlacement
 
         setUp()
 
@@ -463,6 +498,7 @@ public final class AppState: ObservableObject {
         residencyTimer?.invalidate()
         memoryPressureSource?.cancel()
         vocabularyRebuildTask?.cancel()
+        agentSocketServer?.stop()
         for observer in systemObservers {
             observer.center.removeObserver(observer.token)
         }
@@ -521,6 +557,7 @@ public final class AppState: ObservableObject {
 
             let engineDirectory = layout.engineDirectory
             self.engineDirectory = engineDirectory
+            setUpAgentTranscription(engineDirectory: engineDirectory)
             let languageHint: @Sendable () -> String? = { [box = UncheckedBox(defaults)] in
                 // UserDefaults is documented thread-safe. Read at invocation so
                 // changing the recognition language affects the very next take.
@@ -551,10 +588,15 @@ public final class AppState: ObservableObject {
                 pipeline: { [weak self] in
                     self?.makePipeline() ?? TextPipeline()
                 },
-                prepareForTranscription: makePrepareForTranscription(engineDirectory: engineDirectory)
+                prepareForTranscription: makePrepareForTranscription(
+                    engineDirectory: engineDirectory,
+                    agentBroker: agentTranscriptionBroker
+                )
             )
             controller.onStateChange = { [weak self] state in
                 self?.dictationState = state
+                if state == .preparing { self?.agentTranscriptionBroker?.beginInteractiveWork() }
+                if state == .idle { self?.agentTranscriptionBroker?.endInteractiveWork() }
                 self?.flushNoticeAfterSession(state)
                 // The person just pressed the key and is about to speak for
                 // seconds: if the engine sat idle long enough for macOS to
@@ -658,10 +700,109 @@ public final class AppState: ObservableObject {
     /// coalesces this with the reload already in flight. Test environments
     /// (transcriber == nil) keep the old shape: no separate prepare phase.
     private func makePrepareForTranscription(
-        engineDirectory: URL
+        engineDirectory: URL,
+        agentBroker: AgentTranscriptionBroker?
     ) -> (@Sendable () async throws -> Void)? {
         guard let transcriber else { return nil }
-        return { try await transcriber.prepare(modelDirectory: engineDirectory) }
+        return {
+            try await agentBroker?.waitUntilInteractiveReady()
+            try await transcriber.prepare(modelDirectory: engineDirectory)
+        }
+    }
+
+    private func setUpAgentTranscription(engineDirectory: URL) {
+        guard let transcriber else { return }
+        let identifier = Bundle.main.bundleIdentifier
+            ?? AgentBridgeSocketAddress.productionBundleIdentifier
+        let address: AgentBridgeSocketAddress
+        do {
+            address = try AgentBridgeSocketAddress(bundleIdentifier: identifier)
+        } catch {
+            isAgentBridgeListening = false
+            agentLog.error("Could not create the private agent socket address: \(String(describing: error), privacy: .public)")
+            return
+        }
+        let defaultsBox = UncheckedBox(defaults)
+        let broker = AgentTranscriptionBroker(
+            transcriber: transcriber,
+            engineDirectory: engineDirectory,
+            bridgeAddress: address,
+            isEnabled: {
+                defaultsBox.value.bool(forKey: Keys.agentTranscriptionEnabled)
+            },
+            onBusyChanged: { [weak self] busy, usedEngine in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.isAgentTranscriptionBusy = busy
+                    if !busy {
+                        if usedEngine { self.lastEngineActivity = self.now() }
+                        self.evaluateResidency(trigger: "agent-idle")
+                    }
+                }
+            }
+        )
+
+        do {
+            let server = UnixSocketServer(address: address)
+            try server.start { [weak broker] request, progress in
+                guard let broker else {
+                    return .failure(
+                        requestID: request.requestID,
+                        error: AgentBridgeError(
+                            code: .serverShuttingDown,
+                            message: "OpenRamble is shutting down.",
+                            isRetryable: true
+                        )
+                    )
+                }
+                return await broker.handle(request: request, progress: progress)
+            }
+            agentTranscriptionBroker = broker
+            agentSocketServer = server
+            isAgentBridgeListening = true
+        } catch {
+            isAgentBridgeListening = false
+            agentLog.error("Could not start the private agent socket: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    var agentExecutablePath: String {
+        Bundle.main.bundleURL
+            .appending(path: "Contents/MacOS/openramble-mcp", directoryHint: .notDirectory)
+            .path
+    }
+
+    func copyCodexMCPCommand() {
+        copyAgentConfiguration(
+            "codex mcp add openramble -- \(Self.shellQuote(agentExecutablePath))"
+        )
+    }
+
+    func copyClaudeMCPCommand() {
+        copyAgentConfiguration(
+            "claude mcp add --scope user openramble -- \(Self.shellQuote(agentExecutablePath))"
+        )
+    }
+
+    func copyGenericMCPConfiguration() {
+        let escaped = agentExecutablePath
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        copyAgentConfiguration(
+            "{\n  \"mcpServers\": {\n    \"openramble\": {\n      \"command\": \"\(escaped)\"\n    }\n  }\n}"
+        )
+    }
+
+    private func copyAgentConfiguration(_ text: String) {
+        do {
+            try HostOnlyPasteboard().copyHostOnly(text)
+        } catch {
+            NSSound.beep()
+        }
+    }
+
+    private static func shellQuote(_ text: String) -> String {
+        "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
     /// Old builds wrote unrecognized text to disk in `Recovered/`.
@@ -923,7 +1064,7 @@ public final class AppState: ObservableObject {
     /// after eviction. A hung ping means the engine is wedged on a dead
     /// system service — recycle it.
     private func pingEngine(deadline: Duration) {
-        guard let transcriber else { return }
+        guard let transcriber, !isAgentTranscriptionBusy else { return }
         Task { [weak self] in
             do {
                 _ = try await withTranscriptionDeadline(deadline) {
@@ -1045,7 +1186,7 @@ public final class AppState: ObservableObject {
             consecutiveWarnings: consecutiveWarnings,
             engineLoaded: isEngineReady,
             engineBusy: dictationState != .idle || isRecoveryOperationActive
-                || isRecyclingEngine || isPreparingEngine,
+                || isRecyclingEngine || isPreparingEngine || isAgentTranscriptionBusy,
             idleFor: lastEngineActivity.map { referenceNow.timeIntervalSince($0) } ?? .infinity,
             sinceLoadCompleted: lastLoadCompletedAt.map { referenceNow.timeIntervalSince($0) }
                 ?? .infinity
