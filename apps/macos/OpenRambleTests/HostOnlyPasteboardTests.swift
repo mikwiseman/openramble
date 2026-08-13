@@ -220,6 +220,48 @@ final class HostOnlyPasteboardTests: XCTestCase {
         )
     }
 
+    /// A copied screenshot is TIFF + PNG with no text at all. The dictation
+    /// round trip must return both representations byte-for-byte — losing a
+    /// screenshot to a dictated chat reply is exactly the kind of small theft
+    /// that breaks trust for good. (A real image-restore bug shipped in
+    /// Handy 0.9.5; this pins that it cannot happen here.)
+    func testScreenshotInClipboardSurvivesTheDictationRoundTrip() throws {
+        let rep = try XCTUnwrap(NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: 2,
+            pixelsHigh: 2,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ))
+        if let pixels = rep.bitmapData {
+            for index in 0..<16 { pixels[index] = UInt8(index * 16) }
+        }
+        let tiff = try XCTUnwrap(rep.tiffRepresentation)
+        let png = try XCTUnwrap(rep.representation(using: .png, properties: [:]))
+
+        board.prepareForNewContents(with: .currentHostOnly)
+        let item = NSPasteboardItem()
+        item.setData(tiff, forType: .tiff)
+        item.setData(png, forType: .png)
+        XCTAssertTrue(board.writeObjects([item]))
+
+        let transaction = try pasteboard.beginHostOnlyWrite("dictation")
+        XCTAssertEqual(board.string(forType: .string), "dictation")
+        try pasteboard.restore(transaction)
+
+        XCTAssertEqual(board.data(forType: .tiff), tiff)
+        XCTAssertEqual(board.data(forType: .png), png)
+        XCTAssertNil(
+            board.string(forType: .string),
+            "a screenshot has no text — restore must not invent one"
+        )
+    }
+
     /// The same overlap, but the restores arrive in reverse order: the superseded
     /// transaction must not return the dictation to the board over the person's content.
     func testScenario016() throws {

@@ -173,7 +173,16 @@ public final class AppState: ObservableObject {
     private var preparationStartedAt: Date?
     /// Is the preparation countdown in progress? Needed for tests: “the application is silent at rest.”
     public var isCountingEnginePreparation: Bool { preparationTimer != nil }
-    @Published public private(set) var isEngineReady = false
+    @Published public private(set) var isEngineReady = false {
+        didSet { if isEngineReady { hasEngineBeenReady = true } }
+    }
+    /// Whether the engine has ever been ready in this process.
+    ///
+    /// Splits two very different "not ready" states: the FIRST warm-up after
+    /// install (blocks dictation with an honest message — there is genuinely
+    /// nothing to recognize with yet) and a residency unload (recording must
+    /// start instantly; the reload rides under the voice).
+    public private(set) var hasEngineBeenReady = false
     /// How much the installation button will download: the full volume or additional volume after the update.
     @Published public private(set) var remainingDownloadMegabytes = 586
     /// Recognition language: nil - auto-detection by sound. Code BCP-47 (“en”).
@@ -360,9 +369,14 @@ public final class AppState: ObservableObject {
     nonisolated(unsafe) private var permissionTimer: Timer?
     nonisolated(unsafe) private var durationTimer: Timer?
     nonisolated(unsafe) private var systemObservers: [(center: NotificationCenter, token: any NSObjectProtocol)] = []
+    /// One-shot: armed only while a residency rule waits on a time boundary.
+    /// At rest — normal pressure, or nothing pending — no timer exists.
+    nonisolated(unsafe) private var residencyTimer: Timer?
+    nonisolated(unsafe) private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
 
     public var isDictationReady: Bool {
-        accessibilityGranted && microphoneGranted && modelState.isReady && isEngineReady
+        accessibilityGranted && microphoneGranted && modelState.isReady
+            && (isEngineReady || hasEngineBeenReady)
     }
 
     /// How often permissions are now polled. Zero - polling is not running.
@@ -451,6 +465,8 @@ public final class AppState: ObservableObject {
         // not from waking up.
         permissionTimer?.invalidate()
         durationTimer?.invalidate()
+        residencyTimer?.invalidate()
+        memoryPressureSource?.cancel()
         vocabularyRebuildTask?.cancel()
         for observer in systemObservers {
             observer.center.removeObserver(observer.token)
@@ -529,7 +545,8 @@ public final class AppState: ObservableObject {
                 recordingRecovery: recordingRecovery,
                 pipeline: { [weak self] in
                     self?.makePipeline() ?? TextPipeline()
-                }
+                },
+                prepareForTranscription: makePrepareForTranscription(engineDirectory: engineDirectory)
             )
             controller.onStateChange = { [weak self] state in
                 self?.dictationState = state
@@ -540,6 +557,9 @@ public final class AppState: ObservableObject {
                 // evict its Neural Engine state, reload it now, under their
                 // voice, instead of after it.
                 if state == .preparing { self?.warmEngineUnderVoiceIfCold() }
+                // A finished session is a residency event: the engine just
+                // became safely idle, and a deferred unload may now proceed.
+                if state == .idle { self?.evaluateResidency(trigger: "session-idle") }
             }
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
@@ -617,6 +637,7 @@ public final class AppState: ObservableObject {
 
         wireHotkey()
         observeSystemEvents()
+        observeMemoryPressure()
         refreshPermissions()
         Task {
             removeLegacyTextRecovery()
@@ -624,6 +645,19 @@ public final class AppState: ObservableObject {
             await refreshModelState()
             if modelState.isReady { await warmUpEngine() }
         }
+    }
+
+    /// A residency-managed engine may be cold at stop time; the reload has
+    /// been running since the keypress and gets its own budget in the
+    /// controller so a two-second utterance's recognition deadline never has
+    /// to cover a sixteen-second load. The single-flight transcriber
+    /// coalesces this with the reload already in flight. Test environments
+    /// (transcriber == nil) keep the old shape: no separate prepare phase.
+    private func makePrepareForTranscription(
+        engineDirectory: URL
+    ) -> (@Sendable () async throws -> Void)? {
+        guard let transcriber else { return nil }
+        return { try await transcriber.prepare(modelDirectory: engineDirectory) }
     }
 
     /// Old builds wrote unrecognized text to disk in `Recovered/`.
@@ -870,6 +904,7 @@ public final class AppState: ObservableObject {
         hotkeyMonitor.stop()
         refreshPermissions()
         revalidateEngineAfterWake()
+        evaluateResidency(trigger: "wake")
     }
 
     /// Whether an engine recycle is already underway — one wedge, one cure.
@@ -902,14 +937,152 @@ public final class AppState: ObservableObject {
     /// The engine clock: injected time keeps the cold-suspicion rule testable.
     private func now() -> Date { Date() }
 
-    private func warmEngineUnderVoiceIfCold() {
-        guard transcriber != nil, isEngineReady, !isRecyclingEngine else { return }
+    /// Internal, not private: the residency pin drives the exact press hook.
+    func warmEngineUnderVoiceIfCold() {
+        guard transcriber != nil, !isRecyclingEngine else { return }
+        // Residency gave the memory back: the press starts the FULL reload —
+        // weights and vocabulary — in parallel with the recording. The
+        // single-flight transcriber coalesces this with the transcription
+        // path's own prepare, and the preparation UI narrates honestly if
+        // the reload outlasts the speech.
+        guard isEngineReady else {
+            if hasEngineBeenReady, !isPreparingEngine {
+                engineLog.info("engine reload under voice")
+                Task { [weak self] in await self?.warmUpEngine() }
+            }
+            return
+        }
         guard EngineWarming.shouldWarm(lastEngineActivity: lastEngineActivity, now: now()) else {
             return
         }
         // A generous deadline: the recording gives it cover, and a real wedge
         // still surfaces through the dictation's own deadline right after.
         pingEngine(deadline: .seconds(30))
+    }
+
+    /// Show the support folder in Finder.
+    ///
+    /// Kept recordings, downloaded models — everything the app writes lives
+    /// here. The failure notice points at this button, so a preserved take
+    /// is never a file the person can't find without a terminal.
+    func revealSupportFolder() {
+        do {
+            let support = try paths.support()
+            NSWorkspace.shared.activateFileViewerSelecting([support])
+        } catch {
+            // Application Support failing to materialize is a disk-level
+            // event; the click must still not pass silently.
+            NSSound.beep()
+        }
+    }
+
+    // MARK: - Engine residency (automatic, zero settings)
+
+    /// Consecutive warning-tier pressure events; one blip does nothing.
+    private var consecutiveWarnings = 0
+    /// When the last engine load completed — feeds the anti-thrash hold.
+    private var lastLoadCompletedAt: Date?
+    /// Test seam, same doctrine as `isCountingDuration`: at rest — normal
+    /// pressure, nothing pending — no residency timer may exist.
+    public var isAwaitingResidencyBoundary: Bool { residencyTimer != nil }
+
+    /// Give the engine's memory back when macOS says memory is tight.
+    ///
+    /// Handy asks the user to pick an unload timer from seven options; this
+    /// is the zero-settings answer. The source is an OS-driven event — the
+    /// app still does nothing at rest.
+    private func observeMemoryPressure() {
+        let source = DispatchSource.makeMemoryPressureSource(
+            eventMask: [.normal, .warning, .critical],
+            queue: .global(qos: .utility)
+        )
+        source.setEventHandler { [weak self, weak source] in
+            guard let event = source?.data else { return }
+            let tier: MemoryPressureTier =
+                event.contains(.critical) ? .critical
+                : event.contains(.warning) ? .warning
+                : .normal
+            Task { @MainActor in self?.registerMemoryPressure(tier) }
+        }
+        source.activate()
+        memoryPressureSource = source
+    }
+
+    /// The most recent tier the OS reported; rules between events use it.
+    private var lastPressureTier: MemoryPressureTier = .normal
+
+    /// Internal, not private: tests inject tiers the OS only sends under real
+    /// memory starvation.
+    func registerMemoryPressure(_ tier: MemoryPressureTier) {
+        lastPressureTier = tier
+        switch tier {
+        case .warning: consecutiveWarnings += 1
+        case .critical: break
+        case .normal: consecutiveWarnings = 0
+        }
+        engineLog.info(
+            "memory pressure tier=\(String(describing: tier), privacy: .public) consecutiveWarnings=\(self.consecutiveWarnings)"
+        )
+        evaluateResidency(trigger: "pressure")
+    }
+
+    /// One evaluation path for every trigger: pressure change, finished
+    /// dictation, finished load, wake, boundary timer.
+    private func evaluateResidency(trigger: StaticString) {
+        residencyTimer?.invalidate()
+        residencyTimer = nil
+
+        let tier: MemoryPressureTier = currentPressureTier()
+        let referenceNow = now()
+        let decision = EngineResidencyPolicy.decision(
+            tier: tier,
+            consecutiveWarnings: consecutiveWarnings,
+            engineLoaded: isEngineReady,
+            engineBusy: dictationState != .idle || isRecoveryOperationActive
+                || isRecyclingEngine || isPreparingEngine,
+            idleFor: lastEngineActivity.map { referenceNow.timeIntervalSince($0) } ?? .infinity,
+            sinceLoadCompleted: lastLoadCompletedAt.map { referenceNow.timeIntervalSince($0) }
+                ?? .infinity
+        )
+
+        switch decision {
+        case .keep:
+            break
+        case .unload:
+            engineLog.notice("engine unload: tier=\(String(describing: tier), privacy: .public) trigger=\(trigger, privacy: .public)")
+            guard let transcriber else { return }
+            Task { [weak self] in
+                let unloaded = await transcriber.unloadIfIdle()
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    if unloaded {
+                        // hasEngineBeenReady stays true: dictation remains
+                        // enabled, the reload rides under the next voice.
+                        self.isEngineReady = false
+                        self.enginePreparation = .make(phase: .idle, elapsed: 0)
+                    } else {
+                        engineLog.info("engine unload deferred: busy at the transcriber")
+                    }
+                }
+            }
+        case let .checkAgain(after):
+            engineLog.info("engine unload pending boundary in \(after, format: .fixed(precision: 0))s")
+            residencyTimer = Timer.scheduledTimer(
+                withTimeInterval: max(1, after),
+                repeats: false
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.residencyTimer = nil
+                    self?.evaluateResidency(trigger: "boundary")
+                }
+            }
+        }
+    }
+
+    /// The tier the policy sees between events: the OS's last report stands
+    /// until the next event replaces it.
+    private func currentPressureTier() -> MemoryPressureTier {
+        lastPressureTier
     }
 
     /// Reload the recognition engine after a wedged transcription.
@@ -1079,7 +1252,8 @@ public final class AppState: ObservableObject {
             accessibilityGranted: accessibilityGranted,
             microphoneGranted: microphoneGranted,
             modelState: modelState,
-            isEngineReady: isEngineReady
+            isEngineReady: isEngineReady,
+            engineWasReadyBefore: hasEngineBeenReady
         ) else { return true }
 
         // Precisely warning: for VoiceOver this is an urgent announcement, and the person
@@ -1518,6 +1692,8 @@ public final class AppState: ObservableObject {
             }
             isEngineReady = true
             engineLoadFailure = nil
+            lastLoadCompletedAt = now()
+            evaluateResidency(trigger: "load-completed")
         } catch let boost as VocabularyBoostError {
             // The problem is with the list of human terms, not with the model's weights.
             // Previously, this fell into the general catch and was classified as damage

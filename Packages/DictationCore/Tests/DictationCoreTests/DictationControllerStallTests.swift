@@ -116,6 +116,78 @@ final class DictationControllerStallTests: XCTestCase {
         XCTAssertEqual(kept.count, 1, "the take moves into safekeeping")
     }
 
+    /// A reload that wedges (prepare never returns) flows into the same
+    /// recovery as a wedged recognition: bounded failure, recording kept,
+    /// stall signalled — the person is never held hostage by a cold engine.
+    func testWedgedPrepareResolvesLikeAWedgedTranscription() async throws {
+        let capture = FileCapture(directory: takes)
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in
+                ASRResult(text: "never reached", audioDuration: 1, processingDuration: 0.1)
+            },
+            inserter: NullInserter(),
+            overlay: NullOverlay(),
+            sounds: NullSounds(),
+            recordingRecovery: RecordingRecoveryStore(directory: recovered),
+            prepareForTranscription: {
+                while true {
+                    try? await Task.sleep(for: .seconds(10))
+                }
+            },
+            prepareDeadline: .milliseconds(80)
+        )
+        var notices: [DictationNotice] = []
+        controller.onNotice = { notices.append($0) }
+        var stalls = 0
+        controller.onTranscriptionStall = { stalls += 1 }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        for _ in 0..<200 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertEqual(controller.state, .idle)
+        XCTAssertEqual(stalls, 1)
+        let notice = try XCTUnwrap(notices.last)
+        XCTAssertEqual(notice.kind, .failure)
+        XCTAssertNotNil(notice.recoveryAudio, "the words survive a wedged reload too")
+    }
+
+    /// A healthy prepare adds nothing observable: recognition proceeds.
+    func testHealthyPrepareIsInvisible() async throws {
+        let capture = FileCapture(directory: takes)
+        let preparedBox = UncheckedBox(0)
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in
+                ASRResult(text: "words", audioDuration: 1, processingDuration: 0.1)
+            },
+            inserter: NullInserter(),
+            overlay: NullOverlay(),
+            sounds: NullSounds(),
+            recordingRecovery: RecordingRecoveryStore(directory: recovered),
+            prepareForTranscription: { preparedBox.value += 1 },
+            prepareDeadline: .seconds(5)
+        )
+        var inserted = false
+        controller.onTextInserted = { _ in inserted = true }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        for _ in 0..<200 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertEqual(preparedBox.value, 1)
+        XCTAssertTrue(inserted, "prepare must not disturb a healthy dictation")
+    }
+
     /// Escape during a wedged transcription stays a quiet cancellation:
     /// no stall signal, no failure notice, nothing kept.
     func testCancellationDuringWedgeStaysQuietCancellation() async throws {

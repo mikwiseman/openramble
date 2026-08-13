@@ -7,12 +7,15 @@ actor ScriptedCapture: AudioCapturing {
     private(set) var startCount = 0
     private(set) var abortCount = 0
     private var duration: TimeInterval = 2.0
+    private var startError: Error?
     private let file = URL(fileURLWithPath: "/tmp/scripted-take.wav")
 
     func setDuration(_ value: TimeInterval) { duration = value }
+    func setStartError(_ error: Error?) { startError = error }
 
     func startRecording() async throws -> URL {
         startCount += 1
+        if let startError { throw startError }
         return file
     }
 
@@ -137,6 +140,31 @@ final class DictationControllerFailurePathTests: XCTestCase {
         await settle()
         controller.stop()
         await settle()
+    }
+
+    /// The audio daemon is dead at press time — coreaudiod restarts were
+    /// observed overnight in the field. One session fails with a plain
+    /// notice, and the very NEXT press works once audio is back. A crashed
+    /// engine bricking every hotkey until app restart is Handy 0.9.5's
+    /// failure mode; ours must stay a one-session event.
+    func testCaptureStartFailureSurfacesAndTheNextPressWorks() async throws {
+        let controller = makeController(recognized: "after recovery")
+        await capture.setStartError(AudioCaptureError.notRecording)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+
+        XCTAssertEqual(controller.state, .idle, "a failed start must free the session")
+        let notice = await overlay.notices.last
+        XCTAssertEqual(notice?.kind, .failure)
+        XCTAssertEqual(notice?.message, "Couldn't record audio.")
+
+        await capture.setStartError(nil)
+        await runFullDictation(controller)
+
+        let inserted = await inserter.insertedTexts
+        // The pipeline capitalizes the sentence start — that's the healthy path.
+        XCTAssertEqual(inserted, ["After recovery"], "the next press must dictate normally")
     }
 
     // MARK: - Press Return

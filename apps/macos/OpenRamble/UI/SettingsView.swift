@@ -20,7 +20,7 @@ struct SettingsView: View {
                 .tabItem { Label("Recognition", systemImage: "waveform") }
             DictionarySettings(state: state)
                 .tabItem { Label("Dictionary", systemImage: "character.book.closed") }
-            AboutView(updater: state.updater)
+            AboutView(updater: state.updater, revealSupportFolder: state.revealSupportFolder)
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 620, height: 500)
@@ -490,6 +490,7 @@ private struct DictionaryTransferFile: FileDocument {
 private struct AboutView: View {
     // Sparkle reports its changes itself; they would not have reached through AppState.
     @ObservedObject var updater: SparkleUpdater
+    let revealSupportFolder: () -> Void
 
     /// Version and build number. The first thing asked in any bug report is
     /// and the only place where this could be read is not in the application
@@ -566,10 +567,12 @@ private struct AboutView: View {
                         .font(.title3)
                 }
                 .accessibilityElement(children: .combine)
+                Button("Reveal Support Folder", action: revealSupportFolder)
+                    .accessibilityHint("Opens the folder with downloaded models and any recordings kept after a failure")
             } header: {
                 Text("Privacy")
             } footer: {
-                Text("No account, analytics, or cloud transcription. Network access is limited to model downloads and update checks.")
+                Text("No account, analytics, or cloud transcription. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder.")
             }
 
             Section("Credits") {
