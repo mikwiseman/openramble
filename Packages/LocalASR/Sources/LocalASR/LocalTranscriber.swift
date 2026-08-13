@@ -15,6 +15,19 @@ public actor LocalTranscriber {
     private let engine: any ASREngineAdapting
     private let reader: AudioFileReader
     private var loadedDirectory: URL?
+    /// The in-flight load, if any. Loads are single-flight: the press-time
+    /// warm-up and the transcribe path both ask for the engine, and without
+    /// coalescing they would start two multi-second model loads — doubling
+    /// the memory spike on exactly the machine whose memory pressure caused
+    /// the unload in the first place.
+    private var loadTask: Task<Void, Error>?
+    /// Bumped by every unload. A load that finishes into an older generation
+    /// has been overtaken — its weights are released and its caller sees
+    /// cancellation instead of a resurrected engine.
+    private var generation = 0
+    /// Recognition calls in flight. Residency's polite unload refuses while
+    /// this is non-zero; only the forced unload (wedge recovery) ignores it.
+    private var activeOperations = 0
 
     public init(
         engine: any ASREngineAdapting = FluidAudioAdapter(),
@@ -26,15 +39,43 @@ public actor LocalTranscriber {
 
     public var isPrepared: Bool { loadedDirectory != nil }
 
-    /// Load the model in advance.
-    ///
-    /// The first call after installation compiles the model for the neuromodule and therefore
-    /// noticeably longer than subsequent ones - this should not be done at the moment when
-    /// the user is waiting for text.
+    /// Is a recognition or load running right now?
+    public var isBusy: Bool { activeOperations > 0 || loadTask != nil }
+
+    /// Load the model in advance. Single-flight: concurrent calls ride one
+    /// load. The first call after installation compiles the model for the
+    /// neuromodule and is noticeably longer than subsequent ones — this
+    /// should not happen at the moment the user is waiting for text.
     public func prepare(modelDirectory: URL) async throws {
         if loadedDirectory == modelDirectory { return }
-        try await engine.loadModels(from: modelDirectory)
-        loadedDirectory = modelDirectory
+
+        if let inFlight = loadTask {
+            try await inFlight.value
+            // The shared task marks completion before finishing, so by the
+            // time any rider resumes, the mark is already visible.
+            if loadedDirectory == modelDirectory { return }
+        }
+
+        let expectedGeneration = generation
+        let engine = engine
+        // The completion mark is set INSIDE the shared task (which inherits
+        // this actor's isolation): riders may resume before the creator, and
+        // marking outside the task would let a rider observe "not loaded"
+        // and start a second multi-second load.
+        let task = Task {
+            try await engine.loadModels(from: modelDirectory)
+            guard self.generation == expectedGeneration else {
+                // Unloaded while loading: the owner has discarded this
+                // generation. Release the orphaned weights and report the
+                // load as overtaken, not successful.
+                await engine.unload()
+                throw CancellationError()
+            }
+            self.loadedDirectory = modelDirectory
+        }
+        loadTask = task
+        defer { loadTask = nil }
+        try await task.value
     }
 
     /// Load or rebuild the acoustic term hint.
@@ -96,6 +137,8 @@ public actor LocalTranscriber {
         }
 
         try Task.checkCancellation()
+        activeOperations += 1
+        defer { activeOperations -= 1 }
         return try await engine.transcribe(samples: samples, languageHint: languageHint)
     }
 
@@ -120,9 +163,26 @@ public actor LocalTranscriber {
         await capable.stopPreview()
     }
 
-    /// Free up memory under the model.
+    /// Free up memory under the model — forced.
+    ///
+    /// Used by wedge recovery and model deletion: it must work even when a
+    /// zombie inference will never return. A load in flight is fenced out by
+    /// the generation bump; its caller sees cancellation.
     public func unload() async {
+        generation += 1
         await engine.unload()
         loadedDirectory = nil
+    }
+
+    /// Free up memory under the model — polite, for residency management.
+    ///
+    /// Refuses while a load or recognition is in flight: interleaving an
+    /// unload with live work on the reentrant engine actor would end in a
+    /// nondeterministic state. The owner re-evaluates on completion events.
+    @discardableResult
+    public func unloadIfIdle() async -> Bool {
+        guard !isBusy else { return false }
+        await unload()
+        return true
     }
 }

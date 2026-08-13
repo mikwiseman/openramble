@@ -5,6 +5,11 @@ Private, local dictation for Apple Silicon Macs.
 Hold a hotkey, speak, and release it. OpenRamble transcribes the recording on
 your Mac and inserts the text at the current cursor.
 
+There are no engine knobs to tune: model choice, memory residency, timing
+budgets, and paste behavior are automatic and covered by tests. Under memory
+pressure the app releases the recognition engine on its own and reloads it
+under your next dictation — recording starts instantly either way.
+
 [Download OpenRamble](https://waiwai.is/ramble) ·
 [Latest release](https://github.com/mikwiseman/openramble/releases/latest) ·
 [Sparkle feed](https://mikwiseman.github.io/openramble/appcast.xml)
@@ -17,6 +22,9 @@ existing beta installations.
 
 Recognition runs locally. Audio is not uploaded, accounts are not required,
 and the app contains no analytics or crash-reporting SDK.
+
+Transcripts are never written to disk or to logs. Audio is kept only after a
+failure the app has told you about, within the limits in the table below.
 
 Recognition never uses the network. The following maintenance actions can:
 
@@ -67,6 +75,7 @@ Application data is stored under
 | Recognition models | Until removed in Settings |
 | Current recording | Deleted immediately after recognition |
 | Recovery audio after a technical failure | Up to 10 WAV files, seven days, and 1 GiB |
+| Recognized text and Recent Dictations | Memory only — the last 8, never written to disk, gone at quit |
 | Settings and replacement dictionary | Stored in macOS defaults |
 | Text that could not be inserted | Memory only, until the next dictation or app exit |
 
@@ -85,7 +94,10 @@ Application Support directory automatically. The bundle identifier remains
 - A single dictation is limited to one hour.
 
 Clipboard insertion preserves the previous clipboard contents in memory and
-restores them within two seconds. Concealed password-manager values, file
+restores them within two seconds — including screenshots and other non-text
+content, byte for byte. The dictated text is written with host-only, transient,
+and concealed markers, so it does not enter Universal Clipboard on your other
+devices or clipboard-manager history. Concealed password-manager values, file
 promises, and clipboard contents larger than 16 MiB are never copied; the
 dictated text stays available in the menu — “Insert Last Dictation” and
 Recent Dictations — instead.

@@ -20,7 +20,8 @@ enum DictationReadiness {
         accessibilityGranted: Bool,
         microphoneGranted: Bool,
         modelState: ModelState,
-        isEngineReady: Bool
+        isEngineReady: Bool,
+        engineWasReadyBefore: Bool = false
     ) -> String? {
         guard accessibilityGranted else {
             return "Dictation needs Accessibility access. Open Settings → General → Permissions."
@@ -44,10 +45,15 @@ enum DictationReadiness {
             break
         }
 
-        guard isEngineReady else {
+        guard isEngineReady || engineWasReadyBefore else {
             // The most offensive case: everything is installed, everything is issued, and still
             // silence. We name the deadline - otherwise it’s unclear whether to wait a second or
             // restart the application.
+            //
+            // Only the FIRST warm-up blocks. Once the engine has ever been
+            // ready, an unloaded engine (residency gave its memory back) must
+            // not stop the press: recording starts instantly and the reload
+            // rides under the voice.
             return "The model is getting ready for this Mac — usually 20–40 seconds, and only once."
         }
 

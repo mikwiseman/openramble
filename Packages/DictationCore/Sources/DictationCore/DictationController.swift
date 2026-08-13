@@ -49,6 +49,10 @@ public final class DictationController {
     /// Tells whether recording is going on without holding: this determines how
     /// interpret the next keystroke.
     public var onHandsFreeChange: (@MainActor (Bool) -> Void)?
+    /// Recognition exceeded its deadline — the engine is presumed wedged on a
+    /// dead system service. The owner should recycle it so the next dictation
+    /// runs on a fresh session instead of the same stuck one.
+    public var onTranscriptionStall: (@MainActor () -> Void)?
 
     /// Whether recording occurs without holding down a key.
     public private(set) var isHandsFreeActive = false {
@@ -78,6 +82,18 @@ public final class DictationController {
     /// lies. `MicrophoneCapture` and `TextInserter` already live on
     /// `ContinuousClock`, so all marks are comparable to each other.
     private let monotonicNow: @Sendable () -> ContinuousClock.Instant
+    /// How long recognition may run for a recording of a given duration.
+    /// Injectable so tests do not wait twenty real seconds for a stall.
+    private let transcriptionDeadline: @Sendable (TimeInterval) -> Duration
+    /// Bring the engine into memory before recognition, when the owner
+    /// manages residency. Separate from `transcribe` so a cold reload gets
+    /// its own generous budget instead of eating the recognition deadline:
+    /// a load that overlaps the person's speech must not count against the
+    /// transcription of a two-second utterance.
+    private let prepareForTranscription: (@Sendable () async throws -> Void)?
+    /// The reload budget. Covers a cache-purged model compile; a breach means
+    /// the engine is wedged and flows into the same stall recovery.
+    private let prepareDeadline: Duration
 
     // MARK: - Session state
 
@@ -126,7 +142,10 @@ public final class DictationController {
         recordingRecovery: any RecordingRecoveryStoring = DiscardingRecordingRecovery(),
         pipeline: @escaping () -> TextPipeline = { TextPipeline() },
         now: @escaping @Sendable () -> Date = { Date() },
-        monotonicNow: @escaping @Sendable () -> ContinuousClock.Instant = { .now }
+        monotonicNow: @escaping @Sendable () -> ContinuousClock.Instant = { .now },
+        transcriptionDeadline: @escaping @Sendable (TimeInterval) -> Duration = TranscriptionDeadline.deadline(forAudioDuration:),
+        prepareForTranscription: (@Sendable () async throws -> Void)? = nil,
+        prepareDeadline: Duration = .seconds(90)
     ) {
         self.capture = capture
         self.transcribe = transcribe
@@ -137,6 +156,9 @@ public final class DictationController {
         self.pipeline = pipeline
         self.now = now
         self.monotonicNow = monotonicNow
+        self.transcriptionDeadline = transcriptionDeadline
+        self.prepareForTranscription = prepareForTranscription
+        self.prepareDeadline = prepareDeadline
     }
 
     // MARK: - Beginning
@@ -295,6 +317,22 @@ public final class DictationController {
         finalizationTask = nil
     }
 
+    /// Move the take into safekeeping and word the outcome for the notice.
+    private func preserveForRetry(_ url: URL) async -> (saved: URL?, suffix: String) {
+        do {
+            let saved = try await recordingRecovery.preserve(url)
+            return (
+                saved,
+                saved == nil
+                    ? " The recording couldn't be kept."
+                    : " The recording is kept on this Mac for a few days"
+                        + " (Settings → About → Reveal Support Folder)."
+            )
+        } catch {
+            return (nil, " The recording is still on disk, but safekeeping failed: \(error.localizedDescription)")
+        }
+    }
+
     private func finalize(session: Int) async {
         await overlay.present(.transcribing, elapsed: elapsedSeconds())
 
@@ -343,7 +381,23 @@ public final class DictationController {
 
         let recognized: ASRResult
         do {
-            recognized = try await transcribe(recording.url)
+            // A residency-managed engine may be cold here; the reload has
+            // been running under the person's voice since the keypress and
+            // gets its own budget. Only after the engine is in memory does
+            // the recognition deadline start counting.
+            if let prepareForTranscription {
+                try await withTranscriptionDeadline(prepareDeadline) {
+                    try await prepareForTranscription()
+                }
+            }
+            // The deadline stands between the person and a wedged engine: a
+            // CoreML prediction stuck on a dead system service ignores
+            // cancellation and would hold "Transcribing…" forever.
+            recognized = try await withTranscriptionDeadline(
+                transcriptionDeadline(recording.duration)
+            ) { [transcribe] in
+                try await transcribe(recording.url)
+            }
         } catch is CancellationError {
             await discard(recording.url)
             await finishWithoutInsertion(session: session)
@@ -352,6 +406,24 @@ public final class DictationController {
             // Cancellation received through the engine: this is not a failure, nothing to report.
             await discard(recording.url)
             await finishWithoutInsertion(session: session)
+            return
+        } catch is TranscriptionTimeout {
+            guard shouldContinue(session) else {
+                await discard(recording.url)
+                await finishWithoutInsertion(session: session)
+                return
+            }
+            let (saved, suffix) = await preserveForRetry(recording.url)
+            let notice = DictationNotice(
+                kind: .failure,
+                message: "Transcribing took too long and was stopped." + suffix,
+                recoveryAudio: saved
+            )
+            await report(notice)
+            // After the report, so the owner recycles a quiet engine, not one
+            // still being blamed for the current session.
+            onTranscriptionStall?()
+            await cleanup(session: session)
             return
         } catch {
             // A cancellation that came while the engine was running is more important than its failure. Otherwise
@@ -363,17 +435,7 @@ public final class DictationController {
                 await finishWithoutInsertion(session: session)
                 return
             }
-            let saved: URL?
-            let suffix: String
-            do {
-                saved = try await recordingRecovery.preserve(recording.url)
-                suffix = saved == nil
-                    ? " The recording couldn't be kept."
-                    : " The recording is kept on this Mac for a few days."
-            } catch {
-                saved = nil
-                suffix = " The recording is still on disk, but safekeeping failed: \(error.localizedDescription)"
-            }
+            let (saved, suffix) = await preserveForRetry(recording.url)
             let notice = DictationNotice(
                 kind: .failure,
                 message: DictationError.recognition(String(describing: error)).userMessage + suffix,
@@ -635,7 +697,8 @@ public final class DictationController {
                     kind: .failure,
                     message: saved == nil
                         ? message + " The recording couldn't be kept."
-                        : message + " The recording is kept on this Mac for a few days.",
+                        : message + " The recording is kept on this Mac for a few days"
+                            + " (Settings → About → Reveal Support Folder).",
                     recoveryAudio: saved
                 )
             }

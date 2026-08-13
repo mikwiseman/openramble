@@ -339,8 +339,9 @@ actor FakeOverlay: OverlayPresenting {
 
 // MARK: - Permissions and key monitor
 
-@MainActor
-final class FakePermissions: PermissionReading {
+/// Deliberately nonisolated: the permission poll reads these off the main
+/// thread, exactly like the real TCC-backed implementation.
+nonisolated final class FakePermissions: PermissionReading, @unchecked Sendable {
     var accessibilityGranted: Bool
     var microphoneGranted: Bool
 

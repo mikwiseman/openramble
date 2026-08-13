@@ -1,3 +1,4 @@
+import Combine
 import DictationCore
 import LocalASR
 import XCTest
@@ -104,6 +105,31 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(state.isDictationReady)
         XCTAssertFalse(monitor.isRunning)
         XCTAssertEqual(state.accessibilityState, .denied)
+    }
+
+    /// The permission poll runs forever by design — so an unchanged tick must
+    /// publish nothing. `@Published` does not deduplicate, and an unguarded
+    /// write here re-rendered the entire menu bar scene once a second for the
+    /// whole life of the process.
+    func testSteadyStatePermissionTickPublishesNothing() async throws {
+        permissions.accessibilityGranted = true
+        permissions.microphoneGranted = true
+        let state = makeState()
+        state.refreshPermissions()
+        // Let the launch-time async work (model scan, recovery import) settle
+        // so it cannot masquerade as tick-driven churn.
+        for _ in 0..<40 {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        var publishes = 0
+        let subscription = state.objectWillChange.sink { _ in publishes += 1 }
+        state.refreshPermissions()
+        state.refreshPermissions()
+        subscription.cancel()
+
+        XCTAssertEqual(publishes, 0, "an unchanged permission tick must not touch published state")
     }
 
     func testScenario003() {
@@ -1250,23 +1276,36 @@ final class VocabularyRebuildTests: XCTestCase {
     private final class RebuildCountingEngine: ASREngineAdapting, VocabularyBoostCapable, @unchecked Sendable {
         private let lock = NSLock()
         private var _prepares = 0
+        private var _modelLoads = 0
+        private var _unloads = 0
         private var _lastTermCount = -1
         private var _delayNext = false
         private var _delayedStarts = 0
         var prepares: Int { lock.withLock { _prepares } }
+        var modelLoads: Int { lock.withLock { _modelLoads } }
+        var unloads: Int { lock.withLock { _unloads } }
         var lastTermCount: Int { lock.withLock { _lastTermCount } }
         var delayedStarts: Int { lock.withLock { _delayedStarts } }
 
         func delayNextRebuild() { lock.withLock { _delayNext = true } }
 
-        func loadModels(from directory: URL) async throws {}
+        func loadModels(from directory: URL) async throws {
+            lock.withLock { _modelLoads += 1 }
+        }
         func transcribe(samples: [Float]) async throws -> ASRResult {
             ASRResult(text: "", audioDuration: 0, processingDuration: 0)
         }
         func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
             ASRResult(text: "", audioDuration: 0, processingDuration: 0)
         }
-        func unload() async {}
+        // A real unload drops the acoustic boost together with the weights —
+        // the marker resets so a reload must re-issue the vocabulary to pass.
+        func unload() async {
+            lock.withLock {
+                _unloads += 1
+                _lastTermCount = -1
+            }
+        }
         func loadVocabularyModels(from directory: URL, boost: VocabularyBoost) async throws {
             let shouldDelay = lock.withLock {
                 _prepares += 1
@@ -1341,6 +1380,60 @@ final class VocabularyRebuildTests: XCTestCase {
         XCTAssertFalse(
             notices.contains { $0.message.contains("acoustic boosting") },
             "cancellation of an obsolete rebuild must stay silent"
+        )
+    }
+
+    /// The full residency round trip: critical memory pressure gives the
+    /// weights back, dictation stays enabled, and the press-time reload
+    /// restores BOTH the weights and the boosted vocabulary. A dictionary
+    /// term must survive the trip — a reload that forgets the boost would
+    /// silently degrade recognition of exactly the words the person cared
+    /// enough to teach.
+    func testBoostedTermSurvivesPressureUnloadAndPressReload() async throws {
+        let harness = try AppHarness()
+        defer { harness.tearDown() }
+        try harness.installModelMarker()
+        let engine = RebuildCountingEngine()
+        harness.warmUpEngine = engine
+        let state = harness.makeState()
+
+        for _ in 0..<400 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertTrue(state.isEngineReady)
+        XCTAssertEqual(engine.modelLoads, 1, "the first warm-up loads the weights once")
+
+        state.addReplacement(spoken: "open ramble term", written: "OpenRambleTerm")
+        let boosted = engine.lastTermCount + 1
+        for _ in 0..<400 where engine.lastTermCount != boosted {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(engine.lastTermCount, boosted)
+
+        state.registerMemoryPressure(.critical)
+        for _ in 0..<400 where state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertFalse(state.isEngineReady, "critical pressure on an idle engine must release the memory")
+        XCTAssertEqual(engine.unloads, 1)
+        XCTAssertTrue(
+            state.isDictationReady,
+            "an unloaded engine must not block the press — the reload rides under the voice"
+        )
+
+        state.warmEngineUnderVoiceIfCold()
+        for _ in 0..<400 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertTrue(state.isEngineReady, "the press-time reload must complete")
+        XCTAssertEqual(engine.modelLoads, 2, "the reload really reloads the weights")
+        XCTAssertEqual(
+            engine.lastTermCount, boosted,
+            "the boosted term survives the unload/reload round trip"
         )
     }
 }
