@@ -21,42 +21,43 @@ final class PunctuationReattachmentCostTests: XCTestCase {
         return (original.joined(separator: " "), rescored.joined(separator: " "))
     }
 
-    /// A long dictation must not freeze the app.
+    /// The quadratic blow-up must not return — measured as a shape, not a
+    /// stopwatch.
     ///
-    /// The budget is generous on purpose — it is a ceiling against the old
-    /// quadratic blow-up, not a micro-benchmark. Anything near the old 16 s
-    /// fails here loudly.
-    func testLongDictationStaysFast() {
-        let sample = text(words: 4000)
-        let started = ContinuousClock.now
-        _ = PunctuationReattachment.restore(original: sample.original, rescored: sample.rescored)
-        let elapsed = ContinuousClock.now - started
+    /// Every absolute-seconds budget this test carried measured the machine
+    /// as much as the code: 5 s passed on an idle laptop, failed at 6.3 s on
+    /// a shared CI runner, and read 938 s on the same laptop under swap
+    /// thrash — all on identical, healthy code. The property actually being
+    /// guarded is the SHAPE of the cost: the old full-matrix path grew
+    /// quadratically (4× the words → ~16× the time), the banded fix grows
+    /// linearly (4× the words → ~4× the time). A ratio of two runs on the
+    /// same machine in the same second is immune to how fast that machine
+    /// happens to be.
+    func testCostScalesLinearlyNotQuadratically() {
+        // One warm-up so allocator and cache effects don't land on either side.
+        let warm = text(words: 500)
+        _ = PunctuationReattachment.restore(original: warm.original, rescored: warm.rescored)
 
-        XCTAssertLessThan(
-            elapsed, .seconds(3),
-            "4000 words took \(elapsed); before the fix this was 7.1 s in debug and grew quadratically"
-        )
-    }
+        let small = text(words: 2000)
+        let smallStarted = ContinuousClock.now
+        _ = PunctuationReattachment.restore(original: small.original, rescored: small.rescored)
+        let smallElapsed = ContinuousClock.now - smallStarted
 
-    /// The hour-long limit the app allows is roughly 8000 words. That case used
-    /// to need a 488 MB matrix; it must now finish without one.
-    ///
-    /// The ceiling is generous on purpose. A tight one measured a shared CI
-    /// runner as much as it measured the code and failed at 3.2 s against a
-    /// 3.0 s budget while nothing was wrong. Five seconds in a debug build
-    /// still catches any return to the old 16.7 s (28 s in debug) beyond doubt.
-    func testHourLongDictationFinishesQuickly() {
-        let sample = text(words: 8000)
-        let started = ContinuousClock.now
+        let large = text(words: 8000)
+        let largeStarted = ContinuousClock.now
         let result = PunctuationReattachment.restore(
-            original: sample.original, rescored: sample.rescored
+            original: large.original, rescored: large.rescored
         )
-        let elapsed = ContinuousClock.now - started
+        let largeElapsed = ContinuousClock.now - largeStarted
 
         XCTAssertFalse(result.isEmpty)
+        let ratio = Double(largeElapsed.components.attoseconds)
+            / max(1, Double(smallElapsed.components.attoseconds))
+        // Linear ≈ 4, quadratic ≈ 16. Ten separates them with room for noise
+        // on both sides.
         XCTAssertLessThan(
-            elapsed, .seconds(5),
-            "8000 words took \(elapsed); before the fix this was 16.7 s in release"
+            ratio, 10,
+            "4× the words cost \(String(format: "%.1f", ratio))× the time — the quadratic path is back"
         )
     }
 
@@ -72,9 +73,10 @@ final class PunctuationReattachmentCostTests: XCTestCase {
         let elapsed = ContinuousClock.now - started
 
         XCTAssertEqual(result, rescored, "nothing recoverable — the rescorer's text stands")
-        // This runs in an unoptimized debug test binary. Ten seconds still stays
-        // far below the old quadratic path while leaving room for shared CI load.
-        XCTAssertLessThan(elapsed, .seconds(10), "took \(elapsed)")
+        // The behavioral assert above is the test. The clock is only a
+        // runaway backstop, set far above any honest machine so it cannot
+        // measure load instead of code.
+        XCTAssertLessThan(elapsed, .seconds(60), "took \(elapsed) — the give-up path is grinding")
     }
 
     /// Speed must not have been bought with correctness: the three invariants
