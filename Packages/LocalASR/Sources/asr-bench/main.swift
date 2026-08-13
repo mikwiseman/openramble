@@ -187,7 +187,9 @@ func prepareTranscriber() async throws -> LocalTranscriber {
         placement = parsed
         print("Encoder counts to: \(raw)")
     } else {
-        placement = .neuralEngine
+        // The product default; WAI_ASR_ENCODER_PLACEMENT=neuralEngine
+        // reproduces the old path for comparison runs.
+        placement = .gpu
     }
 
     let dualDecode = isOn("WAI_ASR_DUAL_DECODE")
