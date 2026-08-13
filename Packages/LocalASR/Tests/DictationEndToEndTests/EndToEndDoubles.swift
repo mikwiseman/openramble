@@ -1,10 +1,12 @@
 import AVFoundation
 import DictationCore
 import Foundation
+import LocalASR
 
 // Exactly two edges remain dummy in end-to-end tests, which will be present in the test
-// cannot: microphone and someone else's application. Everything in between - controller, reading
-// files, model, dictionary, text finishing - the present.
+// cannot: microphone and someone else's application. Everything in between - controller,
+// recognizer-ready PCM, model, dictionary, text finishing - the present. File reading remains
+// covered separately as the long-recording fallback.
 
 /// A capture that delivers a pre-recorded file instead of a microphone.
 ///
@@ -19,6 +21,7 @@ actor FixturePlaybackCapture: AudioCapturing {
     private var queue: [URL] = []
     private var lastFixture: URL?
     private var currentTake: URL?
+    private var bufferedSamples: [Float]?
 
     private(set) var isRecording = false
     private(set) var startCount = 0
@@ -57,7 +60,12 @@ actor FixturePlaybackCapture: AudioCapturing {
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try FileManager.default.copyItem(at: fixture, to: take)
+            // The production recorder accumulates this recognizer-ready PCM
+            // while it writes the durable WAV. Prepare the fixture's equivalent
+            // before the measured "take ready" boundary.
+            bufferedSamples = try AudioFileReader().samples(from: take)
         } catch {
+            bufferedSamples = nil
             throw AudioCaptureError.writeFailed(String(describing: error))
         }
 
@@ -85,6 +93,11 @@ actor FixturePlaybackCapture: AudioCapturing {
         return (take, duration)
     }
 
+    func takeBufferedSamples() async -> [Float]? {
+        defer { bufferedSamples = nil }
+        return bufferedSamples
+    }
+
     /// Turns off the “microphone” and removes the file - just like `MicrophoneCapture` does.
     func abortRecording() async {
         abortCount += 1
@@ -93,6 +106,7 @@ actor FixturePlaybackCapture: AudioCapturing {
             try? FileManager.default.removeItem(at: take)
             currentTake = nil
         }
+        bufferedSamples = nil
     }
 }
 
@@ -173,6 +187,10 @@ actor TranscriptionProbe {
     func willStart(_ url: URL) {
         calls += 1
         files.append(url)
+    }
+
+    func willStartSamples() {
+        calls += 1
     }
 
     func didFinish(_ result: ASRResult) {

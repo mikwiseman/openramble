@@ -126,6 +126,17 @@ class EndToEndScenario: XCTestCase {
                     throw error
                 }
             },
+            transcribeSamples: { samples in
+                await watcher.willStartSamples()
+                do {
+                    let result = try await engine.transcribe(samples: samples)
+                    await watcher.didFinish(result)
+                    return result
+                } catch {
+                    await watcher.didFail(error)
+                    throw error
+                }
+            },
             inserter: inserter,
             overlay: overlay,
             sounds: sounds,

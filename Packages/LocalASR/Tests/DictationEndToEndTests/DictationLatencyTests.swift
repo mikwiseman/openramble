@@ -4,10 +4,11 @@ import XCTest
 
 /// Measurement of the promise “text appears in less than a second.”
 ///
-/// The entire path is measured, not just one recognition: from the moment when the recording file
-/// ready until the text reaches insertion. This segment includes
-/// reading a file from disk, format conversion, the model itself, a dictionary of replacements and
-/// finishing the text - that is, exactly what a person expects with the key released.
+/// The entire common path is measured, not just one recognition: from the moment when the finished
+/// take and its in-memory PCM are ready until the text reaches insertion. This segment includes
+/// the model itself, a dictionary of replacements and finishing the text - exactly what a person
+/// expects with the key released. WAV reopening is the capped long-take fallback and is tested
+/// independently.
 @MainActor
 final class DictationLatencyTests: EndToEndScenario {
     private struct Sample {
@@ -16,7 +17,7 @@ final class DictationLatencyTests: EndToEndScenario {
         let audio: TimeInterval
         /// How much did the model itself take?
         let inference: TimeInterval
-        /// The entire path “file ready → text at insertion”.
+        /// The entire path “take ready → text at insertion”.
         let path: TimeInterval
 
         /// How many times is the path shorter than the record itself?

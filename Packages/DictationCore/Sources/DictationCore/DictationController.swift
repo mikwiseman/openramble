@@ -66,6 +66,9 @@ public final class DictationController {
 
     private let capture: any AudioCapturing
     private let transcribe: @Sendable (URL) async throws -> ASRResult
+    /// Fast path for captures that already own recognizer-ready PCM. The file
+    /// closure remains the compatibility and recovery path.
+    private let transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)?
     private let inserter: any TextInserting
     private let overlay: any OverlayPresenting
     private let sounds: any Sounding
@@ -131,6 +134,7 @@ public final class DictationController {
     public init(
         capture: any AudioCapturing,
         transcribe: @escaping @Sendable (URL) async throws -> ASRResult,
+        transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)? = nil,
         inserter: any TextInserting,
         overlay: any OverlayPresenting,
         sounds: any Sounding,
@@ -144,6 +148,7 @@ public final class DictationController {
     ) {
         self.capture = capture
         self.transcribe = transcribe
+        self.transcribeSamples = transcribeSamples
         self.inserter = inserter
         self.overlay = overlay
         self.sounds = sounds
@@ -329,6 +334,9 @@ public final class DictationController {
             await fail(session: session, with: .capture(String(describing: error)))
             return
         }
+        // Move the in-memory buffer out immediately so every early-return path
+        // releases it. The on-disk take remains available for retry/recovery.
+        let bufferedSamples = await capture.takeBufferedSamples()
 
         guard shouldContinue(session) else {
             await discard(recording.url)
@@ -379,8 +387,11 @@ public final class DictationController {
             // cancellation and would hold "Transcribing…" forever.
             recognized = try await withTranscriptionDeadline(
                 transcriptionDeadline(recording.duration)
-            ) { [transcribe] in
-                try await transcribe(recording.url)
+            ) { [transcribe, transcribeSamples] in
+                if let transcribeSamples, let bufferedSamples, !bufferedSamples.isEmpty {
+                    return try await transcribeSamples(bufferedSamples)
+                }
+                return try await transcribe(recording.url)
             }
         } catch is CancellationError {
             await discard(recording.url)

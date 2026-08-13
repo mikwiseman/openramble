@@ -8,9 +8,11 @@ actor FakeCapture: AudioCapturing {
     private(set) var stopCount = 0
     private(set) var abortCount = 0
     private var startError: AudioCaptureError?
+    private var bufferedSamples: [Float]?
     private let file = URL(fileURLWithPath: "/tmp/fake-take.wav")
 
     func setStartError(_ error: AudioCaptureError?) { startError = error }
+    func setBufferedSamples(_ samples: [Float]?) { bufferedSamples = samples }
 
     func startRecording() async throws -> URL {
         startCount += 1
@@ -21,6 +23,11 @@ actor FakeCapture: AudioCapturing {
     func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
         stopCount += 1
         return (file, 2.0)
+    }
+
+    func takeBufferedSamples() async -> [Float]? {
+        defer { bufferedSamples = nil }
+        return bufferedSamples
     }
 
     func abortRecording() async { abortCount += 1 }
@@ -107,6 +114,18 @@ actor FakeSounds: Sounding {
     func playAttention() async { attentionPlays += 1 }
 }
 
+private actor TranscriptionRouteLog {
+    private(set) var fileCalls = 0
+    private(set) var sampleCalls = 0
+    private(set) var samples: [Float] = []
+
+    func recordFile() { fileCalls += 1 }
+    func recordSamples(_ value: [Float]) {
+        sampleCalls += 1
+        samples = value
+    }
+}
+
 // MARK: - Tests
 
 @MainActor
@@ -149,6 +168,40 @@ final class DictationControllerTests: XCTestCase {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(5))
         }
+    }
+
+    func testRecognizerUsesCaptureBufferWithoutReopeningTheWAV() async throws {
+        let expected: [Float] = [0.1, -0.2, 0.3]
+        await capture.setBufferedSamples(expected)
+        let route = TranscriptionRouteLog()
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in
+                await route.recordFile()
+                return ASRResult(text: "file", audioDuration: 2, processingDuration: 0.1)
+            },
+            transcribeSamples: { samples in
+                await route.recordSamples(samples)
+                return ASRResult(text: "buffer", audioDuration: 2, processingDuration: 0.1)
+            },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        let fileCalls = await route.fileCalls
+        let sampleCalls = await route.sampleCalls
+        let delivered = await route.samples
+        let inserted = await inserter.insertedTexts
+        XCTAssertEqual(fileCalls, 0)
+        XCTAssertEqual(sampleCalls, 1)
+        XCTAssertEqual(delivered, expected)
+        XCTAssertEqual(inserted, ["Buffer"])
     }
 
     // MARK: Normal path

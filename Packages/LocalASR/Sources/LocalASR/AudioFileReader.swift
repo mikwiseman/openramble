@@ -5,9 +5,10 @@ import Foundation
 /// Reading an audio file into the format that awaits recognition:
 /// mono, 16 kHz, Float32.
 ///
-/// The recording of the dictation goes to disk, and is not kept in memory: an hour-long dictation is
-/// more than a hundred megabytes, and the file on the disk also provides recovery after a failure
-/// and repeat if there is a recognition error.
+/// Capture can hand ordinary takes to recognition as ready PCM. This reader is
+/// the durable fallback for long recordings, recovery files, and external WAVs:
+/// an hour-long dictation is hundreds of megabytes as Float32, while the file
+/// also survives a failure and permits retry.
 public struct AudioFileReader: Sendable {
     /// The frequency at which Parakeet operates.
     public static let targetSampleRate: Double = 16_000

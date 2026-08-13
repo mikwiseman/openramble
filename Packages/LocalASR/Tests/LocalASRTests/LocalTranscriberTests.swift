@@ -36,6 +36,46 @@ actor StubEngine: ASREngineAdapting {
     func unload() async { loaded = false }
 }
 
+/// Holds the first inference open so the test can prove a real dictation waits
+/// for warm-up instead of running a second Core ML prediction concurrently.
+private actor WarmupGateEngine: ASREngineAdapting {
+    private(set) var callCount = 0
+    private(set) var maximumConcurrency = 0
+    private var active = 0
+    private let gatedCalls: Set<Int>
+    private var callGates: [Int: CheckedContinuation<Void, Never>] = [:]
+
+    init(gatedCalls: Set<Int> = [1]) {
+        self.gatedCalls = gatedCalls
+    }
+
+    func loadModels(from directory: URL) async throws {}
+
+    func transcribe(samples: [Float]) async throws -> ASRResult {
+        callCount += 1
+        active += 1
+        maximumConcurrency = max(maximumConcurrency, active)
+        let call = callCount
+        if gatedCalls.contains(call) {
+            await withCheckedContinuation { continuation in
+                callGates[call] = continuation
+            }
+        }
+        active -= 1
+        return ASRResult(text: "ok", audioDuration: 1, processingDuration: 0.1)
+    }
+
+    func openFirstCall() {
+        openCall(1)
+    }
+
+    func openCall(_ call: Int) {
+        callGates.removeValue(forKey: call)?.resume()
+    }
+
+    func unload() async {}
+}
+
 final class LocalTranscriberTests: XCTestCase {
     private var directory: URL!
 
@@ -98,6 +138,112 @@ final class LocalTranscriberTests: XCTestCase {
 
         let loads = await engine.loadCount
         XCTAssertEqual(loads, 1, "\u{041F}\u{043E}\u{0432}\u{0442}\u{043E}\u{0440}\u{043D}\u{0430}\u{044F} \u{043F}\u{043E}\u{0434}\u{0433}\u{043E}\u{0442}\u{043E}\u{0432}\u{043A}\u{0430} \u{0442}\u{043E}\u{0439} \u{0436}\u{0435} \u{043C}\u{043E}\u{0434}\u{0435}\u{043B}\u{0438} \u{043D}\u{0435} \u{0434}\u{043E}\u{043B}\u{0436}\u{043D}\u{0430} \u{0433}\u{0440}\u{0443}\u{0437}\u{0438}\u{0442}\u{044C} \u{0435}\u{0451} \u{0437}\u{0430}\u{043D}\u{043E}\u{0432}\u{043E}")
+    }
+
+    func testInferenceWarmupRunsARepresentativeOneSecondBuffer() async throws {
+        let engine = StubEngine()
+        let transcriber = LocalTranscriber(engine: engine)
+        try await transcriber.prepare(modelDirectory: directory)
+
+        try await transcriber.warmUpInference()
+
+        let batches = await engine.receivedBatches
+        XCTAssertEqual(batches.count, 1)
+        XCTAssertEqual(batches[0].count, 16_000)
+        XCTAssertTrue(batches[0].allSatisfy { $0 == 0 })
+    }
+
+    func testRealTranscriptionWaitsForInferenceWarmup() async throws {
+        let engine = WarmupGateEngine()
+        let transcriber = LocalTranscriber(engine: engine)
+        try await transcriber.prepare(modelDirectory: directory)
+
+        let warmup = Task { try await transcriber.warmUpInference() }
+        for _ in 0..<100 where await engine.callCount == 0 {
+            await Task.yield()
+        }
+        let recognition = Task {
+            try await transcriber.transcribe(samples: [0.25, -0.25])
+        }
+        for _ in 0..<100 { await Task.yield() }
+
+        let callsWhileWarming = await engine.callCount
+        XCTAssertEqual(callsWhileWarming, 1, "recognition must wait behind warm-up")
+        await engine.openFirstCall()
+        try await warmup.value
+        _ = try await recognition.value
+        let finalCalls = await engine.callCount
+        let maximumConcurrency = await engine.maximumConcurrency
+        XCTAssertEqual(finalCalls, 2)
+        XCTAssertEqual(maximumConcurrency, 1)
+    }
+
+    func testCancelledTranscriptionDoesNotRunAfterInferenceWarmup() async throws {
+        let engine = WarmupGateEngine()
+        let transcriber = LocalTranscriber(engine: engine)
+        try await transcriber.prepare(modelDirectory: directory)
+
+        let warmup = Task { try await transcriber.warmUpInference() }
+        for _ in 0..<100 where await engine.callCount == 0 {
+            await Task.yield()
+        }
+        let recognition = Task {
+            try await transcriber.transcribe(samples: [0.25, -0.25])
+        }
+        for _ in 0..<100 { await Task.yield() }
+        recognition.cancel()
+        await engine.openFirstCall()
+
+        try await warmup.value
+        do {
+            _ = try await recognition.value
+            XCTFail("a cancelled dictation must not begin inference after warm-up")
+        } catch is CancellationError {
+            // Expected.
+        }
+        let finalCalls = await engine.callCount
+        XCTAssertEqual(finalCalls, 1, "only the shared warm-up should reach the engine")
+    }
+
+    func testLateCancelledWarmupCannotClearNewGenerationWarmup() async throws {
+        let engine = WarmupGateEngine(gatedCalls: [1, 2])
+        let transcriber = LocalTranscriber(engine: engine)
+        try await transcriber.prepare(modelDirectory: directory)
+
+        let oldWarmup = Task { try await transcriber.warmUpInference() }
+        for _ in 0..<100 where await engine.callCount < 1 { await Task.yield() }
+
+        await transcriber.unload()
+        try await transcriber.prepare(modelDirectory: directory)
+        let newWarmup = Task { try await transcriber.warmUpInference() }
+        for _ in 0..<100 where await engine.callCount < 2 { await Task.yield() }
+
+        await engine.openCall(1)
+        do {
+            try await oldWarmup.value
+            XCTFail("an inference overtaken by unload must not report success")
+        } catch is CancellationError {
+            // Expected even when the engine itself ignored task cancellation.
+        }
+
+        let recognition = Task {
+            try await transcriber.transcribe(samples: [0.25, -0.25])
+        }
+        for _ in 0..<100 { await Task.yield() }
+        let callsWhileNewWarmupIsBlocked = await engine.callCount
+        let isBusy = await transcriber.isBusy
+        XCTAssertEqual(
+            callsWhileNewWarmupIsBlocked,
+            2,
+            "the real dictation must still wait for the new generation's warm-up"
+        )
+        XCTAssertTrue(isBusy)
+
+        await engine.openCall(2)
+        try await newWarmup.value
+        _ = try await recognition.value
+        let finalCallCount = await engine.callCount
+        XCTAssertEqual(finalCallCount, 3)
     }
 
     func testReadsWavAndPassesSamplesToEngine() async throws {

@@ -28,6 +28,14 @@ public actor LocalTranscriber {
     /// Recognition calls in flight. Residency's polite unload refuses while
     /// this is non-zero; only the forced unload (wedge recovery) ignores it.
     private var activeOperations = 0
+    /// A silence inference that materializes Core ML/ANE execution state. It is
+    /// single-flight, and a real dictation waits for it instead of competing for
+    /// the same compute resources after the key is released.
+    private var inferenceWarmupTask: Task<Void, Error>?
+    /// Distinguishes successive warm-ups. A cancelled Core ML prediction may
+    /// ignore cancellation and finish after unload plus a new prepare; its
+    /// owner's defer must not clear the newer task's single-flight marker.
+    private var inferenceWarmupEpoch = 0
 
     public init(
         engine: any ASREngineAdapting = FluidAudioAdapter(),
@@ -136,10 +144,63 @@ public actor LocalTranscriber {
             throw ASREngineError.unsupportedAudioFormat("empty recording")
         }
 
-        try Task.checkCancellation()
+        // Claim residency before waiting on the shared warm-up. Otherwise the
+        // warm-up owner can drop its busy count just before this continuation
+        // resumes, leaving a narrow window where polite unload sees an idle
+        // engine even though a real dictation is queued for it.
         activeOperations += 1
         defer { activeOperations -= 1 }
+        let expectedGeneration = generation
+        try Task.checkCancellation()
+        if let inferenceWarmupTask {
+            try await inferenceWarmupTask.value
+            // Waiting on an unstructured task does not consume the waiter's
+            // cancellation. Escape/deadline may have abandoned this dictation
+            // while the shared warm-up was finishing; never start inference for it.
+            try Task.checkCancellation()
+        }
+        guard generation == expectedGeneration, loadedDirectory != nil else {
+            throw CancellationError()
+        }
         return try await engine.transcribe(samples: samples, languageHint: languageHint)
+    }
+
+    /// Execute one representative inference after all optional models have
+    /// loaded. Loading Core ML weights alone does not compile/materialize every
+    /// prediction path; without this, the first short dictation can be seconds
+    /// slower than the steady state.
+    public func warmUpInference() async throws {
+        guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
+        let expectedGeneration = generation
+        if let inferenceWarmupTask {
+            try await inferenceWarmupTask.value
+            guard generation == expectedGeneration, loadedDirectory != nil else {
+                throw CancellationError()
+            }
+            return
+        }
+
+        inferenceWarmupEpoch &+= 1
+        let warmupEpoch = inferenceWarmupEpoch
+        let engine = engine
+        let task = Task {
+            _ = try await engine.transcribe(
+                samples: [Float](repeating: 0, count: 16_000),
+                languageHint: nil
+            )
+        }
+        inferenceWarmupTask = task
+        activeOperations += 1
+        defer {
+            activeOperations -= 1
+            if inferenceWarmupEpoch == warmupEpoch {
+                inferenceWarmupTask = nil
+            }
+        }
+        try await task.value
+        guard generation == expectedGeneration, loadedDirectory != nil else {
+            throw CancellationError()
+        }
     }
 
     /// Live preview: start, flow of samples, stop.
@@ -170,6 +231,9 @@ public actor LocalTranscriber {
     /// the generation bump; its caller sees cancellation.
     public func unload() async {
         generation += 1
+        inferenceWarmupEpoch &+= 1
+        inferenceWarmupTask?.cancel()
+        inferenceWarmupTask = nil
         await engine.unload()
         loadedDirectory = nil
     }

@@ -521,19 +521,29 @@ public final class AppState: ObservableObject {
 
             let engineDirectory = layout.engineDirectory
             self.engineDirectory = engineDirectory
+            let languageHint: @Sendable () -> String? = { [box = UncheckedBox(defaults)] in
+                // UserDefaults is documented thread-safe. Read at invocation so
+                // changing the recognition language affects the very next take.
+                box.value.string(forKey: Self.recognitionLanguageKey)
+            }
+            let transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)?
+            if let transcriber {
+                transcribeSamples = { samples in
+                    try await transcriber.transcribe(
+                        samples: samples,
+                        languageHint: languageHint()
+                    )
+                }
+            } else {
+                transcribeSamples = nil
+            }
             let controller = DictationController(
                 capture: capture,
                 transcribe: transcribe(
                     engineDirectory,
-                    { [box = UncheckedBox(defaults)] in
-                        // The provider is called from the background recognition context.
-                        // UserDefaults is thread safe (documented) and
-                        // repository is the same source of truth as
-                        // published property; box only carries it through
-                        // Sendable border.
-                        box.value.string(forKey: Self.recognitionLanguageKey)
-                    }
+                    languageHint
                 ),
+                transcribeSamples: transcribeSamples,
                 inserter: inserter,
                 overlay: overlay,
                 sounds: sounds,
@@ -914,14 +924,12 @@ public final class AppState: ObservableObject {
     /// system service — recycle it.
     private func pingEngine(deadline: Duration) {
         guard let transcriber else { return }
-        lastEngineActivity = now()
         Task { [weak self] in
             do {
                 _ = try await withTranscriptionDeadline(deadline) {
-                    try await transcriber.transcribe(
-                        samples: [Float](repeating: 0, count: 16_000)
-                    )
+                    try await transcriber.warmUpInference()
                 }
+                await MainActor.run { [weak self] in self?.lastEngineActivity = self?.now() }
             } catch {
                 await MainActor.run { [weak self] in self?.recycleWedgedEngine() }
             }
@@ -1665,6 +1673,7 @@ public final class AppState: ObservableObject {
 
         do {
             let clock = ContinuousClock()
+            var vocabularyWarning: VocabularyBoostError?
             let preparationStart = clock.now
             let manifest = try ModelManifest.bundled()
             let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
@@ -1683,31 +1692,39 @@ public final class AppState: ObservableObject {
                 // The person's own replacements - including those learned from edits -
                 // amplify the acoustics with the same fuses as
                 // starting set.
-                try await transcriber.prepareVocabulary(
-                    modelDirectory: vocabularyDirectory,
-                    boost: .withUserReplacements(replacements)
-                )
+                do {
+                    try await transcriber.prepareVocabulary(
+                        modelDirectory: vocabularyDirectory,
+                        boost: .withUserReplacements(replacements)
+                    )
+                } catch let boost as VocabularyBoostError {
+                    // Human vocabulary data must not prevent the recognizer
+                    // itself from becoming warm and ready.
+                    vocabularyWarning = boost
+                }
             }
+            let inferenceStart = clock.now
+            try await transcriber.warmUpInference()
+            engineLog.info(
+                "engine inference warmed in \(inferenceStart.duration(to: clock.now).appSeconds, format: .fixed(precision: 2))s"
+            )
             isEngineReady = true
             engineLoadFailure = nil
             lastLoadCompletedAt = now()
+            lastEngineActivity = now()
             evaluateResidency(trigger: "load-completed")
-        } catch let boost as VocabularyBoostError {
-            // The problem is with the list of human terms, not with the model's weights.
-            // Previously, this fell into the general catch and was classified as damage
-            // models: the interface offered to download hundreds of megabytes, which
-            // would not help in any way - the term would not go away, and the circle
-            // would be repeated. User data cannot be treated by pumping.
-            engineLoadFailure = nil
-            isEngineReady = true
-            notify(
-                DictationNotice(
-                    kind: .warning,
-                    message: "One of the dictionary terms couldn't be used for acoustic "
-                        + "boosting; dictation works, text replacements still apply. "
-                        + "(\(boost))"
+            if let vocabularyWarning {
+                // The problem is with a person's term, not model weights.
+                // Recognition remains ready and text replacements still apply.
+                notify(
+                    DictationNotice(
+                        kind: .warning,
+                        message: "One of the dictionary terms couldn't be used for acoustic "
+                            + "boosting; dictation works, text replacements still apply. "
+                            + "(\(vocabularyWarning))"
+                    )
                 )
-            )
+            }
         } catch {
             let detail =
                 "the files passed verification, but Core ML couldn't load the model: \(error.localizedDescription)"
