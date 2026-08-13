@@ -1,3 +1,4 @@
+import Combine
 import DictationCore
 import LocalASR
 import XCTest
@@ -104,6 +105,31 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(state.isDictationReady)
         XCTAssertFalse(monitor.isRunning)
         XCTAssertEqual(state.accessibilityState, .denied)
+    }
+
+    /// The permission poll runs forever by design — so an unchanged tick must
+    /// publish nothing. `@Published` does not deduplicate, and an unguarded
+    /// write here re-rendered the entire menu bar scene once a second for the
+    /// whole life of the process.
+    func testSteadyStatePermissionTickPublishesNothing() async throws {
+        permissions.accessibilityGranted = true
+        permissions.microphoneGranted = true
+        let state = makeState()
+        state.refreshPermissions()
+        // Let the launch-time async work (model scan, recovery import) settle
+        // so it cannot masquerade as tick-driven churn.
+        for _ in 0..<40 {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        var publishes = 0
+        let subscription = state.objectWillChange.sink { _ in publishes += 1 }
+        state.refreshPermissions()
+        state.refreshPermissions()
+        subscription.cancel()
+
+        XCTAssertEqual(publishes, 0, "an unchanged permission tick must not touch published state")
     }
 
     func testScenario003() {

@@ -17,7 +17,7 @@ public enum Permissions {
     ///
     /// A separate “Input Monitoring” permission is not required - System Monitor
     /// events work under the same access.
-    public static var accessibility: Status {
+    public nonisolated static var accessibility: Status {
         AXIsProcessTrusted() ? .granted : .denied
     }
 
@@ -30,7 +30,7 @@ public enum Permissions {
         return AXIsProcessTrustedWithOptions(options as CFDictionary)
     }
 
-    public static var microphone: Status {
+    public nonisolated static var microphone: Status {
         AVCaptureDevice.authorizationStatus(for: .audio) == .authorized ? .granted : .denied
     }
 
@@ -54,16 +54,20 @@ public enum Permissions {
 /// Behind the protocol - because the real answers depend on what the person
 /// once allowed (in the test - to the test runner), and not from the logic being tested.
 @MainActor
-public protocol PermissionReading {
-    var accessibilityGranted: Bool { get }
-    var microphoneGranted: Bool { get }
+/// Sendable on purpose: the permission poll reads these off the main thread.
+/// Both underlying APIs (`AXIsProcessTrusted`, `authorizationStatus`) are
+/// thread-safe synchronous IPC — exactly the kind of call that must not sit
+/// on the main thread once a second, where a slow daemon under system load
+/// turns into a frozen interface.
+public protocol PermissionReading: Sendable {
+    nonisolated var accessibilityGranted: Bool { get }
+    nonisolated var microphoneGranted: Bool { get }
 }
 
-@MainActor
 public struct SystemPermissions: PermissionReading {
     public init() {}
-    public var accessibilityGranted: Bool { Permissions.accessibility == .granted }
-    public var microphoneGranted: Bool { Permissions.microphone == .granted }
+    public nonisolated var accessibilityGranted: Bool { Permissions.accessibility == .granted }
+    public nonisolated var microphoneGranted: Bool { Permissions.microphone == .granted }
 }
 
 /// The state of the live process, and not the position of the switch in Settings.

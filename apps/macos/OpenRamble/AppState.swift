@@ -540,6 +540,11 @@ public final class AppState: ObservableObject {
                 self?.hotkeyMonitor.isHandsFreeActive = active
                 self?.isHandsFreeActive = active
             }
+            controller.onTranscriptionStall = { [weak self] in
+                // Recognition blew its deadline: the engine is presumed wedged
+                // on a dead system service. A fresh session is the cure.
+                self?.recycleWedgedEngine()
+            }
             controller.onTextInserted = { [weak self] text in
                 guard let self else { return }
                 self.recordSuccessfulDictation(text)
@@ -838,6 +843,58 @@ public final class AppState: ObservableObject {
     private func handleWake() {
         hotkeyMonitor.stop()
         refreshPermissions()
+        revalidateEngineAfterWake()
+    }
+
+    /// Whether an engine recycle is already underway — one wedge, one cure.
+    private var isRecyclingEngine = false
+
+    /// Reload the recognition engine after a wedged transcription.
+    ///
+    /// The stall means a CoreML session stuck on a system service that died
+    /// under it (observed after sleep and after coreaudiod restarts). The
+    /// files on disk are fine; only the loaded session is poisoned. Unload
+    /// and warm up again: the next dictation runs on a fresh session instead
+    /// of the same stuck one, and the existing preparation UI narrates the
+    /// warm-up honestly.
+    private func recycleWedgedEngine() {
+        guard !isRecyclingEngine, let transcriber else { return }
+        isRecyclingEngine = true
+        isEngineReady = false
+        Task { [weak self] in
+            await transcriber.unload()
+            guard let self else { return }
+            await self.warmUpEngine()
+            self.isRecyclingEngine = false
+        }
+    }
+
+    /// First inference after wake, taken out of the person's way.
+    ///
+    /// Sleep is where the engine's system services die (observed: coreaudiod
+    /// restarts, an XPC connection interrupted mid-prediction). Without this,
+    /// the first dictation of the morning pays the reconnect — the two dead
+    /// sessions in the field log both sat right after an idle gap, and a cold
+    /// model load measures at sixteen seconds against a warm 0.13. One second
+    /// of silence — the engine's own minimum is 300 ms — forces the reconnect
+    /// now, while nobody is waiting; if even that hangs, the engine is wedged
+    /// and gets recycled here rather than during someone's sentence.
+    private func revalidateEngineAfterWake() {
+        guard let transcriber, isEngineReady, dictationState == .idle,
+              !isRecyclingEngine
+        else { return }
+        Task { [weak self] in
+            do {
+                _ = try await withTranscriptionDeadline(.seconds(10)) {
+                    try await transcriber.transcribe(
+                        samples: [Float](repeating: 0, count: 16_000)
+                    )
+                }
+            } catch {
+                // A failed or hung ping is the wedge showing itself early.
+                await MainActor.run { [weak self] in self?.recycleWedgedEngine() }
+            }
+        }
     }
 
     /// The audio device changed mid-recording.
@@ -991,8 +1048,32 @@ public final class AppState: ObservableObject {
     // MARK: - Permissions
 
     public func refreshPermissions() {
-        let accessibility = permissions.accessibilityGranted
-        let microphone = permissions.microphoneGranted
+        applyPermissionSnapshot(
+            accessibility: permissions.accessibilityGranted,
+            microphone: permissions.microphoneGranted
+        )
+    }
+
+    /// The timer path of `refreshPermissions`: the TCC reads happen off the
+    /// main thread. Both are synchronous IPC to system daemons; polled once a
+    /// second on the main thread they were a standing invitation for a frozen
+    /// interface the moment a daemon answered slowly under load — observed as
+    /// a stuck "Transcribing…" panel while the engine was busy.
+    private func pollPermissions() {
+        let reader = permissions
+        Task.detached(priority: .utility) { [weak self] in
+            let accessibility = reader.accessibilityGranted
+            let microphone = reader.microphoneGranted
+            await MainActor.run { [weak self] in
+                self?.applyPermissionSnapshot(
+                    accessibility: accessibility,
+                    microphone: microphone
+                )
+            }
+        }
+    }
+
+    private func applyPermissionSnapshot(accessibility: Bool, microphone: Bool) {
         let previousAccessibility = accessibilityGranted
         let previousMicrophone = microphoneGranted
 
@@ -1002,8 +1083,13 @@ public final class AppState: ObservableObject {
         if microphone != microphoneGranted { microphoneGranted = microphone }
 
         if accessibility {
-            accessibilityState = .granted
-            defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
+            // Assignments are guarded: `@Published` does not deduplicate, and
+            // an unconditional write here re-rendered the whole menu bar scene
+            // on every poll tick — a permanent one-hertz UI heartbeat at rest.
+            if accessibilityState != .granted { accessibilityState = .granted }
+            if defaults.bool(forKey: Self.accessibilityRelaunchPendingKey) {
+                defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
+            }
         } else if defaults.bool(forKey: Self.accessibilityRelaunchPendingKey) {
             accessibilityState = .repairRequired
         } else {
@@ -1076,10 +1162,11 @@ public final class AppState: ObservableObject {
 
     /// Select the polling frequency to match the current state of affairs.
     ///
-    /// While something is missing, a person stands in the system settings and waits
-    /// response - we ask often. When everything is issued, there is nothing more to wait:
-    /// The application sits in the menu bar for weeks, and wakes up the process every second
-    /// for the sake of an answer that will not change, there is no need.
+    /// Polling deliberately continues even when everything is granted — see
+    /// `PermissionPollPolicy`: revocation sends no reliable event, and an app
+    /// with revoked Accessibility looks intact while silently not working.
+    /// The price is kept honest instead: each tick reads TCC off the main
+    /// thread and writes no published state unless something changed.
     private func reschedulePermissionPolling() {
         let interval = PermissionPollPolicy.interval(
             accessibilityGranted: accessibilityGranted,
@@ -1097,7 +1184,7 @@ public final class AppState: ObservableObject {
             withTimeInterval: interval,
             repeats: true
         ) { [weak self] _ in
-            Task { @MainActor in self?.refreshPermissions() }
+            Task { @MainActor in self?.pollPermissions() }
         }
     }
 
