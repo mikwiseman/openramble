@@ -147,13 +147,11 @@ actor RecordingOverlay: OverlayPresenting {
     func presentNotice(_ notice: DictationNotice) async { notices.append(notice) }
 }
 
-/// The sounds of the beginning and end are counted, but not played.
+/// The attention signal is counted, not played.
 actor CountingSounds: Sounding {
-    private(set) var startPlays = 0
-    private(set) var stopPlays = 0
+    private(set) var attentionPlays = 0
 
-    func playStart() async { startPlays += 1 }
-    func playStop() async { stopPlays += 1 }
+    func playAttention() async { attentionPlays += 1 }
 }
 
 /// Observer of real recognition.

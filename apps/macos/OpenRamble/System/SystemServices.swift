@@ -179,7 +179,7 @@ public struct SystemAccessibilityManager: AccessibilityManaging {
 
 // MARK: - Sounds
 
-/// Short signals for the start and end of recording.
+/// The single "look at the panel" signal.
 ///
 /// The type is entirely tied to the main thread by design. Protocol Methods
 /// `Sounding` are asynchronous and do not inherit the caller's executor: without this
@@ -193,14 +193,11 @@ public struct SystemSounds: Sounding {
         self.enabled = enabled
     }
 
-    public func playStart() async {
+    public func playAttention() async {
         guard enabled() else { return }
-        NSSound(named: "Morse")?.play()
-    }
-
-    public func playStop() async {
-        guard enabled() else { return }
-        NSSound(named: "Pop")?.play()
+        // Submarine: low and calm. What happened is recoverable — the text is
+        // still offered in the menu — so the sound must not read as an alarm.
+        NSSound(named: "Submarine")?.play()
     }
 }
 

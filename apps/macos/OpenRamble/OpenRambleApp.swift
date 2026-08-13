@@ -39,7 +39,7 @@ struct OpenRambleApp: App {
                 // does not work.
                 guard !onboardingCompleted else { return }
                 openWindow(id: "onboarding")
-                NSApp.activate()
+                WindowFronting.raiseOpenedWindow()
             }
         }
 

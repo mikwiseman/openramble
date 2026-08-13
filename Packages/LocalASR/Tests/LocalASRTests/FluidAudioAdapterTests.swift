@@ -95,6 +95,21 @@ final class FluidAudioAdapterTests: XCTestCase {
         XCTAssertFalse(enabled, "\u{0412}\u{043A}\u{043B}\u{044E}\u{0447}\u{0451}\u{043D}\u{043D}\u{044B}\u{0439} mel-\u{043A}\u{043E}\u{043D}\u{0442}\u{0435}\u{043A}\u{0441}\u{0442} \u{043C}\u{043E}\u{043B}\u{0447}\u{0430} \u{0441}\u{044A}\u{0435}\u{0434}\u{0430}\u{0435}\u{0442} \u{0442}\u{0435}\u{043A}\u{0441}\u{0442} \u{043D}\u{0430} \u{0441}\u{0442}\u{044B}\u{043A}\u{0435} \u{043E}\u{043A}\u{043E}\u{043D}")
     }
 
+    /// The encoder runs on the GPU by default, and this is a measured
+    /// decision, not taste: the ANE path pays ~16 s of program
+    /// specialization every time macOS purges its e5rt cache — which the
+    /// field machine does regularly — while the GPU path worst-cases at
+    /// ~7 s and typically loads in 0.3 s, with an identical transcript.
+    /// Reverting to `.neuralEngine` is one line; the person would only
+    /// notice as the return of "Transcribing…" that hangs for ages.
+    func testEncoderRunsOnTheGpuByDefault() async {
+        let adapter = FluidAudioAdapter()
+
+        let placement = await adapter.placement
+
+        XCTAssertEqual(placement, .gpu, "the predictable engine beats the occasionally-fastest one")
+    }
+
     /// The ceiling of tokens on the window is also a measurement output, not a taste setting.
     /// Library 150 in dense speech silently interrupt the analysis of the window: at the phrase
     /// the middle disappears, there is no error. The test guards the selected value according to

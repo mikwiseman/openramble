@@ -61,8 +61,7 @@ final class DictationControllerStallTests: XCTestCase {
     }
 
     private final class NullSounds: Sounding, @unchecked Sendable {
-        func playStart() async {}
-        func playStop() async {}
+        func playAttention() async {}
     }
 
     private func settle(_ iterations: Int = 40) async {

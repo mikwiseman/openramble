@@ -61,8 +61,7 @@ actor CollectingOverlay: OverlayPresenting {
 }
 
 actor SilentSounds: Sounding {
-    func playStart() async {}
-    func playStop() async {}
+    func playAttention() async {}
 }
 
 @MainActor
@@ -165,6 +164,26 @@ final class DictationControllerFailurePathTests: XCTestCase {
         let inserted = await inserter.insertedTexts
         // The pipeline capitalizes the sentence start — that's the healthy path.
         XCTAssertEqual(inserted, ["After recovery"], "the next press must dictate normally")
+    }
+
+    /// However long the person speaks, the session is theirs to finish.
+    /// A one-hour cap once lived here "for safety"; this pins its absence.
+    func testAThreeHourRecordingIsStillTheUsersToFinish() async throws {
+        let clock = TestClock()
+        let controller = makeController(recognized: "\u{0434}\u{043B}\u{0438}\u{043D}\u{043D}\u{0430}\u{044F} \u{0440}\u{0435}\u{0447}\u{044C}", clock: clock)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        XCTAssertEqual(controller.state, .listening)
+
+        clock.advance(by: 3 * 3600)
+        await settle()
+        XCTAssertEqual(controller.state, .listening, "nothing may stop a long recording but the person")
+
+        controller.stop()
+        await settle()
+        let inserted = await inserter.insertedTexts
+        XCTAssertEqual(inserted, ["\u{0414}\u{043B}\u{0438}\u{043D}\u{043D}\u{0430}\u{044F} \u{0440}\u{0435}\u{0447}\u{044C}"])
     }
 
     // MARK: - Press Return
@@ -356,88 +375,5 @@ final class DictationControllerFailurePathTests: XCTestCase {
         await runFullDictation(controller)
 
         XCTAssertEqual(log.states, [.preparing, .listening, .transcribing, .inserting, .idle])
-    }
-
-    // MARK: - Check duration limit
-
-    func testDurationCheckDoesNothingOutsideRecording() async throws {
-        // The timer ticks every five seconds and must remain silent until there is no recording.
-        let controller = makeController()
-
-        controller.checkDurationLimit()
-        await settle(3)
-
-        let starts = await capture.startCount
-        XCTAssertEqual(controller.state, .idle)
-        XCTAssertEqual(starts, 0)
-    }
-
-    func testHourLimitExplanationReachesTheScreenAfterTheSession() async throws {
-        // The recording ends mid-sentence, not by a person or a glitch, but by a limit.
-        // The explanation went only to the subscriber, but no one shows it -
-        // the person saw how the dictation ended on its own, and did not recognize why.
-        // Showing at the moment of the break is also impossible: `finish()` will immediately redraw
-        // panel under “I recognize”, and the explanation lasts for a split second.
-        let clock = TestClock()
-        let controller = makeController(clock: clock)
-        var notices: [DictationNotice] = []
-        controller.onNotice = { notices.append($0) }
-
-        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
-        await settle()
-        // An hour has passed - we move the session clock, rather than sleep.
-        clock.advance(by: DictationDurationPolicy.maximum + 1)
-        controller.checkDurationLimit()
-        for _ in 0..<400 where controller.state != .idle {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        await settle(3)
-
-        let presented = await overlay.notices
-        XCTAssertEqual(
-            presented.map(\.message),
-            ["Reached the one-hour limit. Transcribing what was recorded."],
-            "\u{041E}\u{0431}\u{044A}\u{044F}\u{0441}\u{043D}\u{0435}\u{043D}\u{0438}\u{0435} \u{043E}\u{0431}\u{044F}\u{0437}\u{0430}\u{043D}\u{043E} \u{0434}\u{043E}\u{0439}\u{0442}\u{0438} \u{0434}\u{043E} \u{043F}\u{0430}\u{043D}\u{0435}\u{043B}\u{0438} — \u{0438} \u{0440}\u{043E}\u{0432}\u{043D}\u{043E} \u{043E}\u{0434}\u{0438}\u{043D} \u{0440}\u{0430}\u{0437}"
-        )
-        XCTAssertEqual(presented.first?.kind, .info)
-        XCTAssertEqual(notices.count, 1, "\u{041F}\u{043E}\u{0434}\u{043F}\u{0438}\u{0441}\u{0447}\u{0438}\u{043A} \u{0442}\u{043E}\u{0436}\u{0435} \u{0443}\u{0437}\u{043D}\u{0430}\u{0451}\u{0442} — \u{043E}\u{0434}\u{0438}\u{043D} \u{0440}\u{0430}\u{0437}")
-        let inserted = await inserter.insertedTexts
-        XCTAssertEqual(inserted, ["\u{041F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442} \u{043C}\u{0438}\u{0440}"], "\u{0421}\u{043A}\u{0430}\u{0437}\u{0430}\u{043D}\u{043D}\u{043E}\u{0435} \u{0434}\u{043E} \u{043F}\u{0440}\u{0435}\u{0434}\u{0435}\u{043B}\u{0430} \u{043D}\u{0435} \u{0442}\u{0435}\u{0440}\u{044F}\u{0435}\u{0442}\u{0441}\u{044F}")
-    }
-
-    func testFailureMessageWinsOverTheHourLimitExplanation() async throws {
-        // The limit has been reached and recognition has dropped. The session has one reason
-        // end: the story of the failure is more important than the explanation of the limit and has no right
-        // be erased.
-        await inserter.setInsertError(.accessibilityPermissionDenied)
-        let clock = TestClock()
-        let controller = makeController(clock: clock)
-
-        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
-        await settle()
-        clock.advance(by: DictationDurationPolicy.maximum + 1)
-        controller.checkDurationLimit()
-        for _ in 0..<400 where controller.state != .idle {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        await settle(3)
-
-        let presented = await overlay.notices
-        XCTAssertEqual(presented.count, 1, "\u{041E}\u{0434}\u{043D}\u{0430} \u{043F}\u{0440}\u{0438}\u{0447}\u{0438}\u{043D}\u{0430} \u{043A}\u{043E}\u{043D}\u{0446}\u{0430} — \u{043E}\u{0434}\u{043D}\u{043E} \u{0441}\u{043E}\u{043E}\u{0431}\u{0449}\u{0435}\u{043D}\u{0438}\u{0435}")
-        XCTAssertEqual(presented.first?.kind, .warning)
-        XCTAssertEqual(controller.pendingRecovery?.text, "\u{041F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442} \u{043C}\u{0438}\u{0440}")
-    }
-
-    func testDurationCheckDoesNotCutOffAFreshRecording() async throws {
-        let controller = makeController()
-        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
-        await settle()
-
-        controller.checkDurationLimit()
-        await settle(3)
-
-        XCTAssertEqual(controller.state, .listening, "\u{0427}\u{0430}\u{0441}\u{043E}\u{0432}\u{043E}\u{0439} \u{043F}\u{0440}\u{0435}\u{0434}\u{0435}\u{043B} \u{043D}\u{0435} \u{0434}\u{043E}\u{043B}\u{0436}\u{0435}\u{043D} \u{0441}\u{0440}\u{0430}\u{0431}\u{0430}\u{0442}\u{044B}\u{0432}\u{0430}\u{0442}\u{044C} \u{0441}\u{0440}\u{0430}\u{0437}\u{0443}")
     }
 }

@@ -159,26 +159,38 @@ public struct DictationNotice: Sendable, Equatable {
     public let recoverableText: String?
     /// Local WAV saved after a technical failure.
     public let recoveryAudio: URL?
+    /// Whether the words failed to land where the person expected them.
+    ///
+    /// This — not the kind — decides the attention sound. "The text was
+    /// inserted, but pressing Return failed" is a warning whose words DID
+    /// land; "nothing was recognized" is mere info whose words did NOT.
+    /// A person watching their editor needs the ear only for the second.
+    public let wordsDidNotLand: Bool
 
     public init(
         kind: Kind,
         message: String,
         recoverableText: String? = nil,
-        recoveryAudio: URL? = nil
+        recoveryAudio: URL? = nil,
+        wordsDidNotLand: Bool? = nil
     ) {
         self.kind = kind
         self.message = message
         self.recoverableText = recoverableText
         self.recoveryAudio = recoveryAudio
+        // Failures lose the words by definition; anything else says so
+        // explicitly at the site that knows.
+        self.wordsDidNotLand = wordsDidNotLand ?? (kind == .failure)
     }
 }
 
-/// Sound confirmation of the beginning and end.
+/// The one sound the product has: "look at the panel".
+///
+/// Not a start chime and not a stop chime. A working dictation already shows
+/// itself — the panel while recording, the text at the cursor when it lands —
+/// and a sound on every session teaches the ear to ignore sounds. This one
+/// plays only when the app has something to say: the words did not reach the
+/// field, nothing was recognized, something failed. Silence means it worked.
 public protocol Sounding: Sendable {
-    /// Played when the recording actually started.
-    ///
-    /// Exactly “when I went”, and not “when I clicked”: otherwise the user will start
-    /// speak into a microphone that has not yet been launched.
-    func playStart() async
-    func playStop() async
+    func playAttention() async
 }

@@ -211,12 +211,29 @@ echo "→ Checking the network surface"
 ./scripts/check-network-surface.sh >/dev/null
 
 echo "→ Running tests"
-swift test --package-path Packages/DictationCore >/dev/null
-swift test --package-path Packages/LocalASR >/dev/null
+# Quiet while they pass, loud when they do not. Sending test output straight
+# to /dev/null once cost two full release cycles: the script exited 1 with no
+# reason anywhere, and the failing assertion was simply gone.
+run_quietly() {
+  local label="$1"; shift
+  local output
+  output=$(mktemp -t openramble-release-test)
+  if ! "$@" >"$output" 2>&1; then
+    echo "✗ $label failed:"
+    tail -40 "$output"
+    echo "(full output: $output)"
+    return 1
+  fi
+  rm -f "$output"
+}
+
+run_quietly "DictationCore tests" swift test --package-path Packages/DictationCore
+run_quietly "LocalASR tests" swift test --package-path Packages/LocalASR
 XCODEGEN=$(./scripts/pinned-xcodegen.sh)
 (cd apps/macos && "$XCODEGEN" generate >/dev/null)
-xcodebuild -project apps/macos/OpenRamble.xcodeproj -scheme OpenRamble \
-  -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test >/dev/null
+run_quietly "application tests" xcodebuild -project apps/macos/OpenRamble.xcodeproj \
+  -scheme OpenRamble -destination 'platform=macOS,arch=arm64' \
+  CODE_SIGNING_ALLOWED=NO test
 
 echo "→ Checking runtime without a network"
 ./scripts/test-zero-network.sh >/dev/null

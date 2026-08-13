@@ -62,10 +62,10 @@ struct MenuContent: View {
             Button("Finish Setting Up…") {
                 showOnboarding()
                 openWindow(id: "onboarding")
-                // Without this the window opens behind whatever the person was
-                // working in: the app has no Dock icon (LSUIElement), so macOS
-                // does not bring it forward on its own.
-                NSApp.activate()
+                // Activation alone is not enough — the window does not exist
+                // yet at this point and would open behind whatever the person
+                // was working in. See `WindowFronting`.
+                WindowFronting.raiseOpenedWindow()
             }
 
         case .insertLastDictation:
@@ -95,9 +95,9 @@ struct MenuContent: View {
         case .settings:
             Button("Settings…") {
                 openSettings()
-                // Same LSUIElement fix as "Finish Setting Up…": otherwise the
-                // window opens behind the frontmost app.
-                NSApp.activate()
+                // The Settings window is created after this action returns, so
+                // it has to be raised once it exists. See `WindowFronting`.
+                WindowFronting.raiseOpenedWindow()
             }
             .keyboardShortcut(",", modifiers: .command)
 

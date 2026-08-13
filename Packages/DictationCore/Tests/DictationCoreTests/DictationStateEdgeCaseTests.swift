@@ -89,16 +89,6 @@ final class DictationStateEdgeCaseTests: XCTestCase {
         XCTAssertEqual(DictationDurationPolicy.outcomeForShortRecording(held: 0), .dropSilently)
     }
 
-    // MARK: - Duration limit
-
-    func testFreshRecordingKeepsGoing() {
-        XCTAssertEqual(DictationDurationPolicy.action(elapsed: 0), .keepRecording)
-        XCTAssertEqual(
-            DictationDurationPolicy.action(elapsed: DictationDurationPolicy.maximum - 0.5),
-            .keepRecording
-        )
-    }
-
     // MARK: - Continued finalization
 
     func testFinalizationStopsWhenBothCancellationSignalsFire() {

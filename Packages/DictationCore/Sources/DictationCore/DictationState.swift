@@ -148,20 +148,9 @@ public enum DictationDurationPolicy {
         held >= minimumHoldForSilentInput ? .reportSilentInput : .dropSilently
     }
 
-    /// An hour is the limit of one session.
-    ///
-    /// Engineering limitation: WAV is written stream to disk, but recognition
-    /// An hour-long recording takes up significant time and engine memory. By
-    /// When the limit is reached, the recording stops itself and is recognized - said
-    /// is not lost.
-    public static let maximum: TimeInterval = 3600
-
-    public enum Action: Sendable, Equatable {
-        case keepRecording
-        case stopAndTranscribe
-    }
-
-    public static func action(elapsed: TimeInterval) -> Action {
-        elapsed >= maximum ? .stopAndTranscribe : .keepRecording
-    }
+    // A one-hour session cap lived here once, "for safety". It was the
+    // product deciding for the person when their dictation is long enough —
+    // removed, along with the repeating timer that policed it. WAV streams
+    // to disk; the transcription deadline scales with the recording; there
+    // is no engineering reason left to interrupt anyone mid-sentence.
 }

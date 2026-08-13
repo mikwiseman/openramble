@@ -18,6 +18,16 @@ public enum EncoderVariant: String, Sendable, CaseIterable {
 ///
 /// The preprocessor library is always attached to the CPU, the decoder and joint go to
 /// neuromodule. Only the encoder is configured - the hardest part.
+/// Where the 425 MB encoder runs. GPU is the default, and the reason is a
+/// cliff, not a race: the Neural Engine path depends on a system-managed
+/// program cache (`com.apple.e5rt.e5bundlecache`) that macOS purges under
+/// pressure — and with it purged, every load pays ~16 s of ANE
+/// specialization (measured on a 24 GB M-series with the cache found
+/// empty in the field). The GPU path compiles through MPSGraph in ≤7 s
+/// worst / 0.3 s typical, and per-window inference is comparable
+/// (FluidAudio's own numbers: 17.8 ms GPU vs 23.5 ms ANE, WER-neutral;
+/// our bench: identical transcript). A dictation product needs the
+/// predictable engine, not the occasionally-fastest one.
 public enum EncoderPlacement: String, Sendable, CaseIterable {
     case neuralEngine
     case gpu
@@ -131,7 +141,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     public init(
         melChunkContext: Bool = false,
         encoder: EncoderVariant = .palettized6bit,
-        encoderPlacement: EncoderPlacement = .neuralEngine,
+        encoderPlacement: EncoderPlacement = .gpu,
         dualDecodeArbitration: Bool = false,
         maxTokensPerChunk: Int = 600
     ) {
@@ -144,6 +154,9 @@ public actor FluidAudioAdapter: ASREngineAdapting {
 
     /// For a test that guards the selected ceiling.
     var chunkTokenCeiling: Int { maxTokensPerChunk }
+
+    /// For the test that guards the GPU default.
+    var placement: EncoderPlacement { encoderPlacement }
 
     /// For a test that guards the selected flag value.
     var usesMelChunkContext: Bool { melChunkContext }
