@@ -132,6 +132,8 @@ public final class DictationController {
     /// While waiting only for an explanation of the hour limit: the only way where
     /// it is not a person or a glitch that ends the session.
     private var noticeAfterSession: DictationNotice?
+    /// Whether this session has already asked for the person's attention.
+    private var hasSoundedThisSession = false
 
     public init(
         capture: any AudioCapturing,
@@ -237,14 +239,10 @@ public final class DictationController {
             return
         }
 
-        // Sound - only when the microphone actually starts sending frames.
-        // The engine starts before it starts to hear: between these
-        // moments of about a tenth of a second, and the person starting
-        // speak on signal, lost the first word in it.
-        guard await capture.waitForFirstFrame() else { return }
-        // While we were waiting for the frame, the session could be closed or the next one started.
-        guard isCurrent(session), state == .listening else { return }
-        await sounds.playStart()
+        // The first frame is still awaited — the panel promises "speak" only
+        // once the microphone is really sending sound — but nothing is played
+        // here any more. The panel is the signal; see `Sounding`.
+        _ = await capture.waitForFirstFrame()
     }
 
     // MARK: - Stop
@@ -343,8 +341,6 @@ public final class DictationController {
             await fail(session: session, with: .capture(String(describing: error)))
             return
         }
-
-        await sounds.playStop()
 
         guard shouldContinue(session) else {
             await discard(recording.url)
@@ -660,7 +656,6 @@ public final class DictationController {
             let recording: (url: URL, duration: TimeInterval)?
             do {
                 recording = try await self.capture.stopRecording()
-                await self.sounds.playStop()
             } catch {
                 recording = nil
             }
@@ -764,10 +759,13 @@ public final class DictationController {
         if let pending = noticeAfterSession {
             noticeAfterSession = nil
             onNotice?(pending)
+            await playAttentionOnce()
             await overlay.presentNotice(pending)
         } else {
             await overlay.dismiss()
         }
+        // The next session starts able to sound again.
+        hasSoundedThisSession = false
     }
 
     private func elapsedSeconds() -> TimeInterval {
@@ -783,7 +781,18 @@ public final class DictationController {
     private func report(_ notice: DictationNotice) async {
         noticeAfterSession = nil
         onNotice?(notice)
+        await playAttentionOnce()
         await overlay.presentNotice(notice)
+    }
+
+    /// One sound per session, however many notices the way out produces.
+    ///
+    /// The person needs to be told once that the panel wants them; a second
+    /// chime for the same session is noise about a fact they already know.
+    private func playAttentionOnce() async {
+        guard !hasSoundedThisSession else { return }
+        hasSoundedThisSession = true
+        await sounds.playAttention()
     }
 
     /// Remove a record from disk.

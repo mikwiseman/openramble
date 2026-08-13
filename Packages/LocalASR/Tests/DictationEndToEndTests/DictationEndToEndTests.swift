@@ -66,9 +66,11 @@ final class DictationEndToEndTests: EndToEndScenario {
         let target = await inserter.insertions.first?.target
         XCTAssertEqual(target?.bundleIdentifier, "com.apple.TextEdit")
 
-        let starts = await sounds.startPlays
-        let stops = await sounds.stopPlays
-        XCTAssertEqual([starts, stops], [1, 1], "\u{0417}\u{0432}\u{0443}\u{043A}\u{0438} \u{043D}\u{0430}\u{0447}\u{0430}\u{043B}\u{0430} \u{0438} \u{043A}\u{043E}\u{043D}\u{0446}\u{0430} — \u{043F}\u{043E} \u{043E}\u{0434}\u{043D}\u{043E}\u{043C}\u{0443} \u{0440}\u{0430}\u{0437}\u{0443}")
+        // A dictation that lands makes no sound at all: the text at the
+        // cursor is the receipt, and the one signal the product has is
+        // reserved for words that never got there.
+        let plays = await sounds.attentionPlays
+        XCTAssertEqual(plays, 0, "a working dictation is silent end to end")
 
         await assertNoRecordingsLeft()
         await assertNoFailureNotices()

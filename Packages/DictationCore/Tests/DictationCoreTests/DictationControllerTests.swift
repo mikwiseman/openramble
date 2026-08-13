@@ -103,10 +103,8 @@ actor FakeOverlay: OverlayPresenting {
 }
 
 actor FakeSounds: Sounding {
-    private(set) var startPlays = 0
-    private(set) var stopPlays = 0
-    func playStart() async { startPlays += 1 }
-    func playStop() async { stopPlays += 1 }
+    private(set) var attentionPlays = 0
+    func playAttention() async { attentionPlays += 1 }
 }
 
 // MARK: - Tests
@@ -175,27 +173,24 @@ final class DictationControllerTests: XCTestCase {
         XCTAssertEqual(controller.state, .idle, "\u{041F}\u{043E}\u{0441}\u{043B}\u{0435} \u{0432}\u{0441}\u{0442}\u{0430}\u{0432}\u{043A}\u{0438} \u{0441}\u{0435}\u{0441}\u{0441}\u{0438}\u{044F} \u{0437}\u{0430}\u{043A}\u{0440}\u{044B}\u{0442}\u{0430}")
     }
 
-    func testStartSoundPlaysOnlyAfterCaptureIsLive() async throws {
+    func testRecordingReachesListeningWithoutASound() async throws {
         let controller = makeController()
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
 
-        // Before the recording starts, there should be no sound: otherwise the user
-        // will speak into a microphone that has not yet been raised.
-        let immediatePlays = await sounds.startPlays
-        XCTAssertEqual(immediatePlays, 0)
-
         await settle()
 
-        let playsAfter = await sounds.startPlays
-        XCTAssertEqual(playsAfter, 1)
         XCTAssertEqual(controller.state, .listening)
+        // The panel is the signal that recording started; a chime here would
+        // be a second, louder copy of what the person can already see.
+        let plays = await sounds.attentionPlays
+        XCTAssertEqual(plays, 0)
     }
 
-    func testStartSoundWaitsForTheFirstRecordedFrame() async throws {
-        // “Speak” is a promise that the microphone is already listening. The engine starts
-        // before it starts sending frames: 0.13–0.14 s on M4 Pro
-        // (docs/benchmarks.md). A person who begins to speak on a signal loses
-        // the first word in this gap.
+    func testSlowFirstFrameNeitherHangsTheSessionNorSounds() async throws {
+        // The microphone takes 0.13–0.14 s on M4 Pro to deliver its first
+        // frame (docs/benchmarks.md). The panel must promise "speak" without
+        // waiting for it, the session must survive the wait, and nothing may
+        // be played on the way — a working dictation is silent.
         let frame = Gate()
         let slowCapture = SlowFirstFrameCapture(firstFrame: frame)
         let controller = DictationController(
@@ -210,17 +205,18 @@ final class DictationControllerTests: XCTestCase {
         await settle()
 
         XCTAssertEqual(controller.state, .listening, "\u{041F}\u{0430}\u{043D}\u{0435}\u{043B}\u{044C} \u{043F}\u{043E}\u{043A}\u{0430}\u{0437}\u{044B}\u{0432}\u{0430}\u{0435}\u{0442} \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{0441}\u{0440}\u{0430}\u{0437}\u{0443}")
-        let beforeFrame = await sounds.startPlays
-        XCTAssertEqual(beforeFrame, 0, "\u{0421}\u{0438}\u{0433}\u{043D}\u{0430}\u{043B} \u{043D}\u{0435} \u{0437}\u{0432}\u{0443}\u{0447}\u{0438}\u{0442}, \u{043F}\u{043E}\u{043A}\u{0430} \u{043C}\u{0438}\u{043A}\u{0440}\u{043E}\u{0444}\u{043E}\u{043D} \u{043D}\u{0435} \u{043E}\u{0442}\u{0434}\u{0430}\u{043B} \u{043D}\u{0438} \u{043A}\u{0430}\u{0434}\u{0440}\u{0430}")
+        let beforeFrame = await sounds.attentionPlays
+        XCTAssertEqual(beforeFrame, 0)
 
         await frame.open()
         await settle()
 
-        let afterFrame = await sounds.startPlays
-        XCTAssertEqual(afterFrame, 1, "\u{0421} \u{043F}\u{0435}\u{0440}\u{0432}\u{044B}\u{043C} \u{043A}\u{0430}\u{0434}\u{0440}\u{043E}\u{043C} \u{0441}\u{0438}\u{0433}\u{043D}\u{0430}\u{043B} \u{043E}\u{0431}\u{044F}\u{0437}\u{0430}\u{043D} \u{043F}\u{0440}\u{043E}\u{0437}\u{0432}\u{0443}\u{0447}\u{0430}\u{0442}\u{044C}")
+        XCTAssertEqual(controller.state, .listening, "the arriving frame must not disturb the session")
+        let afterFrame = await sounds.attentionPlays
+        XCTAssertEqual(afterFrame, 0, "nothing about a healthy recording is worth a sound")
     }
 
-    func testSilentDeviceGivesNoStartSoundAndDoesNotHangTheSession() async throws {
+    func testSilentDeviceDoesNotHangTheSession() async throws {
         // There are no frames at all - the wrong microphone was selected. Promise "speak" here
         // it’s not possible, but it’s also impossible to suspend the session by waiting: stopping is required
         // work, otherwise the microphone will remain on until the hour limit.
@@ -236,7 +232,7 @@ final class DictationControllerTests: XCTestCase {
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()
         XCTAssertEqual(controller.state, .listening)
-        let plays = await sounds.startPlays
+        let plays = await sounds.attentionPlays
         XCTAssertEqual(plays, 0, "\u{041C}\u{043E}\u{043B}\u{0447}\u{0430}\u{0449}\u{0435}\u{0435} \u{0443}\u{0441}\u{0442}\u{0440}\u{043E}\u{0439}\u{0441}\u{0442}\u{0432}\u{043E} \u{043D}\u{0435} \u{0434}\u{0430}\u{0451}\u{0442} \u{043F}\u{043E}\u{0432}\u{043E}\u{0434}\u{0430} \u{0437}\u{0432}\u{0430}\u{0442}\u{044C} \u{0433}\u{043E}\u{0432}\u{043E}\u{0440}\u{0438}\u{0442}\u{044C}")
 
         controller.stop()
@@ -271,7 +267,7 @@ final class DictationControllerTests: XCTestCase {
         }
 
         XCTAssertEqual(controller.state, .idle, "\u{041E}\u{0442}\u{043B}\u{043E}\u{0436}\u{0435}\u{043D}\u{043D}\u{043E}\u{0435} \u{043E}\u{0442}\u{043F}\u{0443}\u{0441}\u{043A}\u{0430}\u{043D}\u{0438}\u{0435} \u{043D}\u{0435} \u{0436}\u{0434}\u{0451}\u{0442} \u{043F}\u{0435}\u{0440}\u{0432}\u{043E}\u{0433}\u{043E} \u{043A}\u{0430}\u{0434}\u{0440}\u{0430}")
-        let plays = await sounds.startPlays
+        let plays = await sounds.attentionPlays
         XCTAssertEqual(plays, 0)
     }
 

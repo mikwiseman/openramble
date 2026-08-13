@@ -61,8 +61,7 @@ actor CollectingOverlay: OverlayPresenting {
 }
 
 actor SilentSounds: Sounding {
-    func playStart() async {}
-    func playStop() async {}
+    func playAttention() async {}
 }
 
 @MainActor

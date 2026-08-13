@@ -72,8 +72,10 @@ private struct GeneralSettings: View {
                 // is silent, and there is no one to explain it to.
                 Toggle("Launch at login", isOn: $state.launchAtLogin)
                     .accessibilityHint("Starts OpenRamble automatically when you log in")
-                Toggle("Play sounds when recording starts and stops", isOn: $state.soundsEnabled)
-                    .accessibilityHint("A short tone when recording starts and when it stops")
+                Toggle("Play a sound when something needs you", isOn: $state.soundsEnabled)
+                    .accessibilityHint(
+                        "A quiet tone when the text didn't reach the field or nothing was recognized. A dictation that works stays silent."
+                    )
             }
 
             Section {

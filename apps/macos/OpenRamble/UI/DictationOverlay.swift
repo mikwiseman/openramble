@@ -67,8 +67,20 @@ public final class DictationOverlay: OverlayPresenting {
             )
             panel.isFloatingPanel = true
             panel.level = .statusBar
-            // Dictation text should not leak into screen recordings via HUD.
-            panel.sharingType = .none
+            // Capturable on purpose, and this was once the other way round.
+            //
+            // The panel was excluded from screen capture to keep dictated text
+            // out of recordings — but it never shows dictated text: there is no
+            // live preview, only the state and, when something fails, the
+            // message about it. What the exclusion actually did was make those
+            // failure messages unscreenshottable: a person hitting an error
+            // could not send a picture of it, and macOS answered their attempt
+            // with "Unable to capture window image". It also erased the panel
+            // from every demo and screen share of the app.
+            //
+            // If a live preview is ever added, this decision must be revisited
+            // in the same commit.
+            panel.sharingType = .readOnly
             panel.backgroundColor = .clear
             panel.isOpaque = false
             panel.hasShadow = true

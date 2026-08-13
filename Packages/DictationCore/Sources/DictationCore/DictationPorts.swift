@@ -173,12 +173,13 @@ public struct DictationNotice: Sendable, Equatable {
     }
 }
 
-/// Sound confirmation of the beginning and end.
+/// The one sound the product has: "look at the panel".
+///
+/// Not a start chime and not a stop chime. A working dictation already shows
+/// itself — the panel while recording, the text at the cursor when it lands —
+/// and a sound on every session teaches the ear to ignore sounds. This one
+/// plays only when the app has something to say: the words did not reach the
+/// field, nothing was recognized, something failed. Silence means it worked.
 public protocol Sounding: Sendable {
-    /// Played when the recording actually started.
-    ///
-    /// Exactly “when I went”, and not “when I clicked”: otherwise the user will start
-    /// speak into a microphone that has not yet been launched.
-    func playStart() async
-    func playStop() async
+    func playAttention() async
 }

@@ -81,9 +81,8 @@ actor QuietOverlay: OverlayPresenting {
 }
 
 actor CountingSounds: Sounding {
-    private(set) var startPlays = 0
-    func playStart() async { startPlays += 1 }
-    func playStop() async {}
+    private(set) var attentionPlays = 0
+    func playAttention() async { attentionPlays += 1 }
 }
 
 /// Counter of recognition calls, accessible from the `@Sendable` closure.
@@ -229,7 +228,7 @@ final class DictationControllerRaceTests: XCTestCase {
         await gate.open()
         await quiesce(controller)
 
-        let plays = await sounds.startPlays
+        let plays = await sounds.attentionPlays
         XCTAssertLessThanOrEqual(plays, 1, "\u{041E}\u{0434}\u{0438}\u{043D} \u{0436}\u{0438}\u{0432}\u{043E}\u{0439} \u{0441}\u{0435}\u{0430}\u{043D}\u{0441} — \u{043E}\u{0434}\u{0438}\u{043D} \u{0437}\u{0432}\u{0443}\u{043A} \u{043D}\u{0430}\u{0447}\u{0430}\u{043B}\u{0430} \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{0438}")
 
         // The main thing: after everything has calmed down, the microphone must be turned off.
