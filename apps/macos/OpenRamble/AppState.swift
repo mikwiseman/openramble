@@ -367,7 +367,6 @@ public final class AppState: ObservableObject {
     // `deinit`, and it is for an isolated class - outside of isolation. They only touch them
     // from the main thread: the application lives entirely on it.
     nonisolated(unsafe) private var permissionTimer: Timer?
-    nonisolated(unsafe) private var durationTimer: Timer?
     nonisolated(unsafe) private var systemObservers: [(center: NotificationCenter, token: any NSObjectProtocol)] = []
     /// One-shot: armed only while a residency rule waits on a time boundary.
     /// At rest — normal pressure, or nothing pending — no timer exists.
@@ -386,9 +385,6 @@ public final class AppState: ObservableObject {
     public private(set) var permissionPollingInterval: TimeInterval = 0
 
     public var isPollingPermissions: Bool { permissionTimer != nil }
-
-    /// Whether the duration limit is being checked. It shouldn't be at rest.
-    public var isCountingDuration: Bool { durationTimer != nil }
 
     /// Warning about the selected key, if any.
     public var hotkeyWarning: String? {
@@ -464,7 +460,6 @@ public final class AppState: ObservableObject {
         // after the death of the owner: a weak link inside saves from falling, but
         // not from waking up.
         permissionTimer?.invalidate()
-        durationTimer?.invalidate()
         residencyTimer?.invalidate()
         memoryPressureSource?.cancel()
         vocabularyRebuildTask?.cancel()
@@ -550,7 +545,6 @@ public final class AppState: ObservableObject {
             )
             controller.onStateChange = { [weak self] state in
                 self?.dictationState = state
-                self?.updateDurationTimer(for: state)
                 self?.flushNoticeAfterSession(state)
                 // The person just pressed the key and is about to speak for
                 // seconds: if the engine sat idle long enough for macOS to
@@ -1805,16 +1799,6 @@ public final class AppState: ObservableObject {
                     message: "Could not update the login item: \(error.localizedDescription)"
                 )
             )
-        }
-    }
-
-    private func updateDurationTimer(for state: DictationState) {
-        durationTimer?.invalidate()
-        durationTimer = nil
-        guard state == .listening else { return }
-
-        durationTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.controller?.checkDurationLimit() }
         }
     }
 

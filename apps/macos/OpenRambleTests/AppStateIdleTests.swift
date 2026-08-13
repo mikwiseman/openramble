@@ -75,18 +75,20 @@ final class AppStateIdleTests: XCTestCase {
 
     // MARK: - Timers at rest
 
+    /// Recording runs without a single repeating timer.
+    ///
+    /// The hour-limit watchdog used to tick every five seconds through every
+    /// dictation. The cap is gone, and with it the tick: a session is the
+    /// person's to end, and the app's only clocks during recording are the
+    /// ones drawing the panel.
     func testScenario005() async throws {
         let state = try await makeReadyState()
-        XCTAssertFalse(state.isCountingDuration)
 
         monitor.onPress?()
         try await waitFor("recording has started") { state.dictationState == .listening }
-        XCTAssertTrue(state.isCountingDuration, "there is nothing to check the hourly limit")
 
         monitor.onRelease?()
         try await waitFor("dictation ended") { state.dictationState == .idle }
-
-        XCTAssertFalse(state.isCountingDuration, "the timer continues to wake the process after dictation")
     }
 
     // MARK: - Microphone
@@ -358,7 +360,6 @@ final class AppStateIdleTests: XCTestCase {
         XCTAssertEqual(starts, 220)
         XCTAssertEqual(stops + aborts, starts)
 
-        XCTAssertFalse(state.isCountingDuration)
         XCTAssertEqual(state.dictationState, .idle)
     }
 

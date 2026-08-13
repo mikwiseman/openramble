@@ -91,7 +91,7 @@ Application Support directory automatically. The bundle identifier remains
 - Use “Copy Last as Spoken” to copy the raw recognition result before
   dictionary replacements and typography cleanup. The item appears when that
   raw text differs from what was inserted.
-- A single dictation is limited to one hour.
+- There is no limit on how long a dictation may run.
 
 Clipboard insertion preserves the previous clipboard contents in memory and
 restores them within two seconds — including screenshots and other non-text

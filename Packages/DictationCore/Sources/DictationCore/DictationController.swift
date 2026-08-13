@@ -72,11 +72,11 @@ public final class DictationController {
     private let recordingRecovery: any RecordingRecoveryStoring
     private let pipeline: () -> TextPipeline
     /// Session hours. A separate dependence for exactly the same reason as
-    /// microphone: hour limit otherwise cannot be checked without waiting an hour.
+    /// microphone.
     private let now: @Sendable () -> Date
     /// The monotonous clock is separate from the wall clock, and this is not duplication.
     ///
-    /// `now` is responsible for the hour limit, which is the idea of wall time.
+    /// `now` supplies wall time where a human-readable moment is needed.
     /// Wall clock speeds are not suitable at all: sleep, daylight saving time
     /// or NTF input in the middle of dictation would give “−400 ms”, that is, just
     /// lies. `MicrophoneCapture` and `TextInserter` already live on
@@ -125,13 +125,6 @@ public final class DictationController {
     /// the microphone remained on, and there was nothing to get out of it.
     private var currentSession = 0
 
-    /// A message that waits for the end of the session.
-    ///
-    /// Cannot be shown immediately: after stopping, the panel is redrawn under
-    /// “recognizes” and erases the message - it lives on the screen for a split second.
-    /// While waiting only for an explanation of the hour limit: the only way where
-    /// it is not a person or a glitch that ends the session.
-    private var noticeAfterSession: DictationNotice?
     /// Whether this session has already asked for the person's attention.
     private var hasSoundedThisSession = false
 
@@ -184,7 +177,6 @@ public final class DictationController {
         isHandsFreeActive = handsFree
         cancellationRequested = false
         deferredStopRequested = false
-        noticeAfterSession = nil
         // We remember the goal right away: then the focus will go away.
         targetApplication = inserter.frontmostApplication()
         state = .preparing
@@ -266,7 +258,7 @@ public final class DictationController {
             // Same as releasing the key, only pressing: second
             // the press arrived before the engine rose. Lose it
             // not allowed - in this mode the key is not held down and the recording is stopped
-            // nothing more: the microphone would work up to the hour limit.
+            // nothing more: the microphone would stay on with no one listening.
             deferredStopRequested = true
         case .idle, .transcribing, .inserting:
             break
@@ -294,7 +286,7 @@ public final class DictationController {
         guard finalizationTask == nil, state == .listening else { return }
 
         // One input for all four stop paths: stop, stopHandsFree,
-        // delayed release and hour limit - everyone comes here.
+        // and delayed release - everyone comes here.
         stopRequestedAt = monotonicNow()
         let session = currentSession
         state = .transcribing
@@ -624,13 +616,12 @@ public final class DictationController {
         finalizationTask?.cancel()
 
         let notice = DictationNotice(kind: .failure, message: message)
-        noticeAfterSession = nil
-        onNotice?(notice)
-
         let session = currentSession
         Task { [weak self] in
             guard let self else { return }
-            await self.overlay.presentNotice(notice)
+            // Through `report`: the interruption loses the words, and the
+            // person mid-sentence learns of it by ear like any other loss.
+            await self.report(notice)
             await self.capture.abortRecording()
             await self.finishWithoutInsertion(session: session)
         }
@@ -644,7 +635,6 @@ public final class DictationController {
         if state == .preparing {
             cancel()
             let notice = DictationNotice(kind: .failure, message: message)
-            noticeAfterSession = nil
             // Through `report`, not around it: the notice must carry the
             // attention sound like every other surfaced failure.
             Task { await self.report(notice) }
@@ -758,15 +748,7 @@ public final class DictationController {
         stopRequestedAt = nil
         state = .idle
 
-        // The deferred message is shown here - when the panel is already free.
-        if let pending = noticeAfterSession {
-            noticeAfterSession = nil
-            onNotice?(pending)
-            await playAttentionOnce(for: pending)
-            await overlay.presentNotice(pending)
-        } else {
-            await overlay.dismiss()
-        }
+        await overlay.dismiss()
         // The next session starts able to sound again.
         hasSoundedThisSession = false
     }
@@ -778,11 +760,9 @@ public final class DictationController {
 
     /// Show the message: both to the subscriber and on the panel.
     ///
-    /// The only way messages exit from the kernel. Filmed here
-    /// deferred: the session has one reason for ending, not two, and an explanation
-    /// The hour limit has no right to erase the story of the failure.
+    /// The only way messages exit from the kernel — the attention sound
+    /// rides on it, so a path around `report` is a path around the ear.
     private func report(_ notice: DictationNotice) async {
-        noticeAfterSession = nil
         onNotice?(notice)
         await playAttentionOnce(for: notice)
         await overlay.presentNotice(notice)
@@ -790,9 +770,9 @@ public final class DictationController {
 
     /// One sound per session, and only for words that never landed.
     ///
-    /// "The text was inserted, but Return failed" or the hour-limit note are
-    /// shown, not sounded: the words are in the field, the person is looking
-    /// at them. The ear is reserved for the loss they would otherwise miss.
+    /// "The text was inserted, but Return failed" is shown, not sounded:
+    /// the words are in the field, the person is looking at them. The ear is
+    /// reserved for the loss they would otherwise miss.
     private func playAttentionOnce(for notice: DictationNotice) async {
         guard notice.wordsDidNotLand, !hasSoundedThisSession else { return }
         hasSoundedThisSession = true
@@ -817,21 +797,6 @@ public final class DictationController {
         }
     }
 
-    /// Whether the duration limit has been reached is checked by an external timer.
-    public func checkDurationLimit() {
-        guard state == .listening else { return }
-        if DictationDurationPolicy.action(elapsed: elapsedSeconds()) == .stopAndTranscribe {
-            // Cannot be shown now: `finish()` will immediately redraw the panel under
-            // “I recognize.” But only through `onNotice` - that means nowhere: panel
-            // does not show messages from the subscriber, and the explanation of the break is on
-            // the half-sentence didn’t come through at all.
-            noticeAfterSession = DictationNotice(
-                kind: .info,
-                message: "Reached the one-hour limit. Transcribing what was recorded."
-            )
-            finish()
-        }
-    }
 }
 
 /// Errors that the user sees.

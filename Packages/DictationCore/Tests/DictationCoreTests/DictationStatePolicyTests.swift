@@ -133,12 +133,4 @@ final class DictationStatePolicyTests: XCTestCase {
         }
     }
 
-    // MARK: - Duration limit
-
-    func testRecordingStopsItselfAtOneHour() {
-        XCTAssertEqual(DictationDurationPolicy.action(elapsed: 3599), .keepRecording)
-        XCTAssertEqual(DictationDurationPolicy.action(elapsed: 3600), .stopAndTranscribe)
-        // It is important that we stop and recognize, and do not throw away the record.
-        XCTAssertEqual(DictationDurationPolicy.action(elapsed: 4000), .stopAndTranscribe)
-    }
 }
