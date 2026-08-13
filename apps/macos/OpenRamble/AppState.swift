@@ -6,6 +6,22 @@ import DictationCore
 import Foundation
 import LocalASR
 import SwiftUI
+import os
+
+/// Field diagnostics for the engine — numbers and reasons only, never words.
+///
+/// This is how the warm/cold latency distribution and every unload decision
+/// get verified against reality after a release, from the unified log alone.
+/// The network gate separately enforces that no transcript text is ever
+/// logged.
+let engineLog = Logger(subsystem: "is.waiwai.dictation", category: "engine")
+
+extension Duration {
+    /// Seconds as a plain Double, for logging and arithmetic.
+    var appSeconds: Double {
+        Double(components.seconds) + Double(components.attoseconds) / 1e18
+    }
+}
 
 /// The edges of the system from which the application is built.
 ///
@@ -519,6 +535,11 @@ public final class AppState: ObservableObject {
                 self?.dictationState = state
                 self?.updateDurationTimer(for: state)
                 self?.flushNoticeAfterSession(state)
+                // The person just pressed the key and is about to speak for
+                // seconds: if the engine sat idle long enough for macOS to
+                // evict its Neural Engine state, reload it now, under their
+                // voice, instead of after it.
+                if state == .preparing { self?.warmEngineUnderVoiceIfCold() }
             }
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
@@ -557,12 +578,17 @@ public final class AppState: ObservableObject {
                 // Keep the measurement for diagnostics and performance tests, but do
                 // not cover the destination app after text has already arrived.
                 self?.lastSpeed = report
+                engineLog.info(
+                    "dictation stop→text \(report.toRecognizedText.appSeconds, format: .fixed(precision: 2))s stop→paste \(report.toPasteDispatched?.appSeconds ?? -1, format: .fixed(precision: 2))s"
+                )
             }
             controller.onDictationCompleted = { [weak self] provenance in
                 self?.lastDictation = LastDictation(
                     insertedText: provenance.finalText,
                     provenance: provenance
                 )
+                // Real inference just ran — the cold-suspicion clock restarts.
+                self?.lastEngineActivity = Date()
             }
             // Putting the person's own clipboard back happens a second after the
             // paste, detached, with nobody left to throw to. If it fails they
@@ -849,6 +875,43 @@ public final class AppState: ObservableObject {
     /// Whether an engine recycle is already underway — one wedge, one cure.
     private var isRecyclingEngine = false
 
+    /// When the engine last did real work. Decides whether a keypress warms
+    /// it in parallel with the recording (see `EngineWarming`).
+    private var lastEngineActivity: Date?
+
+    /// Run one second of silence through the engine to pull its weights back
+    /// onto the Neural Engine. The measured stakes: 0.13 s warm, 16.06 s
+    /// after eviction. A hung ping means the engine is wedged on a dead
+    /// system service — recycle it.
+    private func pingEngine(deadline: Duration) {
+        guard let transcriber else { return }
+        lastEngineActivity = now()
+        Task { [weak self] in
+            do {
+                _ = try await withTranscriptionDeadline(deadline) {
+                    try await transcriber.transcribe(
+                        samples: [Float](repeating: 0, count: 16_000)
+                    )
+                }
+            } catch {
+                await MainActor.run { [weak self] in self?.recycleWedgedEngine() }
+            }
+        }
+    }
+
+    /// The engine clock: injected time keeps the cold-suspicion rule testable.
+    private func now() -> Date { Date() }
+
+    private func warmEngineUnderVoiceIfCold() {
+        guard transcriber != nil, isEngineReady, !isRecyclingEngine else { return }
+        guard EngineWarming.shouldWarm(lastEngineActivity: lastEngineActivity, now: now()) else {
+            return
+        }
+        // A generous deadline: the recording gives it cover, and a real wedge
+        // still surfaces through the dictation's own deadline right after.
+        pingEngine(deadline: .seconds(30))
+    }
+
     /// Reload the recognition engine after a wedged transcription.
     ///
     /// The stall means a CoreML session stuck on a system service that died
@@ -859,6 +922,7 @@ public final class AppState: ObservableObject {
     /// warm-up honestly.
     private func recycleWedgedEngine() {
         guard !isRecyclingEngine, let transcriber else { return }
+        engineLog.warning("engine recycle: wedged (deadline or ping failure)")
         isRecyclingEngine = true
         isEngineReady = false
         Task { [weak self] in
@@ -874,27 +938,16 @@ public final class AppState: ObservableObject {
     /// Sleep is where the engine's system services die (observed: coreaudiod
     /// restarts, an XPC connection interrupted mid-prediction). Without this,
     /// the first dictation of the morning pays the reconnect — the two dead
-    /// sessions in the field log both sat right after an idle gap, and a cold
-    /// model load measures at sixteen seconds against a warm 0.13. One second
-    /// of silence — the engine's own minimum is 300 ms — forces the reconnect
-    /// now, while nobody is waiting; if even that hangs, the engine is wedged
-    /// and gets recycled here rather than during someone's sentence.
+    /// sessions in the field log both sat right after an idle gap. The ping
+    /// forces the reconnect now, while nobody is waiting; if even that hangs,
+    /// the engine is wedged and gets recycled here rather than during
+    /// someone's sentence. The engine's own input minimum is 300 ms — the
+    /// one-second buffer is deliberately above it.
     private func revalidateEngineAfterWake() {
-        guard let transcriber, isEngineReady, dictationState == .idle,
+        guard transcriber != nil, isEngineReady, dictationState == .idle,
               !isRecyclingEngine
         else { return }
-        Task { [weak self] in
-            do {
-                _ = try await withTranscriptionDeadline(.seconds(10)) {
-                    try await transcriber.transcribe(
-                        samples: [Float](repeating: 0, count: 16_000)
-                    )
-                }
-            } catch {
-                // A failed or hung ping is the wedge showing itself early.
-                await MainActor.run { [weak self] in self?.recycleWedgedEngine() }
-            }
-        }
+        pingEngine(deadline: .seconds(10))
     }
 
     /// The audio device changed mid-recording.
@@ -1439,9 +1492,14 @@ public final class AppState: ObservableObject {
         }
 
         do {
+            let clock = ContinuousClock()
+            let preparationStart = clock.now
             let manifest = try ModelManifest.bundled()
             let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
             try await transcriber.prepare(modelDirectory: layout.engineDirectory)
+            engineLog.info(
+                "engine prepared in \(preparationStart.duration(to: clock.now).appSeconds, format: .fixed(precision: 2))s"
+            )
             // The term hint is part of the same readiness: without it, dictation
             // it would work quieter than stated, and the silent “worse, but it works”
             // not allowed here.
