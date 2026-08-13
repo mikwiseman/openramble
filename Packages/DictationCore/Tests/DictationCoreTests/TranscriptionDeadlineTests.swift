@@ -40,11 +40,9 @@ final class TranscriptionDeadlineTests: XCTestCase {
     func testWedgedOperationTimesOutPromptly() async {
         let started = ContinuousClock.now
         do {
+            // Deliberately shrugs off cancellation, like a stuck CoreML call.
             _ = try await withTranscriptionDeadline(.milliseconds(80)) { () -> Int in
-                // Deliberately shrugs off cancellation, like a stuck CoreML call.
-                while true {
-                    try? await Task.sleep(for: .seconds(10))
-                }
+                try await suspendForever()
             }
             XCTFail("expected a timeout")
         } catch {
@@ -59,9 +57,7 @@ final class TranscriptionDeadlineTests: XCTestCase {
     func testCallerCancellationResolvesAsCancellation() async {
         let task = Task { () -> Int in
             try await withTranscriptionDeadline(.seconds(30)) { () -> Int in
-                while true {
-                    try? await Task.sleep(for: .seconds(10))
-                }
+                try await suspendForever()
             }
         }
         try? await Task.sleep(for: .milliseconds(50))

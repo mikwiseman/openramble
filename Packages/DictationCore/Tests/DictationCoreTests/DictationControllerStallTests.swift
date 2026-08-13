@@ -78,11 +78,7 @@ final class DictationControllerStallTests: XCTestCase {
             capture: capture,
             // The premise: an engine call stuck on a dead service, deaf to
             // cancellation, never returning.
-            transcribe: { _ in
-                while true {
-                    try? await Task.sleep(for: .seconds(10))
-                }
-            },
+            transcribe: { _ in try await suspendForever() },
             inserter: NullInserter(),
             overlay: NullOverlay(),
             sounds: NullSounds(),
@@ -130,11 +126,7 @@ final class DictationControllerStallTests: XCTestCase {
             overlay: NullOverlay(),
             sounds: NullSounds(),
             recordingRecovery: RecordingRecoveryStore(directory: recovered),
-            prepareForTranscription: {
-                while true {
-                    try? await Task.sleep(for: .seconds(10))
-                }
-            },
+            prepareForTranscription: { try await suspendForever() },
             prepareDeadline: .milliseconds(80)
         )
         var notices: [DictationNotice] = []
@@ -194,11 +186,7 @@ final class DictationControllerStallTests: XCTestCase {
         let capture = FileCapture(directory: takes)
         let controller = DictationController(
             capture: capture,
-            transcribe: { _ in
-                while true {
-                    try? await Task.sleep(for: .seconds(10))
-                }
-            },
+            transcribe: { _ in try await suspendForever() },
             inserter: NullInserter(),
             overlay: NullOverlay(),
             sounds: NullSounds(),
