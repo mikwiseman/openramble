@@ -201,7 +201,11 @@ final class GlobalHotkeyMonitorTests: XCTestCase {
 
     func testScenario013() async throws {
         var releases = 0
-        monitor.onRelease = { releases += 1 }
+        let releaseDelivered = expectation(description: "deferred release delivered")
+        monitor.onRelease = {
+            releases += 1
+            releaseDelivered.fulfill()
+        }
         monitor.start()
 
         source.sendFlags(pressedRightCommand)
@@ -214,7 +218,7 @@ final class GlobalHotkeyMonitorTests: XCTestCase {
         )
 
         XCTAssertEqual(releases, 0)
-        try await Task.sleep(for: .milliseconds(380))
+        await fulfillment(of: [releaseDelivered], timeout: 2)
         XCTAssertEqual(releases, 1)
     }
 
