@@ -224,3 +224,16 @@ public protocol VocabularyBoostCapable: Sendable {
 }
 
 extension FluidAudioAdapter: VocabularyBoostCapable {}
+
+/// An engine whose optional acoustic-vocabulary prediction path needs the
+/// same pre-Ready materialization as its main recognizer.
+///
+/// Loading Core ML bundles is not enough to compile every prediction graph.
+/// Candidate-first scheduling intentionally skips CTC for ordinary speech,
+/// so without this hook the first dictation that actually mentions a custom
+/// term can inherit a multi-second specialization cliff.
+protocol VocabularyInferenceWarmupCapable: Sendable {
+    func warmUpVocabularyInference() async throws
+}
+
+extension FluidAudioAdapter: VocabularyInferenceWarmupCapable {}

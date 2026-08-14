@@ -4,8 +4,7 @@ import LocalASR
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Five tabs: what you press, what it hears, what it writes, agent access,
-/// and what the app is.
+/// Four tabs: what you press, what it hears, what it writes, and what the app is.
 ///
 /// Every tab is a grouped Form and every explanation is a Section footer —
 /// the native settings shape on modern macOS. No glass inside: settings are
@@ -21,70 +20,10 @@ struct SettingsView: View {
                 .tabItem { Label("Recognition", systemImage: "waveform") }
             DictionarySettings(state: state)
                 .tabItem { Label("Dictionary", systemImage: "character.book.closed") }
-            AgentSettings(state: state)
-                .tabItem { Label("Agents", systemImage: "terminal") }
             AboutView(updater: state.updater, revealSupportFolder: state.revealSupportFolder)
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 620, height: 500)
-    }
-}
-
-// MARK: - Agents
-
-private struct AgentSettings: View {
-    @ObservedObject var state: AppState
-
-    var body: some View {
-        Form {
-            Section {
-                Toggle("Let local agents transcribe audio files", isOn: $state.agentTranscriptionEnabled)
-                    .accessibilityHint("Allows MCP clients running as your macOS user to use OpenRamble's local model")
-
-                LabeledContent("Status") {
-                    Label(statusTitle, systemImage: statusIcon)
-                        .foregroundStyle(statusColor)
-                }
-            } header: {
-                Text("Local MCP server")
-            } footer: {
-                Text("Off by default. Requests stay on this Mac, run one at a time, and live dictation always takes priority. OpenRamble never stores an agent transcript.")
-            }
-
-            Section {
-                HStack {
-                    Button("Copy Codex command", action: state.copyCodexMCPCommand)
-                    Button("Copy Claude command", action: state.copyClaudeMCPCommand)
-                    Button("Copy JSON", action: state.copyGenericMCPConfiguration)
-                }
-                Text(state.agentExecutablePath)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
-            } header: {
-                Text("Connect an agent")
-            } footer: {
-                Text("Run a copied command once, restart that agent, then call openramble_transcribe_audio with an absolute path to a local audio file. Codex, Claude Code, and other stdio MCP clients are supported.")
-            }
-        }
-        .formStyle(.grouped)
-    }
-
-    private var statusTitle: String {
-        guard state.agentTranscriptionEnabled else { return "Off" }
-        if state.isAgentTranscriptionBusy { return "Transcribing" }
-        return state.isAgentBridgeListening ? "Ready" : "Unavailable"
-    }
-
-    private var statusIcon: String {
-        guard state.agentTranscriptionEnabled else { return "circle" }
-        if state.isAgentTranscriptionBusy { return "waveform" }
-        return state.isAgentBridgeListening ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-    }
-
-    private var statusColor: Color {
-        guard state.agentTranscriptionEnabled else { return .secondary }
-        return state.isAgentBridgeListening ? StatusColorRole.success.color : StatusColorRole.attention.color
     }
 }
 
@@ -295,7 +234,7 @@ private struct RecognitionSettings: View {
             } header: {
                 Text("Speech model")
             } footer: {
-                Text("Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. A recording is kept only if its transcription fails, then deleted automatically after a few days.")
+                Text("Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days; Recovered Recordings in the menu opens the exact folder. If safe cleanup state cannot be persisted, automatic recovery stops and the menu exposes the Support files instead of guessing about voice data.")
             }
 
             Section {

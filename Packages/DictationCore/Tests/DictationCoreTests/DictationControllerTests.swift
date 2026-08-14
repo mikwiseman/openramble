@@ -74,6 +74,121 @@ actor SlowFirstFrameCapture: AudioCapturing {
     func abortRecording() async { abortCount += 1 }
 }
 
+/// A stopped capture whose PCM, readable WAV and durable WAV are three
+/// independently controllable milestones.
+actor MilestoneCapture: AudioCapturing {
+    let fileURL: URL
+    private let samples: [Float]?
+    private let duration: TimeInterval
+    private let readable: Gate
+    private let durable: Gate
+
+    init(
+        samples: [Float]?,
+        duration: TimeInterval = 2,
+        readable: Gate,
+        durable: Gate
+    ) {
+        self.samples = samples
+        self.duration = duration
+        self.readable = readable
+        self.durable = durable
+        fileURL = FileManager.default.temporaryDirectory
+            .appending(path: "milestone-\(UUID().uuidString).wav")
+        FileManager.default.createFile(atPath: fileURL.path, contents: Data([0]))
+    }
+
+    func startRecording() async throws -> URL { fileURL }
+
+    func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
+        let recording = try await freezeRecording()
+        return (try await recording.durableURL(), duration)
+    }
+
+    func freezeRecording() async throws -> CapturedRecording {
+        let fileURL = fileURL
+        let readableGate = readable
+        let durableGate = durable
+        let readableTask = Task<URL, Error> {
+            await readableGate.pass()
+            return fileURL
+        }
+        let durableTask = Task<URL, Error> {
+            _ = try await readableTask.value
+            await durableGate.pass()
+            return fileURL
+        }
+        return CapturedRecording(
+            url: fileURL,
+            duration: duration,
+            samples: samples,
+            readableTask: readableTask,
+            durableTask: durableTask
+        )
+    }
+
+    func abortRecording() async {
+        try? FileManager.default.removeItem(at: fileURL)
+    }
+}
+
+/// Disk finalization failed, but the bounded PCM can produce a complete
+/// replacement file for the retry path.
+actor RebuildableFailedDiskCapture: AudioCapturing {
+    let rawURL: URL
+    let rebuiltURL: URL
+    private let samples: [Float]
+
+    init(directory: URL, samples: [Float]) {
+        self.samples = samples
+        rawURL = directory.appending(path: "truncated.wav")
+        rebuiltURL = directory.appending(path: "rebuilt.wav")
+        FileManager.default.createFile(atPath: rawURL.path, contents: Data("truncated".utf8))
+        FileManager.default.createFile(atPath: rebuiltURL.path, contents: Data("complete".utf8))
+    }
+
+    func startRecording() async throws -> URL { rawURL }
+
+    func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
+        throw AudioCaptureError.writeFailed("disk pipeline failed")
+    }
+
+    func freezeRecording() async throws -> CapturedRecording {
+        let rawURL = rawURL
+        let rebuiltURL = rebuiltURL
+        let failed = Task<URL, Error> {
+            throw AudioCaptureError.writeFailed("disk pipeline failed")
+        }
+        return CapturedRecording(
+            url: rawURL,
+            duration: 2,
+            samples: samples,
+            readableTask: failed,
+            durableTask: failed,
+            materializeRecovery: { rebuiltURL }
+        )
+    }
+
+    func abortRecording() async {
+        try? FileManager.default.removeItem(at: rawURL)
+    }
+}
+
+actor StalledRecoveryStore: RecordingRecoveryStoring {
+    private let gate: Gate
+
+    init(gate: Gate) {
+        self.gate = gate
+    }
+
+    func preserve(_ source: URL) async throws -> URL? {
+        await gate.pass()
+        return source
+    }
+}
+
+private struct ExpectedRecognitionFailure: Error {}
+
 actor FakeInserter: TextInserting {
     private(set) var insertedTexts: [String] = []
     private(set) var returnPresses = 0
@@ -202,6 +317,204 @@ final class DictationControllerTests: XCTestCase {
         XCTAssertEqual(sampleCalls, 1)
         XCTAssertEqual(delivered, expected)
         XCTAssertEqual(inserted, ["Buffer"])
+    }
+
+    func testPCMRecognitionAndInsertionDoNotWaitForReadableOrDurableWAV() async throws {
+        let readable = Gate()
+        let durable = Gate()
+        let milestone = MilestoneCapture(
+            samples: [0.1, -0.2, 0.3],
+            readable: readable,
+            durable: durable
+        )
+        let controller = DictationController(
+            capture: milestone,
+            transcribe: { _ in XCTFail("PCM path must not open WAV"); return ASRResult(text: "file", audioDuration: 2, processingDuration: 0.1) },
+            transcribeSamples: { _ in ASRResult(text: "fast", audioDuration: 2, processingDuration: 0.1) },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        for _ in 0..<200 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertEqual(controller.state, .idle, "file milestones must not hold the UI")
+        let inserted = await inserter.insertedTexts
+        XCTAssertEqual(inserted, ["Fast"])
+        await readable.open()
+        await durable.open()
+    }
+
+    func testLongFileFallbackWaitsForReadableButNotDurableWAV() async throws {
+        let readable = Gate()
+        let durable = Gate()
+        let milestone = MilestoneCapture(
+            samples: nil,
+            duration: 301,
+            readable: readable,
+            durable: durable
+        )
+        let route = TranscriptionRouteLog()
+        let controller = DictationController(
+            capture: milestone,
+            transcribe: { _ in
+                await route.recordFile()
+                return ASRResult(text: "long", audioDuration: 301, processingDuration: 0.2)
+            },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle(4)
+        let callsBeforeReadable = await route.fileCalls
+        XCTAssertEqual(callsBeforeReadable, 0)
+        XCTAssertEqual(controller.state, .transcribing)
+
+        await readable.open()
+        for _ in 0..<200 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        let callsAfterReadable = await route.fileCalls
+        let inserted = await inserter.insertedTexts
+        XCTAssertEqual(callsAfterReadable, 1)
+        XCTAssertEqual(inserted, ["Long"])
+        XCTAssertEqual(controller.state, .idle, "fsync must remain outside the file fallback path")
+        await durable.open()
+    }
+
+    func testUnreadableLongRecordingTimesOutAndLeavesRawTakeForRecovery() async throws {
+        let readable = Gate()
+        let durable = Gate()
+        let milestone = MilestoneCapture(
+            samples: nil,
+            duration: 301,
+            readable: readable,
+            durable: durable
+        )
+        var notices: [DictationNotice] = []
+        let controller = DictationController(
+            capture: milestone,
+            transcribe: { _ in XCTFail("unreadable WAV must not reach ASR"); return ASRResult(text: "", audioDuration: 0, processingDuration: 0) },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds,
+            recordingReadableDeadline: .milliseconds(80)
+        )
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        for _ in 0..<200 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertEqual(controller.state, .idle)
+        XCTAssertTrue(notices.contains { $0.message.contains("unfinished file") })
+        let fileURL = milestone.fileURL
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
+
+        await readable.open()
+        await durable.open()
+        try? FileManager.default.removeItem(at: fileURL)
+    }
+
+    func testStalledRecoveryMoveCannotHoldTheUIForever() async throws {
+        let readable = Gate()
+        let durable = Gate()
+        let recoveryGate = Gate()
+        let milestone = MilestoneCapture(
+            samples: [0.1, 0.2],
+            readable: readable,
+            durable: durable
+        )
+        await readable.open()
+        await durable.open()
+        var notices: [DictationNotice] = []
+        let controller = DictationController(
+            capture: milestone,
+            transcribe: { _ in throw ExpectedRecognitionFailure() },
+            transcribeSamples: { _ in throw ExpectedRecognitionFailure() },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds,
+            recordingRecovery: StalledRecoveryStore(gate: recoveryGate),
+            recordingPreserveDeadline: .milliseconds(50)
+        )
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        for _ in 0..<300 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertEqual(controller.state, .idle)
+        XCTAssertTrue(notices.contains { $0.message.contains("automatic recovery") })
+
+        // Let the deliberately cancellation-deaf fake finish so the test does
+        // not leave an unstructured waiter behind.
+        await recoveryGate.open()
+        try? FileManager.default.removeItem(at: milestone.fileURL)
+    }
+
+    func testRecognitionFailurePreservesCompletePCMRebuildInsteadOfTruncatedWAV() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "pcm-recovery-\(UUID().uuidString)", directoryHint: .isDirectory)
+        let recoveryDirectory = directory.appending(path: "Recovery", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let capture = RebuildableFailedDiskCapture(
+            directory: directory,
+            samples: [0.1, 0.2, 0.3]
+        )
+        var notices: [DictationNotice] = []
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in throw ExpectedRecognitionFailure() },
+            transcribeSamples: { _ in throw ExpectedRecognitionFailure() },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds,
+            recordingRecovery: RecordingRecoveryStore(directory: recoveryDirectory)
+        )
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        for _ in 0..<300 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        let recoveryURL = try XCTUnwrap(notices.last?.recoveryAudio)
+        XCTAssertEqual(try Data(contentsOf: recoveryURL), Data("complete".utf8))
+        // Raw cleanup is deliberately non-gating: its durable delete intent
+        // must not hold the controller in Transcribing on slow storage.
+        let cleanupDeadline = ContinuousClock.now + .seconds(2)
+        while FileManager.default.fileExists(atPath: capture.rawURL.path),
+              ContinuousClock.now < cleanupDeadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: capture.rawURL.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: capture.rebuiltURL.path))
+        XCTAssertEqual(controller.state, .idle)
     }
 
     // MARK: Normal path
@@ -436,6 +749,38 @@ final class DictationControllerTests: XCTestCase {
         XCTAssertEqual(controller.state, .idle)
     }
 
+    func testDependencyCancellationErrorIsAVisibleRecognitionFailureNotUserEscape() async throws {
+        var notices: [DictationNotice] = []
+        let controller = makeController(transcribeError: CancellationError())
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle(30)
+
+        XCTAssertEqual(controller.state, .idle)
+        XCTAssertTrue(notices.contains { $0.kind == .failure })
+        let plays = await sounds.attentionPlays
+        XCTAssertEqual(plays, 1)
+    }
+
+    func testEngineCancelledErrorIsAVisibleRecognitionFailureNotUserEscape() async throws {
+        var notices: [DictationNotice] = []
+        let controller = makeController(transcribeError: ASREngineError.cancelled)
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle(30)
+
+        XCTAssertEqual(controller.state, .idle)
+        XCTAssertTrue(notices.contains { $0.kind == .failure })
+        let plays = await sounds.attentionPlays
+        XCTAssertEqual(plays, 1)
+    }
+
     func testTextStaysInMemoryWhenInsertionFails() async throws {
         // Insertion failed - recognized data cannot be lost or written to disk.
         await inserter.setError(.accessibilityPermissionDenied)
@@ -481,6 +826,37 @@ final class DictationControllerTests: XCTestCase {
     }
 
     // MARK: Insertion target
+
+    func testTargetUsesPrepopulatedSnapshotWithoutAKeyDownSystemQuery() async throws {
+        let cached = TargetApplication(
+            bundleIdentifier: "com.apple.TextEdit",
+            processIdentifier: 1,
+            localizedName: "TextEdit"
+        )
+        inserter.frontmost = TargetApplication(
+            bundleIdentifier: "com.apple.Safari",
+            processIdentifier: 2,
+            localizedName: "Safari"
+        )
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in
+                ASRResult(text: "cached target", audioDuration: 1, processingDuration: 0.01)
+            },
+            inserter: inserter,
+            targetApplicationSnapshot: { cached },
+            overlay: overlay,
+            sounds: sounds
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        let targets = await inserter.targets
+        XCTAssertEqual(targets.first ?? nil, cached)
+    }
 
     func testTargetIsCapturedAtKeyDownNotAtInsertion() async throws {
         let original = TargetApplication(bundleIdentifier: "com.apple.TextEdit", processIdentifier: 1, localizedName: "TextEdit")

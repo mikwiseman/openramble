@@ -39,9 +39,11 @@ actor TrackedCapture: AudioCapturing {
     private(set) var inFlight = 0
 
     private var startGate: Gate?
+    private var abortGate: Gate?
     private let file = URL(fileURLWithPath: "/tmp/tracked-take.wav")
 
     func setStartGate(_ gate: Gate?) { startGate = gate }
+    func setAbortGate(_ gate: Gate?) { abortGate = gate }
 
     func startRecording() async throws -> URL {
         startCount += 1
@@ -61,7 +63,135 @@ actor TrackedCapture: AudioCapturing {
         return (file, 2.0)
     }
 
-    func abortRecording() async { isRecording = false }
+    func abortRecording() async {
+        if let abortGate { await abortGate.pass() }
+        isRecording = false
+    }
+}
+
+/// A cancellation-deaf microphone start whose eventual ownership action is
+/// observable. It distinguishes user Escape (delete) from a technical timeout
+/// (contain and preserve) after the same late `.started` result.
+actor LateStartDispositionCapture: AudioCapturing {
+    private let startGate: Gate
+    private let file = URL(fileURLWithPath: "/tmp/late-start-disposition.wav")
+    private(set) var isRecording = false
+    private(set) var abortCount = 0
+    private(set) var containCount = 0
+
+    init(startGate: Gate) { self.startGate = startGate }
+
+    func startRecording() async throws -> URL {
+        await startGate.pass()
+        isRecording = true
+        return file
+    }
+
+    func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
+        isRecording = false
+        return (file, 2)
+    }
+
+    func abortRecording() async {
+        abortCount += 1
+        isRecording = false
+    }
+
+    func abortRecording(session: DictationSessionID, expectedURL: URL?) async {
+        abortCount += 1
+        isRecording = false
+    }
+
+    func containRecording(session: DictationSessionID, expectedURL: URL?) async {
+        containCount += 1
+        isRecording = false
+    }
+}
+
+private final class CancellationResponsiveBarrier: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var isOpen = false
+
+    func wait() async {
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                lock.lock()
+                if isOpen {
+                    lock.unlock()
+                    continuation.resume()
+                } else {
+                    self.continuation = continuation
+                    lock.unlock()
+                }
+            }
+        } onCancel: {
+            self.open()
+        }
+    }
+
+    func open() {
+        lock.lock()
+        isOpen = true
+        let continuation = continuation
+        self.continuation = nil
+        lock.unlock()
+        continuation?.resume()
+    }
+}
+
+/// Models the exact production handoff: the active engine is detached before
+/// waiting for the last PCM callback, and cancellation releases that barrier.
+actor DetachedFreezeCapture: AudioCapturing {
+    private let directory: URL
+    private let firstFreeze = CancellationResponsiveBarrier()
+    private var activeURL: URL?
+    private(set) var freezeCount = 0
+
+    init(directory: URL) {
+        self.directory = directory
+    }
+
+    func startRecording() async throws -> URL {
+        guard activeURL == nil else {
+            throw AudioCaptureError.engineUnavailable("recording already active")
+        }
+        let url = directory.appending(path: "take-\(UUID().uuidString).wav")
+        FileManager.default.createFile(atPath: url.path, contents: Data(repeating: 1, count: 128))
+        activeURL = url
+        return url
+    }
+
+    func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
+        let recording = try await freezeRecording()
+        return (try await recording.durableURL(), recording.duration)
+    }
+
+    func freezeRecording() async throws -> CapturedRecording {
+        guard let url = activeURL else { throw AudioCaptureError.notRecording }
+        activeURL = nil
+        freezeCount += 1
+        if freezeCount == 1 {
+            await firstFreeze.wait()
+            try Task.checkCancellation()
+        }
+        return CapturedRecording(url: url, duration: 2, samples: [0.1, 0.2])
+    }
+
+    func abortRecording() async {
+        await abortRecording(expectedURL: nil)
+    }
+
+    func abortRecording(expectedURL: URL?) async {
+        if let expectedURL, activeURL != expectedURL {
+            try? FileManager.default.removeItem(at: expectedURL)
+            return
+        }
+        if let activeURL { try? FileManager.default.removeItem(at: activeURL) }
+        activeURL = nil
+    }
+
+    var currentURL: URL? { activeURL }
 }
 
 actor RecordingInserter: TextInserting {
@@ -209,6 +339,163 @@ final class DictationControllerRaceTests: XCTestCase {
         XCTAssertEqual(inserted, ["\u{041F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442} \u{043C}\u{0438}\u{0440}"], "\u{0412}\u{0442}\u{043E}\u{0440}\u{0430}\u{044F} \u{0434}\u{0438}\u{043A}\u{0442}\u{043E}\u{0432}\u{043A}\u{0430} \u{043D}\u{0435} \u{0434}\u{043E}\u{043B}\u{0436}\u{043D}\u{0430} \u{043F}\u{0440}\u{043E}\u{043F}\u{0430}\u{0441}\u{0442}\u{044C}")
     }
 
+    func testCancelReturnsControllerToIdleWithoutAwaitingWedgedAbort() async throws {
+        let gate = Gate()
+        await capture.setAbortGate(gate)
+        let controller = makeController()
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        XCTAssertEqual(controller.state, .listening)
+        controller.cancel()
+
+        for _ in 0..<100 where controller.state != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertEqual(controller.state, .idle, "a cancellation-deaf device edge cannot own UI liveness")
+
+        await gate.open()
+        await quiesce(controller)
+    }
+
+    func testCanceledPreparingWatchdogCannotDisableTheNextSessionWatchdog() async throws {
+        let startGate = Gate()
+        await capture.setStartGate(startGate)
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in ASRResult(text: "ok", audioDuration: 2, processingDuration: 0) },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds,
+            captureFreezeDeadline: .milliseconds(30)
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle(2)
+        controller.stop()
+        controller.cancel()
+        await settle(5)
+        XCTAssertEqual(controller.state, .idle)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle(2)
+        controller.stop()
+        for _ in 0..<150 where controller.state != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertEqual(controller.state, .idle, "N+1 must own a fresh absolute-start watchdog")
+
+        await startGate.open()
+        await settle(20)
+        controller.cancel()
+    }
+
+    func testLateStartAfterTechnicalWatchdogIsContainedWithoutUserDeletion() async throws {
+        let startGate = Gate()
+        let lateCapture = LateStartDispositionCapture(startGate: startGate)
+        let controller = DictationController(
+            capture: lateCapture,
+            transcribe: { _ in ASRResult(text: "must not run", audioDuration: 2, processingDuration: 0) },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds,
+            captureFreezeDeadline: .milliseconds(30)
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle(2)
+        controller.stop()
+        for _ in 0..<200 where controller.state != .idle {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertEqual(controller.state, .idle)
+
+        await startGate.open()
+        await settle(20)
+
+        let abortCount = await lateCapture.abortCount
+        let containCount = await lateCapture.containCount
+        let recording = await lateCapture.isRecording
+        XCTAssertEqual(abortCount, 0)
+        XCTAssertGreaterThanOrEqual(containCount, 1)
+        XCTAssertFalse(recording)
+    }
+
+    func testLateStartAfterEscapeUsesDestructiveAbort() async throws {
+        let startGate = Gate()
+        let lateCapture = LateStartDispositionCapture(startGate: startGate)
+        let controller = DictationController(
+            capture: lateCapture,
+            transcribe: { _ in ASRResult(text: "must not run", audioDuration: 2, processingDuration: 0) },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle(2)
+        controller.cancel()
+        await settle(5)
+        XCTAssertEqual(controller.state, .idle)
+
+        await startGate.open()
+        await settle(20)
+
+        let abortCount = await lateCapture.abortCount
+        let containCount = await lateCapture.containCount
+        let recording = await lateCapture.isRecording
+        XCTAssertGreaterThanOrEqual(abortCount, 1)
+        XCTAssertEqual(containCount, 0)
+        XCTAssertFalse(recording)
+    }
+
+    func testHandsFreeCallbackCanStopReentrantlyWithoutLosingTheStop() async throws {
+        let controller = makeController()
+        controller.onHandsFreeChange = { active in
+            if active { controller.stopHandsFree() }
+        }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.promoteToHandsFree()
+        await quiesce(controller)
+
+        XCTAssertEqual(controller.state, .idle)
+        let inserted = await inserter.insertedTexts
+        XCTAssertEqual(inserted.count, 1)
+    }
+
+    func testIdleObserverCanStartNextSessionWithoutOldCleanupOrphaningIt() async throws {
+        let controller = makeController()
+        var restarted = false
+        controller.onStateChange = { state in
+            guard state == .idle, !restarted else { return }
+            restarted = true
+            controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        for _ in 0..<300 where controller.state != .listening || !restarted {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        XCTAssertTrue(restarted)
+        XCTAssertEqual(controller.state, .listening)
+        let recording = await capture.isRecording
+        XCTAssertTrue(recording)
+
+        controller.stop()
+        await quiesce(controller)
+        let inserted = await inserter.insertedTexts
+        XCTAssertEqual(inserted.count, 2)
+    }
+
     func testStaleStartDoesNotAdoptTheNextSession() async throws {
         // The record rises slowly: they have time to release and cancel earlier.
         let gate = Gate()
@@ -242,6 +529,101 @@ final class DictationControllerRaceTests: XCTestCase {
         await quiesce(controller)
         let recording = await capture.isRecording
         XCTAssertFalse(recording, "\u{041C}\u{0438}\u{043A}\u{0440}\u{043E}\u{0444}\u{043E}\u{043D} \u{043D}\u{0435} \u{0434}\u{043E}\u{043B}\u{0436}\u{0435}\u{043D} \u{043E}\u{0441}\u{0442}\u{0430}\u{0442}\u{044C}\u{0441}\u{044F} \u{0432}\u{043A}\u{043B}\u{044E}\u{0447}\u{0451}\u{043D}\u{043D}\u{044B}\u{043C} \u{043E}\u{0442} \u{0431}\u{0440}\u{043E}\u{0448}\u{0435}\u{043D}\u{043D}\u{043E}\u{0433}\u{043E} \u{0437}\u{0430}\u{043F}\u{0443}\u{0441}\u{043A}\u{0430}")
+    }
+
+    func testFreezeTimeoutAndStaleAbortCannotStopTheNextSession() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "detached-freeze-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let detached = DetachedFreezeCapture(directory: directory)
+        let controller = DictationController(
+            capture: detached,
+            transcribe: { _ in ASRResult(text: "new session", audioDuration: 2, processingDuration: 0) },
+            transcribeSamples: { _ in ASRResult(text: "new session", audioDuration: 2, processingDuration: 0) },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds,
+            captureFreezeDeadline: .milliseconds(30)
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        let oldCurrentURL = await detached.currentURL
+        let oldURL = try XCTUnwrap(oldCurrentURL)
+        controller.stop()
+        for _ in 0..<300 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertEqual(controller.state, .idle)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: oldURL.path))
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        let newCurrentURL = await detached.currentURL
+        let newURL = try XCTUnwrap(newCurrentURL)
+        XCTAssertNotEqual(newURL, oldURL)
+
+        // This is the late cleanup that used to call the unscoped abort and
+        // turn off whichever engine happened to be current.
+        await detached.abortRecording(expectedURL: oldURL)
+        let activeAfterStaleAbort = await detached.currentURL
+        XCTAssertEqual(activeAfterStaleAbort, newURL)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: oldURL.path))
+
+        controller.stop()
+        for _ in 0..<300 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertEqual(controller.state, .idle)
+        let inserted = await inserter.insertedTexts
+        XCTAssertEqual(inserted, ["New session"])
+    }
+
+    func testCancelWhileFreezingIsSilentAndRemovesOnlyThatTake() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "cancel-during-freeze-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let detached = DetachedFreezeCapture(directory: directory)
+        let controller = DictationController(
+            capture: detached,
+            transcribe: { _ in ASRResult(text: "must not run", audioDuration: 2, processingDuration: 0) },
+            transcribeSamples: { _ in ASRResult(text: "must not run", audioDuration: 2, processingDuration: 0) },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds,
+            captureFreezeDeadline: .seconds(5)
+        )
+        var notices: [DictationNotice] = []
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        let currentURL = await detached.currentURL
+        let takeURL = try XCTUnwrap(currentURL)
+        controller.stop()
+        await settle(2)
+        XCTAssertEqual(controller.state, .transcribing)
+
+        controller.cancel()
+        for _ in 0..<300 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        let attentionPlays = await sounds.attentionPlays
+        let insertedTexts = await inserter.insertedTexts
+        XCTAssertEqual(controller.state, .idle)
+        XCTAssertTrue(notices.isEmpty, "Escape during capture freeze must not become an error")
+        XCTAssertEqual(attentionPlays, 0)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: takeURL.path))
+        XCTAssertTrue(insertedTexts.isEmpty)
     }
 
     // MARK: - Storm of gestures

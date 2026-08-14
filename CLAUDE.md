@@ -18,14 +18,18 @@ public privacy description in `README.md` if this boundary ever changes.
 
 ## Architecture
 
+- `Packages/ASRWorkerProtocol` defines the bounded private wire protocol shared
+  by the app and its recognition worker.
 - `Packages/DictationCore` contains platform-independent dictation logic and
   protocols for system boundaries.
 - `Packages/LocalASR` depends on `DictationCore` and owns model installation and
   recognition. Only `FluidAudioAdapter.swift` may import FluidAudio.
-- `apps/macos` is the thin SwiftUI/AppKit application layer.
+- `apps/macos` contains the thin SwiftUI/AppKit application layer and the
+  private persistent ASR worker embedded in the app bundle.
 
-Dependencies flow from the app to LocalASR to DictationCore, never in the other
-direction.
+LocalASR depends on DictationCore. The app and private worker share
+ASRWorkerProtocol; the worker also depends on LocalASR and DictationCore. No
+package depends on the application layer.
 
 ## Privacy and safety
 
@@ -51,5 +55,5 @@ See [docs/release.md](docs/release.md) and [AGENTS.md](AGENTS.md).
 
 - Prefer a failing test before the implementation.
 - Keep policy decisions in small, pure types rather than view models.
-- Before committing, run `./scripts/check.sh` or at minimum both Swift package
-  test suites.
+- Before committing, run `./scripts/check.sh` or at minimum all three Swift
+  package test suites.

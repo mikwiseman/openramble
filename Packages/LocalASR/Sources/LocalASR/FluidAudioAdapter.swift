@@ -18,17 +18,15 @@ public enum EncoderVariant: String, Sendable, CaseIterable {
 ///
 /// The preprocessor library is always attached to the CPU, the decoder and joint go to
 /// neuromodule. Only the encoder is configured - the hardest part.
-/// Where the 425 MB encoder runs. GPU is the default, and the reason is a
-/// cliff, not a race: the Neural Engine path depends on a system-managed
-/// program cache (`com.apple.e5rt.e5bundlecache`) that macOS purges under
-/// pressure — and with it purged, every load pays ~16 s of ANE
-/// specialization (measured on a 24 GB M-series with the cache found
-/// empty in the field). The GPU path compiles through MPSGraph in ≤7 s
-/// worst / 0.3 s typical, and per-window inference is comparable
-/// (FluidAudio's own numbers: 17.8 ms GPU vs 23.5 ms ANE, WER-neutral;
-/// our bench: identical transcript). A dictation product needs the
-/// predictable engine, not the occasionally-fastest one.
+/// Where CoreML may place the 425 MB encoder.
+///
+/// Shipping uses `.automatic`: it maps explicitly to Core ML `.all`, while the
+/// persistent worker performs a real dummy inference before declaring Ready.
+/// The OS can therefore choose among CPU, GPU, and Neural Engine on each Mac;
+/// specialization never belongs to stop→text. Explicit modes remain benchmark
+/// lanes for future device-matrix calibration.
 public enum EncoderPlacement: String, Sendable, CaseIterable {
+    case automatic
     case neuralEngine
     case gpu
 }
@@ -37,9 +35,10 @@ public enum EncoderPlacement: String, Sendable, CaseIterable {
 /// recognizer.
 ///
 /// The reference mode preserves FluidAudio's whole-file parallel pass. The
-/// shipping mode produces evidence only for the canonical long-form windows
-/// that can affect text. A single 15-second model window retains the reference
-/// parallel path; longer audio avoids speculative whole-file inference.
+/// shipping mode waits for the primary transcript, then produces evidence only
+/// for spans that can pass the final rescorer's lexical gate. This is true for
+/// short and long audio: speculative CTC competes with the primary encoder even
+/// when there is no vocabulary candidate to correct.
 public enum VocabularyInferenceScheduling: String, Sendable, CaseIterable {
     case alwaysParallel
     case candidateRegions
@@ -66,6 +65,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         let rescorer: VocabularyRescorer
         let sizeConfig: ContextBiasingConstants.VocabSizeConfig
         let biasWeight: Float
+        let lexicalGate: VocabularyLexicalGate
     }
 
     /// Only the part of FluidAudio's spotting result that rescoring consumes.
@@ -74,6 +74,114 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     private struct VocabularyEvidence: Sendable {
         let logProbs: [[Float]]
         let frameDuration: Double
+    }
+
+    /// Immutable, allocation-bounded snapshot of the lexical half of the
+    /// pinned FluidAudio rescorer's candidate decision.
+    ///
+    /// Canonical terms and aliases are normalized and converted to Characters
+    /// once when the vocabulary changes. Recognition can then take this value
+    /// together with the real rescorer/context snapshot and safely use it from
+    /// child tasks without reading mutable actor state.
+    struct VocabularyLexicalGate: Sendable {
+        private struct Form: Sendable {
+            let normalized: [Character]
+            let canonical: [Character]
+        }
+
+        private let forms: [Form]
+        private let minimumSimilarity: Float
+
+        init(terms: [VocabularyBoost.Term], minimumSimilarity: Float) {
+            self.minimumSimilarity = minimumSimilarity
+            var seen = Set<String>()
+            var cached: [Form] = []
+            cached.reserveCapacity(terms.reduce(0) { $0 + 1 + $1.aliases.count })
+
+            for term in terms {
+                let canonical = FluidAudioAdapter.normalizeVocabularyCandidate(term.text)
+                let canonicalCharacters = Array(canonical)
+                for raw in [term.text] + term.aliases {
+                    let normalized = FluidAudioAdapter.normalizeVocabularyCandidate(raw)
+                    let key = canonical + "\u{0}" + normalized
+                    guard !normalized.isEmpty, seen.insert(key).inserted else { continue }
+                    cached.append(
+                        Form(
+                            normalized: Array(normalized),
+                            canonical: canonicalCharacters
+                        )
+                    )
+                }
+            }
+            forms = cached
+        }
+
+        /// Test/benchmark seam confirming that aliases are cached at load time,
+        /// not rebuilt for each dictated phrase.
+        var cachedFormCount: Int { forms.count }
+
+        /// Return word-index spans for which the real CTC rescorer may change
+        /// text. The result deliberately stays conservative: it may include a
+        /// span rejected by stricter stop-word or acoustic checks, but it must
+        /// never exclude one accepted by the final rescorer.
+        func candidateWordSpans(words: [String]) -> [Range<Int>] {
+            guard !words.isEmpty, !forms.isEmpty else { return [] }
+
+            // Normalize every transcript word exactly once. Phrases are built
+            // incrementally for the pinned rescorer's maximum four-word span.
+            let normalizedWords = words.map {
+                Array(FluidAudioAdapter.normalizeVocabularyCandidate($0))
+            }
+            var result: [Range<Int>] = []
+            var candidateCache: [[Character]: Bool] = [:]
+
+            for startIndex in normalizedWords.indices {
+                let maximumLength = min(4, normalizedWords.count - startIndex)
+                var phrase: [Character] = []
+                var compound: [Character] = []
+
+                for length in 1...maximumLength {
+                    let word = normalizedWords[startIndex + length - 1]
+                    if !word.isEmpty {
+                        if !phrase.isEmpty { phrase.append(" ") }
+                        phrase.append(contentsOf: word)
+                        compound.append(contentsOf: word)
+                    }
+                    guard !phrase.isEmpty else { continue }
+
+                    let canAffectText: Bool
+                    if let cached = candidateCache[phrase] {
+                        canAffectText = cached
+                    } else {
+                        canAffectText = forms.contains { form in
+                            // The real rescorer deliberately leaves an exact
+                            // canonical spelling untouched. Aliases remain
+                            // valid candidates for that canonical term.
+                            guard phrase != form.canonical else { return false }
+                            if FluidAudioAdapter.vocabularyCandidateCanReachThreshold(
+                                phrase,
+                                form.normalized,
+                                minimumSimilarity: minimumSimilarity
+                            ) {
+                                return true
+                            }
+                            guard compound != phrase else { return false }
+                            return FluidAudioAdapter.vocabularyCandidateCanReachThreshold(
+                                compound,
+                                form.normalized,
+                                minimumSimilarity: minimumSimilarity
+                            )
+                        }
+                        candidateCache[phrase] = canAffectText
+                    }
+
+                    if canAffectText {
+                        result.append(startIndex..<(startIndex + length))
+                    }
+                }
+            }
+            return result
+        }
     }
 
     // Acoustic term hint: The CTC model looks for terms in the sound,
@@ -169,16 +277,16 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     private let vocabularyScheduling: VocabularyInferenceScheduling
 
     public static let defaultMaxTokensPerChunk = 600
-    public static let defaultParallelChunkConcurrency = 6
-    /// Measured product crossover: retain speculative CTC only while it is a
-    /// single model window. Longer no-correction audio wins by waiting for TDT.
-    public static let parallelVocabularyDurationLimit: TimeInterval = 15
+    /// FluidAudio's cross-device default. Six won one M4 long-form sweep, but
+    /// four is the measured upstream device-matrix choice and avoids making an
+    /// M4-only throughput result the memory/concurrency policy for every Mac.
+    public static let defaultParallelChunkConcurrency = 4
     static let vocabularyChunkOverlapSamples = 32_000
 
     public init(
         melChunkContext: Bool = false,
         encoder: EncoderVariant = .palettized6bit,
-        encoderPlacement: EncoderPlacement = .gpu,
+        encoderPlacement: EncoderPlacement = .automatic,
         dualDecodeArbitration: Bool = false,
         maxTokensPerChunk: Int = FluidAudioAdapter.defaultMaxTokensPerChunk,
         parallelChunkConcurrency: Int = FluidAudioAdapter.defaultParallelChunkConcurrency,
@@ -202,8 +310,26 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     /// Test and benchmark seam for the shipping CTC scheduler.
     var vocabularyInferenceScheduling: VocabularyInferenceScheduling { vocabularyScheduling }
 
-    /// For the test that guards the GPU default.
+    /// Pure scheduling policy used by both the product path and its benchmark
+    /// comparison lane. `candidateRegions` always needs the TDT transcript
+    /// first; only the explicit reference mode may overlap CTC with TDT.
+    static func shouldStartVocabularyEvidenceInParallel(
+        hasVocabulary: Bool,
+        scheduling: VocabularyInferenceScheduling
+    ) -> Bool {
+        hasVocabulary && scheduling == .alwaysParallel
+    }
+
+    /// For the test that guards the portable automatic default.
     var placement: EncoderPlacement { encoderPlacement }
+
+    static func encoderComputeUnits(for placement: EncoderPlacement) -> MLComputeUnits {
+        switch placement {
+        case .automatic: .all
+        case .neuralEngine: .cpuAndNeuralEngine
+        case .gpu: .cpuAndGPU
+        }
+    }
 
     /// For a test that guards the selected flag value.
     var usesMelChunkContext: Bool { melChunkContext }
@@ -239,7 +365,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
                 from: directory,
                 version: .v3,
                 encoderPrecision: precision,
-                encoderComputeUnits: encoderPlacement == .gpu ? .cpuAndGPU : nil
+                encoderComputeUnits: Self.encoderComputeUnits(for: encoderPlacement)
             )
             let manager = AsrManager(
                 config: ASRConfig(
@@ -357,21 +483,43 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             throw ASREngineError.modelsUnavailable(error.localizedDescription)
         }
 
-        // Substitution entirely and with the last action: recognition started before
-        // of this line, it will be completed on the previous set, the next one will be taken by the new one.
-        try Task.checkCancellation()
-        vocabulary = VocabularyHelper(
+        let sizeConfig = ContextBiasingConstants.rescorerConfig(forVocabSize: context.terms.count)
+        let helper = VocabularyHelper(
             spotter: spotter,
             context: context,
             rescorer: rescorer,
-            sizeConfig: ContextBiasingConstants.rescorerConfig(forVocabSize: context.terms.count),
-            biasWeight: boost.biasWeight
+            sizeConfig: sizeConfig,
+            biasWeight: boost.biasWeight,
+            lexicalGate: VocabularyLexicalGate(
+                terms: boost.terms,
+                minimumSimilarity: max(sizeConfig.minSimilarity, context.minSimilarity)
+            )
         )
+        // Substitute atomically and last: an already-running recognition keeps
+        // its previous immutable snapshot; the next one receives this helper.
+        try Task.checkCancellation()
+        vocabulary = helper
     }
 
     /// How many terms are currently in the acoustic set. Need a test that
     /// Ensures that the set is reassembled without restarting.
     var boostedTermCount: Int { vocabulary?.context.terms.count ?? 0 }
+
+    /// Materialize the optional CTC prediction graph before the recognizer is
+    /// advertised as Ready.
+    ///
+    /// The shipping scheduler starts CTC only after TDT finds a lexical
+    /// candidate. Silence therefore cannot reach this path through normal
+    /// transcription warm-up. Calling the evidence-only API directly keeps
+    /// the first real custom-term dictation off the cold path while preserving
+    /// candidate-first scheduling for every product request.
+    func warmUpVocabularyInference() async throws {
+        guard let helper = vocabulary else { return }
+        _ = try await Self.vocabularyEvidenceOnly(
+            samples: [Float](repeating: 0, count: 16_000),
+            helper: helper
+        )
+    }
 
     /// Start live preview. Requires loaded main model: weights
     /// are divided between batch recognition and preview, there is no second copy.
@@ -552,16 +700,15 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             // evidence work. If this fails, there is no child task to orphan.
             var state = try TdtDecoderState()
 
-            // One CTC window is cheap enough to overlap with TDT. On long audio,
-            // however, a whole-file speculative pass competes with the main
-            // decoder before it can be cancelled. The shipping scheduler starts
-            // long-form CTC only after TDT and only for canonical windows whose
-            // words pass the real rescorer's string gates.
-            let parallelCTCSampleLimit = Int(
-                Self.parallelVocabularyDurationLimit * AudioFileReader.targetSampleRate
+            // The product scheduler always waits for TDT, including on a single
+            // 15-second window. Starting CTC speculatively made ordinary short
+            // dictations contend for the accelerator even when their transcript
+            // contained no term the final rescorer could change. The explicit
+            // reference mode remains available to reproduce the old overlap.
+            let shouldRunCTCInParallel = Self.shouldStartVocabularyEvidenceInParallel(
+                hasVocabulary: helper != nil,
+                scheduling: vocabularyScheduling
             )
-            let shouldRunCTCInParallel = helper != nil
-                && (vocabularyScheduling == .alwaysParallel || samples.count <= parallelCTCSampleLimit)
             let evidenceTask = shouldRunCTCInParallel
                 ? helper.map { helper in
                     Task { try await Self.spotKeywords(samples: samples, helper: helper) }
@@ -587,23 +734,34 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             }()
             decoderState = state
 
+            // The final rescorer can only change spans that pass its string
+            // similarity gate. This conservative prefilter mirrors the pinned
+            // FluidAudio normalization/formula and is already used to schedule
+            // long-form CTC windows. Apply the same proof to short dictations:
+            // finish the parallel CTC task (so no background inference leaks
+            // into the next take), but skip the O(words × terms × frames)
+            // rescore when no replacement can possibly survive its guards.
+            let candidateRegions = helper.map {
+                Self.vocabularyCandidateRegions(
+                    text: result.text,
+                    timings: result.tokenTimings,
+                    audioSampleCount: samples.count,
+                    helper: $0
+                )
+            } ?? []
+
             let spotted: VocabularyEvidence?
             if let evidenceTask {
-                spotted = try await withTaskCancellationHandler {
+                let evidence = try await withTaskCancellationHandler {
                     try await evidenceTask.value
                 } onCancel: {
                     evidenceTask.cancel()
                 }
+                spotted = candidateRegions.isEmpty ? nil : evidence
             } else if let helper, vocabularyScheduling == .candidateRegions {
-                let regions = Self.vocabularyCandidateRegions(
-                    text: result.text,
-                    timings: result.tokenTimings,
-                    audioSampleCount: samples.count,
-                    helper: helper
-                )
                 spotted = try await Self.spotKeywords(
                     samples: samples,
-                    candidateRegions: regions,
+                    candidateRegions: candidateRegions,
                     helper: helper
                 )
             } else {
@@ -648,12 +806,13 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         helper: VocabularyHelper?
     ) async throws -> VocabularyEvidence? {
         guard let helper else { return nil }
-        let result = try await helper.spotter.spotKeywordsWithLogProbs(
-            audioSamples: samples,
-            customVocabulary: helper.context,
-            minScore: nil
-        )
-        return VocabularyEvidence(logProbs: result.logProbs, frameDuration: result.frameDuration)
+        // The adapter consumes acoustic log-probabilities, not FluidAudio's
+        // keyword detections. Running the per-term dynamic program here made
+        // short-dictation latency grow linearly with the user's dictionary,
+        // then discarded every detection. The final rescorer below still uses
+        // the real immutable vocabulary snapshot, so this removes only dead
+        // work and keeps the evidence and output semantics unchanged.
+        return try await vocabularyEvidenceOnly(samples: samples, helper: helper)
     }
 
     /// Produce a sparse full-timeline CTC matrix from the exact 15-second
@@ -822,56 +981,19 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         // ~80 ms frame on either side keeps every inspected frame inside a
         // selected canonical chunk.
         let margin = 0.6
-        let similarityFloor = max(
-            helper.sizeConfig.minSimilarity,
-            helper.context.minSimilarity
-        )
         var regions: [Range<Int>] = []
-        var seenForms = Set<String>()
-        let forms = helper.context.terms.flatMap { term -> [(form: String, canonical: String)] in
-            let canonical = normalizeVocabularyCandidate(term.text)
-            let rawForms = [term.text] + (term.aliases ?? [])
-            return rawForms.compactMap { raw in
-                let form = normalizeVocabularyCandidate(raw)
-                let key = canonical + "\u{0}" + form
-                guard !form.isEmpty, seenForms.insert(key).inserted else { return nil }
-                return (form: form, canonical: canonical)
-            }
-        }
-        var candidateCache: [String: Bool] = [:]
+        let candidateSpans = helper.lexicalGate.candidateWordSpans(words: words.map(\.word))
 
-        for startIndex in words.indices {
-            let maximumLength = min(4, words.count - startIndex)
-            for length in 1...maximumLength {
-                let slice = words[startIndex..<(startIndex + length)]
-                let phrase = normalizeVocabularyCandidate(slice.map(\.word).joined(separator: " "))
-                guard !phrase.isEmpty else { continue }
-                let canAffectText: Bool
-                if let cached = candidateCache[phrase] {
-                    canAffectText = cached
-                } else {
-                    let compound = phrase.replacingOccurrences(of: " ", with: "")
-                    canAffectText = forms.contains { candidate in
-                        // The real rescorer deliberately leaves an already-correct
-                        // canonical spelling alone. Aliases remain candidates.
-                        guard phrase != candidate.canonical else { return false }
-                        return vocabularyCandidateSimilarity(phrase, candidate.form) >= similarityFloor
-                            || vocabularyCandidateSimilarity(compound, candidate.form) >= similarityFloor
-                    }
-                    candidateCache[phrase] = canAffectText
-                }
-                guard canAffectText else { continue }
-
-                let lower = max(
-                    0,
-                    Int(floor((words[startIndex].startTime - margin) * sampleRate))
-                )
-                let upper = min(
-                    audioSampleCount,
-                    Int(ceil((words[startIndex + length - 1].endTime + margin) * sampleRate))
-                )
-                if lower < upper { regions.append(lower..<upper) }
-            }
+        for span in candidateSpans {
+            let lower = max(
+                0,
+                Int(floor((words[span.lowerBound].startTime - margin) * sampleRate))
+            )
+            let upper = min(
+                audioSampleCount,
+                Int(ceil((words[span.upperBound - 1].endTime + margin) * sampleRate))
+            )
+            if lower < upper { regions.append(lower..<upper) }
         }
 
         guard !regions.isEmpty else { return [] }
@@ -900,16 +1022,12 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     }
 
     static func vocabularyCandidateSimilarity(_ left: String, _ right: String) -> Float {
-        let maximumLength = max(left.count, right.count)
-        guard maximumLength > 0 else { return 1 }
-        // Same Levenshtein result as FluidAudio's utility, but two rows instead
-        // of an allocated (m + 1) × (n + 1) matrix. This prefilter runs across
-        // every short transcript span, so allocation shape is latency-critical.
         let leftCharacters = Array(left)
         let rightCharacters = Array(right)
-        if leftCharacters.isEmpty { return rightCharacters.isEmpty ? 1 : 0 }
-        if rightCharacters.isEmpty { return 0 }
-
+        let maximumLength = max(leftCharacters.count, rightCharacters.count)
+        guard maximumLength > 0 else { return 1 }
+        // Independent full-width reference for the bounded hot-path decision
+        // below and for dependency-parity tests.
         var previous = Array(0...rightCharacters.count)
         var current = [Int](repeating: 0, count: rightCharacters.count + 1)
         for leftIndex in leftCharacters.indices {
@@ -927,6 +1045,112 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         }
         let distance = previous[rightCharacters.count]
         return 1 - Float(distance) / Float(maximumLength)
+    }
+
+    /// Exact FluidAudio similarity decision without computing matrix cells that
+    /// cannot possibly fit under the requested edit-distance threshold.
+    /// Cached vocabulary Characters are passed directly by the hot lexical gate.
+    static func vocabularyCandidateCanReachThreshold(
+        _ left: [Character],
+        _ right: [Character],
+        minimumSimilarity: Float
+    ) -> Bool {
+        guard !minimumSimilarity.isNaN else { return false }
+        let maximumLength = max(left.count, right.count)
+        guard maximumLength > 0 else { return 1 >= minimumSimilarity }
+        guard let maximumDistance = maximumAcceptedVocabularyDistance(
+            maximumLength: maximumLength,
+            minimumSimilarity: minimumSimilarity
+        ) else { return false }
+        guard abs(left.count - right.count) <= maximumDistance else { return false }
+        guard let distance = boundedVocabularyLevenshteinDistance(
+            left,
+            right,
+            maximumDistance: maximumDistance
+        ) else { return false }
+
+        // Keep the final Float formula byte-for-byte equivalent to the pinned
+        // rescorer. The distance bound is only an optimization, never a change
+        // to a rounding-boundary decision.
+        return 1 - Float(distance) / Float(maximumLength) >= minimumSimilarity
+    }
+
+    /// Greatest integer edit distance whose Float similarity can still pass.
+    /// The small adjustment loops protect exact boundary behavior from Float
+    /// rounding instead of relying on a Double/floor approximation.
+    private static func maximumAcceptedVocabularyDistance(
+        maximumLength: Int,
+        minimumSimilarity: Float
+    ) -> Int? {
+        guard maximumLength > 0 else { return minimumSimilarity <= 1 ? 0 : nil }
+        if minimumSimilarity <= 0 { return maximumLength }
+        guard minimumSimilarity <= 1 else { return nil }
+
+        let accepts: (Int) -> Bool = { distance in
+            1 - Float(distance) / Float(maximumLength) >= minimumSimilarity
+        }
+        var estimate = Int((1 - minimumSimilarity) * Float(maximumLength))
+        estimate = min(maximumLength, max(0, estimate))
+        while estimate > 0, !accepts(estimate) { estimate -= 1 }
+        while estimate < maximumLength, accepts(estimate + 1) { estimate += 1 }
+        return accepts(estimate) ? estimate : nil
+    }
+
+    /// Threshold-banded Levenshtein. A returned distance is the exact full-DP
+    /// result; `nil` only means the exact result is greater than the bound.
+    private static func boundedVocabularyLevenshteinDistance(
+        _ rawLeft: [Character],
+        _ rawRight: [Character],
+        maximumDistance: Int
+    ) -> Int? {
+        guard maximumDistance >= 0 else { return nil }
+        // Put the shorter sequence on the DP column axis to cap scratch storage.
+        let left: [Character]
+        let right: [Character]
+        if rawRight.count <= rawLeft.count {
+            left = rawLeft
+            right = rawRight
+        } else {
+            left = rawRight
+            right = rawLeft
+        }
+        guard abs(left.count - right.count) <= maximumDistance else { return nil }
+        if right.isEmpty { return left.count <= maximumDistance ? left.count : nil }
+
+        let sentinel = maximumDistance + 1
+        var previous = [Int](repeating: sentinel, count: right.count + 1)
+        var current = [Int](repeating: sentinel, count: right.count + 1)
+        for column in 0...min(right.count, maximumDistance) {
+            previous[column] = column
+        }
+
+        for row in 1...left.count {
+            let lower = max(1, row - maximumDistance)
+            let upper = min(right.count, row + maximumDistance)
+            current[0] = row <= maximumDistance ? row : sentinel
+            if lower > 1 { current[lower - 1] = sentinel }
+
+            var rowMinimum = sentinel
+            if lower <= upper {
+                for column in lower...upper {
+                    let substitution = previous[column - 1]
+                        + (left[row - 1] == right[column - 1] ? 0 : 1)
+                    current[column] = min(
+                        sentinel,
+                        previous[column] + 1,
+                        current[column - 1] + 1,
+                        substitution
+                    )
+                    rowMinimum = min(rowMinimum, current[column])
+                }
+            }
+            if upper < right.count { current[upper + 1] = sentinel }
+            guard rowMinimum <= maximumDistance else { return nil }
+            swap(&previous, &current)
+        }
+
+        let distance = previous[right.count]
+        return distance <= maximumDistance ? distance : nil
     }
 
     /// Merge overlapping candidate windows so the chunk selector stays small

@@ -147,6 +147,7 @@ final class TextInserterTests: XCTestCase {
         XCTAssertEqual(system.postedKeys.count, 1)
         XCTAssertEqual(system.postedKeys.first?.keyCode, CGKeyCode(kVK_ANSI_V))
         XCTAssertEqual(system.postedKeys.first?.flags, .maskCommand)
+        XCTAssertEqual(system.postedKeys.first?.targetProcessIdentifier, target.processIdentifier)
     }
 
     func testScenario012() async {
@@ -217,6 +218,15 @@ final class TextInserterTests: XCTestCase {
         XCTAssertEqual(system.postedKeys.count, 1)
         XCTAssertEqual(system.postedKeys.first?.keyCode, CGKeyCode(kVK_Return))
         XCTAssertEqual(system.postedKeys.first?.flags, [])
+        XCTAssertNil(system.postedKeys.first?.targetProcessIdentifier)
+    }
+
+    func testReturnForDictationIsPinnedToTheOriginalApplication() async throws {
+        try await inserter.pressReturn(into: target)
+
+        XCTAssertEqual(system.postedKeys.count, 1)
+        XCTAssertEqual(system.postedKeys.first?.keyCode, CGKeyCode(kVK_Return))
+        XCTAssertEqual(system.postedKeys.first?.targetProcessIdentifier, target.processIdentifier)
     }
 
     func testScenario017() async {
@@ -284,6 +294,217 @@ final class TextInserterTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(5))
         }
         XCTAssertEqual(board.string(forType: .string), "what the person copied")
+    }
+
+    /// A WindowServer call may return only after the insertion deadline and
+    /// after the user has focused another application. The irreversible event
+    /// must remain addressed to the app captured at keypress, never to the new
+    /// frontmost app.
+    func testDelayedPostRemainsTargetedToOriginalApplication() async throws {
+        let originalTarget = target
+        let delayedSystem = DelayedPostInputSystem(frontmost: originalTarget)
+        let pasteboard = FakePasteboard(log: CallLog())
+        let inserter = TextInserter(
+            system: delayedSystem,
+            pasteboard: pasteboard,
+            restoreDelay: .zero
+        )
+        let task = Task {
+            try await inserter.insert("hello", into: originalTarget)
+        }
+
+        XCTAssertEqual(delayedSystem.postEntered.wait(timeout: .now() + 1), .success)
+        task.cancel()
+        delayedSystem.setFrontmost(
+            TargetApplication(
+                bundleIdentifier: "com.apple.Terminal",
+                processIdentifier: 999,
+                localizedName: "Terminal"
+            )
+        )
+        delayedSystem.allowPost.signal()
+
+        try await task.value
+        XCTAssertEqual(delayedSystem.postedTarget, originalTarget.processIdentifier)
+    }
+
+    /// A controller deadline can stop waiting while the actual WindowServer
+    /// call is still blocked. A later dictation must not replace the clipboard
+    /// underneath that old Cmd+V; it fails fast until the real call returns.
+    func testTimedOutPasteOwnsTheProcessLaneUntilItsSystemPostReturns() async throws {
+        let originalTarget = target
+        let delayedSystem = DelayedPostInputSystem(frontmost: originalTarget)
+        let pasteboard = FakePasteboard(log: CallLog())
+        let lane = TextInsertionLane()
+        let inserter = TextInserter(
+            system: delayedSystem,
+            pasteboard: pasteboard,
+            restoreDelay: .zero,
+            operationLane: lane
+        )
+        let first = Task {
+            try await inserter.insert("FIRST", into: originalTarget)
+        }
+
+        XCTAssertEqual(delayedSystem.postEntered.wait(timeout: .now() + 1), .success)
+        first.cancel()
+
+        await XCTAssertThrowsErrorAsync(
+            try await inserter.insert("SECOND", into: originalTarget),
+            expected: .insertionInProgress
+        )
+        XCTAssertEqual(pasteboard.writtenTexts, ["FIRST"])
+
+        delayedSystem.allowPost.signal()
+        try await first.value
+
+        delayedSystem.allowPost.signal()
+        try await inserter.insert("THIRD", into: originalTarget)
+        XCTAssertEqual(pasteboard.writtenTexts, ["FIRST", "THIRD"])
+    }
+
+    /// Restoring the person's clipboard is one destructive transaction: check
+    /// ownership, clear our dictated item, then rewrite the snapshot. A second
+    /// dictation must not enter after that clear and race its Cmd+V against the
+    /// rewrite.
+    func testDeferredRestoreOwnsTheProcessLaneAcrossClearAndRewrite() async throws {
+        let gatedPasteboard = ClearThenRewriteGatedPasteboard(original: "ORIGINAL")
+        let lane = TextInsertionLane()
+        let inserter = TextInserter(
+            system: system,
+            pasteboard: gatedPasteboard,
+            restoreDelay: .milliseconds(20),
+            operationLane: lane
+        )
+
+        try await inserter.insert("FIRST", into: target)
+        let clearDeadline = ContinuousClock.now + .seconds(1)
+        while !gatedPasteboard.hasClearedRestore, ContinuousClock.now < clearDeadline {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(
+            gatedPasteboard.hasClearedRestore,
+            "the test must pause inside restore after its destructive clear"
+        )
+        defer { gatedPasteboard.allowRestoreRewrite.signal() }
+
+        for attempt in 0..<32 {
+            await XCTAssertThrowsErrorAsync(
+                try await inserter.insert("SECOND-\(attempt)", into: target),
+                expected: .insertionInProgress
+            )
+        }
+        XCTAssertEqual(gatedPasteboard.writtenTexts, ["FIRST"])
+        XCTAssertEqual(system.postedKeys.count, 1, "later attempts must never dispatch Cmd+V")
+
+        gatedPasteboard.allowRestoreRewrite.signal()
+        let finishDeadline = ContinuousClock.now + .seconds(1)
+        while !gatedPasteboard.hasFinishedRestore, ContinuousClock.now < finishDeadline {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(gatedPasteboard.hasFinishedRestore)
+        XCTAssertEqual(gatedPasteboard.contents, "ORIGINAL")
+    }
+}
+
+/// Models the non-atomic system pasteboard sequence inside
+/// `HostOnlyPasteboard.restoreSnapshot`: host-only clear, then snapshot write.
+/// The gate makes the otherwise tiny corruption window deterministic.
+private final class ClearThenRewriteGatedPasteboard: DictationPasteboard, @unchecked Sendable {
+    let allowRestoreRewrite = DispatchSemaphore(value: 0)
+
+    private let lock = NSLock()
+    private var storedContents: String
+    private var storedWrittenTexts: [String] = []
+    private var snapshots: [(transaction: PasteboardTransaction, contents: String)] = []
+    private var restoreWasCleared = false
+    private var restoreWasFinished = false
+
+    init(original: String) {
+        storedContents = original
+    }
+
+    var contents: String {
+        lock.withLock { storedContents }
+    }
+
+    var writtenTexts: [String] {
+        lock.withLock { storedWrittenTexts }
+    }
+
+    var hasClearedRestore: Bool {
+        lock.withLock { restoreWasCleared }
+    }
+
+    var hasFinishedRestore: Bool {
+        lock.withLock { restoreWasFinished }
+    }
+
+    func beginHostOnlyWrite(_ text: String) throws -> PasteboardTransaction {
+        let transaction = PasteboardTransaction()
+        lock.withLock {
+            snapshots.append((transaction, storedContents))
+            storedContents = text
+            storedWrittenTexts.append(text)
+        }
+        return transaction
+    }
+
+    func restore(_ transaction: PasteboardTransaction) throws {
+        let snapshot = lock.withLock { () -> String? in
+            guard let index = snapshots.firstIndex(where: { $0.transaction == transaction }) else {
+                return nil
+            }
+            let snapshot = snapshots.remove(at: index).contents
+            storedContents = ""
+            restoreWasCleared = true
+            return snapshot
+        }
+        guard let snapshot else { return }
+
+        allowRestoreRewrite.wait()
+        lock.withLock {
+            storedContents = snapshot
+            restoreWasFinished = true
+        }
+    }
+}
+
+private final class DelayedPostInputSystem: InputSystem, @unchecked Sendable {
+    let postEntered = DispatchSemaphore(value: 0)
+    let allowPost = DispatchSemaphore(value: 0)
+
+    private let lock = NSLock()
+    private var frontmost: TargetApplication?
+    private var storedPostedTarget: Int32?
+
+    init(frontmost: TargetApplication?) {
+        self.frontmost = frontmost
+    }
+
+    var isSecureInputEnabled: Bool { false }
+    var isAccessibilityTrusted: Bool { true }
+    var postedTarget: Int32? { lock.withLock { storedPostedTarget } }
+
+    func setFrontmost(_ target: TargetApplication?) {
+        lock.withLock { frontmost = target }
+    }
+
+    func frontmostApplication() -> TargetApplication? {
+        lock.withLock { frontmost }
+    }
+
+    func heldModifiers() -> CGEventFlags { [] }
+    func activate(_ target: TargetApplication) async -> Bool { true }
+
+    func post(
+        keyCode: CGKeyCode,
+        flags: CGEventFlags,
+        targetProcessIdentifier: Int32?
+    ) throws {
+        postEntered.signal()
+        _ = allowPost.wait(timeout: .now() + 2)
+        lock.withLock { storedPostedTarget = targetProcessIdentifier }
     }
 }
 

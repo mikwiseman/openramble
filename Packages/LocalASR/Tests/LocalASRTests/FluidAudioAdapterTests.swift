@@ -1,3 +1,4 @@
+import CoreML
 import DictationCore
 import FluidAudio
 import XCTest
@@ -10,6 +11,47 @@ import XCTest
 final class FluidAudioAdapterTests: XCTestCase {
     private func timing(_ token: String, _ start: Double, _ end: Double, confidence: Float = 1) -> TokenTiming {
         TokenTiming(token: token, tokenId: 0, startTime: start, endTime: end, confidence: confidence)
+    }
+
+    /// Reference implementation of the pre-optimization lexical decision.
+    /// It deliberately keeps the allocation-heavy String path so the cached
+    /// Character implementation can be checked against the exact old semantics.
+    private func referenceVocabularyCandidateSpans(
+        words: [String],
+        terms: [VocabularyBoost.Term],
+        minimumSimilarity: Float
+    ) -> [Range<Int>] {
+        var seenForms = Set<String>()
+        let forms = terms.flatMap { term -> [(form: String, canonical: String)] in
+            let canonical = FluidAudioAdapter.normalizeVocabularyCandidate(term.text)
+            return ([term.text] + term.aliases).compactMap { raw in
+                let form = FluidAudioAdapter.normalizeVocabularyCandidate(raw)
+                let key = canonical + "\u{0}" + form
+                guard !form.isEmpty, seenForms.insert(key).inserted else { return nil }
+                return (form, canonical)
+            }
+        }
+
+        var spans: [Range<Int>] = []
+        for startIndex in words.indices {
+            let maximumLength = min(4, words.count - startIndex)
+            for length in 1...maximumLength {
+                let phrase = FluidAudioAdapter.normalizeVocabularyCandidate(
+                    words[startIndex..<(startIndex + length)].joined(separator: " ")
+                )
+                guard !phrase.isEmpty else { continue }
+                let compound = phrase.replacingOccurrences(of: " ", with: "")
+                let canAffectText = forms.contains { candidate in
+                    guard phrase != candidate.canonical else { return false }
+                    return FluidAudioAdapter.vocabularyCandidateSimilarity(phrase, candidate.form)
+                        >= minimumSimilarity
+                        || FluidAudioAdapter.vocabularyCandidateSimilarity(compound, candidate.form)
+                            >= minimumSimilarity
+                }
+                if canAffectText { spans.append(startIndex..<(startIndex + length)) }
+            }
+        }
+        return spans
     }
 
     func testEmptyTimingsProduceNoWords() {
@@ -95,19 +137,20 @@ final class FluidAudioAdapterTests: XCTestCase {
         XCTAssertFalse(enabled, "\u{0412}\u{043A}\u{043B}\u{044E}\u{0447}\u{0451}\u{043D}\u{043D}\u{044B}\u{0439} mel-\u{043A}\u{043E}\u{043D}\u{0442}\u{0435}\u{043A}\u{0441}\u{0442} \u{043C}\u{043E}\u{043B}\u{0447}\u{0430} \u{0441}\u{044A}\u{0435}\u{0434}\u{0430}\u{0435}\u{0442} \u{0442}\u{0435}\u{043A}\u{0441}\u{0442} \u{043D}\u{0430} \u{0441}\u{0442}\u{044B}\u{043A}\u{0435} \u{043E}\u{043A}\u{043E}\u{043D}")
     }
 
-    /// The encoder runs on the GPU by default, and this is a measured
-    /// decision, not taste: the ANE path pays ~16 s of program
-    /// specialization every time macOS purges its e5rt cache — which the
-    /// field machine does regularly — while the GPU path worst-cases at
-    /// ~7 s and typically loads in 0.3 s, with an identical transcript.
-    /// Reverting to `.neuralEngine` is one line; the person would only
-    /// notice as the return of "Transcribing…" that hangs for ages.
-    func testEncoderRunsOnTheGpuByDefault() async {
+    /// The enum label alone used to hide FluidAudio's ANE-only default. Guard
+    /// the exact Core ML contract so automatic really permits every unit.
+    func testEncoderUsesPortableAutomaticPlacementByDefault() async {
         let adapter = FluidAudioAdapter()
 
         let placement = await adapter.placement
 
-        XCTAssertEqual(placement, .gpu, "the predictable engine beats the occasionally-fastest one")
+        XCTAssertEqual(placement, .automatic)
+        XCTAssertEqual(FluidAudioAdapter.encoderComputeUnits(for: placement), .all)
+        XCTAssertEqual(
+            FluidAudioAdapter.encoderComputeUnits(for: .neuralEngine),
+            .cpuAndNeuralEngine
+        )
+        XCTAssertEqual(FluidAudioAdapter.encoderComputeUnits(for: .gpu), .cpuAndGPU)
     }
 
     func testLongFormConcurrencyUsesTheBenchmarkedDefault() async {
@@ -115,7 +158,7 @@ final class FluidAudioAdapterTests: XCTestCase {
 
         let concurrency = await adapter.longFormConcurrency
 
-        XCTAssertEqual(concurrency, 6, "six windows won the measured M4 latency sweep")
+        XCTAssertEqual(concurrency, 4, "the portable device-matrix default must not be M4-only")
     }
 
     func testVocabularyInferenceUsesCandidateRegionsByDefault() async {
@@ -126,12 +169,27 @@ final class FluidAudioAdapterTests: XCTestCase {
         XCTAssertEqual(
             scheduling,
             .candidateRegions,
-            "long-form CTC should run only where the final rescorer can affect text"
+            "CTC should run only after TDT proves the final rescorer can affect text"
         )
-        XCTAssertEqual(
-            FluidAudioAdapter.parallelVocabularyDurationLimit,
-            15,
-            "only one CTC model window should compete speculatively with the primary decoder"
+        XCTAssertFalse(
+            FluidAudioAdapter.shouldStartVocabularyEvidenceInParallel(
+                hasVocabulary: true,
+                scheduling: .candidateRegions
+            ),
+            "the product path must not start speculative CTC, including short dictations"
+        )
+        XCTAssertTrue(
+            FluidAudioAdapter.shouldStartVocabularyEvidenceInParallel(
+                hasVocabulary: true,
+                scheduling: .alwaysParallel
+            ),
+            "the benchmark/reference mode must preserve the parallel comparison lane"
+        )
+        XCTAssertFalse(
+            FluidAudioAdapter.shouldStartVocabularyEvidenceInParallel(
+                hasVocabulary: false,
+                scheduling: .alwaysParallel
+            )
         )
     }
 
@@ -163,6 +221,139 @@ final class FluidAudioAdapterTests: XCTestCase {
             FluidAudioAdapter.vocabularyCandidateSimilarity("Postgres", "Postgres"),
             1
         )
+    }
+
+    func testBoundedVocabularySimilarityDecisionMatchesExactReference() {
+        let corpus = [
+            "", "a", "ab", "kitten", "sitting", "Postgres", "postgrez",
+            "постгрес", "постгрез", "кубер нетес", "кубернетес", "café", "cafe\u{301}",
+        ]
+        let thresholds: [Float] = [0, 0.5, 0.52, 0.55, 0.65, 0.8, 1]
+
+        for left in corpus {
+            for right in corpus {
+                for threshold in thresholds {
+                    let expected = FluidAudioAdapter.vocabularyCandidateSimilarity(left, right) >= threshold
+                    let actual = FluidAudioAdapter.vocabularyCandidateCanReachThreshold(
+                        Array(left),
+                        Array(right),
+                        minimumSimilarity: threshold
+                    )
+                    XCTAssertEqual(
+                        actual,
+                        expected,
+                        "bounded decision drifted for \(left.debugDescription), "
+                            + "\(right.debugDescription), threshold \(threshold)"
+                    )
+                }
+            }
+        }
+
+        // Deterministic generated coverage exercises different band widths,
+        // length gaps, and extended grapheme clusters without making the test
+        // dependent on system randomness.
+        let alphabet: [Character] = ["a", "b", "é", "ж", "👩🏽‍💻", "-"]
+        var state: UInt64 = 0xD1C7_A710
+        func next(_ upperBound: Int) -> Int {
+            state = state &* 6_364_136_223_846_793_005 &+ 1
+            return Int(state % UInt64(upperBound))
+        }
+        func generatedString() -> String {
+            String((0..<next(15)).map { _ in alphabet[next(alphabet.count)] })
+        }
+        for _ in 0..<512 {
+            let left = generatedString()
+            let right = generatedString()
+            for threshold in thresholds {
+                let expected = FluidAudioAdapter.vocabularyCandidateSimilarity(left, right) >= threshold
+                let actual = FluidAudioAdapter.vocabularyCandidateCanReachThreshold(
+                    Array(left),
+                    Array(right),
+                    minimumSimilarity: threshold
+                )
+                XCTAssertEqual(actual, expected, "generated bounded decision drifted")
+            }
+        }
+    }
+
+    func testCachedLexicalGatePreservesTranscriptDecisionParity() {
+        let terms: [VocabularyBoost.Term] = [
+            .init(text: "Postgres", aliases: ["постгрес", "постгрес"]),
+            .init(text: "Kubernetes", aliases: ["кубернетес"]),
+            .init(text: "code review", aliases: ["код ревью"]),
+        ]
+        let threshold: Float = 0.65
+        let gate = FluidAudioAdapter.VocabularyLexicalGate(
+            terms: terms,
+            minimumSimilarity: threshold
+        )
+        let transcripts = [
+            ["обычная", "речь"],
+            ["постгрез"],
+            ["Postgres"],
+            ["кубер", "нетес"],
+            ["код", "ревъю"],
+            ["code", "review"],
+            ["до", "постгрез,", "после"],
+            [".", "кубер", "-", "нетес"],
+        ]
+
+        XCTAssertEqual(gate.cachedFormCount, 6, "canonical/alias duplicates should be cached once")
+        for words in transcripts {
+            XCTAssertEqual(
+                gate.candidateWordSpans(words: words),
+                referenceVocabularyCandidateSpans(
+                    words: words,
+                    terms: terms,
+                    minimumSimilarity: threshold
+                ),
+                "cached gate changed the previous decision for \(words)"
+            )
+        }
+    }
+
+    func testRareTermAliasSchedulesEvidenceButUnrelatedSpeechDoesNot() {
+        let gate = FluidAudioAdapter.VocabularyLexicalGate(
+            terms: [
+                .init(text: "OpenTelemetry", aliases: ["опентелеметри"]),
+                .init(text: "Kubernetes", aliases: ["кубернетес"]),
+            ],
+            minimumSimilarity: 0.65
+        )
+
+        XCTAssertTrue(
+            gate.candidateWordSpans(words: ["включи", "опен", "телеметри"]).contains(1..<3),
+            "a split rare-term alias must still reach the real CTC rescorer"
+        )
+        XCTAssertTrue(
+            gate.candidateWordSpans(words: ["обычная", "русская", "речь"]).isEmpty,
+            "unrelated speech must not pay for CTC"
+        )
+        XCTAssertTrue(
+            gate.candidateWordSpans(words: ["OpenTelemetry"]).isEmpty,
+            "an already-correct canonical spelling needs no acoustic rewrite"
+        )
+    }
+
+    func testCachedLexicalGateIsDeterministicAcrossConcurrentReaders() async {
+        let gate = FluidAudioAdapter.VocabularyLexicalGate(
+            terms: VocabularyBoost.developerDefault().terms,
+            minimumSimilarity: 0.65
+        )
+        let words = ["данные", "лежат", "в", "постгрез", "а", "кэш", "в", "редис"]
+        let expected = gate.candidateWordSpans(words: words)
+
+        let results = await withTaskGroup(of: [Range<Int>].self, returning: [[Range<Int>]].self) { group in
+            for _ in 0..<128 {
+                group.addTask { gate.candidateWordSpans(words: words) }
+            }
+            var collected: [[Range<Int>]] = []
+            for await result in group { collected.append(result) }
+            return collected
+        }
+
+        XCTAssertEqual(results.count, 128)
+        XCTAssertTrue(results.allSatisfy { $0 == expected })
     }
 
     func testVocabularyChunkSelectionUsesOnlyRangesThatCanAffectTheScore() {

@@ -55,6 +55,26 @@ final class DictationSpeedTests: XCTestCase {
         func startupLatency() async -> Duration? { latency }
     }
 
+    private actor DeferredStartCapture: AudioCapturing {
+        private let gate: Gate
+        private let url = FileManager.default.temporaryDirectory
+            .appending(path: "deferred-speed-\(UUID().uuidString).wav")
+
+        init(gate: Gate) { self.gate = gate }
+
+        func startRecording() async throws -> URL {
+            await gate.pass()
+            FileManager.default.createFile(atPath: url.path, contents: Data([0]))
+            return url
+        }
+
+        func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
+            (url, 2)
+        }
+
+        func abortRecording() async {}
+    }
+
     private func settle(_ iterations: Int = 20) async {
         for _ in 0..<iterations {
             await Task.yield()
@@ -114,6 +134,36 @@ final class DictationSpeedTests: XCTestCase {
         XCTAssertEqual(speed.toPasteDispatched, .milliseconds(150))
         XCTAssertEqual(speed.toClipboardRestored, .milliseconds(1150))
         XCTAssertEqual(speed.microphoneStartup, .milliseconds(130))
+    }
+
+    func testReleaseDuringPreparingIsIncludedInStopToTextMetric() async throws {
+        let gate = Gate()
+        let inserter = MarkingInserter(marks: InsertionMarks())
+        var report: DictationSpeedReport?
+        let controller = DictationController(
+            capture: DeferredStartCapture(gate: gate),
+            transcribe: { _ in
+                ASRResult(text: "measured", audioDuration: 2, processingDuration: 0)
+            },
+            inserter: inserter,
+            overlay: FakeOverlay(),
+            sounds: FakeSounds()
+        )
+        controller.onSpeed = { report = $0 }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle(2)
+        controller.stop()
+        try await Task.sleep(for: .milliseconds(80))
+        await gate.open()
+        await settle(30)
+
+        let speed = try XCTUnwrap(report)
+        XCTAssertGreaterThanOrEqual(
+            speed.toRecognizedText,
+            .milliseconds(70),
+            "a cold/blocked capture start after key release must not be hidden from telemetry"
+        )
     }
 
     /// The marks are in order: text → insertion → buffer restoration.

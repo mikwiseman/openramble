@@ -6,14 +6,15 @@ import XCTest
 final class TranscriptionDeadlineTests: XCTestCase {
     // MARK: - Policy
 
-    /// Short dictations get the twenty-second floor; long ones scale at
-    /// twice real time, so no healthy transcription ever meets the deadline.
+    /// Short dictations are bounded tightly; long recordings still scale with
+    /// their measured window count rather than with real time.
     func testDeadlineScalesWithAudioButNeverDropsBelowFloor() {
-        XCTAssertEqual(TranscriptionDeadline.deadline(forAudioDuration: 0), .seconds(20))
-        XCTAssertEqual(TranscriptionDeadline.deadline(forAudioDuration: 3), .seconds(20))
-        XCTAssertEqual(TranscriptionDeadline.deadline(forAudioDuration: 10), .seconds(20))
-        XCTAssertEqual(TranscriptionDeadline.deadline(forAudioDuration: 30), .seconds(60))
-        XCTAssertEqual(TranscriptionDeadline.deadline(forAudioDuration: 1800), .seconds(3600))
+        XCTAssertEqual(TranscriptionDeadline.deadline(forAudioDuration: 0), .seconds(3))
+        XCTAssertEqual(TranscriptionDeadline.deadline(forAudioDuration: 3), .seconds(3))
+        XCTAssertEqual(TranscriptionDeadline.deadline(forAudioDuration: 30), .seconds(3))
+        XCTAssertEqual(TranscriptionDeadline.deadline(forAudioDuration: 90), .seconds(3))
+        XCTAssertEqual(TranscriptionDeadline.deadline(forAudioDuration: 180), .seconds(6))
+        XCTAssertEqual(TranscriptionDeadline.deadline(forAudioDuration: 1800), .seconds(60))
     }
 
     // MARK: - Race

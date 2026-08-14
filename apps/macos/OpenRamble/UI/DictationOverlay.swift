@@ -2,6 +2,30 @@ import AppKit
 import DictationCore
 import SwiftUI
 
+private final class OverlayCommandOrder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var latestSession: DictationSessionID?
+    private var lastAppliedRevision: UInt64 = 0
+
+    func advance(to session: DictationSessionID) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard latestSession.map({ session >= $0 }) ?? true else { return }
+        if latestSession != session {
+            latestSession = session
+            lastAppliedRevision = 0
+        }
+    }
+
+    func accepts(session: DictationSessionID, revision: UInt64) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard latestSession == session, revision >= lastAppliedRevision else { return false }
+        lastAppliedRevision = revision
+        return true
+    }
+}
+
 /// A small panel showing what's happening with dictation.
 ///
 /// The panel does not take focus: the user dictates to another application, and the
@@ -13,6 +37,8 @@ import SwiftUI
 public final class DictationOverlay: OverlayPresenting {
     private var panel: NSPanel?
     private let model: OverlayModel
+    /// Synchronous issue-order fence shared with nonisolated protocol calls.
+    private nonisolated let commandOrder = OverlayCommandOrder()
     /// Subscribe to change the panel size. The panel grows behind the content, and
     /// content changes during dictation.
     ///
@@ -66,6 +92,65 @@ public final class DictationOverlay: OverlayPresenting {
 
     nonisolated public func presentNotice(_ notice: DictationNotice) async {
         await MainActor.run { model.showNotice(notice) }
+    }
+
+    nonisolated public func present(
+        _ state: DictationState,
+        elapsed: TimeInterval,
+        session: DictationSessionID
+    ) async {
+        advance(to: session, revision: 0)
+        await present(state, elapsed: elapsed, session: session, revision: 0)
+    }
+
+    nonisolated public func dismiss(session: DictationSessionID) async {
+        advance(to: session, revision: 0)
+        await dismiss(session: session, revision: 0)
+    }
+
+    nonisolated public func presentNotice(
+        _ notice: DictationNotice,
+        session: DictationSessionID
+    ) async {
+        advance(to: session, revision: 0)
+        await presentNotice(notice, session: session, revision: 0)
+    }
+
+    nonisolated public func advance(to session: DictationSessionID, revision: UInt64) {
+        commandOrder.advance(to: session)
+    }
+
+    nonisolated public func present(
+        _ state: DictationState,
+        elapsed: TimeInterval,
+        session: DictationSessionID,
+        revision: UInt64
+    ) async {
+        await MainActor.run {
+            guard commandOrder.accepts(session: session, revision: revision) else { return }
+            model.show(state, elapsed: elapsed)
+        }
+    }
+
+    nonisolated public func dismiss(
+        session: DictationSessionID,
+        revision: UInt64
+    ) async {
+        await MainActor.run {
+            guard commandOrder.accepts(session: session, revision: revision) else { return }
+            model.hide()
+        }
+    }
+
+    nonisolated public func presentNotice(
+        _ notice: DictationNotice,
+        session: DictationSessionID,
+        revision: UInt64
+    ) async {
+        await MainActor.run {
+            guard commandOrder.accepts(session: session, revision: revision) else { return }
+            model.showNotice(notice)
+        }
     }
 
     private func showPanel() {

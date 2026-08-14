@@ -1,10 +1,10 @@
 #!/bin/bash
 # Build an image for distribution.
 #
-# Without Developer ID you get only Debug-probe with a separate name and bundle
-#id. Production identity is never signed ad-hoc: otherwise every rebuild
-# creates a new Accessibility entry, and accumulates in the system settings
-# indistinguishable "OpenRamble".
+# Without Developer ID a local run gets only a Debug probe with a separate name
+# and bundle id. CI may additionally exercise the production Release topology
+# with UNSIGNED_RELEASE_TOPOLOGY=1; that mode is rejected outside CI and is not
+# an installable release.
 #
 #   DEVELOPER_ID   — «Developer ID Application: …»
 # NOTARY_PROFILE - notarytool profile, created via `xcrun notarytool store-credentials`
@@ -23,6 +23,10 @@ PROJECT="apps/macos/OpenRamble.xcodeproj"
 BUILD_DIR="artifacts/build"
 DMG_DIR="artifacts/dmg"
 APP_ENTITLEMENTS="apps/macos/OpenRamble/OpenRamble.entitlements"
+ASR_WORKER_ID="is.waiwai.dictation.asr-worker"
+OFFICIAL_FEED_URL="https://mikwiseman.github.io/openramble/appcast.xml"
+PERMANENT_PUBLIC_KEY="9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI="
+EXPECTED_MIN_OS="14.0"
 
 DEVELOPER_ID="${DEVELOPER_ID:-}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
@@ -31,6 +35,14 @@ NOTARY_KEY_ID="${NOTARY_KEY_ID:-}"
 NOTARY_ISSUER="${NOTARY_ISSUER:-}"
 APPSTORECONNECT_CONFIG="${APPSTORECONNECT_CONFIG:-$HOME/.appstoreconnect/config.json}"
 REQUIRE_NOTARIZATION="${REQUIRE_NOTARIZATION:-0}"
+if [[ -z "${REQUIRE_OFFLINE_RECOGNITION+x}" ]]; then
+  if [[ "$REQUIRE_NOTARIZATION" == "1" || -n "$DEVELOPER_ID" ]]; then
+    REQUIRE_OFFLINE_RECOGNITION=1
+  else
+    REQUIRE_OFFLINE_RECOGNITION=0
+  fi
+fi
+UNSIGNED_RELEASE_TOPOLOGY="${UNSIGNED_RELEASE_TOPOLOGY:-0}"
 BUILD_NUMBER_OVERRIDE="${BUILD_NUMBER_OVERRIDE:-}"
 BUILD_OVERRIDES=()
 
@@ -38,6 +50,57 @@ BUILD_OVERRIDES=()
 source scripts/lib/notary-credentials.sh
 # shellcheck source=lib/release-keychain.sh
 source scripts/lib/release-keychain.sh
+
+project_value() {
+  sed -n "s/^ *$1: *\"\{0,1\}\([^\"]*\)\"\{0,1\} *$/\1/p" apps/macos/project.yml | head -1
+}
+
+PROJECT_VERSION=$(project_value MARKETING_VERSION)
+PROJECT_BUILD=$(project_value CURRENT_PROJECT_VERSION)
+PROJECT_MIN_OS=$(project_value MACOSX_DEPLOYMENT_TARGET)
+PROJECT_FEED_URL=$(project_value SUFeedURL)
+PROJECT_PUBLIC_KEY=$(project_value SUPublicEDKey)
+
+[[ -n "$PROJECT_VERSION" && -n "$PROJECT_BUILD" ]] || {
+  echo "The project version/build is missing." >&2
+  exit 1
+}
+[[ "$PROJECT_MIN_OS" == "$EXPECTED_MIN_OS" ]] || {
+  echo "Project minOS must remain $EXPECTED_MIN_OS, got ${PROJECT_MIN_OS:-missing}." >&2
+  exit 1
+}
+[[ "$PROJECT_FEED_URL" == "$OFFICIAL_FEED_URL" ]] || {
+  echo "Project Sparkle feed must be $OFFICIAL_FEED_URL." >&2
+  exit 1
+}
+[[ "$PROJECT_PUBLIC_KEY" == "$PERMANENT_PUBLIC_KEY" ]] || {
+  echo "Project SUPublicEDKey does not match the permanent product key." >&2
+  exit 1
+}
+[[ "$REQUIRE_OFFLINE_RECOGNITION" == "0" || "$REQUIRE_OFFLINE_RECOGNITION" == "1" ]] || {
+  echo "REQUIRE_OFFLINE_RECOGNITION accepts only 0 or 1." >&2
+  exit 1
+}
+[[ "$REQUIRE_NOTARIZATION" == "0" || "$REQUIRE_NOTARIZATION" == "1" ]] || {
+  echo "REQUIRE_NOTARIZATION accepts only 0 or 1." >&2
+  exit 1
+}
+if [[ "$REQUIRE_NOTARIZATION" == "1" && "$REQUIRE_OFFLINE_RECOGNITION" != "1" ]]; then
+  echo "A notarized build requires packaged-worker recognition with network denied." >&2
+  exit 1
+fi
+[[ "$UNSIGNED_RELEASE_TOPOLOGY" == "0" || "$UNSIGNED_RELEASE_TOPOLOGY" == "1" ]] || {
+  echo "UNSIGNED_RELEASE_TOPOLOGY accepts only 0 or 1." >&2
+  exit 1
+}
+if [[ "$UNSIGNED_RELEASE_TOPOLOGY" == "1" && "${CI:-}" != "true" ]]; then
+  echo "UNSIGNED_RELEASE_TOPOLOGY is a CI-only Release-topology check." >&2
+  exit 1
+fi
+if [[ "$UNSIGNED_RELEASE_TOPOLOGY" == "1" && -n "$DEVELOPER_ID" ]]; then
+  echo "UNSIGNED_RELEASE_TOPOLOGY cannot be combined with a Developer ID." >&2
+  exit 1
+fi
 
 if [[ -n "$BUILD_NUMBER_OVERRIDE" ]]; then
   [[ "$BUILD_NUMBER_OVERRIDE" =~ ^[0-9]+$ ]] || {
@@ -48,8 +111,10 @@ if [[ -n "$BUILD_NUMBER_OVERRIDE" ]]; then
   echo "→ Build number override: $BUILD_NUMBER_OVERRIDE"
 fi
 
-if [[ -n "$DEVELOPER_ID" ]]; then
-  load_release_keychain || exit 1
+if [[ -n "$DEVELOPER_ID" || "$UNSIGNED_RELEASE_TOPOLOGY" == "1" ]]; then
+  if [[ -n "$DEVELOPER_ID" ]]; then
+    load_release_keychain || exit 1
+  fi
   APP_NAME="OpenRamble"
   BUNDLE_ID="is.waiwai.dictation"
   BUILD_CONFIGURATION="Release"
@@ -59,6 +124,10 @@ else
   BUNDLE_ID="is.waiwai.dictation.dev"
   BUILD_CONFIGURATION="Debug"
   DMG_BASENAME="OpenRambleDev"
+fi
+
+if [[ "$UNSIGNED_RELEASE_TOPOLOGY" == "1" ]]; then
+  echo "→ CI-only unsigned production Release topology"
 fi
 
 if [[ -n "$NOTARY_PROFILE" || -n "$NOTARY_KEY" || -n "$NOTARY_KEY_ID" \
@@ -95,7 +164,11 @@ if [[ -n "$DEVELOPER_ID" ]]; then
     SIGN_ARGS+=("${XCODE_KEYCHAIN_SIGN_ARGS[@]}")
   fi
 else
-  echo "Developer ID is not specified - I am collecting a separate Debug-probe OpenRambleDev"
+  if [[ "$UNSIGNED_RELEASE_TOPOLOGY" == "1" ]]; then
+    echo "Developer ID is not specified - building the CI-only production topology ad-hoc"
+  else
+    echo "Developer ID is not specified - building a separate Debug probe OpenRambleDev"
+  fi
   SIGN_ARGS=(CODE_SIGNING_ALLOWED=NO)
 fi
 
@@ -128,13 +201,21 @@ if [[ ! -d "$APP_PATH" ]]; then
   echo "The build did not produce the application" >&2
   exit 1
 fi
-MCP_HELPER="$APP_PATH/Contents/MacOS/openramble-mcp"
-if [[ ! -x "$MCP_HELPER" ]]; then
-  echo "The build did not embed the MCP helper" >&2
+if [[ -e "$APP_PATH/Contents/MacOS/openramble-mcp" ]]; then
+  echo "The dictation-only build unexpectedly embedded openramble-mcp" >&2
   exit 1
 fi
-if otool -L "$MCP_HELPER" | grep -q '/Network\.framework/'; then
-  echo "The local MCP helper unexpectedly links Network.framework" >&2
+if [[ -e "$APP_PATH/Contents/MacOS/openramble-asr-worker-test-fixture" ]]; then
+  echo "The release build unexpectedly embedded the ASR fault-test fixture" >&2
+  exit 1
+fi
+ASR_WORKER="$APP_PATH/Contents/MacOS/openramble-asr-worker"
+if [[ ! -x "$ASR_WORKER" ]]; then
+  echo "The build did not embed the private ASR worker" >&2
+  exit 1
+fi
+if otool -L "$ASR_WORKER" | grep -q '/Network\.framework/'; then
+  echo "The private ASR worker unexpectedly links Network.framework" >&2
   exit 1
 fi
 
@@ -208,6 +289,12 @@ if [[ "$MIN_OS" != "14.0" ]]; then
   echo "Expected minOS 14.0, got $MIN_OS" >&2
   exit 1
 fi
+ASR_WORKER_MIN_OS=$(vtool -show-build "$ASR_WORKER" 2>/dev/null | grep -m1 "minos" | awk '{print $2}')
+echo "  ASR worker minos $ASR_WORKER_MIN_OS"
+if [[ "$ASR_WORKER_MIN_OS" != "14.0" ]]; then
+  echo "Expected ASR worker minOS 14.0, got $ASR_WORKER_MIN_OS" >&2
+  exit 1
+fi
 
 # The release identifier must remain unchanged forever: it is based on
 # user-issued universal access. Debug-probe intentionally uses
@@ -224,10 +311,32 @@ fi
 
 ACTUAL_BUILD_NUMBER=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true)
 echo "→ Build number: $ACTUAL_BUILD_NUMBER"
-if [[ -n "$BUILD_NUMBER_OVERRIDE" && "$ACTUAL_BUILD_NUMBER" != "$BUILD_NUMBER_OVERRIDE" ]]; then
-  echo "Build number override was not included in the artifact." >&2
+EXPECTED_BUILD_NUMBER="${BUILD_NUMBER_OVERRIDE:-$PROJECT_BUILD}"
+if [[ "$ACTUAL_BUILD_NUMBER" != "$EXPECTED_BUILD_NUMBER" ]]; then
+  echo "Wrong build number: expected $EXPECTED_BUILD_NUMBER, got ${ACTUAL_BUILD_NUMBER:-missing}." >&2
   exit 1
 fi
+
+ACTUAL_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true)
+ACTUAL_PLIST_MIN_OS=$(/usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true)
+ACTUAL_FEED_URL=$(/usr/libexec/PlistBuddy -c "Print :SUFeedURL" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true)
+ACTUAL_PUBLIC_KEY=$(/usr/libexec/PlistBuddy -c "Print :SUPublicEDKey" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true)
+[[ "$ACTUAL_VERSION" == "$PROJECT_VERSION" ]] || {
+  echo "Wrong app version: expected $PROJECT_VERSION, got ${ACTUAL_VERSION:-missing}." >&2
+  exit 1
+}
+[[ "$ACTUAL_PLIST_MIN_OS" == "$EXPECTED_MIN_OS" ]] || {
+  echo "Wrong Info.plist minOS: expected $EXPECTED_MIN_OS, got ${ACTUAL_PLIST_MIN_OS:-missing}." >&2
+  exit 1
+}
+[[ "$ACTUAL_FEED_URL" == "$OFFICIAL_FEED_URL" ]] || {
+  echo "Wrong Sparkle feed in the built app: ${ACTUAL_FEED_URL:-missing}." >&2
+  exit 1
+}
+[[ "$ACTUAL_PUBLIC_KEY" == "$PERMANENT_PUBLIC_KEY" ]] || {
+  echo "Wrong permanent Sparkle public key in the built app." >&2
+  exit 1
+}
 
 if [[ -n "$DEVELOPER_ID" ]]; then
   echo "→ I sign"
@@ -241,13 +350,10 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   # Order and composition - from Sparkle documentation (sparkle-project.org, section
   # about the sandbox and signature of components).
   #
-  # --deep is prohibited here for two reasons. Apple announced it for signature
-  # deprecated (“for emergency use only”): it applies the same options to
-  # to all nested code, although it is signed differently. Sparkle asks not
-  # apply it directly: Downloader.xpc signs with its entitlements,
-  # which other binaries do not have, and do not have the same options
-  # cover. What breaks down is not the assembly or notarization, but the installation
-  # updates - that is, the first user will have nothing to repair.
+  # Recursive signing is prohibited here: it applies the same options to every
+  # nested object even though Sparkle's components are signed differently.
+  # Downloader.xpc must preserve its own entitlements, while the other binaries
+  # must not inherit them.
   SPARKLE="$APP_PATH/Contents/Frameworks/Sparkle.framework"
   SPARKLE_VERSION="$SPARKLE/Versions/B"
 
@@ -259,6 +365,7 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   # If Sparkle moves to a different version letter or removes a component, silently
   # you can't skip it: the embedded code will remain with the ad-hoc assembly signature.
   for component in \
+    "$ASR_WORKER" \
     "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
     "$SPARKLE_VERSION/Autoupdate" \
@@ -266,13 +373,14 @@ if [[ -n "$DEVELOPER_ID" ]]; then
     "$SPARKLE"
   do
     if [[ ! -e "$component" ]]; then
-      echo "Can't find nested Sparkle component: $component" >&2
+      echo "Can't find required nested code component: $component" >&2
       echo "The framework layout has changed - update the list, otherwise part of the code" >&2
       echo "will be released with an ad-hoc signature." >&2
       exit 1
     fi
   done
 
+  sign --identifier "$ASR_WORKER_ID" "$ASR_WORKER"
   sign "$SPARKLE_VERSION/XPCServices/Installer.xpc"
   # The only component that Sparkle specifically tells to save
   #entitlements. Our application is not in the sandbox, and now there is an empty list -
@@ -282,15 +390,16 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   sign "$SPARKLE_VERSION/Autoupdate"
   sign "$SPARKLE_VERSION/Updater.app"
   sign "$SPARKLE"
-  sign --identifier "$BUNDLE_ID.mcp" "$MCP_HELPER"
 
   # Application last. We set the identifier explicitly so that it does not depend on
   # product name and build settings.
   sign --identifier "$BUNDLE_ID" --entitlements "$APP_ENTITLEMENTS" "$APP_PATH"
 
-  # But when checking, --deep is exactly what is needed: it bypasses nested code.
+  # Verify the outer seal and every expected nested code object independently.
+  # This makes a missing/replaced helper visible and avoids recursive verification
+  # silently changing which code is considered part of the release.
   echo "→ Checking signature"
-  codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+  codesign --verify --strict --verbose=2 "$APP_PATH"
 
   # Why check: the missing component will remain with an ad-hoc signature
   # builds. Notarization will reject this, and if it misses it, it will break down
@@ -299,13 +408,14 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   APP_AUTHORITY=$(codesign -dvv "$APP_PATH" 2>&1 | sed -n 's/^Authority=//p' | head -1)
   echo "credentials: ${APP_AUTHORITY:-ad-hoc}"
   for component in \
+    "$ASR_WORKER" \
     "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
     "$SPARKLE_VERSION/Autoupdate" \
     "$SPARKLE_VERSION/Updater.app" \
-    "$SPARKLE" \
-    "$MCP_HELPER"
+    "$SPARKLE"
   do
+    codesign --verify --strict --verbose=2 "$component"
     authority=$(codesign -dvv "$component" 2>&1 | sed -n 's/^Authority=//p' | head -1)
     if [[ "$authority" != "$APP_AUTHORITY" ]]; then
       echo "The component is not signed by the same identity: $component" >&2
@@ -317,10 +427,15 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   echo "the attached code is signed by the same identity"
 else
   # After thinning and adding license resources, signing ready Sparkle
-  # components are no longer valid. Debug-probe must pass strict
-  # local code verification, so we rebuild the ad-hoc signature from the inside
-  # out. Its .dev identity cannot pollute the production TCC grant.
-  echo "→ I put a verifiable ad-hoc signature Debug-probe"
+  # components are no longer valid. The non-publishing artifact must still pass
+  # strict local code verification, so rebuild the ad-hoc signature from the
+  # inside out. A normal local probe uses its .dev identity; the production
+  # identifier is available only in the ephemeral CI topology check.
+  if [[ "$UNSIGNED_RELEASE_TOPOLOGY" == "1" ]]; then
+    echo "→ Applying verifiable ad-hoc signatures to the CI Release topology"
+  else
+    echo "→ Applying verifiable ad-hoc signatures to the Debug probe"
+  fi
   SPARKLE="$APP_PATH/Contents/Frameworks/Sparkle.framework"
   SPARKLE_VERSION="$SPARKLE/Versions/B"
   for component in \
@@ -336,17 +451,35 @@ else
     }
   done
 
+  codesign --force --sign - --identifier "$ASR_WORKER_ID" "$ASR_WORKER"
   codesign --force --sign - "$SPARKLE_VERSION/XPCServices/Installer.xpc"
   codesign --force --sign - --preserve-metadata=entitlements \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc"
   codesign --force --sign - "$SPARKLE_VERSION/Autoupdate"
   codesign --force --sign - "$SPARKLE_VERSION/Updater.app"
   codesign --force --sign - "$SPARKLE"
-  codesign --force --sign - --identifier "$BUNDLE_ID.mcp" "$MCP_HELPER"
   codesign --force --sign - --identifier "$BUNDLE_ID" \
     --entitlements "$APP_ENTITLEMENTS" "$APP_PATH"
-  codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+  codesign --verify --strict --verbose=2 "$APP_PATH"
+  for component in \
+    "$ASR_WORKER" \
+    "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
+    "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
+    "$SPARKLE_VERSION/Autoupdate" \
+    "$SPARKLE_VERSION/Updater.app" \
+    "$SPARKLE"
+  do
+    codesign --verify --strict --verbose=2 "$component"
+  done
 fi
+
+ASR_WORKER_ACTUAL_ID=$(codesign -dvv "$ASR_WORKER" 2>&1 \
+  | sed -n 's/^Identifier=//p' | head -1)
+if [[ "$ASR_WORKER_ACTUAL_ID" != "$ASR_WORKER_ID" ]]; then
+  echo "Wrong ASR worker signature identifier: $ASR_WORKER_ACTUAL_ID" >&2
+  exit 1
+fi
+scripts/test-asr-worker.sh "$ASR_WORKER"
 
 echo "→ Assembling the image"
 STAGING="$DMG_DIR/staging"
@@ -371,6 +504,10 @@ fi
 hdiutil verify "$DMG_PATH" >/dev/null
 
 if [[ -n "$DEVELOPER_ID" && ${#NOTARY_ARGS[@]} -gt 0 ]]; then
+  if [[ "$REQUIRE_OFFLINE_RECOGNITION" != "1" ]]; then
+    echo "A notarized build requires packaged-worker recognition with network denied." >&2
+    exit 1
+  fi
   echo "→ Sending for notarization (this takes a few minutes)"
   NOTARY_RESULT=""
   NOTARY_ID=""
@@ -471,6 +608,23 @@ else
   fi
   echo "Notarization missing: this is not an installable beta"
 fi
+
+echo "→ Mounting and checking the exact DMG"
+if [[ -n "$DEVELOPER_ID" ]]; then
+  REQUIRE_DEVELOPER_ID_VALUE=1
+else
+  REQUIRE_DEVELOPER_ID_VALUE=0
+fi
+EXPECTED_APP_NAME="$APP_NAME" \
+EXPECTED_BUNDLE_ID="$BUNDLE_ID" \
+EXPECTED_VERSION="$PROJECT_VERSION" \
+EXPECTED_BUILD="$EXPECTED_BUILD_NUMBER" \
+EXPECTED_MIN_OS="$EXPECTED_MIN_OS" \
+EXPECTED_FEED_URL="$OFFICIAL_FEED_URL" \
+EXPECTED_PUBLIC_KEY="$PERMANENT_PUBLIC_KEY" \
+REQUIRE_DEVELOPER_ID="$REQUIRE_DEVELOPER_ID_VALUE" \
+REQUIRE_OFFLINE_RECOGNITION="$REQUIRE_OFFLINE_RECOGNITION" \
+./scripts/smoke-installed-artifact.sh "$DMG_PATH"
 
 shasum -a 256 "$DMG_PATH" | tee "$DMG_PATH.sha256"
 echo ""

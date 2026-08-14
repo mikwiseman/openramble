@@ -165,6 +165,7 @@ public struct HostOnlyPasteboard: DictationPasteboard {
 
     public func beginHostOnlyWrite(_ text: String) throws -> PasteboardTransaction {
         let pasteboard = NSPasteboard(name: NSPasteboard.Name(name))
+        let observedChangeCount = pasteboard.changeCount
         // Restoration is deferred by a second after ⌘V, and the second dictation within
         // this second is normal life, not an edge case. If our own dictation is still on
         // the board, the person's contents are held by the previous transaction: a fresh
@@ -187,6 +188,13 @@ public struct HostOnlyPasteboard: DictationPasteboard {
         case .missing:
             snapshot = materializeSnapshot(from: pasteboard)
             inheritsLostContents = false
+            // Materializing a lazy clipboard promise can block in another
+            // process. If the user copied something while that read was
+            // suspended, do not overwrite the newer clipboard when it
+            // eventually returns.
+            guard pasteboard.changeCount == observedChangeCount else {
+                throw TextInsertionError.clipboardWriteFailed
+            }
         }
 
         pasteboard.prepareForNewContents(with: .currentHostOnly)
@@ -315,7 +323,14 @@ public protocol InputSystem: Sendable {
     func heldModifiers() -> CGEventFlags
     /// Return focus to the application. `false` - the application no longer exists.
     func activate(_ target: TargetApplication) async -> Bool
-    func post(keyCode: CGKeyCode, flags: CGEventFlags) throws
+    /// Post to the captured process when one is known. A delayed WindowServer
+    /// return must never redirect an old dictation into whichever app happens
+    /// to be frontmost later.
+    func post(
+        keyCode: CGKeyCode,
+        flags: CGEventFlags,
+        targetProcessIdentifier: Int32?
+    ) throws
 }
 
 public struct SystemInput: InputSystem {
@@ -354,7 +369,11 @@ public struct SystemInput: InputSystem {
         return true
     }
 
-    public func post(keyCode: CGKeyCode, flags: CGEventFlags) throws {
+    public func post(
+        keyCode: CGKeyCode,
+        flags: CGEventFlags,
+        targetProcessIdentifier: Int32?
+    ) throws {
         guard let source = CGEventSource(stateID: .combinedSessionState),
               let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
@@ -364,8 +383,13 @@ public struct SystemInput: InputSystem {
 
         keyDown.flags = flags
         keyUp.flags = flags
-        keyDown.post(tap: .cgSessionEventTap)
-        keyUp.post(tap: .cgSessionEventTap)
+        if let targetProcessIdentifier {
+            keyDown.postToPid(pid_t(targetProcessIdentifier))
+            keyUp.postToPid(pid_t(targetProcessIdentifier))
+        } else {
+            keyDown.post(tap: .cgSessionEventTap)
+            keyUp.post(tap: .cgSessionEventTap)
+        }
     }
 }
 
@@ -399,6 +423,152 @@ public final class ClipboardRestoreReporter: @unchecked Sendable {
     }
 }
 
+/// Process-wide ownership of the clipboard + synthetic-event transaction.
+///
+/// Controller deadlines may abandon a synchronous WindowServer call, but the
+/// call itself can still return later. Until it does, changing the clipboard
+/// for another dictation would let the old Cmd+V consume the new text (or the
+/// user's restored clipboard). The lane therefore remains owned by the real
+/// operation, not by the controller's bounded waiter. Later insertions fail
+/// fast and keep their recognized text in recovery instead of corrupting two
+/// applications at once.
+final class TextInsertionLane: @unchecked Sendable {
+    static let shared = TextInsertionLane()
+
+    private enum Owner {
+        case idle
+        case insertion
+        case restoration
+    }
+
+    private struct ScheduledRestore {
+        let generation: UInt64
+        let operation: @Sendable () -> Void
+        var isDue = false
+        var timer: Task<Void, Never>?
+    }
+
+    private let lock = NSLock()
+    private var owner = Owner.idle
+    private var restoreGeneration: UInt64 = 0
+    /// At most one restore is pending. A successful N+1 write inherits N's
+    /// snapshot, so only the newest transaction can still put the person's
+    /// clipboard back. Replacing its timer keeps a burst of short dictations
+    /// from accumulating detached restore tasks.
+    private var scheduledRestore: ScheduledRestore?
+
+    func tryAcquire() -> Bool {
+        lock.withLock {
+            guard owner == .idle else { return false }
+            owner = .insertion
+            return true
+        }
+    }
+
+    func release() {
+        let dueRestore: (@Sendable () -> Void)? = lock.withLock {
+            guard owner == .insertion else {
+                assertionFailure("only an insertion owner can release this lane")
+                return nil
+            }
+
+            guard let restore = scheduledRestore, restore.isDue else {
+                owner = .idle
+                return nil
+            }
+
+            scheduledRestore = nil
+            owner = .restoration
+            return restore.operation
+        }
+
+        if let dueRestore {
+            performRestore(dueRestore)
+        }
+    }
+
+    /// Schedule the production restore before releasing insertion ownership.
+    ///
+    /// During the delay another insertion may safely inherit the snapshot and
+    /// replace this single ticket. Once the ticket becomes due, either restore
+    /// takes the lane first or an insertion does. In the latter case release
+    /// hands the lane directly to restore, leaving no clear/write race window.
+    func scheduleRestore(
+        after delay: Duration,
+        operation: @escaping @Sendable () -> Void
+    ) {
+        let generation: UInt64
+        let previousTimer: Task<Void, Never>?
+        (generation, previousTimer) = lock.withLock {
+            assert(owner == .insertion, "restore must be scheduled by the insertion owner")
+            restoreGeneration &+= 1
+            let generation = restoreGeneration
+            let previousTimer = scheduledRestore?.timer
+            scheduledRestore = ScheduledRestore(
+                generation: generation,
+                operation: operation
+            )
+            return (generation, previousTimer)
+        }
+        previousTimer?.cancel()
+
+        // The lane stores only the newest timer. Superseded sleeps are
+        // cancelled, so a burst cannot leave an unbounded restore queue.
+        let timer = Task.detached(priority: .utility) { [self] in
+            do {
+                try await Task.sleep(for: delay)
+            } catch {
+                return
+            }
+            restoreBecameDue(generation: generation)
+        }
+
+        let wasSuperseded = lock.withLock {
+            guard scheduledRestore?.generation == generation else { return true }
+            scheduledRestore?.timer = timer
+            return false
+        }
+        if wasSuperseded {
+            timer.cancel()
+        }
+    }
+
+    private func restoreBecameDue(generation: UInt64) {
+        let restore: (@Sendable () -> Void)? = lock.withLock {
+            guard var scheduled = scheduledRestore,
+                  scheduled.generation == generation
+            else { return nil }
+
+            scheduled.timer = nil
+            guard owner == .idle else {
+                // The current insertion either replaces this ticket after it
+                // inherits the snapshot, or hands the lane to it on release.
+                scheduled.isDue = true
+                scheduledRestore = scheduled
+                return nil
+            }
+
+            scheduledRestore = nil
+            owner = .restoration
+            return scheduled.operation
+        }
+
+        if let restore {
+            performRestore(restore)
+        }
+    }
+
+    private func performRestore(_ operation: @Sendable () -> Void) {
+        defer {
+            lock.withLock {
+                assert(owner == .restoration, "restore lost ownership of the insertion lane")
+                owner = .idle
+            }
+        }
+        operation()
+    }
+}
+
 public struct TextInserter: TextInserting {
     /// Modifiers, the release of which we wait for before ⌘V.
     ///
@@ -423,6 +593,7 @@ public struct TextInserter: TextInserting {
     /// nobody left to throw to. Without this the person silently loses whatever
     /// they had copied, and the dictated text stays on the board in its place.
     private let restoreReporter: ClipboardRestoreReporter?
+    private let operationLane: TextInsertionLane
 
     public init(
         system: any InputSystem = SystemInput(),
@@ -430,10 +601,27 @@ public struct TextInserter: TextInserting {
         restoreDelay: Duration = .milliseconds(1000),
         restoreReporter: ClipboardRestoreReporter? = nil
     ) {
+        self.init(
+            system: system,
+            pasteboard: pasteboard,
+            restoreDelay: restoreDelay,
+            restoreReporter: restoreReporter,
+            operationLane: .shared
+        )
+    }
+
+    init(
+        system: any InputSystem,
+        pasteboard: any DictationPasteboard,
+        restoreDelay: Duration,
+        restoreReporter: ClipboardRestoreReporter? = nil,
+        operationLane: TextInsertionLane
+    ) {
         self.system = system
         self.pasteboard = pasteboard
         self.restoreDelay = restoreDelay
         self.restoreReporter = restoreReporter
+        self.operationLane = operationLane
     }
 
     public func frontmostApplication() -> TargetApplication? {
@@ -452,8 +640,13 @@ public struct TextInserter: TextInserting {
         _ text: String,
         into target: TargetApplication?
     ) async throws -> InsertionMarks {
+        try Task.checkCancellation()
         guard !text.isEmpty else { return InsertionMarks() }
         guard let target else { throw TextInsertionError.targetUnavailable }
+        guard operationLane.tryAcquire() else {
+            throw TextInsertionError.insertionInProgress
+        }
+        defer { operationLane.release() }
 
         // Protected input is not a failure, but a normal situation.
         guard !system.isSecureInputEnabled else {
@@ -467,18 +660,29 @@ public struct TextInserter: TextInserting {
         // you can’t go, and the buffer has not yet been touched at this moment: otherwise the person
         // would lose what was copied where the pasting did not take place anyway.
         try await activate(target)
+        try Task.checkCancellation()
         try validateTarget(target)
         try validateProtectedState()
 
         let transaction = try pasteboard.beginHostOnlyWrite(text)
         let pasteDispatchedAt: ContinuousClock.Instant
         do {
+            // If a bounded controller wait expired while a synchronous
+            // pasteboard call was blocked, restore rather than dispatching a
+            // late paste into a session that has already returned to idle.
+            try Task.checkCancellation()
             try await waitForModifiersRelease()
+            try Task.checkCancellation()
             // The last check is performed after changing the clipboard and directly
             // before an irreversible event Cmd+V.
             try validateTarget(target)
             try validateProtectedState()
-            try system.post(keyCode: CGKeyCode(kVK_ANSI_V), flags: .maskCommand)
+            try Task.checkCancellation()
+            try system.post(
+                keyCode: CGKeyCode(kVK_ANSI_V),
+                flags: .maskCommand,
+                targetProcessIdentifier: target.processIdentifier
+            )
             // Header: from now on, the text is in someone else's window.
             // Everything further is buffer protection, and it is not speed.
             pasteDispatchedAt = .now
@@ -507,10 +711,8 @@ public struct TextInserter: TextInserting {
         }
 
         let pasteboard = self.pasteboard
-        let restoreDelay = self.restoreDelay
         let reporter = self.restoreReporter
-        Task.detached(priority: .utility) {
-            try? await Task.sleep(for: restoreDelay)
+        operationLane.scheduleRestore(after: restoreDelay) {
             do {
                 try pasteboard.restore(transaction)
             } catch {
@@ -528,13 +730,27 @@ public struct TextInserter: TextInserting {
     }
 
     public func pressReturn() async throws {
+        try await pressReturn(into: nil)
+    }
+
+    public func pressReturn(into target: TargetApplication?) async throws {
+        try Task.checkCancellation()
+        guard operationLane.tryAcquire() else {
+            throw TextInsertionError.insertionInProgress
+        }
+        defer { operationLane.release() }
         guard !system.isSecureInputEnabled else {
             throw TextInsertionError.secureInputActive
         }
         guard system.isAccessibilityTrusted else {
             throw TextInsertionError.accessibilityPermissionDenied
         }
-        try system.post(keyCode: CGKeyCode(kVK_Return), flags: [])
+        try Task.checkCancellation()
+        try system.post(
+            keyCode: CGKeyCode(kVK_Return),
+            flags: [],
+            targetProcessIdentifier: target?.processIdentifier
+        )
     }
 
     /// Return focus to the application where the dictation began.

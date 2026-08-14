@@ -3,9 +3,108 @@ import DictationCore
 import LocalASR
 import XCTest
 
+private actor OwnedPreparationProbe {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private(set) var started = false
+    private(set) var observedCancellation = false
+
+    func run() async {
+        started = true
+        await withCheckedContinuation { continuation = $0 }
+        observedCancellation = Task.isCancelled
+    }
+
+    func release() {
+        continuation?.resume()
+        continuation = nil
+    }
+}
+
+/// A cancellation-deaf vocabulary prepare models the exact window where model
+/// deletion used to unload/delete files while the old warm-up later resumed and
+/// published Ready again.
+private actor ModelDeletionWarmupRecognizer: DictationRecognizing {
+    private var vocabularyContinuation: CheckedContinuation<Void, Never>?
+    private(set) var vocabularyPreparationStarted = false
+    private(set) var warmUpCount = 0
+    private(set) var unloadCount = 0
+
+    var isPrepared: Bool { warmUpCount > 0 && unloadCount == 0 }
+    var isBusy: Bool { vocabularyPreparationStarted && vocabularyContinuation != nil }
+
+    func prepare(modelDirectory: URL) async throws {}
+
+    func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {
+        vocabularyPreparationStarted = true
+        await withCheckedContinuation { vocabularyContinuation = $0 }
+    }
+
+    func transcribe(fileURL: URL, languageHint: String?) async throws -> ASRResult {
+        ASRResult(text: "", audioDuration: 1, processingDuration: 0)
+    }
+
+    func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
+        ASRResult(text: "", audioDuration: 1, processingDuration: 0)
+    }
+
+    func warmUpInference() async throws { warmUpCount += 1 }
+
+    func unload() async { unloadCount += 1 }
+
+    func unloadIfIdle() async -> Bool {
+        unloadCount += 1
+        return true
+    }
+
+    func releaseVocabularyPreparation() {
+        vocabularyContinuation?.resume()
+        vocabularyContinuation = nil
+    }
+}
+
+private final class LegacyCleanupThreadProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var invocationThreadWasMain: Bool?
+
+    func recordInvocation() {
+        lock.lock()
+        invocationThreadWasMain = Thread.isMainThread
+        lock.unlock()
+    }
+
+    var result: Bool? {
+        lock.lock()
+        defer { lock.unlock() }
+        return invocationThreadWasMain
+    }
+}
+
 /// Application wiring: what happens at the edges, where things usually break.
 @MainActor
 final class AppStateTests: XCTestCase {
+    func testForegroundCancellationDoesNotCancelWorkerOwnedPreparation() async throws {
+        let probe = OwnedPreparationProbe()
+        let waiter = Task {
+            try await awaitOwnedEnginePreparation { await probe.run() }
+        }
+        for _ in 0..<100 {
+            if await probe.started { break }
+            await Task.yield()
+        }
+        let didStart = await probe.started
+        XCTAssertTrue(didStart)
+
+        waiter.cancel()
+        for _ in 0..<20 { await Task.yield() }
+        let cancelledBeforeRelease = await probe.observedCancellation
+        XCTAssertFalse(cancelledBeforeRelease)
+
+        await probe.release()
+        try await waiter.value
+        let cancelledAfterRelease = await probe.observedCancellation
+        XCTAssertFalse(cancelledAfterRelease)
+    }
+
     func testScenario001() {
         let message = AppState.captureFailureMessage(
             .unsupportedAudioFormat("48 kHz stereo couldn't be converted")
@@ -426,7 +525,10 @@ final class AppStateTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(5))
         }
 
-        XCTAssertEqual(state.lastNotice?.message, "Dictation cancelled. The recording was deleted.")
+        XCTAssertEqual(
+            state.lastNotice?.message,
+            "Dictation cancelled. Its local recording is queued for deletion."
+        )
         XCTAssertEqual(state.successfulDictationCount, 0)
     }
 
@@ -470,8 +572,46 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(state.modelState.isReady)
 
         state.deleteModel()
+        XCTAssertEqual(state.modelState, .deleting)
         try await Task.sleep(for: .milliseconds(200))
 
+        XCTAssertFalse(state.modelState.isReady)
+    }
+
+    func testDeletingModelRevokesCancellationDeafWarmupBeforeReadyCanRepublish() async throws {
+        try installModelMarker()
+        let recognizer = ModelDeletionWarmupRecognizer()
+        harness.recognizer = recognizer
+        let state = makeState()
+
+        for _ in 0..<200 {
+            if await recognizer.vocabularyPreparationStarted { break }
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(2))
+        }
+        let vocabularyPreparationStarted = await recognizer.vocabularyPreparationStarted
+        XCTAssertTrue(vocabularyPreparationStarted)
+
+        state.deleteModel()
+        XCTAssertEqual(state.modelState, .deleting)
+        XCTAssertFalse(state.isDictationReady)
+        for _ in 0..<200 {
+            if await recognizer.unloadCount == 1 { break }
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(2))
+        }
+        let unloadCount = await recognizer.unloadCount
+        XCTAssertEqual(unloadCount, 1)
+
+        await recognizer.releaseVocabularyPreparation()
+        for _ in 0..<200 where state.modelState.isReady {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(2))
+        }
+
+        let warmUpCount = await recognizer.warmUpCount
+        XCTAssertEqual(warmUpCount, 0)
+        XCTAssertFalse(state.isEngineReady)
         XCTAssertFalse(state.modelState.isReady)
     }
 
@@ -494,6 +634,19 @@ final class AppStateTests: XCTestCase {
             FileManager.default.fileExists(atPath: legacy.path),
             "Dictation texts of old builds should disappear the first time you run them"
         )
+    }
+
+    func testLegacyFilesystemCleanupNeverRunsOnMainActor() async throws {
+        let probe = LegacyCleanupThreadProbe()
+        harness.cleanupLegacyAgentStaging = { probe.recordInvocation() }
+
+        _ = makeState()
+        for _ in 0..<200 where probe.result == nil {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertEqual(probe.result, false)
     }
 
     func testScenario025() async throws {
@@ -537,6 +690,121 @@ final class AppStateTests: XCTestCase {
             )
         }
         XCTAssertFalse(state.isEngineReady)
+    }
+
+    func testWorkerPreparationTimeoutRetriesWithoutRedownloadingVerifiedModels() async throws {
+        try installModelMarker()
+        let engine = TransientWarmupASREngine(failures: 1)
+        harness.warmUpEngine = engine
+        harness.engineWarmupRetryDelay = .milliseconds(5)
+        harness.engineWarmupRetryLimit = 2
+        let state = makeState()
+
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertTrue(state.isEngineReady)
+        XCTAssertEqual(engine.loadAttempts, 2, "one transient generation is retried exactly once")
+        XCTAssertEqual(engine.inferences, 1, "Ready is published only after real inference warm-up")
+        XCTAssertTrue(state.modelState.isReady, "a pipe timeout is not model corruption")
+        let notices = await overlay.notices.map(\.message)
+        XCTAssertFalse(notices.contains { $0.contains("redownload") })
+        XCTAssertTrue(notices.contains { $0.contains("retrying automatically") })
+    }
+
+    func testWorkerReadinessEventsInvalidateAndRestoreAppReadinessCausally() async throws {
+        try installModelMarker()
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        let state = makeState()
+
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertTrue(state.isEngineReady)
+
+        await recognizer.setReady(false)
+        for _ in 0..<200 where state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertFalse(
+            state.isEngineReady,
+            "a dead ready generation must invalidate the app before the next key press"
+        )
+
+        await recognizer.setReady(true)
+        for _ in 0..<200 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertTrue(
+            state.isEngineReady,
+            "only a fully warmed replacement may republish Ready"
+        )
+    }
+
+    func testEveryReadyRecordingStartRefreshesAcceleratorResidency() async throws {
+        try installModelMarker()
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        let state = makeState()
+
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        let baselineWarmUps = await recognizer.warmUps
+        XCTAssertGreaterThanOrEqual(baselineWarmUps, 1)
+
+        monitor.onPress?()
+        for _ in 0..<500 where await recognizer.warmUps == baselineWarmUps {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        let warmUpsAfterPress = await recognizer.warmUps
+        XCTAssertEqual(
+            warmUpsAfterPress,
+            baselineWarmUps + 1,
+            "even a recently used ready generation gets a representative inference under speech"
+        )
+
+        monitor.onRelease?()
+        for _ in 0..<500 where state.dictationState != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+    }
+
+    func testExhaustedWorkerRetriesStillDoNotMisclassifyTheModelAsCorrupt() async throws {
+        try installModelMarker()
+        let engine = TransientWarmupASREngine(failures: 10)
+        harness.warmUpEngine = engine
+        harness.engineWarmupRetryDelay = .milliseconds(2)
+        harness.engineWarmupRetryLimit = 1
+        let state = makeState()
+
+        for _ in 0..<500 where engine.loadAttempts < 2 {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        for _ in 0..<100 {
+            let messages = await overlay.notices.map(\.message)
+            if messages.contains(where: { $0.contains("couldn't become ready") }) { break }
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertEqual(engine.loadAttempts, 2)
+        XCTAssertFalse(state.isEngineReady)
+        XCTAssertTrue(state.modelState.isReady)
+        let notices = await overlay.notices.map(\.message)
+        XCTAssertFalse(notices.contains { $0.contains("redownload") })
+        XCTAssertTrue(notices.contains { $0.contains("downloaded models were kept") })
     }
 
     // MARK: - Press when not ready
@@ -690,7 +958,7 @@ final class AppStateTests: XCTestCase {
     /// From `.inserting` there is nothing to cancel: ⌘V has already gone into someone
     /// else's window, `DictationStopPolicy` knows this and the kernel ignores the request.
     /// The text appears in the person's document a moment later - so the message about
-    /// the deleted recording would say the exact opposite of what he sees, and would
+    /// a recording queued for deletion would say the exact opposite of what he sees, and would
     /// overwrite a real warning about the insertion itself.
     func testScenario061() async throws {
         try installModelMarker()
@@ -710,7 +978,7 @@ final class AppStateTests: XCTestCase {
 
         XCTAssertNotEqual(
             state.lastNotice?.message,
-            "Dictation cancelled. The recording was deleted.",
+            "Dictation cancelled. Its local recording is queued for deletion.",
             "The insertion was not cancelled, and the text is about to appear in the document"
         )
 
@@ -989,16 +1257,80 @@ final class AppStateTests: XCTestCase {
 
     // MARK: - Cleaning
 
-    /// Records that survived an application crash are tidied up quietly:
-    /// header repaired, moved to safekeeping, nothing announced. A broken
-    /// last dictation already surfaced when it happened; a launch-time
-    /// announcement with no action attached would be noise.
+    func testRetiredAgentStagingCleanupRemovesOnlyOwnedAudioNames() throws {
+        let temporary = root.appending(path: "darwin-temp", directoryHint: .isDirectory)
+        let incoming = temporary
+            .appending(path: "is.waiwai.dictation", directoryHint: .isDirectory)
+            .appending(path: "incoming", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: incoming, withIntermediateDirectories: true)
+        let staged = incoming.appending(
+            path: "audio-550E8400-E29B-41D4-A716-446655440000.wav"
+        )
+        let unrelated = incoming.appending(path: "keep-me.wav")
+        let malformed = incoming.appending(path: "audio-not-a-uuid.wav")
+        try Data([1]).write(to: staged)
+        try Data([2]).write(to: unrelated)
+        try Data([3]).write(to: malformed)
+
+        try LegacyAgentStagingCleanup.removeAbandonedAudio(
+            bundleIdentifier: "is.waiwai.dictation",
+            temporaryDirectory: temporary
+        )
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: staged.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: unrelated.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: malformed.path))
+    }
+
+    func testRetiredAgentStagingCleanupCannotEscapeIncomingThroughASymlink() throws {
+        let temporary = root.appending(path: "darwin-temp-link", directoryHint: .isDirectory)
+        let incoming = temporary
+            .appending(path: "is.waiwai.dictation", directoryHint: .isDirectory)
+            .appending(path: "incoming", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: incoming, withIntermediateDirectories: true)
+        let outside = root.appending(path: "outside-voice.wav")
+        try Data([9]).write(to: outside)
+        let stagedLink = incoming.appending(
+            path: "audio-550E8400-E29B-41D4-A716-446655440001.wav"
+        )
+        try FileManager.default.createSymbolicLink(at: stagedLink, withDestinationURL: outside)
+
+        try LegacyAgentStagingCleanup.removeAbandonedAudio(
+            bundleIdentifier: "is.waiwai.dictation",
+            temporaryDirectory: temporary
+        )
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: stagedLink.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: outside.path))
+    }
+
+    func testRetiredAgentSocketIsRemovedEvenWhenIncomingDirectoryIsAbsent() throws {
+        let temporary = root.appending(path: "darwin-temp-socket", directoryHint: .isDirectory)
+        let runtime = temporary.appending(
+            path: "is.waiwai.dictation",
+            directoryHint: .isDirectory
+        )
+        try FileManager.default.createDirectory(at: runtime, withIntermediateDirectories: true)
+        let socket = runtime.appending(path: "agent-v1.sock")
+        try Data([1]).write(to: socket)
+
+        try LegacyAgentStagingCleanup.removeAbandonedAudio(
+            bundleIdentifier: "is.waiwai.dictation",
+            temporaryDirectory: temporary
+        )
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: socket.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: runtime.path))
+    }
+
+    /// Records that survived an application crash are repaired, moved to
+    /// safekeeping and disclosed with an actionable Finder destination.
     func testScenario052() async throws {
         let paths = AppPaths(root: root)
         let orphan = try paths.takes().appending(path: "take-old.wav")
         try writeAbandonedTestWAV(to: orphan, sampleBytes: 32_000)
 
-        _ = makeState()
+        let state = makeState()
         for _ in 0..<40 where recoveryFiles().isEmpty {
             await Task.yield()
             try await Task.sleep(for: .milliseconds(5))
@@ -1014,8 +1346,76 @@ final class AppStateTests: XCTestCase {
             UInt32(littleEndian: $0.load(as: UInt32.self))
         }
         XCTAssertEqual(payloadSize, 32_000, "the interrupted WAV header must be repaired")
+        for _ in 0..<100 where state.recoveredRecordingCount != 1 {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertEqual(state.recoveredRecordingCount, 1)
         let notices = await overlay.notices
-        XCTAssertTrue(notices.isEmpty, "safekeeping is silent: \(notices.map(\.message))")
+        XCTAssertTrue(
+            notices.contains { $0.message.contains("recovered 1 unfinished recording") },
+            "new crash recovery must be disclosed: \(notices.map(\.message))"
+        )
+    }
+
+    /// An immediate relaunch can see a crash take younger than the
+    /// cross-instance grace. It must be imported by the same running process
+    /// once the grace expires, not stranded until a second relaunch.
+    func testFreshCrashRecordingIsRecoveredByIdleMaintenanceWithoutRelaunch() async throws {
+        harness.recordingRecoveryCompatibilityGrace = 0.05
+        harness.recordingRecoveryIdleScanInterval = 0.02
+        let paths = AppPaths(root: root)
+        let orphan = try paths.takes().appending(path: "take-fresh.wav")
+        try writeAbandonedTestWAV(to: orphan, sampleBytes: 32_000)
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date()],
+            ofItemAtPath: orphan.path
+        )
+
+        let state = makeState()
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: orphan.path),
+            "the initial compatibility pass must leave a fresh peer-owned candidate alone"
+        )
+
+        for _ in 0..<500 where state.recoveredRecordingCount != 1 {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertEqual(state.recoveredRecordingCount, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: orphan.path))
+        let notices = await overlay.notices
+        XCTAssertTrue(notices.contains { $0.message.contains("recovered 1 unfinished recording") })
+    }
+
+    /// If the bounded deletion-intent lane loses exact identities, recovery
+    /// fails closed: bytes remain untouched and the condition stays visible.
+    func testRecoveryStorageFaultIsPersistentAndDoesNotGuessAboutAudio() async throws {
+        let paths = AppPaths(root: root)
+        let takes = try paths.takes()
+        let ambiguous = takes.appending(path: "take-ambiguous.wav")
+        try writeAbandonedTestWAV(to: ambiguous, sampleBytes: 32_000)
+        let marker = takes.appending(path: ".openramble-recovery-storage-fault")
+        try Data("openramble-recovery-storage-fault-v1\n".utf8).write(to: marker)
+
+        let state = makeState()
+        for _ in 0..<200 where !state.recordingRecoveryStorageFaulted {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertTrue(state.recordingRecoveryStorageFaulted)
+        XCTAssertEqual(state.recoveredRecordingCount, 0)
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: ambiguous.path),
+            "an ambiguous take is neither imported nor deleted"
+        )
+        let notices = await overlay.notices
+        XCTAssertEqual(
+            notices.filter { $0.message.contains("Automatic audio recovery was disabled") }.count,
+            1
+        )
     }
 
     /// A leftover from a previous launch stays kept — silently.
@@ -1034,6 +1434,7 @@ final class AppStateTests: XCTestCase {
             FileManager.default.fileExists(atPath: leftover.path),
             "a fresh leftover stays within the retention window"
         )
+        XCTAssertEqual(state.recoveredRecordingCount, 1)
         let notices = await overlay.notices
         XCTAssertTrue(
             notices.isEmpty,
@@ -1217,6 +1618,43 @@ final class RecoveredFileTests: XCTestCase {
         XCTAssertNil(state.recoveredText)
     }
 
+    func testRetryInsertionDeadlineReturnsIdleAndKeepsTextRecoverable() async throws {
+        harness.recoveryInsertionDeadline = .milliseconds(50)
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+        XCTAssertEqual(state.recoveredText, "Ping test")
+
+        await harness.inserter.setError(nil)
+        await harness.inserter.holdInsertions()
+        state.retryRecoveredText()
+        for _ in 0..<200 where state.dictationState != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertEqual(state.dictationState, .idle)
+        XCTAssertEqual(state.recoveredText, "Ping test")
+
+        // The abandoned inserter cannot lock the core dictation state. A new
+        // recording remains startable while the old system edge is unresolved.
+        harness.monitor.onPress?()
+        for _ in 0..<100 where state.dictationState != .listening {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertEqual(state.dictationState, .listening)
+        harness.monitor.onEscape?()
+        await harness.inserter.releaseInsertions()
+        await settle()
+    }
+
     /// A successful new dictation supersedes an older insertion warning. The menu
     /// must not keep saying that the last dictation failed after text landed.
     func testScenario057() async throws {
@@ -1282,24 +1720,47 @@ final class VocabularyRebuildTests: XCTestCase {
         private var _lastTermCount = -1
         private var _delayNext = false
         private var _delayedStarts = 0
+        private var _cancelledPrepares = 0
+        private var _emptyVocabularyLoads = 0
+        private var _failNextVocabularyLoad = false
+        private var _cancelNextVocabularyLoad = false
+        private var _failNextVocabularyWarm = false
+        private var _vocabularyActive = false
         var prepares: Int { lock.withLock { _prepares } }
         var modelLoads: Int { lock.withLock { _modelLoads } }
         var unloads: Int { lock.withLock { _unloads } }
         var inferences: Int { lock.withLock { _inferences } }
         var lastTermCount: Int { lock.withLock { _lastTermCount } }
         var delayedStarts: Int { lock.withLock { _delayedStarts } }
+        var cancelledPrepares: Int { lock.withLock { _cancelledPrepares } }
+        var emptyVocabularyLoads: Int { lock.withLock { _emptyVocabularyLoads } }
 
         func delayNextRebuild() { lock.withLock { _delayNext = true } }
+        func failNextVocabularyLoad() { lock.withLock { _failNextVocabularyLoad = true } }
+        func cancelNextVocabularyLoad() { lock.withLock { _cancelNextVocabularyLoad = true } }
+        func failNextVocabularyWarm() { lock.withLock { _failNextVocabularyWarm = true } }
 
         func loadModels(from directory: URL) async throws {
             lock.withLock { _modelLoads += 1 }
         }
         func transcribe(samples: [Float]) async throws -> ASRResult {
-            lock.withLock { _inferences += 1 }
+            let shouldFail = lock.withLock {
+                _inferences += 1
+                guard _failNextVocabularyWarm, _vocabularyActive else { return false }
+                _failNextVocabularyWarm = false
+                return true
+            }
+            if shouldFail { throw ASREngineError.inferenceFailed("CTC warm failed") }
             return ASRResult(text: "", audioDuration: 0, processingDuration: 0)
         }
         func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
-            lock.withLock { _inferences += 1 }
+            let shouldFail = lock.withLock {
+                _inferences += 1
+                guard _failNextVocabularyWarm, _vocabularyActive else { return false }
+                _failNextVocabularyWarm = false
+                return true
+            }
+            if shouldFail { throw ASREngineError.inferenceFailed("CTC warm failed") }
             return ASRResult(text: "", audioDuration: 0, processingDuration: 0)
         }
         // A real unload drops the acoustic boost together with the weights —
@@ -1308,20 +1769,36 @@ final class VocabularyRebuildTests: XCTestCase {
             lock.withLock {
                 _unloads += 1
                 _lastTermCount = -1
+                _vocabularyActive = false
             }
         }
         func loadVocabularyModels(from directory: URL, boost: VocabularyBoost) async throws {
-            let shouldDelay = lock.withLock {
+            let plan = lock.withLock {
                 _prepares += 1
-                let value = _delayNext
+                let delay = _delayNext
                 _delayNext = false
-                if value { _delayedStarts += 1 }
-                return value
+                if delay { _delayedStarts += 1 }
+                let fail = _failNextVocabularyLoad
+                _failNextVocabularyLoad = false
+                let cancel = _cancelNextVocabularyLoad
+                _cancelNextVocabularyLoad = false
+                return (delay, fail, cancel)
             }
-            if shouldDelay { try await Task.sleep(for: .milliseconds(150)) }
+            if plan.0 {
+                do {
+                    try await Task.sleep(for: .milliseconds(150))
+                } catch {
+                    lock.withLock { _cancelledPrepares += 1 }
+                    throw error
+                }
+            }
             try Task.checkCancellation()
+            if plan.2 { throw CancellationError() }
+            if plan.1 { throw ASREngineError.modelsUnavailable("CTC unavailable") }
             lock.withLock {
                 _lastTermCount = boost.terms.count
+                _vocabularyActive = !boost.isEmpty
+                if boost.isEmpty { _emptyVocabularyLoads += 1 }
             }
         }
     }
@@ -1368,6 +1845,7 @@ final class VocabularyRebuildTests: XCTestCase {
             try? await Task.sleep(for: .milliseconds(5))
         }
         let baseline = engine.lastTermCount
+        let baselineInferences = engine.inferences
         engine.delayNextRebuild()
 
         state.addReplacement(spoken: "alpha spoken", written: "AlphaCanonical")
@@ -1381,6 +1859,14 @@ final class VocabularyRebuildTests: XCTestCase {
         try? await Task.sleep(for: .milliseconds(200))
 
         XCTAssertEqual(engine.lastTermCount, baseline + 2, "an older rebuild completed after the newest edit")
+        XCTAssertEqual(
+            engine.cancelledPrepares, 0,
+            "a newer dictionary snapshot must not cancel and kill the active worker generation"
+        )
+        XCTAssertGreaterThan(
+            engine.inferences, baselineInferences,
+            "the newest dictionary generation must be warmed before it is considered installed"
+        )
         let notices = await harness.overlay.notices
         XCTAssertFalse(
             notices.contains { $0.message.contains("acoustic boosting") },
@@ -1388,9 +1874,136 @@ final class VocabularyRebuildTests: XCTestCase {
         )
     }
 
+    func testDictionaryEditDuringInitialWarmupIsAppliedAfterReady() async throws {
+        let harness = try AppHarness()
+        defer { harness.tearDown() }
+        try harness.installModelMarker()
+        let engine = RebuildCountingEngine()
+        engine.delayNextRebuild()
+        harness.warmUpEngine = engine
+        let state = harness.makeState()
+
+        for _ in 0..<400 where engine.delayedStarts == 0 {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertEqual(engine.delayedStarts, 1, "the initial vocabulary snapshot must be in flight")
+
+        state.addReplacement(spoken: "warmup edit", written: "WarmupCanonical")
+        let expectedTermCount = VocabularyBoost.withUserReplacements(state.replacements).terms.count
+        for _ in 0..<500 where !state.isEngineReady || engine.lastTermCount != expectedTermCount {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertTrue(state.isEngineReady)
+        XCTAssertEqual(
+            engine.lastTermCount,
+            expectedTermCount,
+            "an edit made after the warm-up snapshot must schedule the newest acoustic generation"
+        )
+    }
+
+    func testInitialAcousticVocabularyLoadFailureFallsBackToReadyTDT() async throws {
+        let harness = try AppHarness()
+        defer { harness.tearDown() }
+        try harness.installModelMarker()
+        let engine = RebuildCountingEngine()
+        engine.failNextVocabularyLoad()
+        harness.warmUpEngine = engine
+        let state = harness.makeState()
+
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertTrue(state.isEngineReady)
+        XCTAssertEqual(engine.emptyVocabularyLoads, 1)
+        XCTAssertEqual(engine.lastTermCount, 0)
+        XCTAssertEqual(engine.inferences, 1, "main TDT must be proven before Ready")
+        let notices = await harness.overlay.notices.map(\.message)
+        XCTAssertEqual(notices.filter { $0.contains("Acoustic dictionary boosting") }.count, 1)
+    }
+
+    func testAcousticVocabularyWarmFailureRetriesMainOnlyAndPublishesReady() async throws {
+        let harness = try AppHarness()
+        defer { harness.tearDown() }
+        try harness.installModelMarker()
+        let engine = RebuildCountingEngine()
+        engine.failNextVocabularyWarm()
+        harness.warmUpEngine = engine
+        let state = harness.makeState()
+
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertTrue(state.isEngineReady)
+        XCTAssertEqual(engine.emptyVocabularyLoads, 1)
+        XCTAssertEqual(engine.lastTermCount, 0)
+        XCTAssertEqual(engine.inferences, 2, "failed CTC warm plus successful TDT-only warm")
+    }
+
+    func testLiveAcousticVocabularyFailureKeepsCoreReadyWithoutFullReload() async throws {
+        let harness = try AppHarness()
+        defer { harness.tearDown() }
+        try harness.installModelMarker()
+        let engine = RebuildCountingEngine()
+        harness.warmUpEngine = engine
+        let state = harness.makeState()
+
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        let baselineLoads = engine.modelLoads
+        engine.failNextVocabularyLoad()
+        state.addReplacement(spoken: "optional ctc", written: "Optional CTC")
+
+        for _ in 0..<500 where engine.emptyVocabularyLoads == 0 {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertTrue(state.isEngineReady)
+        XCTAssertEqual(engine.emptyVocabularyLoads, 1)
+        XCTAssertEqual(engine.modelLoads, baselineLoads, "optional CTC must not reload the core")
+        let notices = await harness.overlay.notices.map(\.message)
+        XCTAssertEqual(notices.filter { $0.contains("Acoustic dictionary boosting") }.count, 1)
+    }
+
+    func testAcousticVocabularyCancellationDoesNotBecomeFallbackOrWarning() async throws {
+        let harness = try AppHarness()
+        defer { harness.tearDown() }
+        try harness.installModelMarker()
+        let engine = RebuildCountingEngine()
+        harness.warmUpEngine = engine
+        let state = harness.makeState()
+
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        let baselinePrepares = engine.prepares
+        engine.cancelNextVocabularyLoad()
+        state.addReplacement(spoken: "cancel ctc", written: "Cancel CTC")
+        for _ in 0..<300 where engine.prepares == baselinePrepares {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        try? await Task.sleep(for: .milliseconds(30))
+
+        XCTAssertTrue(state.isEngineReady)
+        XCTAssertEqual(engine.emptyVocabularyLoads, 0)
+        let notices = await harness.overlay.notices.map(\.message)
+        XCTAssertFalse(notices.contains { $0.contains("Acoustic dictionary boosting") })
+    }
+
     /// The full residency round trip: critical memory pressure gives the
-    /// weights back, dictation stays enabled, and the press-time reload
-    /// restores BOTH the weights and the boosted vocabulary. A dictionary
+    /// weights back, dictation stays enabled, and returning to normal pressure
+    /// proactively restores BOTH the weights and the boosted vocabulary. A dictionary
     /// term must survive the trip — a reload that forgets the boost would
     /// silently degrade recognition of exactly the words the person cared
     /// enough to teach.
@@ -1417,6 +2030,7 @@ final class VocabularyRebuildTests: XCTestCase {
             try? await Task.sleep(for: .milliseconds(5))
         }
         XCTAssertEqual(engine.lastTermCount, boosted)
+        let inferencesBeforePressureReload = engine.inferences
 
         state.registerMemoryPressure(.critical)
         for _ in 0..<400 where state.isEngineReady {
@@ -1430,14 +2044,17 @@ final class VocabularyRebuildTests: XCTestCase {
             "an unloaded engine must not block the press — the reload rides under the voice"
         )
 
-        state.warmEngineUnderVoiceIfCold()
+        state.registerMemoryPressure(.normal)
         for _ in 0..<400 where !state.isEngineReady {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(5))
         }
-        XCTAssertTrue(state.isEngineReady, "the press-time reload must complete")
+        XCTAssertTrue(state.isEngineReady, "normal pressure must restore readiness before a press")
         XCTAssertEqual(engine.modelLoads, 2, "the reload really reloads the weights")
-        XCTAssertEqual(engine.inferences, 2, "each reloaded generation is warmed before readiness")
+        XCTAssertEqual(
+            engine.inferences, inferencesBeforePressureReload + 1,
+            "each reloaded generation is warmed before readiness"
+        )
         XCTAssertEqual(
             engine.lastTermCount, boosted,
             "the boosted term survives the unload/reload round trip"

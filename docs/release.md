@@ -8,6 +8,7 @@ to GitHub Releases, and listed in the GitHub Pages appcast.
 
 - Repository: `mikwiseman/openramble`
 - Bundle identifier: `is.waiwai.dictation`
+- Private ASR worker signature identifier: `is.waiwai.dictation.asr-worker`
 - Sparkle feed: `https://mikwiseman.github.io/openramble/appcast.xml`
 - Download page: `https://waiwai.is/ramble` — the product's main landing. It
   pins the version, the build number and the DMG link, so every release must
@@ -62,18 +63,41 @@ SPARKLE_KEY_PATH="$HOME/.openramble/sparkle-key" \
 ```
 
 The script runs package and application tests, checks the shipping network
-surface, performs two offline runtime checks, builds the arm64 app, signs nested
-Sparkle components from the inside out, submits the DMG for notarization,
-staples the ticket, verifies Gatekeeper acceptance, signs the exact DMG with
-Sparkle EdDSA, verifies the embedded public key, and updates
-`docs/appcast.xml`.
+surface and the worker control plane, performs two in-process offline runtime
+checks, and always creates a fresh arm64 archive and DMG from the checked-out
+SHA. It rechecks that HEAD and tracked inputs stayed unchanged before the
+archive and again after exact-DMG verification. Reusing an earlier artifact is
+deliberately unsupported.
+
+CI also runs `UNSIGNED_RELEASE_TOPOLOGY=1 ./scripts/build-dmg.sh`. That mode is
+CI-only and ad-hoc signed, but it exercises the production product name,
+permanent bundle identifier, Release configuration, archive layout, and DMG
+name. It is structural coverage only; it cannot substitute for Developer ID,
+notarization, Gatekeeper, or the release-time offline-recognition gate.
+
+The build signs nested Sparkle components and the private ASR worker from the
+inside out, submits the DMG for notarization, staples the ticket, and verifies
+Gatekeeper acceptance. It then mounts that exact read-only DMG and verifies the
+app name, production bundle identifier, version, build, feed URL, permanent
+public key, minimum macOS version, signatures, entitlements, architectures,
+resources, and private worker identifier. Finally, the packaged worker loads
+the installed model, warms inference, and recognizes a synthetic fixture while
+an OS sandbox denies all network access. Only after those checks does the
+script sign the same DMG with Sparkle EdDSA and update `docs/appcast.xml`.
+
+The current worker links the complete `LocalASR` product, so its binary still
+contains CFNetwork/URLSession downloader code even though the private worker
+protocol exposes no download or install request. The smoke test reports that
+fact explicitly. Do not describe this binary as transport-free: the enforced
+release guarantee is successful packaged recognition under the OS network
+deny. Removing the symbols requires splitting a runtime-only LocalASR product.
 
 ## Publish
 
 Upload the exact verified image and use the matching English notes:
 
 ```bash
-VERSION=0.3.8
+VERSION=0.7.0
 gh release create "v$VERSION" \
   "artifacts/dmg/OpenRamble-$VERSION.dmg" \
   --repo mikwiseman/openramble \
@@ -96,7 +120,10 @@ feed must exactly match the uploaded DMG.
 2. `spctl --assess --type install --verbose=2` accepts the DMG.
 3. The app inside the mounted image has the expected bundle identifier,
    version, build, update URL, and public key.
-4. The main landing at `https://waiwai.is/ramble` shows this version and build
+4. `Contents/MacOS/openramble-asr-worker` has its fixed signature identifier
+   and recognizes the synthetic fixture with `network*` denied by the OS; no
+   test fixture or MCP executable is present in the application.
+5. The main landing at `https://waiwai.is/ramble` shows this version and build
    and downloads the same DMG.
-5. An older installed build can discover and install the update through
+6. An older installed build can discover and install the update through
    Sparkle.

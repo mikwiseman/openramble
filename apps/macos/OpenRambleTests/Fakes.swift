@@ -129,7 +129,11 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
     private var heldPlan: [CGEventFlags] = [[]]
     private var heldCalls = 0
     private var postError: TextInsertionError?
-    private var posted: [(keyCode: CGKeyCode, flags: CGEventFlags)] = []
+    private var posted: [(
+        keyCode: CGKeyCode,
+        flags: CGEventFlags,
+        targetProcessIdentifier: Int32?
+    )] = []
 
     let log: CallLog
 
@@ -148,7 +152,11 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
 
     // MARK: Observation
 
-    var postedKeys: [(keyCode: CGKeyCode, flags: CGEventFlags)] { withLock { posted } }
+    var postedKeys: [(
+        keyCode: CGKeyCode,
+        flags: CGEventFlags,
+        targetProcessIdentifier: Int32?
+    )] { withLock { posted } }
     var heldModifiersCallCount: Int { withLock { heldCalls } }
 
     // MARK: InputSystem
@@ -171,10 +179,14 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
         return withLock { activateResult }
     }
 
-    func post(keyCode: CGKeyCode, flags: CGEventFlags) throws {
+    func post(
+        keyCode: CGKeyCode,
+        flags: CGEventFlags,
+        targetProcessIdentifier: Int32?
+    ) throws {
         log.record("post")
         if let error = withLock({ postError }) { throw error }
-        withLock { posted.append((keyCode, flags)) }
+        withLock { posted.append((keyCode, flags, targetProcessIdentifier)) }
     }
 
     private func withLock<T>(_ body: () -> T) -> T {
@@ -451,6 +463,13 @@ final class AppHarness {
     /// Zero - permission polling is disabled: in the check they are changed by us, not
     /// system.
     var permissionPollInterval: TimeInterval = 0
+    var recoveryInsertionDeadline: Duration = .seconds(2)
+    var engineWarmupRetryDelay: Duration = .milliseconds(10)
+    var engineWarmupRetryLimit = 2
+    var recordingRecoveryCompatibilityGrace: TimeInterval = 60
+    var recordingRecoveryMaintenanceRetryDelay: TimeInterval = 0.01
+    var recordingRecoveryIdleScanInterval: TimeInterval = 60
+    var cleanupLegacyAgentStaging: @Sendable () throws -> Void = {}
 
     init() throws {
         root = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -524,6 +543,9 @@ final class AppHarness {
     /// Engine for warming up. It is not needed for routine checks: without it, warming up
     /// is considered passed. It is set where the heating itself is checked.
     var warmUpEngine: (any ASREngineAdapting)?
+    /// Full recognition lifecycle seam for readiness/generation tests.
+    /// When present it takes precedence over the legacy in-process engine.
+    var recognizer: (any DictationRecognizing)?
 
     func makeState() -> AppState {
         AppState(
@@ -534,8 +556,11 @@ final class AppHarness {
                 accessibilityManager: accessibilityManager,
                 hotkeyMonitor: monitor,
                 inserter: inserter,
+                targetApplicationSnapshot: { [inserter] in
+                    inserter.frontmostApplication()
+                },
                 overlay: overlay,
-                makeCapture: { [capture] _, _, _ in capture },
+                makeCapture: { [capture] _, _, _, _ in capture },
                 transcribe: { [transcription] _, _ in
                     { _ in
                         if let delay = transcription.delay {
@@ -549,6 +574,12 @@ final class AppHarness {
                         )
                     }
                 },
+                recoveryInsertionDeadline: recoveryInsertionDeadline,
+                engineWarmupRetryDelay: engineWarmupRetryDelay,
+                engineWarmupRetryLimit: engineWarmupRetryLimit,
+                recordingRecoveryCompatibilityGrace: recordingRecoveryCompatibilityGrace,
+                recordingRecoveryMaintenanceRetryDelay: recordingRecoveryMaintenanceRetryDelay,
+                recordingRecoveryIdleScanInterval: recordingRecoveryIdleScanInterval,
                 permissionPollInterval: permissionPollInterval,
                 modelDownloader: downloader,
                 requestMicrophoneAccess: { [permissions, microphonePermissionFlow] in
@@ -564,8 +595,9 @@ final class AppHarness {
                 },
                 workspaceNotifications: workspaceNotifications,
                 notifications: notifications,
-                localTranscriber: warmUpEngine.map { LocalTranscriber(engine: $0) },
-                focusedFieldReader: focusedField
+                localTranscriber: recognizer ?? warmUpEngine.map { LocalTranscriber(engine: $0) },
+                focusedFieldReader: focusedField,
+                cleanupLegacyAgentStaging: cleanupLegacyAgentStaging
             )
         )
     }
@@ -738,4 +770,86 @@ final class FailingASREngine: ASREngineAdapting, @unchecked Sendable {
     }
 
     func unload() async {}
+}
+
+/// A healthy model behind a worker generation that times out transiently.
+/// This is deliberately an app-layer transport error, not
+/// `ASREngineError.modelsUnavailable`: verified files must survive it.
+final class TransientWarmupASREngine: ASREngineAdapting, VocabularyBoostCapable, @unchecked Sendable {
+    private let lock = NSLock()
+    private var failuresRemaining: Int
+    private var _loadAttempts = 0
+    private var _inferences = 0
+
+    init(failures: Int) {
+        failuresRemaining = failures
+    }
+
+    var loadAttempts: Int { lock.withLock { _loadAttempts } }
+    var inferences: Int { lock.withLock { _inferences } }
+
+    func loadModels(from directory: URL) async throws {
+        let shouldFail = lock.withLock {
+            _loadAttempts += 1
+            guard failuresRemaining > 0 else { return false }
+            failuresRemaining -= 1
+            return true
+        }
+        if shouldFail { throw ASRWorkerTransportError.requestTimedOut }
+    }
+
+    func loadVocabularyModels(from directory: URL, boost: VocabularyBoost) async throws {}
+
+    func transcribe(samples: [Float]) async throws -> ASRResult {
+        lock.withLock { _inferences += 1 }
+        return ASRResult(text: "", audioDuration: 1, processingDuration: 0)
+    }
+
+    func unload() async {}
+}
+
+actor ReadinessControlledRecognizer: DictationRecognizing {
+    private var prepared = false
+    private(set) var warmUps = 0
+    private var observer: AsyncStream<Bool>.Continuation?
+
+    var isPrepared: Bool { prepared }
+    var isBusy: Bool { false }
+
+    func readinessChanges() -> AsyncStream<Bool> {
+        AsyncStream { continuation in
+            observer = continuation
+            continuation.yield(prepared)
+        }
+    }
+
+    func prepare(modelDirectory: URL) async throws {}
+    func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {}
+
+    func transcribe(fileURL: URL, languageHint: String?) async throws -> ASRResult {
+        ASRResult(text: "", audioDuration: 1, processingDuration: 0)
+    }
+
+    func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
+        ASRResult(text: "", audioDuration: 1, processingDuration: 0)
+    }
+
+    func warmUpInference() async throws {
+        warmUps += 1
+        setReady(true)
+    }
+
+    func unload() async {
+        setReady(false)
+    }
+
+    func unloadIfIdle() async -> Bool {
+        setReady(false)
+        return true
+    }
+
+    func setReady(_ value: Bool) {
+        prepared = value
+        observer?.yield(value)
+    }
 }

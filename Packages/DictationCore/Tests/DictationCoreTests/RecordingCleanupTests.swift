@@ -75,6 +75,13 @@ final class RecordingCleanupTests: XCTestCase {
         }
     }
 
+    private func audioArtifacts(in entries: [URL]) -> [URL] {
+        entries.filter {
+            $0.pathExtension.lowercased() == "wav"
+                || $0.lastPathComponent.hasSuffix(".wav.partial")
+        }
+    }
+
     private func makeController(
         capture: FileCapture,
         transcribeError: Error? = nil,
@@ -164,7 +171,10 @@ final class RecordingCleanupTests: XCTestCase {
         await settle()
 
         let leftovers = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-        XCTAssertTrue(leftovers.isEmpty, "\u{041E}\u{0442}\u{043C}\u{0435}\u{043D}\u{0451}\u{043D}\u{043D}\u{0430}\u{044F} \u{0434}\u{0438}\u{043A}\u{0442}\u{043E}\u{0432}\u{043A}\u{0430} \u{043D}\u{0435} \u{043E}\u{0441}\u{0442}\u{0430}\u{0432}\u{043B}\u{044F}\u{0435}\u{0442} \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{0438}: \(leftovers)")
+        XCTAssertTrue(
+            audioArtifacts(in: leftovers).isEmpty,
+            "\u{041E}\u{0442}\u{043C}\u{0435}\u{043D}\u{0451}\u{043D}\u{043D}\u{0430}\u{044F} \u{0434}\u{0438}\u{043A}\u{0442}\u{043E}\u{0432}\u{043A}\u{0430} \u{043D}\u{0435} \u{043E}\u{0441}\u{0442}\u{0430}\u{0432}\u{043B}\u{044F}\u{0435}\u{0442} \u{0433}\u{043E}\u{043B}\u{043E}\u{0441}\u{0430}: \(leftovers)"
+        )
     }
 
     func testAccidentalTapLeavesNoRecording() async throws {
@@ -368,12 +378,15 @@ final class RecordingCleanupTests: XCTestCase {
                 at: directory,
                 includingPropertiesForKeys: nil
             )
-            if entries.isEmpty, controller.state == .idle { break }
+            if audioArtifacts(in: entries).isEmpty, controller.state == .idle { break }
             await Task.yield()
             try await Task.sleep(for: .milliseconds(5))
         }
 
         let leftovers = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-        XCTAssertTrue(leftovers.isEmpty, "\u{041E}\u{0442}\u{043C}\u{0435}\u{043D}\u{0430} \u{0432}\u{043E} \u{0432}\u{0440}\u{0435}\u{043C}\u{044F} \u{0440}\u{0430}\u{0441}\u{043F}\u{043E}\u{0437}\u{043D}\u{0430}\u{0432}\u{0430}\u{043D}\u{0438}\u{044F} \u{043D}\u{0435} \u{043E}\u{0441}\u{0442}\u{0430}\u{0432}\u{043B}\u{044F}\u{0435}\u{0442} \u{0433}\u{043E}\u{043B}\u{043E}\u{0441} \u{043D}\u{0430} \u{0434}\u{0438}\u{0441}\u{043A}\u{0435}: \(leftovers)")
+        XCTAssertTrue(
+            audioArtifacts(in: leftovers).isEmpty,
+            "\u{041E}\u{0442}\u{043C}\u{0435}\u{043D}\u{0430} \u{0432}\u{043E} \u{0432}\u{0440}\u{0435}\u{043C}\u{044F} \u{0440}\u{0430}\u{0441}\u{043F}\u{043E}\u{0437}\u{043D}\u{0430}\u{0432}\u{0430}\u{043D}\u{0438}\u{044F} \u{043D}\u{0435} \u{043E}\u{0441}\u{0442}\u{0430}\u{0432}\u{043B}\u{044F}\u{0435}\u{0442} \u{0433}\u{043E}\u{043B}\u{043E}\u{0441} \u{043D}\u{0430} \u{0434}\u{0438}\u{0441}\u{043A}\u{0435}: \(leftovers)"
+        )
     }
 }

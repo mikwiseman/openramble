@@ -255,11 +255,14 @@ final class AppStateIdleTests: XCTestCase {
         harness.notifications.post(name: .AVAudioEngineConfigurationChange, object: nil)
         try await waitFor("dictation ended") { state.dictationState == .idle }
 
+        try await waitFor("exact stop reason") {
+            await self.overlay.notices.contains {
+                $0.message.contains("audio device was disconnected")
+            }
+        }
+
         let notices = await overlay.notices
-        XCTAssertTrue(
-            notices.contains { $0.message.contains("audio device was disconnected") },
-            "we need an exact reason for stopping"
-        )
+        XCTAssertTrue(notices.contains { $0.message.contains("audio device was disconnected") })
         XCTAssertFalse(
             notices.contains { $0.message.contains("transcribe") },
             "after disconnect ASR should not start"

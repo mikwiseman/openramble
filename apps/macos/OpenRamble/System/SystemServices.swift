@@ -1,7 +1,67 @@
 import AVFoundation
 import AppKit
 import DictationCore
+import Darwin
 import Foundation
+
+// MARK: - Active application snapshot
+
+/// A lock-only snapshot of the application that most recently became active.
+///
+/// The hotkey path must never synchronously ask WindowServer/LaunchServices for
+/// the frontmost application after microphone capture has started. If that IPC
+/// wedges, MainActor cannot receive key-up or Escape while the microphone keeps
+/// recording. NSWorkspace already publishes the exact application in its
+/// activation notification, so production keeps that answer ahead of time and
+/// key-down performs only a bounded memory read.
+final class ActiveApplicationSnapshot: @unchecked Sendable {
+    private let lock = NSLock()
+    private let center: NotificationCenter
+    private var observer: (any NSObjectProtocol)?
+    private var target: TargetApplication?
+
+    init(workspace: NSWorkspace = .shared) {
+        center = workspace.notificationCenter
+        observer = center.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: workspace,
+            queue: nil
+        ) { [weak self] notification in
+            guard let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+                as? NSRunningApplication
+            else { return }
+            self?.store(application, onlyIfEmpty: false)
+        }
+
+        // Seed the cache away from MainActor. A slow initial LaunchServices
+        // lookup may delay only the first available destination snapshot; it
+        // can never hold the UI or a live microphone. A later activation
+        // notification wins over this best-effort seed.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let application = NSWorkspace.shared.frontmostApplication else { return }
+            self?.store(application, onlyIfEmpty: true)
+        }
+    }
+
+    deinit {
+        if let observer { center.removeObserver(observer) }
+    }
+
+    func current() -> TargetApplication? {
+        lock.withLock { target }
+    }
+
+    private func store(_ application: NSRunningApplication, onlyIfEmpty: Bool) {
+        let snapshot = TargetApplication(
+            bundleIdentifier: application.bundleIdentifier,
+            processIdentifier: application.processIdentifier,
+            localizedName: application.localizedName
+        )
+        lock.withLock {
+            if !onlyIfEmpty || target == nil { target = snapshot }
+        }
+    }
+}
 
 // MARK: - Permissions
 
@@ -179,6 +239,23 @@ public struct SystemAccessibilityManager: AccessibilityManaging {
 
 // MARK: - Sounds
 
+private final class SoundSessionFence: @unchecked Sendable {
+    private let lock = NSLock()
+    private var latest: DictationSessionID?
+
+    func advance(to session: DictationSessionID) {
+        lock.lock()
+        if latest.map({ session >= $0 }) ?? true { latest = session }
+        lock.unlock()
+    }
+
+    func accepts(_ session: DictationSessionID) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return latest == session
+    }
+}
+
 /// The single "look at the panel" signal.
 ///
 /// The type is entirely tied to the main thread by design. Protocol Methods
@@ -188,6 +265,7 @@ public struct SystemAccessibilityManager: AccessibilityManaging {
 @MainActor
 public struct SystemSounds: Sounding {
     private let enabled: @MainActor () -> Bool
+    private let sessionFence = SoundSessionFence()
 
     public init(enabled: @escaping @MainActor () -> Bool = { true }) {
         self.enabled = enabled
@@ -198,6 +276,15 @@ public struct SystemSounds: Sounding {
         // Submarine: low and calm. What happened is recoverable — the text is
         // still offered in the menu — so the sound must not read as an alarm.
         NSSound(named: "Submarine")?.play()
+    }
+
+    nonisolated public func advance(to session: DictationSessionID) {
+        sessionFence.advance(to: session)
+    }
+
+    public func playAttention(session: DictationSessionID) async {
+        guard sessionFence.accepts(session) else { return }
+        await playAttention()
     }
 }
 
@@ -298,5 +385,83 @@ public struct AppPaths: Sendable {
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
         try target.setResourceValues(values)
+    }
+}
+
+// MARK: - Retired MCP staging cleanup
+
+/// Removes voice files left by the retired 0.6.x MCP helper after an app or
+/// agent crash. The old helper staged only `audio-<UUID>.<short-extension>`
+/// inside the app's private Darwin temporary namespace. Keeping this small,
+/// exact parser in the upgrade path avoids retaining those recordings forever
+/// without bringing the public MCP server back into the product.
+enum LegacyAgentStagingCleanup {
+    private static let productionNamespace = "is.waiwai.dictation"
+    private static let developmentNamespace = "is.waiwai.dictation.dev"
+
+    static func removeAbandonedAudio(
+        bundleIdentifier: String,
+        temporaryDirectory: URL? = nil,
+        fileManager: FileManager = .default
+    ) throws {
+        let namespace = bundleIdentifier == developmentNamespace
+            ? developmentNamespace
+            : productionNamespace
+        guard let temporaryDirectory = temporaryDirectory ?? darwinUserTemporaryDirectory()
+        else { return }
+
+        let runtime = temporaryDirectory.appending(
+            path: namespace,
+            directoryHint: .isDirectory
+        )
+        let incoming = runtime.appending(path: "incoming", directoryHint: .isDirectory)
+        if fileManager.fileExists(atPath: incoming.path) {
+            for name in try fileManager.contentsOfDirectory(atPath: incoming.path)
+            where isRetiredAudioName(name) {
+                // `removeItem` removes a symlink itself rather than following it.
+                // The exact basename parser also prevents escaping `incoming/`.
+                try fileManager.removeItem(at: incoming.appending(path: name))
+            }
+
+            if (try? fileManager.contentsOfDirectory(atPath: incoming.path).isEmpty) == true {
+                try? fileManager.removeItem(at: incoming)
+            }
+        }
+        let retiredSocket = runtime.appending(path: "agent-v1.sock")
+        if fileManager.fileExists(atPath: retiredSocket.path) {
+            try? fileManager.removeItem(at: retiredSocket)
+        }
+        if (try? fileManager.contentsOfDirectory(atPath: runtime.path).isEmpty) == true {
+            try? fileManager.removeItem(at: runtime)
+        }
+    }
+
+    private static func darwinUserTemporaryDirectory() -> URL? {
+        let requiredBytes = confstr(_CS_DARWIN_USER_TEMP_DIR, nil, 0)
+        guard requiredBytes > 1 else { return nil }
+        var buffer = [CChar](repeating: 0, count: requiredBytes)
+        guard confstr(_CS_DARWIN_USER_TEMP_DIR, &buffer, requiredBytes) > 0 else {
+            return nil
+        }
+        return buffer.withUnsafeBufferPointer { pointer in
+            guard let baseAddress = pointer.baseAddress else { return nil }
+            return URL(fileURLWithPath: String(cString: baseAddress), isDirectory: true)
+        }
+    }
+
+    private static func isRetiredAudioName(_ name: String) -> Bool {
+        guard name.utf8.count <= 64, !name.contains("/"), !name.contains(":"),
+              !name.utf8.contains(0)
+        else { return false }
+        let parts = name.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 2,
+              parts[0].hasPrefix("audio-"),
+              UUID(uuidString: String(parts[0].dropFirst("audio-".count))) != nil,
+              !parts[1].isEmpty,
+              parts[1].utf8.count <= 10
+        else { return false }
+        return parts[1].unicodeScalars.allSatisfy {
+            $0.isASCII && CharacterSet.alphanumerics.contains($0)
+        }
     }
 }

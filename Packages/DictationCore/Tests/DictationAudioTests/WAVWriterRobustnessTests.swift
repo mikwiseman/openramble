@@ -25,6 +25,70 @@ final class WAVWriterRobustnessTests: XCTestCase {
         WAVWriter(url: directory.appending(path: name), sampleRate: 16_000, channels: 1)
     }
 
+    func testSealedWAVIsReadableBeforeFsync() throws {
+        let writer = makeWriter(name: "sealed.wav")
+        try writer.open()
+        try writer.append(Array(repeating: 0.25, count: 1_600))
+
+        let url = try writer.sealForReading()
+
+        let file = try AVAudioFile(forReading: url)
+        XCTAssertEqual(file.length, 1_600)
+        XCTAssertThrowsError(try writer.append([0.5])) { error in
+            XCTAssertEqual(error as? WAVWriter.Failure, .notOpen)
+        }
+        try writer.synchronizeAndClose()
+    }
+
+    func testSlowFsyncDoesNotPreventReadingTheSealedFile() async throws {
+        let entered = DispatchSemaphore(value: 0)
+        let release = DispatchSemaphore(value: 0)
+        let url = directory.appending(path: "slow-sync.wav")
+        let writer = WAVWriter(
+            url: url,
+            sampleRate: 16_000,
+            channels: 1,
+            synchronizer: { handle in
+                entered.signal()
+                release.wait()
+                try handle.synchronize()
+            }
+        )
+        try writer.open()
+        try writer.append(Array(repeating: 0.1, count: 3_200))
+        _ = try writer.sealForReading()
+
+        let durability = Task.detached { try writer.synchronizeAndClose() }
+        XCTAssertEqual(entered.wait(timeout: .now() + 2), .success)
+        var released = false
+        defer {
+            if !released { release.signal() }
+        }
+
+        // The exact production boundary: CoreML/file fallback may open the
+        // complete WAV while durable storage is deliberately still blocked.
+        let file = try AVAudioFile(forReading: url)
+        XCTAssertEqual(file.length, 3_200)
+
+        // A successful in-memory dictation removes its recovery file while
+        // durability may still own the open descriptor. POSIX unlink must not
+        // wait for fsync or let the background task recreate the path.
+        try FileManager.default.removeItem(at: url)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+
+        release.signal()
+        released = true
+        try await durability.value
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+        XCTAssertThrowsError(try writer.close()) { error in
+            XCTAssertEqual(error as? WAVWriter.Failure, .notOpen)
+        }
+
+        let replacement = WAVWriter(url: url)
+        try replacement.open()
+        _ = try replacement.close()
+    }
+
     // MARK: - Simultaneous recording
 
     func testConcurrentAppendsLoseNothing() async throws {
@@ -202,6 +266,22 @@ final class WAVWriterRobustnessTests: XCTestCase {
         let url = try writer.close()
 
         XCTAssertEqual(try Data(contentsOf: url).count, 44 + 2)
+    }
+
+    func testNonFiniteSamplesAreSanitizedWithoutTrappingOrCorruptingWAV() throws {
+        let writer = makeWriter(name: "non-finite.wav")
+        try writer.open()
+        try writer.append([.nan, .infinity, -.infinity, 2, -2])
+        let url = try writer.close()
+
+        let data = try Data(contentsOf: url)
+        let values = stride(from: 44, to: data.count, by: 2).map { offset in
+            data.withUnsafeBytes { bytes in
+                Int16(littleEndian: bytes.loadUnaligned(fromByteOffset: offset, as: Int16.self))
+            }
+        }
+        XCTAssertEqual(values, [0, 32_767, -32_767, 32_767, -32_767])
+        XCTAssertEqual(try AVAudioFile(forReading: url).length, 5)
     }
 
     func testLongRecordingKeepsHeaderAndLengthConsistent() throws {

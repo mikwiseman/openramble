@@ -72,7 +72,7 @@ Check the network: curl -sSI https://github.com/sparkle-project/Sparkle/releases
 # --- Steps ------------------------------------------------------------------
 
 run_packages() {
-  for package in DictationCore LocalASR AgentBridge; do
+  for package in ASRWorkerProtocol DictationCore LocalASR; do
     echo "→ $package"
     local log
     log=$(mktemp)
@@ -129,14 +129,22 @@ run_app() {
   fi
   rm -f "$log"
 
-  local settings built_products_dir full_product_name helper
+  local settings built_products_dir full_product_name app
   settings=$(cd apps/macos && xcodebuild -project OpenRamble.xcodeproj \
     -scheme OpenRamble -configuration Debug -destination 'platform=macOS,arch=arm64' \
     -showBuildSettings 2>/dev/null)
   built_products_dir=$(sed -n 's/^ *BUILT_PRODUCTS_DIR = //p' <<<"$settings" | head -1)
   full_product_name=$(sed -n 's/^ *FULL_PRODUCT_NAME = //p' <<<"$settings" | head -1)
-  helper="$built_products_dir/$full_product_name/Contents/MacOS/openramble-mcp"
-  ./scripts/test-mcp-helper.sh "$helper"
+  app="$built_products_dir/$full_product_name"
+  if [[ -e "$app/Contents/MacOS/openramble-mcp" ]]; then
+    fail "The dictation-only artifact unexpectedly contains openramble-mcp."
+  fi
+  [[ ! -e "$app/Contents/MacOS/openramble-asr-worker-test-fixture" ]] \
+    || fail "The application unexpectedly contains the ASR fault-test fixture."
+  local asr_worker="$app/Contents/MacOS/openramble-asr-worker"
+  [[ -x "$asr_worker" ]] || fail "The private ASR worker is missing from the application."
+  scripts/test-asr-worker.sh "$asr_worker" \
+    || fail "The private ASR worker protocol smoke failed."
 }
 
 run_network_gate() {

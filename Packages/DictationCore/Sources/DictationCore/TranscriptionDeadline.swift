@@ -9,11 +9,13 @@ import Foundation
 /// The deadline converts that infinite hang into a bounded failure that keeps
 /// the recording.
 public enum TranscriptionDeadline {
-    /// Twice real time, never below twenty seconds: generous enough that no
-    /// healthy transcription ever meets it, proportional so an hour-long
-    /// recording gets an hour-scale budget.
+    /// A warm recognizer is over 100x real time on long audio and finishes a
+    /// short dictation in well under a second. Three seconds leaves ample p99
+    /// headroom for recordings up to ninety seconds while turning the old
+    /// twenty-second apparent freeze into a bounded recovery. Longer takes get
+    /// one second per thirty seconds of audio.
     public static func deadline(forAudioDuration duration: TimeInterval) -> Duration {
-        .seconds(max(20, duration * 2))
+        .seconds(max(3, duration / 30))
     }
 }
 
@@ -40,6 +42,49 @@ private final class ResumeClaim: @unchecked Sendable {
     }
 }
 
+/// Thread-safe ownership of the two unstructured tasks in the race.
+///
+/// Cancellation can arrive between constructing the tasks and publishing
+/// their handles. Remembering that cancellation under the same lock ensures
+/// late publication cancels them immediately instead of leaving a detached,
+/// cancellation-deaf CoreML call behind due to a data race.
+private final class DeadlineTasks: @unchecked Sendable {
+    private let lock = NSLock()
+    private var work: Task<Void, Never>?
+    private var watchdog: Task<Void, Never>?
+    private var cancellationRequested = false
+
+    func install(work: Task<Void, Never>, watchdog: Task<Void, Never>) {
+        lock.lock()
+        self.work = work
+        self.watchdog = watchdog
+        let cancelImmediately = cancellationRequested
+        lock.unlock()
+
+        if cancelImmediately {
+            work.cancel()
+            watchdog.cancel()
+        }
+    }
+
+    func cancelWork() {
+        lock.lock()
+        let task = work
+        lock.unlock()
+        task?.cancel()
+    }
+
+    func cancelAll() {
+        lock.lock()
+        cancellationRequested = true
+        let work = work
+        let watchdog = watchdog
+        lock.unlock()
+        work?.cancel()
+        watchdog?.cancel()
+    }
+}
+
 /// Race an operation against a deadline without inheriting its fate.
 ///
 /// A structured race (`withThrowingTaskGroup`) waits for every child before
@@ -60,14 +105,14 @@ public func withTranscriptionDeadline<T: Sendable>(
     try Task.checkCancellation()
 
     let claim = ResumeClaim()
-    let tasks = UncheckedBox<(work: Task<Void, Never>?, watchdog: Task<Void, Never>?)>((nil, nil))
+    let tasks = DeadlineTasks()
 
     return try await withTaskCancellationHandler {
         try await withCheckedThrowingContinuation { continuation in
             let watchdog = Task {
                 try? await clock.sleep(for: deadline)
                 guard claim.claim() else { return }
-                tasks.value.work?.cancel()
+                tasks.cancelWork()
                 if Task.isCancelled {
                     // Woken by the caller's cancellation, not the deadline.
                     continuation.resume(throwing: CancellationError())
@@ -87,10 +132,9 @@ public func withTranscriptionDeadline<T: Sendable>(
                     continuation.resume(throwing: error)
                 }
             }
-            tasks.value = (work, watchdog)
+            tasks.install(work: work, watchdog: watchdog)
         }
     } onCancel: {
-        tasks.value.watchdog?.cancel()
-        tasks.value.work?.cancel()
+        tasks.cancelAll()
     }
 }
