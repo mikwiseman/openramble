@@ -19,7 +19,9 @@ func usage() -> Never {
       import <folder> take the model from the finished folder, without network
       delete delete installed model
       transcribe <file>... recognize files
-      bench <file>... recognize and measure speed and memory
+      bench <file>... measure file decode + product recognition
+      bench-predecoded <file>... decode once, then measure the in-memory product path
+      serve-jsonl persistent benchmark protocol (JSONL on stdin/stdout)
       timings <file>... recognize and print word timings
       eval <manifest.json> run the body and calculate WER/CER
 
@@ -34,11 +36,11 @@ func usage() -> Never {
                                 (just to repeat speech loss measurement)
       WAI_ASR_MODEL_DIR engine bundle folder past storage (for measurements)
       WAI_ASR_ENCODER palettized6bit (default) | int4
-      WAI_ASR_ENCODER_PLACEMENT neuralEngine (default) | gpu
+      WAI_ASR_ENCODER_PLACEMENT automatic (default) | neuralEngine | gpu
       WAI_ASR_DUAL_DECODE=on second decoder pass with arbitration
       WAI_ASR_MAX_TOKENS ceiling of tokens per window (default: product value, 600)
-      WAI_ASR_CHUNK_CONCURRENCY parallel long-form windows (default: product value, 6)
-      WAI_ASR_VOCAB_SCHEDULING candidateRegions (product default) | alwaysParallel
+      WAI_ASR_CHUNK_CONCURRENCY parallel long-form windows (default: product value, 4)
+      WAI_ASR_VOCAB_SCHEDULING candidateRegions (TDT-first product default) | alwaysParallel
       WAI_ASR_LANGUAGE forced language (ru, en, ...) instead of auto
       WAI_ASR_PREWARM=on run the same inference warm-up as the shipping app
     """)
@@ -140,7 +142,10 @@ func isOn(_ name: String) -> Bool {
     ProcessInfo.processInfo.environment[name]?.lowercased() == "on"
 }
 
-func prepareTranscriber() async throws -> LocalTranscriber {
+func prepareTranscriber(
+    performConfiguredWarmup: Bool = true,
+    logger: @escaping (String) -> Void = { print($0) }
+) async throws -> LocalTranscriber {
     // An explicit bundle folder is the only way to compare two encoders: storage
     // checks the installation against the manifest and rightly rejects the extra file
     // (`EncoderInt4.mlmodelc` is not included in the manifest). The same technique has already been applied to
@@ -150,13 +155,13 @@ func prepareTranscriber() async throws -> LocalTranscriber {
 
     let engineDirectory: URL
     if let explicitModelDirectory {
-        print("The engine folder is specified explicitly: \(explicitModelDirectory.path) (frozen, past the storage)")
+        logger("The engine folder is specified explicitly: \(explicitModelDirectory.path) (frozen, past the storage)")
         engineDirectory = explicitModelDirectory
     } else {
         let (store, layout, _) = try makeStore()
         let state = await store.refreshState()
         guard state.isReady else {
-            print("The model is not installed. Run: asr-bench install")
+            logger("The model is not installed. Run: asr-bench install")
             exit(69)
         }
         engineDirectory = layout.engineDirectory
@@ -165,18 +170,18 @@ func prepareTranscriber() async throws -> LocalTranscriber {
     // The switch exists for the sake of measurement repeatability: it was he who showed
     // that the text at the junction of windows loses the included mel-context, and not the length of the piece.
     let melChunkContext = isOn("WAI_ASR_MEL_CONTEXT")
-    if melChunkContext { print("Mel context at the window junction is enabled (measuring, not working mode)") }
+    if melChunkContext { logger("Mel context at the window junction is enabled (measuring, not working mode)") }
 
     // Engine handles. Unknown value is a visible error, not a silent fallback to
     // default: otherwise the measurement would silently measure something other than what is written in the command.
     let encoder: EncoderVariant
     if let raw = ProcessInfo.processInfo.environment["WAI_ASR_ENCODER"] {
         guard let parsed = EncoderVariant(rawValue: raw) else {
-            print("WAI_ASR_ENCODER: unknown option '\(raw)'")
+            logger("WAI_ASR_ENCODER: unknown option '\(raw)'")
             exit(64)
         }
         encoder = parsed
-        print("Encoder: \(raw)")
+        logger("Encoder: \(raw)")
     } else {
         encoder = .palettized6bit
     }
@@ -184,19 +189,19 @@ func prepareTranscriber() async throws -> LocalTranscriber {
     let placement: EncoderPlacement
     if let raw = ProcessInfo.processInfo.environment["WAI_ASR_ENCODER_PLACEMENT"] {
         guard let parsed = EncoderPlacement(rawValue: raw) else {
-            print("WAI_ASR_ENCODER_PLACEMENT: unknown value '\(raw)'")
+            logger("WAI_ASR_ENCODER_PLACEMENT: unknown value '\(raw)'")
             exit(64)
         }
         placement = parsed
-        print("Encoder counts to: \(raw)")
+        logger("Encoder counts to: \(raw)")
     } else {
-        // The product default; WAI_ASR_ENCODER_PLACEMENT=neuralEngine
-        // reproduces the old path for comparison runs.
-        placement = .gpu
+        // The product default. Explicit lanes remain available for host-local
+        // calibration without hard-coding one Apple SoC's result.
+        placement = .automatic
     }
 
     let dualDecode = isOn("WAI_ASR_DUAL_DECODE")
-    if dualDecode { print("Second pass decoder with arbitration enabled") }
+    if dualDecode { logger("Second pass decoder with arbitration enabled") }
 
     // The token ceiling is not duplicated by a number here: the default lives in the adapter,
     // and the bench must measure exactly what is in the product. Variable only
@@ -204,34 +209,34 @@ func prepareTranscriber() async throws -> LocalTranscriber {
     var maxTokens: Int?
     if let raw = ProcessInfo.processInfo.environment["WAI_ASR_MAX_TOKENS"] {
         guard let parsed = Int(raw), parsed > 0 else {
-            print("WAI_ASR_MAX_TOKENS: expected a positive number, received '\(raw)'")
+            logger("WAI_ASR_MAX_TOKENS: expected a positive number, received '\(raw)'")
             exit(64)
         }
         maxTokens = parsed
-        print("Token ceiling per window: \(parsed)")
+        logger("Token ceiling per window: \(parsed)")
     }
 
     var chunkConcurrency: Int?
     if let raw = ProcessInfo.processInfo.environment["WAI_ASR_CHUNK_CONCURRENCY"] {
         guard let parsed = Int(raw), parsed > 0 else {
-            print("WAI_ASR_CHUNK_CONCURRENCY: expected a positive number, received '\(raw)'")
+            logger("WAI_ASR_CHUNK_CONCURRENCY: expected a positive number, received '\(raw)'")
             exit(64)
         }
         chunkConcurrency = parsed
-        print("Parallel long-form windows: \(parsed)")
+        logger("Parallel long-form windows: \(parsed)")
     }
 
     let vocabularyScheduling: VocabularyInferenceScheduling
     if let raw = ProcessInfo.processInfo.environment["WAI_ASR_VOCAB_SCHEDULING"] {
         guard let parsed = VocabularyInferenceScheduling(rawValue: raw) else {
-            print("WAI_ASR_VOCAB_SCHEDULING: unknown value '\(raw)'")
+            logger("WAI_ASR_VOCAB_SCHEDULING: unknown value '\(raw)'")
             exit(64)
         }
         vocabularyScheduling = parsed
-        print("Vocabulary inference scheduling: \(raw)")
     } else {
         vocabularyScheduling = .candidateRegions
     }
+    logger("Vocabulary inference scheduling: \(vocabularyScheduling.rawValue)")
 
     let adapter = FluidAudioAdapter(
         melChunkContext: melChunkContext,
@@ -245,7 +250,7 @@ func prepareTranscriber() async throws -> LocalTranscriber {
     let transcriber = LocalTranscriber(engine: adapter)
     let started = ContinuousClock.now
     try await transcriber.prepare(modelDirectory: engineDirectory)
-    print(String(format: "Model loaded in %.2f s", seconds(started.duration(to: .now))))
+    logger(String(format: "Model loaded in %.2f s", seconds(started.duration(to: .now))))
 
     // Acoustic term hint: comparison “with him and without him” - exactly
     // the measurement for which the switch exists. `WAI_VOCAB=on` takes
@@ -254,7 +259,7 @@ func prepareTranscriber() async throws -> LocalTranscriber {
     if vocabularyDirectory == nil, isOn("WAI_VOCAB") {
         let (vocabStore, vocabLayout, _) = try makeVocabularyStore()
         guard await vocabStore.refreshState().isReady else {
-            print("Prompt is not installed. Run: asr-bench install-vocab")
+            logger("Prompt is not installed. Run: asr-bench install-vocab")
             exit(69)
         }
         vocabularyDirectory = vocabLayout.engineDirectory.path
@@ -271,11 +276,11 @@ func prepareTranscriber() async throws -> LocalTranscriber {
         var terms = defaults.terms
         if let raw = ProcessInfo.processInfo.environment["WAI_VOCAB_TERMS"] {
             guard let limit = Int(raw), limit > 0 else {
-                print("WAI_VOCAB_TERMS: expected a positive number, received '\(raw)'")
+                logger("WAI_VOCAB_TERMS: expected a positive number, received '\(raw)'")
                 exit(64)
             }
             terms = Array(terms.prefix(limit))
-            print("Terms left: \(terms.count)")
+            logger("Terms left: \(terms.count)")
         }
         let boost = VocabularyBoost(
             terms: terms,
@@ -283,17 +288,17 @@ func prepareTranscriber() async throws -> LocalTranscriber {
             biasWeight: biasWeight ?? defaults.biasWeight
         )
         if let similarity {
-            print("Suggestion similarity threshold: \(similarity) (WAI_VOCAB_SIMILARITY)")
+            logger("Suggestion similarity threshold: \(similarity) (WAI_VOCAB_SIMILARITY)")
         }
         if let biasWeight {
-            print("Acoustic evidence weight: \(biasWeight) (WAI_VOCAB_CBW)")
+            logger("Acoustic evidence weight: \(biasWeight) (WAI_VOCAB_CBW)")
         }
         let vocabStarted = ContinuousClock.now
         try await transcriber.prepareVocabulary(
             modelDirectory: URL(fileURLWithPath: vocabDirectory, isDirectory: true),
             boost: boost
         )
-        print(
+        logger(
             String(
                 format: "Prompt loaded in %.2f with - %d terms",
                 seconds(vocabStarted.duration(to: .now)),
@@ -301,10 +306,10 @@ func prepareTranscriber() async throws -> LocalTranscriber {
             )
         )
     }
-    if isOn("WAI_ASR_PREWARM") {
+    if performConfiguredWarmup, isOn("WAI_ASR_PREWARM") {
         let warmupStarted = ContinuousClock.now
         try await transcriber.warmUpInference()
-        print(
+        logger(
             String(
                 format: "Inference warmed in %.2f s",
                 seconds(warmupStarted.duration(to: .now))
@@ -350,6 +355,10 @@ guard let command = arguments.first else { usage() }
 let operands = Array(arguments.dropFirst())
 
 switch command {
+case "serve-jsonl":
+    guard operands.isEmpty else { usage() }
+    exit(await BenchmarkJSONLServer.run())
+
 case "status":
     let (store, layout, manifest) = try makeStore()
     let state = await store.refreshState()
@@ -450,17 +459,35 @@ case "timings":
         }
     }
 
-case "transcribe", "bench":
+case "transcribe", "bench", "bench-predecoded":
     guard !operands.isEmpty else { usage() }
     let transcriber = try await prepareTranscriber()
-    let measure = command == "bench"
+    let measure = command != "transcribe"
+    let predecoded = command == "bench-predecoded"
     let language = languageHint()
+    let reader = AudioFileReader()
+    var decodedByPath: [String: [Float]] = [:]
+
+    if predecoded {
+        // Handy's file benchmark decodes WAV before its timer, and live
+        // dictation in both products already owns PCM. Keep this lane explicit
+        // so file-wall numbers cannot be mistaken for engine/product numbers.
+        for path in Set(operands) {
+            decodedByPath[path] = try reader.samples(from: URL(fileURLWithPath: path))
+        }
+        print("Benchmark lane: predecoded in-memory product path")
+    }
 
     for path in operands {
         let url = URL(fileURLWithPath: path)
         let started = ContinuousClock.now
         do {
-            let result = try await transcriber.transcribe(fileURL: url, languageHint: language)
+            let result: ASRResult
+            if let samples = decodedByPath[path] {
+                result = try await transcriber.transcribe(samples: samples, languageHint: language)
+            } else {
+                result = try await transcriber.transcribe(fileURL: url, languageHint: language)
+            }
             let wall = seconds(started.duration(to: .now))
 
             print("\n=== \(url.lastPathComponent) ===")
