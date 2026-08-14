@@ -97,6 +97,13 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         let didRun: Bool
     }
 
+    private struct VocabularyCandidates: Sendable {
+        let regions: [Range<Int>]
+        let termIndices: Set<Int>
+
+        static let empty = VocabularyCandidates(regions: [], termIndices: [])
+    }
+
     /// Immutable, allocation-bounded snapshot of the lexical half of the
     /// pinned FluidAudio rescorer's candidate decision.
     ///
@@ -108,6 +115,14 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         private struct Form: Sendable {
             let normalized: [Character]
             let canonical: [Character]
+            let termIndex: Int
+        }
+
+        struct Matches: Sendable, Equatable {
+            let spans: [Range<Int>]
+            let termIndices: Set<Int>
+
+            static let empty = Matches(spans: [], termIndices: [])
         }
 
         private let forms: [Form]
@@ -119,17 +134,18 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             var cached: [Form] = []
             cached.reserveCapacity(terms.reduce(0) { $0 + 1 + $1.aliases.count })
 
-            for term in terms {
+            for (termIndex, term) in terms.enumerated() {
                 let canonical = FluidAudioAdapter.normalizeVocabularyCandidate(term.text)
                 let canonicalCharacters = Array(canonical)
                 for raw in [term.text] + term.aliases {
                     let normalized = FluidAudioAdapter.normalizeVocabularyCandidate(raw)
-                    let key = canonical + "\u{0}" + normalized
+                    let key = String(termIndex) + "\u{0}" + canonical + "\u{0}" + normalized
                     guard !normalized.isEmpty, seen.insert(key).inserted else { continue }
                     cached.append(
                         Form(
                             normalized: Array(normalized),
-                            canonical: canonicalCharacters
+                            canonical: canonicalCharacters,
+                            termIndex: termIndex
                         )
                     )
                 }
@@ -146,7 +162,16 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         /// span rejected by stricter stop-word or acoustic checks, but it must
         /// never exclude one accepted by the final rescorer.
         func candidateWordSpans(words: [String]) -> [Range<Int>] {
-            guard !words.isEmpty, !forms.isEmpty else { return [] }
+            candidateMatches(words: words).spans
+        }
+
+        /// Return the same conservative spans together with the exact indices
+        /// of vocabulary terms that made at least one span viable. The pinned
+        /// rescorer can then skip terms already proven unable to reach its
+        /// string gate while retaining the complete vocabulary for collision
+        /// guards and the independently configured acoustic-rescue pass.
+        func candidateMatches(words: [String]) -> Matches {
+            guard !words.isEmpty, !forms.isEmpty else { return .empty }
 
             // Normalize every transcript word exactly once. Phrases are built
             // incrementally for the pinned rescorer's maximum four-word span.
@@ -154,7 +179,8 @@ public actor FluidAudioAdapter: ASREngineAdapting {
                 Array(FluidAudioAdapter.normalizeVocabularyCandidate($0))
             }
             var result: [Range<Int>] = []
-            var candidateCache: [[Character]: Bool] = [:]
+            var termIndices = Set<Int>()
+            var candidateCache: [[Character]: [Int]] = [:]
 
             for startIndex in normalizedWords.indices {
                 let maximumLength = min(4, normalizedWords.count - startIndex)
@@ -170,38 +196,51 @@ public actor FluidAudioAdapter: ASREngineAdapting {
                     }
                     guard !phrase.isEmpty else { continue }
 
-                    let canAffectText: Bool
+                    let matchingTermIndices: [Int]
                     if let cached = candidateCache[phrase] {
-                        canAffectText = cached
+                        matchingTermIndices = cached
                     } else {
-                        canAffectText = forms.contains { form in
+                        var matches: [Int] = []
+                        var matchedTermIndex: Int?
+                        for form in forms {
+                            // Forms are cached in term order. Once one form of
+                            // a term matches, its aliases cannot add another
+                            // index and can be skipped without a Set or sort.
+                            guard matchedTermIndex != form.termIndex else { continue }
                             // The real rescorer deliberately leaves an exact
                             // canonical spelling untouched. Aliases remain
                             // valid candidates for that canonical term.
-                            guard phrase != form.canonical else { return false }
+                            guard phrase != form.canonical else { continue }
                             if FluidAudioAdapter.vocabularyCandidateCanReachThreshold(
                                 phrase,
                                 form.normalized,
                                 minimumSimilarity: minimumSimilarity
                             ) {
-                                return true
+                                matches.append(form.termIndex)
+                                matchedTermIndex = form.termIndex
+                                continue
                             }
-                            guard compound != phrase else { return false }
-                            return FluidAudioAdapter.vocabularyCandidateCanReachThreshold(
+                            guard compound != phrase else { continue }
+                            if FluidAudioAdapter.vocabularyCandidateCanReachThreshold(
                                 compound,
                                 form.normalized,
                                 minimumSimilarity: minimumSimilarity
-                            )
+                            ) {
+                                matches.append(form.termIndex)
+                                matchedTermIndex = form.termIndex
+                            }
                         }
-                        candidateCache[phrase] = canAffectText
+                        matchingTermIndices = matches
+                        candidateCache[phrase] = matchingTermIndices
                     }
 
-                    if canAffectText {
+                    if !matchingTermIndices.isEmpty {
                         result.append(startIndex..<(startIndex + length))
+                        termIndices.formUnion(matchingTermIndices)
                     }
                 }
             }
-            return result
+            return Matches(spans: result, termIndices: termIndices)
         }
     }
 
@@ -804,14 +843,15 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             let gateStarted = collectPhaseTimings && helper != nil
                 ? DispatchTime.now().uptimeNanoseconds
                 : nil
-            let candidateRegions = helper.map {
+            let candidates = helper.map {
                 Self.vocabularyCandidateRegions(
                     text: result.text,
                     timings: result.tokenTimings,
                     audioSampleCount: samples.count,
                     helper: $0
                 )
-            } ?? []
+            } ?? .empty
+            let candidateRegions = candidates.regions
             let gateNanoseconds = gateStarted.map {
                 DispatchTime.now().uptimeNanoseconds - $0
             }
@@ -846,6 +886,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
                 timings: result.tokenTimings,
                 spotted: spotted,
                 helper: helper,
+                candidateTermIndices: candidates.termIndices,
                 collectPhaseTimings: collectPhaseTimings
             )
             text = rescoreRun.text ?? result.text
@@ -1106,12 +1147,12 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         timings: [TokenTiming]?,
         audioSampleCount: Int,
         helper: VocabularyHelper
-    ) -> [Range<Int>] {
-        guard let timings, !text.isEmpty else { return [] }
+    ) -> VocabularyCandidates {
+        guard let timings, !text.isEmpty else { return .empty }
         let words = buildWordTimings(from: timings)
         // The pinned rescorer has the same word-timing guard, so acoustic
         // evidence provably cannot change text in this case.
-        guard !words.isEmpty else { return [] }
+        guard !words.isEmpty else { return .empty }
 
         let sampleRate = AudioFileReader.targetSampleRate
         // The rescorer converts seconds to frames with independent integer
@@ -1120,9 +1161,9 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         // selected canonical chunk.
         let margin = 0.6
         var regions: [Range<Int>] = []
-        let candidateSpans = helper.lexicalGate.candidateWordSpans(words: words.map(\.word))
+        let matches = helper.lexicalGate.candidateMatches(words: words.map(\.word))
 
-        for span in candidateSpans {
+        for span in matches.spans {
             let lower = max(
                 0,
                 Int(floor((words[span.lowerBound].startTime - margin) * sampleRate))
@@ -1134,8 +1175,11 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             if lower < upper { regions.append(lower..<upper) }
         }
 
-        guard !regions.isEmpty else { return [] }
-        return mergeVocabularyCandidateRegions(regions)
+        guard !regions.isEmpty else { return .empty }
+        return VocabularyCandidates(
+            regions: mergeVocabularyCandidateRegions(regions),
+            termIndices: matches.termIndices
+        )
     }
 
     /// Kept byte-for-byte with FluidAudio 0.15.5's private candidate
@@ -1328,7 +1372,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             timings: timings,
             audioSampleCount: audioSampleCount,
             helper: vocabulary
-        )
+        ).regions
     }
 
     /// Log-mean-exp in probability space, matching FluidAudio 0.15.5's
@@ -1361,6 +1405,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         timings: [TokenTiming]?,
         spotted: VocabularyEvidence?,
         helper: VocabularyHelper?,
+        candidateTermIndices: Set<Int>,
         collectPhaseTimings: Bool = false
     ) -> RescoreRun {
         guard let helper, let spotted else {
@@ -1383,7 +1428,8 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             frameDuration: spotted.frameDuration,
             cbw: helper.biasWeight,
             marginSeconds: 0.5,
-            minSimilarity: max(helper.sizeConfig.minSimilarity, helper.context.minSimilarity)
+            minSimilarity: max(helper.sizeConfig.minSimilarity, helper.context.minSimilarity),
+            candidateTermIndices: candidateTermIndices
         )
         let rescored: String?
         if output.wasModified {

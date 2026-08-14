@@ -18,10 +18,11 @@ let package = Package(
         // Immutable OpenRamble fork commit based on upstream tag 0.15.5
         // (19600a485baa4998812e4654b70d2bab8f2c9949). The fork skips a redundant
         // reset of TDT's fully overwritten fixed-size audio input buffer and
-        // avoids NSNumber boxing at the optional CTC model boundaries.
+        // avoids NSNumber boxing at the optional CTC model boundaries. It also
+        // accepts a conservative term-index prefilter for the final rescorer.
         .package(
             url: "https://github.com/mikwiseman/FluidAudio.git",
-            revision: "39bbd3a0742e87c1d2b03dfd7d8526cac8a5a13e"
+            revision: "ee9a7f12d91710da53de6d75f8b7160e09eccee4"
         ),
     ],
     targets: [

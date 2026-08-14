@@ -184,6 +184,31 @@ TDT and vocabulary-rescore coverage. These are single-host implementation
 measurements for dictations that actually invoke optional CTC, not a claim about
 ordinary no-candidate dictation or another product.
 
+The same lexical gate that selects candidate audio windows can also prove which
+vocabulary terms cannot reach the final rescorer's string threshold. Passing its
+conservative term indices to the pinned rescorer keeps the full vocabulary for
+collision checks and leaves the separately configured acoustic-rescue pass
+unchanged, but avoids rebuilding and comparing forms for unrelated terms. An
+internal phase profile localized 35.8 of 36.7 ms to that repeated term loop; CTC
+dynamic programming for the accepted candidate was only about 0.2 ms.
+
+Against the typed-I/O implementation, another balanced 80-pair run reduced
+total p50 from 119.003 to 83.341 ms (-30.0%) and final fusion from 37.499 to
+2.099 ms. A direct before-both-versus-final run measured 212.013 to 84.477 ms
+(-60.2%), with CTC inference at 104.651 versus 11.418 ms and fusion at 37.079
+versus 2.100 ms. All 80 pairs retained identical raw and normalized transcript
+hashes, outcome, and CTC invocation count. The term-filter and direct-combined
+reports have SHA-256
+`3aac76bb7263c58537611dec51e0c12a06a32e7a8b3c06b615af7a23f8eb9b9b`
+and `8f455955c1eaa2747d5c00d6389797d3dca2a67573480ac6df94772a4ca97516`.
+
+On a pinned LibriSpeech fixture with no lexical candidate, a separate 40-pair
+check kept every raw and normalized transcript hash identical and never invoked
+CTC. Total p50 was 48.040 ms before versus 48.088 ms after (+0.10%); the gate
+itself was 2.400 versus 2.383 ms at p50. This is consistent with run noise, not
+evidence of a no-candidate speedup. The report SHA-256 is
+`2be1a931681ff4a51b395792ab0e1bd3e7911f41d5d1d43016dea18e7a6aca0c`.
+
 ## Handy backend investigation (2026-08-13)
 
 Hardware: Apple M4, 16 GB, macOS 26.4. Audio: reproducible macOS `say`
