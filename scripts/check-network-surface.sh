@@ -14,17 +14,17 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # Files that are allowed by the network.
-ALLOWED='Packages/LocalASR/Sources/LocalASR/ModelDownloading.swift|SparkleUpdater.swift'
+ALLOWED='^(Packages/LocalASR/Sources/LocalASR/ModelDownloading\.swift|apps/macos/OpenRamble/System/SparkleUpdater\.swift)$'
 
 # We only check the shipping code. The tests intentionally create a URLSession, read
 # local fixture files via Data(contentsOf:) and raise control-connect;
 # consider these seams to be the network surface of the product - a false PASS/FAIL signal.
 SHIPPING_PATHS=(
+  Packages/ASRWorkerProtocol/Sources
   Packages/DictationCore/Sources
   Packages/LocalASR/Sources
-  Packages/AgentBridge/Sources
   apps/macos/OpenRamble
-  apps/macos/OpenRambleMCP
+  apps/macos/OpenRambleASRWorker
 )
 
 # Symbols that can go online.
@@ -56,6 +56,30 @@ done < <(grep -rnE "$FORBIDDEN" "${SHIPPING_PATHS[@]}" 2>/dev/null \
   | grep -v '^Binary' \
   | grep -vE ':[0-9]+: *//' \
   | grep -vE 'URLSessionModelDownloader\(\)|: ModelDownloading' \
+  || true)
+
+# The worker links the LocalASR product, which currently also contains the
+# explicitly user-invoked model downloader. That makes a binary-symbol absence
+# claim impossible: CFNetwork/URLSession code is present in the linked image.
+# What must remain impossible through the private control plane is asking the
+# worker to download or install anything. Release additionally executes the
+# exact mounted worker under an OS-level deny-network sandbox.
+WORKER_CONTROL_PATHS=(
+  Packages/ASRWorkerProtocol/Sources
+  apps/macos/OpenRambleASRWorker
+)
+WORKER_CONTROL_FORBIDDEN="$FORBIDDEN|ModelDownloading|ModelStore|download|install|https?://"
+echo "Checking the ASR worker control plane..."
+while IFS= read -r hit; do
+  if [[ $status -eq 0 ]]; then
+    echo ""
+    echo "VIOLATION: the private ASR worker exposes a network/model-install path."
+    status=1
+  fi
+  echo "  $hit"
+done < <(grep -rnEi "$WORKER_CONTROL_FORBIDDEN" "${WORKER_CONTROL_PATHS[@]}" 2>/dev/null \
+  | grep -v '^Binary' \
+  | grep -vE ':[0-9]+: *//' \
   || true)
 
 # The clipboard is a different story. Naked clearContents() returns dictated
@@ -134,6 +158,6 @@ done < <(grep -rnE 'log(ger)?\.(info|debug|error|warning|notice)\(.*(transcript|
 
 if [[ $status -eq 0 ]]; then
   echo ""
-  echo "Network surface is fine: model download and update checks, nothing else."
+  echo "Network source surface is limited to model downloads and update checks; the ASR worker protocol exposes neither."
 fi
 exit $status

@@ -1,21 +1,14 @@
-import Foundation
-
-/// When a recording starts, is the engine cold enough to warm in parallel?
+/// Whether a recording start should run one representative inference in
+/// parallel with capture.
 ///
 /// The recognition engine has two speeds, measured on this hardware: 0.13 s
 /// warm against 16.06 s after macOS evicted its Neural Engine state. The
-/// eviction happens with idle time — memory pressure, sleep — so the moment
-/// the person presses the key is the perfect place to pay for the reload:
-/// they are about to speak for seconds anyway, and the warm-up runs under
-/// their voice instead of after it.
-///
-/// The five-minute threshold keeps the ping out of active work entirely:
-/// back-to-back dictations never trigger it, only a return from real idle.
+/// operating system does not expose a portable residency signal or a reliable
+/// time-to-eviction threshold across Apple Silicon generations. A cheap warm
+/// inference on every ready recording start is therefore the deterministic
+/// policy: it runs under speech and prevents a hidden cold tail at key-up.
 enum EngineWarming {
-    static let coldSuspicionInterval: TimeInterval = 300
-
-    static func shouldWarm(lastEngineActivity: Date?, now: Date) -> Bool {
-        guard let lastEngineActivity else { return true }
-        return now.timeIntervalSince(lastEngineActivity) >= coldSuspicionInterval
+    static func shouldPingOnRecordingStart(engineReady: Bool) -> Bool {
+        engineReady
     }
 }

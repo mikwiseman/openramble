@@ -165,10 +165,11 @@ public actor LocalTranscriber {
         return try await engine.transcribe(samples: samples, languageHint: languageHint)
     }
 
-    /// Execute one representative inference after all optional models have
-    /// loaded. Loading Core ML weights alone does not compile/materialize every
-    /// prediction path; without this, the first short dictation can be seconds
-    /// slower than the steady state.
+    /// Execute representative inference after all optional models have loaded.
+    /// Loading Core ML weights alone does not compile/materialize every
+    /// prediction path; without this, the first short dictation (or the first
+    /// one containing a custom-term candidate) can be seconds slower than the
+    /// steady state.
     public func warmUpInference() async throws {
         guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
         let expectedGeneration = generation
@@ -188,6 +189,9 @@ public actor LocalTranscriber {
                 samples: [Float](repeating: 0, count: 16_000),
                 languageHint: nil
             )
+            if let vocabularyWarmup = engine as? VocabularyInferenceWarmupCapable {
+                try await vocabularyWarmup.warmUpVocabularyInference()
+            }
         }
         inferenceWarmupTask = task
         activeOperations += 1

@@ -47,8 +47,9 @@ final class CaptureInterruptionTests: XCTestCase {
         XCTAssertEqual(notices.first?.message, "\u{041A}\u{043E}\u{043D}\u{0447}\u{0438}\u{043B}\u{043E}\u{0441}\u{044C} \u{043C}\u{0435}\u{0441}\u{0442}\u{043E} \u{043D}\u{0430} \u{0434}\u{0438}\u{0441}\u{043A}\u{0435}.")
     }
 
-    func testInterruptionAbortsRecordingInsteadOfFinishingIt() async throws {
-        // There is nowhere to append - the file needs to be dropped, not closed.
+    func testInterruptionContainsRecordingWithoutTreatingItAsUserCancellation() async throws {
+        // A technical failure fences the microphone, but it is not Escape:
+        // keep the take recoverable instead of deleting the user's speech.
         let capture = FakeCapture()
         let controller = makeController(capture: capture)
 
@@ -59,8 +60,8 @@ final class CaptureInterruptionTests: XCTestCase {
 
         let aborted = await capture.abortCount
         let stopped = await capture.stopCount
-        XCTAssertEqual(aborted, 1, "\u{0417}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{0431}\u{0440}\u{043E}\u{0441}\u{0430}\u{0435}\u{0442}\u{0441}\u{044F}")
-        XCTAssertEqual(stopped, 0, "\u{0418} \u{043D}\u{0435} \u{0444}\u{0438}\u{043D}\u{0430}\u{043B}\u{0438}\u{0437}\u{0438}\u{0440}\u{0443}\u{0435}\u{0442}\u{0441}\u{044F}")
+        XCTAssertEqual(aborted, 0, "\u{0422}\u{0435}\u{0445}\u{043D}\u{0438}\u{0447}\u{0435}\u{0441}\u{043A}\u{0438}\u{0439} \u{0441}\u{0431}\u{043E}\u{0439} \u{043D}\u{0435} \u{0434}\u{043E}\u{043B}\u{0436}\u{0435}\u{043D} \u{0443}\u{0434}\u{0430}\u{043B}\u{044F}\u{0442}\u{044C} \u{0433}\u{043E}\u{043B}\u{043E}\u{0441}")
+        XCTAssertEqual(stopped, 1, "\u{0417}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{043D}\u{0435}\u{0440}\u{0430}\u{0437}\u{0440}\u{0443}\u{0448}\u{0430}\u{044E}\u{0449}\u{0435} \u{0444}\u{0438}\u{043D}\u{0430}\u{043B}\u{0438}\u{0437}\u{0438}\u{0440}\u{0443}\u{0435}\u{0442}\u{0441}\u{044F} \u{0434}\u{043B}\u{044F} \u{0432}\u{043E}\u{0441}\u{0441}\u{0442}\u{0430}\u{043D}\u{043E}\u{0432}\u{043B}\u{0435}\u{043D}\u{0438}\u{044F}")
     }
 
     func testInterruptionNeverInsertsText() async throws {

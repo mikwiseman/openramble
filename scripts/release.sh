@@ -23,9 +23,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 APP_NAME="OpenRamble"
-APP_PATH="artifacts/build/OpenRamble.xcarchive/Products/Applications/$APP_NAME.app"
 APPCAST="docs/appcast.xml"
 NOTES_DIR="docs/release-notes"
+EXPECTED_BUNDLE_ID="is.waiwai.dictation"
+EXPECTED_FEED_URL="https://mikwiseman.github.io/openramble/appcast.xml"
+EXPECTED_PUBLIC_KEY="9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI="
+EXPECTED_MIN_OS="14.0"
 # Where the images will be located. GitHub releases - regular static from your server
 # the product does not have.
 DOWNLOAD_BASE="${DOWNLOAD_BASE:-https://github.com/mikwiseman/openramble/releases/download}"
@@ -43,7 +46,6 @@ NOTARY_KEY_ID="${NOTARY_KEY_ID:-}"
 NOTARY_ISSUER="${NOTARY_ISSUER:-}"
 APPSTORECONNECT_CONFIG="${APPSTORECONNECT_CONFIG:-$HOME/.appstoreconnect/config.json}"
 SPARKLE_BIN="${SPARKLE_BIN:-}"
-REUSE_VERIFIED_ARTIFACT="${REUSE_VERIFIED_ARTIFACT:-0}"
 
 fail() {
   echo "" >&2
@@ -64,6 +66,15 @@ git fetch --quiet origin main
 HEAD_SHA=$(git rev-parse HEAD)
 ORIGIN_SHA=$(git rev-parse origin/main)
 [[ "$HEAD_SHA" == "$ORIGIN_SHA" ]] || fail "HEAD does not match origin/main."
+
+assert_release_source_unchanged() {
+  local checkpoint="$1"
+  [[ "$(git rev-parse HEAD)" == "$HEAD_SHA" ]] \
+    || fail "HEAD changed $checkpoint; refusing to publish an artifact from a mixed source snapshot."
+  [[ -z "$(git status --porcelain)" ]] \
+    || fail "Tracked release inputs changed $checkpoint; restart from a clean tree."
+}
+
 command -v gh >/dev/null || fail "Gh not found for required CI check."
 CI_CONCLUSION=$(gh run list \
   --workflow CI \
@@ -83,10 +94,8 @@ If you don't have the key yet:
 
 A new Sparkle key cannot be generated for this product: installed
 copies need exactly the same key. The public half is already in
-apps/macos/project.yml as SUPublicEDKey.
-
-generate_keys itself comes with the Sparkle package:
-  ~/Library/Developer/Xcode/DerivedData/OpenRamble-*/SourcePackages/artifacts/sparkle/Sparkle/bin/"
+apps/macos/project.yml as SUPublicEDKey. Recover the permanent key;
+never create a replacement."
 fi
 
 if [[ ! -f "$SPARKLE_KEY_PATH" ]]; then
@@ -168,8 +177,19 @@ yml_value() {
 
 MARKETING_VERSION=$(yml_value MARKETING_VERSION)
 SHORT_VERSION=$(yml_value CFBundleShortVersionString)
+EXPECTED_BUILD=$(yml_value CURRENT_PROJECT_VERSION)
+PROJECT_MIN_OS=$(yml_value MACOSX_DEPLOYMENT_TARGET)
+PROJECT_FEED_URL=$(yml_value SUFeedURL)
+PROJECT_PUBLIC_KEY=$(yml_value SUPublicEDKey)
 
-[[ -n "$MARKETING_VERSION" ]] || fail "MARKETING_VERSION was not found in $PROJECT_YML"
+[[ -n "$MARKETING_VERSION" && -n "$EXPECTED_BUILD" ]] \
+  || fail "MARKETING_VERSION or CURRENT_PROJECT_VERSION was not found in $PROJECT_YML"
+[[ "$PROJECT_MIN_OS" == "$EXPECTED_MIN_OS" ]] \
+  || fail "The release minOS must be $EXPECTED_MIN_OS, got ${PROJECT_MIN_OS:-missing}."
+[[ "$PROJECT_FEED_URL" == "$EXPECTED_FEED_URL" ]] \
+  || fail "The release feed must remain $EXPECTED_FEED_URL."
+[[ "$PROJECT_PUBLIC_KEY" == "$EXPECTED_PUBLIC_KEY" ]] \
+  || fail "SUPublicEDKey does not match the permanent key used by installed copies. Recover the existing key; never generate a replacement."
 
 # Two lines about the same version must match: Sparkle shows the person
 # CFBundleShortVersionString, and the image name is taken from it.
@@ -227,6 +247,7 @@ run_quietly() {
   rm -f "$output"
 }
 
+run_quietly "ASRWorkerProtocol tests" swift test --package-path Packages/ASRWorkerProtocol
 run_quietly "DictationCore tests" swift test --package-path Packages/DictationCore
 run_quietly "LocalASR tests" swift test --package-path Packages/LocalASR
 XCODEGEN=$(./scripts/pinned-xcodegen.sh)
@@ -238,89 +259,53 @@ run_quietly "application tests" xcodebuild -project apps/macos/OpenRamble.xcodep
 echo "→ Checking runtime without a network"
 ./scripts/test-zero-network.sh >/dev/null
 ./scripts/test-zero-network-trace.sh >/dev/null
+assert_release_source_unchanged "before the fresh archive build"
 
 # --- Build the image -------------------------------------------------------------
 
 echo "→ Assembling the image"
-if [[ "$REUSE_VERIFIED_ARTIFACT" == "1" ]]; then
-  echo "I'm using an already verified artifact; a new DMG is not created."
-elif [[ "$REUSE_VERIFIED_ARTIFACT" == "0" ]]; then
-  DEVELOPER_ID="$DEVELOPER_ID" \
-  NOTARY_PROFILE="$NOTARY_PROFILE" \
-  NOTARY_KEY="$NOTARY_KEY" \
-  NOTARY_KEY_ID="$NOTARY_KEY_ID" \
-  NOTARY_ISSUER="$NOTARY_ISSUER" \
-  APPSTORECONNECT_CONFIG="$APPSTORECONNECT_CONFIG" \
-  RELEASE_KEYCHAIN_PATH="$RELEASE_KEYCHAIN_PATH" \
-  RELEASE_KEYCHAIN_PASSWORD_PATH="$RELEASE_KEYCHAIN_PASSWORD_PATH" \
-  REQUIRE_NOTARIZATION=1 \
-  ./scripts/build-dmg.sh
-else
-  fail "REUSE_VERIFIED_ARTIFACT only accepts 0 or 1."
-fi
+DEVELOPER_ID="$DEVELOPER_ID" \
+NOTARY_PROFILE="$NOTARY_PROFILE" \
+NOTARY_KEY="$NOTARY_KEY" \
+NOTARY_KEY_ID="$NOTARY_KEY_ID" \
+NOTARY_ISSUER="$NOTARY_ISSUER" \
+APPSTORECONNECT_CONFIG="$APPSTORECONNECT_CONFIG" \
+RELEASE_KEYCHAIN_PATH="$RELEASE_KEYCHAIN_PATH" \
+RELEASE_KEYCHAIN_PASSWORD_PATH="$RELEASE_KEYCHAIN_PASSWORD_PATH" \
+REQUIRE_NOTARIZATION=1 \
+REQUIRE_OFFLINE_RECOGNITION=1 \
+./scripts/build-dmg.sh
 
-[[ -d "$APP_PATH" ]] || fail "The build failed the application: $APP_PATH"
-
-echo "→ Checking the installed artifact"
-./scripts/smoke-installed-artifact.sh "$APP_PATH"
-
-for resource in \
-  LICENSE NOTICE THIRD_PARTY_LICENSES.md model-manifest.json \
-  FluidAudio-Apache-2.0.txt FluidAudio-fastcluster-BSD.txt \
-  FluidAudio-vbx-Apache-2.0.txt Sparkle-LICENSE.txt \
-  Parakeet-CC-BY-4.0.txt
-do
-  [[ -f "$APP_PATH/Contents/Resources/$resource" ]] \
-    || fail "There is no required resource in artifact: $resource"
-done
-
-plist_value() {
-  /usr/libexec/PlistBuddy -c "Print :$1" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
-}
-
-VERSION=$(plist_value CFBundleShortVersionString)
-BUILD=$(plist_value CFBundleVersion)
-MIN_OS=$(plist_value LSMinimumSystemVersion)
-FEED_URL=$(plist_value SUFeedURL)
-PUBLIC_KEY=$(plist_value SUPublicEDKey)
-
-[[ -n "$VERSION" && -n "$BUILD" ]] || fail "There is no version or build number in Info.plist"
-[[ -n "$FEED_URL" ]] || fail "Info.plist does not have SUFeedURL - the application will not know where to look for updates"
-
-if [[ -z "$PUBLIC_KEY" ]]; then
-  fail "There is no SUPublicEDKey in Info.plist.
-
-Without it, the update is verified only by Apple's signature, which Sparkle considers
-outdated and unsafe. Take the public key:
-  generate_keys -p
-and add it to apps/macos/project.yml:
-  SUPublicEDKey: \"<key>\""
-fi
-
-DMG_PATH="artifacts/dmg/OpenRamble-$VERSION.dmg"
+VERSION="$MARKETING_VERSION"
+BUILD="$EXPECTED_BUILD"
+MIN_OS="$EXPECTED_MIN_OS"
+FEED_URL="$EXPECTED_FEED_URL"
+PUBLIC_KEY="$EXPECTED_PUBLIC_KEY"
+DMG_PATH="artifacts/dmg/OpenRamble-$MARKETING_VERSION.dmg"
 [[ -f "$DMG_PATH" ]] || fail "No image: $DMG_PATH"
+[[ -f "$DMG_PATH.sha256" ]] || fail "No build checksum: $DMG_PATH.sha256"
+shasum -a 256 -c "$DMG_PATH.sha256" >/dev/null \
+  || fail "The DMG no longer matches the checksum produced by this build."
 
-# In reuse mode it is especially important to prove that this is a real Developer ID /
-# notarized artifact, not a smoke ad-hoc build.
-APP_AUTHORITY=$(codesign -dvv "$APP_PATH" 2>&1 | sed -n 's/^Authority=//p' | head -1)
-[[ "$APP_AUTHORITY" == Developer\ ID\ Application:* ]] \
-  || fail "The application is not signed by Developer ID Application: ${APP_AUTHORITY:-ad-hoc}."
+echo "→ Checking the exact mounted release DMG"
+EXPECTED_APP_NAME="$APP_NAME" \
+EXPECTED_BUNDLE_ID="$EXPECTED_BUNDLE_ID" \
+EXPECTED_VERSION="$VERSION" \
+EXPECTED_BUILD="$BUILD" \
+EXPECTED_MIN_OS="$MIN_OS" \
+EXPECTED_FEED_URL="$FEED_URL" \
+EXPECTED_PUBLIC_KEY="$PUBLIC_KEY" \
+REQUIRE_DEVELOPER_ID=1 \
+REQUIRE_OFFLINE_RECOGNITION=1 \
+./scripts/smoke-installed-artifact.sh "$DMG_PATH"
+assert_release_source_unchanged "after building and verifying the exact DMG"
+
 xcrun stapler validate "$DMG_PATH" >/dev/null \
   || fail "Staple ticket not confirmed for $DMG_PATH."
 spctl --assess --type install --verbose=2 "$DMG_PATH" \
   || fail "Gatekeeper does not accept $DMG_PATH."
 
 echo "version $VERSION, build $BUILD, minimum macOS $MIN_OS"
-
-# --- What's new --------------------------------------------------------------
-
-# The description was already required before assembly. Here we just check that everything has come together smoothly
-# what it says: a discrepancy would mean that xcodegen did not take the version
-# from project.yml.
-if [[ "$VERSION" != "$MARKETING_VERSION" ]]; then
-  fail "The assembled version of $VERSION does not match the $MARKETING_VERSION from $PROJECT_YML.
-Regenerate the project: cd apps/macos && xcodegen generate"
-fi
 
 # --- Update signature ------------------------------------------------------
 
@@ -367,9 +352,9 @@ if [[ "$DERIVED_KEY" != "$PUBLIC_KEY" ]]; then
 In Info.plist: $PUBLIC_KEY
 Corresponds to the key: $DERIVED_KEY
 
-You can’t release it like this: no one will install the update. Enter in
-apps/macos/project.yml is the correct key and rebuild:
-  SUPublicEDKey: \"$DERIVED_KEY\""
+You can’t release it like this: installed copies require the permanent public
+key already embedded in the application. Do not change SUPublicEDKey. Recover
+the matching permanent private key with ./scripts/bootstrap-release-secrets.sh."
 fi
 
 LENGTH=$(stat -f%z "$DMG_PATH")
@@ -377,6 +362,9 @@ DMG_URL="$DOWNLOAD_BASE/v$VERSION/$(basename "$DMG_PATH")"
 
 # --- Update feed --------------------------------------------------------
 
+shasum -a 256 -c "$DMG_PATH.sha256" >/dev/null \
+  || fail "The verified DMG changed before appcast mutation."
+assert_release_source_unchanged "immediately before appcast mutation"
 echo "→Updating $APPCAST"
 APPCAST="$APPCAST" NOTES_PATH="$NOTES_PATH" KEEP_ITEMS="$KEEP_ITEMS" \
 VERSION="$VERSION" BUILD="$BUILD" MIN_OS="$MIN_OS" FEED_URL="$FEED_URL" \

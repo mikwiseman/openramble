@@ -76,6 +76,24 @@ private actor WarmupGateEngine: ASREngineAdapting {
     func unload() async {}
 }
 
+private actor VocabularyWarmupEngine: ASREngineAdapting, VocabularyInferenceWarmupCapable {
+    private(set) var mainWarmupCount = 0
+    private(set) var vocabularyWarmupCount = 0
+
+    func loadModels(from directory: URL) async throws {}
+
+    func transcribe(samples: [Float]) async throws -> ASRResult {
+        mainWarmupCount += 1
+        return ASRResult(text: "", audioDuration: 1, processingDuration: 0.01)
+    }
+
+    func warmUpVocabularyInference() async throws {
+        vocabularyWarmupCount += 1
+    }
+
+    func unload() async {}
+}
+
 final class LocalTranscriberTests: XCTestCase {
     private var directory: URL!
 
@@ -151,6 +169,19 @@ final class LocalTranscriberTests: XCTestCase {
         XCTAssertEqual(batches.count, 1)
         XCTAssertEqual(batches[0].count, 16_000)
         XCTAssertTrue(batches[0].allSatisfy { $0 == 0 })
+    }
+
+    func testInferenceWarmupAlsoMaterializesOptionalVocabularyPath() async throws {
+        let engine = VocabularyWarmupEngine()
+        let transcriber = LocalTranscriber(engine: engine)
+        try await transcriber.prepare(modelDirectory: directory)
+
+        try await transcriber.warmUpInference()
+
+        let mainWarmups = await engine.mainWarmupCount
+        let vocabularyWarmups = await engine.vocabularyWarmupCount
+        XCTAssertEqual(mainWarmups, 1)
+        XCTAssertEqual(vocabularyWarmups, 1)
     }
 
     func testRealTranscriptionWaitsForInferenceWarmup() async throws {

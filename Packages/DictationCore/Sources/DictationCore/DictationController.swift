@@ -5,6 +5,195 @@ public struct RecoveredDictation: Sendable, Equatable {
     public let text: String
 }
 
+private enum DictationOverlayCommand: Sendable {
+    case present(DictationState, TimeInterval, DictationSessionID, UInt64)
+    case notice(DictationNotice, DictationSessionID, UInt64)
+    case dismiss(DictationSessionID, UInt64)
+
+    var session: DictationSessionID {
+        switch self {
+        case let .present(_, _, session, _), let .notice(_, session, _), let .dismiss(session, _):
+            return session
+        }
+    }
+
+    var revision: UInt64 {
+        switch self {
+        case let .present(_, _, _, revision), let .notice(_, _, revision), let .dismiss(_, revision):
+            return revision
+        }
+    }
+
+    var isNotice: Bool {
+        if case .notice = self { return true }
+        return false
+    }
+}
+
+/// One in-flight UI call plus at most one notice and one latest state command.
+///
+/// If the window server wedges, dictation keeps moving and repeated sessions
+/// cannot accumulate an unbounded number of tasks. A newer session replaces
+/// every queued command from an older one. Within a session a notice is kept
+/// ahead of the later dismiss so failures remain visible.
+private final class DictationOverlayDispatcher: @unchecked Sendable {
+    private let overlay: any OverlayPresenting
+    private let lock = NSLock()
+    private var latestSession: DictationSessionID?
+    private var pendingNotice: DictationOverlayCommand?
+    private var pendingState: DictationOverlayCommand?
+    private var isRunning = false
+
+    init(overlay: any OverlayPresenting) {
+        self.overlay = overlay
+    }
+
+    func submit(_ command: DictationOverlayCommand) {
+        var shouldLaunch = false
+        lock.lock()
+        if let latestSession, command.session < latestSession {
+            lock.unlock()
+            return
+        }
+        if latestSession != command.session {
+            latestSession = command.session
+            pendingNotice = nil
+            pendingState = nil
+        }
+        if command.isNotice {
+            pendingNotice = command
+        } else {
+            pendingState = command
+        }
+        if !isRunning {
+            isRunning = true
+            shouldLaunch = true
+        }
+        lock.unlock()
+
+        if shouldLaunch {
+            Task { await self.drain() }
+        }
+    }
+
+    private func takeNext() -> DictationOverlayCommand? {
+        lock.lock()
+        defer { lock.unlock() }
+
+        let next: DictationOverlayCommand?
+        switch (pendingNotice, pendingState) {
+        case let (notice?, state?):
+            if notice.revision <= state.revision {
+                pendingNotice = nil
+                next = notice
+            } else {
+                pendingState = nil
+                next = state
+            }
+        case let (notice?, nil):
+            pendingNotice = nil
+            next = notice
+        case let (nil, state?):
+            pendingState = nil
+            next = state
+        case (nil, nil):
+            isRunning = false
+            next = nil
+        }
+        return next
+    }
+
+    private func drain() async {
+        while let command = takeNext() {
+            // This protocol edge is intentionally off the controller actor. A
+            // broken UI fence can retain this one bounded feedback task, never
+            // microphone start/stop or the session state machine.
+            overlay.advance(to: command.session, revision: command.revision)
+            switch command {
+            case let .present(state, elapsed, session, revision):
+                await overlay.present(
+                    state,
+                    elapsed: elapsed,
+                    session: session,
+                    revision: revision
+                )
+            case let .notice(notice, session, revision):
+                await overlay.presentNotice(notice, session: session, revision: revision)
+            case let .dismiss(session, revision):
+                await overlay.dismiss(session: session, revision: revision)
+            }
+        }
+    }
+}
+
+/// Sound feedback is also decoration: one stuck backend may retain one task,
+/// never the controller and never one task per later failure.
+private final class DictationSoundDispatcher: @unchecked Sendable {
+    private let sounds: any Sounding
+    private let lock = NSLock()
+    private var latestSession: DictationSessionID?
+    private var pendingSession: DictationSessionID?
+    private var isRunning = false
+
+    init(sounds: any Sounding) {
+        self.sounds = sounds
+    }
+
+    func advance(to session: DictationSessionID) {
+        lock.lock()
+        if latestSession.map({ session >= $0 }) ?? true {
+            latestSession = session
+            if pendingSession.map({ $0 < session }) == true { pendingSession = nil }
+        }
+        lock.unlock()
+    }
+
+    func submit(session: DictationSessionID) {
+        advance(to: session)
+        var shouldLaunch = false
+        lock.lock()
+        guard latestSession == session else {
+            lock.unlock()
+            return
+        }
+        pendingSession = session
+        if !isRunning {
+            isRunning = true
+            shouldLaunch = true
+        }
+        lock.unlock()
+        if shouldLaunch { Task { await self.drain() } }
+    }
+
+    private func takeNext() -> DictationSessionID? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let pendingSession else {
+            isRunning = false
+            return nil
+        }
+        self.pendingSession = nil
+        return pendingSession
+    }
+
+    private func drain() async {
+        while let session = takeNext() {
+            sounds.advance(to: session)
+            await sounds.playAttention(session: session)
+        }
+    }
+}
+
+private enum CaptureStartOutcome: Sendable {
+    case started(URL)
+    case failed(String)
+}
+
+/// Preparation exceeded the foreground stop-to-result budget. This is not an
+/// inference stall: a separately owned model load may still be healthy and
+/// must not be killed just as it is about to become ready.
+private struct DictationPreparationTimeout: Error, Sendable {}
+
 /// Dictation core.
 ///
 /// Holds the state of the session and carries it through from keypress to text insertion.
@@ -72,6 +261,8 @@ public final class DictationController {
     private let inserter: any TextInserting
     private let overlay: any OverlayPresenting
     private let sounds: any Sounding
+    private let overlayDispatcher: DictationOverlayDispatcher
+    private let soundDispatcher: DictationSoundDispatcher
     private let recordingRecovery: any RecordingRecoveryStoring
     private let pipeline: () -> TextPipeline
     /// Session hours. A separate dependence for exactly the same reason as
@@ -97,6 +288,28 @@ public final class DictationController {
     /// The reload budget. Covers a cache-purged model compile; a breach means
     /// the engine is wedged and flows into the same stall recovery.
     private let prepareDeadline: Duration
+    /// Capture stop owns only the audio-engine handoff and PCM freeze. Disk
+    /// drain and fsync are separate milestones and do not consume this budget.
+    private let captureFreezeDeadline: Duration
+    /// Rare file-only recordings wait for a readable WAV, never for fsync.
+    private let recordingReadableDeadline: Duration
+    /// Moving a failed take into the support folder is also storage I/O and
+    /// therefore cannot own the UI indefinitely.
+    private let recordingPreserveDeadline: Duration
+    /// Fast local moves usually finish in milliseconds. Recovery may keep
+    /// running after this grace, but it never extends foreground failure UI.
+    private let recoveryForegroundGrace: Duration
+    /// Accessibility, WindowServer, and pasteboard calls are system edges.
+    /// Cancellation-deaf implementations must not leave the controller in
+    /// `.inserting` forever; an uncertain result is retained in memory.
+    private let insertionDeadline: Duration
+    /// Return is a separate irreversible system event after text already
+    /// landed. It has its own shorter confirmation budget.
+    private let returnDeadline: Duration
+    /// Key-down destination supplied by a pre-populated system cache. This is
+    /// deliberately a synchronous memory read: no AppKit/WindowServer call may
+    /// sit between launching capture and publishing a cancellable session.
+    private let targetApplicationSnapshot: @Sendable () -> TargetApplication?
 
     // MARK: - Session state
 
@@ -115,9 +328,19 @@ public final class DictationController {
     private var cancellationRequested = false
     private var isHandsFree = false
     private var finalizationTask: Task<Void, Never>?
+    private var preparingStopWatchdog: Task<Void, Never>?
+    private var activeRecoveryTickets: [DictationSessionID: RecordingRecoveryTicket] = [:]
+    private var currentDisposition: RecordingDisposition?
     private var recordingStartedAt: Date?
+    /// The path returned at capture start remains the cancellation handle even
+    /// while a stop operation is suspended before it can return its artifact.
+    private var activeRecordingURL: URL?
     /// The moment the key is released is the start of the “stop → text” countdown.
     private var stopRequestedAt: ContinuousClock.Instant?
+    /// Real monotonic anchor for the absolute foreground SLO. Kept separate
+    /// from the injectable reporting clock so tests cannot accidentally mix
+    /// clock domains in deadline arithmetic.
+    private var stopSLORequestedAt: ContinuousClock.Instant?
 
     /// The number of the current session increases at each start.
     ///
@@ -126,7 +349,8 @@ public final class DictationController {
     /// managed to start the next dictation. Without a number, such a tail brought cleaning to a
     /// end and extinguished ANOTHER'S live session: the state showed “free”, and
     /// the microphone remained on, and there was nothing to get out of it.
-    private var currentSession = 0
+    private var currentSession: DictationSessionID?
+    private var overlayRevision: UInt64 = 0
 
     /// Whether this session has already asked for the person's attention.
     private var hasSoundedThisSession = false
@@ -136,6 +360,7 @@ public final class DictationController {
         transcribe: @escaping @Sendable (URL) async throws -> ASRResult,
         transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)? = nil,
         inserter: any TextInserting,
+        targetApplicationSnapshot: (@Sendable () -> TargetApplication?)? = nil,
         overlay: any OverlayPresenting,
         sounds: any Sounding,
         recordingRecovery: any RecordingRecoveryStoring = DiscardingRecordingRecovery(),
@@ -144,14 +369,24 @@ public final class DictationController {
         monotonicNow: @escaping @Sendable () -> ContinuousClock.Instant = { .now },
         transcriptionDeadline: @escaping @Sendable (TimeInterval) -> Duration = TranscriptionDeadline.deadline(forAudioDuration:),
         prepareForTranscription: (@Sendable () async throws -> Void)? = nil,
-        prepareDeadline: Duration = .seconds(90)
+        prepareDeadline: Duration = .seconds(90),
+        captureFreezeDeadline: Duration = .milliseconds(500),
+        recordingReadableDeadline: Duration = .seconds(2),
+        recordingPreserveDeadline: Duration = .seconds(2),
+        recoveryForegroundGrace: Duration = .milliseconds(150),
+        insertionDeadline: Duration = .seconds(2),
+        returnDeadline: Duration = .seconds(1)
     ) {
         self.capture = capture
         self.transcribe = transcribe
         self.transcribeSamples = transcribeSamples
         self.inserter = inserter
+        self.targetApplicationSnapshot = targetApplicationSnapshot
+            ?? { inserter.frontmostApplication() }
         self.overlay = overlay
         self.sounds = sounds
+        overlayDispatcher = DictationOverlayDispatcher(overlay: overlay)
+        soundDispatcher = DictationSoundDispatcher(sounds: sounds)
         self.recordingRecovery = recordingRecovery
         self.pipeline = pipeline
         self.now = now
@@ -159,6 +394,12 @@ public final class DictationController {
         self.transcriptionDeadline = transcriptionDeadline
         self.prepareForTranscription = prepareForTranscription
         self.prepareDeadline = prepareDeadline
+        self.captureFreezeDeadline = captureFreezeDeadline
+        self.recordingReadableDeadline = recordingReadableDeadline
+        self.recordingPreserveDeadline = recordingPreserveDeadline
+        self.recoveryForegroundGrace = recoveryForegroundGrace
+        self.insertionDeadline = insertionDeadline
+        self.returnDeadline = returnDeadline
     }
 
     // MARK: - Beginning
@@ -173,39 +414,78 @@ public final class DictationController {
             isModelReady: isModelReady
         ) else { return }
 
-        currentSession += 1
-        let session = currentSession
+        let session = DictationSessionID()
+        let disposition = RecordingDisposition()
+        currentSession = session
+        currentDisposition = disposition
+        overlayRevision = 0
         // Do not touch the previous Copy/Retry: the new entry can be canceled or
         // fail with an error. Saved text is deleted only by an explicit action
         // or after a successful Retry.
         isHandsFree = handsFree
-        isHandsFreeActive = handsFree
         cancellationRequested = false
         deferredStopRequested = false
-        // We remember the goal right away: then the focus will go away.
-        targetApplication = inserter.frontmostApplication()
+
+        // Production supplies a lock-only destination cache. Capture ownership
+        // is launched before callbacks and HUD work so none can clip the first
+        // word. Adoption still happens on this actor with the session token.
+        launchCapture(session: session, disposition: disposition)
+        // Snapshot the destination before publishing `.preparing`: an observer
+        // may activate our own settings window and change focus.
+        targetApplication = targetApplicationSnapshot()
         state = .preparing
 
-        Task {
-            // A capture device can take a noticeable fraction of a second to wake up.
-            // Acknowledge the hotkey before that wait so the gesture never feels lost.
-            await overlay.present(.preparing, elapsed: 0)
-            await startCapture(session: session)
+        guard isCurrent(session), state == .preparing, !cancellationRequested else { return }
+        isHandsFreeActive = handsFree
+        guard isCurrent(session), state == .preparing, !cancellationRequested else { return }
+        guard isCurrent(session), state == .preparing, !cancellationRequested else { return }
+
+        // The HUD is feedback, never a prerequisite for the microphone. A
+        // wedged window server must not clip the first word or delay capture.
+        presentOverlay(.preparing, elapsed: 0, session: session)
+    }
+
+    private func launchCapture(
+        session: DictationSessionID,
+        disposition: RecordingDisposition
+    ) {
+        let capture = capture
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let outcome: CaptureStartOutcome
+            do {
+                outcome = .started(
+                    try await capture.startRecording(
+                        session: session,
+                        disposition: disposition
+                    )
+                )
+            } catch {
+                outcome = .failed(String(describing: error))
+            }
+            guard let self else {
+                disposition.requestDelete()
+                if case let .started(url) = outcome {
+                    await capture.abortRecording(session: session, expectedURL: url)
+                }
+                return
+            }
+            await self.captureDidStart(
+                outcome,
+                session: session,
+                disposition: disposition
+            )
         }
     }
 
-    private func startCapture(session: Int) async {
-        // Second check of the same condition: between the synchronous part and this
-        // the line passed a transition between tasks, during which the session could be cancelled.
-        guard isCurrent(session), state == .preparing, !cancellationRequested else {
-            await finishWithoutInsertion(session: session)
-            return
-        }
-
-        do {
-            _ = try await capture.startRecording()
-        } catch {
-            await fail(session: session, with: .capture(String(describing: error)))
+    private func captureDidStart(
+        _ outcome: CaptureStartOutcome,
+        session: DictationSessionID,
+        disposition: RecordingDisposition
+    ) async {
+        guard case let .started(startedURL) = outcome else {
+            if case let .failed(message) = outcome {
+                await fail(session: session, with: .capture(message))
+            }
             return
         }
 
@@ -215,14 +495,33 @@ public final class DictationController {
             // The recording has started, but the session is no longer there. We turn off our microphone -
             // otherwise it will remain on, and there will be nothing to stop it, -
             // but we don’t do the cleaning: it belongs to the session that is going on now.
-            await capture.abortRecording()
-            await finishWithoutInsertion(session: session)
+            let capture = capture
+            Task.detached(priority: .userInitiated) {
+                if disposition.state == .deleteRequested {
+                    await capture.abortRecording(session: session, expectedURL: startedURL)
+                } else {
+                    // A start that outlives a technical timeout/interruption is
+                    // still the user's recording. Fence the exact generation,
+                    // but never reinterpret recovery ownership as Escape.
+                    await capture.containRecording(session: session, expectedURL: startedURL)
+                }
+            }
+            // An interrupt/preserve task may already own the terminal outcome
+            // and required notice. Do not let the late start steal its cleanup.
+            if isCurrent(session), finalizationTask == nil {
+                await finishWithoutInsertion(session: session)
+            }
             return
         }
 
+        activeRecordingURL = startedURL
         recordingStartedAt = now()
         state = .listening
-        await overlay.present(.listening, elapsed: 0)
+        // `onStateChange` is an external reentrancy point: it may synchronously
+        // stop or cancel. Never publish an obsolete Listening command or eat a
+        // deferred stop belonging to that transition.
+        guard isCurrent(session), state == .listening, !cancellationRequested else { return }
+        presentOverlay(.listening, elapsed: 0, session: session)
 
         // The release that came while the engine was rising is processed here -
         // exactly once.
@@ -244,9 +543,12 @@ public final class DictationController {
     public func stop() {
         switch DictationStopPolicy.decideStop(state: state, isHandsFree: isHandsFree) {
         case .stopNow:
+            markStopRequested()
             finish()
         case .deferUntilListening:
+            markStopRequested()
             deferredStopRequested = true
+            if let session = currentSession { schedulePreparingStopWatchdog(session: session) }
         case .ignore, .noSession:
             break
         }
@@ -258,13 +560,42 @@ public final class DictationController {
 
         switch state {
         case .listening:
+            markStopRequested()
             finish()
         case .preparing:
             // Same as releasing the key, only pressing: second
             // the press arrived before the engine rose. Lose it
             // not allowed - in this mode the key is not held down and the recording is stopped
             // nothing more: the microphone would stay on with no one listening.
+            markStopRequested()
             deferredStopRequested = true
+            if let session = currentSession { schedulePreparingStopWatchdog(session: session) }
+        case .idle, .transcribing, .inserting:
+            break
+        }
+    }
+
+    /// Capture reached its bounded in-memory safety limit while disk spill was
+    /// unavailable. Finish the complete retained take through the ordinary
+    /// transcription path, independent of hotkey/hands-free gesture policy.
+    /// This is a graceful capacity stop, not a capture failure.
+    public func stopAtCaptureMemoryLimit() {
+        guard let session = currentSession else { return }
+        stopAtCaptureMemoryLimit(session: session)
+    }
+
+    /// Token-scoped form used by the asynchronously delivered capture limit
+    /// observer. A late N callback can never stop N+1.
+    public func stopAtCaptureMemoryLimit(session: DictationSessionID) {
+        guard isCurrent(session) else { return }
+        switch state {
+        case .listening:
+            markStopRequested()
+            finish()
+        case .preparing:
+            markStopRequested()
+            deferredStopRequested = true
+            if let session = currentSession { schedulePreparingStopWatchdog(session: session) }
         case .idle, .transcribing, .inserting:
             break
         }
@@ -281,9 +612,17 @@ public final class DictationController {
     /// in the new mode the key is supposed to be released.
     public func promoteToHandsFree() {
         guard state == .preparing || state == .listening else { return }
+        // Commit every internal mode transition before publishing the external
+        // hands-free callback. That callback is reentrant and may immediately
+        // stop the session; clearing its newly accepted stop afterwards would
+        // leave the microphone recording forever.
         isHandsFree = true
-        isHandsFreeActive = true
         deferredStopRequested = false
+        preparingStopWatchdog?.cancel()
+        preparingStopWatchdog = nil
+        stopRequestedAt = nil
+        stopSLORequestedAt = nil
+        isHandsFreeActive = true
     }
 
     private func finish() {
@@ -292,26 +631,162 @@ public final class DictationController {
 
         // One input for all four stop paths: stop, stopHandsFree,
         // and delayed release - everyone comes here.
-        stopRequestedAt = monotonicNow()
-        let session = currentSession
-        state = .transcribing
+        markStopRequested()
+        preparingStopWatchdog?.cancel()
+        preparingStopWatchdog = nil
+        guard let session = currentSession else { return }
         let task = Task { [weak self] in
             await self?.finalize(session: session)
             await MainActor.run { self?.forgetFinalization(session: session) }
         }
         finalizationTask = task
+        state = .transcribing
+        guard isCurrent(session), state == .transcribing, !cancellationRequested else { return }
+        presentOverlay(.transcribing, elapsed: elapsedSeconds(), session: session)
+    }
+
+    private func schedulePreparingStopWatchdog(session: DictationSessionID) {
+        guard preparingStopWatchdog == nil, let stopSLORequestedAt else { return }
+        let deadline = stopSLORequestedAt.advanced(by: captureFreezeDeadline)
+        let task = Task { [weak self] in
+            let remaining = ContinuousClock.now.duration(to: deadline)
+            if remaining > .zero { try? await Task.sleep(for: remaining) }
+            guard !Task.isCancelled else { return }
+            await self?.preparingStopExpired(session: session)
+        }
+        preparingStopWatchdog = task
+    }
+
+    private func preparingStopExpired(session: DictationSessionID) async {
+        guard isCurrent(session), state == .preparing, deferredStopRequested else { return }
+        let owner = preparingStopWatchdog
+        preparingStopWatchdog = nil
+        finalizationTask = owner
+        cancellationRequested = true
+        currentDisposition?.keepInBackground()
+        state = .transcribing
+        guard !Task.isCancelled, isCurrent(session) else { return }
+
+        let capture = capture
+        Task.detached(priority: .userInitiated) {
+            await capture.containRecording(session: session, expectedURL: nil)
+        }
+        let notice = DictationNotice(
+            kind: .failure,
+            message: "Starting the microphone took too long. Dictation was stopped.",
+            wordsDidNotLand: true
+        )
+        await report(notice, session: session, allowCancellation: true)
+        await cleanup(session: session)
+    }
+
+    private func markStopRequested() {
+        if stopRequestedAt == nil {
+            stopRequestedAt = monotonicNow()
+            stopSLORequestedAt = .now
+        }
     }
 
     /// Forget the completed task - but only if it is still our session.
-    private func forgetFinalization(session: Int) {
+    private func forgetFinalization(session: DictationSessionID) {
         guard isCurrent(session) else { return }
         finalizationTask = nil
+        preparingStopWatchdog?.cancel()
+        preparingStopWatchdog = nil
     }
 
-    /// Move the take into safekeeping and word the outcome for the notice.
-    private func preserveForRetry(_ url: URL) async -> (saved: URL?, suffix: String) {
+    private func freezeCapture(
+        session: DictationSessionID,
+        expectedURL: URL
+    ) async throws -> CapturedRecording {
         do {
-            let saved = try await recordingRecovery.preserve(url)
+            let budget: Duration
+            if let stopSLORequestedAt {
+                budget = try remainingBudget(
+                    until: stopSLORequestedAt.advanced(by: captureFreezeDeadline),
+                    stageMaximum: captureFreezeDeadline
+                )
+            } else {
+                budget = captureFreezeDeadline
+            }
+            return try await withTranscriptionDeadline(budget) { [capture] in
+                try await capture.freezeRecording(session: session, expectedURL: expectedURL)
+            }
+        } catch is TranscriptionTimeout {
+            throw RecordingFinalizationTimeout(stage: .freeze)
+        }
+    }
+
+    private func readableURL(for recording: CapturedRecording) async throws -> URL {
+        do {
+            return try await withTranscriptionDeadline(recordingReadableDeadline) {
+                try await recording.readableURL()
+            }
+        } catch is TranscriptionTimeout {
+            throw RecordingFinalizationTimeout(stage: .readableFile)
+        }
+    }
+
+    private func recoverySourceURL(
+        for recording: CapturedRecording
+    ) async throws -> (url: URL, rebuiltFromPCM: Bool) {
+        do {
+            return (try await readableURL(for: recording), false)
+        } catch let readableFailure {
+            let rebuilt = try await withTranscriptionDeadline(recordingPreserveDeadline) {
+                try await recording.materializedRecoveryURL()
+            }
+            guard let rebuilt else { throw readableFailure }
+            return (rebuilt, true)
+        }
+    }
+
+    /// Move a proven-readable take into safekeeping and word the outcome.
+    /// A zero-header or still-draining file is left in Takes for launch-time
+    /// repair instead of being advertised as a usable recovery recording.
+    private func preserveForRetry(
+        _ recording: CapturedRecording,
+        session: DictationSessionID
+    ) async -> (saved: URL?, suffix: String) {
+        defer {
+            if !isCurrent(session) { activeRecoveryTickets[session] = nil }
+        }
+        do {
+            let source = try await recoverySourceURL(for: recording)
+            let ticket = recordingRecovery.beginPreserve(source.url)
+            if recording.disposition.state == .deleteRequested {
+                ticket.requestDelete()
+            }
+            activeRecoveryTickets[session] = ticket
+            let outcome = try await withTranscriptionDeadline(recordingPreserveDeadline) {
+                await ticket.value()
+            }
+            let saved: URL?
+            switch outcome {
+            case let .committed(url):
+                if recording.disposition.markPublished() {
+                    saved = url
+                    // No await follows before the notice is queued and cleanup
+                    // commits, so Escape cannot race this publication point.
+                    ticket.markPublished()
+                } else {
+                    ticket.requestDelete()
+                    saved = nil
+                }
+            case .busy:
+                saved = nil
+            case .deleted:
+                saved = nil
+            case let .notCommitted(_, reason):
+                return (nil, " The recording couldn't be kept: \(reason)")
+            }
+            if source.rebuiltFromPCM, saved != nil {
+                // The complete rebuilt WAV is now in Recovery. The original
+                // file belongs to a failed/possibly wedged writer and may be
+                // truncated; unlinking its path is safe even while its old FD
+                // is still being released.
+                RecordingFileDisposer.shared.submit(recording.url)
+            }
             return (
                 saved,
                 saved == nil
@@ -319,27 +794,86 @@ public final class DictationController {
                     : " The recording is kept on this Mac for a few days"
                         + " (Settings → About → Reveal Support Folder)."
             )
+        } catch is RecordingFinalizationTimeout {
+            return (
+                nil,
+                " The local take will be checked for automatic recovery on the next launch."
+            )
+        } catch is TranscriptionTimeout {
+            return (
+                nil,
+                " Local safekeeping did not finish in time; automatic recovery will check the take on the next launch."
+            )
         } catch {
-            return (nil, " The recording is still on disk, but safekeeping failed: \(error.localizedDescription)")
+            return (
+                nil,
+                " Safekeeping failed: \(error.localizedDescription). The local take will be checked on the next launch."
+            )
         }
     }
 
-    private func finalize(session: Int) async {
-        await overlay.present(.transcribing, elapsed: elapsedSeconds())
-
-        let recording: (url: URL, duration: TimeInterval)
+    private func preserveWithinForegroundGrace(
+        _ recording: CapturedRecording,
+        session: DictationSessionID
+    ) async -> (saved: URL?, suffix: String) {
+        let background = Task { [weak self] in
+            guard let self else {
+                return (saved: URL?.none, suffix: " The recording couldn't be kept.")
+            }
+            return await self.preserveForRetry(recording, session: session)
+        }
         do {
-            recording = try await capture.stopRecording()
+            return try await withTranscriptionDeadline(recoveryForegroundGrace) {
+                await background.value
+            }
         } catch {
+            return (
+                nil,
+                " Local safekeeping is continuing in the background; automatic recovery will keep the take on this Mac even if Retry is not shown immediately."
+            )
+        }
+    }
+
+    private func finalize(session: DictationSessionID) async {
+        let recording: CapturedRecording
+        do {
+            guard shouldContinue(session), let expectedURL = activeRecordingURL else {
+                await finishWithoutInsertion(session: session)
+                return
+            }
+            recording = try await freezeCapture(session: session, expectedURL: expectedURL)
+        } catch let timeout as RecordingFinalizationTimeout where timeout.stage == .freeze {
+            guard shouldContinue(session) else {
+                await finishWithoutInsertion(session: session)
+                return
+            }
+            if let expectedURL = activeRecordingURL {
+                let capture = capture
+                Task.detached(priority: .userInitiated) {
+                    await capture.containRecording(session: session, expectedURL: expectedURL)
+                }
+            }
+            currentDisposition?.keepInBackground()
+            let notice = DictationNotice(
+                kind: .failure,
+                message: "Stopping the recording took too long. The local take will be checked for automatic recovery.",
+                wordsDidNotLand: true
+            )
+            await report(notice, session: session)
+            await cleanup(session: session)
+            return
+        } catch {
+            guard shouldContinue(session) else {
+                await finishWithoutInsertion(session: session)
+                return
+            }
             await fail(session: session, with: .capture(String(describing: error)))
             return
         }
-        // Move the in-memory buffer out immediately so every early-return path
-        // releases it. The on-disk take remains available for retry/recovery.
-        let bufferedSamples = await capture.takeBufferedSamples()
+        let bufferedSamples = recording.samples
 
         guard shouldContinue(session) else {
-            await discard(recording.url)
+            await discard(recording.url, session: session)
             await finishWithoutInsertion(session: session)
             return
         }
@@ -356,7 +890,7 @@ public final class DictationController {
         // place where the session needs it.
         guard DictationDurationPolicy.isWorthTranscribing(duration: recording.duration) else {
             let outcome = DictationDurationPolicy.outcomeForShortRecording(held: elapsedSeconds())
-            await discard(recording.url)
+            await discard(recording.url, session: session)
             switch outcome {
             case .dropSilently:
                 await finishWithoutInsertion(session: session)
@@ -365,7 +899,7 @@ public final class DictationController {
                     kind: .failure,
                     message: "The microphone recorded nothing — check that the right input device is selected and not muted."
                 )
-                await report(notice)
+                await report(notice, session: session)
                 await cleanup(session: session)
             }
             return
@@ -373,51 +907,103 @@ public final class DictationController {
 
         let recognized: ASRResult
         do {
+            let foregroundEnd = (stopSLORequestedAt ?? .now).advanced(
+                by: captureFreezeDeadline + transcriptionDeadline(recording.duration)
+            )
             // A residency-managed engine may be cold here; the reload has
             // been running under the person's voice since the keypress and
             // gets its own budget. Only after the engine is in memory does
             // the recognition deadline start counting.
             if let prepareForTranscription {
-                try await withTranscriptionDeadline(prepareDeadline) {
-                    try await prepareForTranscription()
+                do {
+                    let budget = try remainingBudget(
+                        until: foregroundEnd,
+                        stageMaximum: prepareDeadline
+                    )
+                    try await withTranscriptionDeadline(budget) {
+                        try await prepareForTranscription()
+                    }
+                } catch is TranscriptionTimeout {
+                    throw DictationPreparationTimeout()
                 }
             }
             // The deadline stands between the person and a wedged engine: a
             // CoreML prediction stuck on a dead system service ignores
             // cancellation and would hold "Transcribing…" forever.
-            recognized = try await withTranscriptionDeadline(
-                transcriptionDeadline(recording.duration)
-            ) { [transcribe, transcribeSamples] in
+            let inferenceBudget = try remainingBudget(
+                until: foregroundEnd,
+                stageMaximum: transcriptionDeadline(recording.duration)
+            )
+            recognized = try await withTranscriptionDeadline(inferenceBudget) {
+                [transcribe, transcribeSamples] in
                 if let transcribeSamples, let bufferedSamples, !bufferedSamples.isEmpty {
                     return try await transcribeSamples(bufferedSamples)
                 }
-                return try await transcribe(recording.url)
+                return try await transcribe(self.readableURL(for: recording))
             }
-        } catch is CancellationError {
-            await discard(recording.url)
-            await finishWithoutInsertion(session: session)
-            return
-        } catch let error as ASREngineError where error == .cancelled {
-            // Cancellation received through the engine: this is not a failure, nothing to report.
-            await discard(recording.url)
-            await finishWithoutInsertion(session: session)
-            return
-        } catch is TranscriptionTimeout {
+        } catch let timeout as RecordingFinalizationTimeout where timeout.stage == .readableFile {
             guard shouldContinue(session) else {
-                await discard(recording.url)
+                await discard(recording.url, session: session)
                 await finishWithoutInsertion(session: session)
                 return
             }
-            let (saved, suffix) = await preserveForRetry(recording.url)
+            let notice = DictationNotice(
+                kind: .failure,
+                message: "Finishing the local recording took too long. The unfinished file will be checked for automatic recovery.",
+                wordsDidNotLand: true
+            )
+            await report(notice, session: session)
+            await cleanup(session: session)
+            return
+        } catch is DictationPreparationTimeout {
+            guard shouldContinue(session) else {
+                await discard(recording.url, session: session)
+                await finishWithoutInsertion(session: session)
+                return
+            }
+            // A cold generation may still be loading normally. Free the
+            // foreground session and keep the take, but do not signal the
+            // inference-stall hook: the worker's preparation watchdog owns
+            // kill, fencing, and recovery if that load is genuinely wedged.
+            recording.disposition.keepInBackground()
+            currentDisposition?.keepInBackground()
+            let (saved, suffix) = await preserveWithinForegroundGrace(recording, session: session)
+            guard shouldContinue(session) else {
+                await discard(saved ?? recording.url, session: session)
+                await finishWithoutInsertion(session: session)
+                return
+            }
+            let notice = DictationNotice(
+                kind: .failure,
+                message: "The speech model is still getting ready; this take was not discarded." + suffix,
+                recoveryAudio: saved
+            )
+            await report(notice, session: session)
+            await cleanup(session: session)
+            return
+        } catch is TranscriptionTimeout {
+            guard shouldContinue(session) else {
+                await discard(recording.url, session: session)
+                await finishWithoutInsertion(session: session)
+                return
+            }
+            // Signal containment at the moment the deadline is known. Recovery
+            // file I/O and user feedback must never postpone worker fencing.
+            onTranscriptionStall?()
+            recording.disposition.keepInBackground()
+            currentDisposition?.keepInBackground()
+            let (saved, suffix) = await preserveWithinForegroundGrace(recording, session: session)
+            guard shouldContinue(session) else {
+                await discard(saved ?? recording.url, session: session)
+                await finishWithoutInsertion(session: session)
+                return
+            }
             let notice = DictationNotice(
                 kind: .failure,
                 message: "Transcribing took too long and was stopped." + suffix,
                 recoveryAudio: saved
             )
-            await report(notice)
-            // After the report, so the owner recycles a quiet engine, not one
-            // still being blamed for the current session.
-            onTranscriptionStall?()
+            await report(notice, session: session)
             await cleanup(session: session)
             return
         } catch {
@@ -426,17 +1012,24 @@ public final class DictationController {
             // the voice and failure message saved for Retry are already on top of that one
             // the session that the person started next.
             guard shouldContinue(session) else {
-                await discard(recording.url)
+                await discard(recording.url, session: session)
                 await finishWithoutInsertion(session: session)
                 return
             }
-            let (saved, suffix) = await preserveForRetry(recording.url)
+            recording.disposition.keepInBackground()
+            currentDisposition?.keepInBackground()
+            let (saved, suffix) = await preserveWithinForegroundGrace(recording, session: session)
+            guard shouldContinue(session) else {
+                await discard(saved ?? recording.url, session: session)
+                await finishWithoutInsertion(session: session)
+                return
+            }
             let notice = DictationNotice(
                 kind: .failure,
                 message: DictationError.recognition(String(describing: error)).userMessage + suffix,
                 recoveryAudio: saved
             )
-            await report(notice)
+            await report(notice, session: session)
             await cleanup(session: session)
             return
         }
@@ -444,7 +1037,7 @@ public final class DictationController {
         // Check after each wait: while recognition was in progress, the user
         //could press cancel.
         guard shouldContinue(session) else {
-            await discard(recording.url)
+            await discard(recording.url, session: session)
             await finishWithoutInsertion(session: session)
             return
         }
@@ -452,7 +1045,17 @@ public final class DictationController {
         // t1: the engine returned the text. Removed before all checks below, so that
         // the number did not hit our own branch.
         let recognizedAt = monotonicNow()
-        let microphoneStartup = await capture.startupLatency()
+        // Diagnostic timing is frozen with this exact take. Reading mutable
+        // capture state here used to add an actor wait after ASR and let an old
+        // session resume inside the next one.
+        let microphoneStartup = recording.startupLatency
+        let insertionTarget = targetApplication
+
+        guard shouldContinue(session) else {
+            await discard(recording.url, session: session)
+            await finishWithoutInsertion(session: session)
+            return
+        }
 
         let run = pipeline().run(recognized.text)
         let processed = run.output
@@ -463,13 +1066,13 @@ public final class DictationController {
             // a person goes to look for the missing phrase in someone else's window. Too
             // short press does not go here - it is filtered out above and explanations
             // not required.
-            await discard(recording.url)
+            await discard(recording.url, session: session)
             let notice = DictationNotice(
                 kind: .info,
                 message: "Nothing was recognized — nothing was inserted.",
                 wordsDidNotLand: true
             )
-            await report(notice)
+            await report(notice, session: session)
             await cleanup(session: session)
             return
         }
@@ -479,9 +1082,10 @@ public final class DictationController {
             provenance: run.provenance,
             recognizedAt: recognizedAt,
             microphoneStartup: microphoneStartup,
+            target: insertionTarget,
             session: session
         )
-        await discard(recording.url)
+        await discard(recording.url, session: session)
     }
 
     /// Collect a speed report and send it outside.
@@ -509,13 +1113,15 @@ public final class DictationController {
         provenance: PipelineProvenance,
         recognizedAt: ContinuousClock.Instant,
         microphoneStartup: Duration?,
-        session: Int
+        target: TargetApplication?,
+        session: DictationSessionID
     ) async {
+        guard shouldContinue(session) else { return }
         state = .inserting
         // Cmd+V is the meaningful completion feedback. Do not leave a redundant
         // “Inserting” panel over the destination application while the clipboard is
         // restored in the background.
-        await overlay.dismiss()
+        dismissOverlay(session: session)
 
         // Last point where cancellation is still possible. Then the event goes into
         // someone else's application and does not respond.
@@ -526,11 +1132,23 @@ public final class DictationController {
 
         let marks: InsertionMarks
         do {
-            marks = try await inserter.insertReportingMarks(output.text, into: targetApplication)
+            let inserter = inserter
+            marks = try await withTranscriptionDeadline(insertionDeadline) {
+                try await inserter.insertReportingMarks(output.text, into: target)
+            }
+        } catch is TranscriptionTimeout {
+            guard shouldContinue(session) else { return }
+            await handleInsertionTimeout(text: output.text, session: session)
+            return
         } catch {
+            guard shouldContinue(session) else { return }
             await handleInsertionFailure(error, text: output.text, session: session)
             return
         }
+
+        // Paste may already be irreversible, but a late completion from an old
+        // session must not mutate callbacks, history, UI, or the next session.
+        guard shouldContinue(session) else { return }
         onTextInserted?(output.text)
         // Origin - only after a successful insertion: unsuccessful insertion does not
         // “what the person saw” and “copy verbatim” she has nothing to give.
@@ -542,12 +1160,33 @@ public final class DictationController {
         // when the user never released the modifier.
         if output.command == .pressReturn {
             do {
-                try await inserter.pressReturn()
+                let inserter = inserter
+                try await withTranscriptionDeadline(returnDeadline) {
+                    try await inserter.pressReturn(into: target)
+                }
             } catch {
+                guard shouldContinue(session) else { return }
                 await reportReturnFailure(session: session)
                 return
             }
+            guard shouldContinue(session) else { return }
         }
+        await cleanup(session: session)
+    }
+
+    /// The system edge did not return, so we cannot truthfully claim either
+    /// success or failure: a synchronous event post may have crossed its
+    /// irreversible boundary before the watchdog fired. Keep a copy and tell
+    /// the person exactly that, while freeing the next dictation immediately.
+    private func handleInsertionTimeout(text: String, session: DictationSessionID) async {
+        pendingRecovery = RecoveredDictation(text: text)
+        let notice = DictationNotice(
+            kind: .warning,
+            message: "Insertion couldn't be confirmed in time. The text is saved in the menu and may already have been pasted.",
+            recoverableText: text,
+            wordsDidNotLand: true
+        )
+        await report(notice, session: session)
         await cleanup(session: session)
     }
 
@@ -556,33 +1195,44 @@ public final class DictationController {
     /// The general denial thread would lie twice here: it would say “the text is not
     /// inserted" when it is in place, and would save a second copy of the dictated
     /// to disk. The private tool does not add up what is said without reason.
-    private func reportReturnFailure(session: Int) async {
+    private func reportReturnFailure(session: DictationSessionID) async {
         let notice = DictationNotice(
             kind: .warning,
             message: "The text was inserted, but pressing Return failed."
         )
-        await report(notice)
+        await report(notice, session: session)
         await cleanup(session: session)
     }
 
     /// The text was recognized, but it was not possible to insert it - we save it so that it does not disappear.
-    private func handleInsertionFailure(_ error: Error, text: String, session: Int) async {
+    private func handleInsertionFailure(
+        _ error: Error,
+        text: String,
+        session: DictationSessionID
+    ) async {
         if let insertion = error as? TextInsertionError,
            insertion == .insertedButClipboardRestoreFailed {
             let notice = DictationNotice(
                 kind: .warning,
                 message: "The text was inserted, but the previous clipboard couldn't be restored."
             )
-            await report(notice)
+            await report(notice, session: session)
             await cleanup(session: session)
             return
         }
         pendingRecovery = RecoveredDictation(text: text)
 
         let message: String
-        if let insertion = error as? TextInsertionError, insertion == .secureInputActive {
-            // Not a failure, but a normal situation: the password field is active.
-            message = "Text not inserted: secure input is active. Your text is saved in the menu."
+        if let insertion = error as? TextInsertionError {
+            switch insertion {
+            case .secureInputActive:
+                // Not a failure, but a normal situation: the password field is active.
+                message = "Text not inserted: secure input is active. Your text is saved in the menu."
+            case .insertionInProgress:
+                message = "A previous paste is still finishing. Your text is saved in the menu."
+            default:
+                message = "The text couldn't be inserted. It's saved in the menu."
+            }
         } else {
             message = "The text couldn't be inserted. It's saved in the menu."
         }
@@ -593,7 +1243,7 @@ public final class DictationController {
             recoverableText: text,
             wordsDidNotLand: true
         )
-        await report(notice)
+        await report(notice, session: session)
         await cleanup(session: session)
     }
 
@@ -606,11 +1256,19 @@ public final class DictationController {
         // The order is important: first the flag, then cancel the task. Canceling a task does not
         // interrupts an already ongoing wait, and the flag is checked after each of them.
         cancellationRequested = true
+        currentDisposition?.requestDelete()
+        if let session = currentSession { activeRecoveryTickets[session]?.requestDelete() }
         finalizationTask?.cancel()
 
-        let session = currentSession
+        guard let session = currentSession else { return }
+        let recordingURL = activeRecordingURL
+        let capture = capture
+        Task.detached(priority: .userInitiated) {
+            await capture.abortRecording(session: session, expectedURL: recordingURL)
+        }
+        // Filesystem/AVAudio containment is session-scoped and continues in
+        // the background. It must never own the controller's return to idle.
         Task { [weak self] in
-            await self?.capture.abortRecording()
             await self?.finishWithoutInsertion(session: session)
         }
     }
@@ -621,21 +1279,40 @@ public final class DictationController {
     /// Therefore, we stop immediately and explain the reason, and do not wait until he
     /// finishes a phrase that there is nowhere to write down.
     public func interrupt(reason message: String) {
+        guard let session = currentSession else { return }
+        interrupt(session: session, reason: message)
+    }
+
+    /// Token-scoped live failure delivery. Validation happens at the final
+    /// MainActor mutation point, after every observer/queue hop.
+    public func interrupt(session: DictationSessionID, reason message: String) {
+        guard isCurrent(session) else { return }
         guard state == .preparing || state == .listening else { return }
+        guard finalizationTask == nil else { return }
 
         cancellationRequested = true
-        finalizationTask?.cancel()
-
+        currentDisposition?.keepInBackground()
+        markStopRequested()
         let notice = DictationNotice(kind: .failure, message: message)
-        let session = currentSession
-        Task { [weak self] in
+        let recordingURL = activeRecordingURL
+        let task = Task { [weak self] in
             guard let self else { return }
+            let capture = self.capture
+            Task.detached(priority: .userInitiated) {
+                await capture.containRecording(session: session, expectedURL: recordingURL)
+            }
+            guard !Task.isCancelled, self.isCurrent(session) else {
+                await self.finishWithoutInsertion(session: session)
+                return
+            }
             // Through `report`: the interruption loses the words, and the
             // person mid-sentence learns of it by ear like any other loss.
-            await self.report(notice)
-            await self.capture.abortRecording()
+            // Capture is already detached; feedback cannot keep the mic on.
+            await self.report(notice, session: session, allowCancellation: true)
             await self.finishWithoutInsertion(session: session)
         }
+        finalizationTask = task
+        state = .transcribing
     }
 
     /// System permission or device disappeared while recording.
@@ -644,24 +1321,61 @@ public final class DictationController {
     public func preserveActiveRecording(reason message: String) {
         guard state == .preparing || state == .listening else { return }
         if state == .preparing {
-            cancel()
+            guard finalizationTask == nil, let session = currentSession else { return }
+            cancellationRequested = true
+            currentDisposition?.keepInBackground()
+            markStopRequested()
             let notice = DictationNotice(kind: .failure, message: message)
-            // Through `report`, not around it: the notice must carry the
-            // attention sound like every other surfaced failure.
-            Task { await self.report(notice) }
+            let recordingURL = activeRecordingURL
+            let task = Task { [weak self] in
+                guard let self else { return }
+                let capture = self.capture
+                Task.detached(priority: .userInitiated) {
+                    await capture.containRecording(session: session, expectedURL: recordingURL)
+                }
+                guard !Task.isCancelled, self.isCurrent(session) else {
+                    await self.finishWithoutInsertion(session: session)
+                    return
+                }
+                // Through `report`, not around it: the notice must carry the
+                // attention sound like every other surfaced failure.
+                await self.report(notice, session: session, allowCancellation: true)
+                await self.finishWithoutInsertion(session: session)
+            }
+            finalizationTask = task
+            state = .transcribing
             return
         }
         guard finalizationTask == nil else { return }
 
-        let session = currentSession
-        state = .transcribing
+        guard let session = currentSession else { return }
+        currentDisposition?.keepInBackground()
+        markStopRequested()
         let task = Task { [weak self] in
             guard let self else { return }
-            let recording: (url: URL, duration: TimeInterval)?
+            guard !Task.isCancelled else {
+                await self.cleanup(session: session)
+                return
+            }
+            let recording: CapturedRecording?
             do {
-                recording = try await self.capture.stopRecording()
+                guard let expectedURL = self.activeRecordingURL else {
+                    throw AudioCaptureError.notRecording
+                }
+                recording = try await self.freezeCapture(
+                    session: session,
+                    expectedURL: expectedURL
+                )
             } catch {
                 recording = nil
+                let capture = self.capture
+                let expectedURL = self.activeRecordingURL
+                Task.detached(priority: .userInitiated) {
+                    await capture.containRecording(
+                        session: session,
+                        expectedURL: expectedURL
+                    )
+                }
             }
 
             // While the file was closing, the person could press Escape. From now on
@@ -671,7 +1385,7 @@ public final class DictationController {
             // keep quiet: the failure message would fall on top of the session that
             // the man started next.
             guard !Task.isCancelled else {
-                if let recording { await self.discard(recording.url) }
+                if let recording { await self.discard(recording.url, session: session) }
                 await self.cleanup(session: session)
                 return
             }
@@ -685,34 +1399,43 @@ public final class DictationController {
                 // the interruption and nothing else, otherwise a one-second
                 // device hiccup leaves a "recording for retry" whose retry can
                 // only ever produce an empty result.
-                await self.discard(recording.url)
+                await self.discard(recording.url, session: session)
                 notice = DictationNotice(kind: .failure, message: message)
             } else {
                 var saved: URL?
+                var suffix = " The recording couldn't be kept."
                 if let recording {
-                    saved = try? await self.recordingRecovery.preserve(recording.url)
+                    let outcome = await self.preserveWithinForegroundGrace(
+                        recording,
+                        session: session
+                    )
+                    saved = outcome.saved
+                    suffix = outcome.suffix
+                    guard !Task.isCancelled else {
+                        await self.discard(saved ?? recording.url, session: session)
+                        await self.cleanup(session: session)
+                        return
+                    }
                 }
                 notice = DictationNotice(
                     kind: .failure,
-                    message: saved == nil
-                        ? message + " The recording couldn't be kept."
-                        : message + " The recording is kept on this Mac for a few days"
-                            + " (Settings → About → Reveal Support Folder).",
+                    message: message + suffix,
                     recoveryAudio: saved
                 )
             }
-            await self.report(notice)
+            await self.report(notice, session: session)
             await self.cleanup(session: session)
         }
         finalizationTask = task
+        state = .transcribing
     }
 
     // MARK: - Completion
 
     /// Is the session for which the wait began still ongoing?
-    private func isCurrent(_ session: Int) -> Bool { session == currentSession }
+    private func isCurrent(_ session: DictationSessionID) -> Bool { session == currentSession }
 
-    private func shouldContinue(_ session: Int) -> Bool {
+    private func shouldContinue(_ session: DictationSessionID) -> Bool {
         guard isCurrent(session) else { return false }
         return DictationFinalizationPolicy.shouldContinue(
             state: state,
@@ -721,17 +1444,17 @@ public final class DictationController {
         )
     }
 
-    private func fail(session: Int, with error: DictationError) async {
+    private func fail(session: DictationSessionID, with error: DictationError) async {
         // There is no reason to show the failure of a canceled session: the person has already closed it, but
         // the message would fall on top of the one that is going now.
-        guard isCurrent(session) else { return }
+        guard isCurrent(session), !cancellationRequested else { return }
 
         let notice = DictationNotice(kind: .failure, message: error.userMessage)
-        await report(notice)
+        await report(notice, session: session)
         await cleanup(session: session)
     }
 
-    private func finishWithoutInsertion(session: Int) async {
+    private func finishWithoutInsertion(session: DictationSessionID) async {
         await cleanup(session: session)
     }
 
@@ -743,9 +1466,22 @@ public final class DictationController {
     ///
     /// You can only clean up your own session: the tail of the previous one,
     /// woke up after cancellation, otherwise he would have extinguished the new one already in progress.
-    private func cleanup(session: Int) async {
+    private func cleanup(session: DictationSessionID) async {
         guard isCurrent(session) else { return }
 
+        // Issue the terminal HUD command while N is still current, then make
+        // its identity terminal before publishing any externally observable
+        // idle state. An idle observer is allowed to start N+1 synchronously.
+        dismissOverlay(session: session)
+        // User cancellation already changed both dispositions synchronously in
+        // `cancel()`. Technical containment also sets `cancellationRequested`
+        // to stop recognition, but it must keep the raw take; never infer file
+        // deletion from this transient control-flow flag.
+        activeRecoveryTickets[session] = nil
+        preparingStopWatchdog?.cancel()
+        preparingStopWatchdog = nil
+        currentSession = nil
+        currentDisposition = nil
         finalizationTask = nil
         deferredStopRequested = false
         cancellationRequested = false
@@ -753,15 +1489,15 @@ public final class DictationController {
         isHandsFreeActive = false
         targetApplication = nil
         recordingStartedAt = nil
+        activeRecordingURL = nil
         // The release mark is reset along with the rest of the session state.
         // Otherwise, t0 of the canceled dictation would flow into the next one, and it would report
         // would be about time, including someone else's waiting.
         stopRequestedAt = nil
-        state = .idle
-
-        await overlay.dismiss()
+        stopSLORequestedAt = nil
         // The next session starts able to sound again.
         hasSoundedThisSession = false
+        state = .idle
     }
 
     private func elapsedSeconds() -> TimeInterval {
@@ -769,14 +1505,31 @@ public final class DictationController {
         return now().timeIntervalSince(recordingStartedAt)
     }
 
+    private func remainingBudget(
+        until deadline: ContinuousClock.Instant,
+        stageMaximum: Duration
+    ) throws -> Duration {
+        let remaining = ContinuousClock.now.duration(to: deadline)
+        guard remaining > .zero else { throw TranscriptionTimeout(deadline: .zero) }
+        return min(remaining, stageMaximum)
+    }
+
     /// Show the message: both to the subscriber and on the panel.
     ///
     /// The only way messages exit from the kernel — the attention sound
     /// rides on it, so a path around `report` is a path around the ear.
-    private func report(_ notice: DictationNotice) async {
+    @discardableResult
+    private func report(
+        _ notice: DictationNotice,
+        session: DictationSessionID,
+        allowCancellation: Bool = false
+    ) async -> Bool {
+        guard isCurrent(session), allowCancellation || !cancellationRequested else { return false }
         onNotice?(notice)
-        await playAttentionOnce(for: notice)
-        await overlay.presentNotice(notice)
+        guard isCurrent(session), allowCancellation || !cancellationRequested else { return false }
+        playAttentionOnce(for: notice, session: session, allowCancellation: allowCancellation)
+        presentNotice(notice, session: session)
+        return true
     }
 
     /// One sound per session, and only for words that never landed.
@@ -784,10 +1537,44 @@ public final class DictationController {
     /// "The text was inserted, but Return failed" is shown, not sounded:
     /// the words are in the field, the person is looking at them. The ear is
     /// reserved for the loss they would otherwise miss.
-    private func playAttentionOnce(for notice: DictationNotice) async {
+    private func playAttentionOnce(
+        for notice: DictationNotice,
+        session: DictationSessionID,
+        allowCancellation: Bool
+    ) {
+        guard isCurrent(session), allowCancellation || !cancellationRequested else { return }
         guard notice.wordsDidNotLand, !hasSoundedThisSession else { return }
         hasSoundedThisSession = true
-        await sounds.playAttention()
+        soundDispatcher.submit(session: session)
+    }
+
+    /// UI work never owns capture, recognition, or cleanup latency. Production
+    /// overlay methods apply the session token at the MainActor mutation point,
+    /// so a cancellation-deaf old command cannot overwrite a newer session.
+    private func presentOverlay(
+        _ state: DictationState,
+        elapsed: TimeInterval,
+        session: DictationSessionID
+    ) {
+        guard let revision = nextOverlayRevision(session: session) else { return }
+        overlayDispatcher.submit(.present(state, elapsed, session, revision))
+    }
+
+    private func dismissOverlay(session: DictationSessionID) {
+        guard let revision = nextOverlayRevision(session: session) else { return }
+        overlayDispatcher.submit(.dismiss(session, revision))
+    }
+
+    private func presentNotice(_ notice: DictationNotice, session: DictationSessionID) {
+        guard let revision = nextOverlayRevision(session: session) else { return }
+        overlayDispatcher.submit(.notice(notice, session, revision))
+    }
+
+    private func nextOverlayRevision(session: DictationSessionID) -> UInt64? {
+        guard isCurrent(session) else { return nil }
+        precondition(overlayRevision < UInt64.max, "overlay revision exhausted")
+        overlayRevision += 1
+        return overlayRevision
     }
 
     /// Remove a record from disk.
@@ -795,17 +1582,8 @@ public final class DictationController {
     /// A separate method so that deletion cannot be accidentally missed on
     /// one of the completion branches: the user's voice should not remain in
     /// files after the text is recognized.
-    private func discard(_ url: URL) async {
-        guard FileManager.default.fileExists(atPath: url.path) else { return }
-        do {
-            try FileManager.default.removeItem(at: url)
-        } catch {
-            let notice = DictationNotice(
-                kind: .failure,
-                message: "Couldn't delete the local recording: \(error.localizedDescription)"
-            )
-            await report(notice)
-        }
+    private func discard(_ url: URL, session _: DictationSessionID? = nil) async {
+        RecordingFileDisposer.shared.submit(url)
     }
 
 }
@@ -827,4 +1605,13 @@ public enum DictationError: Error, Sendable, Equatable {
             return "Couldn't transcribe speech."
         }
     }
+}
+
+private enum RecordingFinalizationStage: Sendable, Equatable {
+    case freeze
+    case readableFile
+}
+
+private struct RecordingFinalizationTimeout: Error, Sendable, Equatable {
+    let stage: RecordingFinalizationStage
 }

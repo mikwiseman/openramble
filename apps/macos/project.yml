@@ -7,12 +7,12 @@ options:
   createIntermediateGroups: true
 
 packages:
+  ASRWorkerProtocol:
+    path: ../../Packages/ASRWorkerProtocol
   DictationCore:
     path: ../../Packages/DictationCore
   LocalASR:
     path: ../../Packages/LocalASR
-  AgentBridge:
-    path: ../../Packages/AgentBridge
   # Updates. The version is pinned exactly, not `from:`: Sparkle arrives
   # a ready-made binary framework inside the application, and this version will rise
   # should be done consciously, and not on its own during the next build.
@@ -25,8 +25,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
-    MARKETING_VERSION: "0.6.1"
-    CURRENT_PROJECT_VERSION: "20"
+    MARKETING_VERSION: "0.7.0"
+    CURRENT_PROJECT_VERSION: "21"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     # The sandbox is turned off intentionally: dictation must insert text into other people's
@@ -58,19 +58,19 @@ targets:
       - path: OpenRamble/Resources/AppIcon.icns
         buildPhase: resources
     dependencies:
-      - target: OpenRambleMCP
+      - target: OpenRambleASRWorker
         embed: true
         link: false
         copy:
           destination: executables
+      - package: ASRWorkerProtocol
+        product: ASRWorkerProtocol
       - package: DictationCore
         product: DictationCore
       - package: DictationCore
         product: DictationAudio
       - package: LocalASR
         product: LocalASR
-      - package: AgentBridge
-        product: AgentBridge
       - package: Sparkle
         product: Sparkle
     settings:
@@ -124,24 +124,44 @@ targets:
         # is placed when the person pressed the button, and nothing else.
         SUAllowsAutomaticUpdates: false
         # EdDSA public key used to verify the update signature.
-        # Appears here after `generate_keys` - it is public, and its place
-        # in the repository. The release cannot be released before this: scripts/release.sh
-        # will refuse to work. The procedure is in docs/release.md.
+        # This is the public half of the product's permanent Sparkle key. If the
+        # matching private key is missing, recover it through AGENTS.md; never
+        # generate a replacement. scripts/release.sh verifies the exact pair.
         SUPublicEDKey: "9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI="
 
-  OpenRambleMCP:
+  # Private lifetime boundary around FluidAudio/Core ML. There is no socket,
+  # service registration, or public API: the parent grants access only through
+  # anonymous stdin/stdout pipes inherited at launch.
+  OpenRambleASRWorker:
     type: tool
     platform: macOS
     sources:
-      - path: OpenRambleMCP
+      - path: OpenRambleASRWorker
     dependencies:
-      - package: AgentBridge
-        product: AgentBridge
+      - package: ASRWorkerProtocol
+        product: ASRWorkerProtocol
+      - package: DictationCore
+        product: DictationCore
+      - package: LocalASR
+        product: LocalASR
     settings:
       base:
-        PRODUCT_NAME: openramble-mcp
-        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.mcp
-        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.asr-worker
+        PRODUCT_NAME: openramble-asr-worker
+        SWIFT_STRICT_CONCURRENCY: complete
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+
+  OpenRambleASRWorkerTestFixture:
+    type: tool
+    platform: macOS
+    sources:
+      - path: OpenRambleASRWorkerTestFixture
+    dependencies:
+      - package: ASRWorkerProtocol
+        product: ASRWorkerProtocol
+    settings:
+      base:
+        PRODUCT_NAME: openramble-asr-worker-test-fixture
         SWIFT_STRICT_CONCURRENCY: complete
         SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
 
@@ -186,14 +206,17 @@ targets:
           fi
           /usr/bin/touch "$SCRIPT_OUTPUT_FILE_0"
     dependencies:
+      - target: OpenRambleASRWorkerTestFixture
+        embed: false
+        link: false
+      - package: ASRWorkerProtocol
+        product: ASRWorkerProtocol
       - package: DictationCore
         product: DictationCore
       - package: DictationCore
         product: DictationAudio
       - package: LocalASR
         product: LocalASR
-      - package: AgentBridge
-        product: AgentBridge
       - package: Sparkle
         product: Sparkle
     settings:

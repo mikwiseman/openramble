@@ -1,5 +1,4 @@
 import AVFoundation
-import AgentBridge
 import AppKit
 import ServiceManagement
 import DictationAudio
@@ -16,13 +15,23 @@ import os
 /// The network gate separately enforces that no transcript text is ever
 /// logged.
 let engineLog = Logger(subsystem: "is.waiwai.dictation", category: "engine")
-let agentLog = Logger(subsystem: "is.waiwai.dictation", category: "agent-bridge")
 
 extension Duration {
     /// Seconds as a plain Double, for logging and arithmetic.
     var appSeconds: Double {
         Double(components.seconds) + Double(components.attoseconds) / 1e18
     }
+}
+
+/// Await worker-owned model preparation without transferring the caller's
+/// cancellation to it. The dictation controller may abandon its short
+/// foreground wait, while the persistent worker must be allowed to finish a
+/// healthy load/specialization for the next take.
+func awaitOwnedEnginePreparation(
+    _ operation: @escaping @Sendable () async throws -> Void
+) async throws {
+    let owned = Task { try await operation() }
+    try await owned.value
 }
 
 /// The edges of the system from which the application is built.
@@ -38,10 +47,19 @@ public struct AppEnvironment {
     public var accessibilityManager: any AccessibilityManaging
     public var hotkeyMonitor: any HotkeyMonitoring
     public var inserter: any TextInserting
+    /// Lock-only destination snapshot maintained ahead of the hotkey. The
+    /// shipping path never asks AppKit/WindowServer synchronously after the
+    /// microphone has started.
+    public var targetApplicationSnapshot: @Sendable () -> TargetApplication?
     public var overlay: any OverlayPresenting
     /// Capture factory: recording folder, crash handler and live microphone samples
     /// used by the recording waveform.
-    public var makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void, @escaping @Sendable ([Float]) -> Void) -> any AudioCapturing
+    public var makeCapture: (
+        URL,
+        @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void,
+        @escaping @Sendable ([Float]) -> Void,
+        @escaping @Sendable (DictationSessionID) -> Void
+    ) -> any AudioCapturing
     /// How to recognize. Same system edge as microphone and insert: in
     /// in the application this is a model on disk, in the test this is a previously known answer. Without
     /// this seam, the entire dictation path in the application could not be checked
@@ -50,6 +68,19 @@ public struct AppEnvironment {
     /// A hint is read for each call - the person could change the language between
     /// dictations, and fixing it during assembly would mean ignoring the choice.
     public var transcribe: (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult
+    /// Retry insertion is a system edge too. Keep it injectable so the app
+    /// and tests share the same bounded state transition.
+    public var recoveryInsertionDeadline: Duration
+    /// A worker timeout is not evidence that verified model files are bad.
+    /// Retry timing is injectable so that the exact recovery policy is testable
+    /// without making the suite sleep for production-scale intervals.
+    public var engineWarmupRetryDelay: Duration
+    public var engineWarmupRetryLimit: Int
+    /// Crash-recovery timing is injectable so launch-to-idle maintenance can
+    /// be proven without sleeping for the production compatibility window.
+    public var recordingRecoveryCompatibilityGrace: TimeInterval
+    public var recordingRecoveryMaintenanceRetryDelay: TimeInterval
+    public var recordingRecoveryIdleScanInterval: TimeInterval
     /// How often to request permissions in the busiest mode. Zero - do not poll.
     public var permissionPollInterval: TimeInterval
     /// How to download the model. The only network that the application has.
@@ -62,15 +93,19 @@ public struct AppEnvironment {
     public var workspaceNotifications: NotificationCenter
     /// General notification center: the audio device change comes from there.
     public var notifications: NotificationCenter
-    /// The only production instance of the engine. In tests `nil`: there is ASR
-    /// is substituted via `transcribe` and the real model is not needed.
-    public var localTranscriber: LocalTranscriber?
+    /// The only production recognition lifecycle. Production owns the model
+    /// in a private child process; tests may inject an in-process fake engine.
+    public var localTranscriber: (any DictationRecognizing)?
     /// How to read the field in which you inserted it. The only thing the app reads
     /// at other people’s windows, so there is a seam: “turned off means we can’t read” otherwise
     /// there is nothing to prove, but you will have to prove it in the README.
     public var focusedFieldReader: any FocusedFieldReading
     /// Where the inserter reports a clipboard it could not put back.
     public var clipboardRestoreReporter: ClipboardRestoreReporter?
+    /// One-release upgrade cleanup for voice files staged by the retired MCP
+    /// helper. Test environments default to a no-op and never touch the real
+    /// user's Darwin temporary directory.
+    public var cleanupLegacyAgentStaging: @Sendable () throws -> Void
 
     public init(
         defaults: UserDefaults,
@@ -79,9 +114,21 @@ public struct AppEnvironment {
         accessibilityManager: any AccessibilityManaging,
         hotkeyMonitor: any HotkeyMonitoring,
         inserter: any TextInserting,
+        targetApplicationSnapshot: @escaping @Sendable () -> TargetApplication? = { nil },
         overlay: any OverlayPresenting,
-        makeCapture: @escaping (URL, @escaping @Sendable (AudioCaptureError) -> Void, @escaping @Sendable ([Float]) -> Void) -> any AudioCapturing,
+        makeCapture: @escaping (
+            URL,
+            @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void,
+            @escaping @Sendable ([Float]) -> Void,
+            @escaping @Sendable (DictationSessionID) -> Void
+        ) -> any AudioCapturing,
         transcribe: @escaping (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult,
+        recoveryInsertionDeadline: Duration = .seconds(2),
+        engineWarmupRetryDelay: Duration = .seconds(1),
+        engineWarmupRetryLimit: Int = 2,
+        recordingRecoveryCompatibilityGrace: TimeInterval = 60,
+        recordingRecoveryMaintenanceRetryDelay: TimeInterval = 5,
+        recordingRecoveryIdleScanInterval: TimeInterval = 60,
         permissionPollInterval: TimeInterval,
         modelDownloader: any ModelDownloading,
         requestMicrophoneAccess: @escaping () async -> Bool,
@@ -89,9 +136,10 @@ public struct AppEnvironment {
         activateApplication: @escaping () -> Void,
         workspaceNotifications: NotificationCenter,
         notifications: NotificationCenter,
-        localTranscriber: LocalTranscriber? = nil,
+        localTranscriber: (any DictationRecognizing)? = nil,
         focusedFieldReader: any FocusedFieldReading = SystemFocusedFieldReader(),
-        clipboardRestoreReporter: ClipboardRestoreReporter? = nil
+        clipboardRestoreReporter: ClipboardRestoreReporter? = nil,
+        cleanupLegacyAgentStaging: @escaping @Sendable () throws -> Void = {}
     ) {
         self.defaults = defaults
         self.paths = paths
@@ -99,9 +147,16 @@ public struct AppEnvironment {
         self.accessibilityManager = accessibilityManager
         self.hotkeyMonitor = hotkeyMonitor
         self.inserter = inserter
+        self.targetApplicationSnapshot = targetApplicationSnapshot
         self.overlay = overlay
         self.makeCapture = makeCapture
         self.transcribe = transcribe
+        self.recoveryInsertionDeadline = recoveryInsertionDeadline
+        self.engineWarmupRetryDelay = engineWarmupRetryDelay
+        self.engineWarmupRetryLimit = max(0, engineWarmupRetryLimit)
+        self.recordingRecoveryCompatibilityGrace = recordingRecoveryCompatibilityGrace
+        self.recordingRecoveryMaintenanceRetryDelay = recordingRecoveryMaintenanceRetryDelay
+        self.recordingRecoveryIdleScanInterval = recordingRecoveryIdleScanInterval
         self.permissionPollInterval = permissionPollInterval
         self.modelDownloader = modelDownloader
         self.requestMicrophoneAccess = requestMicrophoneAccess
@@ -112,12 +167,18 @@ public struct AppEnvironment {
         self.localTranscriber = localTranscriber
         self.focusedFieldReader = focusedFieldReader
         self.clipboardRestoreReporter = clipboardRestoreReporter
+        self.cleanupLegacyAgentStaging = cleanupLegacyAgentStaging
     }
 
     /// Real edges are what a working application is built from.
     public static func system() -> AppEnvironment {
-        let transcriber = LocalTranscriber()
+        let workerURL = Bundle.main.bundleURL
+            .appendingPathComponent("Contents", isDirectory: true)
+            .appendingPathComponent("MacOS", isDirectory: true)
+            .appendingPathComponent("openramble-asr-worker", isDirectory: false)
+        let transcriber = ASRWorkerSupervisor(executableURL: workerURL)
         let restoreReporter = ClipboardRestoreReporter()
+        let activeApplication = ActiveApplicationSnapshot()
         return AppEnvironment(
             defaults: .standard,
             paths: .standard(),
@@ -125,8 +186,16 @@ public struct AppEnvironment {
             accessibilityManager: SystemAccessibilityManager(),
             hotkeyMonitor: GlobalHotkeyMonitor(),
             inserter: TextInserter(restoreReporter: restoreReporter),
+            targetApplicationSnapshot: { activeApplication.current() },
             overlay: DictationOverlay(),
-            makeCapture: { MicrophoneCapture(directory: $0, onFailure: $1, onSamples: $2) },
+            makeCapture: {
+                MicrophoneCapture(
+                    directory: $0,
+                    onFailure: $1,
+                    onSamples: $2,
+                    onMemoryLimitReached: $3
+                )
+            },
             transcribe: { engineDirectory, languageHint in
                 return { url in
                     try await transcriber.prepare(modelDirectory: engineDirectory)
@@ -143,7 +212,13 @@ public struct AppEnvironment {
             activateApplication: { NSApplication.shared.activate() },
             workspaceNotifications: NSWorkspace.shared.notificationCenter,
             notifications: .default,
-            localTranscriber: transcriber
+            localTranscriber: transcriber,
+            cleanupLegacyAgentStaging: {
+                try LegacyAgentStagingCleanup.removeAbandonedAudio(
+                    bundleIdentifier: Bundle.main.bundleIdentifier
+                        ?? "is.waiwai.dictation"
+                )
+            }
         )
     }
 }
@@ -206,6 +281,14 @@ public final class AppState: ObservableObject {
 
     /// Text of unsuccessful insertion. Never written to disk.
     @Published public private(set) var recoveredText: String?
+    /// Technical-failure audio retained under the documented age/count/size
+    /// limits. The menu exposes the count and an exact Finder destination;
+    /// crash recovery is never a hidden disk write.
+    @Published public private(set) var recoveredRecordingCount = 0
+    /// Fail-closed recovery state after the bounded delete-intent lane could
+    /// no longer retain exact identities. Ambiguous audio stays untouched and
+    /// the menu exposes the Support folder instead of silently guessing.
+    @Published public private(set) var recordingRecoveryStorageFaulted = false
     /// Whether recording occurs without holding down a key is shown in the menu.
     @Published public private(set) var isHandsFreeActive = false
     /// Only a successful insertion is considered a passed test in onboarding.
@@ -273,19 +356,6 @@ public final class AppState: ObservableObject {
         }
     }
 
-    /// Explicit opt-in for processes running as this macOS user. The bridge
-    /// listener exists while the app runs so helpers can return an actionable
-    /// disabled error instead of looking crashed, but no audio is decoded off.
-    @Published public var agentTranscriptionEnabled: Bool {
-        didSet {
-            guard oldValue != agentTranscriptionEnabled else { return }
-            defaults.set(agentTranscriptionEnabled, forKey: Keys.agentTranscriptionEnabled)
-        }
-    }
-
-    @Published public private(set) var isAgentBridgeListening = false
-    @Published public private(set) var isAgentTranscriptionBusy = false
-
     /// Replacement dictionary. Changes only through the methods below: direct write bypassed
     /// would check that the dictionary can be saved at all.
     @Published public private(set) var replacements: [DictionaryReplacement]
@@ -294,7 +364,6 @@ public final class AppState: ObservableObject {
         static let hotkey = "hotkey"
         static let sounds = "soundsEnabled"
         static let overlayPlacement = "overlayPlacement"
-        static let agentTranscriptionEnabled = AgentBridgeProtocol.accessPreferenceKey
         static let replacements = "replacements"
         /// macOS global setup: what pressing 🌐 does.
         static let fnUsage = "AppleFnUsageType"
@@ -310,10 +379,22 @@ public final class AppState: ObservableObject {
     private let accessibilityManager: any AccessibilityManaging
     private let hotkeyMonitor: any HotkeyMonitoring
     private let inserter: any TextInserting
+    private let targetApplicationSnapshot: @Sendable () -> TargetApplication?
     private let clipboardRestoreReporter: ClipboardRestoreReporter?
     private let overlay: any OverlayPresenting
-    private let makeCapture: (URL, @escaping @Sendable (AudioCaptureError) -> Void, @escaping @Sendable ([Float]) -> Void) -> any AudioCapturing
+    private let makeCapture: (
+        URL,
+        @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void,
+        @escaping @Sendable ([Float]) -> Void,
+        @escaping @Sendable (DictationSessionID) -> Void
+    ) -> any AudioCapturing
     private let transcribe: (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult
+    private let recoveryInsertionDeadline: Duration
+    private let engineWarmupRetryDelay: Duration
+    private let engineWarmupRetryLimit: Int
+    private let recordingRecoveryCompatibilityGrace: TimeInterval
+    private let recordingRecoveryMaintenanceRetryDelay: TimeInterval
+    private let recordingRecoveryIdleScanInterval: TimeInterval
     private let permissionPollInterval: TimeInterval
     private let modelDownloader: any ModelDownloading
     private let requestMicrophoneAccess: () async -> Bool
@@ -322,6 +403,7 @@ public final class AppState: ObservableObject {
     private let workspaceNotifications: NotificationCenter
     private let notifications: NotificationCenter
     private let replacementsStore: ReplacementsStore
+    private let cleanupLegacyAgentStaging: @Sendable () throws -> Void
 
     /// Updates. A separate object with its own subscribers: check mark
     /// autochecks live in Sparkle settings, not in our `defaults`.
@@ -334,10 +416,10 @@ public final class AppState: ObservableObject {
     private var vocabularyModelBytes: Int64 = 0
     private var mainModelFileCount = 0
     private var vocabularyModelFileCount = 0
-    private var transcriber: LocalTranscriber?
-    private var agentTranscriptionBroker: AgentTranscriptionBroker?
-    private var agentSocketServer: UnixSocketServer?
+    private var transcriber: (any DictationRecognizing)?
     private var recordingRecovery: RecordingRecoveryStore?
+    private var recordingRecoveryMaintenanceTask: Task<Void, Never>?
+    private var engineReadinessTask: Task<Void, Never>?
     private var engineDirectory: URL?
     private var controller: DictationController?
     /// Is the model being installed right now?
@@ -352,6 +434,20 @@ public final class AppState: ObservableObject {
     /// Only the newest personal-dictionary snapshot may reach the acoustic model.
     private var vocabularyRebuildTask: Task<Void, Never>?
     private var vocabularyRevision = 0
+    /// Acoustic vocabulary is auxiliary. Once it fails in this process, keep
+    /// the main TDT recognizer available and retain text replacements instead
+    /// of repeatedly putting optional CTC work on the Ready critical path.
+    private var acousticVocabularyDisabled = false
+    private var didReportAcousticVocabularyDisabled = false
+    /// Model preparation is single-flight at the AppState boundary as well as
+    /// inside the worker. This keeps UI state and recovery decisions causal
+    /// when startup, wake and memory-pressure events arrive together.
+    private var engineWarmupTask: Task<EngineWarmupOutcome, Never>?
+    private var engineWarmupTaskRevision = 0
+    /// At most one bounded retry loop may exist. A transient worker failure
+    /// never becomes a model-redownload request.
+    private var engineWarmupRetryTask: Task<Void, Never>?
+    private var engineWarmupRetryRevision = 0
 
     /// Observer of edits of inserted text - learns the dictionary automatically.
     private let editWatcher: EditLearningWatcher
@@ -395,9 +491,6 @@ public final class AppState: ObservableObject {
     // from the main thread: the application lives entirely on it.
     nonisolated(unsafe) private var permissionTimer: Timer?
     nonisolated(unsafe) private var systemObservers: [(center: NotificationCenter, token: any NSObjectProtocol)] = []
-    /// One-shot: armed only while a residency rule waits on a time boundary.
-    /// At rest — normal pressure, or nothing pending — no timer exists.
-    nonisolated(unsafe) private var residencyTimer: Timer?
     nonisolated(unsafe) private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
 
     public var isDictationReady: Bool {
@@ -446,10 +539,17 @@ public final class AppState: ObservableObject {
         accessibilityManager = environment.accessibilityManager
         hotkeyMonitor = environment.hotkeyMonitor
         inserter = environment.inserter
+        targetApplicationSnapshot = environment.targetApplicationSnapshot
         clipboardRestoreReporter = environment.clipboardRestoreReporter
         overlay = environment.overlay
         makeCapture = environment.makeCapture
         transcribe = environment.transcribe
+        recoveryInsertionDeadline = environment.recoveryInsertionDeadline
+        engineWarmupRetryDelay = environment.engineWarmupRetryDelay
+        engineWarmupRetryLimit = environment.engineWarmupRetryLimit
+        recordingRecoveryCompatibilityGrace = environment.recordingRecoveryCompatibilityGrace
+        recordingRecoveryMaintenanceRetryDelay = environment.recordingRecoveryMaintenanceRetryDelay
+        recordingRecoveryIdleScanInterval = environment.recordingRecoveryIdleScanInterval
         permissionPollInterval = environment.permissionPollInterval
         modelDownloader = environment.modelDownloader
         requestMicrophoneAccess = environment.requestMicrophoneAccess
@@ -465,6 +565,7 @@ public final class AppState: ObservableObject {
             defaults: environment.defaults,
             key: Keys.replacements
         )
+        cleanupLegacyAgentStaging = environment.cleanupLegacyAgentStaging
 
         hotkey = DictationHotkey(rawValue: environment.defaults.string(forKey: Keys.hotkey) ?? "")
             ?? .rightCommand
@@ -472,10 +573,6 @@ public final class AppState: ObservableObject {
         overlayPlacement = DictationOverlayPlacement(
             rawValue: environment.defaults.string(forKey: Keys.overlayPlacement) ?? ""
         ) ?? .top
-        agentTranscriptionEnabled = environment.defaults.bool(
-            forKey: Keys.agentTranscriptionEnabled
-        )
-
         let loaded = replacementsStore.load()
         replacements = loaded.replacements
         dictionaryProblem = loaded.problem
@@ -495,10 +592,12 @@ public final class AppState: ObservableObject {
         // after the death of the owner: a weak link inside saves from falling, but
         // not from waking up.
         permissionTimer?.invalidate()
-        residencyTimer?.invalidate()
         memoryPressureSource?.cancel()
         vocabularyRebuildTask?.cancel()
-        agentSocketServer?.stop()
+        engineWarmupTask?.cancel()
+        engineWarmupRetryTask?.cancel()
+        recordingRecoveryMaintenanceTask?.cancel()
+        engineReadinessTask?.cancel()
         for observer in systemObservers {
             observer.center.removeObserver(observer.token)
         }
@@ -512,12 +611,13 @@ public final class AppState: ObservableObject {
         do {
             let capture = makeCapture(
                 try paths.takes(),
-                { [weak self] error in
+                { [weak self] session, error in
                     // The audio stream is no longer usable in the middle of a speech. Wait
                     // stopping is not possible: the person speaks into emptiness, and the reason
                     // must be shown exactly.
                     Task { @MainActor in
                         self?.controller?.interrupt(
+                            session: session,
                             reason: Self.captureFailureMessage(error)
                         )
                     }
@@ -527,9 +627,23 @@ public final class AppState: ObservableObject {
                     // consonant transients that make the live signal feel responsive.
                     let peak = samples.reduce(Float(0)) { max($0, abs($1)) }
                     Task { @MainActor in self?.registerInputLevel(peak) }
+                },
+                { [weak self] session in
+                    // Disk spill never gates the microphone. If it remained
+                    // unavailable until the bounded PCM buffer became full,
+                    // finish the complete retained take normally instead of
+                    // dropping history or continuing into unrecoverable audio.
+                    Task { @MainActor in
+                        self?.controller?.stopAtCaptureMemoryLimit(session: session)
+                    }
                 }
             )
-            let recordingRecovery = RecordingRecoveryStore(directory: try paths.audioRecovery())
+            let recordingRecovery = RecordingRecoveryStore(
+                directory: try paths.audioRecovery(),
+                compatibilityGrace: recordingRecoveryCompatibilityGrace,
+                maintenanceRetryDelay: recordingRecoveryMaintenanceRetryDelay,
+                idleScanInterval: recordingRecoveryIdleScanInterval
+            )
             self.recordingRecovery = recordingRecovery
 
             let manifest = try ModelManifest.bundled()
@@ -557,7 +671,6 @@ public final class AppState: ObservableObject {
 
             let engineDirectory = layout.engineDirectory
             self.engineDirectory = engineDirectory
-            setUpAgentTranscription(engineDirectory: engineDirectory)
             let languageHint: @Sendable () -> String? = { [box = UncheckedBox(defaults)] in
                 // UserDefaults is documented thread-safe. Read at invocation so
                 // changing the recognition language affects the very next take.
@@ -582,6 +695,7 @@ public final class AppState: ObservableObject {
                 ),
                 transcribeSamples: transcribeSamples,
                 inserter: inserter,
+                targetApplicationSnapshot: targetApplicationSnapshot,
                 overlay: overlay,
                 sounds: sounds,
                 recordingRecovery: recordingRecovery,
@@ -589,26 +703,26 @@ public final class AppState: ObservableObject {
                     self?.makePipeline() ?? TextPipeline()
                 },
                 prepareForTranscription: makePrepareForTranscription(
-                    engineDirectory: engineDirectory,
-                    agentBroker: agentTranscriptionBroker
+                    engineDirectory: engineDirectory
                 )
             )
             controller.onStateChange = { [weak self] state in
                 self?.dictationState = state
-                if state == .preparing { self?.agentTranscriptionBroker?.beginInteractiveWork() }
-                if state == .idle { self?.agentTranscriptionBroker?.endInteractiveWork() }
                 self?.flushNoticeAfterSession(state)
                 // The person just pressed the key and is about to speak for
-                // seconds: if the engine sat idle long enough for macOS to
-                // evict its Neural Engine state, reload it now, under their
-                // voice, instead of after it.
-                if state == .preparing { self?.warmEngineUnderVoiceIfCold() }
+                // seconds. Refresh accelerator residency now, under their
+                // voice, instead of trusting a device-specific idle timer and
+                // discovering a cold Core ML graph only after key-up.
+                if state == .preparing { self?.warmEngineUnderVoice() }
                 // A finished session is a residency event: the engine just
                 // became safely idle, and a deferred unload may now proceed.
                 if state == .idle { self?.evaluateResidency(trigger: "session-idle") }
             }
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
+                if notice.recoveryAudio != nil {
+                    self?.refreshRecoveredRecordingCount()
+                }
                 if let text = notice.recoverableText {
                     self?.recoveredText = text
                     // The words also join Recent Dictations at failure time:
@@ -653,8 +767,6 @@ public final class AppState: ObservableObject {
                     insertedText: provenance.finalText,
                     provenance: provenance
                 )
-                // Real inference just ran — the cold-suspicion clock restarts.
-                self?.lastEngineActivity = Date()
             }
             // Putting the person's own clipboard back happens a second after the
             // paste, detached, with nobody left to throw to. If it fails they
@@ -685,11 +797,27 @@ public final class AppState: ObservableObject {
         observeSystemEvents()
         observeMemoryPressure()
         refreshPermissions()
+        scheduleLegacyCleanup()
         Task {
-            removeLegacyTextRecovery()
+            await startEngineReadinessMonitoring()
+            await startRecordingRecoveryMaintenance()
             await importAbandonedRecordings()
             await refreshModelState()
             if modelState.isReady { await warmUpEngine() }
+        }
+    }
+
+    /// The worker process is the authority on readiness. In particular, an
+    /// idle child can disappear after AppState previously published Ready; a
+    /// local sticky Bool must not hide that death until the next key release.
+    private func startEngineReadinessMonitoring() async {
+        guard engineReadinessTask == nil, let transcriber else { return }
+        let changes = await transcriber.readinessChanges()
+        engineReadinessTask = Task { @MainActor [weak self] in
+            for await ready in changes {
+                guard !Task.isCancelled, let self else { return }
+                self.isEngineReady = ready
+            }
         }
     }
 
@@ -700,129 +828,77 @@ public final class AppState: ObservableObject {
     /// coalesces this with the reload already in flight. Test environments
     /// (transcriber == nil) keep the old shape: no separate prepare phase.
     private func makePrepareForTranscription(
-        engineDirectory: URL,
-        agentBroker: AgentTranscriptionBroker?
+        engineDirectory: URL
     ) -> (@Sendable () async throws -> Void)? {
         guard let transcriber else { return nil }
         return {
-            try await agentBroker?.waitUntilInteractiveReady()
-            try await transcriber.prepare(modelDirectory: engineDirectory)
-        }
-    }
-
-    private func setUpAgentTranscription(engineDirectory: URL) {
-        guard let transcriber else { return }
-        let identifier = Bundle.main.bundleIdentifier
-            ?? AgentBridgeSocketAddress.productionBundleIdentifier
-        let address: AgentBridgeSocketAddress
-        do {
-            address = try AgentBridgeSocketAddress(bundleIdentifier: identifier)
-        } catch {
-            isAgentBridgeListening = false
-            agentLog.error("Could not create the private agent socket address: \(String(describing: error), privacy: .public)")
-            return
-        }
-        let defaultsBox = UncheckedBox(defaults)
-        let broker = AgentTranscriptionBroker(
-            transcriber: transcriber,
-            engineDirectory: engineDirectory,
-            bridgeAddress: address,
-            isEnabled: {
-                defaultsBox.value.bool(forKey: Keys.agentTranscriptionEnabled)
-            },
-            onBusyChanged: { [weak self] busy, usedEngine in
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
-                    self.isAgentTranscriptionBusy = busy
-                    if !busy {
-                        if usedEngine { self.lastEngineActivity = self.now() }
-                        self.evaluateResidency(trigger: "agent-idle")
-                    }
-                }
+            // The controller owns only the foreground wait. Model loading and
+            // Core ML specialization belong to the persistent worker and must
+            // survive a short utterance exhausting that wait; otherwise the
+            // deadline kills a healthy almost-ready generation and guarantees
+            // another cold start on the next dictation.
+            try await awaitOwnedEnginePreparation {
+                try await transcriber.prepare(modelDirectory: engineDirectory)
             }
-        )
-
-        do {
-            let server = UnixSocketServer(address: address)
-            try server.start { [weak broker] request, progress in
-                guard let broker else {
-                    return .failure(
-                        requestID: request.requestID,
-                        error: AgentBridgeError(
-                            code: .serverShuttingDown,
-                            message: "OpenRamble is shutting down.",
-                            isRetryable: true
-                        )
-                    )
-                }
-                return await broker.handle(request: request, progress: progress)
-            }
-            agentTranscriptionBroker = broker
-            agentSocketServer = server
-            isAgentBridgeListening = true
-        } catch {
-            isAgentBridgeListening = false
-            agentLog.error("Could not start the private agent socket: \(String(describing: error), privacy: .public)")
         }
-    }
-
-    var agentExecutablePath: String {
-        Bundle.main.bundleURL
-            .appending(path: "Contents/MacOS/openramble-mcp", directoryHint: .notDirectory)
-            .path
-    }
-
-    func copyCodexMCPCommand() {
-        copyAgentConfiguration(
-            "codex mcp add openramble -- \(Self.shellQuote(agentExecutablePath))"
-        )
-    }
-
-    func copyClaudeMCPCommand() {
-        copyAgentConfiguration(
-            "claude mcp add --scope user openramble -- \(Self.shellQuote(agentExecutablePath))"
-        )
-    }
-
-    func copyGenericMCPConfiguration() {
-        let escaped = agentExecutablePath
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        copyAgentConfiguration(
-            "{\n  \"mcpServers\": {\n    \"openramble\": {\n      \"command\": \"\(escaped)\"\n    }\n  }\n}"
-        )
-    }
-
-    private func copyAgentConfiguration(_ text: String) {
-        do {
-            try HostOnlyPasteboard().copyHostOnly(text)
-        } catch {
-            NSSound.beep()
-        }
-    }
-
-    private static func shellQuote(_ text: String) -> String {
-        "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
     /// Old builds wrote unrecognized text to disk in `Recovered/`.
     /// Now such text lives only in memory, and the promise of “recognized text
     /// is not written to disk” must also cover traces of previous versions.
-    private func removeLegacyTextRecovery() {
-        guard let support = try? paths.support() else { return }
-        let legacy = support.appending(path: "Recovered", directoryHint: .isDirectory)
-        guard FileManager.default.fileExists(atPath: legacy.path) else { return }
+    /// Upgrade cleanup is filesystem work, not a launch prerequisite. Run one
+    /// bounded lifetime job away from MainActor so a stalled directory scan or
+    /// unlink cannot freeze hotkeys, permission UI, or engine preparation.
+    private func scheduleLegacyCleanup() {
+        let paths = paths
+        let cleanupAgentStaging = cleanupLegacyAgentStaging
+        Task.detached(priority: .utility) { [weak self] in
+            let notices = Self.performLegacyCleanup(
+                paths: paths,
+                cleanupAgentStaging: cleanupAgentStaging
+            )
+            guard !notices.isEmpty else { return }
+            await self?.publishLegacyCleanupNotices(notices)
+        }
+    }
+
+    nonisolated private static func performLegacyCleanup(
+        paths: AppPaths,
+        cleanupAgentStaging: @Sendable () throws -> Void
+    ) -> [DictationNotice] {
+        var notices: [DictationNotice] = []
+        if let support = try? paths.support() {
+            let legacy = support.appending(path: "Recovered", directoryHint: .isDirectory)
+            if FileManager.default.fileExists(atPath: legacy.path) {
+                do {
+                    try FileManager.default.removeItem(at: legacy)
+                } catch {
+                    notices.append(
+                        DictationNotice(
+                            kind: .warning,
+                            message: "Couldn't delete the old version's recovery texts. "
+                                + "Delete them manually: ~/Library/Application Support/OpenRamble/Recovered"
+                        )
+                    )
+                }
+            }
+        }
+
         do {
-            try FileManager.default.removeItem(at: legacy)
+            try cleanupAgentStaging()
         } catch {
-            notify(
+            notices.append(
                 DictationNotice(
                     kind: .warning,
-                    message: "Couldn't delete the old version's recovery texts. "
-                        + "Delete them manually: ~/Library/Application Support/OpenRamble/Recovered"
+                    message: "Couldn't delete audio staged by the retired agent transcription feature. Restart OpenRamble to retry cleanup."
                 )
             )
         }
+        return notices
+    }
+
+    private func publishLegacyCleanupNotices(_ notices: [DictationNotice]) {
+        for notice in notices { notify(notice) }
     }
 
     static func captureFailureMessage(_ error: AudioCaptureError) -> String {
@@ -842,24 +918,105 @@ public final class AppState: ObservableObject {
         }
     }
 
-    /// Tidy up recordings left behind by a kill or power loss — quietly.
+    /// Tidy up recordings left behind by a kill or power loss.
     ///
     /// The import repairs interrupted WAV headers, discards fragments too
     /// short to hold speech, and prunes the folder by age, count and size.
-    /// Nothing is announced and no menu item appears: a broken last dictation
-    /// is a rare technical event that already surfaced the moment it happened,
-    /// and a recovery apparatus in the menu cost more attention than the words
-    /// it guarded. Files stay on disk for a few days (see
-    /// `RecordingRecoveryStore`), so nothing is silently discarded.
+    /// A newly imported take is disclosed once and every retained take remains
+    /// discoverable from the menu. Existing takes do not produce a launch
+    /// notification on every run; their count is still visible.
     private func importAbandonedRecordings() async {
         guard let recordingRecovery else { return }
         do {
-            _ = try await recordingRecovery.importAbandoned(from: paths.takes())
+            let result = try await recordingRecovery.importAbandoned(from: paths.takes())
+            applyRecordingRecoveryResult(result)
         } catch {
             notify(
                 DictationNotice(
                     kind: .failure,
                     message: "Couldn't prepare recording recovery: \(error.localizedDescription)"
+                )
+            )
+        }
+    }
+
+    /// Subscribe before the first import so a fresh crash artifact that is
+    /// deliberately skipped during the cross-instance grace window is picked
+    /// up in this same process. The store owns one bounded maintenance loop;
+    /// this task only reflects its results into product state.
+    private func startRecordingRecoveryMaintenance() async {
+        guard recordingRecoveryMaintenanceTask == nil,
+              let recordingRecovery
+        else { return }
+        let results = await recordingRecovery.maintenanceResults()
+        recordingRecoveryMaintenanceTask = Task { @MainActor [weak self] in
+            for await result in results {
+                guard !Task.isCancelled, let self else { return }
+                self.applyRecordingRecoveryResult(result)
+            }
+        }
+    }
+
+    private func applyRecordingRecoveryResult(
+        _ result: AbandonedRecordingImportResult
+    ) {
+        recoveredRecordingCount = result.recordings.count
+        if result.storageFaulted {
+            let isNewFault = !recordingRecoveryStorageFaulted
+            recordingRecoveryStorageFaulted = true
+            if isNewFault {
+                notify(
+                    DictationNotice(
+                        kind: .failure,
+                        message: "Automatic audio recovery was disabled after a storage failure. "
+                            + "Open Recording Support Files from the menu: ambiguous recordings "
+                            + "were left untouched, not deleted or imported."
+                    )
+                )
+            }
+            return
+        }
+
+        guard result.newlyImportedCount > 0 else { return }
+        let noun = result.newlyImportedCount == 1 ? "recording" : "recordings"
+        notify(
+            DictationNotice(
+                kind: .warning,
+                message: "OpenRamble recovered \(result.newlyImportedCount) unfinished \(noun) "
+                    + "after an interrupted session. Open Recovered Recordings from the menu "
+                    + "to review or delete the audio; retention is limited to seven days."
+            )
+        )
+    }
+
+    private func refreshRecoveredRecordingCount() {
+        guard let recordingRecovery else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                self.recoveredRecordingCount = try await recordingRecovery.recordings().count
+            } catch {
+                engineLog.error(
+                    "couldn't refresh recovered recording count: \(error.localizedDescription, privacy: .public)"
+                )
+            }
+        }
+    }
+
+    /// Open the exact retention directory. Finder supplies explicit Preview,
+    /// Move and Delete actions without the app reading or transcribing audio in
+    /// the background.
+    public func revealRecoveredRecordings() {
+        do {
+            let directory = recordingRecoveryStorageFaulted
+                ? try paths.support()
+                : try paths.audioRecovery()
+            NSWorkspace.shared.activateFileViewerSelecting([directory])
+        } catch {
+            notify(
+                DictationNotice(
+                    kind: .failure,
+                    message: "Couldn't reveal recovered recordings: \(error.localizedDescription)"
                 )
             )
         }
@@ -944,7 +1101,10 @@ public final class AppState: ObservableObject {
               !isRecoveryOperationActive,
               let recoveredText
         else { return }
-        let target = inserter.frontmostApplication()
+        // The destination is maintained ahead of the click. Querying
+        // NSWorkspace synchronously here can wedge MainActor and permanently
+        // lock both Retry and the dictation hotkey.
+        let target = targetApplicationSnapshot()
         isRecoveryOperationActive = true
         dictationState = .inserting
         Task { [weak self] in
@@ -953,9 +1113,11 @@ public final class AppState: ObservableObject {
                 self.dictationState = .idle
                 self.isRecoveryOperationActive = false
             }
-            await overlay.dismiss()
             do {
-                try await inserter.insert(recoveredText, into: target)
+                let inserter = inserter
+                try await withTranscriptionDeadline(recoveryInsertionDeadline) {
+                    try await inserter.insert(recoveredText, into: target)
+                }
                 // The words already joined Recent Dictations at failure time;
                 // appending again here would duplicate them. The provenance
                 // slot is cleared too: it still holds the PREVIOUS dictation,
@@ -964,7 +1126,14 @@ public final class AppState: ObservableObject {
                 self.successfulDictationCount += 1
                 self.recoveredText = nil
                 self.lastDictation = nil
-                await overlay.dismiss()
+            } catch is TranscriptionTimeout {
+                notify(
+                    DictationNotice(
+                        kind: .warning,
+                        message: "Insertion couldn't be confirmed in time. The text stays in the menu and may already have been pasted.",
+                        recoverableText: recoveredText
+                    )
+                )
             } catch {
                 notify(
                     DictationNotice(
@@ -1055,33 +1224,25 @@ public final class AppState: ObservableObject {
     /// Whether an engine recycle is already underway — one wedge, one cure.
     private var isRecyclingEngine = false
 
-    /// When the engine last did real work. Decides whether a keypress warms
-    /// it in parallel with the recording (see `EngineWarming`).
-    private var lastEngineActivity: Date?
-
     /// Run one second of silence through the engine to pull its weights back
     /// onto the Neural Engine. The measured stakes: 0.13 s warm, 16.06 s
     /// after eviction. A hung ping means the engine is wedged on a dead
     /// system service — recycle it.
     private func pingEngine(deadline: Duration) {
-        guard let transcriber, !isAgentTranscriptionBusy else { return }
+        guard let transcriber else { return }
         Task { [weak self] in
             do {
                 _ = try await withTranscriptionDeadline(deadline) {
                     try await transcriber.warmUpInference()
                 }
-                await MainActor.run { [weak self] in self?.lastEngineActivity = self?.now() }
             } catch {
                 await MainActor.run { [weak self] in self?.recycleWedgedEngine() }
             }
         }
     }
 
-    /// The engine clock: injected time keeps the cold-suspicion rule testable.
-    private func now() -> Date { Date() }
-
     /// Internal, not private: the residency pin drives the exact press hook.
-    func warmEngineUnderVoiceIfCold() {
+    func warmEngineUnderVoice() {
         guard transcriber != nil, !isRecyclingEngine else { return }
         // Residency gave the memory back: the press starts the FULL reload —
         // weights and vocabulary — in parallel with the recording. The
@@ -1095,7 +1256,7 @@ public final class AppState: ObservableObject {
             }
             return
         }
-        guard EngineWarming.shouldWarm(lastEngineActivity: lastEngineActivity, now: now()) else {
+        guard EngineWarming.shouldPingOnRecordingStart(engineReady: isEngineReady) else {
             return
         }
         // A generous deadline: the recording gives it cover, and a real wedge
@@ -1121,13 +1282,9 @@ public final class AppState: ObservableObject {
 
     // MARK: - Engine residency (automatic, zero settings)
 
-    /// Consecutive warning-tier pressure events; one blip does nothing.
-    private var consecutiveWarnings = 0
-    /// When the last engine load completed — feeds the anti-thrash hold.
-    private var lastLoadCompletedAt: Date?
-    /// Test seam, same doctrine as `isCountingDuration`: at rest — normal
-    /// pressure, nothing pending — no residency timer may exist.
-    public var isAwaitingResidencyBoundary: Bool { residencyTimer != nil }
+    /// Set only after a critical-pressure eviction succeeds. A later normal
+    /// event restores readiness before another dictation begins.
+    private var shouldRewarmAfterPressure = false
 
     /// Give the engine's memory back when macOS says memory is tight.
     ///
@@ -1162,13 +1319,8 @@ public final class AppState: ObservableObject {
     /// memory starvation.
     func registerMemoryPressure(_ tier: MemoryPressureTier) {
         lastPressureTier = tier
-        switch tier {
-        case .warning: consecutiveWarnings += 1
-        case .critical: break
-        case .normal: consecutiveWarnings = 0
-        }
         engineLog.info(
-            "memory pressure tier=\(String(describing: tier), privacy: .public) consecutiveWarnings=\(self.consecutiveWarnings)"
+            "memory pressure tier=\(String(describing: tier), privacy: .public)"
         )
         evaluateResidency(trigger: "pressure")
     }
@@ -1176,20 +1328,12 @@ public final class AppState: ObservableObject {
     /// One evaluation path for every trigger: pressure change, finished
     /// dictation, finished load, wake, boundary timer.
     private func evaluateResidency(trigger: StaticString) {
-        residencyTimer?.invalidate()
-        residencyTimer = nil
-
         let tier: MemoryPressureTier = currentPressureTier()
-        let referenceNow = now()
         let decision = EngineResidencyPolicy.decision(
             tier: tier,
-            consecutiveWarnings: consecutiveWarnings,
             engineLoaded: isEngineReady,
             engineBusy: dictationState != .idle || isRecoveryOperationActive
-                || isRecyclingEngine || isPreparingEngine || isAgentTranscriptionBusy,
-            idleFor: lastEngineActivity.map { referenceNow.timeIntervalSince($0) } ?? .infinity,
-            sinceLoadCompleted: lastLoadCompletedAt.map { referenceNow.timeIntervalSince($0) }
-                ?? .infinity
+                || isRecyclingEngine || isPreparingEngine
         )
 
         switch decision {
@@ -1204,24 +1348,39 @@ public final class AppState: ObservableObject {
                     guard let self else { return }
                     if unloaded {
                         // hasEngineBeenReady stays true: dictation remains
-                        // enabled, the reload rides under the next voice.
+                        // enabled. Normal pressure proactively restores it.
                         self.isEngineReady = false
+                        self.shouldRewarmAfterPressure = true
                         self.enginePreparation = .make(phase: .idle, elapsed: 0)
+                        self.rewarmAfterPressureIfPossible()
                     } else {
                         engineLog.info("engine unload deferred: busy at the transcriber")
                     }
                 }
             }
-        case let .checkAgain(after):
-            engineLog.info("engine unload pending boundary in \(after, format: .fixed(precision: 0))s")
-            residencyTimer = Timer.scheduledTimer(
-                withTimeInterval: max(1, after),
-                repeats: false
-            ) { [weak self] _ in
-                Task { @MainActor in
-                    self?.residencyTimer = nil
-                    self?.evaluateResidency(trigger: "boundary")
-                }
+        }
+        rewarmAfterPressureIfPossible()
+    }
+
+    private func rewarmAfterPressureIfPossible() {
+        guard shouldRewarmAfterPressure,
+              lastPressureTier == .normal,
+              !isEngineReady,
+              hasEngineBeenReady,
+              modelState.isReady,
+              dictationState == .idle,
+              !isRecoveryOperationActive,
+              !isRecyclingEngine,
+              !isPreparingEngine
+        else { return }
+
+        shouldRewarmAfterPressure = false
+        engineLog.info("engine proactive rewarm after critical pressure")
+        Task { [weak self] in
+            guard let self else { return }
+            await self.warmUpEngine()
+            if !self.isEngineReady, self.modelState.isReady {
+                self.shouldRewarmAfterPressure = true
             }
         }
     }
@@ -1245,8 +1404,13 @@ public final class AppState: ObservableObject {
         engineLog.warning("engine recycle: wedged (deadline or ping failure)")
         isRecyclingEngine = true
         isEngineReady = false
+        let ownsTimeoutRecovery = transcriber.ownsTimeoutRecovery
         Task { [weak self] in
-            await transcriber.unload()
+            // The process supervisor has already exact-killed/fenced the
+            // timed-out PID and scheduled one fresh generation. Unloading here
+            // would race that recovery and kill the healthy replacement. The
+            // legacy in-process adapter still needs an explicit unload.
+            if !ownsTimeoutRecovery { await transcriber.unload() }
             guard let self else { return }
             await self.warmUpEngine()
             self.isRecyclingEngine = false
@@ -1696,6 +1860,8 @@ public final class AppState: ObservableObject {
         // Explicit human command opens a new attempt: previous Core ML failure
         // no longer holds, the fresh installation will warm up again.
         engineLoadFailure = nil
+        acousticVocabularyDisabled = false
+        didReportAcousticVocabularyDisabled = false
 
         Task {
             // Both models are placed sequentially, and the progress on the screen is common:
@@ -1801,9 +1967,45 @@ public final class AppState: ObservableObject {
         }
     }
 
-    private func warmUpEngine() async {
-        guard let transcriber, let store else { return }
-        guard case .ready = await store.currentState() else { return }
+    private enum EngineWarmupOutcome: Sendable {
+        case ready
+        case skipped
+        case retryable(String)
+        case repairRequired(String)
+    }
+
+    /// Prepare one fully warm generation. Calls from launch, wake, pressure
+    /// recovery and a key-down are coalesced here so only the owner updates the
+    /// UI and decides whether a failure means "retry worker" or "repair files".
+    @discardableResult
+    private func warmUpEngine(
+        allowAutomaticRetry: Bool = true
+    ) async -> EngineWarmupOutcome {
+        if let engineWarmupTask {
+            return await engineWarmupTask.value
+        }
+
+        engineWarmupTaskRevision &+= 1
+        let revision = engineWarmupTaskRevision
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return EngineWarmupOutcome.skipped }
+            return await self.performEngineWarmup()
+        }
+        engineWarmupTask = task
+        let outcome = await task.value
+        if engineWarmupTaskRevision == revision {
+            engineWarmupTask = nil
+        }
+
+        if allowAutomaticRetry, case let .retryable(detail) = outcome {
+            scheduleEngineWarmupRetry(after: detail)
+        }
+        return outcome
+    }
+
+    private func performEngineWarmup() async -> EngineWarmupOutcome {
+        guard let transcriber, let store else { return .skipped }
+        guard case .ready = await store.currentState() else { return .skipped }
         isEngineReady = false
         isPreparingEngine = true
         beginPreparationCountdown(phase: .loadingRecognizer)
@@ -1814,7 +2016,9 @@ public final class AppState: ObservableObject {
 
         do {
             let clock = ContinuousClock()
-            var vocabularyWarning: VocabularyBoostError?
+            var vocabularyWarning: String?
+            var vocabularyWasEnabledForWarmup = false
+            var preparedVocabularyRevision: Int?
             let preparationStart = clock.now
             let manifest = try ModelManifest.bundled()
             let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
@@ -1833,52 +2037,166 @@ public final class AppState: ObservableObject {
                 // The person's own replacements - including those learned from edits -
                 // amplify the acoustics with the same fuses as
                 // starting set.
-                do {
+                let snapshotRevision = vocabularyRevision
+                let snapshot = replacements
+                preparedVocabularyRevision = snapshotRevision
+                if acousticVocabularyDisabled {
                     try await transcriber.prepareVocabulary(
                         modelDirectory: vocabularyDirectory,
-                        boost: .withUserReplacements(replacements)
+                        boost: VocabularyBoost(terms: [])
                     )
-                } catch let boost as VocabularyBoostError {
-                    // Human vocabulary data must not prevent the recognizer
-                    // itself from becoming warm and ready.
-                    vocabularyWarning = boost
+                } else {
+                    do {
+                        try await transcriber.prepareVocabulary(
+                            modelDirectory: vocabularyDirectory,
+                            boost: .withUserReplacements(snapshot)
+                        )
+                        vocabularyWasEnabledForWarmup = true
+                    } catch is CancellationError {
+                        throw CancellationError()
+                    } catch {
+                        try Task.checkCancellation()
+                        vocabularyWarning = error.localizedDescription
+                        try await disableAcousticVocabulary(
+                            transcriber: transcriber,
+                            vocabularyDirectory: vocabularyDirectory
+                        )
+                    }
                 }
             }
             let inferenceStart = clock.now
-            try await transcriber.warmUpInference()
+            do {
+                try await transcriber.warmUpInference()
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                try Task.checkCancellation()
+                guard vocabularyWasEnabledForWarmup, let vocabularyDirectory else {
+                    throw error
+                }
+                vocabularyWarning = error.localizedDescription
+                try await disableAcousticVocabulary(
+                    transcriber: transcriber,
+                    vocabularyDirectory: vocabularyDirectory
+                )
+                // Prove the core TDT path after removing CTC. If this still
+                // fails, the ordinary main-engine recovery path owns it.
+                try await transcriber.warmUpInference()
+            }
             engineLog.info(
                 "engine inference warmed in \(inferenceStart.duration(to: clock.now).appSeconds, format: .fixed(precision: 2))s"
             )
             isEngineReady = true
             engineLoadFailure = nil
-            lastLoadCompletedAt = now()
-            lastEngineActivity = now()
+            engineWarmupRetryRevision &+= 1
+            engineWarmupRetryTask?.cancel()
+            engineWarmupRetryTask = nil
             evaluateResidency(trigger: "load-completed")
+            let preparedVocabularyIsStale = preparedVocabularyRevision.map {
+                $0 != vocabularyRevision
+            } ?? false
+            if preparedVocabularyIsStale {
+                scheduleVocabularyRebuildIfReady()
+            }
             if let vocabularyWarning {
-                // The problem is with a person's term, not model weights.
-                // Recognition remains ready and text replacements still apply.
+                reportAcousticVocabularyDisabled(detail: vocabularyWarning)
+            }
+            return .ready
+        } catch {
+            if let reason = verifiedModelRejection(from: error) {
+                let detail =
+                    "the files passed verification, but Core ML couldn't load the model: \(reason)"
+                engineLoadFailure = detail
+                modelState = .repairRequired(detail)
+                engineWarmupRetryRevision &+= 1
+                engineWarmupRetryTask?.cancel()
+                engineWarmupRetryTask = nil
                 notify(
                     DictationNotice(
-                        kind: .warning,
-                        message: "One of the dictionary terms couldn't be used for acoustic "
-                            + "boosting; dictation works, text replacements still apply. "
-                            + "(\(vocabularyWarning))"
+                        kind: .failure,
+                        message: "The model didn't load. An explicit repair will redownload "
+                            + "\(remainingDownloadMegabytes == 0 ? 586 : remainingDownloadMegabytes) MB."
                     )
                 )
+                return .repairRequired(detail)
             }
-        } catch {
-            let detail =
-                "the files passed verification, but Core ML couldn't load the model: \(error.localizedDescription)"
-            engineLoadFailure = detail
-            modelState = .repairRequired(detail)
-            notify(
-                DictationNotice(
-                    kind: .failure,
-                    message: "The model didn't load. An explicit repair will redownload "
-                        + "\(remainingDownloadMegabytes == 0 ? 586 : remainingDownloadMegabytes) MB."
-                )
+
+            // A dead pipe, worker watchdog, cancellation, launch failure or
+            // protocol fence says nothing about the verified files on disk.
+            // Keep them and recover the process generation in the background.
+            let detail = error.localizedDescription
+            engineLoadFailure = nil
+            engineLog.error(
+                "engine warm-up failed without model rejection: \(detail, privacy: .public)"
             )
+            return .retryable(detail)
         }
+    }
+
+    private func verifiedModelRejection(from error: any Error) -> String? {
+        guard let engineError = error as? ASREngineError else { return nil }
+        guard case let .modelsUnavailable(reason) = engineError else { return nil }
+        return reason
+    }
+
+    /// A single task performs a finite number of retries. It neither deletes
+    /// model files nor accumulates retry tasks if several lifecycle events
+    /// observe the same failed worker generation.
+    private func scheduleEngineWarmupRetry(after initialDetail: String) {
+        guard engineWarmupRetryLimit > 0 else {
+            notifyEngineWarmupRetryExhausted(detail: initialDetail)
+            return
+        }
+        guard engineWarmupRetryTask == nil, modelState.isReady else { return }
+
+        engineWarmupRetryRevision &+= 1
+        let revision = engineWarmupRetryRevision
+        notify(
+            DictationNotice(
+                kind: .warning,
+                message: "The recognizer worker restarted while warming up. "
+                    + "OpenRamble is retrying automatically; downloaded models were kept."
+            )
+        )
+        engineWarmupRetryTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            var lastDetail = initialDetail
+            for _ in 0..<self.engineWarmupRetryLimit {
+                do {
+                    try await Task.sleep(for: self.engineWarmupRetryDelay)
+                } catch {
+                    return
+                }
+                guard self.engineWarmupRetryRevision == revision,
+                      self.modelState.isReady
+                else { return }
+
+                let outcome = await self.warmUpEngine(allowAutomaticRetry: false)
+                switch outcome {
+                case .ready, .repairRequired, .skipped:
+                    return
+                case let .retryable(detail):
+                    lastDetail = detail
+                }
+            }
+
+            guard self.engineWarmupRetryRevision == revision else { return }
+            self.engineWarmupRetryTask = nil
+            self.notifyEngineWarmupRetryExhausted(detail: lastDetail)
+        }
+    }
+
+    private func notifyEngineWarmupRetryExhausted(detail: String) {
+        engineLog.error(
+            "engine automatic rewarm exhausted: \(detail, privacy: .public)"
+        )
+        notify(
+            DictationNotice(
+                kind: .failure,
+                message: "The recognizer worker couldn't become ready after automatic retries. "
+                    + "Restart OpenRamble; downloaded models were kept."
+            )
+        )
     }
 
     /// Editing the dictionary reaches the acoustics now, and not after a restart.
@@ -1889,35 +2207,117 @@ public final class AppState: ObservableObject {
     /// a person cannot understand the system. Reassembly costs a fraction of a second, weight
     /// the tipster survives it without rebooting.
     private func rebuildVocabularyBoost() {
-        guard isEngineReady, let transcriber, let vocabularyDirectory else { return }
-        let currentReplacements = replacements
-        vocabularyRevision += 1
-        let revision = vocabularyRevision
-        vocabularyRebuildTask?.cancel()
-        vocabularyRebuildTask = Task { [weak self] in
+        vocabularyRevision &+= 1
+        scheduleVocabularyRebuildIfReady()
+    }
+
+    private func scheduleVocabularyRebuildIfReady() {
+        guard !acousticVocabularyDisabled,
+              isEngineReady,
+              let transcriber,
+              let vocabularyDirectory
+        else { return }
+        // Never cancel an in-flight worker request for a newer dictionary
+        // edit. Supervisor cancellation must kill the exact process to contain
+        // cancellation-deaf Core ML, which used to turn ordinary rapid typing
+        // into a cold generation and a false `isEngineReady` window. The owner
+        // loops once more with the newest snapshot instead.
+        guard vocabularyRebuildTask == nil else { return }
+        vocabularyRebuildTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.runVocabularyRebuilds(
+                transcriber: transcriber,
+                vocabularyDirectory: vocabularyDirectory
+            )
+        }
+    }
+
+    private func runVocabularyRebuilds(
+        transcriber: any DictationRecognizing,
+        vocabularyDirectory: URL
+    ) async {
+        while !Task.isCancelled {
+            let revision = vocabularyRevision
+            let snapshot = replacements
             do {
-                try Task.checkCancellation()
                 try await transcriber.prepareVocabulary(
                     modelDirectory: vocabularyDirectory,
-                    boost: .withUserReplacements(currentReplacements)
+                    boost: .withUserReplacements(snapshot)
                 )
-                try Task.checkCancellation()
+                // `prepareVocabulary` may have created or replaced a worker
+                // generation. Ready means its real inference path has run.
+                try await transcriber.warmUpInference()
+            } catch is CancellationError {
+                vocabularyRebuildTask = nil
+                return
             } catch {
-                guard !Task.isCancelled else { return }
-                // The acoustics have not been reassembled - text replacements are already working, and
-                // the only honest reaction is to say, and not roll back the edit.
-                await MainActor.run { [weak self] in
-                    guard self?.vocabularyRevision == revision else { return }
-                    self?.notify(
-                        DictationNotice(
-                            kind: .warning,
-                            message: "The dictionary was saved, but acoustic boosting "
-                                + "couldn't pick it up: \(error.localizedDescription)"
-                        )
+                guard !Task.isCancelled else {
+                    vocabularyRebuildTask = nil
+                    return
+                }
+                // An obsolete failure is not user-visible: the loop owns a
+                // newer snapshot and will apply it next.
+                guard vocabularyRevision == revision else { continue }
+                let acousticFailure = error.localizedDescription
+                do {
+                    try await disableAcousticVocabulary(
+                        transcriber: transcriber,
+                        vocabularyDirectory: vocabularyDirectory
                     )
+                    try await transcriber.warmUpInference()
+                    isEngineReady = true
+                    vocabularyRebuildTask = nil
+                    reportAcousticVocabularyDisabled(detail: acousticFailure)
+                    return
+                } catch is CancellationError {
+                    vocabularyRebuildTask = nil
+                    return
+                } catch {
+                    guard !Task.isCancelled else {
+                        vocabularyRebuildTask = nil
+                        return
+                    }
+                    vocabularyRebuildTask = nil
+                    isEngineReady = false
+                    scheduleEngineWarmupRetry(after: error.localizedDescription)
+                    return
                 }
             }
+
+            guard vocabularyRevision != revision else {
+                vocabularyRebuildTask = nil
+                return
+            }
         }
+        vocabularyRebuildTask = nil
+    }
+
+    private func disableAcousticVocabulary(
+        transcriber: any DictationRecognizing,
+        vocabularyDirectory: URL
+    ) async throws {
+        try Task.checkCancellation()
+        try await transcriber.prepareVocabulary(
+            modelDirectory: vocabularyDirectory,
+            boost: VocabularyBoost(terms: [])
+        )
+        try Task.checkCancellation()
+        acousticVocabularyDisabled = true
+    }
+
+    private func reportAcousticVocabularyDisabled(detail: String) {
+        engineLog.error(
+            "optional acoustic vocabulary disabled: \(detail, privacy: .public)"
+        )
+        guard !didReportAcousticVocabularyDisabled else { return }
+        didReportAcousticVocabularyDisabled = true
+        notify(
+            DictationNotice(
+                kind: .warning,
+                message: "Acoustic dictionary boosting is unavailable; dictation and text "
+                    + "replacements still work. Restart OpenRamble to retry it."
+            )
+        )
     }
 
     // MARK: - Duration limit

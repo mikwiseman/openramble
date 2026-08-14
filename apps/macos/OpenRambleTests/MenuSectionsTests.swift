@@ -5,8 +5,9 @@ import XCTest
 ///
 /// The menu is the whole interface at rest, and every extra row is a tax on a
 /// person mid-thought. These tests document two removals as design decisions:
-/// - "Transcribe/Delete Saved Recording" are gone. Failed-transcription
-///   recordings are kept quietly on disk and pruned by age; no menu decisions.
+/// - Background audio transcription remains gone. Failed-transcription and
+///   crash recordings expose one Finder destination with a count, so retention
+///   is discoverable and deletion stays explicit.
 /// - "Copy/Delete Saved Text" are gone. Failed-insert words join Recent
 ///   Dictations at failure time (copyable there), and the one recovery row is
 ///   "Insert Last Dictation". Do not re-add delete items.
@@ -15,6 +16,7 @@ final class MenuSectionsTests: XCTestCase {
         state: DictationState = .idle,
         ready: Bool = true,
         recoveredText: Bool = false,
+        recoveredRecordings: Bool = false,
         recents: Bool = false,
         copyAsSpoken: Bool = false
     ) -> [[MenuRow]] {
@@ -22,6 +24,7 @@ final class MenuSectionsTests: XCTestCase {
             state: state,
             isDictationReady: ready,
             hasRecoveredText: recoveredText,
+            hasRecoveredRecordings: recoveredRecordings,
             hasRecents: recents,
             canCopyAsSpoken: copyAsSpoken
         )
@@ -131,8 +134,21 @@ final class MenuSectionsTests: XCTestCase {
         )
         let allowed: Set<MenuRow> = [
             .statusLine, .stopAndInsert, .cancelDictation, .setupHints, .finishSetup,
-            .insertLastDictation, .recentDictations, .copyLastAsSpoken, .settings, .quit,
+            .insertLastDictation, .revealRecoveredRecordings,
+            .recentDictations, .copyLastAsSpoken, .settings, .quit,
         ]
         XCTAssertTrue(everything.isSubset(of: allowed))
+    }
+
+    func testRecoveredAudioIsDiscoverableOnlyAtRest() {
+        XCTAssertEqual(
+            sections(recoveredRecordings: true),
+            [[.statusLine], [.revealRecoveredRecordings], [.settings, .quit]]
+        )
+        XCTAssertFalse(
+            sections(state: .listening, recoveredRecordings: true)
+                .flatMap(\.self)
+                .contains(.revealRecoveredRecordings)
+        )
     }
 }

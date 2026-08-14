@@ -21,6 +21,8 @@ struct MenuContent: View {
             state: state.dictationState,
             isDictationReady: state.isDictationReady,
             hasRecoveredText: state.recoveredText != nil,
+            hasRecoveredRecordings: state.recoveredRecordingCount > 0
+                || state.recordingRecoveryStorageFaulted,
             hasRecents: !state.recentDictations.isEmpty,
             canCopyAsSpoken: state.canCopyRawDictation
         )
@@ -76,6 +78,15 @@ struct MenuContent: View {
                         ? "Attempts to insert the saved text into the current field"
                         : "Finish or cancel the current dictation first"
                 )
+
+        case .revealRecoveredRecordings:
+            Button(
+                state.recordingRecoveryStorageFaulted
+                    ? "Recording Support Files — Recovery Disabled…"
+                    : "Recovered Recordings (\(state.recoveredRecordingCount))…"
+            ) {
+                state.revealRecoveredRecordings()
+            }
 
         case .recentDictations:
             Menu("Recent Dictations") {

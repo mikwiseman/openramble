@@ -9,6 +9,7 @@ enum MenuRow: Equatable {
     case setupHints
     case finishSetup
     case insertLastDictation
+    case revealRecoveredRecordings
     case recentDictations
     case copyLastAsSpoken
     case settings
@@ -24,16 +25,16 @@ enum MenuRow: Equatable {
 ///   acted on anyway, and a short menu is read faster mid-dictation.
 /// - Transcribing is seconds and cannot be meaningfully cancelled from a menu
 ///   that takes longer to open; Escape still works.
-/// - At most ONE recovery row ever appears: "Insert Last Dictation". Failed
-///   transcription recordings heal quietly (kept on disk briefly, pruned by
-///   age) instead of demanding menu decisions — the strange
-///   "Transcribe/Delete Saved Recording" pair is gone by design; do not
-///   re-add it.
+/// - Recognized text recovery and retained audio are different promises. Text
+///   can be retried in place; audio is exposed as a count plus one Finder
+///   destination where Preview/Delete are explicit. No background retry reads
+///   a person's voice without a command.
 enum MenuSections {
     static func sections(
         state: DictationState,
         isDictationReady: Bool,
         hasRecoveredText: Bool,
+        hasRecoveredRecordings: Bool,
         hasRecents: Bool,
         canCopyAsSpoken: Bool
     ) -> [[MenuRow]] {
@@ -50,6 +51,9 @@ enum MenuSections {
             }
             if hasRecoveredText {
                 sections.append([.insertLastDictation])
+            }
+            if hasRecoveredRecordings {
+                sections.append([.revealRecoveredRecordings])
             }
             var history: [MenuRow] = []
             if hasRecents { history.append(.recentDictations) }

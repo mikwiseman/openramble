@@ -35,15 +35,20 @@ jobs:
           swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors
           swift test --package-path Packages/DictationCore
 
+      - name: ASRWorkerProtocol
+        run: |
+          swift build --package-path Packages/ASRWorkerProtocol --build-tests -Xswiftc -warnings-as-errors
+          swift test --package-path Packages/ASRWorkerProtocol
+
       - name: LocalASR
         run: |
           swift build --package-path Packages/LocalASR --build-tests -Xswiftc -warnings-as-errors
           swift test --package-path Packages/LocalASR
 
-      - name: AgentBridge
+      - name: Persistent benchmark protocol
         run: |
-          swift build --package-path Packages/AgentBridge --build-tests -Xswiftc -warnings-as-errors
-          swift test --package-path Packages/AgentBridge
+          python3 -m py_compile scripts/benchmark-local-asr.py scripts/tests/test_benchmark_local_asr.py
+          python3 -m unittest scripts.tests.test_benchmark_local_asr
 
   app:
     name: Application build
@@ -110,19 +115,17 @@ jobs:
           ./scripts/tests/test-bootstrap-release-secrets.sh
           ./scripts/tests/test-release-keychain.sh
 
-      # Everything else in CI is collected by Debug for the current purpose. Release is underway
-      # another way: Release configuration, archive, `generic/platform=macOS`
-      # and arm64-only artifact. A breakdown that lives only on this road,
-      # used to be detected at the time of release - that is, when to repair
-      # she has no time. There is no signature here and is not needed: we are checking the assembly, not
-      # certificate.
-      - name: Build an image without a signature
+      # Exercise the same Release configuration, production product name,
+      # permanent bundle identifier, archive topology and DMG name as publishing.
+      # CI has no Developer ID key, so build-dmg.sh re-signs this one artifact
+      # ad-hoc and refuses this mode outside CI. Notarization remains release-only.
+      - name: Build unsigned production Release topology
+        env:
+          UNSIGNED_RELEASE_TOPOLOGY: "1"
         run: ./scripts/build-dmg.sh
 
-      - name: Check packaged application and MCP helper
-        run: >-
-          ./scripts/smoke-installed-artifact.sh
-          artifacts/build/OpenRamble.xcarchive/Products/Applications/OpenRambleDev.app
+      - name: Mount and check the exact packaged DMG
+        run: ./scripts/smoke-installed-artifact.sh artifacts/dmg/OpenRamble-*.dmg
 
       # Values on which the fate of already installed copies depends. Each
       # of which various things break: identifier - issued universal access,
@@ -131,7 +134,7 @@ jobs:
       # seen by a person in the update window.
       - name: Check Info.plist invariants
         run: |
-          PLIST="artifacts/build/OpenRamble.xcarchive/Products/Applications/OpenRambleDev.app/Contents/Info.plist"
+          PLIST="artifacts/build/OpenRamble.xcarchive/Products/Applications/OpenRamble.app/Contents/Info.plist"
           p() { /usr/libexec/PlistBuddy -c "Print :$1" "$PLIST" 2>/dev/null; }
           bad=0
           expect() {
@@ -143,16 +146,14 @@ jobs:
               bad=1
             fi
           }
-          expect CFBundleIdentifier is.waiwai.dictation.dev
+          expect CFBundleIdentifier is.waiwai.dictation
           expect LSMinimumSystemVersion 14.0
           expect LSUIElement true
           expect SUEnableAutomaticChecks true
           expect SUSendProfileInfo false
           expect SUAllowsAutomaticUpdates false
-
-          feed=$(p SUFeedURL)
-          printf ' %-28s %s\n' SUFeedURL "${feed:-(empty)}"
-          [[ -n "$feed" ]] || bad=1
+          expect SUFeedURL https://mikwiseman.github.io/openramble/appcast.xml
+          expect SUPublicEDKey 9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI=
 
           marketing=$(sed -n 's/^ *MARKETING_VERSION: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' apps/macos/project.yml | head -1)
           short=$(p CFBundleShortVersionString)
@@ -168,7 +169,7 @@ jobs:
 
       - name: Check required model and dependency notices
         run: |
-          RESOURCES="artifacts/build/OpenRamble.xcarchive/Products/Applications/OpenRambleDev.app/Contents/Resources"
+          RESOURCES="artifacts/build/OpenRamble.xcarchive/Products/Applications/OpenRamble.app/Contents/Resources"
           for file in \
             LICENSE NOTICE THIRD_PARTY_LICENSES.md \
             model-manifest.json vocabulary-manifest.json \
@@ -179,15 +180,8 @@ jobs:
             test -s "$RESOURCES/$file" || { echo "No required resource: $file" >&2; exit 1; }
           done
 
-      # An image that does not mount is a failure at exactly the step that
-      # is done by every user and not by any test.
-      - name: Check that the image opens
-        run: |
-          DMG=$(ls artifacts/dmg/OpenRambleDev-*.dmg)
-          hdiutil attach "$DMG" -nobrowse -readonly -mountpoint /tmp/waidmg
-          test -d "/tmp/waidmg/OpenRambleDev.app"
-          test -L "/tmp/waidmg/Applications"
-          hdiutil detach /tmp/waidmg
+      - name: Check DMG checksum container
+        run: hdiutil verify artifacts/dmg/OpenRamble-*.dmg
 
   feed:
     name: Update feed
