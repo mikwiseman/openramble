@@ -116,6 +116,40 @@ hashes between the reference and candidate-first schedulers; the full LocalASR
 suite also exercises final context rescoring. These are implementation
 regression checks, not cross-product claims.
 
+## Reusable TDT input buffer evidence (2026-08-14)
+
+The pinned upstream runtime cleared its cached 240,000-element Float32 audio
+input after every TDT request, even though `preparePreprocessorInput` overwrites
+the complete fixed-size buffer before Core ML can read it again. On the Apple M4
+host used for the phase study, that redundant clear took about 16 ms by itself.
+The pinned OpenRamble FluidAudio fork keeps the cache's zero-reset behavior as
+the default and skips it only for this fully overwritten TDT input.
+
+The same predecoded, persistent-process, vocabulary-on lane was run before and
+after the change. The baseline used 20 measured requests per fixture and the
+post-change run used 50; both used six warm-ups, the same frozen PCM hashes,
+`.automatic` compute placement, and `candidateRegions` scheduling.
+
+| Fixture | Before p50 | After p50 | Change |
+|---|---:|---:|---:|
+| LibriSpeech real EN, 7.06 s | 62.034 ms | 50.930 ms | -17.9% |
+| VOiCES real EN, 3.53 s | 52.622 ms | 40.260 ms | -23.5% |
+| FLEURS real RU, 7.44 s | 60.854 ms | 49.027 ms | -19.4% |
+| FLEURS real RU, 3.40 s | 60.233 ms | 47.869 ms | -20.5% |
+| Synthetic boundary, 14.9 s | 81.349 ms | 70.607 ms | -13.2% |
+| Synthetic boundary, 15.1 s | 111.025 ms | 98.289 ms | -11.5% |
+| Synthetic boundary, 29.9 s | 144.997 ms | 127.410 ms | -12.1% |
+| Synthetic boundary, 30.1 s | 138.447 ms | 127.424 ms | -8.0% |
+
+Every fixture retained exactly the same raw and normalized transcript hash. A
+separate Russian developer-term fixture also retained its exact
+`rescored_modified` hash; its primary TDT phase moved from 88.36 ms to 71.03 ms,
+while the independent CTC phase dominated total variance. The optimized
+eight-fixture report has SHA-256
+`b8b758370a444d9faf67bcee9da1648121409bd4bb3de38eb376f7eafb23eacf`.
+These are single-host implementation measurements, not a cross-hardware or
+cross-product speed claim.
+
 ## Handy backend investigation (2026-08-13)
 
 Hardware: Apple M4, 16 GB, macOS 26.4. Audio: reproducible macOS `say`

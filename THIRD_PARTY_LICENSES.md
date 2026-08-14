@@ -45,7 +45,8 @@ The user downloads them explicitly from the app.
 
 The dependencies are pinned by immutable commit:
 
-- FluidAudio: `19600a485baa4998812e4654b70d2bab8f2c9949`
+- FluidAudio: OpenRamble fork `955af8b81f4023a353fa84fe096078388b3eb023`,
+  based on upstream `19600a485baa4998812e4654b70d2bab8f2c9949`
 - Sparkle: `b6496a74a087257ef5e6da1c5b29a447a60f5bd7`
 
 The DMG includes complete license texts as `FluidAudio-Apache-2.0.txt` and
