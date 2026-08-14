@@ -31,93 +31,73 @@ for every published result.
 Synthetic fixtures are useful for reproducibility but do not establish quality
 on live speech. Do not present synthetic scores as human-speech measurements.
 
-## OpenRamble vs Handy 0.9.5 (2026-08-14)
+## Paired OpenRamble and Handy protocol (2026-08-14)
 
-This is the current controlled comparison to use for product writing. It used
-an Apple M4 with 16 GB RAM on macOS 26.4, the shipping OpenRamble Core ML
-pipeline with acoustic vocabulary and inference pre-warm enabled, and Handy's
-official notarized arm64 0.9.5 release with its catalog-default Parakeet v3
-Q8_0 GGUF on Metal. Each value is two unreported warm-ups followed by nine
-measured recognitions of the identical 16 kHz mono input. `p50` is the median;
-`p95` is linearly interpolated.
+The retired asymmetric comparison has been removed. Its timers covered
+different work, it ran engines in blocks with only nine observations, and it
+could not verify every Handy output. No number from that run is a product
+claim.
 
-| Input | Audio | OpenRamble p50 / p95 | Handy p50 / p95 | Median result |
-|---|---:|---:|---:|---:|
-| Synthetic Russian, short | 5.74 s | 0.1583 / 0.1591 s | 0.1170 / 0.1328 s | Handy 1.35× faster |
-| Synthetic Russian, medium | 35.36 s | 0.3843 / 0.3885 s | 0.6150 / 0.6204 s | OpenRamble 1.60× faster |
-| Synthetic Russian, long | 183.41 s | 1.3070 / 1.3292 s | 17.5560 / 18.0708 s | OpenRamble 13.43× faster |
-| LibriSpeech `test-other` sample | 7.06 s | 0.1557 / 0.1575 s | 0.1100 / 0.1318 s | Handy 1.42× faster |
-| VOiCES room sample | 3.40 s | 0.1303 / 0.1329 s | 0.0690 / 0.0842 s | Handy 1.89× faster |
+The replacement harness launches each backend once behind the same persistent
+JSONL protocol. It decodes canonical 16 kHz mono Float32 PCM before the timed
+`predecoded-product-warm` lane, then interleaves every measured pair in a
+seeded, balanced order. It records p50/p95/p99/max, paired-bootstrap confidence
+intervals, thermal state, exact argv and binary/model/source/patch/input hashes.
+Every output is normalized and hashed on every run; plaintext transcripts are
+never written to the report. Checkpoints resume only when the complete
+experiment identity still matches.
 
-Both apps produced zero word errors against the frozen references for the two
-real English samples. Two clips are an integration check, not a representative
-quality corpus, so this is not evidence of equal general WER. The three
-synthetic Russian clips have no quality claim. Both apps produced identical
-transcript hashes on the short and medium synthetic clips. Their hashes differ
-on the repeated three-minute fixture, so its row is a latency comparison only.
-OpenRamble reached 140× real time
-on the three-minute input and used about 2.41 GB peak RSS; this run did not
-capture Handy RSS with the same measurement method, so no memory comparison is
-published.
+A 2026-08-14 internal acceptance run completed 400/400 pairs across four real
+speech and four synthetic boundary fixtures without a hang. All four real
+fixtures were transcript-stable and matched between the two tested backends
+after common normalization. This is a backend-only check on one Apple M4, not
+an official app-to-app benchmark: the Handy side is a locally patched pinned
+backend, the engines use different model quantization, custom-vocabulary
+configuration is asymmetric, and the fixture set is too small for a public
+speed or general-WER claim. Synthetic boundary results are diagnostic only.
 
-The defensible public statement from this run is: **“Up to 13.4× faster than
-Handy 0.9.5 on a tested three-minute local transcription, and 140× faster than
-real time on an Apple M4.”** It must stay attached to the hardware, fixture,
-versions, and method above. The run does not support “fastest for every clip”
-or “10× faster on every clip”: Handy retains a 1.4–1.9× short-utterance
-advantage on this machine. A product target is not a benchmark result.
+Therefore OpenRamble currently publishes **no speed multiplier versus Handy**.
+A future claim requires publishing the consented fixture manifest and complete
+artifacts, independent reproduction, an app-level lane, several Apple Silicon
+generations and a representative frozen quality corpus.
 
-The speedup comes from scheduling the optional CTC vocabulary model by need.
-One 15-second model window still runs alongside the primary recognizer. For
-longer audio, OpenRamble first reads the TDT transcript, applies the pinned
-rescorer's permissive string gates, and then computes only the canonical
-15-second CTC windows that could change the final text. A no-candidate
-three-minute recording therefore avoids a speculative whole-record second
-pass. If a candidate falls near an overlap, every intersecting window is kept
-and combined with FluidAudio's probability-space overlap rule. A trailing
-partial window also retains its full predecessor so the reconstructed frame
-grid remains identical to the reference.
-
-A separate 172.29-second synthetic fixture placed a real `Postgres` vocabulary
-candidate late in the recording. The optimized sparse pass and the
-reference whole-file pass produced the same transcript SHA-256
-(`70526bda7c02bdf06d3d2704833733d122884eb984d49677577a1689ccc7e861`).
-Their p50 latencies were 1.8260 seconds and 2.3470 seconds respectively. This
-is an end-to-end parity check for a late candidate, not a general quality score.
-Another 65.0000625-second fixture placed the candidate inside the final partial
-window. Selective and reference modes again produced the same transcript hash
-(`19e67ac1c731259b651d3ce6278547569b24460d42d6fe6d9f622606692121c8`);
-their p50 latencies were 0.7487 and 0.5714 seconds respectively.
-
-The scheduler makes a measured tradeoff after the single-window boundary. On
-a 25.86-second fixture containing a real vocabulary candidate, the selective
-serial pass took 0.5746 seconds versus 0.4185 seconds for speculative parallel
-CTC, with identical transcript hashes. On the ordinary 35.36-second fixture
-without a candidate, selective scheduling took 0.3843 seconds versus 0.5543
-seconds for speculative CTC. The 15-second cutoff favors the no-correction path
-while the candidate case still runs about 45× faster than real time. Both sides
-of this policy remain reproducible instead of hiding the less favorable case.
-
-The reproducible runner checkpoints atomically after every engine/fixture pair
-and stores transcript hashes rather than transcript text:
+The runner checkpoints atomically after every observation:
 
 ```bash
-./scripts/benchmark-local-asr.py \
+/usr/bin/python3 scripts/benchmark-local-asr.py \
   --manifest /absolute/path/to/manifest.json \
   --openramble-bin Packages/LocalASR/.build/release/asr-bench \
-  --handy-bin /absolute/path/to/Handy.app/Contents/MacOS/handy \
-  --handy-model parakeet-tdt-0.6b-v3-Q8_0 \
-  --warmups 2 --repeats 9 \
+  --handy-bin /absolute/path/to/patched/handy \
+  --handy-model handy-computer/parakeet-tdt-0.6b-v3-gguf/parakeet-tdt-0.6b-v3-Q8_0.gguf \
+  --handy-model-path /absolute/path/to/parakeet-tdt-0.6b-v3-Q8_0.gguf \
+  --handy-model-sha256 <sha256> \
+  --handy-source-commit <40-character-commit> \
+  --handy-patch scripts/benchmark-adapters/handy-persistent-jsonl-db003f3.patch \
+  --lane predecoded-product-warm \
+  --openramble-vocabulary on --openramble-prewarm on \
+  --openramble-encoder-placement automatic \
+  --openramble-vocabulary-scheduling candidateRegions \
+  --warmups 6 --repeats 50 --bootstrap-samples 10000 \
   --output /absolute/path/to/report.json
 ```
 
-The manifest records each fixture's absolute path, source, license, optional
-frozen reference, model revisions, application commits, and release-asset and
-model SHA-256 values. This run pinned Handy source
-`db003f38b1aef4eb967ac3419bebc851d680f71c`, release asset SHA-256
-`d7b83185ebe04d67b51b668a5ac26a052128ec27ff1dd5f0da85d385aa7de7aa`,
-and Q8_0 model SHA-256
-`5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7`.
+The manifest records source, license, language, immutable input checksum and an
+optional frozen reference for every fixture. `scripts/benchmark-adapters/README.md`
+documents why the Handy patch is benchmark infrastructure rather than evidence
+of parity with the official GUI application.
+
+## Vocabulary scheduler evidence
+
+The shipping scheduler completes primary TDT recognition first, applies a
+cached allocation-bounded lexical gate, and runs the optional CTC vocabulary
+model only for regions that can change the final text. Ordinary short
+dictations therefore avoid both discarded per-term dynamic programming and
+accelerator contention with a speculative CTC pass. Candidate windows retain
+the pinned overlap reconstruction rules. Frozen A/B fixtures, including real
+Russian speech and an actual developer-term case, produced identical transcript
+hashes between the reference and candidate-first schedulers; the full LocalASR
+suite also exercises final context rescoring. These are implementation
+regression checks, not cross-product claims.
 
 ## Handy backend investigation (2026-08-13)
 
@@ -155,12 +135,14 @@ justify replacing the shipping backend solely for latency.
 
 FluidAudio's long-form window pool was also swept on the exact 183.91-second
 fixture after inference warm-up. Two workers took 1.99 s, four took 1.48–1.56 s,
-six took 1.29–1.31 s, and eight or ten took 1.31 s. Six is now the shipping
-default. The transcript SHA-256 was identical at four and six workers
+six took 1.29–1.31 s, and eight or ten took 1.31 s. The transcript SHA-256 was
+identical at four and six workers
 (`f535f6a32e729561cdd185a6854353c2e3f1845794477a66f167bcf6126d163d`),
 peak RSS stayed at about 2.414 GB, and the 36.63-second fixture remained flat
-(0.36 s at four, 0.37 s at six). This buys roughly 15% on long dictation without
-a quality, memory, or common short-dictation tradeoff.
+(0.36 s at four, 0.37 s at six). Six buys roughly 15% on this M4's 184-second
+fixture, but that single-host result is not a universal concurrency policy;
+shipping retains FluidAudio's cross-device default of four until a wider
+device matrix justifies per-host tuning.
 
 The retained ONNX backend is not the source of Handy's short-latency advantage
 on this machine. After its first run, it was slightly slower than warmed Core
@@ -180,9 +162,11 @@ The actionable differences were elsewhere:
 - Handy sends the recorder's Float32 PCM directly to recognition and persists
   WAV concurrently. OpenRamble used to close an Int16 WAV, reopen it, and
   convert it to Float32. The shipping capture now hands the same in-memory PCM
-  to ASR while retaining the WAV as the durable recovery copy. The fast-path
-  buffer is capped at five minutes (about 19 MB); unlimited longer recordings
-  fall back to the WAV instead of growing resident memory without bound.
+  to ASR while retaining the WAV as the durable recovery copy. The lossless
+  fast-path buffer is capped at five minutes (about 19 MB). At that boundary
+  capture stops gracefully and transcribes the complete retained take; it does
+  not trust an unsealed asynchronous WAV and does not grow resident memory
+  without bound.
 - FluidAudio pads every Parakeet v3 batch window to the model's fixed 15-second
   input. This explains the short-utterance latency floor. Its true-streaming
   managers use different model families; the v3 sliding-window API also lacks

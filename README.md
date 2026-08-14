@@ -73,11 +73,23 @@ Application data is stored under
 | Data | Retention |
 |---|---|
 | Recognition models | Until removed in Settings |
-| Current recording | Deleted immediately after recognition |
+| Current recording | Queued for local deletion after success or explicit cancellation |
 | Recovery audio after a technical failure | Up to 10 WAV files, seven days, and 1 GiB |
 | Recognized text and Recent Dictations | Memory only — the last 8, never written to disk, gone at quit |
 | Settings and replacement dictionary | Stored in macOS defaults |
 | Text that could not be inserted | Memory only, until the next dictation or app exit |
+
+When a technical failure or interrupted process leaves recovery audio,
+OpenRamble discloses a newly recovered take and shows `Recovered Recordings
+(N)…` in the menu. That command opens the exact Finder folder for Preview or
+Delete; retained voice is never transcribed again in the background.
+
+Deletion runs outside the microphone/UI path so a stalled filesystem cannot
+freeze dictation. If the bounded cleanup lane cannot persist exact file
+identities, OpenRamble fails closed: it disables automatic audio recovery,
+leaves ambiguous bytes untouched, and shows `Recording Support Files —
+Recovery Disabled…` until the Support folder is inspected. Cancellation is
+not described as power-loss durable before its local intent reaches disk.
 
 Upgrading from a build released under the previous product name moves the old
 Application Support directory automatically. The bundle identifier remains
@@ -91,7 +103,9 @@ Application Support directory automatically. The bundle identifier remains
 - Use “Copy Last as Spoken” to copy the raw recognition result before
   dictionary replacements and typography cleanup. The item appears when that
   raw text differs from what was inserted.
-- There is no limit on how long a dictation may run.
+- A single dictation can run for up to five minutes. At the limit OpenRamble
+  stops cleanly and transcribes the complete captured audio instead of risking
+  an incomplete take when disk storage is unavailable.
 - Choose whether the compact dictation panel appears at the top or bottom of
   the active display in Settings → General.
 
@@ -103,18 +117,6 @@ devices or clipboard-manager history. Concealed password-manager values, file
 promises, and clipboard contents larger than 16 MiB are never copied; the
 dictated text stays available in the menu — “Insert Last Dictation” and
 Recent Dictations — instead.
-
-## Local transcription for agents
-
-OpenRamble includes an opt-in local [MCP server](docs/mcp.md), so Codex,
-Claude Code, and other stdio MCP clients can transcribe audio with the same
-on-device model. Enable it in Settings → Agents and copy the setup command for
-your client. Agent requests are bounded and serialized; a live dictation
-always takes priority.
-
-The helper does not load another model, open a network listener, or retain a
-transcript. It connects to the running app over a same-user Unix socket and
-returns text plus measured processing, queue, and total durations.
 
 ## Requirements
 
@@ -153,7 +155,6 @@ the separate name `OpenRambleDev` and bundle identifier
 - [Security policy](SECURITY.md)
 - [Manual verification](docs/manual-check.md)
 - [Release process](docs/release.md)
-- [Local transcription MCP](docs/mcp.md)
 - [Benchmark methodology](docs/benchmarks.md)
 - [Model lifecycle](docs/model-lifecycle.md)
 

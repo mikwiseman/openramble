@@ -42,10 +42,16 @@ for the check.
    after insertion and do not appear on another device through Universal
    Clipboard. Verify password-manager values, lazy file promises, and content
    above 16 MiB use the safe Copy/Retry recovery instead.
-10. Force capture, transcription, and insertion failures. Verify recovery audio
-    and uninserted text remain accessible from the menu, retry succeeds, delete
-    is explicit, old recovery recordings expire, and ordinary successful audio
-    is removed immediately.
+10. Force capture, transcription, insertion, and kill/relaunch failures. Verify
+    uninserted recognized text offers `Insert Last Dictation`; retained voice is
+    disclosed once and appears as `Recovered Recordings (N)…`, which opens the
+    exact Finder folder for Preview/Delete. Verify the count, explicit Finder
+    deletion, seven-day/count/size expiry, and bounded-background removal of
+    ordinary successful audio. The app must not transcribe retained voice in the
+    background. Inject a delete-intent storage failure and confirm automatic
+    recovery fails closed: ambiguous WAVs remain byte-for-byte untouched and
+    the idle menu persistently offers `Recording Support Files — Recovery
+    Disabled…` rather than importing or deleting them.
 11. Enable correction learning, correct an inserted term in the same field, and
     verify the learned replacement. Disable the setting and confirm the field is
     no longer re-read. Add and delete a personal replacement using keyboard and
