@@ -17,10 +17,11 @@ let package = Package(
         .package(path: "../DictationCore"),
         // Immutable OpenRamble fork commit based on upstream tag 0.15.5
         // (19600a485baa4998812e4654b70d2bab8f2c9949). The fork skips a redundant
-        // reset of TDT's fully overwritten fixed-size audio input buffer.
+        // reset of TDT's fully overwritten fixed-size audio input buffer and
+        // avoids NSNumber boxing at the optional CTC model boundaries.
         .package(
             url: "https://github.com/mikwiseman/FluidAudio.git",
-            revision: "955af8b81f4023a353fa84fe096078388b3eb023"
+            revision: "39bbd3a0742e87c1d2b03dfd7d8526cac8a5a13e"
         ),
     ],
     targets: [

@@ -150,6 +150,40 @@ eight-fixture report has SHA-256
 These are single-host implementation measurements, not a cross-hardware or
 cross-product speed claim.
 
+## Typed CTC tensor access evidence (2026-08-14)
+
+The optional acoustic-vocabulary path previously wrote up to 240,000 Float16
+audio samples and read roughly 188 × 1,025 Float16 logits through
+`MLMultiArray`'s generic subscript. Every scalar crossed the Objective-C
+`NSNumber` bridge. The pinned FluidAudio fork now writes the contiguous audio
+backing directly and reads logits through their recorded tensor strides. The
+log-softmax, candidate selection, overlap merge, and rescoring algorithms are
+unchanged.
+
+The same persistent, prewarmed M4 processes were compared in balanced order.
+The real 7.578-second Russian developer-term fixture used six warm-ups and 80
+measured baseline/candidate pairs, split exactly 40/40 by order. A synthetic
+15.156-second repeat exercised two CTC windows with six warm-ups and 40 measured
+pairs, split 20/20 by order.
+
+| Candidate path | Baseline total p50 | Typed total p50 | Baseline CTC p50 | Typed CTC p50 |
+|---|---:|---:|---:|---:|
+| One CTC invocation | 210.403 ms | 120.285 ms (-42.8%) | 101.989 ms | 11.399 ms |
+| Two CTC invocations | 413.418 ms | 218.891 ms (-47.1%) | 218.091 ms | 29.821 ms |
+
+Every measured pair retained the same raw and normalized transcript hashes,
+the same `rescored_modified` outcome, and the same CTC invocation count.
+Float16/Float32, rank-3/rank-4, shipping-sized, and non-contiguous-stride oracle
+tests compare the direct path against the former boxed subscript path; the
+unsafe-buffer tests also pass AddressSanitizer and ThreadSanitizer. The
+one-window and two-window reports have SHA-256
+`4d952cb8be7a278d2c596975bd34ff258994fe73d21b74d6ba7aa770f4564f86`
+and `2bd34284405da0ba9c6d858177244d18b49f4b230fd058830c87f1c007ec74db`.
+The pinned current tree also passed all 233 LocalASR tests, including real-model
+TDT and vocabulary-rescore coverage. These are single-host implementation
+measurements for dictations that actually invoke optional CTC, not a claim about
+ordinary no-candidate dictation or another product.
+
 ## Handy backend investigation (2026-08-13)
 
 Hardware: Apple M4, 16 GB, macOS 26.4. Audio: reproducible macOS `say`
