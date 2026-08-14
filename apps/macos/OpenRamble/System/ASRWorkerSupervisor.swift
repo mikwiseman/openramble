@@ -191,6 +191,14 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
     private var operationHeld = false
     private var nextOperationWaiterID: UInt64 = 0
     private var operationWaiters: [OperationWaiter] = []
+    /// Explicit unload is a non-cancellable ownership boundary. It runs before
+    /// ordinary queued work once the active operation yields, so model deletion
+    /// cannot be overtaken by another warm/prepare call.
+    private var unloadOperationWaiters: [CheckedContinuation<Void, Never>] = []
+    /// Public calls capture this before waiting for the operation gate. Unload
+    /// advances it while holding that gate; calls admitted against the old model
+    /// configuration then fail without launching a replacement child.
+    private var configurationEpoch: UInt64 = 0
     private var recoverySequence: UInt64 = 0
     private var recoveryTask: Task<Void, Never>?
     private var readinessObservers: [UUID: AsyncStream<Bool>.Continuation] = [:]
@@ -224,9 +232,13 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
     }
 
     public func prepare(modelDirectory: URL) async throws {
+        let admittedEpoch = configurationEpoch
         try await acquireOperation()
         defer { releaseOperation() }
         try Task.checkCancellation()
+        guard admittedEpoch == configurationEpoch else {
+            throw ASRWorkerTransportError.generationInvalidated
+        }
         cachedModelDirectory = modelDirectory
 
         try await retryTransportOnce {
@@ -240,9 +252,14 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
     }
 
     public func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {
+        let admittedEpoch = configurationEpoch
         try await acquireOperation()
         defer { releaseOperation() }
         try Task.checkCancellation()
+        guard admittedEpoch == configurationEpoch else {
+            throw ASRWorkerTransportError.generationInvalidated
+        }
+        guard cachedModelDirectory != nil else { throw ASREngineError.modelsNotLoaded }
 
         vocabularyRevision &+= 1
         let proposed = ASRWorkerVocabulary(
@@ -276,9 +293,14 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
     }
 
     public func warmUpInference() async throws {
+        let admittedEpoch = configurationEpoch
         try await acquireOperation()
         defer { releaseOperation() }
         try Task.checkCancellation()
+        guard admittedEpoch == configurationEpoch else {
+            throw ASRWorkerTransportError.generationInvalidated
+        }
+        guard cachedModelDirectory != nil else { throw ASREngineError.modelsNotLoaded }
         try await retryTransportOnce {
             let activeGeneration = try await self.ensureLaunched()
             if self.loadedMainGeneration != activeGeneration {
@@ -304,9 +326,13 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
             throw ASREngineError.unsupportedAudioFormat("recording exceeds the in-memory worker limit")
         }
 
+        let admittedEpoch = configurationEpoch
         try await acquireOperation()
         defer { releaseOperation() }
         try Task.checkCancellation()
+        guard admittedEpoch == configurationEpoch else {
+            throw ASRWorkerTransportError.generationInvalidated
+        }
         let duration = Double(samples.count) / Double(ASRWorkerProtocol.sampleRate)
         let payload = samples.withUnsafeBufferPointer { Data(buffer: $0) }
         let request = ASRWorkerTranscribeSamples(
@@ -324,9 +350,13 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
     }
 
     public func transcribe(fileURL: URL, languageHint: String?) async throws -> ASRResult {
+        let admittedEpoch = configurationEpoch
         try await acquireOperation()
         defer { releaseOperation() }
         try Task.checkCancellation()
+        guard admittedEpoch == configurationEpoch else {
+            throw ASRWorkerTransportError.generationInvalidated
+        }
         let request = ASRWorkerTranscribeFile(path: fileURL.path, languageHint: languageHint)
         return try await transcribeOnce(
             metadata: ASRWorkerJSON.encode(request),
@@ -338,7 +368,14 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
 
     public func unload() async {
         cancelRecovery()
+        await acquireUnloadOperation()
+        defer { releaseOperation() }
+        cancelRecovery()
+        configurationEpoch &+= 1
         invalidateCurrentGeneration(error: ASRWorkerTransportError.generationInvalidated)
+        cachedModelDirectory = nil
+        cachedVocabulary = nil
+        hasCompleteConfiguration = false
         await reapKilledProcesses()
     }
 
@@ -977,7 +1014,9 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
     }
 
     func releaseOperation() {
-        if operationWaiters.isEmpty {
+        if !unloadOperationWaiters.isEmpty {
+            unloadOperationWaiters.removeFirst().resume()
+        } else if operationWaiters.isEmpty {
             operationHeld = false
         } else {
             operationWaiters.removeFirst().continuation.resume()
@@ -985,6 +1024,17 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
     }
 
     var queuedOperationCount: Int { operationWaiters.count }
+    var queuedUnloadOperationCount: Int { unloadOperationWaiters.count }
+
+    private func acquireUnloadOperation() async {
+        if !operationHeld {
+            operationHeld = true
+            return
+        }
+        await withCheckedContinuation { continuation in
+            unloadOperationWaiters.append(continuation)
+        }
+    }
 
     private func cancelOperationWaiter(identifier: UInt64) {
         guard let index = operationWaiters.firstIndex(where: {

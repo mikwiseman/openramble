@@ -1481,8 +1481,8 @@ public final class AppState: ObservableObject {
     ///
     /// The message is given only for a cancellation that has actually taken place. From
     /// `.inserting` there is nothing to cancel - ⌘V has already gone into someone else's
-    /// window - and the kernel ignores such a request. The words “the recording was
-    /// deleted” would then say the exact opposite of what a person sees a moment later in
+    /// window - and the kernel ignores such a request. A message saying the recording was
+    /// queued for deletion would then say the exact opposite of what a person sees a moment later in
     /// his document, and would also erase the real warning about the insertion from the
     /// screen. Escape at this moment does nothing, and it is right that it says nothing:
     /// the text is already in place, and there is nothing to report about it.
@@ -1491,7 +1491,12 @@ public final class AppState: ObservableObject {
               DictationStopPolicy.canCancel(state: dictationState)
         else { return }
         controller?.cancel()
-        notify(DictationNotice(kind: .info, message: "Dictation cancelled. The recording was deleted."))
+        notify(
+            DictationNotice(
+                kind: .info,
+                message: "Dictation cancelled. Its local recording is queued for deletion."
+            )
+        )
     }
 
     private func wireHotkey() {
@@ -1957,9 +1962,24 @@ public final class AppState: ObservableObject {
             return
         }
         guard let store else { return }
+
+        // Deletion is an ownership boundary, not another model lifecycle event.
+        // Revoke every AppState task before asking the recognizer to unload so a
+        // cancellation-deaf continuation cannot publish Ready or queue a retry
+        // after the files have gone away. The process-backed recognizer also
+        // serializes unload against its active request and fences queued calls.
+        modelState = .deleting
+        isEngineReady = false
+        engineLoadFailure = nil
+        vocabularyRebuildTask?.cancel()
+        vocabularyRebuildTask = nil
+        engineWarmupTaskRevision &+= 1
+        engineWarmupTask?.cancel()
+        engineWarmupTask = nil
+        engineWarmupRetryRevision &+= 1
+        engineWarmupRetryTask?.cancel()
+        engineWarmupRetryTask = nil
         Task {
-            isEngineReady = false
-            engineLoadFailure = nil
             await transcriber?.unload()
             await store.delete()
             await vocabularyStore?.delete()
@@ -2005,6 +2025,7 @@ public final class AppState: ObservableObject {
 
     private func performEngineWarmup() async -> EngineWarmupOutcome {
         guard let transcriber, let store else { return .skipped }
+        guard modelState.isReady else { return .skipped }
         guard case .ready = await store.currentState() else { return .skipped }
         isEngineReady = false
         isPreparingEngine = true
@@ -2023,6 +2044,7 @@ public final class AppState: ObservableObject {
             let manifest = try ModelManifest.bundled()
             let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
             try await transcriber.prepare(modelDirectory: layout.engineDirectory)
+            try Task.checkCancellation()
             engineLog.info(
                 "engine prepared in \(preparationStart.duration(to: clock.now).appSeconds, format: .fixed(precision: 2))s"
             )
@@ -2064,6 +2086,7 @@ public final class AppState: ObservableObject {
                     }
                 }
             }
+            try Task.checkCancellation()
             let inferenceStart = clock.now
             do {
                 try await transcriber.warmUpInference()
@@ -2083,6 +2106,7 @@ public final class AppState: ObservableObject {
                 // fails, the ordinary main-engine recovery path owns it.
                 try await transcriber.warmUpInference()
             }
+            try Task.checkCancellation()
             engineLog.info(
                 "engine inference warmed in \(inferenceStart.duration(to: clock.now).appSeconds, format: .fixed(precision: 2))s"
             )
@@ -2102,6 +2126,8 @@ public final class AppState: ObservableObject {
                 reportAcousticVocabularyDisabled(detail: vocabularyWarning)
             }
             return .ready
+        } catch is CancellationError {
+            return .skipped
         } catch {
             if let reason = verifiedModelRejection(from: error) {
                 let detail =

@@ -126,6 +126,55 @@ struct ASRWorkerSupervisorTests {
         #expect(errno == ESRCH)
     }
 
+    @Test("explicit unload fences active and already queued model operations")
+    func explicitUnloadSerializesAndRevokesQueuedWork() async throws {
+        let fixture = try makeHangingWorker(mode: "success")
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let supervisor = ASRWorkerSupervisor(
+            executableURL: fixture.executable,
+            executableArguments: [fixture.processLog.path, fixture.mode]
+        )
+        try await supervisor.prepare(
+            modelDirectory: URL(fileURLWithPath: "/tmp/model-being-deleted")
+        )
+        try await supervisor.acquireOperation()
+
+        let unload = Task { await supervisor.unload() }
+        for _ in 0..<100 {
+            if await supervisor.queuedUnloadOperationCount == 1 { break }
+            await Task.yield()
+        }
+        #expect(await supervisor.queuedUnloadOperationCount == 1)
+
+        // This models the next step of an AppState warm-up that resumes after
+        // prepare while a user has already requested model deletion.
+        let staleWarm = Task { try await supervisor.warmUpInference() }
+        for _ in 0..<100 {
+            if await supervisor.queuedOperationCount == 1 { break }
+            await Task.yield()
+        }
+        #expect(await supervisor.queuedOperationCount == 1)
+
+        await supervisor.releaseOperation()
+        await unload.value
+        do {
+            try await staleWarm.value
+            Issue.record("stale warm-up relaunched a worker after explicit unload")
+        } catch let error as ASRWorkerTransportError {
+            #expect(error == .generationInvalidated)
+        } catch {
+            Issue.record("unexpected stale warm-up error: \(type(of: error))")
+        }
+
+        #expect(await supervisor.isPrepared == false)
+        #expect(await supervisor.isBusy == false)
+        let processIdentifiers = readProcessIdentifiers(from: fixture.processLog)
+        #expect(processIdentifiers.count == 1)
+        let processIdentifier = try #require(processIdentifiers.first)
+        #expect(Darwin.kill(processIdentifier, 0) == -1)
+        #expect(errno == ESRCH)
+    }
+
     @Test("a missing worker fails closed without an in-process fallback")
     func missingWorkerFailsClosed() async {
         let supervisor = ASRWorkerSupervisor(

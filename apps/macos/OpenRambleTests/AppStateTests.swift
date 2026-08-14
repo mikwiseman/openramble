@@ -20,6 +20,48 @@ private actor OwnedPreparationProbe {
     }
 }
 
+/// A cancellation-deaf vocabulary prepare models the exact window where model
+/// deletion used to unload/delete files while the old warm-up later resumed and
+/// published Ready again.
+private actor ModelDeletionWarmupRecognizer: DictationRecognizing {
+    private var vocabularyContinuation: CheckedContinuation<Void, Never>?
+    private(set) var vocabularyPreparationStarted = false
+    private(set) var warmUpCount = 0
+    private(set) var unloadCount = 0
+
+    var isPrepared: Bool { warmUpCount > 0 && unloadCount == 0 }
+    var isBusy: Bool { vocabularyPreparationStarted && vocabularyContinuation != nil }
+
+    func prepare(modelDirectory: URL) async throws {}
+
+    func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {
+        vocabularyPreparationStarted = true
+        await withCheckedContinuation { vocabularyContinuation = $0 }
+    }
+
+    func transcribe(fileURL: URL, languageHint: String?) async throws -> ASRResult {
+        ASRResult(text: "", audioDuration: 1, processingDuration: 0)
+    }
+
+    func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
+        ASRResult(text: "", audioDuration: 1, processingDuration: 0)
+    }
+
+    func warmUpInference() async throws { warmUpCount += 1 }
+
+    func unload() async { unloadCount += 1 }
+
+    func unloadIfIdle() async -> Bool {
+        unloadCount += 1
+        return true
+    }
+
+    func releaseVocabularyPreparation() {
+        vocabularyContinuation?.resume()
+        vocabularyContinuation = nil
+    }
+}
+
 private final class LegacyCleanupThreadProbe: @unchecked Sendable {
     private let lock = NSLock()
     private var invocationThreadWasMain: Bool?
@@ -483,7 +525,10 @@ final class AppStateTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(5))
         }
 
-        XCTAssertEqual(state.lastNotice?.message, "Dictation cancelled. The recording was deleted.")
+        XCTAssertEqual(
+            state.lastNotice?.message,
+            "Dictation cancelled. Its local recording is queued for deletion."
+        )
         XCTAssertEqual(state.successfulDictationCount, 0)
     }
 
@@ -527,8 +572,46 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(state.modelState.isReady)
 
         state.deleteModel()
+        XCTAssertEqual(state.modelState, .deleting)
         try await Task.sleep(for: .milliseconds(200))
 
+        XCTAssertFalse(state.modelState.isReady)
+    }
+
+    func testDeletingModelRevokesCancellationDeafWarmupBeforeReadyCanRepublish() async throws {
+        try installModelMarker()
+        let recognizer = ModelDeletionWarmupRecognizer()
+        harness.recognizer = recognizer
+        let state = makeState()
+
+        for _ in 0..<200 {
+            if await recognizer.vocabularyPreparationStarted { break }
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(2))
+        }
+        let vocabularyPreparationStarted = await recognizer.vocabularyPreparationStarted
+        XCTAssertTrue(vocabularyPreparationStarted)
+
+        state.deleteModel()
+        XCTAssertEqual(state.modelState, .deleting)
+        XCTAssertFalse(state.isDictationReady)
+        for _ in 0..<200 {
+            if await recognizer.unloadCount == 1 { break }
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(2))
+        }
+        let unloadCount = await recognizer.unloadCount
+        XCTAssertEqual(unloadCount, 1)
+
+        await recognizer.releaseVocabularyPreparation()
+        for _ in 0..<200 where state.modelState.isReady {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(2))
+        }
+
+        let warmUpCount = await recognizer.warmUpCount
+        XCTAssertEqual(warmUpCount, 0)
+        XCTAssertFalse(state.isEngineReady)
         XCTAssertFalse(state.modelState.isReady)
     }
 
@@ -875,7 +958,7 @@ final class AppStateTests: XCTestCase {
     /// From `.inserting` there is nothing to cancel: ⌘V has already gone into someone
     /// else's window, `DictationStopPolicy` knows this and the kernel ignores the request.
     /// The text appears in the person's document a moment later - so the message about
-    /// the deleted recording would say the exact opposite of what he sees, and would
+    /// a recording queued for deletion would say the exact opposite of what he sees, and would
     /// overwrite a real warning about the insertion itself.
     func testScenario061() async throws {
         try installModelMarker()
@@ -895,7 +978,7 @@ final class AppStateTests: XCTestCase {
 
         XCTAssertNotEqual(
             state.lastNotice?.message,
-            "Dictation cancelled. The recording was deleted.",
+            "Dictation cancelled. Its local recording is queued for deletion.",
             "The insertion was not cancelled, and the text is about to appear in the document"
         )
 
