@@ -42,7 +42,9 @@ The replacement harness launches each backend once behind the same persistent
 JSONL protocol. It decodes canonical 16 kHz mono Float32 PCM before the timed
 `predecoded-product-warm` lane, then interleaves every measured pair in a
 seeded, balanced order. It records p50/p95/p99/max, paired-bootstrap confidence
-intervals, thermal state, exact argv and binary/model/source/patch/input hashes.
+intervals, Mac hardware model, chip, memory, macOS version/build, exact argv and
+binary/model/source/patch/input hashes. Thermal state remains run evidence that
+the operator must capture separately; the JSON report does not infer it.
 Every output is normalized and hashed on every run; plaintext transcripts are
 never written to the report. Checkpoints resume only when the complete
 experiment identity still matches.
@@ -85,6 +87,21 @@ The manifest records source, license, language, immutable input checksum and an
 optional frozen reference for every fixture. `scripts/benchmark-adapters/README.md`
 documents why the Handy patch is benchmark infrastructure rather than evidence
 of parity with the official GUI application.
+
+Report schema 4 includes OpenRamble phase timing schema 1. Collection is enabled
+only by `serve-jsonl`; the shipping adapter leaves it off. The monotonic phases
+are primary TDT inference+decode (the exact `AsrManager.transcribe` call), the
+whole cached lexical localization/gating call, summed wall time of each
+FluidAudio `spotKeywordsWithLogProbs` call, and CTC rescoring through conditional
+punctuation restoration after all guards pass. The CTC value is API-wall time,
+not a claim about an isolated Core ML kernel; audio slicing and sparse timeline
+reconstruction remain unclassified orchestration outside it.
+Skipped phases are JSON `null`, never a zero sentinel, and every report records
+the CTC invocation count and vocabulary outcome. `elapsed_ns` remains the
+authoritative outer wall time. In the explicit `alwaysParallel` reference lane,
+TDT and CTC durations may overlap, so phase values must never be summed to
+reconstruct total latency. `run-file` includes audio decoding only in the outer
+total; its model phase boundaries remain identical to the predecoded lane.
 
 ## Vocabulary scheduler evidence
 

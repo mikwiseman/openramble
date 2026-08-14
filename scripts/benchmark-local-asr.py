@@ -29,11 +29,24 @@ from random import Random
 from typing import Any, Iterable
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 PROTOCOL_VERSION = 1
 HEX_64 = re.compile(r"^[0-9a-f]{64}$")
 HEX_40 = re.compile(r"^[0-9a-f]{40}$")
 ENGINE_ORDER = {"OH": ("openramble", "handy"), "HO": ("handy", "openramble")}
+TIMING_PHASE_KEYS = (
+    "primary_tdt_inference_decode_ns",
+    "lexical_candidate_gate_ns",
+    "ctc_model_inference_ns",
+    "ctc_rescoring_fusion_ns",
+)
+VOCABULARY_OUTCOMES = {
+    "not_configured",
+    "no_candidate",
+    "candidate_no_usable_evidence",
+    "rescored_unmodified",
+    "rescored_modified",
+}
 
 
 def arguments(argv: list[str] | None = None) -> argparse.Namespace:
@@ -433,9 +446,17 @@ def sysctl(name: str) -> str | None:
 
 
 def host_identity() -> dict[str, Any]:
+    try:
+        macos_build = subprocess.check_output(
+            ["sw_vers", "-buildVersion"], text=True
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        macos_build = None
     return {
         "machine": platform.machine(),
         "macos": platform.mac_ver()[0],
+        "macos_build": macos_build,
+        "hardware_model": sysctl("hw.model"),
         "chip": sysctl("machdep.cpu.brand_string"),
         "memory_bytes": int(sysctl("hw.memsize") or 0) or None,
         "python": platform.python_version(),
@@ -599,6 +620,8 @@ def sanitize_observation(
     expected_pcm_hash: str | None,
     expected_language: str | None,
     require_language_echo: bool,
+    expected_timing_scope: str,
+    require_phase_timing: bool,
 ) -> dict[str, Any]:
     elapsed = response.get("elapsed_ns")
     text = response.get("text")
@@ -623,6 +646,12 @@ def sanitize_observation(
     validate_hex(pcm_hash, HEX_64, "engine PCM SHA-256")
     if expected_pcm_hash is not None and pcm_hash != expected_pcm_hash:
         raise RuntimeError("engine transcribed a different canonical PCM buffer")
+    timing = sanitize_timing(
+        response.get("timing"),
+        elapsed,
+        expected_timing_scope,
+        required=require_phase_timing,
+    )
     return {
         "elapsed_ns": elapsed,
         "pcm_f32le_sha256": pcm_hash,
@@ -638,6 +667,120 @@ def sanitize_observation(
         "sample_rate": response.get("sample_rate"),
         "prewarmed": response.get("prewarmed"),
         "peak_rss_bytes": response.get("peak_rss_bytes"),
+        "timing": timing,
+    }
+
+
+def _nonnegative_integer(value: Any, name: str, *, nullable: bool) -> int | None:
+    if value is None and nullable:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        suffix = " or null" if nullable else ""
+        raise RuntimeError(f"{name} must be a non-negative integer{suffix}")
+    return value
+
+
+def sanitize_timing(
+    value: Any,
+    elapsed_ns: int,
+    expected_scope: str,
+    *,
+    required: bool,
+) -> dict[str, Any] | None:
+    if value is None:
+        if required:
+            raise RuntimeError("OpenRamble response omitted phase timing")
+        return None
+    if not isinstance(value, dict):
+        raise RuntimeError("timing must be an object or null")
+    schema_version = _nonnegative_integer(
+        value.get("schema_version"), "timing.schema_version", nullable=False
+    )
+    if schema_version != 1:
+        raise RuntimeError("unsupported timing schema_version")
+    if value.get("clock") != "monotonic_uptime":
+        raise RuntimeError("timing clock must be monotonic_uptime")
+    total = _nonnegative_integer(
+        value.get("total_wall_ns"), "timing.total_wall_ns", nullable=False
+    )
+    if total != elapsed_ns:
+        raise RuntimeError("timing.total_wall_ns must equal elapsed_ns")
+    if value.get("total_wall_scope") != expected_scope:
+        raise RuntimeError("timing.total_wall_scope does not match benchmark lane")
+    overlap = value.get("phases_may_overlap")
+    if not isinstance(overlap, bool):
+        raise RuntimeError("timing.phases_may_overlap must be boolean")
+    phases = value.get("phases")
+    if not isinstance(phases, dict) or any(key not in phases for key in TIMING_PHASE_KEYS):
+        raise RuntimeError("timing.phases omitted a required phase")
+
+    sanitized_phases = {
+        key: _nonnegative_integer(
+            phases.get(key),
+            f"timing.phases.{key}",
+            nullable=key != "primary_tdt_inference_decode_ns",
+        )
+        for key in TIMING_PHASE_KEYS
+    }
+    invocations = _nonnegative_integer(
+        value.get("ctc_inference_invocations"),
+        "timing.ctc_inference_invocations",
+        nullable=False,
+    )
+    ctc_duration = sanitized_phases["ctc_model_inference_ns"]
+    if (invocations == 0) != (ctc_duration is None):
+        raise RuntimeError("CTC duration and invocation count disagree")
+    outcome = value.get("vocabulary_outcome")
+    if not isinstance(outcome, str) or outcome not in VOCABULARY_OUTCOMES:
+        raise RuntimeError("timing.vocabulary_outcome is invalid")
+
+    gate = sanitized_phases["lexical_candidate_gate_ns"]
+    fusion = sanitized_phases["ctc_rescoring_fusion_ns"]
+    if outcome == "not_configured":
+        valid_semantics = (
+            gate is None
+            and ctc_duration is None
+            and fusion is None
+            and invocations == 0
+            and not overlap
+        )
+    elif outcome == "no_candidate":
+        valid_semantics = (
+            gate is not None
+            and fusion is None
+            and (
+                (overlap and ctc_duration is not None and invocations > 0)
+                or (not overlap and ctc_duration is None and invocations == 0)
+            )
+        )
+    elif outcome == "candidate_no_usable_evidence":
+        valid_semantics = (
+            gate is not None
+            and ctc_duration is not None
+            and invocations > 0
+            and fusion is None
+        )
+    else:
+        valid_semantics = (
+            gate is not None
+            and ctc_duration is not None
+            and invocations > 0
+            and fusion is not None
+        )
+    if not valid_semantics:
+        raise RuntimeError("timing phase values contradict vocabulary_outcome")
+
+    return {
+        "schema_version": 1,
+        "clock": "monotonic_uptime",
+        "total_wall_ns": total,
+        "total_wall_scope": expected_scope,
+        # This is a scheduling property: phase durations may overlap and must
+        # never be added to infer total wall time.
+        "phases_may_overlap": overlap,
+        "phases": sanitized_phases,
+        "ctc_inference_invocations": invocations,
+        "vocabulary_outcome": outcome,
     }
 
 
@@ -659,6 +802,12 @@ def execute_observation(
         expected_pcm_hash,
         language,
         engine_name == "handy",
+        (
+            "predecoded_transcribe"
+            if lane == "predecoded-product-warm"
+            else "file_decode_plus_transcribe"
+        ),
+        engine_name == "openramble",
     )
 
 
@@ -700,6 +849,62 @@ def fixture_summary(
                 if any(pair["order"] == order for pair in pairs)
             },
         }
+        timing_values = [
+            observation["timing"]
+            for observation in observations
+            if isinstance(observation.get("timing"), dict)
+        ]
+        if timing_values:
+            phase_summary: dict[str, Any] = {}
+            for phase in TIMING_PHASE_KEYS:
+                measured = [
+                    timing["phases"][phase]
+                    for timing in timing_values
+                    if timing["phases"][phase] is not None
+                ]
+                phase_summary[phase] = (
+                    {
+                        **summarize_ns(measured, audio_duration_ns),
+                        "executed_count": len(measured),
+                        "skipped_count": len(timing_values) - len(measured),
+                    }
+                    if measured
+                    else {
+                        "runs_ns": [],
+                        "minimum_ns": None,
+                        "p50_ns": None,
+                        "p95_ns": None,
+                        "p99_ns": None,
+                        "maximum_ns": None,
+                        "p50_seconds": None,
+                        "p95_seconds": None,
+                        "p99_seconds": None,
+                        "maximum_seconds": None,
+                        "p50_realtime_factor": None,
+                        "executed_count": 0,
+                        "skipped_count": len(timing_values),
+                    }
+                )
+            outcome_counts: dict[str, int] = {}
+            for timing in timing_values:
+                outcome = timing["vocabulary_outcome"]
+                outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+            invocations = [
+                timing["ctc_inference_invocations"] for timing in timing_values
+            ]
+            summary[engine].update(
+                {
+                    "phase_timing_schema_version": 1,
+                    "phase_timings": phase_summary,
+                    "vocabulary_outcomes": dict(sorted(outcome_counts.items())),
+                    "ctc_inference_invocations": {
+                        "runs": invocations,
+                        "minimum": min(invocations),
+                        "p50": float(statistics.median(invocations)),
+                        "maximum": max(invocations),
+                    },
+                }
+            )
 
     if "handy" in engines:
         open_values = [pair["openramble"]["elapsed_ns"] for pair in pairs]

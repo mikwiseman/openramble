@@ -76,6 +76,27 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         let frameDuration: Double
     }
 
+    /// Immutable CTC result returned by the existing evidence task. Keeping
+    /// measurements in this value makes them request-local and keeps locks out
+    /// of the exact model-call interval.
+    private struct VocabularyEvidenceRun: Sendable {
+        let evidence: VocabularyEvidence?
+        let inferenceNanoseconds: UInt64?
+        let invocations: Int
+
+        static let empty = VocabularyEvidenceRun(
+            evidence: nil,
+            inferenceNanoseconds: nil,
+            invocations: 0
+        )
+    }
+
+    private struct RescoreRun: Sendable {
+        let text: String?
+        let fusionNanoseconds: UInt64?
+        let didRun: Bool
+    }
+
     /// Immutable, allocation-bounded snapshot of the lexical half of the
     /// pinned FluidAudio rescorer's candidate decision.
     ///
@@ -276,6 +297,11 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     /// with FluidAudio's reference path in `asr-bench`.
     private let vocabularyScheduling: VocabularyInferenceScheduling
 
+    /// Phase collection is benchmark-only and defaults off. When disabled,
+    /// the shipping path pays only predictable optional branches and performs
+    /// no clock reads, locking, or mutable metric publication.
+    private let collectPhaseTimings: Bool
+
     public static let defaultMaxTokensPerChunk = 600
     /// FluidAudio's cross-device default. Six won one M4 long-form sweep, but
     /// four is the measured upstream device-matrix choice and avoids making an
@@ -290,7 +316,8 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         dualDecodeArbitration: Bool = false,
         maxTokensPerChunk: Int = FluidAudioAdapter.defaultMaxTokensPerChunk,
         parallelChunkConcurrency: Int = FluidAudioAdapter.defaultParallelChunkConcurrency,
-        vocabularyScheduling: VocabularyInferenceScheduling = .candidateRegions
+        vocabularyScheduling: VocabularyInferenceScheduling = .candidateRegions,
+        collectPhaseTimings: Bool = false
     ) {
         self.melChunkContext = melChunkContext
         self.encoder = encoder
@@ -299,6 +326,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         self.maxTokensPerChunk = maxTokensPerChunk
         self.parallelChunkConcurrency = max(1, parallelChunkConcurrency)
         self.vocabularyScheduling = vocabularyScheduling
+        self.collectPhaseTimings = collectPhaseTimings
     }
 
     /// For a test that guards the selected ceiling.
@@ -310,6 +338,9 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     /// Test and benchmark seam for the shipping CTC scheduler.
     var vocabularyInferenceScheduling: VocabularyInferenceScheduling { vocabularyScheduling }
 
+    /// Test seam proving that production construction does not collect metrics.
+    var collectsPhaseTimings: Bool { collectPhaseTimings }
+
     /// Pure scheduling policy used by both the product path and its benchmark
     /// comparison lane. `candidateRegions` always needs the TDT transcript
     /// first; only the explicit reference mode may overlap CTC with TDT.
@@ -318,6 +349,22 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         scheduling: VocabularyInferenceScheduling
     ) -> Bool {
         hasVocabulary && scheduling == .alwaysParallel
+    }
+
+    /// Pure outcome mapping shared by the instrumented path and its table test.
+    /// `rescoredModified` describes the final fused text, not an intermediate
+    /// rescorer flag that punctuation repair could later neutralize.
+    static func vocabularyOutcome(
+        hasVocabulary: Bool,
+        candidateCount: Int,
+        rescoreDidRun: Bool,
+        primaryText: String,
+        finalText: String
+    ) -> ASRPhaseTimings.VocabularyOutcome {
+        guard hasVocabulary else { return .notConfigured }
+        guard candidateCount > 0 else { return .noCandidate }
+        guard rescoreDidRun else { return .candidateNoUsableEvidence }
+        return finalText == primaryText ? .rescoredUnmodified : .rescoredModified
     }
 
     /// For the test that guards the portable automatic default.
@@ -690,6 +737,7 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         let audioDuration = Double(samples.count) / AudioFileReader.targetSampleRate
         let text: String
         let timings: [TokenTiming]?
+        let phaseTimings: ASRPhaseTimings?
         do {
             // The set of terms is taken once for the entire dictation: editing the dictionary
             // in the middle of recognition has no right to replace it between
@@ -711,7 +759,13 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             )
             let evidenceTask = shouldRunCTCInParallel
                 ? helper.map { helper in
-                    Task { try await Self.spotKeywords(samples: samples, helper: helper) }
+                    Task {
+                        try await Self.spotKeywords(
+                            samples: samples,
+                            helper: helper,
+                            collectPhaseTimings: collectPhaseTimings
+                        )
+                    }
                 }
                 : nil
 
@@ -719,6 +773,9 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             // nil - auto-detection by sound. The model covers 25 European
             // languages; a hard choice breaks mixed speech, so the hint is
             // only explicit human choice when emphasis is shifted away from autodetection.
+            let primaryStarted = collectPhaseTimings
+                ? DispatchTime.now().uptimeNanoseconds
+                : nil
             let result = try await {
                 do {
                     return try await manager.transcribe(
@@ -732,6 +789,9 @@ public actor FluidAudioAdapter: ASREngineAdapting {
                     throw error
                 }
             }()
+            let primaryNanoseconds = primaryStarted.map {
+                DispatchTime.now().uptimeNanoseconds - $0
+            }
             decoderState = state
 
             // The final rescorer can only change spans that pass its string
@@ -741,6 +801,9 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             // finish the parallel CTC task (so no background inference leaks
             // into the next take), but skip the O(words × terms × frames)
             // rescore when no replacement can possibly survive its guards.
+            let gateStarted = collectPhaseTimings && helper != nil
+                ? DispatchTime.now().uptimeNanoseconds
+                : nil
             let candidateRegions = helper.map {
                 Self.vocabularyCandidateRegions(
                     text: result.text,
@@ -749,35 +812,65 @@ public actor FluidAudioAdapter: ASREngineAdapting {
                     helper: $0
                 )
             } ?? []
+            let gateNanoseconds = gateStarted.map {
+                DispatchTime.now().uptimeNanoseconds - $0
+            }
 
+            let evidenceRun: VocabularyEvidenceRun
             let spotted: VocabularyEvidence?
             if let evidenceTask {
-                let evidence = try await withTaskCancellationHandler {
+                evidenceRun = try await withTaskCancellationHandler {
                     try await evidenceTask.value
                 } onCancel: {
                     evidenceTask.cancel()
                 }
-                spotted = candidateRegions.isEmpty ? nil : evidence
+                spotted = candidateRegions.isEmpty ? nil : evidenceRun.evidence
             } else if let helper, vocabularyScheduling == .candidateRegions {
-                spotted = try await Self.spotKeywords(
+                evidenceRun = try await Self.spotKeywords(
                     samples: samples,
                     candidateRegions: candidateRegions,
-                    helper: helper
+                    helper: helper,
+                    collectPhaseTimings: collectPhaseTimings
                 )
+                spotted = evidenceRun.evidence
             } else {
+                evidenceRun = .empty
                 spotted = nil
             }
             // The prompter edits the text based on the acoustic evidence of the CTC model.
             // Timings remain from the original tokens: replacing a word does not move
             // its place in the recording, and consumers of word-by-word timings, which
             // the letter-by-letter accuracy of the replaced word is important, it is not in the product.
-            text = Self.rescore(
+            let rescoreRun = Self.rescore(
                 text: result.text,
                 timings: result.tokenTimings,
                 spotted: spotted,
-                helper: helper
-            ) ?? result.text
+                helper: helper,
+                collectPhaseTimings: collectPhaseTimings
+            )
+            text = rescoreRun.text ?? result.text
             timings = result.tokenTimings
+
+            if collectPhaseTimings, let primaryNanoseconds {
+                let outcome = Self.vocabularyOutcome(
+                    hasVocabulary: helper != nil,
+                    candidateCount: candidateRegions.count,
+                    rescoreDidRun: rescoreRun.didRun,
+                    primaryText: result.text,
+                    finalText: text
+                )
+                phaseTimings = ASRPhaseTimings(
+                    primaryTDTInferenceDecodeNanoseconds: primaryNanoseconds,
+                    lexicalCandidateGateNanoseconds: gateNanoseconds,
+                    ctcModelInferenceNanoseconds: evidenceRun.inferenceNanoseconds,
+                    ctcRescoringFusionNanoseconds: rescoreRun.fusionNanoseconds,
+                    ctcInferenceInvocations: evidenceRun.invocations,
+                    vocabularyOutcome: outcome,
+                    phasesMayOverlap: shouldRunCTCInParallel
+                )
+            } else {
+                phaseTimings = nil
+            }
         } catch is CancellationError {
             throw ASREngineError.cancelled
         } catch {
@@ -789,7 +882,8 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             text: text,
             words: Self.words(from: timings),
             audioDuration: audioDuration,
-            processingDuration: elapsed.seconds
+            processingDuration: elapsed.seconds,
+            phaseTimings: phaseTimings
         )
     }
 
@@ -803,16 +897,21 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     /// worked, and the record will be saved for Retry.
     private static func spotKeywords(
         samples: [Float],
-        helper: VocabularyHelper?
-    ) async throws -> VocabularyEvidence? {
-        guard let helper else { return nil }
+        helper: VocabularyHelper?,
+        collectPhaseTimings: Bool = false
+    ) async throws -> VocabularyEvidenceRun {
+        guard let helper else { return .empty }
         // The adapter consumes acoustic log-probabilities, not FluidAudio's
         // keyword detections. Running the per-term dynamic program here made
         // short-dictation latency grow linearly with the user's dictionary,
         // then discarded every detection. The final rescorer below still uses
         // the real immutable vocabulary snapshot, so this removes only dead
         // work and keeps the evidence and output semantics unchanged.
-        return try await vocabularyEvidenceOnly(samples: samples, helper: helper)
+        return try await vocabularyEvidenceOnly(
+            samples: samples,
+            helper: helper,
+            collectPhaseTimings: collectPhaseTimings
+        )
     }
 
     /// Produce a sparse full-timeline CTC matrix from the exact 15-second
@@ -822,14 +921,19 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     private static func spotKeywords(
         samples: [Float],
         candidateRegions: [Range<Int>],
-        helper: VocabularyHelper
-    ) async throws -> VocabularyEvidence? {
+        helper: VocabularyHelper,
+        collectPhaseTimings: Bool = false
+    ) async throws -> VocabularyEvidenceRun {
         let chunkSize = ASRConstants.maxModelSamples
         let overlap = vocabularyChunkOverlapSamples
-        guard !candidateRegions.isEmpty else { return nil }
+        guard !candidateRegions.isEmpty else { return .empty }
         guard samples.count > chunkSize else {
             // Preserve reference behavior if scheduling constants ever drift.
-            return try await spotKeywords(samples: samples, helper: helper)
+            return try await spotKeywords(
+                samples: samples,
+                helper: helper,
+                collectPhaseTimings: collectPhaseTimings
+            )
         }
 
         let chunks = vocabularyChunkRanges(audioSampleCount: samples.count)
@@ -837,17 +941,25 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             audioSampleCount: samples.count,
             candidateRegions: candidateRegions
         )
-        guard !selected.isEmpty else { return nil }
+        guard !selected.isEmpty else { return .empty }
 
         var results: [(index: Int, evidence: VocabularyEvidence)] = []
+        var inferenceNanoseconds: UInt64?
+        var invocations = 0
         for index in selected {
             try Task.checkCancellation()
             let chunk = chunks[index]
-            let evidence = try await vocabularyEvidenceOnly(
+            let run = try await vocabularyEvidenceOnly(
                 samples: Array(samples[chunk]),
-                helper: helper
+                helper: helper,
+                collectPhaseTimings: collectPhaseTimings
             )
+            if let elapsed = run.inferenceNanoseconds {
+                inferenceNanoseconds = (inferenceNanoseconds ?? 0) + elapsed
+            }
+            invocations += run.invocations
             try Task.checkCancellation()
+            guard let evidence = run.evidence else { continue }
             guard !evidence.logProbs.isEmpty else { continue }
             results.append((index: index, evidence: evidence))
         }
@@ -860,14 +972,26 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             let rowWidth = results.first?.evidence.logProbs.first?.count,
             rowWidth > helper.spotter.blankId,
             full.evidence.frameDuration > 0
-        else { return nil }
+        else {
+            return VocabularyEvidenceRun(
+                evidence: nil,
+                inferenceNanoseconds: inferenceNanoseconds,
+                invocations: invocations
+            )
+        }
 
         let frameDuration = full.evidence.frameDuration
         let overlapFrames = Int(
             Double(overlap) / AudioFileReader.targetSampleRate / frameDuration
         )
         let frameStride = full.evidence.logProbs.count - overlapFrames
-        guard frameStride > 0 else { return nil }
+        guard frameStride > 0 else {
+            return VocabularyEvidenceRun(
+                evidence: nil,
+                inferenceNanoseconds: inferenceNanoseconds,
+                invocations: invocations
+            )
+        }
 
         let frameCount = results.map {
             $0.index * frameStride + $0.evidence.logProbs.count
@@ -894,7 +1018,11 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             }
         }
 
-        return VocabularyEvidence(logProbs: combined, frameDuration: frameDuration)
+        return VocabularyEvidenceRun(
+            evidence: VocabularyEvidence(logProbs: combined, frameDuration: frameDuration),
+            inferenceNanoseconds: inferenceNanoseconds,
+            invocations: invocations
+        )
     }
 
     /// Canonical FluidAudio 0.15.5 windows in source-sample coordinates.
@@ -944,14 +1072,24 @@ public actor FluidAudioAdapter: ASREngineAdapting {
     /// discard every detection.
     private static func vocabularyEvidenceOnly(
         samples: [Float],
-        helper: VocabularyHelper
-    ) async throws -> VocabularyEvidence {
+        helper: VocabularyHelper,
+        collectPhaseTimings: Bool = false
+    ) async throws -> VocabularyEvidenceRun {
+        let startedAt = collectPhaseTimings ? DispatchTime.now().uptimeNanoseconds : nil
         let result = try await helper.spotter.spotKeywordsWithLogProbs(
             audioSamples: samples,
             customVocabulary: CustomVocabularyContext(terms: []),
             minScore: nil
         )
-        return VocabularyEvidence(logProbs: result.logProbs, frameDuration: result.frameDuration)
+        let elapsed = startedAt.map { DispatchTime.now().uptimeNanoseconds - $0 }
+        return VocabularyEvidenceRun(
+            evidence: VocabularyEvidence(
+                logProbs: result.logProbs,
+                frameDuration: result.frameDuration
+            ),
+            inferenceNanoseconds: elapsed,
+            invocations: collectPhaseTimings ? 1 : 0
+        )
     }
 
     /// Locate every word span that can reach constrained CTC scoring.
@@ -1222,14 +1360,22 @@ public actor FluidAudioAdapter: ASREngineAdapting {
         text: String,
         timings: [TokenTiming]?,
         spotted: VocabularyEvidence?,
-        helper: VocabularyHelper?
-    ) -> String? {
-        guard let helper, let spotted else { return nil }
-        guard let timings, !timings.isEmpty, !text.isEmpty else { return nil }
+        helper: VocabularyHelper?,
+        collectPhaseTimings: Bool = false
+    ) -> RescoreRun {
+        guard let helper, let spotted else {
+            return RescoreRun(text: nil, fusionNanoseconds: nil, didRun: false)
+        }
+        guard let timings, !timings.isEmpty, !text.isEmpty else {
+            return RescoreRun(text: nil, fusionNanoseconds: nil, didRun: false)
+        }
         // Empty log-probs are not a crash, but “there is less than one frame of sound”:
         // there is nothing to suggest to such records.
-        guard !spotted.logProbs.isEmpty else { return nil }
+        guard !spotted.logProbs.isEmpty else {
+            return RescoreRun(text: nil, fusionNanoseconds: nil, didRun: false)
+        }
 
+        let startedAt = collectPhaseTimings ? DispatchTime.now().uptimeNanoseconds : nil
         let output = helper.rescorer.ctcTokenRescore(
             transcript: text,
             tokenTimings: timings,
@@ -1239,11 +1385,17 @@ public actor FluidAudioAdapter: ASREngineAdapting {
             marginSeconds: 0.5,
             minSimilarity: max(helper.sizeConfig.minSimilarity, helper.context.minSimilarity)
         )
-        guard output.wasModified else { return nil }
-        // Resorer replaces the word along with the sign stuck to it: on long
-        // records of 450 characters reached 347 (docs/benchmarks.md). We return
-        // lost without touching a single word.
-        return PunctuationReattachment.restore(original: text, rescored: output.text)
+        let rescored: String?
+        if output.wasModified {
+            // Rescorer replaces the word along with the sign stuck to it: on long
+            // records of 450 characters reached 347 (docs/benchmarks.md). We return
+            // lost without touching a single word.
+            rescored = PunctuationReattachment.restore(original: text, rescored: output.text)
+        } else {
+            rescored = nil
+        }
+        let elapsed = startedAt.map { DispatchTime.now().uptimeNanoseconds - $0 }
+        return RescoreRun(text: rescored, fusionNanoseconds: elapsed, didRun: true)
     }
 
     public func unload() async {

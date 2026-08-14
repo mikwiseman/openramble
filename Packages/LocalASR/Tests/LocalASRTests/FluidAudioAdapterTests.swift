@@ -193,6 +193,40 @@ final class FluidAudioAdapterTests: XCTestCase {
         )
     }
 
+    func testPhaseTimingCollectionIsOptIn() async {
+        let shipping = FluidAudioAdapter()
+        let benchmark = FluidAudioAdapter(collectPhaseTimings: true)
+        let shippingCollects = await shipping.collectsPhaseTimings
+        let benchmarkCollects = await benchmark.collectsPhaseTimings
+
+        XCTAssertFalse(shippingCollects)
+        XCTAssertTrue(benchmarkCollects)
+    }
+
+    func testVocabularyPhaseOutcomeMatrix() {
+        typealias Outcome = ASRPhaseTimings.VocabularyOutcome
+        let cases: [(Bool, Int, Bool, String, String, Outcome)] = [
+            (false, 0, false, "a", "a", .notConfigured),
+            (true, 0, false, "a", "a", .noCandidate),
+            (true, 1, false, "a", "a", .candidateNoUsableEvidence),
+            (true, 1, true, "a", "a", .rescoredUnmodified),
+            (true, 1, true, "a", "b", .rescoredModified),
+        ]
+
+        for (hasVocabulary, candidates, didRun, primary, final, expected) in cases {
+            XCTAssertEqual(
+                FluidAudioAdapter.vocabularyOutcome(
+                    hasVocabulary: hasVocabulary,
+                    candidateCount: candidates,
+                    rescoreDidRun: didRun,
+                    primaryText: primary,
+                    finalText: final
+                ),
+                expected
+            )
+        }
+    }
+
     func testVocabularyOverlapUsesProbabilitySpaceMean() {
         let merged = FluidAudioAdapter.mergeVocabularyOverlap(
             existing: [0, -Float.infinity],

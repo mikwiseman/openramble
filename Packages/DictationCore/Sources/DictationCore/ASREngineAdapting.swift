@@ -1,5 +1,47 @@
 import Foundation
 
+/// Opt-in phase timings for one recognition result.
+///
+/// These values deliberately travel with the result instead of living in mutable
+/// engine state: a cancelled or overlapping request can never attach its timings
+/// to another transcript. Phase durations may overlap when the reference CTC
+/// scheduler runs alongside the primary recognizer.
+public struct ASRPhaseTimings: Sendable, Equatable {
+    public enum VocabularyOutcome: String, Sendable, Equatable {
+        case notConfigured = "not_configured"
+        case noCandidate = "no_candidate"
+        case candidateNoUsableEvidence = "candidate_no_usable_evidence"
+        case rescoredUnmodified = "rescored_unmodified"
+        case rescoredModified = "rescored_modified"
+    }
+
+    public let primaryTDTInferenceDecodeNanoseconds: UInt64
+    public let lexicalCandidateGateNanoseconds: UInt64?
+    public let ctcModelInferenceNanoseconds: UInt64?
+    public let ctcRescoringFusionNanoseconds: UInt64?
+    public let ctcInferenceInvocations: Int
+    public let vocabularyOutcome: VocabularyOutcome
+    public let phasesMayOverlap: Bool
+
+    public init(
+        primaryTDTInferenceDecodeNanoseconds: UInt64,
+        lexicalCandidateGateNanoseconds: UInt64?,
+        ctcModelInferenceNanoseconds: UInt64?,
+        ctcRescoringFusionNanoseconds: UInt64?,
+        ctcInferenceInvocations: Int,
+        vocabularyOutcome: VocabularyOutcome,
+        phasesMayOverlap: Bool
+    ) {
+        self.primaryTDTInferenceDecodeNanoseconds = primaryTDTInferenceDecodeNanoseconds
+        self.lexicalCandidateGateNanoseconds = lexicalCandidateGateNanoseconds
+        self.ctcModelInferenceNanoseconds = ctcModelInferenceNanoseconds
+        self.ctcRescoringFusionNanoseconds = ctcRescoringFusionNanoseconds
+        self.ctcInferenceInvocations = ctcInferenceInvocations
+        self.vocabularyOutcome = vocabularyOutcome
+        self.phasesMayOverlap = phasesMayOverlap
+    }
+}
+
 /// The result of recognizing one fragment of speech.
 ///
 /// The type is declared here, and not in LocalASR, intentionally: pure logic should be able to
@@ -28,17 +70,21 @@ public struct ASRResult: Sendable, Equatable {
     public let audioDuration: TimeInterval
     /// How long did the recognition itself take - for measurements and for display in diagnostics.
     public let processingDuration: TimeInterval
+    /// Benchmark-only phase measurements. Production engines leave this `nil`.
+    public let phaseTimings: ASRPhaseTimings?
 
     public init(
         text: String,
         words: [Word] = [],
         audioDuration: TimeInterval,
-        processingDuration: TimeInterval
+        processingDuration: TimeInterval,
+        phaseTimings: ASRPhaseTimings? = nil
     ) {
         self.text = text
         self.words = words
         self.audioDuration = audioDuration
         self.processingDuration = processingDuration
+        self.phaseTimings = phaseTimings
     }
 }
 

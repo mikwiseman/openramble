@@ -86,4 +86,27 @@ final class ASREngineAdaptingTests: XCTestCase {
         // Timings are monotonous: the end of a word is not earlier than its beginning, words do not overlap.
         XCTAssertLessThanOrEqual(result.words[0].end, result.words[1].start)
     }
+
+    func testResultCarriesOptionalPhaseTimingsWithoutChangingExistingCallers() {
+        let plain = ASRResult(text: "plain", audioDuration: 1, processingDuration: 0.1)
+        XCTAssertNil(plain.phaseTimings)
+
+        let timings = ASRPhaseTimings(
+            primaryTDTInferenceDecodeNanoseconds: 11,
+            lexicalCandidateGateNanoseconds: 22,
+            ctcModelInferenceNanoseconds: 33,
+            ctcRescoringFusionNanoseconds: 44,
+            ctcInferenceInvocations: 2,
+            vocabularyOutcome: .rescoredModified,
+            phasesMayOverlap: true
+        )
+        let profiled = ASRResult(
+            text: "profiled",
+            audioDuration: 1,
+            processingDuration: 0.1,
+            phaseTimings: timings
+        )
+
+        XCTAssertEqual(profiled.phaseTimings, timings)
+    }
 }
