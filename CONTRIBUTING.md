@@ -16,9 +16,12 @@ and text stay on the user's Mac.
 
 ## Repository layout
 
+- `Packages/ASRWorkerProtocol`: bounded private protocol shared by the app and
+  its recognition worker.
 - `Packages/DictationCore`: platform-independent dictation logic.
 - `Packages/LocalASR`: model installation and local recognition.
-- `apps/macos`: SwiftUI/AppKit application and system integrations.
+- `apps/macos`: SwiftUI/AppKit application, system integrations, and the
+  private persistent recognition worker embedded in the app bundle.
 
 The Xcode project is generated from `apps/macos/project.yml`; do not edit the
 generated `.xcodeproj`.
@@ -29,6 +32,7 @@ generated `.xcodeproj`.
 git clone https://github.com/mikwiseman/openramble.git
 cd openramble
 
+swift test --package-path Packages/ASRWorkerProtocol
 swift test --package-path Packages/DictationCore
 swift test --package-path Packages/LocalASR
 "$(./scripts/pinned-xcodegen.sh)" generate --spec apps/macos/project.yml
