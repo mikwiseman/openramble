@@ -26,15 +26,19 @@ enum MenuRow: Equatable {
 /// - Transcribing is seconds and cannot be meaningfully cancelled from a menu
 ///   that takes longer to open; Escape still works.
 /// - Recognized text recovery and retained audio are different promises. Text
-///   can be retried in place; audio is exposed as a count plus one Finder
-///   destination where Preview/Delete are explicit. No background retry reads
-///   a person's voice without a command.
+///   can be retried in place; audio is announced by the failure notice the
+///   moment it is kept and lives behind a Settings row afterwards. The menu
+///   itself stays about dictation — a permanent "Recovered Recordings (2)…"
+///   row read as unexplained debris, not as care. The single exception is a
+///   recovery-storage fault: when safe cleanup cannot be persisted, hiding
+///   retained voice data would break the privacy promise, so that state keeps
+///   its menu row until it is resolved.
 enum MenuSections {
     static func sections(
         state: DictationState,
         isDictationReady: Bool,
         hasRecoveredText: Bool,
-        hasRecoveredRecordings: Bool,
+        recoveryStorageFaulted: Bool,
         hasRecents: Bool,
         canCopyAsSpoken: Bool
     ) -> [[MenuRow]] {
@@ -52,7 +56,7 @@ enum MenuSections {
             if hasRecoveredText {
                 sections.append([.insertLastDictation])
             }
-            if hasRecoveredRecordings {
+            if recoveryStorageFaulted {
                 sections.append([.revealRecoveredRecordings])
             }
             var history: [MenuRow] = []

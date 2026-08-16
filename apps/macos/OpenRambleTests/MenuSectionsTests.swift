@@ -16,7 +16,7 @@ final class MenuSectionsTests: XCTestCase {
         state: DictationState = .idle,
         ready: Bool = true,
         recoveredText: Bool = false,
-        recoveredRecordings: Bool = false,
+        recoveryFaulted: Bool = false,
         recents: Bool = false,
         copyAsSpoken: Bool = false
     ) -> [[MenuRow]] {
@@ -24,7 +24,7 @@ final class MenuSectionsTests: XCTestCase {
             state: state,
             isDictationReady: ready,
             hasRecoveredText: recoveredText,
-            hasRecoveredRecordings: recoveredRecordings,
+            recoveryStorageFaulted: recoveryFaulted,
             hasRecents: recents,
             canCopyAsSpoken: copyAsSpoken
         )
@@ -140,13 +140,23 @@ final class MenuSectionsTests: XCTestCase {
         XCTAssertTrue(everything.isSubset(of: allowed))
     }
 
-    func testRecoveredAudioIsDiscoverableOnlyAtRest() {
+    /// Retained audio no longer occupies the daily menu: the failure notice
+    /// announces it when it happens and Settings keeps it findable. The one
+    /// state that must stay in the menu is a recovery-storage fault — hiding
+    /// voice data the app can no longer clean up would break the privacy
+    /// promise.
+    func testRecoveredAudioStaysOutOfTheMenuUnlessRecoveryFaulted() {
         XCTAssertEqual(
-            sections(recoveredRecordings: true),
+            sections(),
+            [[.statusLine], [.settings, .quit]],
+            "ordinary retained recordings are a Settings affair, not menu debris"
+        )
+        XCTAssertEqual(
+            sections(recoveryFaulted: true),
             [[.statusLine], [.revealRecoveredRecordings], [.settings, .quit]]
         )
         XCTAssertFalse(
-            sections(state: .listening, recoveredRecordings: true)
+            sections(state: .listening, recoveryFaulted: true)
                 .flatMap(\.self)
                 .contains(.revealRecoveredRecordings)
         )

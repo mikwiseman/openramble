@@ -76,13 +76,18 @@ enum ASRWorkerDescriptor {
 
 struct ASRWorkerDeadlines: Sendable {
     var hello: Duration = .seconds(2)
-    var preparation: Duration = .seconds(30)
-    var vocabulary: Duration = .seconds(30)
     // Main TDT and the optional CTC vocabulary graph are both materialized
-    // before Ready. A first-ever Core ML specialization can legitimately take
-    // well over ten seconds; this watchdog still bounds a real native wedge,
-    // while the controller owns the much shorter user-visible foreground wait.
-    var warmup: Duration = .seconds(30)
+    // before Ready, and a first-ever Core ML/ANE specialization owns most of
+    // that time. The old 30 s ceiling raced the app's own honest "usually
+    // 20–40 seconds" first-run estimate: on a slower or busy Mac the watchdog
+    // killed a healthy specialization, the retry started it over from scratch,
+    // and after the retry budget a fresh install dead-ended with everything
+    // looking green. These are wedge bounds, not performance promises — two
+    // minutes still surfaces a genuinely stuck native call, while every
+    // observed healthy first load fits with margin.
+    var preparation: Duration = .seconds(120)
+    var vocabulary: Duration = .seconds(120)
+    var warmup: Duration = .seconds(120)
     // Dropping loaded models is bookkeeping plus deallocations, never a model
     // load; a worker that cannot answer in five seconds has earned the kill
     // fallback.
