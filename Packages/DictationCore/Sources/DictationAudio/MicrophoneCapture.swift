@@ -2687,7 +2687,9 @@ public actor MicrophoneCapture: AudioCapturing {
                         return []
                     }
                     if append.isFirstFrame {
-                        Task { await self?.markFirstFrame(sessionID: sessionID, at: at) }
+                        Task { [weak self] in
+                            await self?.markFirstFrame(sessionID: sessionID, at: at)
+                        }
                     }
                     if append.didReachHardLimit {
                         if let committed = append.committedSamples {
