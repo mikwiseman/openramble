@@ -533,19 +533,24 @@ final class DictationControllerTests: XCTestCase {
 
     func testFullFlowInsertsProcessedText() async throws {
         let controller = makeController(recognized: "\u{043F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442} \u{043C}\u{0438}\u{0440}")
+        // The acknowledgement promise lives here, not on the overlay: the
+        // controller publishes .preparing the instant the key goes down, and
+        // .listening once capture is live. The overlay queue deliberately
+        // coalesces to the newest state — showing a stale one would be worse
+        // than showing one fewer — so asserting its buffer would be asserting
+        // a guarantee the design does not make.
+        var published: [DictationState] = []
+        controller.onStateChange = { published.append($0) }
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()
         XCTAssertEqual(controller.state, .listening)
-        // The overlay is an actor and each present is its own task, so on a
-        // loaded runner the second one can still be in flight. Wait for the
-        // pair to land, then assert their order — the order is the promise,
-        // the scheduler's timing is not.
-        let firstPresentedStates = await waitForPresentedStates(atLeast: 2).prefix(2)
         XCTAssertEqual(
-            firstPresentedStates,
+            Array(published.prefix(2)),
             [.preparing, .listening],
             "the hotkey must receive immediate visual acknowledgement before capture is ready"
         )
+        let presented = await overlay.presentedStates
+        XCTAssertFalse(presented.isEmpty, "the overlay still hears about the session")
 
         controller.stop()
         await settle()
