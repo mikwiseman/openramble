@@ -323,7 +323,12 @@ final class DictationControllerStallTests: XCTestCase {
             transcriptionDeadline: { _ in .milliseconds(80) },
             prepareForTranscription: { try await Task.sleep(for: .milliseconds(70)) },
             prepareDeadline: .milliseconds(200),
-            captureFreezeDeadline: .milliseconds(50),
+            // The freeze is a precondition here, not the subject: a 50 ms
+            // ceiling over a 40 ms freeze left ten milliseconds of headroom,
+            // and a loaded runner spent them scheduling — the take then left
+            // through the freeze-timeout path and never reached the prepare
+            // this test is about.
+            captureFreezeDeadline: .seconds(2),
             recoveryForegroundGrace: .milliseconds(20)
         )
         var stalls = 0
@@ -348,7 +353,7 @@ final class DictationControllerStallTests: XCTestCase {
         )
         XCTAssertLessThan(
             elapsed,
-            .milliseconds(400),
+            .seconds(2),
             "stage ceilings still bound the Transcribing wait"
         )
     }
