@@ -135,6 +135,13 @@ final class AppStateTests: XCTestCase {
 
     private func makeState() -> AppState { harness.makeState() }
 
+    private func settleBriefly() async {
+        for _ in 0..<40 {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+    }
+
     private func installModelMarker() throws { try harness.installModelMarker() }
 
     /// WAVs quietly kept for safety after failures and interruptions.
@@ -896,6 +903,30 @@ final class AppStateTests: XCTestCase {
             .afterOneHour,
             "the picker's choice survives a relaunch"
         )
+    }
+
+    /// Readiness alone is enough: no install call, no key press, no activation.
+    ///
+    /// Preparation used to hang off events, and a missed event was permanent.
+    func testModelBecomingReadyStartsPreparationWithNoEventAtAll() async throws {
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        let state = makeState()
+        await settleBriefly()
+        XCTAssertFalse(state.isEngineReady, "no model on disk yet")
+
+        // The model appears the way a finished download leaves it, and the app
+        // notices by rescanning — nobody calls installModel here.
+        try installModelMarker()
+        await state.refreshModelState()
+
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertTrue(state.isEngineReady, "readiness itself must start preparation")
+        let warmUps = await recognizer.warmUps
+        XCTAssertGreaterThan(warmUps, 0)
     }
 
     /// The reported first-run stall, reproduced.

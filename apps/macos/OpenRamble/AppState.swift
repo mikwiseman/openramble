@@ -248,7 +248,16 @@ public struct AppEnvironment {
 public final class AppState: ObservableObject {
     // Shown in the interface.
     @Published public private(set) var dictationState: DictationState = .idle
-    @Published public private(set) var modelState: ModelState = .notInstalled
+    @Published public private(set) var modelState: ModelState = .notInstalled {
+        didSet {
+            // Readiness itself starts preparation. Hanging it off events —
+            // launch, a finished install, a key press — meant any missed event
+            // left the files ready, the engine cold, and the setup screen
+            // promising work nobody had started.
+            guard modelState.isReady, !oldValue.isReady else { return }
+            prepareEngineIfIdleAndCold()
+        }
+    }
     @Published public private(set) var accessibilityGranted = false
     @Published public private(set) var accessibilityState: AccessibilityPermissionState = .denied
     @Published public private(set) var microphoneGranted = false
@@ -2038,6 +2047,9 @@ public final class AppState: ObservableObject {
         } else if !modelState.isReady {
             isEngineReady = false
         }
+        // The rule again, for the path that reaches readiness by rescanning
+        // the disk rather than by installing.
+        prepareEngineIfIdleAndCold()
     }
 
     private func combinedModelState(main: ModelState, vocabulary: ModelState) -> ModelState {
@@ -2057,7 +2069,8 @@ public final class AppState: ObservableObject {
         // twice as simple as it seems.
         guard let store, !isInstalling else { return }
         isInstalling = true
-        isEngineReady = false
+        // Only an app that actually has an engine can have a cold one.
+        if transcriber != nil { isEngineReady = false }
         // Core ML failure leaves files on disk “intact” - both storages
         // they will say “ready”. Explicit restoration is required to keep the promise of
         // messages and re-download, rather than silently repeat the warm-up.
