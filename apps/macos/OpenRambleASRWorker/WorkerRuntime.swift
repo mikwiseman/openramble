@@ -36,6 +36,8 @@ actor ASRWorkerRuntime {
                 try await transcribeSamples(frame)
             case .transcribeFile:
                 try await transcribeFile(frame)
+            case .unloadModels:
+                try await unloadModels(frame)
             case .helloAcknowledged, .acknowledged, .result, .failure, .shutdown:
                 throw ASRWorkerFailure(code: .invalidRequest, message: "Unexpected worker message kind.")
             }
@@ -109,6 +111,18 @@ actor ASRWorkerRuntime {
         )
         workerLog.info(
             "main model ready seconds=\(started.duration(to: .now).workerSeconds, format: .fixed(precision: 3))"
+        )
+        try send(kind: .acknowledged, requestID: frame.requestID, value: ASRWorkerAcknowledgement())
+    }
+
+    private func unloadModels(_ frame: ASRWireFrame) async throws {
+        guard frame.payload.isEmpty, frame.metadata.isEmpty else {
+            throw ASRWorkerFailure(code: .invalidRequest, message: "Model unload carries no payload.")
+        }
+        let started = ContinuousClock.now
+        await transcriber.unload()
+        workerLog.info(
+            "models unloaded, worker resident seconds=\(started.duration(to: .now).workerSeconds, format: .fixed(precision: 3))"
         )
         try send(kind: .acknowledged, requestID: frame.requestID, value: ASRWorkerAcknowledgement())
     }

@@ -64,6 +64,18 @@ enum OpenRambleASRWorkerTestFixture {
                     requestID: frame.requestID,
                     value: ASRWorkerAcknowledgement(vocabularyRevision: request.revision)
                 )
+            case .unloadModels:
+                if mode == "hang-unload" {
+                    while true { _ = Darwin.pause() }
+                }
+                guard frame.payload.isEmpty, frame.metadata.isEmpty else {
+                    Darwin._exit(EX_DATAERR)
+                }
+                try respond(
+                    kind: .acknowledged,
+                    requestID: frame.requestID,
+                    value: ASRWorkerAcknowledgement()
+                )
             case .transcribeSamples, .transcribeFile:
                 try handleTranscription(
                     frame,

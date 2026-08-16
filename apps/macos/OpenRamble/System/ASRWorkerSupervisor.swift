@@ -83,6 +83,10 @@ struct ASRWorkerDeadlines: Sendable {
     // well over ten seconds; this watchdog still bounds a real native wedge,
     // while the controller owns the much shorter user-visible foreground wait.
     var warmup: Duration = .seconds(30)
+    // Dropping loaded models is bookkeeping plus deallocations, never a model
+    // load; a worker that cannot answer in five seconds has earned the kill
+    // fallback.
+    var unload: Duration = .seconds(5)
     var fileTranscription: Duration = .seconds(60)
     var transcription: @Sendable (TimeInterval) -> Duration = { audioDuration in
         // DictationController owns the user-visible stop-to-text deadline. Let
@@ -399,13 +403,36 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
 
     public func unloadIfIdle() async -> Bool {
         guard !operationHeld else { return false }
-        // Keep the idle check and generation invalidation in one actor turn;
+        // Keep the idle check and the state transition in one actor turn;
         // hopping through `unload()` here would leave a reentrancy window. Hold
-        // the same operation gate through reap so a queued dictation cannot
-        // launch its generation before the old one has actually exited.
+        // the same operation gate through the whole transition so a queued
+        // dictation cannot interleave with it.
         operationHeld = true
         defer { releaseOperation() }
         cancelRecovery()
+        // Prefer dropping the models inside a living worker: spawn, dyld and
+        // framework init stay paid for, and the next prepare reuses the
+        // process. Any hiccup falls back to the old exact-PID kill.
+        if let snapshot = processHolder.snapshot(),
+           snapshot.process.isRunning,
+           loadedMainGeneration == snapshot.generation {
+            do {
+                let frame = try await request(
+                    kind: .unloadModels,
+                    metadata: Data(),
+                    generation: snapshot.generation,
+                    deadline: deadlines.unload
+                )
+                _ = try requireAcknowledgement(frame)
+                clearLoadedState(for: snapshot.generation)
+                log.notice(
+                    "worker models unloaded, process resident generation=\(snapshot.generation)"
+                )
+                return true
+            } catch {
+                log.error("in-place model unload failed; falling back to worker kill")
+            }
+        }
         invalidateCurrentGeneration(error: ASRWorkerTransportError.generationInvalidated)
         await reapKilledProcesses()
         return true
