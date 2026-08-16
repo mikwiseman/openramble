@@ -71,22 +71,25 @@ struct ModelStatus: Equatable {
         action.hint(downloadMegabytes: downloadMegabytes)
     }
 
-    /// The card reads two facts: is the recognizer usable, and how long the
-    /// current preparation has been running. A separate "is preparing" flag
-    /// could disagree with them, so there isn't one.
+    /// The card reads three facts, and never guesses: is the recognizer
+    /// usable, is preparation actually running right now, and how far along it
+    /// is. Claiming "preparing" from readiness alone is what once left a fresh
+    /// install staring at a promise nothing was keeping.
     static func make(
         state: ModelState,
         preparation: EnginePreparationState? = nil,
         place: Place,
         downloadMegabytes: Int = 586,
-        isEngineReady: Bool = true
+        isEngineReady: Bool = true,
+        isPreparingEngine: Bool = false
     ) -> ModelStatus {
         var status = makeStatus(
             state: state,
             preparation: preparation,
             place: place,
             downloadMegabytes: downloadMegabytes,
-            isEngineReady: isEngineReady
+            isEngineReady: isEngineReady,
+            isPreparingEngine: isPreparingEngine
         )
         status.downloadMegabytes = downloadMegabytes
         return status
@@ -97,7 +100,8 @@ struct ModelStatus: Equatable {
         preparation: EnginePreparationState?,
         place: Place,
         downloadMegabytes: Int,
-        isEngineReady: Bool = true
+        isEngineReady: Bool = true,
+        isPreparingEngine: Bool = false
     ) -> ModelStatus {
         switch state {
         case .notInstalled:
@@ -144,22 +148,36 @@ struct ModelStatus: Equatable {
             )
 
         case .ready:
-            // Two honest phases, never both at once: the download is done, and
-            // the model is either still being prepared for this Mac or ready.
-            // Saying "ready" while dictation would still have to wait is the
+            // Three honest states, never blurred: preparing (with real steps),
+            // resting (given back on purpose, comes back on the next press),
+            // and ready. Saying "preparing" without work behind it is the
             // sentence that made a first run feel broken.
-            guard isEngineReady else {
+            if !isEngineReady, isPreparingEngine {
+                let step = preparation?.step ?? 1
+                let total = EnginePreparationState.stepCount
                 return ModelStatus(
                     title: "Preparing the model",
                     // Live seconds, not "usually 20-40": a wait with a moving
                     // counter reads as work, without one it reads as stuck.
-                    detail: preparation?.title
-                        ?? "Preparing for this Mac — usually 20–40 seconds, and only once.",
+                    detail: preparation?.detail
+                        ?? "macOS is compiling the model for this Mac. This happens once.",
+                    progress: Double(step - 1) / Double(total),
+                    progressLabel: preparation.map { "Step \(step) of \(total) · \($0.title)" }
+                        ?? "Step \(step) of \(total)",
+                    actions: place == .settings ? [.delete] : [],
+                    tone: .neutral,
+                    announcement: "Preparing the model, step \(step) of \(total)"
+                )
+            }
+            if !isEngineReady {
+                return ModelStatus(
+                    title: "Model ready",
+                    detail: "The model rests until your next dictation, then loads in a moment.",
                     progress: nil,
                     progressLabel: nil,
                     actions: place == .settings ? [.delete] : [],
-                    tone: .neutral,
-                    announcement: "Preparing the model for first use"
+                    tone: .success,
+                    announcement: "Model ready, resting"
                 )
             }
             return ModelStatus(

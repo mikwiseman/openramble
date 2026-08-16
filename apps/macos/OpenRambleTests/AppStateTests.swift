@@ -842,6 +842,8 @@ final class AppStateTests: XCTestCase {
     /// goes back, and the next key press brings it back under the voice.
     func testIdleUnloadFreesTheEngineAfterTheCountdown() async throws {
         try installModelMarker()
+        // Idle unload is a courtesy for someone who has finished setting up.
+        harness.defaults.set(true, forKey: AppState.onboardingCompletedKey)
         let recognizer = ReadinessControlledRecognizer()
         harness.recognizer = recognizer
         harness.idleUnloadDelayOverride = .milliseconds(40)
@@ -894,6 +896,73 @@ final class AppStateTests: XCTestCase {
             .afterOneHour,
             "the picker's choice survives a relaunch"
         )
+    }
+
+    /// The reported first-run stall, reproduced.
+    ///
+    /// Setup takes a trip through System Settings for two permissions, and that
+    /// trip can outlast the idle-unload timer. The engine then gave its memory
+    /// back and waited for a key press that nobody makes on the setup screen,
+    /// leaving a fresh install staring at "Preparing the model" forever.
+    func testIdleUnloadNeverStrandsSetupBeforeOnboardingIsFinished() async throws {
+        try installModelMarker()
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        harness.idleUnloadDelayOverride = .milliseconds(30)
+        // Onboarding is still open: the person has not finished setting up.
+        let state = makeState()
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertTrue(state.isEngineReady)
+
+        try? await Task.sleep(for: .milliseconds(200))
+        XCTAssertTrue(
+            state.isEngineReady,
+            "setup is not idleness: the engine must still be there when the person returns"
+        )
+
+        // Once setup is done, the courtesy applies again.
+        harness.defaults.set(true, forKey: AppState.onboardingCompletedKey)
+        state.modelUnloadTimeout = .afterTwoMinutes
+        state.modelUnloadTimeout = .afterFiveMinutes
+        for _ in 0..<500 where state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertFalse(state.isEngineReady, "after setup, idle memory goes back as promised")
+    }
+
+    /// Whatever event is missed, a ready model with a cold engine and nothing
+    /// running is a state the app leaves by itself.
+    func testReadyModelWithColdEngineStartsPreparingWithoutAnyEvent() async throws {
+        try installModelMarker()
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        let state = makeState()
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        let baseline = await recognizer.warmUps
+
+        // The worker's readiness disappears without any app-side decision: no
+        // residency unload, no idle unload, nobody pressed anything.
+        await recognizer.setReady(false)
+        for _ in 0..<300 where state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        state.prepareEngineIfIdleAndCold()
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertTrue(state.isEngineReady, "the standing rule brings the engine back")
+        let warmUps = await recognizer.warmUps
+        XCTAssertGreaterThan(warmUps, baseline)
     }
 
     func testEveryReadyRecordingStartRefreshesAcceleratorResidency() async throws {

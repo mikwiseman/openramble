@@ -229,7 +229,8 @@ private struct RecognitionSettings: View {
                         preparation: state.enginePreparation,
                         place: .settings,
                         downloadMegabytes: state.remainingDownloadMegabytes,
-                        isEngineReady: state.isEngineReady
+                        isEngineReady: state.isEngineReady,
+                        isPreparingEngine: state.isPreparingEngine
                     ),
                     install: state.installModel,
                     cancel: state.cancelModelInstall,

@@ -150,7 +150,8 @@ struct MenuContent: View {
             preparation: state.enginePreparation,
             place: .settings,
             downloadMegabytes: state.remainingDownloadMegabytes,
-            isEngineReady: state.isEngineReady
+            isEngineReady: state.isEngineReady,
+            isPreparingEngine: state.isPreparingEngine
         )
         if state.modelState.isReady, !state.isEngineReady {
             Text("Preparing the model for dictation…")

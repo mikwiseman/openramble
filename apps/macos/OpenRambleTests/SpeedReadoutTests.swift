@@ -21,11 +21,11 @@ final class EnginePreparationStateTests: XCTestCase {
     func testScenario008() {
         XCTAssertEqual(
             EnginePreparationState.make(phase: .loadingRecognizer, elapsed: 14).title,
-            "Preparing the recognizer… 14 s"
+            "Loading the recognizer… 14 s"
         )
         XCTAssertEqual(
             EnginePreparationState.make(phase: .loadingVocabulary, elapsed: 3).title,
-            "Preparing the term booster… 3 s"
+            "Loading the term booster… 3 s"
         )
     }
 
@@ -70,9 +70,10 @@ final class EnginePreparationWiringTests: XCTestCase {
             state: .ready(directory: URL(fileURLWithPath: "/tmp")),
             preparation: .make(phase: .loadingRecognizer, elapsed: 9),
             place: .settings,
-            isEngineReady: false
+            isEngineReady: false,
+            isPreparingEngine: true
         )
-        XCTAssertEqual(status.detail, "Preparing the recognizer… 9 s")
+        XCTAssertEqual(status.progressLabel, "Step 1 of 3 · Loading the recognizer… 9 s")
     }
 
     /// The second model is a separate phase: merging them into one line means
@@ -82,9 +83,11 @@ final class EnginePreparationWiringTests: XCTestCase {
             state: .ready(directory: URL(fileURLWithPath: "/tmp")),
             preparation: .make(phase: .loadingVocabulary, elapsed: 2),
             place: .settings,
-            isEngineReady: false
+            isEngineReady: false,
+            isPreparingEngine: true
         )
-        XCTAssertEqual(status.detail, "Preparing the term booster… 2 s")
+        XCTAssertEqual(status.progressLabel, "Step 2 of 3 · Loading the term booster… 2 s")
+        XCTAssertEqual(status.progress ?? -1, 1.0 / 3.0, accuracy: 0.001)
     }
 
     /// The preparation is over - there is no line at all.

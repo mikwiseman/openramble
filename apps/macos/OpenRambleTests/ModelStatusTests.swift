@@ -12,9 +12,15 @@ final class ModelStatusTests: XCTestCase {
     private func status(
         _ state: ModelState,
         place: ModelStatus.Place = .settings,
-        engineReady: Bool = true
+        engineReady: Bool = true,
+        preparing: Bool = false
     ) -> ModelStatus {
-        ModelStatus.make(state: state, place: place, isEngineReady: engineReady)
+        ModelStatus.make(
+            state: state,
+            place: place,
+            isEngineReady: engineReady,
+            isPreparingEngine: preparing
+        )
     }
 
     // MARK: - States
@@ -74,18 +80,26 @@ final class ModelStatusTests: XCTestCase {
     /// Downloaded is not the same as usable: while the engine is still loading
     /// for this Mac the card says so plainly instead of claiming readiness the
     /// dictation cannot honour yet.
+    /// Preparation shows real milestones, and only while it is genuinely
+    /// running. Claiming it from readiness alone once stranded a fresh install.
     func testScenario006() {
-        let status = status(ready, engineReady: false)
-
-        XCTAssertEqual(status.title, "Preparing the model")
-        XCTAssertEqual(status.tone, .neutral)
-        XCTAssertEqual(status.detail?.contains("20–40 seconds"), true)
-        XCTAssertEqual(status.announcement, "Preparing the model for first use")
-        XCTAssertEqual(
-            self.status(ready, engineReady: false).title,
-            "Preparing the model",
-            "a pause between automatic attempts is still preparation, never a dead end"
+        let working = ModelStatus.make(
+            state: ready,
+            preparation: .make(phase: .loadingRecognizer, elapsed: 7),
+            place: .settings,
+            isEngineReady: false,
+            isPreparingEngine: true
         )
+        XCTAssertEqual(working.title, "Preparing the model")
+        XCTAssertEqual(working.tone, .neutral)
+        XCTAssertEqual(working.progressLabel, "Step 1 of 3 · Loading the recognizer… 7 s")
+        XCTAssertEqual(working.progress ?? -1, 0, accuracy: 0.001)
+
+        // Nothing running: the card must not narrate work that does not exist.
+        let resting = status(ready, engineReady: false)
+        XCTAssertEqual(resting.title, "Model ready")
+        XCTAssertEqual(resting.tone, .success)
+        XCTAssertEqual(resting.detail?.contains("rests until your next dictation"), true)
     }
 
     func testScenario007() {

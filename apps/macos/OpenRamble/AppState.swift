@@ -825,6 +825,7 @@ public final class AppState: ObservableObject {
             await importAbandonedRecordings()
             await refreshModelState()
             if modelState.isReady { await warmUpEngine() }
+            prepareEngineIfIdleAndCold()
         }
     }
 
@@ -1308,6 +1309,15 @@ public final class AppState: ObservableObject {
     /// event restores readiness before another dictation begins.
     private var shouldRewarmAfterPressure = false
 
+    /// True while an engine that was deliberately given back should stay cold.
+    ///
+    /// A residency eviction or an idle unload is a decision, not a failure: the
+    /// comeback belongs to the next key press. The standing preparation rule
+    /// must respect that, or the app would immediately reload what it just
+    /// released. Setup never sets this, because during setup the person is
+    /// waiting for the engine rather than resting from it.
+    private var shouldStayUnloadedUntilUse = false
+
     /// Give the engine's memory back when macOS says memory is tight.
     ///
     /// Handy asks the user to pick an unload timer from seven options; this
@@ -1353,6 +1363,12 @@ public final class AppState: ObservableObject {
         idleUnloadTask = nil
         guard dictationState == .idle,
               isEngineReady,
+              // Setup is not idleness. Granting two permissions takes a trip
+              // through System Settings that can outlast the timer, and the
+              // engine's comeback is the next key press — which nobody makes
+              // while still on the setup screen. Giving the memory back there
+              // stranded a fresh install on "Preparing the model" forever.
+              hasCompletedOnboarding,
               let policyDelay = modelUnloadTimeout.idleDelay
         else { return }
         // The override shortens the countdown for tests; the decision itself
@@ -1381,6 +1397,7 @@ public final class AppState: ObservableObject {
         )
         guard await transcriber.unloadIfIdle() else { return }
         isEngineReady = false
+        shouldStayUnloadedUntilUse = true
         enginePreparation = .make(phase: .idle, elapsed: 0)
         // Deliberately no proactive rewarm: the comeback is the next key
         // press, riding under the voice.
@@ -1396,6 +1413,14 @@ public final class AppState: ObservableObject {
     private let pressureRewarmSettleDelay: Duration
     /// Test-only idle-unload countdown override (see AppEnvironment).
     private let idleUnloadDelayOverride: Duration?
+
+    /// The onboarding window owns this flag; the engine only reads it, to know
+    /// whether the person has finished setting the app up.
+    private var hasCompletedOnboarding: Bool {
+        defaults.bool(forKey: Self.onboardingCompletedKey)
+    }
+
+    nonisolated static let onboardingCompletedKey = "onboardingCompleted"
 
     /// Internal, not private: tests inject tiers the OS only sends under real
     /// memory starvation.
@@ -1437,6 +1462,7 @@ public final class AppState: ObservableObject {
                         // hasEngineBeenReady stays true: dictation remains
                         // enabled. Normal pressure proactively restores it.
                         self.isEngineReady = false
+                        self.shouldStayUnloadedUntilUse = true
                         self.shouldRewarmAfterPressure = true
                         self.enginePreparation = .make(phase: .idle, elapsed: 0)
                         self.rewarmAfterPressureIfPossible()
@@ -1500,6 +1526,40 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// Does the app currently want a ready engine?
+    ///
+    /// The files are usable, the recognizer is not loaded, and nobody gave the
+    /// memory back on purpose. This is the "desired state" half of the rule
+    /// that keeps setup from stalling; it is deliberately not about events.
+    private var wantsEngineReady: Bool {
+        modelState.isReady && !isEngineReady && !shouldStayUnloadedUntilUse
+    }
+
+    /// Leave the "downloaded but cold" state without waiting for an event.
+    ///
+    /// Preparation used to be started only by events: launch, a finished
+    /// install, a key press, an app activation. Any missed event left the model
+    /// ready on disk, the engine cold, nothing running, and a setup screen
+    /// claiming to prepare. This is the standing rule instead of those events:
+    /// if the files are ready and the engine is not, and no attempt is alive,
+    /// start one. Safe to call from anywhere — `warmUpEngine` single-flights.
+    func prepareEngineIfIdleAndCold() {
+        guard transcriber != nil,
+              modelState.isReady,
+              !isEngineReady,
+              !isPreparingEngine,
+              engineWarmupTask == nil,
+              engineWarmupRetryTask == nil,
+              !isRecyclingEngine,
+              !isInstalling,
+              // A deliberate residency or idle unload owns its own comeback:
+              // that engine is meant to stay cold until the next key press.
+              !shouldStayUnloadedUntilUse
+        else { return }
+        engineLog.info("engine preparation resumed: ready model, cold engine, nothing running")
+        Task { [weak self] in await self?.warmUpEngine() }
+    }
+
     /// The earliest reload triggers: they fire before any readiness guard can
     /// swallow the press. Single-flight through `warmUpEngine`'s shared task;
     /// calling on every press is safe and free when warm.
@@ -1518,6 +1578,7 @@ public final class AppState: ObservableObject {
         engineLog.info(
             "engine rewarm trigger=\(String(describing: trigger), privacy: .public)"
         )
+        shouldStayUnloadedUntilUse = false
         Task { [weak self] in await self?.warmUpEngine() }
     }
 
@@ -2072,8 +2133,11 @@ public final class AppState: ObservableObject {
 
             // The first load compiles the model for the neuromodule and takes
             // seconds. We do this right away so that the user does not wait at the moment
-            // first dictation.
+            // first dictation. The standing rule below is the safety net: if
+            // this attempt is skipped for any reason, readiness alone brings
+            // preparation back.
             if modelState.isReady { await warmUpEngine() }
+            prepareEngineIfIdleAndCold()
         }
     }
 
@@ -2156,16 +2220,35 @@ public final class AppState: ObservableObject {
             engineWarmupTask = nil
         }
 
-        if allowAutomaticRetry, case let .retryable(detail) = outcome {
-            scheduleEngineWarmupRetry(after: detail)
+        if allowAutomaticRetry {
+            switch outcome {
+            case let .retryable(detail):
+                scheduleEngineWarmupRetry(after: detail)
+            case .skipped where wantsEngineReady:
+                // "Nothing to do" is not a fact about the world, it is a fact
+                // about one moment: a guard that was briefly false, a state
+                // read that disagreed, an attempt that was cancelled. Treating
+                // it as final is what let a fresh install park on "Preparing
+                // the model" with nothing running. If the app still wants a
+                // ready engine, it tries again on the same ladder.
+                scheduleEngineWarmupRetry(after: "preparation did not start")
+            case .ready, .repairRequired, .skipped:
+                break
+            }
         }
         return outcome
     }
 
     private func performEngineWarmup() async -> EngineWarmupOutcome {
-        guard let transcriber, let store else { return .skipped }
+        // One source of truth. `modelState` is computed from the stores, so
+        // asking a store again only introduces a second opinion that can
+        // disagree for an instant — and that instant used to be terminal: the
+        // disagreement returned "nothing to do", which schedules no retry, so
+        // a fresh install could sit on a promise nobody was keeping. If the
+        // files really are not usable, `prepare` says so and that failure is
+        // retried like any other.
+        guard let transcriber else { return .skipped }
         guard modelState.isReady else { return .skipped }
-        guard case .ready = await store.currentState() else { return .skipped }
         isEngineReady = false
         isPreparingEngine = true
         // The retry loop owns one continuous countdown across its waits; a
@@ -2233,6 +2316,7 @@ public final class AppState: ObservableObject {
                 }
             }
             try Task.checkCancellation()
+            setPreparationPhase(.warmingUp)
             let inferenceStart = clock.now
             do {
                 try await transcriber.warmUpInference()

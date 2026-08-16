@@ -14,6 +14,7 @@ final class OnboardingStepTests: XCTestCase {
         accessibility: Bool = true,
         model: ModelState? = nil,
         engineReady: Bool = true,
+        enginePreparing: Bool = false,
         trialSucceeded: Bool = true
     ) -> String? {
         OnboardingGate.blockReason(
@@ -22,6 +23,7 @@ final class OnboardingStepTests: XCTestCase {
             accessibilityGranted: accessibility,
             modelState: model ?? ready,
             engineReady: engineReady,
+            enginePreparing: enginePreparing,
             trialSucceeded: trialSucceeded
         )
     }
@@ -131,10 +133,16 @@ final class OnboardingStepTests: XCTestCase {
         XCTAssertNil(reason(.setup, model: ready))
     }
 
+    /// The footer narrates only work that exists: the long sentence while
+    /// preparation runs, a short one in the instant before it starts.
     func testScenario013() {
         XCTAssertEqual(
-            reason(.setup, model: ready, engineReady: false),
+            reason(.setup, model: ready, engineReady: false, enginePreparing: true),
             "The model is getting ready for this Mac — this happens once."
+        )
+        XCTAssertEqual(
+            reason(.setup, model: ready, engineReady: false),
+            "Getting the model ready…"
         )
     }
 
