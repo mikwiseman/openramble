@@ -837,6 +837,64 @@ final class AppStateTests: XCTestCase {
         XCTAssertGreaterThan(warmUps, baselineWarmUps)
     }
 
+    /// The Handy-style idle unload: after the countdown the engine's memory
+    /// goes back, and the next key press brings it back under the voice.
+    func testIdleUnloadFreesTheEngineAfterTheCountdown() async throws {
+        try installModelMarker()
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        harness.idleUnloadDelayOverride = .milliseconds(40)
+        let state = makeState()
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertTrue(state.isEngineReady)
+        XCTAssertEqual(state.modelUnloadTimeout, .afterFiveMinutes, "Handy's default is ours")
+
+        for _ in 0..<500 where state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertFalse(state.isEngineReady, "the countdown returns the memory")
+
+        monitor.onPress?()
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertTrue(state.isEngineReady, "the comeback rides the next key press")
+    }
+
+    func testNeverKeepsTheEngineResidentForever() async throws {
+        try installModelMarker()
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        harness.idleUnloadDelayOverride = .milliseconds(30)
+        let state = makeState()
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        state.modelUnloadTimeout = .never
+        try? await Task.sleep(for: .milliseconds(120))
+        XCTAssertTrue(state.isEngineReady, "never means the pre-0.8 behavior")
+    }
+
+    func testUnloadTimeoutPersistsAcrossAppStates() async throws {
+        try installModelMarker()
+        let first = makeState()
+        first.modelUnloadTimeout = .afterOneHour
+
+        let second = makeState()
+        XCTAssertEqual(
+            second.modelUnloadTimeout,
+            .afterOneHour,
+            "the picker's choice survives a relaunch"
+        )
+    }
+
     func testEveryReadyRecordingStartRefreshesAcceleratorResidency() async throws {
         try installModelMarker()
         let recognizer = ReadinessControlledRecognizer()

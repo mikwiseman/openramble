@@ -77,6 +77,9 @@ public struct AppEnvironment {
     public var engineWarmupRetryDelay: Duration
     /// Warning-tier rewarm settle window; injectable for the same reason.
     public var pressureRewarmSettleDelay: Duration
+    /// Test-only override for the idle-unload countdown: the policy's real
+    /// options start at two minutes, and suites never sleep that long.
+    public var idleUnloadDelayOverride: Duration?
     public var engineWarmupRetryLimit: Int
     /// Crash-recovery timing is injectable so launch-to-idle maintenance can
     /// be proven without sleeping for the production compatibility window.
@@ -131,6 +134,7 @@ public struct AppEnvironment {
         recoveryInsertionDeadline: Duration = .seconds(2),
         engineWarmupRetryDelay: Duration = .seconds(1),
         pressureRewarmSettleDelay: Duration = EngineRewarmPolicy.defaultSettleWindow,
+        idleUnloadDelayOverride: Duration? = nil,
         engineWarmupRetryLimit: Int = 2,
         recordingRecoveryCompatibilityGrace: TimeInterval = 60,
         recordingRecoveryMaintenanceRetryDelay: TimeInterval = 5,
@@ -161,6 +165,7 @@ public struct AppEnvironment {
         self.recoveryInsertionDeadline = recoveryInsertionDeadline
         self.engineWarmupRetryDelay = engineWarmupRetryDelay
         self.pressureRewarmSettleDelay = pressureRewarmSettleDelay
+        self.idleUnloadDelayOverride = idleUnloadDelayOverride
         self.engineWarmupRetryLimit = max(0, engineWarmupRetryLimit)
         self.recordingRecoveryCompatibilityGrace = recordingRecoveryCompatibilityGrace
         self.recordingRecoveryMaintenanceRetryDelay = recordingRecoveryMaintenanceRetryDelay
@@ -561,7 +566,9 @@ public final class AppState: ObservableObject {
         recoveryInsertionDeadline = environment.recoveryInsertionDeadline
         engineWarmupRetryDelay = environment.engineWarmupRetryDelay
         pressureRewarmSettleDelay = environment.pressureRewarmSettleDelay
+        idleUnloadDelayOverride = environment.idleUnloadDelayOverride
         environmentPressureGauge = environment.pressureGauge
+        modelUnloadTimeout = IdleUnloadPolicy.stored(in: environment.defaults)
         engineWarmupRetryLimit = environment.engineWarmupRetryLimit
         recordingRecoveryCompatibilityGrace = environment.recordingRecoveryCompatibilityGrace
         recordingRecoveryMaintenanceRetryDelay = environment.recordingRecoveryMaintenanceRetryDelay
@@ -733,6 +740,9 @@ public final class AppState: ObservableObject {
                 // A finished session is a residency event: the engine just
                 // became safely idle, and a deferred unload may now proceed.
                 if state == .idle { self?.evaluateResidency(trigger: "session-idle") }
+                // Every state change re-arms or cancels the idle-unload
+                // timer: activity disarms it, idleness starts the countdown.
+                self?.rescheduleIdleUnload()
             }
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
@@ -1329,6 +1339,58 @@ public final class AppState: ObservableObject {
         memoryPressureSource = source
     }
 
+    /// When to give the engine's memory back after dictation goes idle.
+    /// Mirrors Handy's "Unload Model" row; `.never` is the pre-0.8 behavior.
+    @Published public var modelUnloadTimeout: IdleUnloadPolicy {
+        didSet {
+            guard oldValue != modelUnloadTimeout else { return }
+            defaults.set(modelUnloadTimeout.rawValue, forKey: IdleUnloadPolicy.defaultsKey)
+            rescheduleIdleUnload()
+        }
+    }
+
+    /// One pending idle-unload timer at most; any dictation activity replaces
+    /// it through the state-change hook.
+    private var idleUnloadTask: Task<Void, Never>?
+
+    private func rescheduleIdleUnload() {
+        idleUnloadTask?.cancel()
+        idleUnloadTask = nil
+        guard dictationState == .idle,
+              isEngineReady,
+              let policyDelay = modelUnloadTimeout.idleDelay
+        else { return }
+        // The override shortens the countdown for tests; the decision itself
+        // (`never` keeps the engine forever) always belongs to the policy.
+        let delay = idleUnloadDelayOverride ?? policyDelay
+        idleUnloadTask = Task { [weak self] in
+            if delay > .zero {
+                try? await Task.sleep(for: delay)
+            }
+            guard !Task.isCancelled else { return }
+            await self?.performIdleUnload()
+        }
+    }
+
+    private func performIdleUnload() async {
+        idleUnloadTask = nil
+        guard dictationState == .idle,
+              !isRecoveryOperationActive,
+              !isRecyclingEngine,
+              !isPreparingEngine,
+              isEngineReady,
+              let transcriber
+        else { return }
+        engineLog.notice(
+            "engine idle unload: \(self.modelUnloadTimeout.rawValue, privacy: .public)"
+        )
+        guard await transcriber.unloadIfIdle() else { return }
+        isEngineReady = false
+        enginePreparation = .make(phase: .idle, elapsed: 0)
+        // Deliberately no proactive rewarm: the comeback is the next key
+        // press, riding under the voice.
+    }
+
     /// The most recent tier the OS reported; rules between events use it.
     private var lastPressureTier: MemoryPressureTier = .normal
 
@@ -1337,6 +1399,8 @@ public final class AppState: ObservableObject {
     private var pressureGauge: MemoryPressureGauge { environmentPressureGauge }
     /// Warning-tier settle window before a proactive rewarm; injectable.
     private let pressureRewarmSettleDelay: Duration
+    /// Test-only idle-unload countdown override (see AppEnvironment).
+    private let idleUnloadDelayOverride: Duration?
 
     /// Internal, not private: tests inject tiers the OS only sends under real
     /// memory starvation.
@@ -2196,6 +2260,7 @@ public final class AppState: ObservableObject {
             engineWarmupRetryTask?.cancel()
             engineWarmupRetryTask = nil
             evaluateResidency(trigger: "load-completed")
+            rescheduleIdleUnload()
             let preparedVocabularyIsStale = preparedVocabularyRevision.map {
                 $0 != vocabularyRevision
             } ?? false
@@ -2372,6 +2437,7 @@ public final class AppState: ObservableObject {
                     )
                     try await transcriber.warmUpInference()
                     isEngineReady = true
+                    rescheduleIdleUnload()
                     vocabularyRebuildTask = nil
                     reportAcousticVocabularyDisabled(detail: acousticFailure)
                     return
