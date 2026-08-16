@@ -1,0 +1,1100 @@
+{
+  "binaries": {
+    "baseline": {
+      "path": "$REPO/Packages/LocalASR/.build/arm64-apple-macosx/release/asr-bench",
+      "sha256": "d01108be6b65de822d40fc87a03f86e4d9ee8c9cd8f47c2209fd466c1def656f"
+    },
+    "candidate": {
+      "path": "$REPO/Packages/LocalASR/.build/arm64-apple-macosx/release/asr-bench",
+      "sha256": "d01108be6b65de822d40fc87a03f86e4d9ee8c9cd8f47c2209fd466c1def656f"
+    }
+  },
+  "candidate_p50_delta_percent": 0.02396245142939346,
+  "created_at": "2026-08-14T15:16:38Z",
+  "effective_settings": {
+    "dual_decode": false,
+    "encoder": "palettized6bit",
+    "encoder_placement": "automatic",
+    "language": null,
+    "max_tokens_per_chunk": 600,
+    "mel_chunk_context": false,
+    "parallel_chunk_concurrency": 4,
+    "vocabulary_bias_weight": 3,
+    "vocabulary_enabled": true,
+    "vocabulary_scheduling": "candidateRegions",
+    "vocabulary_similarity": 0.6499999761581421,
+    "vocabulary_terms": 28
+  },
+  "fixture": {
+    "language": "ru",
+    "path": "$TMP/openramble-bench.XfRRRf/ru-short.wav",
+    "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+    "sample_count": 121245,
+    "sha256": "0f581fd6f1aeb43dd121293ae02331070a3e4c68afb2a9d77a35e388bb7fa7de"
+  },
+  "load": {
+    "baseline": {
+      "command": "load",
+      "effective_settings": {
+        "dual_decode": false,
+        "encoder": "palettized6bit",
+        "encoder_placement": "automatic",
+        "language": null,
+        "max_tokens_per_chunk": 600,
+        "mel_chunk_context": false,
+        "parallel_chunk_concurrency": 4,
+        "vocabulary_bias_weight": 3,
+        "vocabulary_enabled": true,
+        "vocabulary_scheduling": "candidateRegions",
+        "vocabulary_similarity": 0.6499999761581421,
+        "vocabulary_terms": 28
+      },
+      "load_ns": 320588084,
+      "model": {
+        "engine_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3",
+        "files": [
+          {
+            "byte_count": 243,
+            "path": "Decoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "4238c4e81ecd0dc94bd7dfbb60f7e2cc824107c1ffe0387b8607b72833dba350"
+          },
+          {
+            "byte_count": 554,
+            "path": "Decoder.mlmodelc/coremldata.bin",
+            "sha256": "18647af085d87bd8f3121c8a9b4d4564c1ede038dab63d295b4e745cf2d7fb99"
+          },
+          {
+            "byte_count": 3427,
+            "path": "Decoder.mlmodelc/metadata.json",
+            "sha256": "a39e93cd8371b8ded92635c7804fcd0590f0d1dd9415c6d19a0484be073077d9"
+          },
+          {
+            "byte_count": 13110,
+            "path": "Decoder.mlmodelc/model.mil",
+            "sha256": "ef2a0a281695398a62fde86ac269c68f73d5b578d7ed3b31f2ba91a2d1ea1f35"
+          },
+          {
+            "byte_count": 23604992,
+            "path": "Decoder.mlmodelc/weights/weight.bin",
+            "sha256": "48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41"
+          },
+          {
+            "byte_count": 243,
+            "path": "Encoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "42e638870d73f26b332918a3496ce36793fbb413a81cbd3d16ba01328637a105"
+          },
+          {
+            "byte_count": 485,
+            "path": "Encoder.mlmodelc/coremldata.bin",
+            "sha256": "d48034a167a82e88fc3df64f60af963ab3983538271175b8319e7d5720a0fb86"
+          },
+          {
+            "byte_count": 2921,
+            "path": "Encoder.mlmodelc/metadata.json",
+            "sha256": "da24da9cca943fb29d7fa8e376d57fca7cb3aa08ca51b956b0b0e56813f087e9"
+          },
+          {
+            "byte_count": 959769,
+            "path": "Encoder.mlmodelc/model.mil",
+            "sha256": "ed7b19156ca29fa7dfd6891deb9fda4b0e8893f68597c985d135736546a43808"
+          },
+          {
+            "byte_count": 445187200,
+            "path": "Encoder.mlmodelc/weights/weight.bin",
+            "sha256": "e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421"
+          },
+          {
+            "byte_count": 243,
+            "path": "JointDecisionv3.mlmodelc/analytics/coremldata.bin",
+            "sha256": "26def4bf73dd56d29dee21c8ef97cb8969e62f6120ed1adc91e46828e2737b6c"
+          },
+          {
+            "byte_count": 521,
+            "path": "JointDecisionv3.mlmodelc/coremldata.bin",
+            "sha256": "f5fc08b741400f0088492c9e839418b1e18522f19cba28d361dd030c5f398342"
+          },
+          {
+            "byte_count": 3453,
+            "path": "JointDecisionv3.mlmodelc/metadata.json",
+            "sha256": "d9307211b9a37e0f0ac260c7660b1571a3de25841035cfdf9b58fd40425f890f"
+          },
+          {
+            "byte_count": 11775,
+            "path": "JointDecisionv3.mlmodelc/model.mil",
+            "sha256": "be60732943389a047175111a83f8839f3eb39d4803adafa828a0871b2f39818d"
+          },
+          {
+            "byte_count": 12642764,
+            "path": "JointDecisionv3.mlmodelc/weights/weight.bin",
+            "sha256": "4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e"
+          },
+          {
+            "byte_count": 243,
+            "path": "Preprocessor.mlmodelc/analytics/coremldata.bin",
+            "sha256": "c9beeb989c8d66f8be11df59bc6df277ec76cee404f6865b46243835ef562f6d"
+          },
+          {
+            "byte_count": 486,
+            "path": "Preprocessor.mlmodelc/coremldata.bin",
+            "sha256": "dbde3f2300842c1fd51ef3ff948a0bcffe65ffd2dca10707f2509f32c1d65b1d"
+          },
+          {
+            "byte_count": 2841,
+            "path": "Preprocessor.mlmodelc/metadata.json",
+            "sha256": "2a98699e22d279dd37fa1d238aeb1c6db1df0d6fad687775324157689d8f3acf"
+          },
+          {
+            "byte_count": 28181,
+            "path": "Preprocessor.mlmodelc/model.mil",
+            "sha256": "4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93"
+          },
+          {
+            "byte_count": 491072,
+            "path": "Preprocessor.mlmodelc/weights/weight.bin",
+            "sha256": "129b76e3aeafa8afa3ea76d995b964b145fe83700d579f6ff42c4c38fa0968ea"
+          },
+          {
+            "byte_count": 151122,
+            "path": "parakeet_vocab.json",
+            "sha256": "7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735"
+          }
+        ],
+        "fluid_audio_version": "0.15.5",
+        "license": "CC-BY-4.0",
+        "manifest_sha256": "d7bb1d56263f31321712b688835a19c6d178cbf35c4bbb4c82be032b5caf8650",
+        "model_id": "parakeet-tdt-0.6b-v3",
+        "quantization": "encoder 6-bit palettized, mixed precision",
+        "repository": "FluidInference/parakeet-tdt-0.6b-v3-coreml",
+        "revision": "aed02740059203c4a87495924f685de3722ae9ce"
+      },
+      "ok": true,
+      "protocol_version": 1,
+      "vocabulary_model": {
+        "engine_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-ctc-110m/accdafd8cf8a2ff1cabe3c11e54416b405d409aa/parakeet-ctc-110m",
+        "files": [
+          {
+            "byte_count": 243,
+            "path": "AudioEncoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "8906c823e9bb3bf6b16d9f0308f98cd70573526333ad85dd767dc3f9ae6b25fa"
+          },
+          {
+            "byte_count": 505,
+            "path": "AudioEncoder.mlmodelc/coremldata.bin",
+            "sha256": "a88b002b58193b4c31211754cdfdf220a85f9651dc61caf336ab84400cbc191a"
+          },
+          {
+            "byte_count": 3456,
+            "path": "AudioEncoder.mlmodelc/metadata.json",
+            "sha256": "4f288bfe5cbe867ef1e592cdae33578b2fe59ada69182fc12209879558f985c2"
+          },
+          {
+            "byte_count": 1060924,
+            "path": "AudioEncoder.mlmodelc/model.mil",
+            "sha256": "2f84ef93a69115e55f3b5d8ce695b3c937de1833d4d229620634fae967cd587e"
+          },
+          {
+            "byte_count": 100778304,
+            "path": "AudioEncoder.mlmodelc/weights/weight.bin",
+            "sha256": "af0734b4a5d7465ad9e8bb170f0c53c5e6b91ebb75a9bdf88d3f59ae4ad6aebd"
+          },
+          {
+            "byte_count": 243,
+            "path": "MelSpectrogram.mlmodelc/analytics/coremldata.bin",
+            "sha256": "22f2a8cba1de25c984050566b534a1d8caf22a82f9fe6c1c6f3149a0dd7e8ae3"
+          },
+          {
+            "byte_count": 330,
+            "path": "MelSpectrogram.mlmodelc/coremldata.bin",
+            "sha256": "3a32ec67c76aa0aa2faef518413c311493e89aeb7fa11289fa4b8653ab8a160c"
+          },
+          {
+            "byte_count": 1962,
+            "path": "MelSpectrogram.mlmodelc/metadata.json",
+            "sha256": "5e11d21a65c02bcfc37db43e941978e5d60d59e0efeadfda08e41f33b4f835d3"
+          },
+          {
+            "byte_count": 12584,
+            "path": "MelSpectrogram.mlmodelc/model.mil",
+            "sha256": "0a7cb5693b39667295218bac5c7c09053f6bcd4b32699a83d06ac35d14ac6b79"
+          },
+          {
+            "byte_count": 567712,
+            "path": "MelSpectrogram.mlmodelc/weights/weight.bin",
+            "sha256": "0a89c055bfde9022029d3cc59a23e949385e063974460d8eaec3a7614c3eaaa8"
+          },
+          {
+            "byte_count": 121,
+            "path": "config.json",
+            "sha256": "1fd77c83ea89285c242608d95a7992f146867481adc3938be730a064f3a63305"
+          },
+          {
+            "byte_count": 382,
+            "path": "ctc_head_metadata.json",
+            "sha256": "26100793bc6d3642d345cc52d7b8611d11510fa870d4d66ad93b204e0ba29d2e"
+          },
+          {
+            "byte_count": 279,
+            "path": "special_tokens_map.json",
+            "sha256": "af8c98917af6cb493513e5f1f8a35efdc28fa82cac15b2bb5f065d64f8bc904d"
+          },
+          {
+            "byte_count": 360106,
+            "path": "tokenizer.json",
+            "sha256": "9f7c517c0bf644b1b690ab037bab4d4c53aecd38e047e7154d011013ab9160db"
+          },
+          {
+            "byte_count": 632,
+            "path": "tokenizer_config.json",
+            "sha256": "7a29ed0fec88768d8666d65be8dc00ae41a60c4b7758c4df99a912108e62a23a"
+          },
+          {
+            "byte_count": 16086,
+            "path": "vocab.json",
+            "sha256": "319d386eead79aadc80df9c3ecc8340d1a727efb7c02a8847eb940380dd61e1f"
+          }
+        ],
+        "fluid_audio_version": "0.15.5",
+        "license": "CC-BY-4.0",
+        "manifest_sha256": "790711251c677d3a74af5c867ca8b7c596975d737e4a26fc23f10abaedf0654e",
+        "model_id": "parakeet-ctc-110m",
+        "quantization": "mixed precision",
+        "repository": "FluidInference/parakeet-ctc-110m-coreml",
+        "revision": "accdafd8cf8a2ff1cabe3c11e54416b405d409aa"
+      }
+    },
+    "candidate": {
+      "command": "load",
+      "effective_settings": {
+        "dual_decode": false,
+        "encoder": "palettized6bit",
+        "encoder_placement": "automatic",
+        "language": null,
+        "max_tokens_per_chunk": 600,
+        "mel_chunk_context": false,
+        "parallel_chunk_concurrency": 4,
+        "vocabulary_bias_weight": 3,
+        "vocabulary_enabled": true,
+        "vocabulary_scheduling": "candidateRegions",
+        "vocabulary_similarity": 0.6499999761581421,
+        "vocabulary_terms": 28
+      },
+      "load_ns": 244575625,
+      "model": {
+        "engine_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3",
+        "files": [
+          {
+            "byte_count": 243,
+            "path": "Decoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "4238c4e81ecd0dc94bd7dfbb60f7e2cc824107c1ffe0387b8607b72833dba350"
+          },
+          {
+            "byte_count": 554,
+            "path": "Decoder.mlmodelc/coremldata.bin",
+            "sha256": "18647af085d87bd8f3121c8a9b4d4564c1ede038dab63d295b4e745cf2d7fb99"
+          },
+          {
+            "byte_count": 3427,
+            "path": "Decoder.mlmodelc/metadata.json",
+            "sha256": "a39e93cd8371b8ded92635c7804fcd0590f0d1dd9415c6d19a0484be073077d9"
+          },
+          {
+            "byte_count": 13110,
+            "path": "Decoder.mlmodelc/model.mil",
+            "sha256": "ef2a0a281695398a62fde86ac269c68f73d5b578d7ed3b31f2ba91a2d1ea1f35"
+          },
+          {
+            "byte_count": 23604992,
+            "path": "Decoder.mlmodelc/weights/weight.bin",
+            "sha256": "48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41"
+          },
+          {
+            "byte_count": 243,
+            "path": "Encoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "42e638870d73f26b332918a3496ce36793fbb413a81cbd3d16ba01328637a105"
+          },
+          {
+            "byte_count": 485,
+            "path": "Encoder.mlmodelc/coremldata.bin",
+            "sha256": "d48034a167a82e88fc3df64f60af963ab3983538271175b8319e7d5720a0fb86"
+          },
+          {
+            "byte_count": 2921,
+            "path": "Encoder.mlmodelc/metadata.json",
+            "sha256": "da24da9cca943fb29d7fa8e376d57fca7cb3aa08ca51b956b0b0e56813f087e9"
+          },
+          {
+            "byte_count": 959769,
+            "path": "Encoder.mlmodelc/model.mil",
+            "sha256": "ed7b19156ca29fa7dfd6891deb9fda4b0e8893f68597c985d135736546a43808"
+          },
+          {
+            "byte_count": 445187200,
+            "path": "Encoder.mlmodelc/weights/weight.bin",
+            "sha256": "e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421"
+          },
+          {
+            "byte_count": 243,
+            "path": "JointDecisionv3.mlmodelc/analytics/coremldata.bin",
+            "sha256": "26def4bf73dd56d29dee21c8ef97cb8969e62f6120ed1adc91e46828e2737b6c"
+          },
+          {
+            "byte_count": 521,
+            "path": "JointDecisionv3.mlmodelc/coremldata.bin",
+            "sha256": "f5fc08b741400f0088492c9e839418b1e18522f19cba28d361dd030c5f398342"
+          },
+          {
+            "byte_count": 3453,
+            "path": "JointDecisionv3.mlmodelc/metadata.json",
+            "sha256": "d9307211b9a37e0f0ac260c7660b1571a3de25841035cfdf9b58fd40425f890f"
+          },
+          {
+            "byte_count": 11775,
+            "path": "JointDecisionv3.mlmodelc/model.mil",
+            "sha256": "be60732943389a047175111a83f8839f3eb39d4803adafa828a0871b2f39818d"
+          },
+          {
+            "byte_count": 12642764,
+            "path": "JointDecisionv3.mlmodelc/weights/weight.bin",
+            "sha256": "4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e"
+          },
+          {
+            "byte_count": 243,
+            "path": "Preprocessor.mlmodelc/analytics/coremldata.bin",
+            "sha256": "c9beeb989c8d66f8be11df59bc6df277ec76cee404f6865b46243835ef562f6d"
+          },
+          {
+            "byte_count": 486,
+            "path": "Preprocessor.mlmodelc/coremldata.bin",
+            "sha256": "dbde3f2300842c1fd51ef3ff948a0bcffe65ffd2dca10707f2509f32c1d65b1d"
+          },
+          {
+            "byte_count": 2841,
+            "path": "Preprocessor.mlmodelc/metadata.json",
+            "sha256": "2a98699e22d279dd37fa1d238aeb1c6db1df0d6fad687775324157689d8f3acf"
+          },
+          {
+            "byte_count": 28181,
+            "path": "Preprocessor.mlmodelc/model.mil",
+            "sha256": "4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93"
+          },
+          {
+            "byte_count": 491072,
+            "path": "Preprocessor.mlmodelc/weights/weight.bin",
+            "sha256": "129b76e3aeafa8afa3ea76d995b964b145fe83700d579f6ff42c4c38fa0968ea"
+          },
+          {
+            "byte_count": 151122,
+            "path": "parakeet_vocab.json",
+            "sha256": "7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735"
+          }
+        ],
+        "fluid_audio_version": "0.15.5",
+        "license": "CC-BY-4.0",
+        "manifest_sha256": "d7bb1d56263f31321712b688835a19c6d178cbf35c4bbb4c82be032b5caf8650",
+        "model_id": "parakeet-tdt-0.6b-v3",
+        "quantization": "encoder 6-bit palettized, mixed precision",
+        "repository": "FluidInference/parakeet-tdt-0.6b-v3-coreml",
+        "revision": "aed02740059203c4a87495924f685de3722ae9ce"
+      },
+      "ok": true,
+      "protocol_version": 1,
+      "vocabulary_model": {
+        "engine_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-ctc-110m/accdafd8cf8a2ff1cabe3c11e54416b405d409aa/parakeet-ctc-110m",
+        "files": [
+          {
+            "byte_count": 243,
+            "path": "AudioEncoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "8906c823e9bb3bf6b16d9f0308f98cd70573526333ad85dd767dc3f9ae6b25fa"
+          },
+          {
+            "byte_count": 505,
+            "path": "AudioEncoder.mlmodelc/coremldata.bin",
+            "sha256": "a88b002b58193b4c31211754cdfdf220a85f9651dc61caf336ab84400cbc191a"
+          },
+          {
+            "byte_count": 3456,
+            "path": "AudioEncoder.mlmodelc/metadata.json",
+            "sha256": "4f288bfe5cbe867ef1e592cdae33578b2fe59ada69182fc12209879558f985c2"
+          },
+          {
+            "byte_count": 1060924,
+            "path": "AudioEncoder.mlmodelc/model.mil",
+            "sha256": "2f84ef93a69115e55f3b5d8ce695b3c937de1833d4d229620634fae967cd587e"
+          },
+          {
+            "byte_count": 100778304,
+            "path": "AudioEncoder.mlmodelc/weights/weight.bin",
+            "sha256": "af0734b4a5d7465ad9e8bb170f0c53c5e6b91ebb75a9bdf88d3f59ae4ad6aebd"
+          },
+          {
+            "byte_count": 243,
+            "path": "MelSpectrogram.mlmodelc/analytics/coremldata.bin",
+            "sha256": "22f2a8cba1de25c984050566b534a1d8caf22a82f9fe6c1c6f3149a0dd7e8ae3"
+          },
+          {
+            "byte_count": 330,
+            "path": "MelSpectrogram.mlmodelc/coremldata.bin",
+            "sha256": "3a32ec67c76aa0aa2faef518413c311493e89aeb7fa11289fa4b8653ab8a160c"
+          },
+          {
+            "byte_count": 1962,
+            "path": "MelSpectrogram.mlmodelc/metadata.json",
+            "sha256": "5e11d21a65c02bcfc37db43e941978e5d60d59e0efeadfda08e41f33b4f835d3"
+          },
+          {
+            "byte_count": 12584,
+            "path": "MelSpectrogram.mlmodelc/model.mil",
+            "sha256": "0a7cb5693b39667295218bac5c7c09053f6bcd4b32699a83d06ac35d14ac6b79"
+          },
+          {
+            "byte_count": 567712,
+            "path": "MelSpectrogram.mlmodelc/weights/weight.bin",
+            "sha256": "0a89c055bfde9022029d3cc59a23e949385e063974460d8eaec3a7614c3eaaa8"
+          },
+          {
+            "byte_count": 121,
+            "path": "config.json",
+            "sha256": "1fd77c83ea89285c242608d95a7992f146867481adc3938be730a064f3a63305"
+          },
+          {
+            "byte_count": 382,
+            "path": "ctc_head_metadata.json",
+            "sha256": "26100793bc6d3642d345cc52d7b8611d11510fa870d4d66ad93b204e0ba29d2e"
+          },
+          {
+            "byte_count": 279,
+            "path": "special_tokens_map.json",
+            "sha256": "af8c98917af6cb493513e5f1f8a35efdc28fa82cac15b2bb5f065d64f8bc904d"
+          },
+          {
+            "byte_count": 360106,
+            "path": "tokenizer.json",
+            "sha256": "9f7c517c0bf644b1b690ab037bab4d4c53aecd38e047e7154d011013ab9160db"
+          },
+          {
+            "byte_count": 632,
+            "path": "tokenizer_config.json",
+            "sha256": "7a29ed0fec88768d8666d65be8dc00ae41a60c4b7758c4df99a912108e62a23a"
+          },
+          {
+            "byte_count": 16086,
+            "path": "vocab.json",
+            "sha256": "319d386eead79aadc80df9c3ecc8340d1a727efb7c02a8847eb940380dd61e1f"
+          }
+        ],
+        "fluid_audio_version": "0.15.5",
+        "license": "CC-BY-4.0",
+        "manifest_sha256": "790711251c677d3a74af5c867ca8b7c596975d737e4a26fc23f10abaedf0654e",
+        "model_id": "parakeet-ctc-110m",
+        "quantization": "mixed precision",
+        "repository": "FluidInference/parakeet-ctc-110m-coreml",
+        "revision": "accdafd8cf8a2ff1cabe3c11e54416b405d409aa"
+      }
+    }
+  },
+  "method": {
+    "lane": "predecoded-product-warm",
+    "public_claim_eligible": false,
+    "repeats": 6,
+    "schedule": "balanced persistent-process BC/CB pairs",
+    "seed": 20260814,
+    "warmups": 2
+  },
+  "pairs": [
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 119399750,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102023168,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11366334,
+            "ctc_rescoring_fusion_ns": 37325500,
+            "lexical_candidate_gate_ns": 1797875,
+            "primary_tdt_inference_decode_ns": 68618916
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 119399750,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117687125,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 101957632,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11411125,
+            "ctc_rescoring_fusion_ns": 36601875,
+            "lexical_candidate_gate_ns": 1808959,
+            "primary_tdt_inference_decode_ns": 67614084
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117687125,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 0,
+      "order": "CB"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118868250,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102121472,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11873834,
+            "ctc_rescoring_fusion_ns": 36668750,
+            "lexical_candidate_gate_ns": 1822833,
+            "primary_tdt_inference_decode_ns": 68234250
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118868250,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117157458,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102072320,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11385459,
+            "ctc_rescoring_fusion_ns": 36544125,
+            "lexical_candidate_gate_ns": 1817416,
+            "primary_tdt_inference_decode_ns": 67143166
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117157458,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 1,
+      "order": "CB"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118011625,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102187008,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11452208,
+            "ctc_rescoring_fusion_ns": 36731541,
+            "lexical_candidate_gate_ns": 1799583,
+            "primary_tdt_inference_decode_ns": 67768833
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118011625,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118721083,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102137856,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11379041,
+            "ctc_rescoring_fusion_ns": 37282958,
+            "lexical_candidate_gate_ns": 1819833,
+            "primary_tdt_inference_decode_ns": 67976459
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118721083,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 2,
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117720500,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102285312,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11456167,
+            "ctc_rescoring_fusion_ns": 36571458,
+            "lexical_candidate_gate_ns": 1785292,
+            "primary_tdt_inference_decode_ns": 67626292
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117720500,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118149708,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102203392,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11493000,
+            "ctc_rescoring_fusion_ns": 36938625,
+            "lexical_candidate_gate_ns": 1825333,
+            "primary_tdt_inference_decode_ns": 67633500
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118149708,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 3,
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117445958,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102301696,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11382709,
+            "ctc_rescoring_fusion_ns": 36559959,
+            "lexical_candidate_gate_ns": 1823708,
+            "primary_tdt_inference_decode_ns": 67396083
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117445958,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117980833,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102252544,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11445666,
+            "ctc_rescoring_fusion_ns": 36936333,
+            "lexical_candidate_gate_ns": 1803167,
+            "primary_tdt_inference_decode_ns": 67534834
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117980833,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 4,
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117949208,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102367232,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11359750,
+            "ctc_rescoring_fusion_ns": 36675750,
+            "lexical_candidate_gate_ns": 1796834,
+            "primary_tdt_inference_decode_ns": 67855083
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117949208,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118036542,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102252544,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11423042,
+            "ctc_rescoring_fusion_ns": 37247500,
+            "lexical_candidate_gate_ns": 1801958,
+            "primary_tdt_inference_decode_ns": 67306292
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118036542,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 5,
+      "order": "CB"
+    }
+  ],
+  "prewarm": {
+    "baseline": {
+      "command": "prewarm",
+      "ok": true,
+      "prewarm_ns": 54123375,
+      "protocol_version": 1
+    },
+    "candidate": {
+      "command": "prewarm",
+      "ok": true,
+      "prewarm_ns": 53422250,
+      "protocol_version": 1
+    }
+  },
+  "schema_version": 1,
+  "summary": {
+    "baseline": {
+      "elapsed": {
+        "count": 6,
+        "maximum_ns": 119399750,
+        "mean_ns": 118232548.5,
+        "minimum_ns": 117445958,
+        "p50_ns": 117980416.5,
+        "p95_ns": 119266875.0,
+        "p99_ns": 119373175.0
+      },
+      "phases": {
+        "ctc_model_inference_ns": {
+          "count": 6,
+          "maximum_ns": 11873834,
+          "mean_ns": 11481833.666666666,
+          "minimum_ns": 11359750,
+          "p50_ns": 11417458.5,
+          "p95_ns": 11769417.25,
+          "p99_ns": 11852950.65
+        },
+        "ctc_rescoring_fusion_ns": {
+          "count": 6,
+          "maximum_ns": 37325500,
+          "mean_ns": 36755493.0,
+          "minimum_ns": 36559959,
+          "p50_ns": 36672250.0,
+          "p95_ns": 37177010.25,
+          "p99_ns": 37295802.050000004
+        },
+        "lexical_candidate_gate_ns": {
+          "count": 6,
+          "maximum_ns": 1823708,
+          "mean_ns": 1804354.1666666667,
+          "minimum_ns": 1785292,
+          "p50_ns": 1798729.0,
+          "p95_ns": 1823489.25,
+          "p99_ns": 1823664.25
+        },
+        "primary_tdt_inference_decode_ns": {
+          "count": 6,
+          "maximum_ns": 68618916,
+          "mean_ns": 67916576.16666667,
+          "minimum_ns": 67396083,
+          "p50_ns": 67811958.0,
+          "p95_ns": 68522749.5,
+          "p99_ns": 68599682.7
+        }
+      }
+    },
+    "candidate": {
+      "elapsed": {
+        "count": 6,
+        "maximum_ns": 118721083,
+        "mean_ns": 117955458.16666667,
+        "minimum_ns": 117157458,
+        "p50_ns": 118008687.5,
+        "p95_ns": 118578239.25,
+        "p99_ns": 118692514.25
+      },
+      "phases": {
+        "ctc_model_inference_ns": {
+          "count": 6,
+          "maximum_ns": 11493000,
+          "mean_ns": 11422888.833333334,
+          "minimum_ns": 11379041,
+          "p50_ns": 11417083.5,
+          "p95_ns": 11481166.5,
+          "p99_ns": 11490633.3
+        },
+        "ctc_rescoring_fusion_ns": {
+          "count": 6,
+          "maximum_ns": 37282958,
+          "mean_ns": 36925236.0,
+          "minimum_ns": 36544125,
+          "p50_ns": 36937479.0,
+          "p95_ns": 37274093.5,
+          "p99_ns": 37281185.1
+        },
+        "lexical_candidate_gate_ns": {
+          "count": 6,
+          "maximum_ns": 1825333,
+          "mean_ns": 1812777.6666666667,
+          "minimum_ns": 1801958,
+          "p50_ns": 1813187.5,
+          "p95_ns": 1823958.0,
+          "p99_ns": 1825058.0
+        },
+        "primary_tdt_inference_decode_ns": {
+          "count": 6,
+          "maximum_ns": 67976459,
+          "mean_ns": 67534722.5,
+          "minimum_ns": 67143166,
+          "p50_ns": 67574459.0,
+          "p95_ns": 67890719.25,
+          "p99_ns": 67959311.05
+        }
+      }
+    }
+  },
+  "warmup_observations": [
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 133811666,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 101531648,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 18828500,
+            "ctc_rescoring_fusion_ns": 37476459,
+            "lexical_candidate_gate_ns": 1822334,
+            "primary_tdt_inference_decode_ns": 75403375
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 133811666,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 129505334,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 101515264,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11430125,
+            "ctc_rescoring_fusion_ns": 37077250,
+            "lexical_candidate_gate_ns": 1820541,
+            "primary_tdt_inference_decode_ns": 78876167
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 129505334,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118215833,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 101875712,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11555667,
+            "ctc_rescoring_fusion_ns": 36511458,
+            "lexical_candidate_gate_ns": 1832416,
+            "primary_tdt_inference_decode_ns": 68060834
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118215833,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118344083,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 101875712,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11470208,
+            "ctc_rescoring_fusion_ns": 36729250,
+            "lexical_candidate_gate_ns": 1822916,
+            "primary_tdt_inference_decode_ns": 68071166
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118344083,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "order": "CB"
+    }
+  ]
+}

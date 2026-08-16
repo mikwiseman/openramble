@@ -1,0 +1,172 @@
+diff --git a/Packages/DictationCore/Sources/DictationCore/ASREngineAdapting.swift b/Packages/DictationCore/Sources/DictationCore/ASREngineAdapting.swift
+index 280463c..40b8363 100644
+--- a/Packages/DictationCore/Sources/DictationCore/ASREngineAdapting.swift
++++ b/Packages/DictationCore/Sources/DictationCore/ASREngineAdapting.swift
+@@ -47,6 +47,30 @@ public struct ASRPhaseTimings: Sendable, Equatable {
+ /// The type is declared here, and not in LocalASR, intentionally: pure logic should be able to
+ /// work with the result without knowing anything about which engine produced it.
+ public struct ASRResult: Sendable, Equatable {
++    /// Benchmark-only raw token timing carried by the temp endpoint-cache
++    /// falsification harness. Shipping sources are not modified.
++    public struct Token: Sendable, Equatable {
++        public let text: String
++        public let id: Int
++        public let start: TimeInterval
++        public let end: TimeInterval
++        public let confidence: Float
++
++        public init(
++            text: String,
++            id: Int,
++            start: TimeInterval,
++            end: TimeInterval,
++            confidence: Float
++        ) {
++            self.text = text
++            self.id = id
++            self.start = start
++            self.end = end
++            self.confidence = confidence
++        }
++    }
++
+     /// One word with time boundaries relative to the beginning of the fragment.
+     public struct Word: Sendable, Equatable {
+         public let text: String
+@@ -72,19 +96,23 @@ public struct ASRResult: Sendable, Equatable {
+     public let processingDuration: TimeInterval
+     /// Benchmark-only phase measurements. Production engines leave this `nil`.
+     public let phaseTimings: ASRPhaseTimings?
++    /// Present only in the temp endpoint-cache benchmark build.
++    public let tokens: [Token]?
+
+     public init(
+         text: String,
+         words: [Word] = [],
+         audioDuration: TimeInterval,
+         processingDuration: TimeInterval,
+-        phaseTimings: ASRPhaseTimings? = nil
++        phaseTimings: ASRPhaseTimings? = nil,
++        tokens: [Token]? = nil
+     ) {
+         self.text = text
+         self.words = words
+         self.audioDuration = audioDuration
+         self.processingDuration = processingDuration
+         self.phaseTimings = phaseTimings
++        self.tokens = tokens
+     }
+ }
+
+diff --git a/Packages/LocalASR/Package.swift b/Packages/LocalASR/Package.swift
+index 4b28312..9be2797 100644
+--- a/Packages/LocalASR/Package.swift
++++ b/Packages/LocalASR/Package.swift
+@@ -20,10 +20,7 @@ let package = Package(
+         // reset of TDT's fully overwritten fixed-size audio input buffer and
+         // avoids NSNumber boxing at the optional CTC model boundaries. It also
+         // accepts a conservative term-index prefilter for the final rescorer.
+-        .package(
+-            url: "https://github.com/mikwiseman/FluidAudio.git",
+-            revision: "ee9a7f12d91710da53de6d75f8b7160e09eccee4"
+-        ),
++        .package(path: "$TMP/openramble-phase-breakdown-ee9a7f12/FluidAudio"),
+     ],
+     targets: [
+         .target(
+diff --git a/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift b/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift
+index 45caca9..62eb20f 100644
+--- a/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift
++++ b/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift
+@@ -924,7 +924,16 @@ public actor FluidAudioAdapter: ASREngineAdapting {
+             words: Self.words(from: timings),
+             audioDuration: audioDuration,
+             processingDuration: elapsed.seconds,
+-            phaseTimings: phaseTimings
++            phaseTimings: phaseTimings,
++            tokens: timings?.map {
++                .init(
++                    text: $0.token,
++                    id: $0.tokenId,
++                    start: $0.startTime,
++                    end: $0.endTime,
++                    confidence: $0.confidence
++                )
++            }
+         )
+     }
+
+@@ -965,7 +974,8 @@ public actor FluidAudioAdapter: ASREngineAdapting {
+         helper: VocabularyHelper,
+         collectPhaseTimings: Bool = false
+     ) async throws -> VocabularyEvidenceRun {
+-        let chunkSize = ASRConstants.maxModelSamples
++        // Temp short-TDT experiment: CTC remains the shipping 15-second model.
++        let chunkSize = 240_000
+         let overlap = vocabularyChunkOverlapSamples
+         guard !candidateRegions.isEmpty else { return .empty }
+         guard samples.count > chunkSize else {
+diff --git a/Packages/LocalASR/Sources/asr-bench/BenchmarkJSONLServer.swift b/Packages/LocalASR/Sources/asr-bench/BenchmarkJSONLServer.swift
+index 522584c..622ede3 100644
+--- a/Packages/LocalASR/Sources/asr-bench/BenchmarkJSONLServer.swift
++++ b/Packages/LocalASR/Sources/asr-bench/BenchmarkJSONLServer.swift
+@@ -222,6 +222,23 @@ enum BenchmarkJSONLServer {
+         didPrewarm: Bool
+     ) -> [String: Any] {
+         let normalized = TextNormalizer.normalize(result.text).text
++        let tokens: [[String: Any]] = (result.tokens ?? []).map {
++            [
++                "text": $0.text,
++                "id": $0.id,
++                "start": $0.start,
++                "end": $0.end,
++                "confidence": Double($0.confidence),
++            ]
++        }
++        let words: [[String: Any]] = result.words.map {
++            [
++                "text": $0.text,
++                "start": $0.start,
++                "end": $0.end,
++                "confidence": $0.confidence.map { NSNumber(value: $0) } ?? NSNull(),
++            ]
++        }
+         let timing: Any
+         if let phases = result.phaseTimings {
+             timing = [
+@@ -258,11 +275,19 @@ enum BenchmarkJSONLServer {
+             "protocol_version": protocolVersion,
+             "command": command,
+             "elapsed_ns": NSNumber(value: elapsed),
++            "audio_duration_ns": NSNumber(value: UInt64(result.audioDuration * 1_000_000_000)),
++            "processing_duration_ns": NSNumber(
++                value: UInt64(result.processingDuration * 1_000_000_000)
++            ),
+             "sample_rate": sampleRate,
+             "sample_count": sampleCount,
+             "pcm_f32le_sha256": pcmHash,
+             "raw_transcript_sha256": sha256(Data(result.text.utf8)),
+             "normalized_transcript_sha256": sha256(Data(normalized.utf8)),
++            "token_timing_sha256": stableJSONHash(tokens),
++            "word_timing_sha256": stableJSONHash(words),
++            "tokens": tokens,
++            "words": words,
+             // The orchestrator removes transcript text from the persisted report.
+             // It needs the text transiently for a common cross-engine normalizer
+             // and optional WER against the frozen reference.
+@@ -277,6 +302,15 @@ enum BenchmarkJSONLServer {
+         value.map { NSNumber(value: $0) } ?? NSNull()
+     }
+
++    private static func stableJSONHash(_ object: Any) -> String {
++        guard JSONSerialization.isValidJSONObject(object),
++              let data = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
++        else {
++            return "invalid"
++        }
++        return sha256(data)
++    }
++
+     static func canonicalPCM(_ samples: [Float]) -> Data {
+         let words = samples.map { $0.bitPattern.littleEndian }
+         return words.withUnsafeBytes { Data($0) }

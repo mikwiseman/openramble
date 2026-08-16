@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "status": "sealed_and_blocked_before_candidate_inference",
+  "created_at_utc": "2026-08-14T20:40:30Z",
+  "blocker": "SenseVoiceSmall is a five-language released checkpoint without Russian ASR, Russian hinting, Cyrillic tokenizer pieces, current Fluid word timing/confidence output, or product vocabulary candidateRegions semantics.",
+  "corpus": {
+    "id": "openramble-dominant-short-quality-v1",
+    "manifest": "$TMP/openramble-dominant-short-quality-v1/final-corpus/manifest.json",
+    "manifest_sha256": "340314c63357f2ec0bcb4091438a71b43668ecba4ad376dc8844e9785d86faf6",
+    "fixture_count": 204,
+    "en_count": 102,
+    "ru_count": 102,
+    "duration_bin_counts_per_language": {"1-2": 34, "2-3": 34, "3-4": 34},
+    "total_audio_seconds": 547.184125,
+    "en_audio_seconds": 273.108,
+    "ru_audio_seconds": 274.076125,
+    "model_outputs_previously_inspected_for_this_candidate": false
+  },
+  "shipping": {
+    "source_commit": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+    "product_config": "$TMP/openramble-intermediate-quality-gate/PRODUCT_CONFIG.json",
+    "product_config_sha256": "98338d07767b45d3abaf222a790b6070b4a0dae6291343034cd7b91f16f3c59b",
+    "vocabulary_enabled": true,
+    "vocabulary_terms": 28,
+    "language_hints_from_manifest": true
+  },
+  "candidate": {
+    "fluid_audio_revision": "ee9a7f12d91710da53de6d75f8b7160e09eccee4",
+    "model_repository": "FluidInference/sensevoice-small-coreml",
+    "model_revision": "cdea3526163035c19915d4a10268992d018ebd46",
+    "precision": "int8",
+    "compute_units": "cpuAndNeuralEngine",
+    "text_norm_embed_index": 15,
+    "en_language_embed_index": 4,
+    "ru_language_embed_index": null,
+    "ru_diagnostic_mode": "auto",
+    "network_mode": "offline_after_exact_manifest_install"
+  },
+  "analysis": {
+    "normalization": "Unicode NFKC; casefold; Russian ё->е; Unicode punctuation/symbol/separator/control to spaces; collapse whitespace; WER by spaces; CER without spaces.",
+    "bootstrap_iterations": 20000,
+    "bootstrap_seed": "openramble-sensevoice-204-bootstrap-v1-20260814",
+    "bootstrap": "paired stratified resampling within language x duration-bin cells",
+    "candidate_minus_shipping": true,
+    "optional_stopping": false,
+    "metric_driven_reruns": false
+  },
+  "quality_hard_gates": {
+    "combined_observed_wer_delta_max": 0.002,
+    "combined_bootstrap_p975_wer_delta_max": 0.0075,
+    "each_language_observed_wer_delta_max": 0.004,
+    "each_language_bootstrap_p975_wer_delta_max": 0.01,
+    "each_duration_bin_observed_wer_delta_max": 0.005,
+    "each_duration_bin_bootstrap_p975_wer_delta_max": 0.015,
+    "utterances_with_two_or_more_extra_word_errors_max": 0,
+    "empty_or_failed_outputs_max": 0,
+    "ru_hypotheses_without_any_cyrillic_letter_max": 0,
+    "detected_language_mismatches_max": 0,
+    "word_timing_missing_max": 0,
+    "confidence_missing_max": 0,
+    "word_alignment_fraction_min": 0.97,
+    "aligned_timing_absolute_p95_seconds_max": 0.12,
+    "aligned_confidence_absolute_p95_max": 0.1,
+    "vocabulary_candidate_false_negatives_max": 0
+  },
+  "latency_and_resource_hard_gates": {
+    "warm_stop_to_text_p50_candidate_over_shipping_max": 0.8,
+    "warm_stop_to_text_p95_candidate_over_shipping_max": 0.8,
+    "warm_stop_to_text_max_candidate_over_shipping_max": 1.0,
+    "candidate_cold_load_over_shipping_cold_load_max": 1.0,
+    "candidate_prewarm_over_shipping_prewarm_max": 1.0,
+    "candidate_peak_rss_bytes_max": 1073741824,
+    "candidate_disk_bytes_max": 250000000,
+    "swap_growth_bytes_max": 0,
+    "memory_pressure_must_be_normal": true,
+    "fd_growth_max": 0,
+    "unreaped_processes_max": 0,
+    "network_requests_during_inference_max": 0,
+    "macos14_m1_smoke_required": true
+  },
+  "promotion_rule": "The 204 run is forbidden until a new versioned adapter closes every source capability blocker and the frozen four-fixture smoke passes. If it is ever unblocked, integrate only if every quality, latency, resource, privacy, and lifecycle gate passes; otherwise reject.",
+  "routing_fallback_policy": {
+    "feature_default": "off",
+    "pre_inference_eligibility": [
+      "exact English hint only; never nil/auto, Russian, or mixed-language",
+      "3200...480000 exact 16 kHz mono samples",
+      "no acoustic vocabulary or candidateRegions requirement",
+      "caller explicitly accepts text-only output with no word timing/confidence",
+      "all nine local model artifacts exactly verified and offline mode active",
+      "macOS/device route previously qualified"
+    ],
+    "ordinary_shipping_fallback": "On any preflight mismatch, use shipping exactly once before candidate inference. On candidate load/inference/empty-output failure, tear down the candidate generation and invoke shipping exactly once; report the added latency. Never silently substitute fp32 SenseVoice because it is a different compute route and a 944 MB artifact set.",
+    "current_product_effect": "The normal product has auto/mixed EN+RU semantics and, when installed, a 28-term candidateRegions vocabulary path; therefore current safe eligibility is effectively zero."
+  }
+}

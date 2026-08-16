@@ -708,13 +708,22 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
         let descriptor = try ASRWorkerDescriptor.duplicate(output.fileDescriptor)
         Thread.detachNewThread { [weak self] in
             defer { Darwin.close(descriptor) }
+            // @Sendable is load-bearing on these hops: the app target's default
+            // MainActor isolation would otherwise be inferred onto the closures,
+            // and Swift 6.2.3 rejects sending them from the reader thread.
             do {
                 while let frame = try ASRWireIO.read(from: descriptor) {
-                    Task { await self?.received(frame, generation: generation) }
+                    Task { @Sendable [weak self] in
+                        await self?.received(frame, generation: generation)
+                    }
                 }
-                Task { await self?.connectionEnded(generation: generation) }
+                Task { @Sendable [weak self] in
+                    await self?.connectionEnded(generation: generation)
+                }
             } catch {
-                Task { await self?.connectionEnded(generation: generation) }
+                Task { @Sendable [weak self] in
+                    await self?.connectionEnded(generation: generation)
+                }
             }
         }
     }

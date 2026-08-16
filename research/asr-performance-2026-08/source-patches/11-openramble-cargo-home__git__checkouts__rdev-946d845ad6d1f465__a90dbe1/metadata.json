@@ -1,0 +1,9 @@
+{
+  "branch": "master",
+  "head": "a90dbe1172f8832f54c97c62e823c5a34af5fdfe",
+  "origin": "file://$TMP/openramble-cargo-home/git/db/rdev-946d845ad6d1f465",
+  "source": "$TMP/openramble-cargo-home/git/checkouts/rdev-946d845ad6d1f465/a90dbe1",
+  "status": [
+    "?? .cargo-ok"
+  ]
+}

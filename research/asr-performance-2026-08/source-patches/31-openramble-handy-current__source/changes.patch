@@ -1,0 +1,417 @@
+diff --git a/src-tauri/src/cli.rs b/src-tauri/src/cli.rs
+index 0423bce..740ceba 100644
+--- a/src-tauri/src/cli.rs
++++ b/src-tauri/src/cli.rs
+@@ -60,4 +60,9 @@ pub struct CliArgs {
+     /// Emit --transcribe-file results as JSON.
+     #[arg(long)]
+     pub json: bool,
++
++    /// Run the local, persistent JSONL benchmark adapter on stdin/stdout.
++    /// Development evidence only; this is not the Handy application UI path.
++    #[arg(long)]
++    pub benchmark_jsonl: bool,
+ }
+diff --git a/src-tauri/src/lib.rs b/src-tauri/src/lib.rs
+index 6b3e2fa..7a941d6 100644
+--- a/src-tauri/src/lib.rs
++++ b/src-tauri/src/lib.rs
+@@ -586,6 +586,312 @@ fn run_headless_transcription(app: &AppHandle, args: &CliArgs) -> i32 {
+     0
+ }
+
++/// Persistent backend-only benchmark adapter. This deliberately does not claim
++/// parity with Handy's UI/capture path. It exists only to keep the same model
++/// resident while an external orchestrator alternates paired engine calls.
++fn run_benchmark_jsonl(app: &AppHandle, args: &CliArgs) -> i32 {
++    use serde_json::{json, Value};
++    use sha2::{Digest, Sha256};
++    use std::collections::HashMap;
++    use std::io::{BufRead, Write};
++    use std::time::Instant;
++
++    const PROTOCOL_VERSION: u64 = 1;
++    const SOURCE_COMMIT: &str = "db003f38b1aef4eb967ac3419bebc851d680f71c";
++
++    struct Pcm {
++        samples: Vec<f32>,
++        sha256: String,
++    }
++
++    fn digest(bytes: &[u8]) -> String {
++        format!("{:x}", Sha256::digest(bytes))
++    }
++
++    fn normalized_hash(text: &str) -> String {
++        let normalized = text
++            .to_lowercase()
++            .split_whitespace()
++            .collect::<Vec<_>>()
++            .join(" ");
++        digest(normalized.as_bytes())
++    }
++
++    fn emit(value: &Value) -> anyhow::Result<()> {
++        let stdout = std::io::stdout();
++        let mut output = stdout.lock();
++        serde_json::to_writer(&mut output, value)?;
++        output.write_all(b"\n")?;
++        output.flush()?;
++        Ok(())
++    }
++
++    fn error(id: Value, detail: impl std::fmt::Display) -> Value {
++        json!({
++            "id": id,
++            "ok": false,
++            "protocol_version": PROTOCOL_VERSION,
++            "error": detail.to_string(),
++        })
++    }
++
++    let Some(model_id) = args.model.clone() else {
++        eprintln!("error: --benchmark-jsonl requires --model");
++        return 2;
++    };
++    // See TranscriptionManager::maybe_unload_immediately. This process is the
++    // isolated adapter instance, so the override cannot affect a running app.
++    crate::managers::transcription::set_benchmark_keep_model(true);
++
++    let tm = app.state::<Arc<TranscriptionManager>>();
++    let model_manager = app.state::<Arc<ModelManager>>();
++    let mut loaded = false;
++    let mut prewarmed = false;
++    let mut buffers: HashMap<String, Pcm> = HashMap::new();
++
++    let stdin = std::io::stdin();
++    for line in stdin.lock().lines() {
++        let line = match line {
++            Ok(value) => value,
++            Err(e) => {
++                eprintln!("error: benchmark stdin failed: {e}");
++                return 1;
++            }
++        };
++        if line.trim().is_empty() {
++            continue;
++        }
++        let request: Value = match serde_json::from_str(&line) {
++            Ok(value) => value,
++            Err(e) => {
++                let _ = emit(&error(Value::Null, e));
++                continue;
++            }
++        };
++        let id = request.get("id").cloned().unwrap_or(Value::Null);
++        let command = request.get("command").and_then(Value::as_str).unwrap_or("");
++
++        let response: anyhow::Result<Value> = (|| {
++            match command {
++                "load" => {
++                    if loaded {
++                        anyhow::bail!("model is already loaded");
++                    }
++                    let model_path = model_manager.get_model_path(&model_id)?;
++                    let model_info = model_manager
++                        .get_model_info(&model_id)
++                        .ok_or_else(|| anyhow::anyhow!("model not found: {model_id}"))?;
++                    let started = Instant::now();
++                    tm.load_model_with_device(&model_id, args.device_index)?;
++                    let elapsed = started.elapsed().as_nanos() as u64;
++                    let settings = get_settings(app);
++                    let custom_words = serde_json::to_vec(&settings.custom_words)?;
++                    let custom_fillers = serde_json::to_vec(&settings.custom_filler_words)?;
++                    loaded = true;
++                    Ok(json!({
++                        "id": id,
++                        "ok": true,
++                        "protocol_version": PROTOCOL_VERSION,
++                        "command": command,
++                        "load_ns": elapsed,
++                        "source_commit": SOURCE_COMMIT,
++                        "model_id": model_id,
++                        "model_path": model_path,
++                        "model_info": model_info,
++                        "requested_device_index": args.device_index,
++                        "bound_backend": tm.current_backend(),
++                        "effective_settings": {
++                            "selected_language": settings.selected_language,
++                            "translate_to_english": settings.translate_to_english,
++                            "word_correction_threshold": settings.word_correction_threshold,
++                            "custom_words_count": settings.custom_words.len(),
++                            "custom_words_sha256": digest(&custom_words),
++                            "custom_filler_words_count": settings
++                                .custom_filler_words
++                                .as_ref()
++                                .map(Vec::len)
++                                .unwrap_or(0),
++                            "custom_filler_words_sha256": digest(&custom_fillers),
++                            "transcribe_accelerator": settings.transcribe_accelerator,
++                            "transcribe_gpu_device": settings.transcribe_gpu_device,
++                            "persisted_model_unload_timeout": settings.model_unload_timeout,
++                            "benchmark_keep_model_override": true,
++                        },
++                    }))
++                }
++                "prewarm" => {
++                    if !loaded || !tm.is_model_loaded() {
++                        anyhow::bail!("load must complete first");
++                    }
++                    let started = Instant::now();
++                    let _ = tm.transcribe(vec![0.0; 16_000])?;
++                    let elapsed = started.elapsed().as_nanos() as u64;
++                    if !tm.is_model_loaded() {
++                        anyhow::bail!("model was unloaded during prewarm");
++                    }
++                    prewarmed = true;
++                    Ok(json!({
++                        "id": id,
++                        "ok": true,
++                        "protocol_version": PROTOCOL_VERSION,
++                        "command": command,
++                        "prewarm_ns": elapsed,
++                    }))
++                }
++                "preload" => {
++                    if !loaded {
++                        anyhow::bail!("load must complete first");
++                    }
++                    let key = request
++                        .get("key")
++                        .and_then(Value::as_str)
++                        .filter(|value| !value.is_empty())
++                        .ok_or_else(|| anyhow::anyhow!("preload requires key"))?;
++                    let path = request
++                        .get("path")
++                        .and_then(Value::as_str)
++                        .filter(|value| !value.is_empty())
++                        .ok_or_else(|| anyhow::anyhow!("preload requires path"))?;
++                    if request.get("format").and_then(Value::as_str) != Some("f32le") {
++                        anyhow::bail!("Handy adapter preload accepts only canonical f32le");
++                    }
++                    let bytes = std::fs::read(path)?;
++                    if bytes.is_empty() || bytes.len() % 4 != 0 {
++                        anyhow::bail!("f32le PCM must contain complete Float32 values");
++                    }
++                    let samples = bytes
++                        .chunks_exact(4)
++                        .map(|chunk| {
++                            let bits = u32::from_le_bytes(chunk.try_into().unwrap());
++                            let sample = f32::from_bits(bits);
++                            if !sample.is_finite() {
++                                anyhow::bail!("PCM contains NaN or infinity");
++                            }
++                            Ok(sample)
++                        })
++                        .collect::<anyhow::Result<Vec<_>>>()?;
++                    let pcm_hash = digest(&bytes);
++                    let sample_count = samples.len();
++                    buffers.insert(
++                        key.to_string(),
++                        Pcm {
++                            samples,
++                            sha256: pcm_hash.clone(),
++                        },
++                    );
++                    Ok(json!({
++                        "id": id,
++                        "ok": true,
++                        "protocol_version": PROTOCOL_VERSION,
++                        "command": command,
++                        "key": key,
++                        "format": "f32le",
++                        "sample_rate": 16_000,
++                        "sample_count": sample_count,
++                        "audio_duration_ns": sample_count as u64 * 1_000_000_000 / 16_000,
++                        "pcm_f32le_sha256": pcm_hash,
++                    }))
++                }
++                "run" | "run-file" => {
++                    if !loaded || !tm.is_model_loaded() {
++                        anyhow::bail!("persistent model residency was lost");
++                    }
++                    let language = match request.get("language") {
++                        None | Some(Value::Null) => None,
++                        Some(Value::String(value)) if !value.is_empty() => Some(value.as_str()),
++                        _ => anyhow::bail!("language must be a non-empty string or null"),
++                    };
++                    let (samples, pcm_hash, file_path) = if command == "run" {
++                        let key = request
++                            .get("key")
++                            .and_then(Value::as_str)
++                            .ok_or_else(|| anyhow::anyhow!("run requires key"))?;
++                        let pcm = buffers
++                            .get(key)
++                            .ok_or_else(|| anyhow::anyhow!("key was not preloaded: {key}"))?;
++                        // Capture already owns a Vec in the app. Clone the fixture
++                        // outside the timer so the adapter measures the same move-in
++                        // transcription boundary rather than harness bookkeeping.
++                        (pcm.samples.clone(), pcm.sha256.clone(), None)
++                    } else {
++                        let path = request
++                            .get("path")
++                            .and_then(Value::as_str)
++                            .ok_or_else(|| anyhow::anyhow!("run-file requires path"))?;
++                        // File-wall intentionally includes this decode. Its PCM hash
++                        // remains visible so it cannot be mixed with the canonical lane.
++                        (Vec::new(), String::new(), Some(path.to_string()))
++                    };
++                    let started = Instant::now();
++                    let samples = if let Some(path) = file_path.as_deref() {
++                        crate::audio_toolkit::read_wav_samples(path)?
++                    } else {
++                        samples
++                    };
++                    let sample_count = samples.len();
++                    let text = tm.transcribe_with_language_override(samples, language)?;
++                    let elapsed = started.elapsed().as_nanos() as u64;
++                    // Hashing is deliberately outside the file-wall timer. A
++                    // second decode is diagnostic bookkeeping, not product work.
++                    let pcm_hash = if let Some(path) = file_path.as_deref() {
++                        let decoded = crate::audio_toolkit::read_wav_samples(path)?;
++                        let bytes: Vec<u8> = decoded
++                            .iter()
++                            .flat_map(|sample| sample.to_bits().to_le_bytes())
++                            .collect();
++                        digest(&bytes)
++                    } else {
++                        pcm_hash
++                    };
++                    if !tm.is_model_loaded() {
++                        anyhow::bail!("model was unloaded during benchmark run");
++                    }
++                    Ok(json!({
++                        "id": id,
++                        "ok": true,
++                        "protocol_version": PROTOCOL_VERSION,
++                        "command": command,
++                        "elapsed_ns": elapsed,
++                        "sample_rate": 16_000,
++                        "sample_count": sample_count,
++                        "pcm_f32le_sha256": pcm_hash,
++                        "raw_transcript_sha256": digest(text.as_bytes()),
++                        "normalized_transcript_sha256": normalized_hash(&text),
++                        "text": text,
++                        "prewarmed": prewarmed,
++                        "language_override": language,
++                        "peak_rss_bytes": Value::Null,
++                    }))
++                }
++                "shutdown" => Ok(json!({
++                    "id": id,
++                    "ok": true,
++                    "protocol_version": PROTOCOL_VERSION,
++                    "command": command,
++                })),
++                _ => anyhow::bail!("unknown command: {command}"),
++            }
++        })();
++
++        match response {
++            Ok(value) => {
++                if emit(&value).is_err() {
++                    return 1;
++                }
++                if command == "shutdown" {
++                    return 0;
++                }
++            }
++            Err(e) => {
++                if emit(&error(id, e)).is_err() {
++                    return 1;
++                }
++            }
++        }
++    }
++    0
++}
++
+ #[cfg_attr(mobile, tauri::mobile_entry_point)]
+ pub fn run(cli_args: CliArgs) {
+     // Pin glibc's dynamic mmap threshold before the first large allocation,
+@@ -733,8 +1039,10 @@ pub fn run(cli_args: CliArgs) {
+
+     // The headless path must run as its own instance (see the single-instance
+     // note below), not forward to an already-running app.
+-    let headless_mode =
+-        cli_args.transcribe_file.is_some() || cli_args.list_devices || cli_args.list_models;
++    let headless_mode = cli_args.transcribe_file.is_some()
++        || cli_args.list_devices
++        || cli_args.list_models
++        || cli_args.benchmark_jsonl;
+
+     #[allow(unused_mut)]
+     let mut builder = tauri::Builder::default()
+@@ -854,7 +1162,13 @@ pub fn run(cli_args: CliArgs) {
+                 let handle = app_handle.clone();
+                 let args = cli_args.clone();
+                 std::thread::spawn(move || {
+-                    let code = run_headless_guarded(|| run_headless_transcription(&handle, &args));
++                    let code = run_headless_guarded(|| {
++                        if args.benchmark_jsonl {
++                            run_benchmark_jsonl(&handle, &args)
++                        } else {
++                            run_headless_transcription(&handle, &args)
++                        }
++                    });
+                     // Drop the loaded engine before teardown: ggml-metal's global
+                     // device free asserts (SIGABRT) if a model's Metal resources
+                     // are still alive at C++ static-destructor time.
+diff --git a/src-tauri/src/managers/transcription.rs b/src-tauri/src/managers/transcription.rs
+index bf169c0..894d0c6 100644
+--- a/src-tauri/src/managers/transcription.rs
++++ b/src-tauri/src/managers/transcription.rs
+@@ -35,6 +35,11 @@ use transcribe_rs::{
+
+ const STREAM_PERF_LOG_INTERVAL: Duration = Duration::from_secs(5);
+ const STREAM_FINALIZE_REPLY_TIMEOUT: Duration = Duration::from_secs(30);
++static BENCHMARK_KEEP_MODEL: AtomicBool = AtomicBool::new(false);
++
++pub(crate) fn set_benchmark_keep_model(enabled: bool) {
++    BENCHMARK_KEEP_MODEL.store(enabled, Ordering::Release);
++}
+
+ fn panic_payload_message(payload: &(dyn std::any::Any + Send)) -> String {
+     if let Some(message) = payload.downcast_ref::<&str>() {
+@@ -447,6 +452,11 @@ impl TranscriptionManager {
+
+     /// Unloads the model immediately if the setting is enabled and the model is loaded
+     pub fn maybe_unload_immediately(&self, context: &str) {
++        // The opt-in benchmark adapter owns one warm model for its complete
++        // JSONL session. It is a separate local harness, never an app default.
++        if BENCHMARK_KEEP_MODEL.load(Ordering::Acquire) {
++            return;
++        }
+         let settings = get_settings(&self.app_handle);
+         if settings.model_unload_timeout == ModelUnloadTimeout::Immediately
+             && self.is_model_loaded()
+@@ -1110,6 +1120,17 @@ impl TranscriptionManager {
+     }
+
+     pub fn transcribe(&self, audio: Vec<f32>) -> Result<String> {
++        self.transcribe_with_language_override(audio, None)
++    }
++
++    /// Benchmark builds use this to apply the fixture language without
++    /// mutating Handy's persisted user settings. Normal app callers continue
++    /// through `transcribe`, which preserves the existing behavior exactly.
++    pub fn transcribe_with_language_override(
++        &self,
++        audio: Vec<f32>,
++        language_override: Option<&str>,
++    ) -> Result<String> {
+         #[cfg(debug_assertions)]
+         if std::env::var("HANDY_FORCE_TRANSCRIPTION_FAILURE").is_ok() {
+             return Err(anyhow::anyhow!(
+@@ -1146,7 +1167,10 @@ impl TranscriptionManager {
+         }
+
+         // Get current settings for configuration
+-        let settings = get_settings(&self.app_handle);
++        let mut settings = get_settings(&self.app_handle);
++        if let Some(language) = language_override {
++            settings.selected_language = language.to_string();
++        }
+
+         // Validate selected language against the model's supported languages.
+         // If the language isn't supported, fall back to "auto" to prevent errors.

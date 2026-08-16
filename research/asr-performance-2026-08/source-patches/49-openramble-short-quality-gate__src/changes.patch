@@ -1,0 +1,141 @@
+diff --git a/Packages/DictationCore/Sources/DictationCore/ASREngineAdapting.swift b/Packages/DictationCore/Sources/DictationCore/ASREngineAdapting.swift
+index 280463c..15f18a3 100644
+--- a/Packages/DictationCore/Sources/DictationCore/ASREngineAdapting.swift
++++ b/Packages/DictationCore/Sources/DictationCore/ASREngineAdapting.swift
+@@ -47,6 +47,30 @@ public struct ASRPhaseTimings: Sendable, Equatable {
+ /// The type is declared here, and not in LocalASR, intentionally: pure logic should be able to
+ /// work with the result without knowing anything about which engine produced it.
+ public struct ASRResult: Sendable, Equatable {
++    /// Benchmark diagnostics preserve the model's raw subword emissions.
++    /// Shipping adapters may leave this empty.
++    public struct Token: Sendable, Equatable {
++        public let text: String
++        public let id: Int
++        public let start: TimeInterval
++        public let end: TimeInterval
++        public let confidence: Double
++
++        public init(
++            text: String,
++            id: Int,
++            start: TimeInterval,
++            end: TimeInterval,
++            confidence: Double
++        ) {
++            self.text = text
++            self.id = id
++            self.start = start
++            self.end = end
++            self.confidence = confidence
++        }
++    }
++
+     /// One word with time boundaries relative to the beginning of the fragment.
+     public struct Word: Sendable, Equatable {
+         public let text: String
+@@ -66,6 +90,8 @@ public struct ASRResult: Sendable, Equatable {
+     public let text: String
+     /// Word-by-word timings. An empty array is acceptable: not every engine provides them.
+     public let words: [Word]
++    /// Raw subword emissions for benchmark diagnostics.
++    public let tokens: [Token]
+     /// Duration of recognized audio.
+     public let audioDuration: TimeInterval
+     /// How long did the recognition itself take - for measurements and for display in diagnostics.
+@@ -76,12 +102,14 @@ public struct ASRResult: Sendable, Equatable {
+     public init(
+         text: String,
+         words: [Word] = [],
++        tokens: [Token] = [],
+         audioDuration: TimeInterval,
+         processingDuration: TimeInterval,
+         phaseTimings: ASRPhaseTimings? = nil
+     ) {
+         self.text = text
+         self.words = words
++        self.tokens = tokens
+         self.audioDuration = audioDuration
+         self.processingDuration = processingDuration
+         self.phaseTimings = phaseTimings
+diff --git a/Packages/LocalASR/Package.swift b/Packages/LocalASR/Package.swift
+index 4b28312..9be2797 100644
+--- a/Packages/LocalASR/Package.swift
++++ b/Packages/LocalASR/Package.swift
+@@ -20,10 +20,7 @@ let package = Package(
+         // reset of TDT's fully overwritten fixed-size audio input buffer and
+         // avoids NSNumber boxing at the optional CTC model boundaries. It also
+         // accepts a conservative term-index prefilter for the final rescorer.
+-        .package(
+-            url: "https://github.com/mikwiseman/FluidAudio.git",
+-            revision: "ee9a7f12d91710da53de6d75f8b7160e09eccee4"
+-        ),
++        .package(path: "$TMP/openramble-phase-breakdown-ee9a7f12/FluidAudio"),
+     ],
+     targets: [
+         .target(
+diff --git a/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift b/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift
+index 45caca9..31607e8 100644
+--- a/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift
++++ b/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift
+@@ -922,6 +922,15 @@ public actor FluidAudioAdapter: ASREngineAdapting {
+         return DictationCore.ASRResult(
+             text: text,
+             words: Self.words(from: timings),
++            tokens: (timings ?? []).map {
++                .init(
++                    text: $0.token,
++                    id: $0.tokenId,
++                    start: $0.startTime,
++                    end: $0.endTime,
++                    confidence: Double($0.confidence)
++                )
++            },
+             audioDuration: audioDuration,
+             processingDuration: elapsed.seconds,
+             phaseTimings: phaseTimings
+@@ -965,7 +974,8 @@ public actor FluidAudioAdapter: ASREngineAdapting {
+         helper: VocabularyHelper,
+         collectPhaseTimings: Bool = false
+     ) async throws -> VocabularyEvidenceRun {
+-        let chunkSize = ASRConstants.maxModelSamples
++        // Temp short-TDT experiment: optional CTC retains the shipping 15 s shape.
++        let chunkSize = 240_000
+         let overlap = vocabularyChunkOverlapSamples
+         guard !candidateRegions.isEmpty else { return .empty }
+         guard samples.count > chunkSize else {
+diff --git a/Packages/LocalASR/Sources/asr-bench/BenchmarkJSONLServer.swift b/Packages/LocalASR/Sources/asr-bench/BenchmarkJSONLServer.swift
+index 522584c..dec22b6 100644
+--- a/Packages/LocalASR/Sources/asr-bench/BenchmarkJSONLServer.swift
++++ b/Packages/LocalASR/Sources/asr-bench/BenchmarkJSONLServer.swift
+@@ -270,6 +270,23 @@ enum BenchmarkJSONLServer {
+             "prewarmed": didPrewarm,
+             "peak_rss_bytes": NSNumber(value: peakMemoryBytes()),
+             "timing": timing,
++            "words": result.words.map {
++                [
++                    "text": $0.text,
++                    "start": $0.start,
++                    "end": $0.end,
++                    "confidence": $0.confidence.map { NSNumber(value: $0) } ?? NSNull(),
++                ] as [String: Any]
++            },
++            "tokens": result.tokens.map {
++                [
++                    "text": $0.text,
++                    "id": $0.id,
++                    "start": $0.start,
++                    "end": $0.end,
++                    "confidence": $0.confidence,
++                ] as [String: Any]
++            },
+         ]
+     }
+
+@@ -329,6 +346,8 @@ enum BenchmarkJSONLServer {
+             "vocabulary_bias_weight": Double(environment["WAI_VOCAB_CBW"] ?? "")
+                 ?? Double(defaults.biasWeight),
+             "language": environment["WAI_ASR_LANGUAGE"] ?? NSNull(),
++            "temp_model_window_seconds": environment["OPENRAMBLE_TEMP_MODEL_WINDOW_SECONDS"]
++                ?? NSNull(),
+         ]
+     }

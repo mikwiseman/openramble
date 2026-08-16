@@ -1,0 +1,522 @@
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/CustomVocabulary/WordSpotting/CtcKeywordSpotter.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/CustomVocabulary/WordSpotting/CtcKeywordSpotter.swift
+index 9904d5f8..08df8019 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/CustomVocabulary/WordSpotting/CtcKeywordSpotter.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/CustomVocabulary/WordSpotting/CtcKeywordSpotter.swift
+@@ -21,7 +21,9 @@ public struct CtcKeywordSpotter: Sendable {
+     }
+
+     let sampleRate: Int = ASRConstants.sampleRate
+-    let maxModelSamples: Int = ASRConstants.maxModelSamples
++    // Temp short-TDT experiment: the optional CTC model keeps its shipping
++    // 15-second input shape while only the primary TDT graph uses 7.5 seconds.
++    let maxModelSamples: Int = 240_000
+
+     // Chunking parameters for audio longer than maxModelSamples
+     // 2s overlap at 16kHz = 32,000 samples (matches TDT chunking pattern)
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift
+index 48dcc31b..db21a020 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift
+@@ -15,11 +15,20 @@ extension AsrManager {
+         emitTokensAfterGlobalFrame: Int? = nil,
+         initialTimeIndexOverride: Int? = nil
+     ) async throws -> (hypothesis: TdtHypothesis, encoderSequenceLength: Int) {
++        let tempRecorder = TempASRPhaseDiagnostics.recorder
++        let tempPipelineStart = tempPhaseNow()
++        defer {
++            tempRecorder?.snapshot.pipelineNanoseconds += tempPhaseNow() - tempPipelineStart
++        }
+
++        let tempPreprocessorInputStart = tempPhaseNow()
+         let preprocessorInput = try await preparePreprocessorInput(
+             paddedAudio, actualLength: originalLength)
+
+         let preprocessorAudioArray = preprocessorInput.featureValue(for: "audio_signal")?.multiArrayValue
++        tempRecorder?.snapshot.preprocessorInputNanoseconds +=
++            tempPhaseNow() - tempPreprocessorInputStart
++        tempRecorder?.snapshot.encoderWindowCount += 1
+
+         do {
+             guard let preprocessorModel = preprocessorModel else {
+@@ -27,30 +36,39 @@ extension AsrManager {
+             }
+
+             try Task.checkCancellation()
++            let tempPreprocessorPredictionStart = tempPhaseNow()
+             let preprocessorOutput = try await preprocessorModel.compatPrediction(
+                 from: preprocessorInput,
+                 options: predictionOptions
+             )
++            tempRecorder?.snapshot.preprocessorPredictionNanoseconds +=
++                tempPhaseNow() - tempPreprocessorPredictionStart
+
+             let encoderOutputProvider: MLFeatureProvider
+             if let encoderModel = encoderModel {
+                 // Split frontend: run separate encoder
++                let tempEncoderInputStart = tempPhaseNow()
+                 let encoderInput = try prepareEncoderInput(
+                     encoder: encoderModel,
+                     preprocessorOutput: preprocessorOutput,
+                     originalInput: preprocessorInput
+                 )
++                tempRecorder?.snapshot.encoderInputNanoseconds += tempPhaseNow() - tempEncoderInputStart
+
+                 try Task.checkCancellation()
++                let tempEncoderPredictionStart = tempPhaseNow()
+                 encoderOutputProvider = try await encoderModel.compatPrediction(
+                     from: encoderInput,
+                     options: predictionOptions
+                 )
++                tempRecorder?.snapshot.encoderPredictionNanoseconds +=
++                    tempPhaseNow() - tempEncoderPredictionStart
+             } else {
+                 // Fused frontend: preprocessor output already contains encoder features
+                 encoderOutputProvider = preprocessorOutput
+             }
+
++            let tempFrontendOutputStart = tempPhaseNow()
+             let rawEncoderOutput = try extractFeatureValue(
+                 from: encoderOutputProvider, key: "encoder", errorMessage: "Invalid encoder output")
+             let encoderLength = try extractFeatureValue(
+@@ -62,7 +80,10 @@ extension AsrManager {
+             // Calculate actual audio frames if not provided using shared constants
+             let actualFrames =
+                 actualAudioFrames ?? ASRConstants.calculateEncoderFrames(from: originalLength ?? paddedAudio.count)
++            tempRecorder?.snapshot.frontendOutputExtractionNanoseconds +=
++                tempPhaseNow() - tempFrontendOutputStart
+
++            let tempDecodeStart = tempPhaseNow()
+             let hypothesis = try await tdtDecodeWithTimings(
+                 encoderOutput: rawEncoderOutput,
+                 encoderSequenceLength: encoderSequenceLength,
+@@ -76,18 +97,23 @@ extension AsrManager {
+                 emitTokensAfterGlobalFrame: emitTokensAfterGlobalFrame,
+                 initialTimeIndexOverride: initialTimeIndexOverride
+             )
++            tempRecorder?.snapshot.tdtDecodeNanoseconds += tempPhaseNow() - tempDecodeStart
+
+             if let preprocessorAudioArray {
+                 // preparePreprocessorInput overwrites the complete fixed-size
+                 // audio buffer before exposing it to Core ML. Clearing the
+                 // same 15-second buffer here only adds redundant work.
++                let tempCacheReturnStart = tempPhaseNow()
+                 await sharedMLArrayCache.returnArray(preprocessorAudioArray, resetData: false)
++                tempRecorder?.snapshot.cacheReturnNanoseconds += tempPhaseNow() - tempCacheReturnStart
+             }
+
+             return (hypothesis, encoderSequenceLength)
+         } catch {
+             if let preprocessorAudioArray {
++                let tempCacheReturnStart = tempPhaseNow()
+                 await sharedMLArrayCache.returnArray(preprocessorAudioArray, resetData: false)
++                tempRecorder?.snapshot.cacheReturnNanoseconds += tempPhaseNow() - tempCacheReturnStart
+             }
+             throw error
+         }
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
+index 4a29727d..375b2ea8 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
+@@ -5,6 +5,11 @@ extension AsrManager {
+     internal func transcribeWithState(
+         _ audioSamples: [Float], decoderState: inout TdtDecoderState, language: Language? = nil
+     ) async throws -> ASRResult {
++        let tempRecorder = TempASRPhaseDiagnostics.recorder
++        let tempTranscribeStart = tempPhaseNow()
++        defer {
++            tempRecorder?.snapshot.transcribeInternalNanoseconds += tempPhaseNow() - tempTranscribeStart
++        }
+         guard isAvailable else { throw ASRError.notInitialized }
+         let minimumRequiredSamples = ASRConstants.minimumRequiredSamples(forSampleRate: config.sampleRate)
+         guard audioSamples.count >= minimumRequiredSamples else { throw ASRError.invalidAudioData }
+@@ -13,8 +18,10 @@ extension AsrManager {
+
+         // Route to appropriate processing method based on audio length
+         if audioSamples.count <= ASRConstants.maxModelSamples {
++            let tempPaddingStart = tempPhaseNow()
+             let (alignedSamples, frameAlignedLength) = frameAlignedAudio(audioSamples)
+             let paddedAudio: [Float] = padAudioIfNeeded(alignedSamples, targetLength: ASRConstants.maxModelSamples)
++            tempRecorder?.snapshot.alignmentAndPaddingNanoseconds += tempPhaseNow() - tempPaddingStart
+             let (hypothesis, encoderSequenceLength) = try await executeMLInferenceWithTimings(
+                 paddedAudio,
+                 originalLength: frameAlignedLength,
+@@ -24,6 +31,7 @@ extension AsrManager {
+                 language: language
+             )
+
++            let tempResultStart = tempPhaseNow()
+             let result = processTranscriptionResult(
+                 tokenIds: hypothesis.ySequence,
+                 timestamps: hypothesis.timestamps,
+@@ -33,6 +41,7 @@ extension AsrManager {
+                 audioSamples: audioSamples,
+                 processingTime: Date().timeIntervalSince(startTime)
+             )
++            tempRecorder?.snapshot.resultProcessingNanoseconds += tempPhaseNow() - tempResultStart
+
+             return result
+         }
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrModels.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrModels.swift
+index 655cd96d..12164162 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrModels.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrModels.swift
+@@ -237,6 +237,12 @@ extension AsrModels {
+         logger.info("Loading ASR models from: \(directory.path)")
+
+         let config = configuration ?? defaultConfiguration()
++        let tempDecoderComputeUnits = Self.tempComputeUnitsOverride(
++            environmentKey: "OPENRAMBLE_TEMP_DECODER_COMPUTE_UNITS",
++            fallback: config.computeUnits)
++        let tempJointComputeUnits = Self.tempComputeUnitsOverride(
++            environmentKey: "OPENRAMBLE_TEMP_JOINT_COMPUTE_UNITS",
++            fallback: config.computeUnits)
+
+         let parentDirectory = directory.deletingLastPathComponent()
+         let downloadVariant: String? = (version == .v3) ? encoderPrecision.rawValue : nil
+@@ -279,7 +285,7 @@ extension AsrModels {
+             version.repo,
+             modelNames: [fileNames.decoder],
+             directory: parentDirectory,
+-            computeUnits: config.computeUnits,
++            computeUnits: tempDecoderComputeUnits,
+             variant: downloadVariant,
+             progressHandler: progressHandler
+         )
+@@ -295,7 +301,7 @@ extension AsrModels {
+             version.repo,
+             modelNames: [fileNames.joint],
+             directory: parentDirectory,
+-            computeUnits: config.computeUnits,
++            computeUnits: tempJointComputeUnits,
+             variant: downloadVariant,
+             progressHandler: progressHandler
+         )
+@@ -363,6 +369,22 @@ extension AsrModels {
+         return asrModels
+     }
+
++    /// TEMP-ONLY component placement override for the isolated benchmark.
++    private static func tempComputeUnitsOverride(
++        environmentKey: String,
++        fallback: MLComputeUnits
++    ) -> MLComputeUnits {
++        guard let raw = ProcessInfo.processInfo.environment[environmentKey] else { return fallback }
++        switch raw {
++        case "all": return .all
++        case "cpuOnly": return .cpuOnly
++        case "cpuAndGPU": return .cpuAndGPU
++        case "cpuAndNeuralEngine": return .cpuAndNeuralEngine
++        default:
++            fatalError("Unsupported \(environmentKey)=\(raw)")
++        }
++    }
++
+     private static func loadVocabulary(from directory: URL, version: AsrModelVersion) throws -> [Int: String] {
+         let vocabularyFileName = getModelFileNames(version: version, encoderPrecision: .int8).vocabulary
+         let vocabPath = repoPath(from: directory, version: version).appendingPathComponent(vocabularyFileName)
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtDecoderV3.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtDecoderV3.swift
+index df1cdff0..fd4688f2 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtDecoderV3.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtDecoderV3.swift
+@@ -34,7 +34,7 @@ internal struct TdtDecoderV3: Sendable {
+
+     private let logger = AppLogger(category: "TDT")
+     private let config: ASRConfig
+-    private let modelInference = TdtModelInference()
++    private let modelInference: TdtModelInference
+     // Parakeet‑TDT‑v3: duration head has 5 bins mapping directly to frame advances
+
+     // English-exclusive whole-word token IDs used by applyEnglishBlocklist.
+@@ -79,6 +79,7 @@ internal struct TdtDecoderV3: Sendable {
+
+     init(config: ASRConfig) {
+         self.config = config
++        self.modelInference = TdtModelInference(tempRecorder: TempASRPhaseDiagnostics.recorder)
+     }
+
+     /// Execute TDT decoding and return tokens with emission timestamps
+@@ -115,6 +116,11 @@ internal struct TdtDecoderV3: Sendable {
+         emitTokensAfterGlobalFrame: Int? = nil,
+         initialTimeIndexOverride: Int? = nil
+     ) async throws -> TdtHypothesis {
++        let tempRecorder = TempASRPhaseDiagnostics.recorder
++        var tempCounters = TempTDTLoopCounters()
++        tempCounters.encoderSequenceLength = encoderSequenceLength
++        tempCounters.actualAudioFrames = actualAudioFrames
++        defer { tempRecorder?.recordLoopCounters(tempCounters) }
+         // Early exit for very short audio (< 160ms)
+         guard encoderSequenceLength > 1 else {
+             return TdtHypothesis(decState: decoderState)
+@@ -155,6 +161,7 @@ internal struct TdtDecoderV3: Sendable {
+             actualAudioFrames: actualAudioFrames
+         )
+         let effectiveSequenceLength = navigationState.effectiveSequenceLength
++        tempCounters.effectiveSequenceLength = effectiveSequenceLength
+         var safeTimeIndices = navigationState.safeTimeIndices
+         let lastTimestep = navigationState.lastTimestep
+         var activeMask = navigationState.activeMask
+@@ -228,6 +235,7 @@ internal struct TdtDecoderV3: Sendable {
+         // ===== MAIN DECODING LOOP =====
+         // Process each encoder frame until we've consumed all audio
+         while activeMask {
++            tempCounters.mainLoopIterationCount += 1
+             try Task.checkCancellation()
+             // Use last emitted token for decoder context, or blank if starting
+             var label = hypothesis.lastToken ?? config.tdtConfig.blankId
+@@ -238,6 +246,7 @@ internal struct TdtDecoderV3: Sendable {
+             // This cache is valid when decoder state hasn't changed
+             let decoderResult: (output: MLFeatureProvider, newState: TdtDecoderState)
+             if let cached = decoderState.predictorOutput {
++                tempCounters.decoderCacheHitCount += 1
+                 // Reuse cached decoder output - significant speedup
+                 let provider = try MLDictionaryFeatureProvider(dictionary: [
+                     "decoder": MLFeatureValue(multiArray: cached)
+@@ -274,6 +283,7 @@ internal struct TdtDecoderV3: Sendable {
+                 durationBacking: durationBacking,
+                 needsTopK: needsTopK
+             )
++            tempCounters.mainJointDecisionCount += 1
+
+             // Predict token (what to emit) and duration (how many frames to skip)
+             label = decision.token
+@@ -303,6 +313,11 @@ internal struct TdtDecoderV3: Sendable {
+             var duration = try TdtDurationMapping.mapDurationBin(
+                 decision.durationBin, durationBins: config.tdtConfig.durationBins)
+             var blankMask = (label == blankId)  // Is this a blank (silence) token?
++            if blankMask {
++                tempCounters.blankDecisionCount += 1
++            } else {
++                tempCounters.nonblankDecisionCount += 1
++            }
+
+             let currentTimeIndex = timeIndices
+             // Prevent repeated non-blank emissions at the same frame when duration=0.
+@@ -321,6 +336,7 @@ internal struct TdtDecoderV3: Sendable {
+             // Advance through audio frames based on predicted duration
+             timeIndicesCurrentLabels = timeIndices  // Remember where this token was emitted
+             timeIndices += duration  // Jump forward by predicted duration
++            tempCounters.durationAdvanceFrameCount += duration
+             safeTimeIndices = min(timeIndices, lastTimestep)  // Bounds check
+
+             activeMask = timeIndices < effectiveSequenceLength  // Continue if more frames
+@@ -346,6 +362,7 @@ internal struct TdtDecoderV3: Sendable {
+             // - Maintains linguistic continuity across gaps in speech
+             // - Speeds up processing by 2-3x for audio with silence
+             while advanceMask {
++                tempCounters.innerLoopIterationCount += 1
+                 try Task.checkCancellation()
+                 timeIndicesCurrentLabels = timeIndices
+
+@@ -364,6 +381,7 @@ internal struct TdtDecoderV3: Sendable {
+                     durationBacking: durationBacking,
+                     needsTopK: needsTopK
+                 )
++                tempCounters.innerJointDecisionCount += 1
+
+                 label = innerDecision.token
+                 score = TdtDurationMapping.clampProbability(innerDecision.probability)
+@@ -390,6 +408,11 @@ internal struct TdtDecoderV3: Sendable {
+                     innerDecision.durationBin, durationBins: config.tdtConfig.durationBins)
+
+                 blankMask = (label == blankId)
++                if blankMask {
++                    tempCounters.blankDecisionCount += 1
++                } else {
++                    tempCounters.nonblankDecisionCount += 1
++                }
+
+                 // Same duration=0 fix for inner loop.
+                 if blankMask && duration == 0 {
+@@ -399,6 +422,7 @@ internal struct TdtDecoderV3: Sendable {
+                 // Advance by duration regardless of blank/non-blank
+                 // This is the ORIGINAL and CORRECT logic
+                 timeIndices += duration
++                tempCounters.durationAdvanceFrameCount += duration
+                 safeTimeIndices = min(timeIndices, lastTimestep)
+                 activeMask = timeIndices < effectiveSequenceLength
+                 advanceMask = activeMask && blankMask  // Exit loop if non-blank found
+@@ -409,7 +433,9 @@ internal struct TdtDecoderV3: Sendable {
+             if activeMask && label != blankId {
+                 // Check per-chunk token limit to prevent runaway decoding
+                 tokensProcessedThisChunk += 1
++                tempCounters.processedTokenCount += 1
+                 if tokensProcessedThisChunk > config.tdtConfig.maxTokensPerChunk {
++                    tempCounters.maxTokenLimitBreakCount += 1
+                     break
+                 }
+
+@@ -424,6 +450,7 @@ internal struct TdtDecoderV3: Sendable {
+                     hypothesis.timestamps.append(emissionTimestamp)
+                     hypothesis.tokenConfidences.append(score)
+                     hypothesis.tokenDurations.append(duration)
++                    tempCounters.emittedTokenCount += 1
+                 }
+                 hypothesis.lastToken = label  // Remember for next iteration
+
+@@ -456,6 +483,8 @@ internal struct TdtDecoderV3: Sendable {
+                 if emissionsAtThisTimestamp >= maxSymbolsPerStep {
+                     let forcedAdvance = 1
+                     timeIndices = min(timeIndices + forcedAdvance, lastTimestep)
++                    tempCounters.durationAdvanceFrameCount += forcedAdvance
++                    tempCounters.forcedAdvanceCount += 1
+                     safeTimeIndices = min(timeIndices, lastTimestep)
+                     emissionsAtThisTimestamp = 0
+                     lastEmissionTimestamp = -1
+@@ -479,12 +508,14 @@ internal struct TdtDecoderV3: Sendable {
+
+             // Continue until we get consecutive blanks or hit max steps
+             while additionalSteps < maxSymbolsPerStep && consecutiveBlanks < maxConsecutiveBlanks {
++                tempCounters.finalLoopIterationCount += 1
+                 try Task.checkCancellation()
+                 let stateToUse = hypothesis.decState ?? decoderState
+
+                 // Get decoder output for final processing
+                 let decoderResult: (output: MLFeatureProvider, newState: TdtDecoderState)
+                 if let cached = decoderState.predictorOutput {
++                    tempCounters.decoderCacheHitCount += 1
+                     let provider = try MLDictionaryFeatureProvider(dictionary: [
+                         "decoder": MLFeatureValue(multiArray: cached)
+                     ])
+@@ -526,6 +557,7 @@ internal struct TdtDecoderV3: Sendable {
+                     durationBacking: durationBacking,
+                     needsTopK: needsTopK
+                 )
++                tempCounters.finalJointDecisionCount += 1
+
+                 let token = decision.token
+                 let score = TdtDurationMapping.clampProbability(decision.probability)
+@@ -535,8 +567,10 @@ internal struct TdtDecoderV3: Sendable {
+                     decision.durationBin, durationBins: config.tdtConfig.durationBins)
+
+                 if token == config.tdtConfig.blankId {
++                    tempCounters.blankDecisionCount += 1
+                     consecutiveBlanks += 1
+                 } else {
++                    tempCounters.nonblankDecisionCount += 1
+                     consecutiveBlanks = 0  // Reset on non-blank
+
+                     let finalTimestamp =
+@@ -552,6 +586,7 @@ internal struct TdtDecoderV3: Sendable {
+                         hypothesis.timestamps.append(finalTimestamp)
+                         hypothesis.tokenConfidences.append(score)
+                         hypothesis.tokenDurations.append(duration)
++                        tempCounters.emittedTokenCount += 1
+                     }
+                     hypothesis.lastToken = token
+
+@@ -571,6 +606,7 @@ internal struct TdtDecoderV3: Sendable {
+
+                 // Advance processing position by predicted duration, but clamp to bounds
+                 finalProcessingTimeIndices = min(finalProcessingTimeIndices + max(1, duration), effectiveSequenceLength)
++                tempCounters.durationAdvanceFrameCount += max(1, duration)
+                 additionalSteps += 1
+             }
+
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtModelInference.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtModelInference.swift
+index 82f98aba..f49d785a 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtModelInference.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtModelInference.swift
+@@ -8,9 +8,11 @@ import Foundation
+ /// These operations are separated from the main decoding loop to improve testability and clarity.
+ internal struct TdtModelInference: Sendable {
+     private let predictionOptions: MLPredictionOptions
++    private let tempRecorder: TempASRPhaseRecorder?
+
+-    init() {
++    init(tempRecorder: TempASRPhaseRecorder? = TempASRPhaseDiagnostics.recorder) {
+         self.predictionOptions = AsrModels.optimizedPredictionOptions()
++        self.tempRecorder = tempRecorder
+     }
+
+     /// Execute decoder LSTM with state caching.
+@@ -30,6 +32,13 @@ internal struct TdtModelInference: Sendable {
+         targetArray: MLMultiArray,
+         targetLengthArray: MLMultiArray
+     ) throws -> (output: MLFeatureProvider, newState: TdtDecoderState) {
++        let tempInvocationStart = tempPhaseNow()
++        var tempPredictionNanoseconds: UInt64 = 0
++        defer {
++            tempRecorder?.recordDecoderInvocation(
++                totalNanoseconds: tempPhaseNow() - tempInvocationStart,
++                predictionNanoseconds: tempPredictionNanoseconds)
++        }
+
+         // Reuse pre-allocated arrays
+         targetArray[0] = NSNumber(value: token)
+@@ -49,10 +58,15 @@ internal struct TdtModelInference: Sendable {
+             "c_out": state.cellState,
+         ]
+
+-        let output = try model.prediction(
+-            from: input,
+-            options: predictionOptions
+-        )
++        let output: MLFeatureProvider
++        do {
++            let tempPredictionStart = tempPhaseNow()
++            defer { tempPredictionNanoseconds += tempPhaseNow() - tempPredictionStart }
++            output = try model.prediction(
++                from: input,
++                options: predictionOptions
++            )
++        }
+
+         var newState = state
+         newState.update(from: output)
+@@ -95,6 +109,13 @@ internal struct TdtModelInference: Sendable {
+         durationBacking: MLMultiArray,
+         needsTopK: Bool = false
+     ) throws -> TdtJointDecision {
++        let tempInvocationStart = tempPhaseNow()
++        var tempPredictionNanoseconds: UInt64 = 0
++        defer {
++            tempRecorder?.recordJointInvocation(
++                totalNanoseconds: tempPhaseNow() - tempInvocationStart,
++                predictionNanoseconds: tempPredictionNanoseconds)
++        }
+
+         // Fill encoder step with the requested frame
+         try encoderFrames.copyFrame(at: timeIndex, into: encoderDestPtr, destinationStride: encoderDestStride)
+@@ -111,10 +132,15 @@ internal struct TdtModelInference: Sendable {
+         ]
+
+         // Execute joint network using the reusable provider
+-        let output = try model.prediction(
+-            from: inputProvider,
+-            options: predictionOptions
+-        )
++        let output: MLFeatureProvider
++        do {
++            let tempPredictionStart = tempPhaseNow()
++            defer { tempPredictionNanoseconds += tempPhaseNow() - tempPredictionStart }
++            output = try model.prediction(
++                from: inputProvider,
++                options: predictionOptions
++            )
++        }
+
+         let tokenIdArray = try extractFeatureValue(
+             from: output, key: "token_id", errorMessage: "Joint decision output missing token_id")
+diff --git a/Sources/FluidAudio/Shared/ASRConstants.swift b/Sources/FluidAudio/Shared/ASRConstants.swift
+index 789f4da6..45990ee0 100644
+--- a/Sources/FluidAudio/Shared/ASRConstants.swift
++++ b/Sources/FluidAudio/Shared/ASRConstants.swift
+@@ -6,10 +6,16 @@ public enum ASRConstants {
+     public static let sampleRate: Int = 16_000
+
+     /// Maximum audio duration supported by CoreML encoder (seconds)
+-    public static let maxDurationSeconds: Double = 15.0
++    public static let maxDurationSeconds: Double = {
++        guard let raw = ProcessInfo.processInfo.environment["OPENRAMBLE_TEMP_MODEL_WINDOW_SECONDS"],
++            let value = Double(raw), value > 0
++        else { return 15.0 }
++        return value
++    }()
+
+     /// Maximum audio samples supported by CoreML encoder (sampleRate × maxDurationSeconds)
+-    public static let maxModelSamples: Int = 240_000
++    public static let maxModelSamples: Int = Int(
++        (Double(sampleRate) * maxDurationSeconds).rounded())
+
+     /// Minimum audio duration accepted by the ASR guard (seconds).
+     public static let minimumAudioDurationSeconds: Double = 0.3

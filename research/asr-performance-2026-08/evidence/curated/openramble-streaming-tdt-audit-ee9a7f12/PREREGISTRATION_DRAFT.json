@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-08-14T20:45:05Z",
+  "status": "draft_not_armed_no_streaming_runner_no_inference_authority",
+  "scope": "temp_only_stateful_sliding_window_tdt_stop_latency_ab",
+  "prohibitions": [
+    "Do not run CoreML or model inference until the parent gives an explicit GO and grants the runner lane.",
+    "Do not edit shared repository files.",
+    "Do not inspect any 204-fixture model output until the candidate, runner, evaluator, and this preregistration are sealed in a new armed revision.",
+    "Do not insert stateful-streaming output into the product unless every quality, protocol, and speed gate passes."
+  ],
+  "source_identity": {
+    "openramble_commit": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+    "openramble_tree": "74c38d68771de3f50ac0d78f79182d2b725d8d2d",
+    "fluid_audio_commit": "ee9a7f12d91710da53de6d75f8b7160e09eccee4",
+    "fluid_audio_tree": "02dc7895b0e4b1ce087e943e3bde5a92f8d85855",
+    "main_model_manifest": "Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json",
+    "main_model_manifest_sha256": "05046d2b0b12fcfcf82625256bbf606eed198a064a73f979b5b2b3a617f0f78b",
+    "main_model_id": "parakeet-tdt-0.6b-v3",
+    "main_model_revision": "aed02740059203c4a87495924f685de3722ae9ce",
+    "main_model_manifest_bytes": 483105645,
+    "installed_main_model_tree_sha256": "66e79161c28717a7869b552453eab474975e801ba5dee28a964d79f952690dff",
+    "vocabulary_model_manifest": "Packages/LocalASR/Sources/LocalASR/Resources/vocabulary-manifest.json",
+    "vocabulary_model_manifest_sha256": "79948cb9dcc9da6410b8fcefb9eba40bec05be50e3a7e98de52f6e87c9bbc3c9",
+    "vocabulary_model_revision": "accdafd8cf8a2ff1cabe3c11e54416b405d409aa",
+    "vocabulary_model_manifest_bytes": 102803869,
+    "installed_vocabulary_model_tree_sha256": "eb90809a5ac7ead5b2f3c3ca95b4040945b43f9deeeb6de6cbde6e4152c48a2a",
+    "product_config": "$TMP/openramble-intermediate-quality-gate/PRODUCT_CONFIG.json",
+    "product_config_sha256": "98338d07767b45d3abaf222a790b6070b4a0dae6291343034cd7b91f16f3c59b"
+  },
+  "baseline": {
+    "name": "shipping_offline_authoritative",
+    "entry_point": "LocalTranscriber.transcribe(samples:languageHint:)",
+    "compute_units": "all",
+    "encoder_variant": "palettized6bit",
+    "mel_chunk_context": false,
+    "parallel_chunk_concurrency": 4,
+    "tdt_max_tokens_per_chunk": 600,
+    "dual_decode": false,
+    "reset_data_on_fully_overwritten_audio_return": false,
+    "language": "exact per-fixture explicit hint",
+    "vocabulary": "28-term frozen snapshot; candidateRegions; minSimilarity=0.65; biasWeight=3.0",
+    "result_start": "after the same canonical PCM final sample is committed",
+    "result_end": "complete product result delivered by the persistent worker"
+  },
+  "candidate": {
+    "name": "stateful_sliding_window_during_capture_then_exact_product_vocabulary",
+    "window": {
+      "chunk_seconds": 1.0,
+      "hypothesis_chunk_seconds": 0.5,
+      "hypothesis_chunk_note": "Present in the API but unused by the pinned SlidingWindowAsrManager processing loop.",
+      "left_context_seconds": 0.5,
+      "right_context_seconds": 0.25,
+      "minimum_confirmation_context_seconds": 3.0,
+      "confirmation_threshold": 0.8
+    },
+    "required_temp_seams": [
+      "Inject the exact shipping ASRConfig rather than SlidingWindowAsrConfig.asrConfig defaults.",
+      "Persist and pass each fixture's explicit Language to every transcribeChunk call.",
+      "Use maxTokensPerChunk=600; melChunkContext=false; concurrency=4; dualDecode=false.",
+      "Return a detailed final value with raw token IDs, token strings, absolute timestamps, durations, confidences, failed-window count, and processed-window count.",
+      "Do not enable SlidingWindowAsrManager's confirmed-window vocabulary path. Run OpenRamble's exact final candidateRegions CTC scheduler and rescorer once over the complete canonical PCM using the final candidate TDT text/timings.",
+      "Make input buffering bounded and make streamAudio return accepted/dropped/terminated; any non-accepted frame invalidates the candidate.",
+      "Make finish close the update stream; make cancel await recognizer-task exit when possible; otherwise kill and reap the exact worker generation before offline fallback.",
+      "Create one manager per dictation; never call reset after its one-shot input stream has been finished."
+    ],
+    "frame_transport": {
+      "sample_rate": 16000,
+      "encoding": "mono Float32 little-endian",
+      "canonical_frame_samples": 1280,
+      "final_frame_samples": "1...1280",
+      "maximum_queued_samples_each_side": 81920,
+      "maximum_queued_payload_bytes_each_side": 327680,
+      "ack_semantics": "worker owns an immutable copy in a bounded queue, not inference complete",
+      "finish_binding": "strict generation + dictation session + stream UUID + contiguous sequence + absolute sample offset + final sample count + SHA-256 of all canonical PCM bytes"
+    }
+  },
+  "corpora": {
+    "engineering_short_manifest": {
+      "path": "$TMP/openramble-real-short-manifest.json",
+      "sha256": "1143305176fc436795395019f0051d8db8670d691f7c6470a81f4d872b79470c",
+      "fixtures": 4,
+      "languages": {"en": 2, "ru": 2},
+      "status": "previously used engineering data"
+    },
+    "boundary_manifest": {
+      "path": "$TMP/openramble-fair-n50-manifest.json",
+      "sha256": "0659a540b1dddbca4f66b7c5acc95e17bc522c718a391c5a3fe0004e9c89086e",
+      "required_ids": [
+        "synthetic-en-repeat-14.9s",
+        "synthetic-en-repeat-15.1s",
+        "synthetic-en-repeat-29.9s",
+        "synthetic-en-repeat-30.1s"
+      ],
+      "status": "previously used engineering diagnostics"
+    },
+    "short_holdout": {
+      "path": "$TMP/openramble-dominant-short-quality-v1/final-corpus/manifest.json",
+      "sha256": "340314c63357f2ec0bcb4091438a71b43668ecba4ad376dc8844e9785d86faf6",
+      "fixture_count": 204,
+      "distribution": "102 en + 102 ru; exactly 34 in each language x 1-2/2-3/3-4 second bin",
+      "status": "sealed_before_inference; no model outputs inspected according to manifest and local artifact audit",
+      "existing_preregistration": "$TMP/openramble-dominant-short-quality-v1/PREREGISTRATION_ARMED.json",
+      "existing_preregistration_sha256": "59f6ced1b7fe68ab88a7e65e4665997d2831d0568decfa35d889ee06297e52bb",
+      "reuse_rule": "The previous preregistration is not authority for this different candidate. Arm a new version before one-shot inference; never tune from these outputs."
+    },
+    "long_real": {
+      "path": "$TMP/openramble-stop-precompute-ee9a7f12/paired-real-resolved-manifest.json",
+      "sha256": "bb1c4e2553a4f9824e326eb85bee367a6362773ded984314960734c064e81d99",
+      "required_ids": ["real-en-product-names-56.104s", "real-en-whole-earth-84.381s"],
+      "status": "previously used engineering data; product-names reference is vocabulary-heavy and must be reported with its provenance caveat"
+    }
+  },
+  "stages": [
+    {
+      "stage": 0,
+      "name": "cpu_protocol_and_source_gate",
+      "model_inference": false,
+      "requirements": [
+        "CPU protocol tests pass for happy path, sequence gap, absolute-offset mismatch, stale fence, bounded overflow, and final hash mismatch.",
+        "Temp patch and runner compile; exact diff, binary SHA-256, model tree hashes, evaluator hash, and output destinations are sealed.",
+        "No tracked shared-repository changes."
+      ]
+    },
+    {
+      "stage": 1,
+      "name": "engineering_smoke",
+      "fixtures": "four real short fixtures, then 14.9/15.1/29.9/30.1 boundaries only if short passes",
+      "protocol": "one persistent process; symmetric 2 warmups per arm; 3 measured AB/BA runs with fixed seed 0x53545245414d5444; candidate PCM paced at 80 ms; baseline idles during speech and starts at the same stop instant",
+      "hard_stop": [
+        "Any PCM gap, drop, hash/count/fence mismatch, queue overflow, worker crash, stale output, duplicate/missing final, failed model window, or non-reaped cancelled generation.",
+        "Any nondeterministic raw text/language/token-ID/token-timing/word/product-text/vocabulary-outcome hash within an arm on a fixture.",
+        "Any empty/catastrophic result, invalid token/word structure, out-of-range/nonmonotonic timing, candidate minus baseline word errors >=2, or vocabulary false negative.",
+        "Any candidate under-speech inference duty >0.95 or candidate Stop-to-final p95 >= baseline Stop-to-final p95."
+      ]
+    },
+    {
+      "stage": 2,
+      "name": "one_shot_204_quality",
+      "precondition": "Stage 1 passes and a replacement preregistration is armed before opening any holdout result.",
+      "protocol": "each of 204 fixtures exactly once per arm; fixed randomized paired AB/BA order; same persistent-process prewarm; no exclusions or retries; evaluator writes before any summary is viewed",
+      "analysis": "paired WER/CER bootstrap with 10000 fixed-seed resamples overall, by language, and by duration bin; raw and normalized transcript hashes; raw token IDs/strings/times/confidences; words; vocabulary outcome; Stop-to-final; under-speech duty; peak RSS"
+    },
+    {
+      "stage": 3,
+      "name": "latency_and_long_confirmation",
+      "precondition": "Every Stage 2 quality gate passes.",
+      "short_latency": "fixed 12-fixture stratified subset, 2 per language x duration bin; 2 symmetric warmups; n=20 paired randomized measurements per fixture",
+      "long_quality": "one result per arm for each 56.104 s and 84.381 s fixture plus transcript/token/timing/word/vocabulary hashes and WER",
+      "long_latency": "one symmetric warmup then n=5 paired randomized measurements per arm per fixture",
+      "resource_checks": "peak and post-session RSS, queue high-water samples, under-speech model-call wall/union duty, backlog at Stop, FD count, worker PID/generation, cancellation/reap, thermal state"
+    }
+  ],
+  "quality_hard_gates": {
+    "combined_observed_wer_delta_max": 0.002,
+    "combined_bootstrap_p975_wer_delta_max": 0.0075,
+    "each_language_observed_wer_delta_max": 0.004,
+    "each_language_bootstrap_p975_wer_delta_max": 0.01,
+    "each_duration_bin_observed_wer_delta_max": 0.005,
+    "each_duration_bin_bootstrap_p975_wer_delta_max": 0.015,
+    "maximum_extra_word_errors_per_utterance_exclusive": 2,
+    "token_alignment_fraction_min": 0.98,
+    "word_alignment_fraction_min": 0.97,
+    "aligned_timing_absolute_p95_seconds_max": 0.12,
+    "aligned_confidence_absolute_p95_max": 0.1,
+    "invalid_token_or_word_structures_max": 0,
+    "emission_validation_failures_max": 0,
+    "vocabulary_candidate_false_negatives_max": 0,
+    "protocol_or_failed_window_errors_max": 0
+  },
+  "speed_and_resource_hard_gates": {
+    "overall_short_stop_to_final_p50_ratio_max": 0.85,
+    "overall_short_stop_to_final_p95_ratio_max": 0.85,
+    "each_language_duration_bin_stop_to_final_p95_ratio_max": 1.0,
+    "paired_bootstrap_p975_short_p95_ratio_max": 1.0,
+    "each_long_fixture_stop_to_final_median_ratio_max": 0.85,
+    "candidate_under_speech_inference_duty_max": 0.95,
+    "queue_overflow_count_max": 0,
+    "candidate_incremental_peak_rss_bytes_max": 67108864,
+    "post_session_rss_growth_after_warmup_bytes_max": 16777216,
+    "fd_growth_after_warmup_max": 0,
+    "orphan_worker_count_max": 0
+  },
+  "required_timestamps": [
+    "capture_frame_committed",
+    "stream_frame_enqueued",
+    "stream_frame_ack_worker_owned",
+    "window_preprocessor_start_end",
+    "window_encoder_start_end",
+    "window_decoder_joint_start_end_and_call_counts",
+    "stop_requested",
+    "capture_admission_closed",
+    "last_conversion_committed",
+    "stream_queue_sealed",
+    "last_frame_acknowledged",
+    "sliding_flush_start_end",
+    "candidate_regions_start_end",
+    "result_serialized_deserialized"
+  ],
+  "fallback": {
+    "authoritative_audio": "The existing lossless CapturedRecording.samples buffer remains complete and is never replaced by the speculative queue.",
+    "trigger": "Any protocol, queue, model-window, cancellation, quality, or speed gate failure.",
+    "action": "Invalidate all streaming output; send streamAbort; wait a bounded 250 ms for cancel-and-join; if not reaped, kill and reap the exact worker generation; prepare a fresh generation; run the unchanged shipping offline path on the complete frozen PCM.",
+    "feature_flag": "Default off; one-session lease; disabling it never changes shipping offline behavior."
+  },
+  "decision_rule": "Integrate nothing from this lane unless all protocol, quality, determinism, speed, resource, cancellation, and lifecycle gates pass. Otherwise retain shipping offline final; optional preview remains eyes-only."
+}

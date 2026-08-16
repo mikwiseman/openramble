@@ -1,0 +1,449 @@
+{
+  "asr_or_coreml_run": false,
+  "decision": "reject_before_untouched_204_inference",
+  "engineering122": {
+    "fallback_all_128": {
+      "count": 17,
+      "fraction": 0.1328125
+    },
+    "latency_caveat": "Single sequential 7.5s quality pass; development-only directional evidence.",
+    "latency_single_sequential_diagnostic": {
+      "arithmetic": "no candidate: short wall; candidate: short wall minus only recorded short CTC model/fusion phases plus full shipping wall; invalid/low-integrity: full short wall plus full shipping wall",
+      "count": 128,
+      "fallback_count": 17,
+      "fallback_fraction": 0.1328125,
+      "fallback_subgroup": {
+        "p95_worse_than_shipping": true,
+        "serial_policy_optimistic_ms": {
+          "count": 17,
+          "max": 136.817666,
+          "mean": 106.38280635294119,
+          "min": 74.941208,
+          "p50": 100.25758400000001,
+          "p95": 135.9055324
+        },
+        "shipping_ms": {
+          "count": 17,
+          "max": 83.641625,
+          "mean": 67.93537011764705,
+          "min": 51.140375,
+          "p50": 71.539292,
+          "p95": 82.4536922
+        }
+      },
+      "optimistic_stop_win_fraction": {
+        "mean": 0.1656822814182282,
+        "p50": 0.3223687920477759,
+        "p95": -0.5973638335673583
+      },
+      "policy_conservative_full_short_then_shipping_ms": {
+        "count": 128,
+        "max": 150.399291,
+        "mean": 44.9439023515625,
+        "min": 25.770708,
+        "p50": 33.556354,
+        "p95": 131.42177224999995
+      },
+      "policy_optimistic_early_candidate_abort_ms": {
+        "count": 128,
+        "max": 136.817666,
+        "mean": 43.148481125,
+        "min": 25.770708,
+        "p50": 33.556354,
+        "p95": 117.57180764999995
+      },
+      "shipping_ms": {
+        "count": 128,
+        "max": 83.641625,
+        "mean": 51.71708590625,
+        "min": 38.400209,
+        "p50": 49.5200835,
+        "p95": 73.60364944999998
+      },
+      "short_ms": {
+        "count": 128,
+        "max": 67.110666,
+        "mean": 35.9212360078125,
+        "min": 25.770708,
+        "p50": 33.556354,
+        "p95": 57.81812279999998
+      }
+    },
+    "manifest_count": 128,
+    "quality": {
+      "all": {
+        "count": 122,
+        "effective_micro_cer": 0.02478378727249258,
+        "effective_micro_wer": 0.06787330316742081,
+        "fallback_count": 11,
+        "fallback_fraction": 0.09016393442622951,
+        "micro_cer_delta": -0.0006454111268878275,
+        "micro_wer_delta": 0.002585649644473174,
+        "net_character_error_delta": -5,
+        "net_word_error_delta": 4,
+        "residual_plus_two_or_more_ids": [
+          "fleurs-en_us-0066-1615",
+          "fleurs-en_us-0124-1543",
+          "fleurs-ru_ru-0355-1560"
+        ],
+        "shipping_micro_cer": 0.025429198399380404,
+        "shipping_micro_wer": 0.06528765352294764,
+        "utterances_improved": 3,
+        "utterances_regressed": 5,
+        "utterances_tied": 114,
+        "word_error_delta_distribution": {
+          "-1": 2,
+          "-2": 1,
+          "0": 114,
+          "1": 2,
+          "2": 3
+        }
+      },
+      "en": {
+        "count": 62,
+        "effective_micro_cer": 0.03587786259541985,
+        "effective_micro_wer": 0.06981981981981981,
+        "fallback_count": 11,
+        "fallback_fraction": 0.1774193548387097,
+        "micro_cer_delta": -0.0017811704834605599,
+        "micro_wer_delta": 0.0,
+        "net_character_error_delta": -7,
+        "net_word_error_delta": 0,
+        "residual_plus_two_or_more_ids": [
+          "fleurs-en_us-0066-1615",
+          "fleurs-en_us-0124-1543"
+        ],
+        "shipping_micro_cer": 0.037659033078880404,
+        "shipping_micro_wer": 0.06981981981981981,
+        "utterances_improved": 3,
+        "utterances_regressed": 2,
+        "utterances_tied": 57,
+        "word_error_delta_distribution": {
+          "-1": 2,
+          "-2": 1,
+          "0": 57,
+          "2": 2
+        }
+      },
+      "ru": {
+        "count": 60,
+        "effective_micro_cer": 0.013361278490961487,
+        "effective_micro_wer": 0.06525037936267071,
+        "fallback_count": 0,
+        "fallback_fraction": 0.0,
+        "micro_cer_delta": 0.0005239717055279015,
+        "micro_wer_delta": 0.006069802731411229,
+        "net_character_error_delta": 2,
+        "net_word_error_delta": 4,
+        "residual_plus_two_or_more_ids": [
+          "fleurs-ru_ru-0355-1560"
+        ],
+        "shipping_micro_cer": 0.012837306785433586,
+        "shipping_micro_wer": 0.05918057663125948,
+        "utterances_improved": 0,
+        "utterances_regressed": 3,
+        "utterances_tied": 57,
+        "word_error_delta_distribution": {
+          "0": 57,
+          "1": 2,
+          "2": 1
+        }
+      }
+    },
+    "role": "development_only_7.5s_risk_proxy_never_pooled_with_12.5s_holdout",
+    "scored_count": 122,
+    "shipping_candidate_short_none_false_negative_ids": []
+  },
+  "failed_hard_gates": [
+    "engineering122_no_residual_plus_two",
+    "holdout300_primary_expected_mean_stop_win_at_least_15pct",
+    "holdout300_duplicate_expected_mean_stop_win_at_least_15pct",
+    "holdout300_primary_expected_p50_stop_win_at_least_15pct",
+    "holdout300_duplicate_expected_p50_stop_win_at_least_15pct",
+    "holdout300_primary_overall_p95_not_worse",
+    "holdout300_duplicate_overall_p95_not_worse",
+    "holdout300_primary_fallback_p95_not_worse",
+    "holdout300_duplicate_fallback_p95_not_worse"
+  ],
+  "hard_gates": {
+    "engineering122_no_residual_plus_two": false,
+    "holdout300_duplicate_expected_mean_stop_win_at_least_15pct": false,
+    "holdout300_duplicate_expected_p50_stop_win_at_least_15pct": false,
+    "holdout300_duplicate_fallback_p95_not_worse": false,
+    "holdout300_duplicate_overall_p95_not_worse": false,
+    "holdout300_no_residual_plus_two": true,
+    "holdout300_primary_expected_mean_stop_win_at_least_15pct": false,
+    "holdout300_primary_expected_p50_stop_win_at_least_15pct": false,
+    "holdout300_primary_fallback_p95_not_worse": false,
+    "holdout300_primary_overall_p95_not_worse": false,
+    "holdout300_zero_false_negative": true,
+    "holdout300_zero_invalid": true
+  },
+  "holdout300": {
+    "duplicate_stability": {
+      "shipping": {
+        "count": 300,
+        "semantic_divergent_fixture_ids": []
+      },
+      "short": {
+        "count": 300,
+        "semantic_divergent_fixture_ids": []
+      }
+    },
+    "invalid_or_low_integrity_ids": [],
+    "latency": {
+      "duplicate": {
+        "arithmetic": "no candidate: short wall; candidate: short wall minus only recorded short CTC model/fusion phases plus full shipping wall; invalid/low-integrity: full short wall plus full shipping wall",
+        "count": 300,
+        "fallback_count": 28,
+        "fallback_fraction": 0.09333333333333334,
+        "fallback_subgroup": {
+          "p95_worse_than_shipping": true,
+          "serial_policy_optimistic_ms": {
+            "count": 28,
+            "max": 157.758334,
+            "mean": 130.79719332142858,
+            "min": 99.10025,
+            "p50": 129.637813,
+            "p95": 155.58867005000002
+          },
+          "shipping_ms": {
+            "count": 28,
+            "max": 86.80775,
+            "mean": 73.05348939285714,
+            "min": 55.973416,
+            "p50": 72.361021,
+            "p95": 86.19659155
+          }
+        },
+        "optimistic_stop_win_fraction": {
+          "mean": -0.08149979898153935,
+          "p50": 0.004915092801390259,
+          "p95": -0.7371036022782561
+        },
+        "policy_conservative_full_short_then_shipping_ms": {
+          "count": 300,
+          "max": 172.514542,
+          "mean": 65.59650429,
+          "min": 42.042167,
+          "p50": 58.2943745,
+          "p95": 143.1231577
+        },
+        "policy_optimistic_early_candidate_abort_ms": {
+          "count": 300,
+          "max": 157.758334,
+          "mean": 64.31460776333333,
+          "min": 42.042167,
+          "p50": 58.2943745,
+          "p95": 129.33589314999998
+        },
+        "shipping_ms": {
+          "count": 300,
+          "max": 86.80775,
+          "mean": 59.46797939666667,
+          "min": 42.261875,
+          "p50": 58.582312,
+          "p95": 74.45491045
+        },
+        "short_ms": {
+          "count": 300,
+          "max": 85.906292,
+          "mean": 58.77817861333333,
+          "min": 42.042167,
+          "p50": 58.2299995,
+          "p95": 72.80475035
+        }
+      },
+      "primary": {
+        "arithmetic": "no candidate: short wall; candidate: short wall minus only recorded short CTC model/fusion phases plus full shipping wall; invalid/low-integrity: full short wall plus full shipping wall",
+        "count": 300,
+        "fallback_count": 28,
+        "fallback_fraction": 0.09333333333333334,
+        "fallback_subgroup": {
+          "p95_worse_than_shipping": true,
+          "serial_policy_optimistic_ms": {
+            "count": 28,
+            "max": 158.8715,
+            "mean": 129.93195664285716,
+            "min": 99.906958,
+            "p50": 129.9816455,
+            "p95": 155.13944594999998
+          },
+          "shipping_ms": {
+            "count": 28,
+            "max": 86.5655,
+            "mean": 72.25710717857143,
+            "min": 56.58925,
+            "p50": 72.0830835,
+            "p95": 85.73222885
+          }
+        },
+        "optimistic_stop_win_fraction": {
+          "mean": -0.06823426509160598,
+          "p50": 0.013984685623900182,
+          "p95": -0.7235076797751419
+        },
+        "policy_conservative_full_short_then_shipping_ms": {
+          "count": 300,
+          "max": 173.87704200000002,
+          "mean": 65.51544110666667,
+          "min": 42.004833,
+          "p50": 58.2092085,
+          "p95": 142.07779525
+        },
+        "policy_optimistic_early_candidate_abort_ms": {
+          "count": 300,
+          "max": 158.8715,
+          "mean": 64.24193692666667,
+          "min": 42.004833,
+          "p50": 58.2092085,
+          "p95": 128.26829665
+        },
+        "shipping_ms": {
+          "count": 300,
+          "max": 86.5655,
+          "mean": 60.13843501000001,
+          "min": 42.518041,
+          "p50": 59.0347915,
+          "p95": 74.42281700000001
+        },
+        "short_ms": {
+          "count": 300,
+          "max": 87.311542,
+          "mean": 58.77144443666667,
+          "min": 42.004833,
+          "p50": 58.133145999999996,
+          "p95": 72.5206521
+        }
+      }
+    },
+    "quality": {
+      "all": {
+        "count": 300,
+        "effective_micro_cer": 0.02218383797331166,
+        "effective_micro_wer": 0.05191256830601093,
+        "fallback_count": 28,
+        "fallback_fraction": 0.09333333333333334,
+        "micro_cer_delta": -0.0012531328320802004,
+        "micro_wer_delta": -0.0020036429872495446,
+        "net_character_error_delta": -37,
+        "net_word_error_delta": -11,
+        "residual_plus_two_or_more_ids": [],
+        "shipping_micro_cer": 0.02343697080539186,
+        "shipping_micro_wer": 0.05391621129326048,
+        "utterances_improved": 13,
+        "utterances_regressed": 5,
+        "utterances_tied": 282,
+        "word_error_delta_distribution": {
+          "-1": 10,
+          "-2": 3,
+          "0": 282,
+          "1": 5
+        }
+      },
+      "en": {
+        "count": 150,
+        "effective_micro_cer": 0.02564439768542872,
+        "effective_micro_wer": 0.053957996768982226,
+        "fallback_count": 25,
+        "fallback_fraction": 0.16666666666666666,
+        "micro_cer_delta": -0.002235665439242504,
+        "micro_wer_delta": -0.0029079159935379646,
+        "net_character_error_delta": -34,
+        "net_word_error_delta": -9,
+        "residual_plus_two_or_more_ids": [],
+        "shipping_micro_cer": 0.027880063124671225,
+        "shipping_micro_wer": 0.05686591276252019,
+        "utterances_improved": 7,
+        "utterances_regressed": 0,
+        "utterances_tied": 143,
+        "word_error_delta_distribution": {
+          "-1": 5,
+          "-2": 2,
+          "0": 143
+        }
+      },
+      "ru": {
+        "count": 150,
+        "effective_micro_cer": 0.018508171532336918,
+        "effective_micro_wer": 0.049269311064718165,
+        "fallback_count": 3,
+        "fallback_fraction": 0.02,
+        "micro_cer_delta": -0.00020952647017739908,
+        "micro_wer_delta": -0.0008350730688935282,
+        "net_character_error_delta": -3,
+        "net_word_error_delta": -2,
+        "residual_plus_two_or_more_ids": [],
+        "shipping_micro_cer": 0.018717698002514317,
+        "shipping_micro_wer": 0.05010438413361169,
+        "utterances_improved": 6,
+        "utterances_regressed": 5,
+        "utterances_tied": 139,
+        "word_error_delta_distribution": {
+          "-1": 5,
+          "-2": 1,
+          "0": 139,
+          "1": 5
+        }
+      }
+    },
+    "role": "independent_fleurs_holdout_direct_12.5s_evidence",
+    "shipping_candidate_short_none_false_negative_ids": []
+  },
+  "hypothesis": "static 12.5s path unless it reports an acoustic-vocabulary candidate or an invalid/low-integrity result; then serially rerun exact shipping 15s and return shipping output",
+  "inputs": {
+    "engineering122_gate": {
+      "path": "$TMP/openramble-short-quality-gate/reports/quality-gate.json",
+      "sha256": "a8dcd5b1d2ef977bd1d959b216a471a5611d0f3ecc9def84d5012bb4c0a8358e"
+    },
+    "engineering122_risk": {
+      "path": "$TMP/openramble-short-quality-gate/reports/risk-gate-analysis.json",
+      "sha256": "db72688d80d2800276a0bf75b394812c4151eda2d58b5dc75e3672bdea321649"
+    },
+    "engineering128_manifest": {
+      "path": "$TMP/openramble-short-quality-gate/corpus/manifest.json",
+      "sha256": "fd8fe15b32d9dbe84452f43ac02b3500b9f2b44baf646dd682600896a7f31771"
+    },
+    "engineering128_shipping": {
+      "path": "$TMP/openramble-short-quality-gate/reports/shipping.jsonl",
+      "sha256": "b8898a3f5c6bb32dbcca6e79a87fd5a59ca8496382b6ccc29e8381fb88209dcb"
+    },
+    "engineering128_short": {
+      "path": "$TMP/openramble-short-quality-gate/reports/short.jsonl",
+      "sha256": "e28083cd0313e05c7a6c43aa0e3f23062cc6c59a6de82d7bf3b9e74088a3cd35"
+    },
+    "holdout300_candidate_duplicate": {
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/candidate-12.5.duplicate.jsonl",
+      "sha256": "9a61df7364be3491b8108ceadc24ae31bfc3438b15791ced1fd555fa4d67dd4e"
+    },
+    "holdout300_candidate_primary": {
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/candidate-12.5.primary.jsonl",
+      "sha256": "8d1ea4b35f64a1c507b17a0065e4c7005edbd97c5ae658df3708ac9f7bca18a7"
+    },
+    "holdout300_gate": {
+      "path": "$TMP/openramble-intermediate-quality-gate/reports/shape-12.5-gate.json",
+      "sha256": "e1d3d6bd7c67e7fd04c915d1ab25a3625327f4689f98e066ff4ef37bf028e815"
+    },
+    "holdout300_manifest": {
+      "path": "$TMP/openramble-intermediate-quality-gate/corpus/manifest.json",
+      "sha256": "bf7e768a882b7a826ab657c32ceb71e5e5a6589833fe1aaf8ab82684c140b9c7"
+    },
+    "holdout300_posthoc": {
+      "path": "$TMP/openramble-intermediate-quality-gate/reports/posthoc-analysis.json",
+      "sha256": "fa232c14a98d3ddcc64df784b2217dc43555d51184e4e7bc2e0d3185e087be01"
+    },
+    "holdout300_shipping_duplicate": {
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/shipping.duplicate.jsonl",
+      "sha256": "f2b92733b3ab52f0b715e3a78becdda9cd623fcba2241e8de65e52835a1e341e"
+    },
+    "holdout300_shipping_primary": {
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/shipping.primary.jsonl",
+      "sha256": "2395eb63d611536cc9c4e9c1d0cf0aa041f38912c35f4287835d39dd06683591"
+    }
+  },
+  "quality_sets_are_not_pooled": true,
+  "schema_version": 1,
+  "selection_rule": "Candidate outcome or structural invalidity only. No confidence, duration, count, rate, or fitted threshold.",
+  "status": "cpu_only_posthoc_frozen_evidence",
+  "untouched_204_outputs_opened": false
+}

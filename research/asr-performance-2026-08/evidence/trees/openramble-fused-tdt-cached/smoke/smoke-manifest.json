@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "source_manifest": "$TMP/openramble-short-quality-gate/corpus/manifest.json",
+  "source_revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+  "fixtures": [
+    {
+      "id": "fleurs-en_us-0000-1548",
+      "language": "en",
+      "pcm_path": "$TMP/openramble-short-quality-gate/corpus/pcm/fleurs-en_us-0000-1548.f32le",
+      "pcm_sha256": "c2e20eb18368277ab53cc1434dc46ed20264a1076ecb779adc9210367a0181c1",
+      "sample_count": 104640,
+      "reference": "when you call someone who is thousands of miles away you are using a satellite"
+    },
+    {
+      "id": "fleurs-en_us-0003-1578",
+      "language": "en",
+      "pcm_path": "$TMP/openramble-short-quality-gate/corpus/pcm/fleurs-en_us-0003-1578.f32le",
+      "pcm_sha256": "7880d7c9f96d88714d8db323b51c421fe776775e224130ee00f75dd0a5cb6363",
+      "sample_count": 66240,
+      "reference": "then lakkha singh took the lead in singing the bhajans"
+    },
+    {
+      "id": "fleurs-ru_ru-0006-1587",
+      "language": "ru",
+      "pcm_path": "$TMP/openramble-short-quality-gate/corpus/pcm/fleurs-ru_ru-0006-1587.f32le",
+      "pcm_sha256": "204acd7577005f722abdf78ae21edd53cc5a9ee88093a9f7d050d73d7fe537f0",
+      "sample_count": 76800,
+      "reference": "о первых случаях заболевания в этом сезоне было сообщено в июле"
+    },
+    {
+      "id": "fleurs-ru_ru-0012-1560",
+      "language": "ru",
+      "pcm_path": "$TMP/openramble-short-quality-gate/corpus/pcm/fleurs-ru_ru-0012-1560.f32le",
+      "pcm_sha256": "252c963c6535db3b393b80756998d03abbee5b3d1876d769fe69577779237d52",
+      "sample_count": 113280,
+      "reference": "как только вы выйдете из течения плыть обратно будет не труднее чем обычно"
+    }
+  ]
+}

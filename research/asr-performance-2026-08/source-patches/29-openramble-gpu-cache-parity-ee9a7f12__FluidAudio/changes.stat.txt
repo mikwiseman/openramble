@@ -1,0 +1,8 @@
+.../WordSpotting/CtcKeywordSpotter.swift           |  4 +-
+ .../SlidingWindow/TDT/AsrManager+Pipeline.swift    | 26 +++++++++++++
+ .../TDT/AsrManager+Transcription.swift             |  9 +++++
+ .../ASR/Parakeet/SlidingWindow/TDT/AsrModels.swift | 26 ++++++++++++-
+ .../SlidingWindow/TDT/Decoder/TdtDecoderV3.swift   | 38 ++++++++++++++++++-
+ .../TDT/Decoder/TdtModelInference.swift            | 44 +++++++++++++++++-----
+ Sources/FluidAudio/Shared/ASRConstants.swift       | 10 ++++-
+ 7 files changed, 142 insertions(+), 15 deletions(-)

@@ -1,0 +1,103 @@
+{
+  "artifact_index": "$TMP/openramble-dominant-short-quality-v1/FINAL_ARTIFACT_INDEX.json",
+  "artifact_index_sha256": "73ce3fcb5365f69875de5a2ebd9bb25d3bcbc2b6f8b6da65d9b6f264c6d871ae",
+  "asr_or_coreml_runs": 0,
+  "canonical_pcm": {
+    "all_204_bytes": 35019784,
+    "common_voice_bytes": 29355784,
+    "every_pcm_sha_recomputed": true,
+    "format": "mono 16000-Hz IEEE-754 Float32 little-endian",
+    "maximum_declared_duration_delta_seconds": 0.0009375000000000355,
+    "transform": "complete utterance decode/resample only; no trim/alignment/VAD/transcript change"
+  },
+  "corpus": {
+    "by_language_duration_bin": {
+      "en": {
+        "1-2": 34,
+        "2-3": 34,
+        "3-4": 34
+      },
+      "ru": {
+        "1-2": 34,
+        "2-3": 34,
+        "3-4": 34
+      }
+    },
+    "common_voice_supplement": 180,
+    "en": 102,
+    "fixtures": 204,
+    "fleurs_core": 24,
+    "manifest": "$TMP/openramble-dominant-short-quality-v1/final-corpus/manifest.json",
+    "manifest_sha256": "340314c63357f2ec0bcb4091438a71b43668ecba4ad376dc8844e9785d86faf6",
+    "ru": 102,
+    "unique_compressed_source_sha256": 180,
+    "unique_fixture_ids": 204,
+    "unique_pcm_sha256": 204
+  },
+  "distribution_allowed": false,
+  "download": {
+    "archive_index": "$TMP/openramble-dominant-short-quality-v1/final-corpus/archive-index.json",
+    "archive_index_sha256": "077360ea92a8e5e552d190c379b14ef1d06c8dbda25232e9f81aa67d04cc56cc",
+    "body_byte_fraction_vs_full_archives": 0.014353123279937515,
+    "boundary_probe_bytes": 1327104,
+    "cdn_non_206_responses": 0,
+    "cdn_range_requests": 55972,
+    "full_archive_bytes_not_downloaded": 2217593856,
+    "nonselected_complete_source_files_retained": 0,
+    "nonselected_source_payload_bytes_retained": 0,
+    "range_payload_bytes": 31829398,
+    "receipt": "$TMP/openramble-dominant-short-quality-v1/final-corpus/download-receipt.json",
+    "receipt_sha256": "32d40f14f443132fdcb2679107e4feef4404dc716e6902fc1a4b5911bb39dd19",
+    "redirect_requests": 4,
+    "redirect_response_body_bytes": 4246,
+    "revision": "8262c16bf297c87a9cd88c51997c4758ed7a8ba2",
+    "schema_version": 1,
+    "selected_file_count": 180,
+    "selected_payload_range_bytes": 3261846,
+    "selected_source_bytes": 3261846,
+    "status": "complete_sparse_remote_tar_index_selected_sources_only",
+    "total_http_response_body_bytes": 31833644,
+    "unique_tar_member_header_bytes": 27234304,
+    "validated_archive_member_count": 53192
+  },
+  "model_output_jsonl_count": 0,
+  "preregistration": {
+    "armed": "$TMP/openramble-dominant-short-quality-v1/PREREGISTRATION_ARMED.json",
+    "armed_sha256": "59f6ced1b7fe68ab88a7e65e4665997d2831d0568decfa35d889ee06297e52bb",
+    "blocked_parent": "$TMP/openramble-dominant-short-quality-v1/PREREGISTRATION.json",
+    "blocked_parent_sha256": "fc11882edf45b3727d124f5689a6fb179e8e7123b8437498226c00c41a5dd719",
+    "evaluator": "$TMP/openramble-dominant-short-quality-v1/evaluate_one_shot.py",
+    "evaluator_sha256": "e0ec47123c4e31b83da0e1ebf067f9e1f1ae10488362e967739b731491b8397d",
+    "model_outputs_inspected": false,
+    "selection_plan_sha256": "de0e219fc3f21ec7cd7d400bc691cb58c5d400f85551ea306c7fecac238c8456"
+  },
+  "schema_version": 1,
+  "scope": "internal_evaluation_only_unofficial_mirror",
+  "shared_repo_clean": true,
+  "shared_repo_head": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+  "source": {
+    "every_compressed_sha_recomputed": true,
+    "license_declared_by_mirror": "CC0-1.0",
+    "mirror_is_unofficial": true,
+    "mirror_repository": "fsicoli/common_voice_17_0",
+    "mirror_revision": "8262c16bf297c87a9cd88c51997c4758ed7a8ba2",
+    "readme_sha256": "5d7f13a790c3f4de73ec28608570d7a4619bce675f37bdd42af47dfa6bfb0281",
+    "selected_compressed_bytes": 3261846,
+    "selected_compressed_file_count": 180,
+    "upstream_release": "Mozilla Common Voice Corpus 17.0"
+  },
+  "status": "frozen_cpu_only_ready_for_separately_coordinated_inference",
+  "verification": {
+    "armed_state_contradiction_absent": true,
+    "armed_verification": "$TMP/openramble-dominant-short-quality-v1/ARMED_VERIFICATION.json",
+    "armed_verification_sha256": "e74d891933c137bc2b53ebdb413c291664d49e35d4bd27f8004ae5e580dadbd4",
+    "missing_duplicate_hash_locale_bin_overlap_failures": 0,
+    "negative_cases_passed": 5,
+    "negative_tests": "$TMP/openramble-dominant-short-quality-v1/NEGATIVE_SEALER_TESTS.json",
+    "negative_tests_sha256": "028a91b90017a79e1b573d070cc0ce8b9e0a64fb1d116b0756f7a6a3092e1017",
+    "passed": true,
+    "receipt": "$TMP/openramble-dominant-short-quality-v1/FINAL_VERIFICATION.json",
+    "receipt_sha256": "d5d240b0d301eead4f256dc096aa10a129fa2e339ed97ec6544dc94c0fb741ca"
+  },
+  "warning": "The Common Voice source is a pinned unofficial mirror declaring CC0-1.0. Keep the assembled corpus internal; do not redistribute it."
+}

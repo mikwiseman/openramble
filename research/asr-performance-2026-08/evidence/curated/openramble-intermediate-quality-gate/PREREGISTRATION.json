@@ -1,0 +1,179 @@
+{
+  "analysis_protocol": {
+    "bootstrap_interval": "percentile 95% interval with linear interpolation; upper gate uses p97.5",
+    "bootstrap_iterations": 20000,
+    "bootstrap_seed": "openramble-intermediate-holdout-bootstrap-v1-20260814",
+    "combined_bootstrap": "paired resampling within EN and RU strata, preserving cohort language counts",
+    "evaluator": "$TMP/openramble-intermediate-quality-gate/evaluate_preregistered_gate.py",
+    "evaluator_sha256": "d140daa510e4e4baa57dafe1b90a414859a81c309bc24f7926e341208ffff935",
+    "normalization": "Unicode NFKC; casefold; map Russian ё to е; Unicode punctuation/symbol/separator/control to spaces; collapse whitespace. WER splits on spaces; CER removes spaces.",
+    "one_shot": "Evaluator may be run only after exact complete shipping and candidate JSONLs plus run metadata are sealed. Partial scoring and rerunning after seeing metrics are prohibited.",
+    "per_language_bootstrap": "paired resampling within the selected language",
+    "preparer": "$TMP/openramble-intermediate-quality-gate/prepare_holdout.py",
+    "preparer_sha256": "34dca899098fd4dbed737e1c8d9e99a3b2ce53b202c1d42af789c6370f1e3f37",
+    "raw_candidate_is_primary": "Quality gates apply to the raw intermediate result before any candidate-triggered shipping fallback.",
+    "scoring": "micro WER/CER from summed edit errors and summed frozen reference lengths"
+  },
+  "cohorts": {
+    "shape_10.0": {
+      "candidate_shape_seconds": 10.0,
+      "count": 200,
+      "en": 100,
+      "maximum_audio_seconds": 10.0,
+      "ru": 100,
+      "shipping_shape_seconds": 15.0
+    },
+    "shape_12.5": {
+      "candidate_shape_seconds": 12.5,
+      "count": 300,
+      "en": 150,
+      "maximum_audio_seconds": 12.5,
+      "ru": 150,
+      "shipping_shape_seconds": 15.0
+    }
+  },
+  "corpus": {
+    "canonicalization": {
+      "input_requirement": "mono 16 kHz PCM16 or IEEE-754 Float32 WAV; no resampling",
+      "mapping": "PCM16 -> float32(sample_int16 / 32768.0); Float32 -> bit-exact payload copy after finite check",
+      "output": "headerless little-endian IEEE-754 Float32 mono PCM",
+      "sample_rate": 16000
+    },
+    "counts": {
+      "fixtures": 300,
+      "scored": 300,
+      "scored_en": 150,
+      "scored_ru": 150,
+      "shape_10_0": 200,
+      "shape_10_0_en": 100,
+      "shape_10_0_ru": 100,
+      "shape_12_5": 300,
+      "shape_12_5_en": 150,
+      "shape_12_5_ru": 150,
+      "unique_pcm_sha256": 300
+    },
+    "dataset": "google/fleurs",
+    "dataset_revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+    "duration_by_language": {
+      "en": {
+        "count": 150,
+        "maximum_seconds": 12.48,
+        "minimum_seconds": 4.92,
+        "total_seconds": 1342.9199999999998
+      },
+      "ru": {
+        "count": 150,
+        "maximum_seconds": 12.48,
+        "minimum_seconds": 6.06,
+        "total_seconds": 1398.0000000000005
+      }
+    },
+    "engineering_manifest": "$TMP/openramble-short-quality-gate/corpus/manifest.json",
+    "engineering_manifest_sha256": "fd8fe15b32d9dbe84452f43ac02b3500b9f2b44baf646dd682600896a7f31771",
+    "engineering_pcm_sha256_overlap_count": 0,
+    "engineering_source_identity_overlap_count": 0,
+    "gender_by_language": {
+      "en": {
+        "female": 104,
+        "male": 46
+      },
+      "ru": {
+        "female": 79,
+        "male": 71
+      }
+    },
+    "license": "CC BY 4.0",
+    "manifest": "$TMP/openramble-intermediate-quality-gate/corpus/manifest.json",
+    "manifest_sha256": "bf7e768a882b7a826ab657c32ceb71e5e5a6589833fe1aaf8ab82684c140b9c7",
+    "pcm_index": "$TMP/openramble-intermediate-quality-gate/corpus/pcm-index.sha256",
+    "pcm_index_sha256": "a2dff16accccf0aa9133f56f75da53319b466eba97167e47b0a731fb5cd01c90",
+    "pool_counts": {
+      "en_us": {
+        "all_metadata_rows": 394,
+        "eligible_untouched_gt_10_le_12_5s": 93,
+        "eligible_untouched_le_10s": 179,
+        "engineering_rows_excluded": 60,
+        "selected_gt_10_le_12_5s": 50,
+        "selected_le_10s": 100
+      },
+      "ru_ru": {
+        "all_metadata_rows": 356,
+        "eligible_untouched_gt_10_le_12_5s": 86,
+        "eligible_untouched_le_10s": 101,
+        "engineering_rows_excluded": 60,
+        "selected_gt_10_le_12_5s": 50,
+        "selected_le_10s": 100
+      }
+    },
+    "selection_plan": "$TMP/openramble-intermediate-quality-gate/corpus/selection-plan.json",
+    "selection_plan_sha256": "f09cdaa95babbd505eb58e9dc03cb8f6cab31ae18934bcdc057500e68fa21f0b",
+    "source_audio_encoding_counts": {
+      "IEEE-754 Float32 little-endian": 300
+    },
+    "source_split": "validation",
+    "total_audio_seconds": 2740.9199999999996
+  },
+  "created_at_utc": "2026-08-14T17:16:48.616705+00:00",
+  "decision_rule": {
+    "changes_after_unsealing": "Any model, product-config, corpus, evaluator, threshold, or analysis change requires a new versioned preregistration and a genuinely untouched holdout.",
+    "joint": "Each shape is an independent decision. Do not pool shapes or trade a pass on one against a failure on the other.",
+    "per_shape": "INTEGRATE only if every hard gate is true; otherwise REJECT."
+  },
+  "hard_gate_interpretation": {
+    "bootstrap_upper": "97.5th percentile of the frozen paired utterance bootstrap; combined resampling is stratified by language",
+    "cer": "CER and paired CER intervals are reported but are not a hard acceptance gate.",
+    "per_utterance": "Any candidate-minus-shipping word-error delta >=2 is an immediate failure.",
+    "token_structure": "Both paths must have zero structural/emission failures. Exact-text SequenceMatcher alignment uses matched/max(shipping_count,candidate_count); aligned p95 start/end and confidence limits apply separately to tokens and words.",
+    "vocabulary_false_negative": "Shipping outcome is a candidate outcome while the intermediate candidate outcome is not.",
+    "wer_delta_units": "absolute rate; 0.002 = +0.20 percentage points"
+  },
+  "hard_gates": {
+    "aligned_confidence_absolute_p95_max": 0.1,
+    "aligned_timing_absolute_p95_seconds_max": 0.12,
+    "combined_bootstrap_p975_wer_delta_max": 0.0075,
+    "combined_observed_wer_delta_max": 0.002,
+    "each_language_bootstrap_p975_wer_delta_max": 0.01,
+    "each_language_observed_wer_delta_max": 0.004,
+    "emission_validation_failures_max": 0,
+    "invalid_token_or_word_structures_max": 0,
+    "maximum_extra_word_errors_per_utterance_exclusive": 2,
+    "token_alignment_fraction_min": 0.98,
+    "vocabulary_candidate_false_negatives_max": 0,
+    "word_alignment_fraction_min": 0.97
+  },
+  "run_contract": {
+    "allowed_to_differ": [
+      "encoder_mil_sha256",
+      "model directory",
+      "declared shape_seconds",
+      "process identifier",
+      "run order"
+    ],
+    "candidate_selection_requirement": "Before any CoreML execution, append immutable candidate encoder MIL SHA/model path and shipping artifact identities to run metadata; this may not change corpus, scoring, or gates.",
+    "candidate_shapes_seconds": [
+      10.0,
+      12.5
+    ],
+    "metadata_template": "$TMP/openramble-intermediate-quality-gate/RUN_METADATA_TEMPLATE.json",
+    "required_same_between_paths": [
+      "runner_binary_sha256",
+      "source_commit",
+      "product_config_sha256",
+      "shared_weight_artifact_sha256",
+      "vocabulary_configured=true",
+      "language_hints_from_manifest=true",
+      "same frozen PCM bytes and fixture order",
+      "same prewarm protocol"
+    ],
+    "shipping_shape_seconds": 15.0
+  },
+  "schema_version": 1,
+  "scope": {
+    "coreml_runs_during_preparation": 0,
+    "engineering_set_role": "The existing frozen 122-reference <=7.5s corpus is development/engineering evidence only. It cannot be pooled into or substituted for holdout acceptance.",
+    "future_10_or_12_5_outputs_inspected": false,
+    "holdout_role": "One-shot acceptance for static 10.0s and 12.5s candidates versus shipping 15.0s. No partial scoring, optional stopping, threshold adjustment, or feature-gate fitting is allowed.",
+    "shared_repository_edits": 0
+  },
+  "status": "preregistered_and_sealed_before_candidate_selection_or_inference"
+}

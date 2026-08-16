@@ -1,0 +1,132 @@
+{
+  "artifacts": {
+    "handy_binary": {
+      "path": "$TMP/openramble-handy-current/source/src-tauri/target/release/handy",
+      "sha256": "4a069f20ca3789338c8ff462dbc5d1df9250fa345eb5cfc80eb078f4d334993f"
+    },
+    "handy_model": {
+      "path": "$HOME/Library/Application Support/com.pais.handy/models/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+      "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+    },
+    "handy_patch": {
+      "path": "$REPO/scripts/benchmark-adapters/handy-persistent-jsonl-db003f3.patch",
+      "sha256": "b9fd76fc905de35836583201841a281cd84cfe5fff896f9b2d17c163ba5e39f9"
+    },
+    "manifest": {
+      "path": "$TMP/openramble-fair-n50-manifest.json",
+      "sha256": "0659a540b1dddbca4f66b7c5acc95e17bc522c718a391c5a3fe0004e9c89086e"
+    },
+    "openramble_binary": {
+      "path": "$REPO/Packages/LocalASR/.build/arm64-apple-macosx/release/asr-bench",
+      "sha256": "1061d7ec10ad4c04b508aa5e82356e80b45821f97137b1201572a7b46d40ef3a"
+    },
+    "output": "$TMP/openramble-fair-paired-n50-20260814.json",
+    "runner": {
+      "path": "$REPO/scripts/benchmark-local-asr.py",
+      "sha256": "ce7fa4212cfb269eccf30c4f0f5394bbf27fcabf86e049870039d6d964f02d15"
+    }
+  },
+  "benchmark_server_processes_after_completion": 0,
+  "command_argv": [
+    "/usr/bin/python3",
+    "$REPO/scripts/benchmark-local-asr.py",
+    "--manifest",
+    "$TMP/openramble-fair-n50-manifest.json",
+    "--openramble-bin",
+    "$REPO/Packages/LocalASR/.build/release/asr-bench",
+    "--handy-bin",
+    "$TMP/openramble-handy-current/source/src-tauri/target/release/handy",
+    "--handy-model",
+    "handy-computer/parakeet-tdt-0.6b-v3-gguf/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "--handy-model-path",
+    "$HOME/Library/Application Support/com.pais.handy/models/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "--handy-model-sha256",
+    "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+    "--handy-source-commit",
+    "db003f38b1aef4eb967ac3419bebc851d680f71c",
+    "--handy-patch",
+    "$REPO/scripts/benchmark-adapters/handy-persistent-jsonl-db003f3.patch",
+    "--lane",
+    "predecoded-product-warm",
+    "--openramble-vocabulary",
+    "on",
+    "--openramble-prewarm",
+    "on",
+    "--openramble-encoder-placement",
+    "automatic",
+    "--openramble-vocabulary-scheduling",
+    "candidateRegions",
+    "--warmups",
+    "6",
+    "--repeats",
+    "50",
+    "--bootstrap-samples",
+    "10000",
+    "--seed",
+    "20260814",
+    "--timeout-seconds",
+    "1800",
+    "--output",
+    "$TMP/openramble-fair-paired-n50-20260814.json"
+  ],
+  "completed_at": "2026-08-14T09:37:19Z",
+  "host": {
+    "machine": "arm64",
+    "macos": "26.4"
+  },
+  "isolation": {
+    "benchmark_server_processes_before_start": 0,
+    "handy_ui_processes_found": 0,
+    "matching_processes_after_stop": [],
+    "stopped_ui_processes": [
+      {
+        "executable": "/Applications/OpenRamble.app/Contents/MacOS/OpenRamble",
+        "pid": 85806,
+        "signal": "TERM",
+        "stopped": true
+      }
+    ],
+    "ui_restore": {
+      "reason": "coordinated with root: keep installed 0.6.1 stopped to avoid contention and false live logs; restore by installing the 0.7.0 candidate after all gates",
+      "status": "deferred"
+    }
+  },
+  "report": {
+    "byte_count": 794427,
+    "path": "$TMP/openramble-fair-paired-n50-20260814.json",
+    "sha256": "4bbb0318ad3eb5ecdec7626fedb36900f2926da178656541bf8f3672e2ca47b7"
+  },
+  "schema_version": 1,
+  "started_at": "2026-08-14T09:28:52Z",
+  "status": "complete",
+  "thermal_after": [
+    "Note: No thermal warning level has been recorded",
+    "Note: No performance warning level has been recorded",
+    "Note: No CPU power status has been recorded"
+  ],
+  "thermal_before": [
+    "Note: No thermal warning level has been recorded",
+    "Note: No performance warning level has been recorded",
+    "Note: No CPU power status has been recorded"
+  ],
+  "validation": {
+    "canonical_pcm_equal_for_all_pairs": true,
+    "fixtures": 8,
+    "observations": 800,
+    "orders_per_fixture": {
+      "HO": 25,
+      "OH": 25
+    },
+    "p50_p95_p99_max_present": true,
+    "paired_bootstrap_resamples": 10000,
+    "pairs": 400,
+    "per_run_transcript_hashes_present": true,
+    "plaintext_transcripts_persisted": false,
+    "public_claim_eligible": false,
+    "thermal_nominal_before_and_after": true,
+    "warmup_orders_per_fixture": {
+      "HO": 3,
+      "OH": 3
+    }
+  }
+}

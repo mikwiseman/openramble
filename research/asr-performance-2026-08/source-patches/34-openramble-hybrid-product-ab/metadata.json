@@ -1,0 +1,10 @@
+{
+  "branch": "",
+  "head": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+  "origin": "https://github.com/mikwiseman/openramble.git",
+  "source": "$TMP/openramble-hybrid-product-ab",
+  "status": [
+    "M Packages/LocalASR/Package.swift",
+    " M Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift"
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "asr_or_coreml_run": false,
+  "file_level_accounting": {
+    "candidate_encoder_exact_shared_bytes_with_shipping_encoder": 0,
+    "candidate_encoder_exact_shared_paths_with_shipping_encoder": [],
+    "candidate_encoder_logical_bytes": 444943177,
+    "candidate_model_exact_shared_bytes_with_shipping_model": 36432204,
+    "candidate_model_exact_shared_paths_with_shipping_model": [
+      "Decoder.mlmodelc/analytics/coremldata.bin",
+      "Decoder.mlmodelc/coremldata.bin",
+      "Decoder.mlmodelc/metadata.json",
+      "Decoder.mlmodelc/model.mil",
+      "Decoder.mlmodelc/weights/weight.bin",
+      "JointDecisionv3.mlmodelc/analytics/coremldata.bin",
+      "JointDecisionv3.mlmodelc/coremldata.bin",
+      "JointDecisionv3.mlmodelc/metadata.json",
+      "JointDecisionv3.mlmodelc/model.mil",
+      "JointDecisionv3.mlmodelc/weights/weight.bin",
+      "parakeet_vocab.json"
+    ],
+    "candidate_model_incremental_unique_bytes_after_exact_file_dedupe": 445432595,
+    "candidate_model_logical_bytes": 481864799,
+    "candidate_preprocessor_logical_bytes": 489418,
+    "encoder_only_incremental_fraction_of_shipping_encoder": 0.9972936471422752,
+    "full_candidate_incremental_fraction_of_shipping_model": 0.922019023396011,
+    "shipping_model_logical_bytes": 483105645,
+    "shipping_plus_candidate_unique_logical_bytes": 928538240,
+    "standalone_source_export_bytes": 445178135
+  },
+  "inputs": {
+    "artifact_lineage": {
+      "path": "$TMP/openramble-intermediate-quality-gate/ARTIFACT_LINEAGE.json",
+      "sha256": "4b976c8be281ed945f0a84064f4c0965d65139c35723f847b72b4c81b89cbc29"
+    },
+    "overlay_installer_memo": {
+      "path": "$TMP/openramble-derived-overlay-installer-memo.md",
+      "sha256": "045ded9e53a4dcfec6c571ed5106eaa4878dddf5c26dfb398c4d264b2130930a"
+    }
+  },
+  "interfaces": {
+    "candidate_encoder_mel_input": [
+      1,
+      128,
+      1251
+    ],
+    "candidate_encoder_output": [
+      1,
+      1024,
+      157
+    ],
+    "candidate_preprocessor_mel_output": [
+      1,
+      128,
+      1251
+    ],
+    "candidate_preprocessor_to_candidate_encoder_exact_shape_compatible": true,
+    "shipping_encoder_mel_input": [
+      1,
+      128,
+      1501
+    ],
+    "shipping_preprocessor_mel_output": [
+      1,
+      128,
+      1501
+    ],
+    "shipping_preprocessor_to_candidate_encoder_exact_shape_compatible": false
+  },
+  "schema_version": 1,
+  "semantic_overlay": {
+    "candidate_operation_count": 3396,
+    "complete_12.5_attestation_present": false,
+    "note": "The prior 4.68 MB payload is a different short artifact and cannot be claimed for 12.5s.",
+    "positional_index_zip_allowed": false,
+    "required_mapping": "one-to-one semantic tensor/blob attestation",
+    "required_reference_count": 614,
+    "shipping_operation_count": 3398,
+    "status": "blocked"
+  },
+  "status": "cpu_only_sealed_artifact_audit",
+  "verdict": {
+    "encoder_only_current_interface": "not_feasible_without_an_unproven_1501_to_1251_mel_adapter_or_a_static_12.5_preprocessor",
+    "integration_feasible_now": false,
+    "semantic_overlay": "not_packageable_until_the_complete_12.5_semantic_attestation_and_packed_graph_are_generated_and_verified",
+    "standalone_candidate_pair": "technically_loadable_but_requires_445432595_incremental_unique_bytes_after_exact_file_dedupe"
+  },
+  "weights": {
+    "candidate_encoder_weight_bytes": 444044416,
+    "candidate_encoder_weight_sha256": "2de581c1b2ed74ab6569c27838a723fd596365c5abcbbf7ed3c2f8fa5d739e84",
+    "shipping_encoder_weight_bytes": 445187200,
+    "shipping_encoder_weight_sha256": "e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421",
+    "whole_file_weight_reuse": false
+  }
+}

@@ -54,6 +54,50 @@ final class FluidAudioAdapterTests: XCTestCase {
         return spans
     }
 
+    private func referenceVocabularyCandidateTermIndices(
+        words: [String],
+        terms: [VocabularyBoost.Term],
+        minimumSimilarity: Float
+    ) -> Set<Int> {
+        var seenForms = Set<String>()
+        let forms = terms.enumerated().flatMap { termIndex, term -> [(
+            form: String,
+            canonical: String,
+            termIndex: Int
+        )] in
+            let canonical = FluidAudioAdapter.normalizeVocabularyCandidate(term.text)
+            return ([term.text] + term.aliases).compactMap { raw in
+                let form = FluidAudioAdapter.normalizeVocabularyCandidate(raw)
+                let key = String(termIndex) + "\u{0}" + canonical + "\u{0}" + form
+                guard !form.isEmpty, seenForms.insert(key).inserted else { return nil }
+                return (form, canonical, termIndex)
+            }
+        }
+
+        var indices = Set<Int>()
+        for startIndex in words.indices {
+            let maximumLength = min(4, words.count - startIndex)
+            for length in 1...maximumLength {
+                let phrase = FluidAudioAdapter.normalizeVocabularyCandidate(
+                    words[startIndex..<(startIndex + length)].joined(separator: " ")
+                )
+                guard !phrase.isEmpty else { continue }
+                let compound = phrase.replacingOccurrences(of: " ", with: "")
+                for candidate in forms {
+                    guard phrase != candidate.canonical else { continue }
+                    if FluidAudioAdapter.vocabularyCandidateSimilarity(phrase, candidate.form)
+                        >= minimumSimilarity
+                        || FluidAudioAdapter.vocabularyCandidateSimilarity(compound, candidate.form)
+                            >= minimumSimilarity
+                    {
+                        indices.insert(candidate.termIndex)
+                    }
+                }
+            }
+        }
+        return indices
+    }
+
     func testEmptyTimingsProduceNoWords() {
         XCTAssertTrue(FluidAudioAdapter.words(from: nil).isEmpty)
         XCTAssertTrue(FluidAudioAdapter.words(from: []).isEmpty)
@@ -193,6 +237,40 @@ final class FluidAudioAdapterTests: XCTestCase {
         )
     }
 
+    func testPhaseTimingCollectionIsOptIn() async {
+        let shipping = FluidAudioAdapter()
+        let benchmark = FluidAudioAdapter(collectPhaseTimings: true)
+        let shippingCollects = await shipping.collectsPhaseTimings
+        let benchmarkCollects = await benchmark.collectsPhaseTimings
+
+        XCTAssertFalse(shippingCollects)
+        XCTAssertTrue(benchmarkCollects)
+    }
+
+    func testVocabularyPhaseOutcomeMatrix() {
+        typealias Outcome = ASRPhaseTimings.VocabularyOutcome
+        let cases: [(Bool, Int, Bool, String, String, Outcome)] = [
+            (false, 0, false, "a", "a", .notConfigured),
+            (true, 0, false, "a", "a", .noCandidate),
+            (true, 1, false, "a", "a", .candidateNoUsableEvidence),
+            (true, 1, true, "a", "a", .rescoredUnmodified),
+            (true, 1, true, "a", "b", .rescoredModified),
+        ]
+
+        for (hasVocabulary, candidates, didRun, primary, final, expected) in cases {
+            XCTAssertEqual(
+                FluidAudioAdapter.vocabularyOutcome(
+                    hasVocabulary: hasVocabulary,
+                    candidateCount: candidates,
+                    rescoreDidRun: didRun,
+                    primaryText: primary,
+                    finalText: final
+                ),
+                expected
+            )
+        }
+    }
+
     func testVocabularyOverlapUsesProbabilitySpaceMean() {
         let merged = FluidAudioAdapter.mergeVocabularyOverlap(
             existing: [0, -Float.infinity],
@@ -300,14 +378,24 @@ final class FluidAudioAdapterTests: XCTestCase {
 
         XCTAssertEqual(gate.cachedFormCount, 6, "canonical/alias duplicates should be cached once")
         for words in transcripts {
+            let matches = gate.candidateMatches(words: words)
             XCTAssertEqual(
-                gate.candidateWordSpans(words: words),
+                matches.spans,
                 referenceVocabularyCandidateSpans(
                     words: words,
                     terms: terms,
                     minimumSimilarity: threshold
                 ),
                 "cached gate changed the previous decision for \(words)"
+            )
+            XCTAssertEqual(
+                matches.termIndices,
+                referenceVocabularyCandidateTermIndices(
+                    words: words,
+                    terms: terms,
+                    minimumSimilarity: threshold
+                ),
+                "cached term filter changed the previous decision for \(words)"
             )
         }
     }
@@ -321,17 +409,41 @@ final class FluidAudioAdapterTests: XCTestCase {
             minimumSimilarity: 0.65
         )
 
+        let rareTerm = gate.candidateMatches(words: ["включи", "опен", "телеметри"])
         XCTAssertTrue(
-            gate.candidateWordSpans(words: ["включи", "опен", "телеметри"]).contains(1..<3),
+            rareTerm.spans.contains(1..<3),
             "a split rare-term alias must still reach the real CTC rescorer"
         )
+        XCTAssertEqual(
+            rareTerm.termIndices,
+            Set([0]),
+            "the final rescorer should only revisit terms that passed the conservative gate"
+        )
+        XCTAssertEqual(
+            gate.candidateMatches(words: ["кубернетес"]).termIndices,
+            Set([1]),
+            "term indices must stay aligned with the immutable vocabulary context"
+        )
         XCTAssertTrue(
-            gate.candidateWordSpans(words: ["обычная", "русская", "речь"]).isEmpty,
+            gate.candidateMatches(words: ["обычная", "русская", "речь"]).termIndices.isEmpty,
             "unrelated speech must not pay for CTC"
         )
         XCTAssertTrue(
-            gate.candidateWordSpans(words: ["OpenTelemetry"]).isEmpty,
+            gate.candidateMatches(words: ["OpenTelemetry"]).termIndices.isEmpty,
             "an already-correct canonical spelling needs no acoustic rewrite"
+        )
+
+        let duplicateGate = FluidAudioAdapter.VocabularyLexicalGate(
+            terms: [
+                .init(text: "Postgres", aliases: ["постгрес"]),
+                .init(text: "Postgres", aliases: ["постгрес"]),
+            ],
+            minimumSimilarity: 0.65
+        )
+        XCTAssertEqual(
+            duplicateGate.candidateMatches(words: ["постгрез"]).termIndices,
+            Set([0, 1]),
+            "duplicate context entries must not lose their independent indices"
         )
     }
 

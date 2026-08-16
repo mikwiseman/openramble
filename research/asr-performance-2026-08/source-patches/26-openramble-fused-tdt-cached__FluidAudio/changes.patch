@@ -1,0 +1,1014 @@
+diff --git a/Sources/FluidAudio/ASR/Parakeet/AsrTypes.swift b/Sources/FluidAudio/ASR/Parakeet/AsrTypes.swift
+index d0d99c7f..2af3615d 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/AsrTypes.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/AsrTypes.swift
+@@ -95,13 +95,16 @@ public struct ASRResult: Codable, Sendable {
+     public let performanceMetrics: ASRPerformanceMetrics?
+     public let ctcDetectedTerms: [String]?
+     public let ctcAppliedTerms: [String]?
++    /// Temp-gated decoder call accounting; nil for non-TDT and legacy result paths.
++    public let cachedFusionDiagnostics: TdtCachedFusionDiagnostics?
+
+     public init(
+         text: String, confidence: Float, duration: TimeInterval, processingTime: TimeInterval,
+         tokenTimings: [TokenTiming]? = nil,
+         performanceMetrics: ASRPerformanceMetrics? = nil,
+         ctcDetectedTerms: [String]? = nil,
+-        ctcAppliedTerms: [String]? = nil
++        ctcAppliedTerms: [String]? = nil,
++        cachedFusionDiagnostics: TdtCachedFusionDiagnostics? = nil
+     ) {
+         self.text = text
+         self.confidence = confidence
+@@ -111,6 +114,7 @@ public struct ASRResult: Codable, Sendable {
+         self.performanceMetrics = performanceMetrics
+         self.ctcDetectedTerms = ctcDetectedTerms
+         self.ctcAppliedTerms = ctcAppliedTerms
++        self.cachedFusionDiagnostics = cachedFusionDiagnostics
+     }
+
+     /// Real-time factor (RTFx) - how many times faster than real-time
+@@ -134,7 +138,8 @@ public struct ASRResult: Codable, Sendable {
+             tokenTimings: tokenTimings,
+             performanceMetrics: performanceMetrics,
+             ctcDetectedTerms: detected,
+-            ctcAppliedTerms: applied
++            ctcAppliedTerms: applied,
++            cachedFusionDiagnostics: cachedFusionDiagnostics
+         )
+     }
+ }
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
+index 4a29727d..68511cf1 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
+@@ -31,7 +31,8 @@ extension AsrManager {
+                 tokenDurations: hypothesis.tokenDurations,
+                 encoderSequenceLength: encoderSequenceLength,
+                 audioSamples: audioSamples,
+-                processingTime: Date().timeIntervalSince(startTime)
++                processingTime: Date().timeIntervalSince(startTime),
++                cachedFusionDiagnostics: hypothesis.cachedFusionDiagnostics
+             )
+
+             return result
+@@ -97,7 +98,8 @@ extension AsrManager {
+         tokenDurations: [Int] = [],
+         encoderSequenceLength: Int,
+         audioSamples: [Float],
+-        processingTime: TimeInterval
++        processingTime: TimeInterval,
++        cachedFusionDiagnostics: TdtCachedFusionDiagnostics? = nil
+     ) -> ASRResult {
+
+         let text = convertTokensToText(tokenIds)
+@@ -117,7 +119,8 @@ extension AsrManager {
+             confidence: confidence,
+             duration: duration,
+             processingTime: processingTime,
+-            tokenTimings: resultTimings
++            tokenTimings: resultTimings,
++            cachedFusionDiagnostics: cachedFusionDiagnostics
+         )
+     }
+
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager.swift
+index fd164d73..c2a2ba8a 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager.swift
+@@ -303,6 +303,7 @@ public actor AsrManager {
+                 actualAudioFrames: actualAudioFrames,
+                 decoderModel: decoder_,
+                 jointModel: joint,
++                cachedFusedModel: models.cachedFusedDecoderJoint,
+                 decoderState: &decoderState,
+                 contextFrameAdjustment: contextFrameAdjustment,
+                 isLastChunk: isLastChunk,
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrModels.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrModels.swift
+index 655cd96d..25c1899a 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrModels.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrModels.swift
+@@ -64,6 +64,9 @@ public struct AsrModels: Sendable {
+     public let preprocessor: MLModel
+     public let decoder: MLModel
+     public let joint: MLModel
++    /// Optional v3-only cached-semantics decoder+joint artifact under evaluation.
++    /// Missing or contract-invalid artifacts transparently use the required separate models.
++    public let cachedFusedDecoderJoint: MLModel?
+     /// Optional CTC decoder head for custom vocabulary (encoder features → CTC logits)
+     public let ctcHead: MLModel?
+     public let configuration: MLModelConfiguration
+@@ -77,6 +80,7 @@ public struct AsrModels: Sendable {
+         preprocessor: MLModel,
+         decoder: MLModel,
+         joint: MLModel,
++        cachedFusedDecoderJoint: MLModel? = nil,
+         ctcHead: MLModel? = nil,
+         configuration: MLModelConfiguration,
+         vocabulary: [Int: String],
+@@ -86,6 +90,7 @@ public struct AsrModels: Sendable {
+         self.preprocessor = preprocessor
+         self.decoder = decoder
+         self.joint = joint
++        self.cachedFusedDecoderJoint = cachedFusedDecoderJoint
+         self.ctcHead = ctcHead
+         self.configuration = configuration
+         self.vocabulary = vocabulary
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtDecoderV3.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtDecoderV3.swift
+index df1cdff0..5635d2fa 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtDecoderV3.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtDecoderV3.swift
+@@ -106,6 +106,7 @@ internal struct TdtDecoderV3: Sendable {
+         actualAudioFrames: Int,
+         decoderModel: MLModel,
+         jointModel: MLModel,
++        cachedFusedModel: MLModel? = nil,
+         decoderState: inout TdtDecoderState,
+         contextFrameAdjustment: Int = 0,
+         isLastChunk: Bool = false,
+@@ -128,6 +129,22 @@ internal struct TdtDecoderV3: Sendable {
+         // for K-length array allocations they'll never use.
+         let needsTopK = language != nil
+
++        var activeCachedFusedModel = cachedFusedModel
++        var cachedFusedSchemaValidationCalls = 0
++        var cachedFusedSchemaValidationWallNanoseconds: UInt64 = 0
++        if let model = activeCachedFusedModel {
++            let validationStarted = DispatchTime.now().uptimeNanoseconds
++            cachedFusedSchemaValidationCalls = 1
++            do {
++                try TdtCachedFusionContract.validate(model: model)
++            } catch {
++                logger.warning("Cached fused model rejected; using shipping path: \(error.localizedDescription)")
++                activeCachedFusedModel = nil
++            }
++            cachedFusedSchemaValidationWallNanoseconds =
++                DispatchTime.now().uptimeNanoseconds - validationStarted
++        }
++
+         // Build a stride-aware view so we can access encoder frames without extra copies
+         let encoderFrames = try EncoderFrameView(
+             encoderOutput: encoderOutput,
+@@ -137,6 +154,10 @@ internal struct TdtDecoderV3: Sendable {
+
+         var hypothesis = TdtHypothesis(decState: decoderState)
+         hypothesis.lastToken = decoderState.lastToken
++        hypothesis.cachedFusionDiagnostics.schemaValidationCalls = cachedFusedSchemaValidationCalls
++        hypothesis.cachedFusionDiagnostics.schemaValidationWallNanoseconds =
++            cachedFusedSchemaValidationWallNanoseconds
++        var pendingCachedFusedStep: TdtCachedFusedStep?
+
+         // Initialize time tracking for frame navigation
+         // timeIndices: Current position in encoder frames (advances by duration)
+@@ -192,6 +213,25 @@ internal struct TdtDecoderV3: Sendable {
+         let tokenProbBacking = try MLMultiArray(shape: [1, 1, 1] as [NSNumber], dataType: .float32)
+         let durationBacking = try MLMultiArray(shape: [1, 1, 1] as [NSNumber], dataType: .int32)
+
++        var cachedFusedBackingPool: TdtCachedFusionBackingPool?
++        if activeCachedFusedModel != nil {
++            let allocationStarted = DispatchTime.now().uptimeNanoseconds
++            do {
++                let pool = try TdtCachedFusionBackingPool()
++                cachedFusedBackingPool = pool
++                hypothesis.cachedFusionDiagnostics.backingPoolAllocations = 1
++                hypothesis.cachedFusionDiagnostics.backingPoolLogicalBytes = pool.logicalByteCount
++            } catch {
++                activeCachedFusedModel = nil
++                hypothesis.cachedFusionDiagnostics.fallbacks += 1
++                logger.warning(
++                    "Cached fused backing allocation failed; using shipping path: \(error.localizedDescription)"
++                )
++            }
++            hypothesis.cachedFusionDiagnostics.backingPoolAllocationWallNanoseconds =
++                DispatchTime.now().uptimeNanoseconds - allocationStarted
++        }
++
+         // Initialize decoder LSTM state for a fresh utterance
+         // This ensures clean state when starting transcription
+         if decoderState.lastToken == nil && decoderState.predictorOutput == nil {
+@@ -204,17 +244,58 @@ internal struct TdtDecoderV3: Sendable {
+         // Note: In RNN-T/TDT, we use blank token as SOS
+         if decoderState.predictorOutput == nil && hypothesis.lastToken == nil {
+             let sos = config.tdtConfig.blankId  // blank=8192 serves as SOS
+-            let primed = try modelInference.runDecoder(
+-                token: sos,
+-                state: decoderState,
+-                model: decoderModel,
+-                targetArray: reusableTargetArray,
+-                targetLengthArray: reusableTargetLengthArray
+-            )
+-            let proj = try extractFeatureValue(
+-                from: primed.output, key: "decoder", errorMessage: "Invalid decoder output")
+-            decoderState.predictorOutput = proj
+-            hypothesis.decState = primed.newState
++            if let fusedModel = activeCachedFusedModel,
++                let backingPool = cachedFusedBackingPool
++            {
++                do {
++                    let candidate = try modelInference.runCachedFused(
++                        token: sos,
++                        state: decoderState,
++                        encoderFrames: encoderFrames,
++                        timeIndex: safeTimeIndices,
++                        model: fusedModel,
++                        targetArray: reusableTargetArray,
++                        targetLengthArray: reusableTargetLengthArray,
++                        encoderStep: reusableEncoderStep,
++                        encoderDestPtr: encDestPtr,
++                        encoderDestStride: encDestStride,
++                        backingPool: backingPool,
++                        blankId: config.tdtConfig.blankId,
++                        durationBinCount: config.tdtConfig.durationBins.count,
++                        needsTopK: needsTopK
++                    )
++                    try TdtCachedFusionAtomicCandidate<TdtCachedFusedStep?>(value: candidate).commit(
++                        into: &pendingCachedFusedStep,
++                        beforeCommit: { try Task.checkCancellation() }
++                    )
++                    hypothesis.cachedFusionDiagnostics.record(candidate.timing)
++                    hypothesis.cachedFusionDiagnostics.fusedSOSCalls += 1
++                } catch let error as CancellationError {
++                    throw error
++                } catch {
++                    activeCachedFusedModel = nil
++                    hypothesis.cachedFusionDiagnostics.fallbacks += 1
++                    logger.warning("Cached fused SOS failed; replaying shipping decoder: \(error.localizedDescription)")
++                }
++            }
++
++            if pendingCachedFusedStep == nil {
++                let decoderStarted = DispatchTime.now().uptimeNanoseconds
++                let primed = try modelInference.runDecoder(
++                    token: sos,
++                    state: decoderState,
++                    model: decoderModel,
++                    targetArray: reusableTargetArray,
++                    targetLengthArray: reusableTargetLengthArray
++                )
++                hypothesis.cachedFusionDiagnostics.separateDecoderWallNanoseconds +=
++                    DispatchTime.now().uptimeNanoseconds - decoderStarted
++                hypothesis.cachedFusionDiagnostics.separateDecoderCalls += 1
++                let proj = try extractFeatureValue(
++                    from: primed.output, key: "decoder", errorMessage: "Invalid decoder output")
++                decoderState.predictorOutput = proj
++                hypothesis.decState = primed.newState
++            }
+         }
+
+         // Variables for preventing infinite token emission at same timestamp
+@@ -231,20 +312,92 @@ internal struct TdtDecoderV3: Sendable {
+             try Task.checkCancellation()
+             // Use last emitted token for decoder context, or blank if starting
+             var label = hypothesis.lastToken ?? config.tdtConfig.blankId
+-            let stateToUse = hypothesis.decState ?? decoderState
++            var prefetchedDecision: TdtJointDecision?
++            var decoderProjectionAlreadyNormalized = false
+
+             // Get decoder output (LSTM hidden state projection)
+             // OPTIMIZATION: Use cached output if available to avoid redundant computation
+             // This cache is valid when decoder state hasn't changed
+             let decoderResult: (output: MLFeatureProvider, newState: TdtDecoderState)
+-            if let cached = decoderState.predictorOutput {
++            if let candidate = pendingCachedFusedStep {
++                pendingCachedFusedStep = nil
++                if candidate.decisionFrame == safeTimeIndices {
++                    do {
++                        let provider = try MLDictionaryFeatureProvider(dictionary: [
++                            "decoder": MLFeatureValue(multiArray: candidate.predictorOutput)
++                        ])
++                        try modelInference.normalizeDecoderProjection(
++                            candidate.predictorOutput, into: reusableDecoderStep)
++                        // Every throwing preparation step is complete. Publish h/c,
++                        // predictor, and its prefetched decision as one host transaction.
++                        hypothesis.decState = candidate.decoderState
++                        decoderState.predictorOutput = candidate.predictorOutput
++                        prefetchedDecision = candidate.decision
++                        hypothesis.cachedFusionDiagnostics.prefetchedDecisionsConsumed += 1
++                        decoderResult = (output: provider, newState: candidate.decoderState)
++                        decoderProjectionAlreadyNormalized = true
++                    } catch {
++                        // Preparation failure leaves visible state untouched. Replay the exact
++                        // fused input through A rather than failing or consuming a partial step.
++                        activeCachedFusedModel = nil
++                        hypothesis.cachedFusionDiagnostics.fallbacks += 1
++                        let decoderStarted = DispatchTime.now().uptimeNanoseconds
++                        let replay = try modelInference.runDecoder(
++                            token: candidate.replayToken,
++                            state: candidate.replayState,
++                            model: decoderModel,
++                            targetArray: reusableTargetArray,
++                            targetLengthArray: reusableTargetLengthArray
++                        )
++                        hypothesis.cachedFusionDiagnostics.separateDecoderWallNanoseconds +=
++                            DispatchTime.now().uptimeNanoseconds - decoderStarted
++                        hypothesis.cachedFusionDiagnostics.separateDecoderCalls += 1
++                        let replayProjection = try extractFeatureValue(
++                            from: replay.output,
++                            key: "decoder",
++                            errorMessage: "Invalid decoder output"
++                        )
++                        hypothesis.decState = replay.newState
++                        decoderState.predictorOutput = replayProjection
++                        decoderResult = replay
++                        logger.warning(
++                            "Cached fused host preparation failed; replaying shipping decoder: \(error.localizedDescription)"
++                        )
++                    }
++                } else {
++                    // A stale prefetched decision is never applied to a different encoder frame.
++                    // Replay the untouched token/state through A and continue with shipping joint.
++                    activeCachedFusedModel = nil
++                    hypothesis.cachedFusionDiagnostics.fallbacks += 1
++                    hypothesis.cachedFusionDiagnostics.prefetchedFrameMismatches += 1
++                    let decoderStarted = DispatchTime.now().uptimeNanoseconds
++                    let replay = try modelInference.runDecoder(
++                        token: candidate.replayToken,
++                        state: candidate.replayState,
++                        model: decoderModel,
++                        targetArray: reusableTargetArray,
++                        targetLengthArray: reusableTargetLengthArray
++                    )
++                    hypothesis.cachedFusionDiagnostics.separateDecoderWallNanoseconds +=
++                        DispatchTime.now().uptimeNanoseconds - decoderStarted
++                    hypothesis.cachedFusionDiagnostics.separateDecoderCalls += 1
++                    let replayProjection = try extractFeatureValue(
++                        from: replay.output, key: "decoder", errorMessage: "Invalid decoder output")
++                    hypothesis.decState = replay.newState
++                    decoderState.predictorOutput = replayProjection
++                    decoderResult = replay
++                }
++            } else if let cached = decoderState.predictorOutput {
+                 // Reuse cached decoder output - significant speedup
+                 let provider = try MLDictionaryFeatureProvider(dictionary: [
+                     "decoder": MLFeatureValue(multiArray: cached)
+                 ])
++                let stateToUse = hypothesis.decState ?? decoderState
+                 decoderResult = (output: provider, newState: stateToUse)
+             } else {
+                 // No cache - run decoder LSTM
++                let stateToUse = hypothesis.decState ?? decoderState
++                let decoderStarted = DispatchTime.now().uptimeNanoseconds
+                 decoderResult = try modelInference.runDecoder(
+                     token: label,
+                     state: stateToUse,
+@@ -252,28 +405,43 @@ internal struct TdtDecoderV3: Sendable {
+                     targetArray: reusableTargetArray,
+                     targetLengthArray: reusableTargetLengthArray
+                 )
++                hypothesis.cachedFusionDiagnostics.separateDecoderWallNanoseconds +=
++                    DispatchTime.now().uptimeNanoseconds - decoderStarted
++                hypothesis.cachedFusionDiagnostics.separateDecoderCalls += 1
+             }
+
+             // Prepare decoder projection once and reuse for inner blank loop
+             let decoderProjection = try extractFeatureValue(
+                 from: decoderResult.output, key: "decoder", errorMessage: "Invalid decoder output")
+-            try modelInference.normalizeDecoderProjection(decoderProjection, into: reusableDecoderStep)
+-
+-            // Run joint network with preallocated inputs
+-            let decision = try modelInference.runJointPrepared(
+-                encoderFrames: encoderFrames,
+-                timeIndex: safeTimeIndices,
+-                preparedDecoderStep: reusableDecoderStep,
+-                model: jointModel,
+-                encoderStep: reusableEncoderStep,
+-                encoderDestPtr: encDestPtr,
+-                encoderDestStride: encDestStride,
+-                inputProvider: jointInput,
+-                tokenIdBacking: tokenIdBacking,
+-                tokenProbBacking: tokenProbBacking,
+-                durationBacking: durationBacking,
+-                needsTopK: needsTopK
+-            )
++            if !decoderProjectionAlreadyNormalized {
++                try modelInference.normalizeDecoderProjection(decoderProjection, into: reusableDecoderStep)
++            }
++
++            // Consume the decision produced atomically with decoder work, or use the existing
++            // joint-only graph for cache hits and all fallback paths.
++            let decision: TdtJointDecision
++            if let prefetchedDecision {
++                decision = prefetchedDecision
++            } else {
++                let jointStarted = DispatchTime.now().uptimeNanoseconds
++                decision = try modelInference.runJointPrepared(
++                    encoderFrames: encoderFrames,
++                    timeIndex: safeTimeIndices,
++                    preparedDecoderStep: reusableDecoderStep,
++                    model: jointModel,
++                    encoderStep: reusableEncoderStep,
++                    encoderDestPtr: encDestPtr,
++                    encoderDestStride: encDestStride,
++                    inputProvider: jointInput,
++                    tokenIdBacking: tokenIdBacking,
++                    tokenProbBacking: tokenProbBacking,
++                    durationBacking: durationBacking,
++                    needsTopK: needsTopK
++                )
++                hypothesis.cachedFusionDiagnostics.jointOnlyWallNanoseconds +=
++                    DispatchTime.now().uptimeNanoseconds - jointStarted
++                hypothesis.cachedFusionDiagnostics.jointOnlyCalls += 1
++            }
+
+             // Predict token (what to emit) and duration (how many frames to skip)
+             label = decision.token
+@@ -350,6 +518,7 @@ internal struct TdtDecoderV3: Sendable {
+                 timeIndicesCurrentLabels = timeIndices
+
+                 // INTENTIONAL: Reusing prepared decoder step from outside loop
++                let jointStarted = DispatchTime.now().uptimeNanoseconds
+                 let innerDecision = try modelInference.runJointPrepared(
+                     encoderFrames: encoderFrames,
+                     timeIndex: safeTimeIndices,
+@@ -364,6 +533,9 @@ internal struct TdtDecoderV3: Sendable {
+                     durationBacking: durationBacking,
+                     needsTopK: needsTopK
+                 )
++                hypothesis.cachedFusionDiagnostics.jointOnlyWallNanoseconds +=
++                    DispatchTime.now().uptimeNanoseconds - jointStarted
++                hypothesis.cachedFusionDiagnostics.jointOnlyCalls += 1
+
+                 label = innerDecision.token
+                 score = TdtDurationMapping.clampProbability(innerDecision.probability)
+@@ -427,22 +599,6 @@ internal struct TdtDecoderV3: Sendable {
+                 }
+                 hypothesis.lastToken = label  // Remember for next iteration
+
+-                // CRITICAL: Update decoder LSTM with the new token
+-                // This updates the language model context for better predictions
+-                // Only non-blank tokens update the decoder - this is key!
+-                // NOTE: We update the decoder state regardless of whether we emit the token
+-                // to maintain proper language model context across chunk boundaries
+-                let step = try modelInference.runDecoder(
+-                    token: label,
+-                    state: decoderResult.newState,
+-                    model: decoderModel,
+-                    targetArray: reusableTargetArray,
+-                    targetLengthArray: reusableTargetLengthArray
+-                )
+-                hypothesis.decState = step.newState
+-                decoderState.predictorOutput = try extractFeatureValue(
+-                    from: step.output, key: "decoder", errorMessage: "Invalid decoder output")
+-
+                 if timeIndicesCurrentLabels == lastEmissionTimestamp {
+                     emissionsAtThisTimestamp += 1
+                 } else {
+@@ -460,6 +616,78 @@ internal struct TdtDecoderV3: Sendable {
+                     emissionsAtThisTimestamp = 0
+                     lastEmissionTimestamp = -1
+                 }
++
++                // Force-advance is finalized before choosing the encoder frame for a fused
++                // prefetch. This makes the fused decision refer to the exact frame that A would
++                // use on the next outer iteration.
++                activeMask = timeIndices < effectiveSequenceLength
++                let nextEncoderFrame = activeMask ? safeTimeIndices : nil
++                let scheduledWork = TdtCachedFusionScheduler.afterDecoderToken(
++                    fusedAvailable: activeCachedFusedModel != nil,
++                    nextEncoderFrame: nextEncoderFrame
++                )
++
++                var storedFusedCandidate = false
++                if case .fusedDecoderAndJoint(let frame) = scheduledWork,
++                    let fusedModel = activeCachedFusedModel,
++                    let backingPool = cachedFusedBackingPool
++                {
++                    do {
++                        let candidate = try modelInference.runCachedFused(
++                            token: label,
++                            state: decoderResult.newState,
++                            encoderFrames: encoderFrames,
++                            timeIndex: frame,
++                            model: fusedModel,
++                            targetArray: reusableTargetArray,
++                            targetLengthArray: reusableTargetLengthArray,
++                            encoderStep: reusableEncoderStep,
++                            encoderDestPtr: encDestPtr,
++                            encoderDestStride: encDestStride,
++                            backingPool: backingPool,
++                            blankId: blankId,
++                            durationBinCount: config.tdtConfig.durationBins.count,
++                            needsTopK: needsTopK
++                        )
++                        try TdtCachedFusionAtomicCandidate<TdtCachedFusedStep?>(value: candidate).commit(
++                            into: &pendingCachedFusedStep,
++                            beforeCommit: { try Task.checkCancellation() }
++                        )
++                        hypothesis.cachedFusionDiagnostics.record(candidate.timing)
++                        hypothesis.cachedFusionDiagnostics.fusedTokenCalls += 1
++                        storedFusedCandidate = true
++                    } catch let error as CancellationError {
++                        throw error
++                    } catch {
++                        activeCachedFusedModel = nil
++                        hypothesis.cachedFusionDiagnostics.fallbacks += 1
++                        logger.warning(
++                            "Cached fused token step failed; replaying shipping path: \(error.localizedDescription)"
++                        )
++                    }
++                }
++
++                if !storedFusedCandidate {
++                    // No following frame (including a chunk handoff) still requires an exact
++                    // decoder-only update so h/c/projection carry precisely as in shipping A.
++                    let decoderStarted = DispatchTime.now().uptimeNanoseconds
++                    let step = try modelInference.runDecoder(
++                        token: label,
++                        state: decoderResult.newState,
++                        model: decoderModel,
++                        targetArray: reusableTargetArray,
++                        targetLengthArray: reusableTargetLengthArray
++                    )
++                    hypothesis.cachedFusionDiagnostics.separateDecoderWallNanoseconds +=
++                        DispatchTime.now().uptimeNanoseconds - decoderStarted
++                    hypothesis.cachedFusionDiagnostics.separateDecoderCalls += 1
++                    if case .decoderOnly(.noFollowingEncoderFrame) = scheduledWork {
++                        hypothesis.cachedFusionDiagnostics.decoderOnlyAtBoundary += 1
++                    }
++                    hypothesis.decState = step.newState
++                    decoderState.predictorOutput = try extractFeatureValue(
++                        from: step.output, key: "decoder", errorMessage: "Invalid decoder output")
++                }
+             }
+
+             // Update activeMask for next iteration
+@@ -490,6 +718,7 @@ internal struct TdtDecoderV3: Sendable {
+                     ])
+                     decoderResult = (output: provider, newState: stateToUse)
+                 } else {
++                    let decoderStarted = DispatchTime.now().uptimeNanoseconds
+                     decoderResult = try modelInference.runDecoder(
+                         token: lastToken,
+                         state: stateToUse,
+@@ -497,6 +726,9 @@ internal struct TdtDecoderV3: Sendable {
+                         targetArray: reusableTargetArray,
+                         targetLengthArray: reusableTargetLengthArray
+                     )
++                    hypothesis.cachedFusionDiagnostics.separateDecoderWallNanoseconds +=
++                        DispatchTime.now().uptimeNanoseconds - decoderStarted
++                    hypothesis.cachedFusionDiagnostics.separateDecoderCalls += 1
+                 }
+
+                 // Use sliding window approach: try different frames near the boundary
+@@ -512,6 +744,7 @@ internal struct TdtDecoderV3: Sendable {
+                     from: decoderResult.output, key: "decoder", errorMessage: "Invalid decoder output")
+                 try modelInference.normalizeDecoderProjection(finalProjection, into: reusableDecoderStep)
+
++                let jointStarted = DispatchTime.now().uptimeNanoseconds
+                 let decision = try modelInference.runJointPrepared(
+                     encoderFrames: encoderFrames,
+                     timeIndex: frameIndex,
+@@ -526,6 +759,9 @@ internal struct TdtDecoderV3: Sendable {
+                     durationBacking: durationBacking,
+                     needsTopK: needsTopK
+                 )
++                hypothesis.cachedFusionDiagnostics.jointOnlyWallNanoseconds +=
++                    DispatchTime.now().uptimeNanoseconds - jointStarted
++                hypothesis.cachedFusionDiagnostics.jointOnlyCalls += 1
+
+                 let token = decision.token
+                 let score = TdtDurationMapping.clampProbability(decision.probability)
+@@ -556,6 +792,7 @@ internal struct TdtDecoderV3: Sendable {
+                     hypothesis.lastToken = token
+
+                     // Update decoder state
++                    let decoderStarted = DispatchTime.now().uptimeNanoseconds
+                     let step = try modelInference.runDecoder(
+                         token: token,
+                         state: decoderResult.newState,
+@@ -563,6 +800,10 @@ internal struct TdtDecoderV3: Sendable {
+                         targetArray: reusableTargetArray,
+                         targetLengthArray: reusableTargetLengthArray
+                     )
++                    hypothesis.cachedFusionDiagnostics.separateDecoderWallNanoseconds +=
++                        DispatchTime.now().uptimeNanoseconds - decoderStarted
++                    hypothesis.cachedFusionDiagnostics.separateDecoderCalls += 1
++                    hypothesis.cachedFusionDiagnostics.decoderOnlyInLastChunkFlush += 1
+                     hypothesis.decState = step.newState
+                     decoderState.predictorOutput = try extractFeatureValue(
+                         from: step.output, key: "decoder", errorMessage: "Invalid decoder output")
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtHypothesis.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtHypothesis.swift
+index 87922bc4..b9c12759 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtHypothesis.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtHypothesis.swift
+@@ -7,6 +7,7 @@ struct TdtHypothesis {
+     var timestamps: [Int] = []
+     var tokenDurations: [Int] = []
+     var tokenConfidences: [Float] = []
++    var cachedFusionDiagnostics = TdtCachedFusionDiagnostics()
+     /// Last non-blank token decoded in this hypothesis.
+     /// Used to initialize the decoder for the next chunk, maintaining context across chunk boundaries.
+     var lastToken: Int?
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtModelInference.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtModelInference.swift
+index 82f98aba..82148724 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtModelInference.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtModelInference.swift
+@@ -173,6 +173,262 @@ internal struct TdtModelInference: Sendable {
+         )
+     }
+
++    /// Execute the optional cached-semantics decoder+joint graph without changing input state.
++    ///
++    /// A two-slot pool supplies output backings that are proven disjoint from `state` before the
++    /// prediction. The candidate slot remains separate from replay state until every output has
++    /// passed the strict contract checks below. A caller can therefore discard this value and
++    /// replay `replayToken`/`replayState` through the shipping decoder after any failure.
++    func runCachedFused(
++        token: Int,
++        state: TdtDecoderState,
++        encoderFrames: EncoderFrameView,
++        timeIndex: Int,
++        model: MLModel,
++        targetArray: MLMultiArray,
++        targetLengthArray: MLMultiArray,
++        encoderStep: MLMultiArray,
++        encoderDestPtr: UnsafeMutablePointer<Float>,
++        encoderDestStride: Int,
++        backingPool: TdtCachedFusionBackingPool,
++        blankId: Int,
++        durationBinCount: Int,
++        needsTopK: Bool
++    ) throws -> TdtCachedFusedStep {
++        let totalStarted = DispatchTime.now().uptimeNanoseconds
++
++        let protectedInputs = try [
++            memoryRegion(for: targetArray, name: "targets"),
++            memoryRegion(for: targetLengthArray, name: "target_length"),
++            memoryRegion(for: state.hiddenState, name: "h_in"),
++            memoryRegion(for: state.cellState, name: "c_in"),
++            memoryRegion(for: encoderStep, name: "encoder_step"),
++        ]
++        let outputArraysBySlot = backingPool.stateSlots.map {
++            backedOutputArrays(pool: backingPool, stateBackings: $0)
++        }
++        let outputRegionsBySlot = try outputArraysBySlot.map { arrays in
++            try arrays.map { try memoryRegion(for: $0.array, name: $0.name) }
++        }
++        guard
++            let backingSlot = TdtCachedFusionBackingSelector.selectSlot(
++                preferredSlot: backingPool.preferredSlot,
++                outputRegionsBySlot: outputRegionsBySlot,
++                protectedInputs: protectedInputs
++            )
++        else {
++            throw ASRError.processingFailed(
++                "Cached fused backing pool has no replay-safe output slot"
++            )
++        }
++        let selectedStateBackings = backingPool.stateSlots[backingSlot]
++        let expectedOutputArrays = outputArraysBySlot[backingSlot]
++        let expectedOutputRegions = outputRegionsBySlot[backingSlot]
++        backingPool.markSelected(slot: backingSlot)
++
++        targetArray[0] = NSNumber(value: token)
++        try encoderFrames.copyFrame(
++            at: timeIndex,
++            into: encoderDestPtr,
++            destinationStride: encoderDestStride
++        )
++
++        encoderStep.prefetchToNeuralEngine()
++        state.hiddenState.prefetchToNeuralEngine()
++        state.cellState.prefetchToNeuralEngine()
++
++        let input = try MLDictionaryFeatureProvider(dictionary: [
++            "targets": MLFeatureValue(multiArray: targetArray),
++            "target_length": MLFeatureValue(multiArray: targetLengthArray),
++            "h_in": MLFeatureValue(multiArray: state.hiddenState),
++            "c_in": MLFeatureValue(multiArray: state.cellState),
++            "encoder_step": MLFeatureValue(multiArray: encoderStep),
++        ])
++
++        // Every output is preallocated. The state slot was proven disjoint from replay inputs;
++        // tiny decisions are copied into value types before this method returns.
++        predictionOptions.outputBackings = [
++            "token_id": backingPool.tokenId,
++            "token_prob": backingPool.tokenProbability,
++            "duration": backingPool.duration,
++            "top_k_ids": backingPool.topKIds,
++            "top_k_logits": backingPool.topKLogits,
++            "decoder": selectedStateBackings.decoderProjection,
++            "h_out": selectedStateBackings.hiddenState,
++            "c_out": selectedStateBackings.cellState,
++        ]
++        let predictionStarted = DispatchTime.now().uptimeNanoseconds
++        let output = try model.prediction(from: input, options: predictionOptions)
++        let predictionFinished = DispatchTime.now().uptimeNanoseconds
++
++        let tokenIdArray = try requireArray(
++            from: output, key: "token_id", shape: [1, 1, 1], dataType: .int32)
++        let tokenProbArray = try requireArray(
++            from: output, key: "token_prob", shape: [1, 1, 1], dataType: .float32)
++        let durationArray = try requireArray(
++            from: output, key: "duration", shape: [1, 1, 1], dataType: .int32)
++        let topKIdsArray = try requireArray(
++            from: output,
++            key: "top_k_ids",
++            shape: [1, 1, 1, TdtCachedFusionContract.topKCount],
++            dataType: .int32
++        )
++        let topKLogitsArray = try requireArray(
++            from: output,
++            key: "top_k_logits",
++            shape: [1, 1, 1, TdtCachedFusionContract.topKCount],
++            dataType: .float32
++        )
++        let decoderProjection = try requireArray(
++            from: output,
++            key: "decoder",
++            shape: [1, TdtCachedFusionContract.decoderHiddenSize, 1],
++            dataType: .float32
++        )
++        let hiddenState = try requireArray(
++            from: output,
++            key: "h_out",
++            shape: [
++                TdtCachedFusionContract.decoderLayerCount, 1,
++                TdtCachedFusionContract.decoderHiddenSize,
++            ],
++            dataType: .float32
++        )
++        let cellState = try requireArray(
++            from: output,
++            key: "c_out",
++            shape: [
++                TdtCachedFusionContract.decoderLayerCount, 1,
++                TdtCachedFusionContract.decoderHiddenSize,
++            ],
++            dataType: .float32
++        )
++
++        let actualOutputArrays: [(name: String, array: MLMultiArray)] = [
++            ("token_id", tokenIdArray),
++            ("token_prob", tokenProbArray),
++            ("duration", durationArray),
++            ("top_k_ids", topKIdsArray),
++            ("top_k_logits", topKLogitsArray),
++            ("decoder", decoderProjection),
++            ("h_out", hiddenState),
++            ("c_out", cellState),
++        ]
++        let actualOutputRegions = try actualOutputArrays.map {
++            try memoryRegion(for: $0.array, name: $0.name)
++        }
++        if let mismatch = TdtCachedFusionBackingIdentityGuard.firstMismatch(
++            expected: expectedOutputRegions,
++            actual: actualOutputRegions
++        ) {
++            throw ASRError.processingFailed(
++                "Cached fused model ignored selected output backing: \(String(describing: mismatch))"
++            )
++        }
++        try requireExactBackingStrides(
++            expected: expectedOutputArrays,
++            actual: actualOutputArrays
++        )
++        if let conflict = TdtCachedFusionAliasGuard.firstConflict(
++            mutableOutputs: actualOutputRegions,
++            protectedInputs: protectedInputs
++        ) {
++            throw ASRError.processingFailed(
++                "Cached fused output alias: \(conflict.mutableOutput) overlaps \(conflict.otherRegion)"
++            )
++        }
++
++        // This is intentionally the first content read from the large state outputs so the
++        // counter includes any CPU synchronization forced by the full finite scan.
++        let finiteScanStarted = DispatchTime.now().uptimeNanoseconds
++        try requireFinite(decoderProjection, name: "decoder")
++        try requireFinite(hiddenState, name: "h_out")
++        try requireFinite(cellState, name: "c_out")
++        let finiteScanFinished = DispatchTime.now().uptimeNanoseconds
++
++        let tokenPointer = tokenIdArray.dataPointer.bindMemory(to: Int32.self, capacity: 1)
++        let probabilityPointer = tokenProbArray.dataPointer.bindMemory(to: Float.self, capacity: 1)
++        let durationPointer = durationArray.dataPointer.bindMemory(to: Int32.self, capacity: 1)
++        let predictedToken = Int(tokenPointer[0])
++        let probability = probabilityPointer[0]
++        let durationBin = Int(durationPointer[0])
++
++        guard (0...blankId).contains(predictedToken) else {
++            throw ASRError.processingFailed("Cached fused token is out of bounds: \(predictedToken)")
++        }
++        guard probability.isFinite, (0...1).contains(probability) else {
++            throw ASRError.processingFailed("Cached fused probability is invalid: \(probability)")
++        }
++        guard (0..<durationBinCount).contains(durationBin) else {
++            throw ASRError.processingFailed("Cached fused duration bin is out of bounds: \(durationBin)")
++        }
++
++        let topKIdsPointer = topKIdsArray.dataPointer.bindMemory(
++            to: Int32.self, capacity: TdtCachedFusionContract.topKCount)
++        let topKLogitsPointer = topKLogitsArray.dataPointer.bindMemory(
++            to: Float.self, capacity: TdtCachedFusionContract.topKCount)
++        var topKIds: [Int] = []
++        var topKLogits: [Float] = []
++        if needsTopK {
++            topKIds.reserveCapacity(TdtCachedFusionContract.topKCount)
++            topKLogits.reserveCapacity(TdtCachedFusionContract.topKCount)
++        }
++        for index in 0..<TdtCachedFusionContract.topKCount {
++            let candidateId = Int(topKIdsPointer[index])
++            let candidateLogit = topKLogitsPointer[index]
++            guard (0...blankId).contains(candidateId), candidateLogit.isFinite else {
++                throw ASRError.processingFailed(
++                    "Cached fused top-K candidate is invalid at \(index): \(candidateId)/\(candidateLogit)"
++                )
++            }
++            if needsTopK {
++                topKIds.append(candidateId)
++                topKLogits.append(candidateLogit)
++            }
++        }
++        guard Int(topKIdsPointer[0]) == predictedToken else {
++            throw ASRError.processingFailed(
++                "Cached fused token/top-K disagreement: \(predictedToken) != \(topKIdsPointer[0])"
++            )
++        }
++
++        var candidateState = state
++        candidateState.hiddenState = hiddenState
++        candidateState.cellState = cellState
++        candidateState.predictorOutput = decoderProjection
++
++        let validationFinished = DispatchTime.now().uptimeNanoseconds
++        let preallocatedStateLogicalBytesWritten =
++            UInt64(
++                hiddenState.count + cellState.count + decoderProjection.count
++            ) * UInt64(MemoryLayout<Float>.size)
++
++        return TdtCachedFusedStep(
++            decoderState: candidateState,
++            predictorOutput: decoderProjection,
++            decision: TdtJointDecision(
++                token: predictedToken,
++                probability: probability,
++                durationBin: durationBin,
++                topKIds: needsTopK ? topKIds : nil,
++                topKLogits: needsTopK ? topKLogits : nil
++            ),
++            decisionFrame: timeIndex,
++            replayState: state,
++            replayToken: token,
++            timing: TdtCachedFusedCallTiming(
++                totalWallNanoseconds: validationFinished - totalStarted,
++                predictionWallNanoseconds: predictionFinished - predictionStarted,
++                hostBeforePredictionNanoseconds: predictionStarted - totalStarted,
++                hostValidationNanoseconds: validationFinished - predictionFinished,
++                detachedStateLogicalBytes: 0,
++                preallocatedStateLogicalBytesWritten: preallocatedStateLogicalBytesWritten,
++                finiteScanWallNanoseconds: finiteScanFinished - finiteScanStarted,
++                backingSlot: backingSlot
++            )
++        )
++    }
++
+     /// Normalize decoder projection into [1, hiddenSize, 1] layout via BLAS copy.
+     ///
+     /// CoreML decoder outputs can have varying layouts ([1, 1, 640] or [1, 640, 1]).
+@@ -263,6 +519,145 @@ internal struct TdtModelInference: Sendable {
+         return value
+     }
+
++    private func requireArray(
++        from output: MLFeatureProvider,
++        key: String,
++        shape: [Int],
++        dataType: MLMultiArrayDataType
++    ) throws -> MLMultiArray {
++        guard let array = output.featureValue(for: key)?.multiArrayValue else {
++            throw ASRError.processingFailed("Cached fused output missing \(key)")
++        }
++        let actualShape = array.shape.map(\.intValue)
++        guard actualShape == shape, array.dataType == dataType else {
++            throw ASRError.processingFailed(
++                "Cached fused output \(key) mismatch: \(actualShape)/\(array.dataType.rawValue)"
++            )
++        }
++        return array
++    }
++
++    private func backedOutputArrays(
++        pool: TdtCachedFusionBackingPool,
++        stateBackings: TdtCachedFusionStateBackingSet
++    ) -> [(name: String, array: MLMultiArray)] {
++        [
++            ("token_id", pool.tokenId),
++            ("token_prob", pool.tokenProbability),
++            ("duration", pool.duration),
++            ("top_k_ids", pool.topKIds),
++            ("top_k_logits", pool.topKLogits),
++            ("decoder", stateBackings.decoderProjection),
++            ("h_out", stateBackings.hiddenState),
++            ("c_out", stateBackings.cellState),
++        ]
++    }
++
++    private func requireExactBackingStrides(
++        expected: [(name: String, array: MLMultiArray)],
++        actual: [(name: String, array: MLMultiArray)]
++    ) throws {
++        for expectedEntry in expected {
++            guard let actualArray = actual.first(where: { $0.name == expectedEntry.name })?.array else {
++                throw ASRError.processingFailed(
++                    "Cached fused output backing missing \(expectedEntry.name)"
++                )
++            }
++            let expectedStrides = expectedEntry.array.strides.map(\.intValue)
++            let actualStrides = actualArray.strides.map(\.intValue)
++            guard actualArray.dataPointer == expectedEntry.array.dataPointer,
++                actualStrides == expectedStrides
++            else {
++                throw ASRError.processingFailed(
++                    "Cached fused output backing pointer/stride mismatch for \(expectedEntry.name)"
++                )
++            }
++        }
++    }
++
++    /// Produce a checked conservative byte span for alias detection. Negative strides and all
++    /// arithmetic overflow fail closed because they cannot support a replay-safety proof.
++    private func memoryRegion(
++        for array: MLMultiArray,
++        name: String
++    ) throws -> TdtCachedFusionMemoryRegion {
++        let elementByteCount: Int
++        switch array.dataType {
++        case .double:
++            elementByteCount = MemoryLayout<Double>.size
++        case .float32:
++            elementByteCount = MemoryLayout<Float>.size
++        case .float16:
++            elementByteCount = MemoryLayout<UInt16>.size
++        case .int32:
++            elementByteCount = MemoryLayout<Int32>.size
++        case .int8:
++            elementByteCount = MemoryLayout<Int8>.size
++        @unknown default:
++            throw ASRError.processingFailed(
++                "Cached fused alias analysis does not support dtype \(array.dataType.rawValue)"
++            )
++        }
++
++        let shape = array.shape.map(\.intValue)
++        let strides = array.strides.map(\.intValue)
++        guard shape.count == strides.count, !shape.isEmpty else {
++            throw ASRError.processingFailed(
++                "Cached fused alias analysis found invalid rank for \(name)"
++            )
++        }
++
++        var maximumElementOffset = 0
++        for (dimension, stride) in zip(shape, strides) {
++            guard dimension > 0, stride >= 0 else {
++                throw ASRError.processingFailed(
++                    "Cached fused alias analysis found unsupported layout for \(name)"
++                )
++            }
++            let (dimensionOffset, productOverflow) = (dimension - 1).multipliedReportingOverflow(
++                by: stride)
++            let (nextMaximum, sumOverflow) = maximumElementOffset.addingReportingOverflow(
++                dimensionOffset)
++            guard !productOverflow, !sumOverflow else {
++                throw ASRError.processingFailed(
++                    "Cached fused alias analysis overflowed for \(name)"
++                )
++            }
++            maximumElementOffset = nextMaximum
++        }
++
++        let (spanElements, spanOverflow) = maximumElementOffset.addingReportingOverflow(1)
++        let (byteCount, byteOverflow) = spanElements.multipliedReportingOverflow(by: elementByteCount)
++        guard !spanOverflow, !byteOverflow, byteCount > 0 else {
++            throw ASRError.processingFailed(
++                "Cached fused alias analysis found invalid span for \(name)"
++            )
++        }
++
++        let lowerBound = UInt(bitPattern: Int(bitPattern: array.dataPointer))
++        let (upperBound, pointerOverflow) = lowerBound.addingReportingOverflow(UInt(byteCount))
++        guard !pointerOverflow else {
++            throw ASRError.processingFailed(
++                "Cached fused alias analysis pointer overflowed for \(name)"
++            )
++        }
++        return TdtCachedFusionMemoryRegion(
++            name: name,
++            lowerBound: lowerBound,
++            upperBound: upperBound
++        )
++    }
++
++    private func requireFinite(_ array: MLMultiArray, name: String) throws {
++        guard array.dataType == .float32 else {
++            throw ASRError.processingFailed("Cached fused output \(name) is not Float32")
++        }
++        let pointer = array.dataPointer.bindMemory(to: Float.self, capacity: array.count)
++        for index in 0..<array.count where !pointer[index].isFinite {
++            throw ASRError.processingFailed("Cached fused output \(name) is non-finite at \(index)")
++        }
++    }
++
+     /// Read a 1D Int32 feature into an `[Int]`, or `nil` if the feature is absent.
+     /// Validates dtype; the 1D contiguous-layout assumption matches the scalar
+     /// extraction paths above (CoreML 1D outputs are row-major contiguous).

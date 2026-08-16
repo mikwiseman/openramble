@@ -1,0 +1,255 @@
+{
+  "artifact_lineage_sha256": "4b976c8be281ed945f0a84064f4c0965d65139c35723f847b72b4c81b89cbc29",
+  "duplicate_stability": {
+    "candidate-10.0": {
+      "count": 200,
+      "duplicate_sha256": "19aa76bd21276a99e7d210cce2735ed1dd516c4b81ccce630b20780e08c094dc",
+      "field_divergence_counts": {
+        "ctc_inference_invocations": 0,
+        "normalized_transcript_sha256": 0,
+        "raw_transcript_sha256": 0,
+        "text": 0,
+        "tokens": 0,
+        "vocabulary_outcome": 0,
+        "words": 0
+      },
+      "primary_sha256": "b661e15bc7dbd6f0eea8a76a1e6eddcdf76cca94b922d239cb3ca7bf82dd62a2",
+      "semantic_divergent_fixture_ids": [],
+      "semantic_exact_count": 200,
+      "semantic_exact_fraction": 1.0
+    },
+    "candidate-12.5": {
+      "count": 300,
+      "duplicate_sha256": "9a61df7364be3491b8108ceadc24ae31bfc3438b15791ced1fd555fa4d67dd4e",
+      "field_divergence_counts": {
+        "ctc_inference_invocations": 0,
+        "normalized_transcript_sha256": 0,
+        "raw_transcript_sha256": 0,
+        "text": 0,
+        "tokens": 0,
+        "vocabulary_outcome": 0,
+        "words": 0
+      },
+      "primary_sha256": "8d1ea4b35f64a1c507b17a0065e4c7005edbd97c5ae658df3708ac9f7bca18a7",
+      "semantic_divergent_fixture_ids": [],
+      "semantic_exact_count": 300,
+      "semantic_exact_fraction": 1.0
+    },
+    "shipping-10.0-subset": {
+      "count": 200,
+      "duplicate_sha256": "aa4dce856eae11dbeaaf21f8617ef6c0c17f19831544c09e49b12afab33924f3",
+      "field_divergence_counts": {
+        "ctc_inference_invocations": 0,
+        "normalized_transcript_sha256": 0,
+        "raw_transcript_sha256": 0,
+        "text": 0,
+        "tokens": 0,
+        "vocabulary_outcome": 0,
+        "words": 0
+      },
+      "primary_sha256": "308ec62fb0843b5ae80b26e5300bf855107ea58c201f3b0d4baa655fcd7d610c",
+      "semantic_divergent_fixture_ids": [],
+      "semantic_exact_count": 200,
+      "semantic_exact_fraction": 1.0
+    },
+    "shipping-12.5-cohort": {
+      "count": 300,
+      "duplicate_sha256": "f2b92733b3ab52f0b715e3a78becdda9cd623fcba2241e8de65e52835a1e341e",
+      "field_divergence_counts": {
+        "ctc_inference_invocations": 0,
+        "normalized_transcript_sha256": 0,
+        "raw_transcript_sha256": 0,
+        "text": 0,
+        "tokens": 0,
+        "vocabulary_outcome": 0,
+        "words": 0
+      },
+      "primary_sha256": "2395eb63d611536cc9c4e9c1d0cf0aa041f38912c35f4287835d39dd06683591",
+      "semantic_divergent_fixture_ids": [],
+      "semantic_exact_count": 300,
+      "semantic_exact_fraction": 1.0
+    }
+  },
+  "engineering_evidence": {
+    "report_path": "$TMP/openramble-short-quality-gate/reports/quality-gate.json",
+    "report_sha256": "a8dcd5b1d2ef977bd1d959b216a471a5611d0f3ecc9def84d5012bb4c0a8358e",
+    "role": "separate development-only 122-reference set; never pooled"
+  },
+  "frozen_gate_reports": {
+    "10.0": {
+      "path": "$TMP/openramble-intermediate-quality-gate/reports/shape-10.0-gate.json",
+      "sha256": "aef6f6add28c4b37345fe5d6e6c40c78e131974bb9eed592abd6bac6aaea9856"
+    },
+    "12.5": {
+      "path": "$TMP/openramble-intermediate-quality-gate/reports/shape-12.5-gate.json",
+      "sha256": "e1d3d6bd7c67e7fd04c915d1ab25a3625327f4689f98e066ff4ef37bf028e815"
+    }
+  },
+  "raw_artifact_index_sha256": "fee13b2e28d59232ea1c6a5f2e458fafc1c497d45f1833063ad5dae9bda64246",
+  "schema_version": 1,
+  "shape_analysis": {
+    "10.0": {
+      "count": 200,
+      "policy_a_candidate_fallback": {
+        "effective": {
+          "micro_cer": 0.0190809968847352,
+          "micro_wer": 0.04611722701576912
+        },
+        "fallback_count": 14,
+        "fallback_fraction": 0.07,
+        "note": "supplemental only; cannot rescue a failed raw preregistered gate",
+        "shipping": {
+          "micro_cer": 0.018079661771250557,
+          "micro_wer": 0.04730734900327284
+        }
+      },
+      "utterances_improved": 12,
+      "utterances_regressed": 9,
+      "utterances_tied": 179,
+      "vocabulary": {
+        "candidate_outcomes": {
+          "no_candidate": 186,
+          "rescored_modified": 10,
+          "rescored_unmodified": 4
+        },
+        "shipping_candidate_short_none_false_negatives": [],
+        "shipping_outcomes": {
+          "no_candidate": 186,
+          "rescored_modified": 10,
+          "rescored_unmodified": 4
+        }
+      },
+      "word_error_delta_distribution": {
+        "-1": 11,
+        "-2": 1,
+        "0": 179,
+        "1": 7,
+        "2": 2
+      },
+      "worst_utterances": [
+        {
+          "candidate_score": {
+            "character_errors": 18,
+            "character_reference_length": 100,
+            "word_errors": 7,
+            "word_reference_length": 18
+          },
+          "candidate_text": "New Kingdom Ancient Egyptians marveled at their pre-predeces' moments which they were well over a thousand years old.",
+          "candidate_word_errors": 7,
+          "character_error_delta": 7,
+          "duration_seconds": 9.0,
+          "fixture_id": "fleurs-holdout-en_us-0285-1631",
+          "language": "en",
+          "reference": "new kingdom ancient egyptians marvelled at their predecessors monuments which were then well over a thousand year old",
+          "shape_candidate": false,
+          "shipping_candidate": false,
+          "shipping_score": {
+            "character_errors": 11,
+            "character_reference_length": 100,
+            "word_errors": 5,
+            "word_reference_length": 18
+          },
+          "shipping_text": "New Kingdom Ancient Egyptians marveled at their predecessors' moments which they were well over a thousand years old.",
+          "shipping_word_errors": 5,
+          "word_error_delta": 2
+        },
+        {
+          "candidate_score": {
+            "character_errors": 5,
+            "character_reference_length": 119,
+            "word_errors": 2,
+            "word_reference_length": 25
+          },
+          "candidate_text": "In many cases, enrolling on a capture course abroad can actually improve your chances of moving into higher education back in your home country.",
+          "candidate_word_errors": 2,
+          "character_error_delta": 5,
+          "duration_seconds": 7.8,
+          "fixture_id": "fleurs-holdout-en_us-0346-1519",
+          "language": "en",
+          "reference": "in many cases enrolling on a gap-year course abroad can actually improve your chances of moving into higher education back in your home country",
+          "shape_candidate": true,
+          "shipping_candidate": true,
+          "shipping_score": {
+            "character_errors": 0,
+            "character_reference_length": 119,
+            "word_errors": 0,
+            "word_reference_length": 25
+          },
+          "shipping_text": "In many cases, enrolling on a gap-year course abroad can actually improve your chances of moving into higher education back in your home country.",
+          "shipping_word_errors": 0,
+          "word_error_delta": 2
+        }
+      ],
+      "worst_word_error_delta": 2
+    },
+    "12.5": {
+      "count": 300,
+      "policy_a_candidate_fallback": {
+        "effective": {
+          "micro_cer": 0.02218383797331166,
+          "micro_wer": 0.05191256830601093
+        },
+        "fallback_count": 28,
+        "fallback_fraction": 0.09333333333333334,
+        "note": "supplemental only; cannot rescue a failed raw preregistered gate",
+        "shipping": {
+          "micro_cer": 0.02343697080539186,
+          "micro_wer": 0.05391621129326048
+        }
+      },
+      "utterances_improved": 13,
+      "utterances_regressed": 6,
+      "utterances_tied": 281,
+      "vocabulary": {
+        "candidate_outcomes": {
+          "no_candidate": 272,
+          "rescored_modified": 22,
+          "rescored_unmodified": 6
+        },
+        "shipping_candidate_short_none_false_negatives": [],
+        "shipping_outcomes": {
+          "no_candidate": 272,
+          "rescored_modified": 22,
+          "rescored_unmodified": 6
+        }
+      },
+      "word_error_delta_distribution": {
+        "-1": 10,
+        "-2": 3,
+        "0": 281,
+        "1": 5,
+        "2": 1
+      },
+      "worst_utterances": [
+        {
+          "candidate_score": {
+            "character_errors": 5,
+            "character_reference_length": 119,
+            "word_errors": 2,
+            "word_reference_length": 25
+          },
+          "candidate_text": "In many cases, enrolling on a capture course abroad can actually improve your chances of moving into higher education back in your home country.",
+          "candidate_word_errors": 2,
+          "character_error_delta": 5,
+          "duration_seconds": 7.8,
+          "fixture_id": "fleurs-holdout-en_us-0346-1519",
+          "language": "en",
+          "reference": "in many cases enrolling on a gap-year course abroad can actually improve your chances of moving into higher education back in your home country",
+          "shape_candidate": true,
+          "shipping_candidate": true,
+          "shipping_score": {
+            "character_errors": 0,
+            "character_reference_length": 119,
+            "word_errors": 0,
+            "word_reference_length": 25
+          },
+          "shipping_text": "In many cases, enrolling on a gap-year course abroad can actually improve your chances of moving into higher education back in your home country.",
+          "shipping_word_errors": 0,
+          "word_error_delta": 2
+        }
+      ],
+      "worst_word_error_delta": 2
+    }
+  },
+  "status": "posthoc_cpu_only_description_after_both_one_shot_evaluators"
+}

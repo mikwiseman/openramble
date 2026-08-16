@@ -15,11 +15,16 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../DictationCore"),
-        // Immutable commit of tag 0.15.5: even the moved upstream tag is not
-        // will change the release build code.
+        // Immutable OpenRamble fork commit based on upstream tag 0.15.5
+        // (19600a485baa4998812e4654b70d2bab8f2c9949). The fork skips a redundant
+        // reset of TDT's fully overwritten fixed-size audio input buffer and
+        // avoids NSNumber boxing at the optional CTC model boundaries. It also
+        // accepts a conservative term-index prefilter for the final rescorer.
+        // The typed Float16 paths carry arch(arm64) guards so the universal
+        // Release archive's x86_64 slice keeps compiling.
         .package(
-            url: "https://github.com/FluidInference/FluidAudio.git",
-            revision: "19600a485baa4998812e4654b70d2bab8f2c9949"
+            url: "https://github.com/mikwiseman/FluidAudio.git",
+            revision: "ad35b9e7f424bc6b2eda45db61302e1599618bfc"
         ),
     ],
     targets: [

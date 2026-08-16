@@ -1,0 +1,8 @@
+{
+  "error": "vm.swapusage used value is not an exact byte count",
+  "normal_pressure_level": 1,
+  "post": null,
+  "pre": null,
+  "schema_version": 1,
+  "swap_delta_bytes": null
+}

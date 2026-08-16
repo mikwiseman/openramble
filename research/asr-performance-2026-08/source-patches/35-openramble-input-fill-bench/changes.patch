@@ -1,0 +1,408 @@
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/CustomVocabulary/WordSpotting/CtcKeywordSpotter+Inference.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/CustomVocabulary/WordSpotting/CtcKeywordSpotter+Inference.swift
+index 074569d3..5da6b6ac 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/CustomVocabulary/WordSpotting/CtcKeywordSpotter+Inference.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/CustomVocabulary/WordSpotting/CtcKeywordSpotter+Inference.swift
+@@ -255,9 +255,42 @@ extension CtcKeywordSpotter {
+             array = try MLMultiArray(shape: [NSNumber(value: maxModelSamples)], dataType: dataType)
+         }
+
+-        // Copy actual samples (MLMultiArray is zero-initialized, so padding is implicit).
+-        for i in 0..<clampedCount {
+-            array[i] = NSNumber(value: audioSamples[i])
++        // Fill the typed backing directly. Linear MLMultiArray subscripting
++        // boxes every sample through NSNumber and is a measurable part of the
++        // optional CTC path for 15-second inputs.
++        switch dataType {
++        case .float32:
++            let destination = array.dataPointer.bindMemory(to: Float.self, capacity: maxModelSamples)
++            if clampedCount > 0 {
++                _ = audioSamples.withUnsafeBufferPointer { source in
++                    memcpy(
++                        destination,
++                        source.baseAddress!,
++                        clampedCount * MemoryLayout<Float>.stride
++                    )
++                }
++            }
++            if clampedCount < maxModelSamples {
++                memset(
++                    destination.advanced(by: clampedCount),
++                    0,
++                    (maxModelSamples - clampedCount) * MemoryLayout<Float>.stride
++                )
++            }
++        case .float16:
++            let destination = array.dataPointer.bindMemory(to: Float16.self, capacity: maxModelSamples)
++            for index in 0..<clampedCount {
++                destination[index] = Float16(audioSamples[index])
++            }
++            if clampedCount < maxModelSamples {
++                memset(
++                    destination.advanced(by: clampedCount),
++                    0,
++                    (maxModelSamples - clampedCount) * MemoryLayout<Float16>.stride
++                )
++            }
++        default:
++            throw ASRError.processingFailed("Unsupported CTC audio input type: \(dataType.rawValue)")
+         }
+
+         if debugMode {
+@@ -359,46 +392,94 @@ extension CtcKeywordSpotter {
+
+         let vocabSize: Int
+         let timeSteps: Int
+-        let indexBuilder: (Int, Int) -> [NSNumber]
++        let timeStride: Int
++        let vocabularyStride: Int
+
+         if rank == 3 {
+             // Expected shape: [1, timeSteps, vocabSize]
+             timeSteps = ctcOutput.shape[1].intValue
+             vocabSize = ctcOutput.shape[2].intValue
+-            indexBuilder = { t, v in [0, t, v].map { NSNumber(value: $0) } }
++            timeStride = ctcOutput.strides[1].intValue
++            vocabularyStride = ctcOutput.strides[2].intValue
+         } else {
+             // Expected shape: [1, vocabSize, 1, timeSteps]
+             vocabSize = ctcOutput.shape[1].intValue
+             timeSteps = ctcOutput.shape[3].intValue
+-            indexBuilder = { t, v in [0, v, 0, t].map { NSNumber(value: $0) } }
++            timeStride = ctcOutput.strides[3].intValue
++            vocabularyStride = ctcOutput.strides[1].intValue
+         }
+
+         if vocabSize <= 0 || timeSteps <= 0 {
+             return []
+         }
+
++        switch ctcOutput.dataType {
++        case .float16:
++            let pointer = ctcOutput.dataPointer.bindMemory(to: Float16.self, capacity: ctcOutput.count)
++            return makeLogProbs(
++                pointer: pointer,
++                timeSteps: timeSteps,
++                vocabSize: vocabSize,
++                timeStride: timeStride,
++                vocabularyStride: vocabularyStride,
++                temperature: temperature,
++                blankBias: blankBias
++            )
++        case .float32:
++            let pointer = ctcOutput.dataPointer.bindMemory(to: Float.self, capacity: ctcOutput.count)
++            return makeLogProbs(
++                pointer: pointer,
++                timeSteps: timeSteps,
++                vocabSize: vocabSize,
++                timeStride: timeStride,
++                vocabularyStride: vocabularyStride,
++                temperature: temperature,
++                blankBias: blankBias
++            )
++        case .double:
++            let pointer = ctcOutput.dataPointer.bindMemory(to: Double.self, capacity: ctcOutput.count)
++            return makeLogProbs(
++                pointer: pointer,
++                timeSteps: timeSteps,
++                vocabSize: vocabSize,
++                timeStride: timeStride,
++                vocabularyStride: vocabularyStride,
++                temperature: temperature,
++                blankBias: blankBias
++            )
++        default:
++            throw ASRError.processingFailed("Unsupported CTC output type: \(ctcOutput.dataType.rawValue)")
++        }
++    }
++
++    private func makeLogProbs<Element: BinaryFloatingPoint>(
++        pointer: UnsafePointer<Element>,
++        timeSteps: Int,
++        vocabSize: Int,
++        timeStride: Int,
++        vocabularyStride: Int,
++        temperature: Float,
++        blankBias: Float
++    ) -> [[Float]] {
+         var logProbs: [[Float]] = Array(
+             repeating: Array(repeating: 0, count: vocabSize),
+             count: timeSteps
+         )
+
+-        // Iterate over time/vocab dimensions, read logits or log-probabilities.
+-        // Apply log-softmax per frame when needed.
+-        for t in 0..<timeSteps {
++        for time in 0..<timeSteps {
+             var logits = [Float](repeating: 0, count: vocabSize)
+-
+-            for v in 0..<vocabSize {
+-                logits[v] = ctcOutput[indexBuilder(t, v)].floatValue
++            let timeOffset = time * timeStride
++            for vocabularyIndex in 0..<vocabSize {
++                logits[vocabularyIndex] = Float(
++                    pointer[timeOffset + vocabularyIndex * vocabularyStride]
++                )
+             }
+
+             var row = logSoftmax(logits, temperature: temperature)
+-
+-            // Apply blank bias: subtract from blank token log prob to penalize it
+             if blankBias != 0.0 && blankId < row.count {
+                 row[blankId] -= blankBias
+             }
+-
+-            logProbs[t] = row
++            logProbs[time] = row
+         }
+
+         return logProbs
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift
+index 48dcc31b..e06f8983 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift
+@@ -4,7 +4,8 @@ import Foundation
+ extension AsrManager {
+
+     internal func executeMLInferenceWithTimings(
+-        _ paddedAudio: [Float],
++        _ audioSamples: [Float],
++        modelInputLength: Int? = nil,
+         originalLength: Int? = nil,
+         actualAudioFrames: Int? = nil,
+         decoderState: inout TdtDecoderState,
+@@ -17,7 +18,10 @@ extension AsrManager {
+     ) async throws -> (hypothesis: TdtHypothesis, encoderSequenceLength: Int) {
+
+         let preprocessorInput = try await preparePreprocessorInput(
+-            paddedAudio, actualLength: originalLength)
++            audioSamples,
++            actualLength: originalLength,
++            paddedTo: modelInputLength
++        )
+
+         let preprocessorAudioArray = preprocessorInput.featureValue(for: "audio_signal")?.multiArrayValue
+
+@@ -61,13 +65,13 @@ extension AsrManager {
+
+             // Calculate actual audio frames if not provided using shared constants
+             let actualFrames =
+-                actualAudioFrames ?? ASRConstants.calculateEncoderFrames(from: originalLength ?? paddedAudio.count)
++                actualAudioFrames ?? ASRConstants.calculateEncoderFrames(from: originalLength ?? audioSamples.count)
+
+             let hypothesis = try await tdtDecodeWithTimings(
+                 encoderOutput: rawEncoderOutput,
+                 encoderSequenceLength: encoderSequenceLength,
+                 actualAudioFrames: actualFrames,
+-                originalAudioSamples: paddedAudio,
++                originalAudioSamples: audioSamples,
+                 decoderState: &decoderState,
+                 contextFrameAdjustment: contextFrameAdjustment,
+                 isLastChunk: isLastChunk,
+@@ -141,16 +145,28 @@ extension AsrManager {
+         _ audioSamples: [Float], allowAlignment: Bool = true
+     ) -> (samples: [Float], frameAlignedLength: Int) {
+         let originalLength = audioSamples.count
++        let frameAlignedLength = frameAlignedSampleCount(originalLength, allowAlignment: allowAlignment)
++        if frameAlignedLength > originalLength {
++            let aligned = audioSamples + Array(repeating: 0, count: frameAlignedLength - originalLength)
++            return (aligned, frameAlignedLength)
++        }
++        return (audioSamples, originalLength)
++    }
++
++    nonisolated internal func frameAlignedSampleCount(
++        _ sampleCount: Int,
++        allowAlignment: Bool = true
++    ) -> Int {
+         let frameAlignedCandidate =
+-            ((originalLength + ASRConstants.samplesPerEncoderFrame - 1)
++            ((sampleCount + ASRConstants.samplesPerEncoderFrame - 1)
+                 / ASRConstants.samplesPerEncoderFrame) * ASRConstants.samplesPerEncoderFrame
+-        if allowAlignment && frameAlignedCandidate > originalLength
+-            && frameAlignedCandidate <= ASRConstants.maxModelSamples
+-        {
+-            let aligned = audioSamples + Array(repeating: 0, count: frameAlignedCandidate - originalLength)
+-            return (aligned, frameAlignedCandidate)
++        guard allowAlignment,
++            frameAlignedCandidate > sampleCount,
++            frameAlignedCandidate <= ASRConstants.maxModelSamples
++        else {
++            return sampleCount
+         }
+-        return (audioSamples, originalLength)
++        return frameAlignedCandidate
+     }
+
+     nonisolated internal func padAudioIfNeeded(_ audioSamples: [Float], targetLength: Int) -> [Float] {
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
+index 4a29727d..083c17cb 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
+@@ -13,10 +13,10 @@ extension AsrManager {
+
+         // Route to appropriate processing method based on audio length
+         if audioSamples.count <= ASRConstants.maxModelSamples {
+-            let (alignedSamples, frameAlignedLength) = frameAlignedAudio(audioSamples)
+-            let paddedAudio: [Float] = padAudioIfNeeded(alignedSamples, targetLength: ASRConstants.maxModelSamples)
++            let frameAlignedLength = frameAlignedSampleCount(audioSamples.count)
+             let (hypothesis, encoderSequenceLength) = try await executeMLInferenceWithTimings(
+-                paddedAudio,
++                audioSamples,
++                modelInputLength: ASRConstants.maxModelSamples,
+                 originalLength: frameAlignedLength,
+                 actualAudioFrames: nil,  // Will be calculated from originalLength
+                 decoderState: &decoderState,
+@@ -61,11 +61,13 @@ extension AsrManager {
+         isLastChunk: Bool = false,
+         language: Language? = nil
+     ) async throws -> (tokens: [Int], timestamps: [Int], confidences: [Float], encoderSequenceLength: Int) {
+-        let (alignedSamples, frameAlignedLength) = frameAlignedAudio(
+-            chunkSamples, allowAlignment: previousTokens.isEmpty)
+-        let padded = padAudioIfNeeded(alignedSamples, targetLength: ASRConstants.maxModelSamples)
++        let frameAlignedLength = frameAlignedSampleCount(
++            chunkSamples.count,
++            allowAlignment: previousTokens.isEmpty
++        )
+         let (hypothesis, encLen) = try await executeMLInferenceWithTimings(
+-            padded,
++            chunkSamples,
++            modelInputLength: ASRConstants.maxModelSamples,
+             originalLength: frameAlignedLength,
+             actualAudioFrames: nil,  // Will be calculated from originalLength
+             decoderState: &decoderState,
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager.swift
+index fd164d73..6f547936 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager.swift
+@@ -155,12 +155,16 @@ public actor AsrManager {
+     }
+
+     func preparePreprocessorInput(
+-        _ audioSamples: [Float], actualLength: Int? = nil
++        _ audioSamples: [Float], actualLength: Int? = nil, paddedTo targetLength: Int? = nil
+     ) async throws
+         -> MLFeatureProvider
+     {
+-        let audioLength = audioSamples.count
+-        let actualAudioLength = actualLength ?? audioLength  // Use provided actual length or default to sample count
++        let audioLength = targetLength ?? audioSamples.count
++        guard audioLength >= audioSamples.count else {
++            throw ASRError.processingFailed(
++                "Preprocessor target length \(audioLength) is shorter than \(audioSamples.count) audio samples")
++        }
++        let actualAudioLength = actualLength ?? audioSamples.count
+
+         // Use ANE-aligned array from cache
+         let audioArray = try await sharedMLArrayCache.getArray(
+@@ -168,10 +172,26 @@ public actor AsrManager {
+             dataType: .float32
+         )
+
+-        // Use optimized memory copy
+-        audioSamples.withUnsafeBufferPointer { buffer in
+-            let destPtr = audioArray.dataPointer.bindMemory(to: Float.self, capacity: audioLength)
+-            memcpy(destPtr, buffer.baseAddress!, audioLength * MemoryLayout<Float>.stride)
++        // Copy the caller's samples once, directly into the fixed-size Core ML
++        // input, then clear only the padding tail. Callers no longer need to
++        // allocate intermediate aligned and model-sized Swift arrays.
++        let destPtr = audioArray.dataPointer.bindMemory(to: Float.self, capacity: audioLength)
++        if !audioSamples.isEmpty {
++            _ = audioSamples.withUnsafeBufferPointer { buffer in
++                memcpy(
++                    destPtr,
++                    buffer.baseAddress!,
++                    audioSamples.count * MemoryLayout<Float>.stride
++                )
++            }
++        }
++        let paddingCount = audioLength - audioSamples.count
++        if paddingCount > 0 {
++            memset(
++                destPtr.advanced(by: audioSamples.count),
++                0,
++                paddingCount * MemoryLayout<Float>.stride
++            )
+         }
+
+         // Pass the actual audio length, not the padded length
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift
+index b5219765..048501ce 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift
+@@ -652,8 +652,6 @@ struct ChunkProcessor {
+     ) async throws -> (tokens: [Int], timestamps: [Int], confidences: [Float], durations: [Int]) {
+         guard !samples.isEmpty else { return ([], [], [], []) }
+
+-        let paddedChunk = manager.padAudioIfNeeded(samples, targetLength: maxModelSamples)
+-
+         // Calculate frame count for the ACTUAL audio (excluding prepended context)
+         let actualAudioSamples = samples.count - contextSamples
+         let actualFrameCount = ASRConstants.calculateEncoderFrames(from: actualAudioSamples)
+@@ -665,7 +663,8 @@ struct ChunkProcessor {
+         let contextFrames = contextSamples / ASRConstants.samplesPerEncoderFrame
+
+         let (hypothesis, encoderSequenceLength) = try await manager.executeMLInferenceWithTimings(
+-            paddedChunk,
++            samples,
++            modelInputLength: maxModelSamples,
+             originalLength: samples.count,  // Full length including context
+             actualAudioFrames: actualFrameCount,  // Only actual audio frames (excluding context)
+             decoderState: &decoderState,
+diff --git a/Tests/FluidAudioTests/ASR/Parakeet/SlidingWindow/TDT/AsrManagerTests.swift b/Tests/FluidAudioTests/ASR/Parakeet/SlidingWindow/TDT/AsrManagerTests.swift
+index 46e8119b..78ae5ad5 100644
+--- a/Tests/FluidAudioTests/ASR/Parakeet/SlidingWindow/TDT/AsrManagerTests.swift
++++ b/Tests/FluidAudioTests/ASR/Parakeet/SlidingWindow/TDT/AsrManagerTests.swift
+@@ -79,6 +79,53 @@ final class AsrManagerTests: XCTestCase {
+         XCTAssertEqual(largeLength[0].intValue, 16000)
+     }
+
++    func testPreparePreprocessorInputPadsDirectlyIntoCachedArray() async throws {
++        await sharedMLArrayCache.clear()
++
++        let dirtyInput = try await manager.preparePreprocessorInput(
++            Array(repeating: 9, count: 8),
++            paddedTo: 8
++        )
++        let dirtyArray = try XCTUnwrap(
++            dirtyInput.featureValue(for: "audio_signal")?.multiArrayValue
++        )
++        await sharedMLArrayCache.returnArray(dirtyArray, resetData: false)
++
++        let input = try await manager.preparePreprocessorInput(
++            [0.25, -0.5, 0.75],
++            actualLength: 4,
++            paddedTo: 8
++        )
++        let signal = try XCTUnwrap(
++            input.featureValue(for: "audio_signal")?.multiArrayValue
++        )
++        XCTAssertEqual(signal.shape, [1, 8] as [NSNumber])
++        XCTAssertEqual(signal[0].floatValue, 0.25, accuracy: 0.0001)
++        XCTAssertEqual(signal[1].floatValue, -0.5, accuracy: 0.0001)
++        XCTAssertEqual(signal[2].floatValue, 0.75, accuracy: 0.0001)
++        for index in 3..<8 {
++            XCTAssertEqual(signal[index].floatValue, 0, accuracy: 0.0001)
++        }
++
++        let length = try XCTUnwrap(
++            input.featureValue(for: "audio_length")?.multiArrayValue
++        )
++        XCTAssertEqual(length[0].intValue, 4)
++    }
++
++    func testPreparePreprocessorInputRejectsShorterTarget() async {
++        do {
++            _ = try await manager.preparePreprocessorInput([1, 2, 3], paddedTo: 2)
++            XCTFail("Expected target-length validation to fail")
++        } catch let error as ASRError {
++            guard case .processingFailed = error else {
++                return XCTFail("Unexpected error: \(error)")
++            }
++        } catch {
++            XCTFail("Unexpected error: \(error)")
++        }
++    }
++
+     // MARK: - Encoder Output Transpose Tests
+
+     // MARK: - Decoder Input Preparation Tests

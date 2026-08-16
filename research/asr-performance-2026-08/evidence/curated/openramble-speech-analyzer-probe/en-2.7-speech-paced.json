@@ -1,0 +1,123 @@
+[
+  {
+    "assetStatus" : "installed",
+    "durationSeconds" : 2.7,
+    "events" : [
+      {
+        "deliveredNS" : 1092932125,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 1.1,
+        "rangeStartSeconds" : 0,
+        "text" : "He"
+      },
+      {
+        "deliveredNS" : 1093254792,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 1.1,
+        "rangeStartSeconds" : 0,
+        "text" : "He built"
+      },
+      {
+        "deliveredNS" : 1093376667,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 1.1,
+        "rangeStartSeconds" : 0,
+        "text" : "He built a"
+      },
+      {
+        "deliveredNS" : 2040142375,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 2.04,
+        "rangeStartSeconds" : 0,
+        "text" : "He built a Wi"
+      },
+      {
+        "deliveredNS" : 2040347083,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 2.04,
+        "rangeStartSeconds" : 0,
+        "text" : "He built a Wi-"
+      },
+      {
+        "deliveredNS" : 2040481667,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 2.04,
+        "rangeStartSeconds" : 0,
+        "text" : "He built a Wi-Fi door"
+      },
+      {
+        "deliveredNS" : 2040604542,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 2.04,
+        "rangeStartSeconds" : 0,
+        "text" : "He built a Wi-Fi doorbell"
+      },
+      {
+        "deliveredNS" : 2040785500,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 2.04,
+        "rangeStartSeconds" : 0,
+        "text" : "He built a Wi-Fi doorbell."
+      },
+      {
+        "deliveredNS" : 2140475833,
+        "finalizationSeconds" : 1.8,
+        "isFinal" : true,
+        "rangeDurationSeconds" : 1.8,
+        "rangeStartSeconds" : 0,
+        "text" : "He built a Wi-Fi doorbell."
+      },
+      {
+        "deliveredNS" : 2720909125,
+        "finalizationSeconds" : 1.8,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 0.9,
+        "rangeStartSeconds" : 1.8,
+        "text" : " he"
+      },
+      {
+        "deliveredNS" : 2721241250,
+        "finalizationSeconds" : 1.8,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 0.9,
+        "rangeStartSeconds" : 1.8,
+        "text" : " he said"
+      },
+      {
+        "deliveredNS" : 2730762667,
+        "finalizationSeconds" : 1.8,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 0.9,
+        "rangeStartSeconds" : 1.8,
+        "text" : " he said."
+      },
+      {
+        "deliveredNS" : 2758039833,
+        "finalizationSeconds" : 2.7,
+        "isFinal" : true,
+        "rangeDurationSeconds" : 0.9,
+        "rangeStartSeconds" : 1.8,
+        "text" : " he said."
+      }
+    ],
+    "feedWallNS" : 2705055708,
+    "finalText" : "He built a Wi-Fi doorbell.  he said.",
+    "fixtureSHA256" : "35e1ce4c8a1238d9439f4a86a600f228ae1c194be1b79e5d86d4893a3769eade",
+    "locale" : "en_US",
+    "model" : "speech",
+    "paced" : true,
+    "prepareNS" : 114485333,
+    "sampleCount" : 43200,
+    "startNS" : 3666,
+    "stopToFinalizeNS" : 60731833,
+    "totalWallNS" : 2880284666
+  }
+]

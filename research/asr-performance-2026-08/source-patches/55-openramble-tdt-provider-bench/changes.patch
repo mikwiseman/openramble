@@ -1,0 +1,40 @@
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtJointInputProvider.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtJointInputProvider.swift
+index e90e45ec..bdfb5d5e 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtJointInputProvider.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtJointInputProvider.swift
+@@ -22,6 +22,11 @@ internal final class ReusableJointInputProvider: NSObject, MLFeatureProvider {
+     /// Decoder feature tensor (shape: [1, decoder_dim])
+     let decoderStep: MLMultiArray
+
++    let featureNames: Set<String> = ["encoder_step", "decoder_step"]
++
++    private let encoderFeatureValue: MLFeatureValue
++    private let decoderFeatureValue: MLFeatureValue
++
+     /// Initialize with pre-allocated encoder and decoder step tensors.
+     ///
+     /// - Parameters:
+@@ -30,19 +35,17 @@ internal final class ReusableJointInputProvider: NSObject, MLFeatureProvider {
+     init(encoderStep: MLMultiArray, decoderStep: MLMultiArray) {
+         self.encoderStep = encoderStep
+         self.decoderStep = decoderStep
++        self.encoderFeatureValue = MLFeatureValue(multiArray: encoderStep)
++        self.decoderFeatureValue = MLFeatureValue(multiArray: decoderStep)
+         super.init()
+     }
+
+-    var featureNames: Set<String> {
+-        ["encoder_step", "decoder_step"]
+-    }
+-
+     func featureValue(for featureName: String) -> MLFeatureValue? {
+         switch featureName {
+         case "encoder_step":
+-            return MLFeatureValue(multiArray: encoderStep)
++            return encoderFeatureValue
+         case "decoder_step":
+-            return MLFeatureValue(multiArray: decoderStep)
++            return decoderFeatureValue
+         default:
+             return nil
+         }

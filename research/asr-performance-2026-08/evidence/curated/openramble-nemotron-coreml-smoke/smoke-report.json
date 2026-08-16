@@ -1,0 +1,3166 @@
+{
+  "computeUnits" : "cpuAndNeuralEngine",
+  "fluidAudioRevision" : "ee9a7f12d91710da53de6d75f8b7160e09eccee4",
+  "generatedAt" : "2026-08-14T19:53:13Z",
+  "loadNS" : 9473929708,
+  "measurements" : [
+    {
+      "finishNS" : 40490083,
+      "fixtureID" : "fleurs-en_us-0000-1548",
+      "language" : "en",
+      "processNS" : 65595708,
+      "processedChunks" : 3,
+      "repetition" : 0,
+      "sampleCount" : 104640,
+      "tokenCount" : 39,
+      "tokenTimings" : [
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "▁W",
+          "tokenId" : 537
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "h",
+          "tokenId" : 85
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "en",
+          "tokenId" : 124
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "▁you",
+          "tokenId" : 2810
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6800000000000002,
+          "startTime" : 1.6,
+          "token" : "▁call",
+          "tokenId" : 2878
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2,
+          "startTime" : 1.92,
+          "token" : "▁some",
+          "tokenId" : 2899
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "on",
+          "tokenId" : 128
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "e",
+          "tokenId" : 26
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.48,
+          "startTime" : 2.4,
+          "token" : "▁who",
+          "tokenId" : 2976
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "▁is",
+          "tokenId" : 1140
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8800000000000003,
+          "startTime" : 2.8000000000000003,
+          "token" : "▁t",
+          "tokenId" : 12945
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8800000000000003,
+          "startTime" : 2.8000000000000003,
+          "token" : "ho",
+          "tokenId" : 276
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8800000000000003,
+          "startTime" : 2.8000000000000003,
+          "token" : "us",
+          "tokenId" : 566
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.96,
+          "startTime" : 2.88,
+          "token" : "and",
+          "tokenId" : 414
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.04,
+          "startTime" : 2.96,
+          "token" : "s",
+          "tokenId" : 40
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.44,
+          "startTime" : 3.36,
+          "token" : "▁of",
+          "tokenId" : 1639
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "mi",
+          "tokenId" : 299
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.6,
+          "startTime" : 3.52,
+          "token" : "les",
+          "tokenId" : 3056
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.8400000000000003,
+          "startTime" : 3.7600000000000002,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.8400000000000003,
+          "startTime" : 3.7600000000000002,
+          "token" : "a",
+          "tokenId" : 38
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "wa",
+          "tokenId" : 1728
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "y",
+          "tokenId" : 129
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.4,
+          "startTime" : 4.32,
+          "token" : ",",
+          "tokenId" : 6
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.48,
+          "token" : "▁you",
+          "tokenId" : 2810
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "'",
+          "tokenId" : 2775
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "re",
+          "tokenId" : 311
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.8,
+          "startTime" : 4.72,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.8,
+          "startTime" : 4.72,
+          "token" : "u",
+          "tokenId" : 68
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.88,
+          "startTime" : 4.8,
+          "token" : "si",
+          "tokenId" : 819
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.88,
+          "startTime" : 4.8,
+          "token" : "ng",
+          "tokenId" : 2959
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.96,
+          "startTime" : 4.88,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.96,
+          "startTime" : 4.88,
+          "token" : "a",
+          "tokenId" : 38
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.2,
+          "startTime" : 5.12,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.2,
+          "startTime" : 5.12,
+          "token" : "s",
+          "tokenId" : 40
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.2,
+          "startTime" : 5.12,
+          "token" : "at",
+          "tokenId" : 416
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.44,
+          "startTime" : 5.36,
+          "token" : "el",
+          "tokenId" : 436
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.6000000000000005,
+          "startTime" : 5.5200000000000005,
+          "token" : "li",
+          "tokenId" : 262
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.6000000000000005,
+          "startTime" : 5.5200000000000005,
+          "token" : "te",
+          "tokenId" : 274
+        }
+      ],
+      "totalNS" : 106085875,
+      "transcript" : "When you call someone who is thousands of miles away, you're using a satellite"
+    },
+    {
+      "finishNS" : 38019334,
+      "fixtureID" : "fleurs-en_us-0003-1578",
+      "language" : "en",
+      "processNS" : 40816916,
+      "processedChunks" : 2,
+      "repetition" : 0,
+      "sampleCount" : 66240,
+      "tokenCount" : 25,
+      "tokenTimings" : [
+        {
+          "confidence" : 1,
+          "endTime" : 1.2000000000000002,
+          "startTime" : 1.12,
+          "token" : "▁The",
+          "tokenId" : 2845
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.2000000000000002,
+          "startTime" : 1.12,
+          "token" : "n",
+          "tokenId" : 113
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "lo",
+          "tokenId" : 290
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.4400000000000002,
+          "startTime" : 1.36,
+          "token" : "ck",
+          "tokenId" : 550
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "a",
+          "tokenId" : 38
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6800000000000002,
+          "startTime" : 1.6,
+          "token" : "▁thing",
+          "tokenId" : 2977
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.84,
+          "startTime" : 1.76,
+          "token" : "▁t",
+          "tokenId" : 12945
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.84,
+          "startTime" : 1.76,
+          "token" : "o",
+          "tokenId" : 46
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2,
+          "startTime" : 1.92,
+          "token" : "▁del",
+          "tokenId" : 1305
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "e",
+          "tokenId" : 26
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.3200000000000003,
+          "startTime" : 2.24,
+          "token" : "te",
+          "tokenId" : 274
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.48,
+          "startTime" : 2.4,
+          "token" : "▁and",
+          "tokenId" : 2812
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.56,
+          "startTime" : 2.48,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.56,
+          "startTime" : 2.48,
+          "token" : "si",
+          "tokenId" : 819
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "ng",
+          "tokenId" : 2959
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8000000000000003,
+          "startTime" : 2.72,
+          "token" : "i",
+          "tokenId" : 47
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8000000000000003,
+          "startTime" : 2.72,
+          "token" : "ng",
+          "tokenId" : 2959
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.96,
+          "startTime" : 2.88,
+          "token" : "▁the",
+          "tokenId" : 150
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.7600000000000002,
+          "startTime" : 3.68,
+          "token" : "▁Pa",
+          "tokenId" : 9599
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4,
+          "startTime" : 3.92,
+          "token" : "s",
+          "tokenId" : 40
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4,
+          "startTime" : 3.92,
+          "token" : "h",
+          "tokenId" : 85
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.16,
+          "startTime" : 4.08,
+          "token" : "an",
+          "tokenId" : 131
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.4,
+          "startTime" : 4.32,
+          "token" : "s",
+          "tokenId" : 40
+        }
+      ],
+      "totalNS" : 78836291,
+      "transcript" : "Then lock a thing to delete and singing the Pashans"
+    },
+    {
+      "finishNS" : 34991584,
+      "fixtureID" : "fleurs-ru_ru-0006-1587",
+      "language" : "ru",
+      "processNS" : 65761333,
+      "processedChunks" : 3,
+      "repetition" : 0,
+      "sampleCount" : 76800,
+      "tokenCount" : 36,
+      "tokenTimings" : [
+        {
+          "confidence" : 1,
+          "endTime" : 1.2000000000000002,
+          "startTime" : 1.12,
+          "token" : "▁О",
+          "tokenId" : 9637
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.28,
+          "startTime" : 1.2,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.28,
+          "startTime" : 1.2,
+          "token" : "пер",
+          "tokenId" : 2080
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "вы",
+          "tokenId" : 2069
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "х",
+          "tokenId" : 62
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "с",
+          "tokenId" : 8
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "луч",
+          "tokenId" : 2082
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6,
+          "startTime" : 1.52,
+          "token" : "а",
+          "tokenId" : 7
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6800000000000002,
+          "startTime" : 1.6,
+          "token" : "я",
+          "tokenId" : 13
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.76,
+          "startTime" : 1.68,
+          "token" : "х",
+          "tokenId" : 62
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.9200000000000002,
+          "startTime" : 1.84,
+          "token" : "▁за",
+          "tokenId" : 28
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.08,
+          "startTime" : 2,
+          "token" : "бо",
+          "tokenId" : 2042
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "ле",
+          "tokenId" : 81
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.24,
+          "startTime" : 2.16,
+          "token" : "ва",
+          "tokenId" : 23
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.3200000000000003,
+          "startTime" : 2.24,
+          "token" : "ния",
+          "tokenId" : 96
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.48,
+          "startTime" : 2.4,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.48,
+          "startTime" : 2.4,
+          "token" : "в",
+          "tokenId" : 43
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.64,
+          "startTime" : 2.56,
+          "token" : "▁это",
+          "tokenId" : 2025
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "м",
+          "tokenId" : 30
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8800000000000003,
+          "startTime" : 2.8000000000000003,
+          "token" : "▁сезон",
+          "tokenId" : 9660
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.2800000000000002,
+          "startTime" : 3.2,
+          "token" : "е",
+          "tokenId" : 5
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "▁бы",
+          "tokenId" : 2039
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.6,
+          "startTime" : 3.52,
+          "token" : "ло",
+          "tokenId" : 100
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.7600000000000002,
+          "startTime" : 3.68,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.7600000000000002,
+          "startTime" : 3.68,
+          "token" : "со",
+          "tokenId" : 2481
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "о",
+          "tokenId" : 9
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "б",
+          "tokenId" : 53
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4,
+          "startTime" : 3.92,
+          "token" : "ще",
+          "tokenId" : 80
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.16,
+          "startTime" : 4.08,
+          "token" : "но",
+          "tokenId" : 29
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.4,
+          "startTime" : 4.32,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.4,
+          "startTime" : 4.32,
+          "token" : "в",
+          "tokenId" : 43
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.48,
+          "startTime" : 4.4,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.48,
+          "startTime" : 4.4,
+          "token" : "и",
+          "tokenId" : 3
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.48,
+          "token" : "ю",
+          "tokenId" : 175
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.8,
+          "startTime" : 4.72,
+          "token" : "ле",
+          "tokenId" : 81
+        }
+      ],
+      "totalNS" : 100752917,
+      "transcript" : "О первых случаях заболевания в этом сезоне было сообщено в июле"
+    },
+    {
+      "finishNS" : 33767750,
+      "fixtureID" : "fleurs-ru_ru-0012-1560",
+      "language" : "ru",
+      "processNS" : 88269333,
+      "processedChunks" : 4,
+      "repetition" : 0,
+      "sampleCount" : 113280,
+      "tokenCount" : 42,
+      "tokenTimings" : [
+        {
+          "confidence" : 1,
+          "endTime" : 1.2000000000000002,
+          "startTime" : 1.12,
+          "token" : "▁Как",
+          "tokenId" : 9661
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.4400000000000002,
+          "startTime" : 1.36,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.4400000000000002,
+          "startTime" : 1.36,
+          "token" : "то",
+          "tokenId" : 20
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "ль",
+          "tokenId" : 2029
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "ко",
+          "tokenId" : 44
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6800000000000002,
+          "startTime" : 1.6,
+          "token" : "▁вы",
+          "tokenId" : 2038
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.9200000000000002,
+          "startTime" : 1.84,
+          "token" : "▁вы",
+          "tokenId" : 2038
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.08,
+          "startTime" : 2,
+          "token" : "й",
+          "tokenId" : 79
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "де",
+          "tokenId" : 83
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.3200000000000003,
+          "startTime" : 2.24,
+          "token" : "те",
+          "tokenId" : 50
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.4,
+          "startTime" : 2.32,
+          "token" : "▁из",
+          "tokenId" : 90
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "те",
+          "tokenId" : 50
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8000000000000003,
+          "startTime" : 2.72,
+          "token" : "ч",
+          "tokenId" : 58
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8000000000000003,
+          "startTime" : 2.72,
+          "token" : "ение",
+          "tokenId" : 99
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.2,
+          "startTime" : 3.12,
+          "token" : ",",
+          "tokenId" : 6
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "п",
+          "tokenId" : 36
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "л",
+          "tokenId" : 16
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "ы",
+          "tokenId" : 2023
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.68,
+          "startTime" : 3.6,
+          "token" : "ть",
+          "tokenId" : 2024
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.7600000000000002,
+          "startTime" : 3.68,
+          "token" : "▁об",
+          "tokenId" : 112
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.8400000000000003,
+          "startTime" : 3.7600000000000002,
+          "token" : "ра",
+          "tokenId" : 24
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "т",
+          "tokenId" : 11
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "но",
+          "tokenId" : 29
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.08,
+          "startTime" : 4,
+          "token" : "▁будет",
+          "tokenId" : 2086
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.48,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.48,
+          "token" : "не",
+          "tokenId" : 39
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "т",
+          "tokenId" : 11
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "ру",
+          "tokenId" : 2041
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.72,
+          "startTime" : 4.64,
+          "token" : "д",
+          "tokenId" : 25
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.8,
+          "startTime" : 4.72,
+          "token" : "не",
+          "tokenId" : 39
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.88,
+          "startTime" : 4.8,
+          "token" : "е",
+          "tokenId" : 5
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.28,
+          "startTime" : 5.2,
+          "token" : ",",
+          "tokenId" : 6
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.36,
+          "startTime" : 5.28,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.36,
+          "startTime" : 5.28,
+          "token" : "че",
+          "tokenId" : 52
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.6000000000000005,
+          "startTime" : 5.5200000000000005,
+          "token" : "м",
+          "tokenId" : 30
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.680000000000001,
+          "startTime" : 5.6000000000000005,
+          "token" : "▁об",
+          "tokenId" : 112
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.76,
+          "startTime" : 5.68,
+          "token" : "ы",
+          "tokenId" : 2023
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.92,
+          "startTime" : 5.84,
+          "token" : "ч",
+          "tokenId" : 58
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.92,
+          "startTime" : 5.84,
+          "token" : "но",
+          "tokenId" : 29
+        }
+      ],
+      "totalNS" : 122037125,
+      "transcript" : "Как только вы выйдете из течение, плыть обратно будет не труднее, чем обычно"
+    },
+    {
+      "finishNS" : 38340250,
+      "fixtureID" : "fleurs-en_us-0000-1548",
+      "language" : "en",
+      "processNS" : 63877541,
+      "processedChunks" : 3,
+      "repetition" : 1,
+      "sampleCount" : 104640,
+      "tokenCount" : 39,
+      "tokenTimings" : [
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "▁W",
+          "tokenId" : 537
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "h",
+          "tokenId" : 85
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "en",
+          "tokenId" : 124
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "▁you",
+          "tokenId" : 2810
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6800000000000002,
+          "startTime" : 1.6,
+          "token" : "▁call",
+          "tokenId" : 2878
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2,
+          "startTime" : 1.92,
+          "token" : "▁some",
+          "tokenId" : 2899
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "on",
+          "tokenId" : 128
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "e",
+          "tokenId" : 26
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.48,
+          "startTime" : 2.4,
+          "token" : "▁who",
+          "tokenId" : 2976
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "▁is",
+          "tokenId" : 1140
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8800000000000003,
+          "startTime" : 2.8000000000000003,
+          "token" : "▁t",
+          "tokenId" : 12945
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8800000000000003,
+          "startTime" : 2.8000000000000003,
+          "token" : "ho",
+          "tokenId" : 276
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8800000000000003,
+          "startTime" : 2.8000000000000003,
+          "token" : "us",
+          "tokenId" : 566
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.96,
+          "startTime" : 2.88,
+          "token" : "and",
+          "tokenId" : 414
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.04,
+          "startTime" : 2.96,
+          "token" : "s",
+          "tokenId" : 40
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.44,
+          "startTime" : 3.36,
+          "token" : "▁of",
+          "tokenId" : 1639
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "mi",
+          "tokenId" : 299
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.6,
+          "startTime" : 3.52,
+          "token" : "les",
+          "tokenId" : 3056
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.8400000000000003,
+          "startTime" : 3.7600000000000002,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.8400000000000003,
+          "startTime" : 3.7600000000000002,
+          "token" : "a",
+          "tokenId" : 38
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "wa",
+          "tokenId" : 1728
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "y",
+          "tokenId" : 129
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.4,
+          "startTime" : 4.32,
+          "token" : ",",
+          "tokenId" : 6
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.48,
+          "token" : "▁you",
+          "tokenId" : 2810
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "'",
+          "tokenId" : 2775
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "re",
+          "tokenId" : 311
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.8,
+          "startTime" : 4.72,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.8,
+          "startTime" : 4.72,
+          "token" : "u",
+          "tokenId" : 68
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.88,
+          "startTime" : 4.8,
+          "token" : "si",
+          "tokenId" : 819
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.88,
+          "startTime" : 4.8,
+          "token" : "ng",
+          "tokenId" : 2959
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.96,
+          "startTime" : 4.88,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.96,
+          "startTime" : 4.88,
+          "token" : "a",
+          "tokenId" : 38
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.2,
+          "startTime" : 5.12,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.2,
+          "startTime" : 5.12,
+          "token" : "s",
+          "tokenId" : 40
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.2,
+          "startTime" : 5.12,
+          "token" : "at",
+          "tokenId" : 416
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.44,
+          "startTime" : 5.36,
+          "token" : "el",
+          "tokenId" : 436
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.6000000000000005,
+          "startTime" : 5.5200000000000005,
+          "token" : "li",
+          "tokenId" : 262
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.6000000000000005,
+          "startTime" : 5.5200000000000005,
+          "token" : "te",
+          "tokenId" : 274
+        }
+      ],
+      "totalNS" : 102217791,
+      "transcript" : "When you call someone who is thousands of miles away, you're using a satellite"
+    },
+    {
+      "finishNS" : 39925375,
+      "fixtureID" : "fleurs-en_us-0003-1578",
+      "language" : "en",
+      "processNS" : 38562000,
+      "processedChunks" : 2,
+      "repetition" : 1,
+      "sampleCount" : 66240,
+      "tokenCount" : 25,
+      "tokenTimings" : [
+        {
+          "confidence" : 1,
+          "endTime" : 1.2000000000000002,
+          "startTime" : 1.12,
+          "token" : "▁The",
+          "tokenId" : 2845
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.2000000000000002,
+          "startTime" : 1.12,
+          "token" : "n",
+          "tokenId" : 113
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "lo",
+          "tokenId" : 290
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.4400000000000002,
+          "startTime" : 1.36,
+          "token" : "ck",
+          "tokenId" : 550
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "a",
+          "tokenId" : 38
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6800000000000002,
+          "startTime" : 1.6,
+          "token" : "▁thing",
+          "tokenId" : 2977
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.84,
+          "startTime" : 1.76,
+          "token" : "▁t",
+          "tokenId" : 12945
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.84,
+          "startTime" : 1.76,
+          "token" : "o",
+          "tokenId" : 46
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2,
+          "startTime" : 1.92,
+          "token" : "▁del",
+          "tokenId" : 1305
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "e",
+          "tokenId" : 26
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.3200000000000003,
+          "startTime" : 2.24,
+          "token" : "te",
+          "tokenId" : 274
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.48,
+          "startTime" : 2.4,
+          "token" : "▁and",
+          "tokenId" : 2812
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.56,
+          "startTime" : 2.48,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.56,
+          "startTime" : 2.48,
+          "token" : "si",
+          "tokenId" : 819
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "ng",
+          "tokenId" : 2959
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8000000000000003,
+          "startTime" : 2.72,
+          "token" : "i",
+          "tokenId" : 47
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8000000000000003,
+          "startTime" : 2.72,
+          "token" : "ng",
+          "tokenId" : 2959
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.96,
+          "startTime" : 2.88,
+          "token" : "▁the",
+          "tokenId" : 150
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.7600000000000002,
+          "startTime" : 3.68,
+          "token" : "▁Pa",
+          "tokenId" : 9599
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4,
+          "startTime" : 3.92,
+          "token" : "s",
+          "tokenId" : 40
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4,
+          "startTime" : 3.92,
+          "token" : "h",
+          "tokenId" : 85
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.16,
+          "startTime" : 4.08,
+          "token" : "an",
+          "tokenId" : 131
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.4,
+          "startTime" : 4.32,
+          "token" : "s",
+          "tokenId" : 40
+        }
+      ],
+      "totalNS" : 78487416,
+      "transcript" : "Then lock a thing to delete and singing the Pashans"
+    },
+    {
+      "finishNS" : 33449875,
+      "fixtureID" : "fleurs-ru_ru-0006-1587",
+      "language" : "ru",
+      "processNS" : 70251000,
+      "processedChunks" : 3,
+      "repetition" : 1,
+      "sampleCount" : 76800,
+      "tokenCount" : 36,
+      "tokenTimings" : [
+        {
+          "confidence" : 1,
+          "endTime" : 1.2000000000000002,
+          "startTime" : 1.12,
+          "token" : "▁О",
+          "tokenId" : 9637
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.28,
+          "startTime" : 1.2,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.28,
+          "startTime" : 1.2,
+          "token" : "пер",
+          "tokenId" : 2080
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "вы",
+          "tokenId" : 2069
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "х",
+          "tokenId" : 62
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "с",
+          "tokenId" : 8
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "луч",
+          "tokenId" : 2082
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6,
+          "startTime" : 1.52,
+          "token" : "а",
+          "tokenId" : 7
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6800000000000002,
+          "startTime" : 1.6,
+          "token" : "я",
+          "tokenId" : 13
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.76,
+          "startTime" : 1.68,
+          "token" : "х",
+          "tokenId" : 62
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.9200000000000002,
+          "startTime" : 1.84,
+          "token" : "▁за",
+          "tokenId" : 28
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.08,
+          "startTime" : 2,
+          "token" : "бо",
+          "tokenId" : 2042
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "ле",
+          "tokenId" : 81
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.24,
+          "startTime" : 2.16,
+          "token" : "ва",
+          "tokenId" : 23
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.3200000000000003,
+          "startTime" : 2.24,
+          "token" : "ния",
+          "tokenId" : 96
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.48,
+          "startTime" : 2.4,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.48,
+          "startTime" : 2.4,
+          "token" : "в",
+          "tokenId" : 43
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.64,
+          "startTime" : 2.56,
+          "token" : "▁это",
+          "tokenId" : 2025
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "м",
+          "tokenId" : 30
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8800000000000003,
+          "startTime" : 2.8000000000000003,
+          "token" : "▁сезон",
+          "tokenId" : 9660
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.2800000000000002,
+          "startTime" : 3.2,
+          "token" : "е",
+          "tokenId" : 5
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "▁бы",
+          "tokenId" : 2039
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.6,
+          "startTime" : 3.52,
+          "token" : "ло",
+          "tokenId" : 100
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.7600000000000002,
+          "startTime" : 3.68,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.7600000000000002,
+          "startTime" : 3.68,
+          "token" : "со",
+          "tokenId" : 2481
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "о",
+          "tokenId" : 9
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "б",
+          "tokenId" : 53
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4,
+          "startTime" : 3.92,
+          "token" : "ще",
+          "tokenId" : 80
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.16,
+          "startTime" : 4.08,
+          "token" : "но",
+          "tokenId" : 29
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.4,
+          "startTime" : 4.32,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.4,
+          "startTime" : 4.32,
+          "token" : "в",
+          "tokenId" : 43
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.48,
+          "startTime" : 4.4,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.48,
+          "startTime" : 4.4,
+          "token" : "и",
+          "tokenId" : 3
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.48,
+          "token" : "ю",
+          "tokenId" : 175
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.8,
+          "startTime" : 4.72,
+          "token" : "ле",
+          "tokenId" : 81
+        }
+      ],
+      "totalNS" : 103700917,
+      "transcript" : "О первых случаях заболевания в этом сезоне было сообщено в июле"
+    },
+    {
+      "finishNS" : 32685875,
+      "fixtureID" : "fleurs-ru_ru-0012-1560",
+      "language" : "ru",
+      "processNS" : 87197250,
+      "processedChunks" : 4,
+      "repetition" : 1,
+      "sampleCount" : 113280,
+      "tokenCount" : 42,
+      "tokenTimings" : [
+        {
+          "confidence" : 1,
+          "endTime" : 1.2000000000000002,
+          "startTime" : 1.12,
+          "token" : "▁Как",
+          "tokenId" : 9661
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.4400000000000002,
+          "startTime" : 1.36,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.4400000000000002,
+          "startTime" : 1.36,
+          "token" : "то",
+          "tokenId" : 20
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "ль",
+          "tokenId" : 2029
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "ко",
+          "tokenId" : 44
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6800000000000002,
+          "startTime" : 1.6,
+          "token" : "▁вы",
+          "tokenId" : 2038
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.9200000000000002,
+          "startTime" : 1.84,
+          "token" : "▁вы",
+          "tokenId" : 2038
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.08,
+          "startTime" : 2,
+          "token" : "й",
+          "tokenId" : 79
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "де",
+          "tokenId" : 83
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.3200000000000003,
+          "startTime" : 2.24,
+          "token" : "те",
+          "tokenId" : 50
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.4,
+          "startTime" : 2.32,
+          "token" : "▁из",
+          "tokenId" : 90
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "те",
+          "tokenId" : 50
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8000000000000003,
+          "startTime" : 2.72,
+          "token" : "ч",
+          "tokenId" : 58
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8000000000000003,
+          "startTime" : 2.72,
+          "token" : "ение",
+          "tokenId" : 99
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.2,
+          "startTime" : 3.12,
+          "token" : ",",
+          "tokenId" : 6
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "п",
+          "tokenId" : 36
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "л",
+          "tokenId" : 16
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "ы",
+          "tokenId" : 2023
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.68,
+          "startTime" : 3.6,
+          "token" : "ть",
+          "tokenId" : 2024
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.7600000000000002,
+          "startTime" : 3.68,
+          "token" : "▁об",
+          "tokenId" : 112
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.8400000000000003,
+          "startTime" : 3.7600000000000002,
+          "token" : "ра",
+          "tokenId" : 24
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "т",
+          "tokenId" : 11
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "но",
+          "tokenId" : 29
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.08,
+          "startTime" : 4,
+          "token" : "▁будет",
+          "tokenId" : 2086
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.48,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.48,
+          "token" : "не",
+          "tokenId" : 39
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "т",
+          "tokenId" : 11
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "ру",
+          "tokenId" : 2041
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.72,
+          "startTime" : 4.64,
+          "token" : "д",
+          "tokenId" : 25
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.8,
+          "startTime" : 4.72,
+          "token" : "не",
+          "tokenId" : 39
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.88,
+          "startTime" : 4.8,
+          "token" : "е",
+          "tokenId" : 5
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.28,
+          "startTime" : 5.2,
+          "token" : ",",
+          "tokenId" : 6
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.36,
+          "startTime" : 5.28,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.36,
+          "startTime" : 5.28,
+          "token" : "че",
+          "tokenId" : 52
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.6000000000000005,
+          "startTime" : 5.5200000000000005,
+          "token" : "м",
+          "tokenId" : 30
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.680000000000001,
+          "startTime" : 5.6000000000000005,
+          "token" : "▁об",
+          "tokenId" : 112
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.76,
+          "startTime" : 5.68,
+          "token" : "ы",
+          "tokenId" : 2023
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.92,
+          "startTime" : 5.84,
+          "token" : "ч",
+          "tokenId" : 58
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.92,
+          "startTime" : 5.84,
+          "token" : "но",
+          "tokenId" : 29
+        }
+      ],
+      "totalNS" : 119883166,
+      "transcript" : "Как только вы выйдете из течение, плыть обратно будет не труднее, чем обычно"
+    },
+    {
+      "finishNS" : 39288125,
+      "fixtureID" : "fleurs-en_us-0000-1548",
+      "language" : "en",
+      "processNS" : 60250667,
+      "processedChunks" : 3,
+      "repetition" : 2,
+      "sampleCount" : 104640,
+      "tokenCount" : 39,
+      "tokenTimings" : [
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "▁W",
+          "tokenId" : 537
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "h",
+          "tokenId" : 85
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "en",
+          "tokenId" : 124
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "▁you",
+          "tokenId" : 2810
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6800000000000002,
+          "startTime" : 1.6,
+          "token" : "▁call",
+          "tokenId" : 2878
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2,
+          "startTime" : 1.92,
+          "token" : "▁some",
+          "tokenId" : 2899
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "on",
+          "tokenId" : 128
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "e",
+          "tokenId" : 26
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.48,
+          "startTime" : 2.4,
+          "token" : "▁who",
+          "tokenId" : 2976
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "▁is",
+          "tokenId" : 1140
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8800000000000003,
+          "startTime" : 2.8000000000000003,
+          "token" : "▁t",
+          "tokenId" : 12945
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8800000000000003,
+          "startTime" : 2.8000000000000003,
+          "token" : "ho",
+          "tokenId" : 276
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8800000000000003,
+          "startTime" : 2.8000000000000003,
+          "token" : "us",
+          "tokenId" : 566
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.96,
+          "startTime" : 2.88,
+          "token" : "and",
+          "tokenId" : 414
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.04,
+          "startTime" : 2.96,
+          "token" : "s",
+          "tokenId" : 40
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.44,
+          "startTime" : 3.36,
+          "token" : "▁of",
+          "tokenId" : 1639
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "mi",
+          "tokenId" : 299
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.6,
+          "startTime" : 3.52,
+          "token" : "les",
+          "tokenId" : 3056
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.8400000000000003,
+          "startTime" : 3.7600000000000002,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.8400000000000003,
+          "startTime" : 3.7600000000000002,
+          "token" : "a",
+          "tokenId" : 38
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "wa",
+          "tokenId" : 1728
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "y",
+          "tokenId" : 129
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.4,
+          "startTime" : 4.32,
+          "token" : ",",
+          "tokenId" : 6
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.48,
+          "token" : "▁you",
+          "tokenId" : 2810
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "'",
+          "tokenId" : 2775
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "re",
+          "tokenId" : 311
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.8,
+          "startTime" : 4.72,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.8,
+          "startTime" : 4.72,
+          "token" : "u",
+          "tokenId" : 68
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.88,
+          "startTime" : 4.8,
+          "token" : "si",
+          "tokenId" : 819
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.88,
+          "startTime" : 4.8,
+          "token" : "ng",
+          "tokenId" : 2959
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.96,
+          "startTime" : 4.88,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.96,
+          "startTime" : 4.88,
+          "token" : "a",
+          "tokenId" : 38
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.2,
+          "startTime" : 5.12,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.2,
+          "startTime" : 5.12,
+          "token" : "s",
+          "tokenId" : 40
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.2,
+          "startTime" : 5.12,
+          "token" : "at",
+          "tokenId" : 416
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.44,
+          "startTime" : 5.36,
+          "token" : "el",
+          "tokenId" : 436
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.6000000000000005,
+          "startTime" : 5.5200000000000005,
+          "token" : "li",
+          "tokenId" : 262
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.6000000000000005,
+          "startTime" : 5.5200000000000005,
+          "token" : "te",
+          "tokenId" : 274
+        }
+      ],
+      "totalNS" : 99538834,
+      "transcript" : "When you call someone who is thousands of miles away, you're using a satellite"
+    },
+    {
+      "finishNS" : 39364416,
+      "fixtureID" : "fleurs-en_us-0003-1578",
+      "language" : "en",
+      "processNS" : 39176333,
+      "processedChunks" : 2,
+      "repetition" : 2,
+      "sampleCount" : 66240,
+      "tokenCount" : 25,
+      "tokenTimings" : [
+        {
+          "confidence" : 1,
+          "endTime" : 1.2000000000000002,
+          "startTime" : 1.12,
+          "token" : "▁The",
+          "tokenId" : 2845
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.2000000000000002,
+          "startTime" : 1.12,
+          "token" : "n",
+          "tokenId" : 113
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "lo",
+          "tokenId" : 290
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.4400000000000002,
+          "startTime" : 1.36,
+          "token" : "ck",
+          "tokenId" : 550
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "a",
+          "tokenId" : 38
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6800000000000002,
+          "startTime" : 1.6,
+          "token" : "▁thing",
+          "tokenId" : 2977
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.84,
+          "startTime" : 1.76,
+          "token" : "▁t",
+          "tokenId" : 12945
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.84,
+          "startTime" : 1.76,
+          "token" : "o",
+          "tokenId" : 46
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2,
+          "startTime" : 1.92,
+          "token" : "▁del",
+          "tokenId" : 1305
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "e",
+          "tokenId" : 26
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.3200000000000003,
+          "startTime" : 2.24,
+          "token" : "te",
+          "tokenId" : 274
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.48,
+          "startTime" : 2.4,
+          "token" : "▁and",
+          "tokenId" : 2812
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.56,
+          "startTime" : 2.48,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.56,
+          "startTime" : 2.48,
+          "token" : "si",
+          "tokenId" : 819
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "ng",
+          "tokenId" : 2959
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8000000000000003,
+          "startTime" : 2.72,
+          "token" : "i",
+          "tokenId" : 47
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8000000000000003,
+          "startTime" : 2.72,
+          "token" : "ng",
+          "tokenId" : 2959
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.96,
+          "startTime" : 2.88,
+          "token" : "▁the",
+          "tokenId" : 150
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.7600000000000002,
+          "startTime" : 3.68,
+          "token" : "▁Pa",
+          "tokenId" : 9599
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4,
+          "startTime" : 3.92,
+          "token" : "s",
+          "tokenId" : 40
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4,
+          "startTime" : 3.92,
+          "token" : "h",
+          "tokenId" : 85
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.16,
+          "startTime" : 4.08,
+          "token" : "an",
+          "tokenId" : 131
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.4,
+          "startTime" : 4.32,
+          "token" : "s",
+          "tokenId" : 40
+        }
+      ],
+      "totalNS" : 78540833,
+      "transcript" : "Then lock a thing to delete and singing the Pashans"
+    },
+    {
+      "finishNS" : 29700875,
+      "fixtureID" : "fleurs-ru_ru-0006-1587",
+      "language" : "ru",
+      "processNS" : 66990541,
+      "processedChunks" : 3,
+      "repetition" : 2,
+      "sampleCount" : 76800,
+      "tokenCount" : 36,
+      "tokenTimings" : [
+        {
+          "confidence" : 1,
+          "endTime" : 1.2000000000000002,
+          "startTime" : 1.12,
+          "token" : "▁О",
+          "tokenId" : 9637
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.28,
+          "startTime" : 1.2,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.28,
+          "startTime" : 1.2,
+          "token" : "пер",
+          "tokenId" : 2080
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "вы",
+          "tokenId" : 2069
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "х",
+          "tokenId" : 62
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "с",
+          "tokenId" : 8
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "луч",
+          "tokenId" : 2082
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6,
+          "startTime" : 1.52,
+          "token" : "а",
+          "tokenId" : 7
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6800000000000002,
+          "startTime" : 1.6,
+          "token" : "я",
+          "tokenId" : 13
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.76,
+          "startTime" : 1.68,
+          "token" : "х",
+          "tokenId" : 62
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.9200000000000002,
+          "startTime" : 1.84,
+          "token" : "▁за",
+          "tokenId" : 28
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.08,
+          "startTime" : 2,
+          "token" : "бо",
+          "tokenId" : 2042
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "ле",
+          "tokenId" : 81
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.24,
+          "startTime" : 2.16,
+          "token" : "ва",
+          "tokenId" : 23
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.3200000000000003,
+          "startTime" : 2.24,
+          "token" : "ния",
+          "tokenId" : 96
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.48,
+          "startTime" : 2.4,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.48,
+          "startTime" : 2.4,
+          "token" : "в",
+          "tokenId" : 43
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.64,
+          "startTime" : 2.56,
+          "token" : "▁это",
+          "tokenId" : 2025
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "м",
+          "tokenId" : 30
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8800000000000003,
+          "startTime" : 2.8000000000000003,
+          "token" : "▁сезон",
+          "tokenId" : 9660
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.2800000000000002,
+          "startTime" : 3.2,
+          "token" : "е",
+          "tokenId" : 5
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "▁бы",
+          "tokenId" : 2039
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.6,
+          "startTime" : 3.52,
+          "token" : "ло",
+          "tokenId" : 100
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.7600000000000002,
+          "startTime" : 3.68,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.7600000000000002,
+          "startTime" : 3.68,
+          "token" : "со",
+          "tokenId" : 2481
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "о",
+          "tokenId" : 9
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "б",
+          "tokenId" : 53
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4,
+          "startTime" : 3.92,
+          "token" : "ще",
+          "tokenId" : 80
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.16,
+          "startTime" : 4.08,
+          "token" : "но",
+          "tokenId" : 29
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.4,
+          "startTime" : 4.32,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.4,
+          "startTime" : 4.32,
+          "token" : "в",
+          "tokenId" : 43
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.48,
+          "startTime" : 4.4,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.48,
+          "startTime" : 4.4,
+          "token" : "и",
+          "tokenId" : 3
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.48,
+          "token" : "ю",
+          "tokenId" : 175
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.8,
+          "startTime" : 4.72,
+          "token" : "ле",
+          "tokenId" : 81
+        }
+      ],
+      "totalNS" : 96691416,
+      "transcript" : "О первых случаях заболевания в этом сезоне было сообщено в июле"
+    },
+    {
+      "finishNS" : 32168625,
+      "fixtureID" : "fleurs-ru_ru-0012-1560",
+      "language" : "ru",
+      "processNS" : 84807791,
+      "processedChunks" : 4,
+      "repetition" : 2,
+      "sampleCount" : 113280,
+      "tokenCount" : 42,
+      "tokenTimings" : [
+        {
+          "confidence" : 1,
+          "endTime" : 1.2000000000000002,
+          "startTime" : 1.12,
+          "token" : "▁Как",
+          "tokenId" : 9661
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.4400000000000002,
+          "startTime" : 1.36,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.4400000000000002,
+          "startTime" : 1.36,
+          "token" : "то",
+          "tokenId" : 20
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "ль",
+          "tokenId" : 2029
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.44,
+          "token" : "ко",
+          "tokenId" : 44
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6800000000000002,
+          "startTime" : 1.6,
+          "token" : "▁вы",
+          "tokenId" : 2038
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.9200000000000002,
+          "startTime" : 1.84,
+          "token" : "▁вы",
+          "tokenId" : 2038
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.08,
+          "startTime" : 2,
+          "token" : "й",
+          "tokenId" : 79
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2.08,
+          "token" : "де",
+          "tokenId" : 83
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.3200000000000003,
+          "startTime" : 2.24,
+          "token" : "те",
+          "tokenId" : 50
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.4,
+          "startTime" : 2.32,
+          "token" : "▁из",
+          "tokenId" : 90
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : "те",
+          "tokenId" : 50
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8000000000000003,
+          "startTime" : 2.72,
+          "token" : "ч",
+          "tokenId" : 58
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8000000000000003,
+          "startTime" : 2.72,
+          "token" : "ение",
+          "tokenId" : 99
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.2,
+          "startTime" : 3.12,
+          "token" : ",",
+          "tokenId" : 6
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "п",
+          "tokenId" : 36
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "л",
+          "tokenId" : 16
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.44,
+          "token" : "ы",
+          "tokenId" : 2023
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.68,
+          "startTime" : 3.6,
+          "token" : "ть",
+          "tokenId" : 2024
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.7600000000000002,
+          "startTime" : 3.68,
+          "token" : "▁об",
+          "tokenId" : 112
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.8400000000000003,
+          "startTime" : 3.7600000000000002,
+          "token" : "ра",
+          "tokenId" : 24
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "т",
+          "tokenId" : 11
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.92,
+          "startTime" : 3.84,
+          "token" : "но",
+          "tokenId" : 29
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.08,
+          "startTime" : 4,
+          "token" : "▁будет",
+          "tokenId" : 2086
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.48,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.48,
+          "token" : "не",
+          "tokenId" : 39
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "т",
+          "tokenId" : 11
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : "ру",
+          "tokenId" : 2041
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.72,
+          "startTime" : 4.64,
+          "token" : "д",
+          "tokenId" : 25
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.8,
+          "startTime" : 4.72,
+          "token" : "не",
+          "tokenId" : 39
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.88,
+          "startTime" : 4.8,
+          "token" : "е",
+          "tokenId" : 5
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.28,
+          "startTime" : 5.2,
+          "token" : ",",
+          "tokenId" : 6
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.36,
+          "startTime" : 5.28,
+          "token" : "▁",
+          "tokenId" : 2
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.36,
+          "startTime" : 5.28,
+          "token" : "че",
+          "tokenId" : 52
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.6000000000000005,
+          "startTime" : 5.5200000000000005,
+          "token" : "м",
+          "tokenId" : 30
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.680000000000001,
+          "startTime" : 5.6000000000000005,
+          "token" : "▁об",
+          "tokenId" : 112
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.76,
+          "startTime" : 5.68,
+          "token" : "ы",
+          "tokenId" : 2023
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.92,
+          "startTime" : 5.84,
+          "token" : "ч",
+          "tokenId" : 58
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.92,
+          "startTime" : 5.84,
+          "token" : "но",
+          "tokenId" : 29
+        }
+      ],
+      "totalNS" : 116976458,
+      "transcript" : "Как только вы выйдете из течение, плыть обратно будет не труднее, чем обычно"
+    }
+  ],
+  "modelRevision" : "1a41b75758b0337ff67db7d5408280aaaf23074e",
+  "modelVariant" : "multilingual/2240ms",
+  "peakRSSBytes" : 639713280,
+  "repetitions" : 3,
+  "schemaVersion" : 1,
+  "sourceManifest" : "$TMP/openramble-fused-tdt-cached/smoke/smoke-manifest.json",
+  "sourceRevision" : "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+  "warmups" : 1
+}

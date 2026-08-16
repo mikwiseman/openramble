@@ -1,0 +1,8 @@
+Sources/FluidAudio/ASR/Parakeet/AsrTypes.swift     |   9 +-
+ .../TDT/AsrManager+Transcription.swift             |   9 +-
+ .../Parakeet/SlidingWindow/TDT/AsrManager.swift    |   1 +
+ .../ASR/Parakeet/SlidingWindow/TDT/AsrModels.swift |   5 +
+ .../SlidingWindow/TDT/Decoder/TdtDecoderV3.swift   | 333 ++++++++++++++---
+ .../SlidingWindow/TDT/Decoder/TdtHypothesis.swift  |   1 +
+ .../TDT/Decoder/TdtModelInference.swift            | 395 +++++++++++++++++++++
+ 7 files changed, 702 insertions(+), 51 deletions(-)

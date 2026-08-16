@@ -42,7 +42,9 @@ The replacement harness launches each backend once behind the same persistent
 JSONL protocol. It decodes canonical 16 kHz mono Float32 PCM before the timed
 `predecoded-product-warm` lane, then interleaves every measured pair in a
 seeded, balanced order. It records p50/p95/p99/max, paired-bootstrap confidence
-intervals, thermal state, exact argv and binary/model/source/patch/input hashes.
+intervals, Mac hardware model, chip, memory, macOS version/build, exact argv and
+binary/model/source/patch/input hashes. Thermal state remains run evidence that
+the operator must capture separately; the JSON report does not infer it.
 Every output is normalized and hashed on every run; plaintext transcripts are
 never written to the report. Checkpoints resume only when the complete
 experiment identity still matches.
@@ -86,6 +88,21 @@ optional frozen reference for every fixture. `scripts/benchmark-adapters/README.
 documents why the Handy patch is benchmark infrastructure rather than evidence
 of parity with the official GUI application.
 
+Report schema 4 includes OpenRamble phase timing schema 1. Collection is enabled
+only by `serve-jsonl`; the shipping adapter leaves it off. The monotonic phases
+are primary TDT inference+decode (the exact `AsrManager.transcribe` call), the
+whole cached lexical localization/gating call, summed wall time of each
+FluidAudio `spotKeywordsWithLogProbs` call, and CTC rescoring through conditional
+punctuation restoration after all guards pass. The CTC value is API-wall time,
+not a claim about an isolated Core ML kernel; audio slicing and sparse timeline
+reconstruction remain unclassified orchestration outside it.
+Skipped phases are JSON `null`, never a zero sentinel, and every report records
+the CTC invocation count and vocabulary outcome. `elapsed_ns` remains the
+authoritative outer wall time. In the explicit `alwaysParallel` reference lane,
+TDT and CTC durations may overlap, so phase values must never be summed to
+reconstruct total latency. `run-file` includes audio decoding only in the outer
+total; its model phase boundaries remain identical to the predecoded lane.
+
 ## Vocabulary scheduler evidence
 
 The shipping scheduler completes primary TDT recognition first, applies a
@@ -98,6 +115,99 @@ Russian speech and an actual developer-term case, produced identical transcript
 hashes between the reference and candidate-first schedulers; the full LocalASR
 suite also exercises final context rescoring. These are implementation
 regression checks, not cross-product claims.
+
+## Reusable TDT input buffer evidence (2026-08-14)
+
+The pinned upstream runtime cleared its cached 240,000-element Float32 audio
+input after every TDT request, even though `preparePreprocessorInput` overwrites
+the complete fixed-size buffer before Core ML can read it again. On the Apple M4
+host used for the phase study, that redundant clear took about 16 ms by itself.
+The pinned OpenRamble FluidAudio fork keeps the cache's zero-reset behavior as
+the default and skips it only for this fully overwritten TDT input.
+
+The same predecoded, persistent-process, vocabulary-on lane was run before and
+after the change. The baseline used 20 measured requests per fixture and the
+post-change run used 50; both used six warm-ups, the same frozen PCM hashes,
+`.automatic` compute placement, and `candidateRegions` scheduling.
+
+| Fixture | Before p50 | After p50 | Change |
+|---|---:|---:|---:|
+| LibriSpeech real EN, 7.06 s | 62.034 ms | 50.930 ms | -17.9% |
+| VOiCES real EN, 3.53 s | 52.622 ms | 40.260 ms | -23.5% |
+| FLEURS real RU, 7.44 s | 60.854 ms | 49.027 ms | -19.4% |
+| FLEURS real RU, 3.40 s | 60.233 ms | 47.869 ms | -20.5% |
+| Synthetic boundary, 14.9 s | 81.349 ms | 70.607 ms | -13.2% |
+| Synthetic boundary, 15.1 s | 111.025 ms | 98.289 ms | -11.5% |
+| Synthetic boundary, 29.9 s | 144.997 ms | 127.410 ms | -12.1% |
+| Synthetic boundary, 30.1 s | 138.447 ms | 127.424 ms | -8.0% |
+
+Every fixture retained exactly the same raw and normalized transcript hash. A
+separate Russian developer-term fixture also retained its exact
+`rescored_modified` hash; its primary TDT phase moved from 88.36 ms to 71.03 ms,
+while the independent CTC phase dominated total variance. The optimized
+eight-fixture report has SHA-256
+`b8b758370a444d9faf67bcee9da1648121409bd4bb3de38eb376f7eafb23eacf`.
+These are single-host implementation measurements, not a cross-hardware or
+cross-product speed claim.
+
+## Typed CTC tensor access evidence (2026-08-14)
+
+The optional acoustic-vocabulary path previously wrote up to 240,000 Float16
+audio samples and read roughly 188 × 1,025 Float16 logits through
+`MLMultiArray`'s generic subscript. Every scalar crossed the Objective-C
+`NSNumber` bridge. The pinned FluidAudio fork now writes the contiguous audio
+backing directly and reads logits through their recorded tensor strides. The
+log-softmax, candidate selection, overlap merge, and rescoring algorithms are
+unchanged.
+
+The same persistent, prewarmed M4 processes were compared in balanced order.
+The real 7.578-second Russian developer-term fixture used six warm-ups and 80
+measured baseline/candidate pairs, split exactly 40/40 by order. A synthetic
+15.156-second repeat exercised two CTC windows with six warm-ups and 40 measured
+pairs, split 20/20 by order.
+
+| Candidate path | Baseline total p50 | Typed total p50 | Baseline CTC p50 | Typed CTC p50 |
+|---|---:|---:|---:|---:|
+| One CTC invocation | 210.403 ms | 120.285 ms (-42.8%) | 101.989 ms | 11.399 ms |
+| Two CTC invocations | 413.418 ms | 218.891 ms (-47.1%) | 218.091 ms | 29.821 ms |
+
+Every measured pair retained the same raw and normalized transcript hashes,
+the same `rescored_modified` outcome, and the same CTC invocation count.
+Float16/Float32, rank-3/rank-4, shipping-sized, and non-contiguous-stride oracle
+tests compare the direct path against the former boxed subscript path; the
+unsafe-buffer tests also pass AddressSanitizer and ThreadSanitizer. The
+one-window and two-window reports have SHA-256
+`4d952cb8be7a278d2c596975bd34ff258994fe73d21b74d6ba7aa770f4564f86`
+and `2bd34284405da0ba9c6d858177244d18b49f4b230fd058830c87f1c007ec74db`.
+The pinned current tree also passed all 233 LocalASR tests, including real-model
+TDT and vocabulary-rescore coverage. These are single-host implementation
+measurements for dictations that actually invoke optional CTC, not a claim about
+ordinary no-candidate dictation or another product.
+
+The same lexical gate that selects candidate audio windows can also prove which
+vocabulary terms cannot reach the final rescorer's string threshold. Passing its
+conservative term indices to the pinned rescorer keeps the full vocabulary for
+collision checks and leaves the separately configured acoustic-rescue pass
+unchanged, but avoids rebuilding and comparing forms for unrelated terms. An
+internal phase profile localized 35.8 of 36.7 ms to that repeated term loop; CTC
+dynamic programming for the accepted candidate was only about 0.2 ms.
+
+Against the typed-I/O implementation, another balanced 80-pair run reduced
+total p50 from 119.003 to 83.341 ms (-30.0%) and final fusion from 37.499 to
+2.099 ms. A direct before-both-versus-final run measured 212.013 to 84.477 ms
+(-60.2%), with CTC inference at 104.651 versus 11.418 ms and fusion at 37.079
+versus 2.100 ms. All 80 pairs retained identical raw and normalized transcript
+hashes, outcome, and CTC invocation count. The term-filter and direct-combined
+reports have SHA-256
+`3aac76bb7263c58537611dec51e0c12a06a32e7a8b3c06b615af7a23f8eb9b9b`
+and `8f455955c1eaa2747d5c00d6389797d3dca2a67573480ac6df94772a4ca97516`.
+
+On a pinned LibriSpeech fixture with no lexical candidate, a separate 40-pair
+check kept every raw and normalized transcript hash identical and never invoked
+CTC. Total p50 was 48.040 ms before versus 48.088 ms after (+0.10%); the gate
+itself was 2.400 versus 2.383 ms at p50. This is consistent with run noise, not
+evidence of a no-candidate speedup. The report SHA-256 is
+`2be1a931681ff4a51b395792ab0e1bd3e7911f41d5d1d43016dea18e7a6aca0c`.
 
 ## Handy backend investigation (2026-08-13)
 

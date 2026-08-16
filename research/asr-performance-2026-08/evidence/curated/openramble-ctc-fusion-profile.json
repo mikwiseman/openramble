@@ -1,0 +1,2058 @@
+{
+  "binaries": {
+    "baseline": {
+      "path": "$REPO/Packages/LocalASR/.build/arm64-apple-macosx/release/asr-bench",
+      "sha256": "44696aa3c8b9f58b67003ec5e1c092697d8f404fe4c94d99b6a0fcaa51b25452"
+    },
+    "candidate": {
+      "path": "$REPO/Packages/LocalASR/.build/arm64-apple-macosx/release/asr-bench",
+      "sha256": "44696aa3c8b9f58b67003ec5e1c092697d8f404fe4c94d99b6a0fcaa51b25452"
+    }
+  },
+  "candidate_p50_delta_percent": -0.003267990136246457,
+  "created_at": "2026-08-14T15:14:58Z",
+  "effective_settings": {
+    "dual_decode": false,
+    "encoder": "palettized6bit",
+    "encoder_placement": "automatic",
+    "language": null,
+    "max_tokens_per_chunk": 600,
+    "mel_chunk_context": false,
+    "parallel_chunk_concurrency": 4,
+    "vocabulary_bias_weight": 3,
+    "vocabulary_enabled": true,
+    "vocabulary_scheduling": "candidateRegions",
+    "vocabulary_similarity": 0.6499999761581421,
+    "vocabulary_terms": 28
+  },
+  "fixture": {
+    "language": "ru",
+    "path": "$TMP/openramble-bench.XfRRRf/ru-short.wav",
+    "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+    "sample_count": 121245,
+    "sha256": "0f581fd6f1aeb43dd121293ae02331070a3e4c68afb2a9d77a35e388bb7fa7de"
+  },
+  "load": {
+    "baseline": {
+      "command": "load",
+      "effective_settings": {
+        "dual_decode": false,
+        "encoder": "palettized6bit",
+        "encoder_placement": "automatic",
+        "language": null,
+        "max_tokens_per_chunk": 600,
+        "mel_chunk_context": false,
+        "parallel_chunk_concurrency": 4,
+        "vocabulary_bias_weight": 3,
+        "vocabulary_enabled": true,
+        "vocabulary_scheduling": "candidateRegions",
+        "vocabulary_similarity": 0.6499999761581421,
+        "vocabulary_terms": 28
+      },
+      "load_ns": 401759041,
+      "model": {
+        "engine_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3",
+        "files": [
+          {
+            "byte_count": 243,
+            "path": "Decoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "4238c4e81ecd0dc94bd7dfbb60f7e2cc824107c1ffe0387b8607b72833dba350"
+          },
+          {
+            "byte_count": 554,
+            "path": "Decoder.mlmodelc/coremldata.bin",
+            "sha256": "18647af085d87bd8f3121c8a9b4d4564c1ede038dab63d295b4e745cf2d7fb99"
+          },
+          {
+            "byte_count": 3427,
+            "path": "Decoder.mlmodelc/metadata.json",
+            "sha256": "a39e93cd8371b8ded92635c7804fcd0590f0d1dd9415c6d19a0484be073077d9"
+          },
+          {
+            "byte_count": 13110,
+            "path": "Decoder.mlmodelc/model.mil",
+            "sha256": "ef2a0a281695398a62fde86ac269c68f73d5b578d7ed3b31f2ba91a2d1ea1f35"
+          },
+          {
+            "byte_count": 23604992,
+            "path": "Decoder.mlmodelc/weights/weight.bin",
+            "sha256": "48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41"
+          },
+          {
+            "byte_count": 243,
+            "path": "Encoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "42e638870d73f26b332918a3496ce36793fbb413a81cbd3d16ba01328637a105"
+          },
+          {
+            "byte_count": 485,
+            "path": "Encoder.mlmodelc/coremldata.bin",
+            "sha256": "d48034a167a82e88fc3df64f60af963ab3983538271175b8319e7d5720a0fb86"
+          },
+          {
+            "byte_count": 2921,
+            "path": "Encoder.mlmodelc/metadata.json",
+            "sha256": "da24da9cca943fb29d7fa8e376d57fca7cb3aa08ca51b956b0b0e56813f087e9"
+          },
+          {
+            "byte_count": 959769,
+            "path": "Encoder.mlmodelc/model.mil",
+            "sha256": "ed7b19156ca29fa7dfd6891deb9fda4b0e8893f68597c985d135736546a43808"
+          },
+          {
+            "byte_count": 445187200,
+            "path": "Encoder.mlmodelc/weights/weight.bin",
+            "sha256": "e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421"
+          },
+          {
+            "byte_count": 243,
+            "path": "JointDecisionv3.mlmodelc/analytics/coremldata.bin",
+            "sha256": "26def4bf73dd56d29dee21c8ef97cb8969e62f6120ed1adc91e46828e2737b6c"
+          },
+          {
+            "byte_count": 521,
+            "path": "JointDecisionv3.mlmodelc/coremldata.bin",
+            "sha256": "f5fc08b741400f0088492c9e839418b1e18522f19cba28d361dd030c5f398342"
+          },
+          {
+            "byte_count": 3453,
+            "path": "JointDecisionv3.mlmodelc/metadata.json",
+            "sha256": "d9307211b9a37e0f0ac260c7660b1571a3de25841035cfdf9b58fd40425f890f"
+          },
+          {
+            "byte_count": 11775,
+            "path": "JointDecisionv3.mlmodelc/model.mil",
+            "sha256": "be60732943389a047175111a83f8839f3eb39d4803adafa828a0871b2f39818d"
+          },
+          {
+            "byte_count": 12642764,
+            "path": "JointDecisionv3.mlmodelc/weights/weight.bin",
+            "sha256": "4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e"
+          },
+          {
+            "byte_count": 243,
+            "path": "Preprocessor.mlmodelc/analytics/coremldata.bin",
+            "sha256": "c9beeb989c8d66f8be11df59bc6df277ec76cee404f6865b46243835ef562f6d"
+          },
+          {
+            "byte_count": 486,
+            "path": "Preprocessor.mlmodelc/coremldata.bin",
+            "sha256": "dbde3f2300842c1fd51ef3ff948a0bcffe65ffd2dca10707f2509f32c1d65b1d"
+          },
+          {
+            "byte_count": 2841,
+            "path": "Preprocessor.mlmodelc/metadata.json",
+            "sha256": "2a98699e22d279dd37fa1d238aeb1c6db1df0d6fad687775324157689d8f3acf"
+          },
+          {
+            "byte_count": 28181,
+            "path": "Preprocessor.mlmodelc/model.mil",
+            "sha256": "4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93"
+          },
+          {
+            "byte_count": 491072,
+            "path": "Preprocessor.mlmodelc/weights/weight.bin",
+            "sha256": "129b76e3aeafa8afa3ea76d995b964b145fe83700d579f6ff42c4c38fa0968ea"
+          },
+          {
+            "byte_count": 151122,
+            "path": "parakeet_vocab.json",
+            "sha256": "7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735"
+          }
+        ],
+        "fluid_audio_version": "0.15.5",
+        "license": "CC-BY-4.0",
+        "manifest_sha256": "d7bb1d56263f31321712b688835a19c6d178cbf35c4bbb4c82be032b5caf8650",
+        "model_id": "parakeet-tdt-0.6b-v3",
+        "quantization": "encoder 6-bit palettized, mixed precision",
+        "repository": "FluidInference/parakeet-tdt-0.6b-v3-coreml",
+        "revision": "aed02740059203c4a87495924f685de3722ae9ce"
+      },
+      "ok": true,
+      "protocol_version": 1,
+      "vocabulary_model": {
+        "engine_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-ctc-110m/accdafd8cf8a2ff1cabe3c11e54416b405d409aa/parakeet-ctc-110m",
+        "files": [
+          {
+            "byte_count": 243,
+            "path": "AudioEncoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "8906c823e9bb3bf6b16d9f0308f98cd70573526333ad85dd767dc3f9ae6b25fa"
+          },
+          {
+            "byte_count": 505,
+            "path": "AudioEncoder.mlmodelc/coremldata.bin",
+            "sha256": "a88b002b58193b4c31211754cdfdf220a85f9651dc61caf336ab84400cbc191a"
+          },
+          {
+            "byte_count": 3456,
+            "path": "AudioEncoder.mlmodelc/metadata.json",
+            "sha256": "4f288bfe5cbe867ef1e592cdae33578b2fe59ada69182fc12209879558f985c2"
+          },
+          {
+            "byte_count": 1060924,
+            "path": "AudioEncoder.mlmodelc/model.mil",
+            "sha256": "2f84ef93a69115e55f3b5d8ce695b3c937de1833d4d229620634fae967cd587e"
+          },
+          {
+            "byte_count": 100778304,
+            "path": "AudioEncoder.mlmodelc/weights/weight.bin",
+            "sha256": "af0734b4a5d7465ad9e8bb170f0c53c5e6b91ebb75a9bdf88d3f59ae4ad6aebd"
+          },
+          {
+            "byte_count": 243,
+            "path": "MelSpectrogram.mlmodelc/analytics/coremldata.bin",
+            "sha256": "22f2a8cba1de25c984050566b534a1d8caf22a82f9fe6c1c6f3149a0dd7e8ae3"
+          },
+          {
+            "byte_count": 330,
+            "path": "MelSpectrogram.mlmodelc/coremldata.bin",
+            "sha256": "3a32ec67c76aa0aa2faef518413c311493e89aeb7fa11289fa4b8653ab8a160c"
+          },
+          {
+            "byte_count": 1962,
+            "path": "MelSpectrogram.mlmodelc/metadata.json",
+            "sha256": "5e11d21a65c02bcfc37db43e941978e5d60d59e0efeadfda08e41f33b4f835d3"
+          },
+          {
+            "byte_count": 12584,
+            "path": "MelSpectrogram.mlmodelc/model.mil",
+            "sha256": "0a7cb5693b39667295218bac5c7c09053f6bcd4b32699a83d06ac35d14ac6b79"
+          },
+          {
+            "byte_count": 567712,
+            "path": "MelSpectrogram.mlmodelc/weights/weight.bin",
+            "sha256": "0a89c055bfde9022029d3cc59a23e949385e063974460d8eaec3a7614c3eaaa8"
+          },
+          {
+            "byte_count": 121,
+            "path": "config.json",
+            "sha256": "1fd77c83ea89285c242608d95a7992f146867481adc3938be730a064f3a63305"
+          },
+          {
+            "byte_count": 382,
+            "path": "ctc_head_metadata.json",
+            "sha256": "26100793bc6d3642d345cc52d7b8611d11510fa870d4d66ad93b204e0ba29d2e"
+          },
+          {
+            "byte_count": 279,
+            "path": "special_tokens_map.json",
+            "sha256": "af8c98917af6cb493513e5f1f8a35efdc28fa82cac15b2bb5f065d64f8bc904d"
+          },
+          {
+            "byte_count": 360106,
+            "path": "tokenizer.json",
+            "sha256": "9f7c517c0bf644b1b690ab037bab4d4c53aecd38e047e7154d011013ab9160db"
+          },
+          {
+            "byte_count": 632,
+            "path": "tokenizer_config.json",
+            "sha256": "7a29ed0fec88768d8666d65be8dc00ae41a60c4b7758c4df99a912108e62a23a"
+          },
+          {
+            "byte_count": 16086,
+            "path": "vocab.json",
+            "sha256": "319d386eead79aadc80df9c3ecc8340d1a727efb7c02a8847eb940380dd61e1f"
+          }
+        ],
+        "fluid_audio_version": "0.15.5",
+        "license": "CC-BY-4.0",
+        "manifest_sha256": "790711251c677d3a74af5c867ca8b7c596975d737e4a26fc23f10abaedf0654e",
+        "model_id": "parakeet-ctc-110m",
+        "quantization": "mixed precision",
+        "repository": "FluidInference/parakeet-ctc-110m-coreml",
+        "revision": "accdafd8cf8a2ff1cabe3c11e54416b405d409aa"
+      }
+    },
+    "candidate": {
+      "command": "load",
+      "effective_settings": {
+        "dual_decode": false,
+        "encoder": "palettized6bit",
+        "encoder_placement": "automatic",
+        "language": null,
+        "max_tokens_per_chunk": 600,
+        "mel_chunk_context": false,
+        "parallel_chunk_concurrency": 4,
+        "vocabulary_bias_weight": 3,
+        "vocabulary_enabled": true,
+        "vocabulary_scheduling": "candidateRegions",
+        "vocabulary_similarity": 0.6499999761581421,
+        "vocabulary_terms": 28
+      },
+      "load_ns": 246666625,
+      "model": {
+        "engine_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3",
+        "files": [
+          {
+            "byte_count": 243,
+            "path": "Decoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "4238c4e81ecd0dc94bd7dfbb60f7e2cc824107c1ffe0387b8607b72833dba350"
+          },
+          {
+            "byte_count": 554,
+            "path": "Decoder.mlmodelc/coremldata.bin",
+            "sha256": "18647af085d87bd8f3121c8a9b4d4564c1ede038dab63d295b4e745cf2d7fb99"
+          },
+          {
+            "byte_count": 3427,
+            "path": "Decoder.mlmodelc/metadata.json",
+            "sha256": "a39e93cd8371b8ded92635c7804fcd0590f0d1dd9415c6d19a0484be073077d9"
+          },
+          {
+            "byte_count": 13110,
+            "path": "Decoder.mlmodelc/model.mil",
+            "sha256": "ef2a0a281695398a62fde86ac269c68f73d5b578d7ed3b31f2ba91a2d1ea1f35"
+          },
+          {
+            "byte_count": 23604992,
+            "path": "Decoder.mlmodelc/weights/weight.bin",
+            "sha256": "48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41"
+          },
+          {
+            "byte_count": 243,
+            "path": "Encoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "42e638870d73f26b332918a3496ce36793fbb413a81cbd3d16ba01328637a105"
+          },
+          {
+            "byte_count": 485,
+            "path": "Encoder.mlmodelc/coremldata.bin",
+            "sha256": "d48034a167a82e88fc3df64f60af963ab3983538271175b8319e7d5720a0fb86"
+          },
+          {
+            "byte_count": 2921,
+            "path": "Encoder.mlmodelc/metadata.json",
+            "sha256": "da24da9cca943fb29d7fa8e376d57fca7cb3aa08ca51b956b0b0e56813f087e9"
+          },
+          {
+            "byte_count": 959769,
+            "path": "Encoder.mlmodelc/model.mil",
+            "sha256": "ed7b19156ca29fa7dfd6891deb9fda4b0e8893f68597c985d135736546a43808"
+          },
+          {
+            "byte_count": 445187200,
+            "path": "Encoder.mlmodelc/weights/weight.bin",
+            "sha256": "e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421"
+          },
+          {
+            "byte_count": 243,
+            "path": "JointDecisionv3.mlmodelc/analytics/coremldata.bin",
+            "sha256": "26def4bf73dd56d29dee21c8ef97cb8969e62f6120ed1adc91e46828e2737b6c"
+          },
+          {
+            "byte_count": 521,
+            "path": "JointDecisionv3.mlmodelc/coremldata.bin",
+            "sha256": "f5fc08b741400f0088492c9e839418b1e18522f19cba28d361dd030c5f398342"
+          },
+          {
+            "byte_count": 3453,
+            "path": "JointDecisionv3.mlmodelc/metadata.json",
+            "sha256": "d9307211b9a37e0f0ac260c7660b1571a3de25841035cfdf9b58fd40425f890f"
+          },
+          {
+            "byte_count": 11775,
+            "path": "JointDecisionv3.mlmodelc/model.mil",
+            "sha256": "be60732943389a047175111a83f8839f3eb39d4803adafa828a0871b2f39818d"
+          },
+          {
+            "byte_count": 12642764,
+            "path": "JointDecisionv3.mlmodelc/weights/weight.bin",
+            "sha256": "4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e"
+          },
+          {
+            "byte_count": 243,
+            "path": "Preprocessor.mlmodelc/analytics/coremldata.bin",
+            "sha256": "c9beeb989c8d66f8be11df59bc6df277ec76cee404f6865b46243835ef562f6d"
+          },
+          {
+            "byte_count": 486,
+            "path": "Preprocessor.mlmodelc/coremldata.bin",
+            "sha256": "dbde3f2300842c1fd51ef3ff948a0bcffe65ffd2dca10707f2509f32c1d65b1d"
+          },
+          {
+            "byte_count": 2841,
+            "path": "Preprocessor.mlmodelc/metadata.json",
+            "sha256": "2a98699e22d279dd37fa1d238aeb1c6db1df0d6fad687775324157689d8f3acf"
+          },
+          {
+            "byte_count": 28181,
+            "path": "Preprocessor.mlmodelc/model.mil",
+            "sha256": "4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93"
+          },
+          {
+            "byte_count": 491072,
+            "path": "Preprocessor.mlmodelc/weights/weight.bin",
+            "sha256": "129b76e3aeafa8afa3ea76d995b964b145fe83700d579f6ff42c4c38fa0968ea"
+          },
+          {
+            "byte_count": 151122,
+            "path": "parakeet_vocab.json",
+            "sha256": "7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735"
+          }
+        ],
+        "fluid_audio_version": "0.15.5",
+        "license": "CC-BY-4.0",
+        "manifest_sha256": "d7bb1d56263f31321712b688835a19c6d178cbf35c4bbb4c82be032b5caf8650",
+        "model_id": "parakeet-tdt-0.6b-v3",
+        "quantization": "encoder 6-bit palettized, mixed precision",
+        "repository": "FluidInference/parakeet-tdt-0.6b-v3-coreml",
+        "revision": "aed02740059203c4a87495924f685de3722ae9ce"
+      },
+      "ok": true,
+      "protocol_version": 1,
+      "vocabulary_model": {
+        "engine_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-ctc-110m/accdafd8cf8a2ff1cabe3c11e54416b405d409aa/parakeet-ctc-110m",
+        "files": [
+          {
+            "byte_count": 243,
+            "path": "AudioEncoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "8906c823e9bb3bf6b16d9f0308f98cd70573526333ad85dd767dc3f9ae6b25fa"
+          },
+          {
+            "byte_count": 505,
+            "path": "AudioEncoder.mlmodelc/coremldata.bin",
+            "sha256": "a88b002b58193b4c31211754cdfdf220a85f9651dc61caf336ab84400cbc191a"
+          },
+          {
+            "byte_count": 3456,
+            "path": "AudioEncoder.mlmodelc/metadata.json",
+            "sha256": "4f288bfe5cbe867ef1e592cdae33578b2fe59ada69182fc12209879558f985c2"
+          },
+          {
+            "byte_count": 1060924,
+            "path": "AudioEncoder.mlmodelc/model.mil",
+            "sha256": "2f84ef93a69115e55f3b5d8ce695b3c937de1833d4d229620634fae967cd587e"
+          },
+          {
+            "byte_count": 100778304,
+            "path": "AudioEncoder.mlmodelc/weights/weight.bin",
+            "sha256": "af0734b4a5d7465ad9e8bb170f0c53c5e6b91ebb75a9bdf88d3f59ae4ad6aebd"
+          },
+          {
+            "byte_count": 243,
+            "path": "MelSpectrogram.mlmodelc/analytics/coremldata.bin",
+            "sha256": "22f2a8cba1de25c984050566b534a1d8caf22a82f9fe6c1c6f3149a0dd7e8ae3"
+          },
+          {
+            "byte_count": 330,
+            "path": "MelSpectrogram.mlmodelc/coremldata.bin",
+            "sha256": "3a32ec67c76aa0aa2faef518413c311493e89aeb7fa11289fa4b8653ab8a160c"
+          },
+          {
+            "byte_count": 1962,
+            "path": "MelSpectrogram.mlmodelc/metadata.json",
+            "sha256": "5e11d21a65c02bcfc37db43e941978e5d60d59e0efeadfda08e41f33b4f835d3"
+          },
+          {
+            "byte_count": 12584,
+            "path": "MelSpectrogram.mlmodelc/model.mil",
+            "sha256": "0a7cb5693b39667295218bac5c7c09053f6bcd4b32699a83d06ac35d14ac6b79"
+          },
+          {
+            "byte_count": 567712,
+            "path": "MelSpectrogram.mlmodelc/weights/weight.bin",
+            "sha256": "0a89c055bfde9022029d3cc59a23e949385e063974460d8eaec3a7614c3eaaa8"
+          },
+          {
+            "byte_count": 121,
+            "path": "config.json",
+            "sha256": "1fd77c83ea89285c242608d95a7992f146867481adc3938be730a064f3a63305"
+          },
+          {
+            "byte_count": 382,
+            "path": "ctc_head_metadata.json",
+            "sha256": "26100793bc6d3642d345cc52d7b8611d11510fa870d4d66ad93b204e0ba29d2e"
+          },
+          {
+            "byte_count": 279,
+            "path": "special_tokens_map.json",
+            "sha256": "af8c98917af6cb493513e5f1f8a35efdc28fa82cac15b2bb5f065d64f8bc904d"
+          },
+          {
+            "byte_count": 360106,
+            "path": "tokenizer.json",
+            "sha256": "9f7c517c0bf644b1b690ab037bab4d4c53aecd38e047e7154d011013ab9160db"
+          },
+          {
+            "byte_count": 632,
+            "path": "tokenizer_config.json",
+            "sha256": "7a29ed0fec88768d8666d65be8dc00ae41a60c4b7758c4df99a912108e62a23a"
+          },
+          {
+            "byte_count": 16086,
+            "path": "vocab.json",
+            "sha256": "319d386eead79aadc80df9c3ecc8340d1a727efb7c02a8847eb940380dd61e1f"
+          }
+        ],
+        "fluid_audio_version": "0.15.5",
+        "license": "CC-BY-4.0",
+        "manifest_sha256": "790711251c677d3a74af5c867ca8b7c596975d737e4a26fc23f10abaedf0654e",
+        "model_id": "parakeet-ctc-110m",
+        "quantization": "mixed precision",
+        "repository": "FluidInference/parakeet-ctc-110m-coreml",
+        "revision": "accdafd8cf8a2ff1cabe3c11e54416b405d409aa"
+      }
+    }
+  },
+  "method": {
+    "lane": "predecoded-product-warm",
+    "public_claim_eligible": false,
+    "repeats": 20,
+    "schedule": "balanced persistent-process BC/CB pairs",
+    "seed": 20260814,
+    "warmups": 4
+  },
+  "pairs": [
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117243167,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102203392,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11450583,
+            "ctc_rescoring_fusion_ns": 36478125,
+            "lexical_candidate_gate_ns": 1824209,
+            "primary_tdt_inference_decode_ns": 67233166
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117243167,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117885458,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102154240,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11436417,
+            "ctc_rescoring_fusion_ns": 36524708,
+            "lexical_candidate_gate_ns": 1824917,
+            "primary_tdt_inference_decode_ns": 67803042
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117885458,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 0,
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117533625,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102236160,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11470250,
+            "ctc_rescoring_fusion_ns": 36629583,
+            "lexical_candidate_gate_ns": 1810417,
+            "primary_tdt_inference_decode_ns": 67342750
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117533625,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118338417,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102252544,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11471416,
+            "ctc_rescoring_fusion_ns": 36848875,
+            "lexical_candidate_gate_ns": 1842667,
+            "primary_tdt_inference_decode_ns": 67925209
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118338417,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 1,
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117757125,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102301696,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11408042,
+            "ctc_rescoring_fusion_ns": 36917417,
+            "lexical_candidate_gate_ns": 1815958,
+            "primary_tdt_inference_decode_ns": 67366041
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117757125,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117892000,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102301696,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11476834,
+            "ctc_rescoring_fusion_ns": 37107625,
+            "lexical_candidate_gate_ns": 1821417,
+            "primary_tdt_inference_decode_ns": 67216834
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117892000,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 2,
+      "order": "CB"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117612708,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102318080,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11410791,
+            "ctc_rescoring_fusion_ns": 36733250,
+            "lexical_candidate_gate_ns": 1846459,
+            "primary_tdt_inference_decode_ns": 67350084
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117612708,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118136542,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102334464,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11434458,
+            "ctc_rescoring_fusion_ns": 37037375,
+            "lexical_candidate_gate_ns": 1833583,
+            "primary_tdt_inference_decode_ns": 67520500
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118136542,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 3,
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118786542,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102334464,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11396042,
+            "ctc_rescoring_fusion_ns": 36715584,
+            "lexical_candidate_gate_ns": 1833208,
+            "primary_tdt_inference_decode_ns": 68591875
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118786542,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118142250,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102383616,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11449250,
+            "ctc_rescoring_fusion_ns": 36633750,
+            "lexical_candidate_gate_ns": 1806458,
+            "primary_tdt_inference_decode_ns": 67982375
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118142250,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 4,
+      "order": "CB"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118735416,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102334464,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11414917,
+            "ctc_rescoring_fusion_ns": 37463458,
+            "lexical_candidate_gate_ns": 1816042,
+            "primary_tdt_inference_decode_ns": 67785375
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118735416,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117544084,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102400000,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11415041,
+            "ctc_rescoring_fusion_ns": 36870417,
+            "lexical_candidate_gate_ns": 1840125,
+            "primary_tdt_inference_decode_ns": 67163459
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117544084,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 5,
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117590542,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102350848,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11398042,
+            "ctc_rescoring_fusion_ns": 36695625,
+            "lexical_candidate_gate_ns": 1818792,
+            "primary_tdt_inference_decode_ns": 67420709
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117590542,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118868250,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102400000,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11490792,
+            "ctc_rescoring_fusion_ns": 36649209,
+            "lexical_candidate_gate_ns": 1838500,
+            "primary_tdt_inference_decode_ns": 68639792
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118868250,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 6,
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118689500,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102367232,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11451167,
+            "ctc_rescoring_fusion_ns": 37566459,
+            "lexical_candidate_gate_ns": 1792333,
+            "primary_tdt_inference_decode_ns": 67604041
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118689500,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117876917,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102400000,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11437041,
+            "ctc_rescoring_fusion_ns": 36623625,
+            "lexical_candidate_gate_ns": 1815000,
+            "primary_tdt_inference_decode_ns": 67750875
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117876917,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 7,
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118472542,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102367232,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11366583,
+            "ctc_rescoring_fusion_ns": 36714000,
+            "lexical_candidate_gate_ns": 1779958,
+            "primary_tdt_inference_decode_ns": 68359666
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118472542,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117855666,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102432768,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11462500,
+            "ctc_rescoring_fusion_ns": 36960208,
+            "lexical_candidate_gate_ns": 1820542,
+            "primary_tdt_inference_decode_ns": 67346125
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117855666,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 8,
+      "order": "CB"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117264250,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102383616,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11439000,
+            "ctc_rescoring_fusion_ns": 36591583,
+            "lexical_candidate_gate_ns": 1816333,
+            "primary_tdt_inference_decode_ns": 67166708
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117264250,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118737291,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102449152,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11410666,
+            "ctc_rescoring_fusion_ns": 37376125,
+            "lexical_candidate_gate_ns": 1797875,
+            "primary_tdt_inference_decode_ns": 67886708
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118737291,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 9,
+      "order": "CB"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117704333,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102383616,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11387208,
+            "ctc_rescoring_fusion_ns": 36864542,
+            "lexical_candidate_gate_ns": 1786208,
+            "primary_tdt_inference_decode_ns": 67410042
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117704333,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117912417,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102449152,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11454750,
+            "ctc_rescoring_fusion_ns": 36906917,
+            "lexical_candidate_gate_ns": 1795458,
+            "primary_tdt_inference_decode_ns": 67451083
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117912417,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 10,
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117664875,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102400000,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11412875,
+            "ctc_rescoring_fusion_ns": 36667667,
+            "lexical_candidate_gate_ns": 1806750,
+            "primary_tdt_inference_decode_ns": 67483417
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117664875,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 119434500,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102449152,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11452791,
+            "ctc_rescoring_fusion_ns": 37359167,
+            "lexical_candidate_gate_ns": 1781625,
+            "primary_tdt_inference_decode_ns": 68584084
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 119434500,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 11,
+      "order": "CB"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117803750,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102400000,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11417083,
+            "ctc_rescoring_fusion_ns": 37042542,
+            "lexical_candidate_gate_ns": 1827000,
+            "primary_tdt_inference_decode_ns": 67262167
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117803750,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117943500,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102449152,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11332375,
+            "ctc_rescoring_fusion_ns": 37244958,
+            "lexical_candidate_gate_ns": 1787416,
+            "primary_tdt_inference_decode_ns": 67330291
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117943500,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 12,
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117224417,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102400000,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11352125,
+            "ctc_rescoring_fusion_ns": 36671416,
+            "lexical_candidate_gate_ns": 1820125,
+            "primary_tdt_inference_decode_ns": 67121250
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117224417,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117690042,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102449152,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11405375,
+            "ctc_rescoring_fusion_ns": 36866750,
+            "lexical_candidate_gate_ns": 1813000,
+            "primary_tdt_inference_decode_ns": 67359417
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117690042,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 13,
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118355708,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102400000,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11471500,
+            "ctc_rescoring_fusion_ns": 37442084,
+            "lexical_candidate_gate_ns": 1841042,
+            "primary_tdt_inference_decode_ns": 67344125
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118355708,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117165375,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102449152,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11398167,
+            "ctc_rescoring_fusion_ns": 36806916,
+            "lexical_candidate_gate_ns": 1815000,
+            "primary_tdt_inference_decode_ns": 66882042
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117165375,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 14,
+      "order": "CB"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118459959,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102400000,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11372292,
+            "ctc_rescoring_fusion_ns": 36777000,
+            "lexical_candidate_gate_ns": 1804208,
+            "primary_tdt_inference_decode_ns": 68207291
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118459959,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117597708,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102449152,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11387917,
+            "ctc_rescoring_fusion_ns": 36716750,
+            "lexical_candidate_gate_ns": 1804125,
+            "primary_tdt_inference_decode_ns": 67428709
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117597708,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 15,
+      "order": "CB"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118306000,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102400000,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11452917,
+            "ctc_rescoring_fusion_ns": 37547083,
+            "lexical_candidate_gate_ns": 1810292,
+            "primary_tdt_inference_decode_ns": 67247333
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118306000,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118084666,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102449152,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11391291,
+            "ctc_rescoring_fusion_ns": 37058333,
+            "lexical_candidate_gate_ns": 1810834,
+            "primary_tdt_inference_decode_ns": 67553084
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118084666,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 16,
+      "order": "CB"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118755125,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102400000,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11390542,
+            "ctc_rescoring_fusion_ns": 37273125,
+            "lexical_candidate_gate_ns": 1792875,
+            "primary_tdt_inference_decode_ns": 68043250
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118755125,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 121450125,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102465536,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11421416,
+            "ctc_rescoring_fusion_ns": 37029125,
+            "lexical_candidate_gate_ns": 1816958,
+            "primary_tdt_inference_decode_ns": 70927834
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 121450125,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 17,
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118580834,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102400000,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11418250,
+            "ctc_rescoring_fusion_ns": 37089459,
+            "lexical_candidate_gate_ns": 1805000,
+            "primary_tdt_inference_decode_ns": 68014875
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118580834,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 117828167,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102465536,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11392041,
+            "ctc_rescoring_fusion_ns": 37335167,
+            "lexical_candidate_gate_ns": 1829375,
+            "primary_tdt_inference_decode_ns": 67021542
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117828167,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 18,
+      "order": "CB"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118059875,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102400000,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11380917,
+            "ctc_rescoring_fusion_ns": 36657750,
+            "lexical_candidate_gate_ns": 1788875,
+            "primary_tdt_inference_decode_ns": 67964125
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118059875,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118213834,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102465536,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11346292,
+            "ctc_rescoring_fusion_ns": 37096500,
+            "lexical_candidate_gate_ns": 1809583,
+            "primary_tdt_inference_decode_ns": 67699458
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118213834,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "index": 19,
+      "order": "CB"
+    }
+  ],
+  "prewarm": {
+    "baseline": {
+      "command": "prewarm",
+      "ok": true,
+      "prewarm_ns": 62487542,
+      "protocol_version": 1
+    },
+    "candidate": {
+      "command": "prewarm",
+      "ok": true,
+      "prewarm_ns": 55368500,
+      "protocol_version": 1
+    }
+  },
+  "schema_version": 1,
+  "summary": {
+    "baseline": {
+      "elapsed": {
+        "count": 20,
+        "maximum_ns": 118786542,
+        "mean_ns": 118030014.65,
+        "minimum_ns": 117224417,
+        "p50_ns": 117931812.5,
+        "p95_ns": 118756695.85,
+        "p99_ns": 118780572.77
+      },
+      "phases": {
+        "ctc_model_inference_ns": {
+          "count": 20,
+          "maximum_ns": 11471500,
+          "mean_ns": 11413056.3,
+          "minimum_ns": 11352125,
+          "p50_ns": 11411833.0,
+          "p95_ns": 11470312.5,
+          "p99_ns": 11471262.5
+        },
+        "ctc_rescoring_fusion_ns": {
+          "count": 20,
+          "maximum_ns": 37566459,
+          "mean_ns": 36926887.6,
+          "minimum_ns": 36478125,
+          "p50_ns": 36755125.0,
+          "p95_ns": 37548051.8,
+          "p99_ns": 37562777.56
+        },
+        "lexical_candidate_gate_ns": {
+          "count": 20,
+          "maximum_ns": 1846459,
+          "mean_ns": 1811804.2,
+          "minimum_ns": 1779958,
+          "p50_ns": 1813187.5,
+          "p95_ns": 1841312.85,
+          "p99_ns": 1845429.77
+        },
+        "primary_tdt_inference_decode_ns": {
+          "count": 20,
+          "maximum_ns": 68591875,
+          "mean_ns": 67615914.5,
+          "minimum_ns": 67121250,
+          "p50_ns": 67415375.5,
+          "p95_ns": 68371276.45,
+          "p99_ns": 68547755.28999999
+        }
+      }
+    },
+    "candidate": {
+      "elapsed": {
+        "count": 20,
+        "maximum_ns": 121450125,
+        "mean_ns": 118229860.45,
+        "minimum_ns": 117165375,
+        "p50_ns": 117927958.5,
+        "p95_ns": 119535281.25,
+        "p99_ns": 121067156.25
+      },
+      "phases": {
+        "ctc_model_inference_ns": {
+          "count": 20,
+          "maximum_ns": 11490792,
+          "mean_ns": 11423341.5,
+          "minimum_ns": 11332375,
+          "p50_ns": 11427937.0,
+          "p95_ns": 11477531.9,
+          "p99_ns": 11488139.98
+        },
+        "ctc_rescoring_fusion_ns": {
+          "count": 20,
+          "maximum_ns": 37376125,
+          "mean_ns": 36952625.0,
+          "minimum_ns": 36524708,
+          "p50_ns": 36933562.5,
+          "p95_ns": 37360014.900000006,
+          "p99_ns": 37372902.98
+        },
+        "lexical_candidate_gate_ns": {
+          "count": 20,
+          "maximum_ns": 1842667,
+          "mean_ns": 1815222.9,
+          "minimum_ns": 1781625,
+          "p50_ns": 1815000.0,
+          "p95_ns": 1840252.0999999999,
+          "p99_ns": 1842184.02
+        },
+        "primary_tdt_inference_decode_ns": {
+          "count": 20,
+          "maximum_ns": 70927834,
+          "mean_ns": 67773623.15,
+          "minimum_ns": 66882042,
+          "p50_ns": 67536792.0,
+          "p95_ns": 68754194.10000001,
+          "p99_ns": 70493106.02
+        }
+      }
+    }
+  },
+  "warmup_observations": [
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 135723625,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 101613568,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 18223958,
+            "ctc_rescoring_fusion_ns": 38702375,
+            "lexical_candidate_gate_ns": 1990208,
+            "primary_tdt_inference_decode_ns": 76482125
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 135723625,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 127133459,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 101580800,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11444125,
+            "ctc_rescoring_fusion_ns": 36876959,
+            "lexical_candidate_gate_ns": 1815833,
+            "primary_tdt_inference_decode_ns": 76684459
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 127133459,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118572250,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 101941248,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11396291,
+            "ctc_rescoring_fusion_ns": 36938167,
+            "lexical_candidate_gate_ns": 1840916,
+            "primary_tdt_inference_decode_ns": 68134583
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118572250,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118345625,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 101892096,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11560625,
+            "ctc_rescoring_fusion_ns": 37426125,
+            "lexical_candidate_gate_ns": 1833458,
+            "primary_tdt_inference_decode_ns": 67277833
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118345625,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "order": "CB"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 117308583,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102055936,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11392167,
+            "ctc_rescoring_fusion_ns": 36756375,
+            "lexical_candidate_gate_ns": 1827208,
+            "primary_tdt_inference_decode_ns": 67085583
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 117308583,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118593584,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102006784,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11416875,
+            "ctc_rescoring_fusion_ns": 37404333,
+            "lexical_candidate_gate_ns": 1821000,
+            "primary_tdt_inference_decode_ns": 67637583
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118593584,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "order": "BC"
+    },
+    {
+      "baseline": {
+        "command": "run",
+        "elapsed_ns": 118797750,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102121472,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11356334,
+            "ctc_rescoring_fusion_ns": 37460792,
+            "lexical_candidate_gate_ns": 1803709,
+            "primary_tdt_inference_decode_ns": 67884833
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118797750,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "candidate": {
+        "command": "run",
+        "elapsed_ns": 118467834,
+        "normalized_transcript_sha256": "f92bead94100068d1a8e7732987b3f7c8d4efa63f3d310e507bacec23338d3ae",
+        "ok": true,
+        "pcm_f32le_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+        "peak_rss_bytes": 102121472,
+        "prewarmed": true,
+        "protocol_version": 1,
+        "raw_transcript_sha256": "857097619bc5b3ccb6eca207c007757a114a22fc230d258c9c9766a1d26d389b",
+        "sample_count": 121245,
+        "sample_rate": 16000,
+        "timing": {
+          "clock": "monotonic_uptime",
+          "ctc_inference_invocations": 1,
+          "phases": {
+            "ctc_model_inference_ns": 11435125,
+            "ctc_rescoring_fusion_ns": 36837875,
+            "lexical_candidate_gate_ns": 1803792,
+            "primary_tdt_inference_decode_ns": 68140334
+          },
+          "phases_may_overlap": false,
+          "schema_version": 1,
+          "total_wall_ns": 118467834,
+          "total_wall_scope": "predecoded_transcribe",
+          "vocabulary_outcome": "rescored_modified"
+        }
+      },
+      "order": "CB"
+    }
+  ]
+}

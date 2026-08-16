@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-08-14T20:45:05Z",
+  "scope": "source_and_cpu_only_no_model_inference",
+  "openramble_commit": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+  "fluid_audio_commit": "ee9a7f12d91710da53de6d75f8b7160e09eccee4",
+  "artifacts": [
+    {
+      "path": "$TMP/openramble-streaming-tdt-audit-ee9a7f12/STREAMING_TDT_SOURCE_AUDIT.md",
+      "bytes": 29551,
+      "sha256": "d98ce71d4ae6e53633e83d9dc378bd16d2bafc702e62336c6007bd9defd2763c"
+    },
+    {
+      "path": "$TMP/openramble-streaming-tdt-audit-ee9a7f12/PREREGISTRATION_DRAFT.json",
+      "bytes": 12751,
+      "sha256": "edd498b0a5492582b7ac93dc156b9e29a077715e9cd445d9c7257eea5f15819d"
+    },
+    {
+      "path": "$TMP/openramble-streaming-tdt-audit-ee9a7f12/PROPOSED_STAGE1_COMMAND.txt",
+      "bytes": 1302,
+      "sha256": "50695a8ab82a5476e549ddd2d3389a2d04f0f5608074a0085f11e7f04a0fc2de"
+    },
+    {
+      "path": "$TMP/openramble-streaming-tdt-audit-ee9a7f12/ProtocolModel.swift",
+      "bytes": 10338,
+      "sha256": "58baf3f6914aaff45f49e91aae205309f91d0a1ff918dcad1203401d641b8513"
+    },
+    {
+      "path": "$TMP/openramble-streaming-tdt-audit-ee9a7f12/protocol-model",
+      "bytes": 91312,
+      "sha256": "72b9b313cd9567fac6b94762499fe898dabb55fceb16ebc494e70e50419a9194"
+    },
+    {
+      "path": "$TMP/openramble-streaming-tdt-audit-ee9a7f12/protocol-model.stdout",
+      "bytes": 93,
+      "sha256": "92d1d30d07dfd4cd14c5b7480bd1960955552456a8e23ca1fad56f73249f87ed"
+    }
+  ],
+  "verification": {
+    "cpu_protocol_tests": 6,
+    "cpu_protocol_status": "pass",
+    "preregistration_json_valid": true,
+    "shared_git_status_clean": true,
+    "coreml_or_model_inference_runs": 0,
+    "holdout_outputs_inspected": false
+  }
+}

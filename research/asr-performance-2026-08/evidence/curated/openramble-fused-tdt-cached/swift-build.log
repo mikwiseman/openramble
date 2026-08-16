@@ -1,0 +1,47 @@
+warning: 'fluidaudio': found 1 file(s) which are unhandled; explicitly declare them as resources or exclude from the target
+    $TMP/openramble-fused-tdt-cached/FluidAudio/Tests/FluidAudioTests/ASR/Parakeet/SlidingWindow/CTC/sample_medical.arpa
+warning: 'fluidaudio': found 1 file(s) which are unhandled; explicitly declare them as resources or exclude from the target
+    $TMP/openramble-fused-tdt-cached/FluidAudio/Sources/FluidAudio/ASR/Parakeet/Unified/benchmark.md
+[0/1] Planning build
+Building for debugging...
+[0/2] Write sources
+[1/2] Write swift-version--58304C5D6DBC2206.txt
+[3/6] Compiling FluidAudio TdtDecoderV3.swift
+[4/6] Compiling FluidAudio AsrModels.swift
+[5/6] Emitting module FluidAudio
+[6/6] Compiling FluidAudio AsrManager.swift
+[7/16] Compiling FluidAudio SlidingWindowAsrSession.swift
+[8/16] Compiling FluidAudio AsrManager+TokenProcessing.swift
+[9/16] Compiling FluidAudio AsrManager+Transcription.swift
+[10/16] Compiling FluidAudio AsrManager+Pipeline.swift
+[11/16] Compiling FluidAudio TdtModelInference.swift
+$TMP/openramble-fused-tdt-cached/FluidAudio/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtModelInference.swift:415:9: warning: 'cblas_scopy' was deprecated in macOS 13.3: An updated CBLAS interface supporting ILP64 is available.  Please compile with -DACCELERATE_NEW_LAPACK to access the new headers and -DACCELERATE_LAPACK_ILP64 for ILP64 support. [#DeprecatedDeclaration]
+413 |         let count = try makeBlasIndex(hiddenSize, label: "Decoder projection length")
+414 |         let stride = try makeBlasIndex(hiddenStride, label: "Decoder projection stride")
+415 |         cblas_scopy(count, startPtr, stride, destPtr, destStrideCblas)
+    |         `- warning: 'cblas_scopy' was deprecated in macOS 13.3: An updated CBLAS interface supporting ILP64 is available.  Please compile with -DACCELERATE_NEW_LAPACK to access the new headers and -DACCELERATE_LAPACK_ILP64 for ILP64 support. [#DeprecatedDeclaration]
+416 |
+417 |         return out
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[12/16] Compiling FluidAudio TdtDecoderV2.swift
+[13/16] Compiling FluidAudio DualDecodeArbitration.swift
+[14/16] Compiling FluidAudio ChunkProcessor.swift
+[15/16] Compiling FluidAudio SlidingWindowAsrManager.swift
+$TMP/openramble-fused-tdt-cached/FluidAudio/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/SlidingWindowAsrManager.swift:355:13: warning: initialization of immutable value 'sampleRate' was never used; consider replacing with assignment to '_' or removing it [#no-usage]
+353 |         let right = config.rightContextSamples
+354 |         let left = config.leftContextSamples
+355 |         let sampleRate = config.asrConfig.sampleRate
+    |             `- warning: initialization of immutable value 'sampleRate' was never used; consider replacing with assignment to '_' or removing it [#no-usage]
+356 |
+357 |         var currentAbsEnd = bufferStartIndex + sampleBuffer.count
+
+$TMP/openramble-fused-tdt-cached/FluidAudio/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/SlidingWindowAsrManager.swift:389:13: warning: initialization of immutable value 'sampleRate' was never used; consider replacing with assignment to '_' or removing it [#no-usage]
+387 |         let chunk = config.chunkSamples
+388 |         let left = config.leftContextSamples
+389 |         let sampleRate = config.asrConfig.sampleRate
+    |             `- warning: initialization of immutable value 'sampleRate' was never used; consider replacing with assignment to '_' or removing it [#no-usage]
+390 |
+391 |         var currentAbsEnd = bufferStartIndex + sampleBuffer.count
+[16/16] Compiling FluidAudio CtcKeywordSpotter.swift
+Build of target: 'FluidAudio' complete! (1.85s)

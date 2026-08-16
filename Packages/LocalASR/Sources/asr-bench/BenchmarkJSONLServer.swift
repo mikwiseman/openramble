@@ -1,4 +1,5 @@
 import CryptoKit
+import DictationCore
 import Foundation
 import LocalASR
 
@@ -68,6 +69,7 @@ enum BenchmarkJSONLServer {
             let started = DispatchTime.now().uptimeNanoseconds
             state.transcriber = try await prepareTranscriber(
                 performConfiguredWarmup: false,
+                collectPhaseTimings: true,
                 logger: log
             )
             let elapsed = DispatchTime.now().uptimeNanoseconds - started
@@ -160,7 +162,7 @@ enum BenchmarkJSONLServer {
                 requestID: requestID,
                 command: command,
                 elapsed: elapsed,
-                result: result.text,
+                result: result,
                 pcmHash: preloaded.sha256,
                 sampleCount: preloaded.samples.count,
                 didPrewarm: state.didPrewarm
@@ -182,7 +184,7 @@ enum BenchmarkJSONLServer {
                 requestID: requestID,
                 command: command,
                 elapsed: elapsed,
-                result: result.text,
+                result: result,
                 pcmHash: sha256(canonicalPCM(samples)),
                 sampleCount: samples.count,
                 didPrewarm: state.didPrewarm
@@ -210,16 +212,46 @@ enum BenchmarkJSONLServer {
         return transcriber
     }
 
-    private static func runResponse(
+    static func runResponse(
         requestID: Any,
         command: String,
         elapsed: UInt64,
-        result: String,
+        result: ASRResult,
         pcmHash: String,
         sampleCount: Int,
         didPrewarm: Bool
     ) -> [String: Any] {
-        let normalized = TextNormalizer.normalize(result).text
+        let normalized = TextNormalizer.normalize(result.text).text
+        let timing: Any
+        if let phases = result.phaseTimings {
+            timing = [
+                "schema_version": 1,
+                "clock": "monotonic_uptime",
+                "total_wall_ns": NSNumber(value: elapsed),
+                "total_wall_scope": command == "run"
+                    ? "predecoded_transcribe"
+                    : "file_decode_plus_transcribe",
+                "phases_may_overlap": phases.phasesMayOverlap,
+                "phases": [
+                    "primary_tdt_inference_decode_ns": NSNumber(
+                        value: phases.primaryTDTInferenceDecodeNanoseconds
+                    ),
+                    "lexical_candidate_gate_ns": optionalNumber(
+                        phases.lexicalCandidateGateNanoseconds
+                    ),
+                    "ctc_model_inference_ns": optionalNumber(
+                        phases.ctcModelInferenceNanoseconds
+                    ),
+                    "ctc_rescoring_fusion_ns": optionalNumber(
+                        phases.ctcRescoringFusionNanoseconds
+                    ),
+                ],
+                "ctc_inference_invocations": phases.ctcInferenceInvocations,
+                "vocabulary_outcome": phases.vocabularyOutcome.rawValue,
+            ]
+        } else {
+            timing = NSNull()
+        }
         return [
             "id": requestID,
             "ok": true,
@@ -229,15 +261,20 @@ enum BenchmarkJSONLServer {
             "sample_rate": sampleRate,
             "sample_count": sampleCount,
             "pcm_f32le_sha256": pcmHash,
-            "raw_transcript_sha256": sha256(Data(result.utf8)),
+            "raw_transcript_sha256": sha256(Data(result.text.utf8)),
             "normalized_transcript_sha256": sha256(Data(normalized.utf8)),
             // The orchestrator removes transcript text from the persisted report.
             // It needs the text transiently for a common cross-engine normalizer
             // and optional WER against the frozen reference.
-            "text": result,
+            "text": result.text,
             "prewarmed": didPrewarm,
             "peak_rss_bytes": NSNumber(value: peakMemoryBytes()),
+            "timing": timing,
         ]
+    }
+
+    private static func optionalNumber(_ value: UInt64?) -> Any {
+        value.map { NSNumber(value: $0) } ?? NSNull()
     }
 
     static func canonicalPCM(_ samples: [Float]) -> Data {

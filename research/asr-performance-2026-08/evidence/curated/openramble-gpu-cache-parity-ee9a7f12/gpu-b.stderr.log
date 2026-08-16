@@ -1,0 +1,1 @@
+/AppleInternal/Library/BuildRoots/4~CKOougDLIumVT7yTlHqeQahAOsLoT_pOj6L2VoE/Library/Caches/com.apple.xbs/TemporaryDirectory.ZOD9bx/Sources/MetalPerformanceShadersGraph/mpsgraph/MetalPerformanceShadersGraph/Core/Files/MPSGraphTensorData.mm:223: failed assertion `shape.count = 0 != strides.count = 3'

@@ -1,0 +1,13 @@
+{
+  "branch": "",
+  "head": "19600a485baa4998812e4654b70d2bab8f2c9949",
+  "origin": "$REPO/Packages/LocalASR/.build/repositories/FluidAudio-08d244c7",
+  "source": "$TMP/openramble-short-shape/FluidAudio",
+  "status": [
+    "M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift",
+    " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift",
+    " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift",
+    " M Sources/FluidAudio/Shared/ASRConstants.swift",
+    " M Sources/FluidAudio/Shared/MLArrayCache.swift"
+  ]
+}

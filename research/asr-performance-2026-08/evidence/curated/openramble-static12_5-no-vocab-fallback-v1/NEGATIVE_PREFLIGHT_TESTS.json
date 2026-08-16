@@ -1,0 +1,20 @@
+{
+  "asr_or_coreml_started": false,
+  "evaluator": {
+    "exit_code": 1,
+    "expected_message": "preregistration is not armed; model execution/evaluation remains forbidden",
+    "passed": true
+  },
+  "runner_candidate": {
+    "exit_code": 78,
+    "expected_message": "inference_allowed=false; frozen prior-evidence hard gate rejected this hypothesis",
+    "passed": true,
+    "process_spawn_point_reached": false
+  },
+  "sealer": {
+    "exit_code": 1,
+    "expected_message": "inference_allowed=false; no run artifacts may be sealed",
+    "passed": true
+  },
+  "status": "all_fail_closed_checks_passed"
+}

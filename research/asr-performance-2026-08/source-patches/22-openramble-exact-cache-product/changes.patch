@@ -1,0 +1,1045 @@
+diff --git a/Packages/ASRWorkerProtocol/Sources/ASRWorkerProtocol/ASRWireIO.swift b/Packages/ASRWorkerProtocol/Sources/ASRWorkerProtocol/ASRWireIO.swift
+index c3c4257..c6ec7ac 100644
+--- a/Packages/ASRWorkerProtocol/Sources/ASRWorkerProtocol/ASRWireIO.swift
++++ b/Packages/ASRWorkerProtocol/Sources/ASRWorkerProtocol/ASRWireIO.swift
+@@ -44,10 +44,11 @@ public enum ASRWireIO {
+                 maximum: ASRWorkerProtocol.maximumMetadataBytes
+             )
+         }
+-        guard frame.payload.count <= ASRWorkerProtocol.maximumPCMBytes else {
++        let maximumPayloadBytes = ASRWorkerProtocol.maximumPayloadBytes(for: frame.kind)
++        guard frame.payload.count <= maximumPayloadBytes else {
+             throw ASRWireError.payloadTooLarge(
+                 actual: frame.payload.count,
+-                maximum: ASRWorkerProtocol.maximumPCMBytes
++                maximum: maximumPayloadBytes
+             )
+         }
+
+@@ -83,8 +84,9 @@ public enum ASRWireIO {
+         let requestID = uint64(bytes, at: 8)
+         let metadataCount = Int(uint32(bytes, at: 16))
+         let payloadCount64 = uint64(bytes, at: 20)
++        let maximumPayloadBytes = ASRWorkerProtocol.maximumPayloadBytes(for: kind)
+         guard payloadCount64 <= UInt64(Int.max) else {
+-            throw ASRWireError.payloadTooLarge(actual: Int.max, maximum: ASRWorkerProtocol.maximumPCMBytes)
++            throw ASRWireError.payloadTooLarge(actual: Int.max, maximum: maximumPayloadBytes)
+         }
+         let payloadCount = Int(payloadCount64)
+         guard metadataCount <= ASRWorkerProtocol.maximumMetadataBytes else {
+@@ -93,10 +95,10 @@ public enum ASRWireIO {
+                 maximum: ASRWorkerProtocol.maximumMetadataBytes
+             )
+         }
+-        guard payloadCount <= ASRWorkerProtocol.maximumPCMBytes else {
++        guard payloadCount <= maximumPayloadBytes else {
+             throw ASRWireError.payloadTooLarge(
+                 actual: payloadCount,
+-                maximum: ASRWorkerProtocol.maximumPCMBytes
++                maximum: maximumPayloadBytes
+             )
+         }
+
+diff --git a/Packages/ASRWorkerProtocol/Sources/ASRWorkerProtocol/ASRWorkerProtocol.swift b/Packages/ASRWorkerProtocol/Sources/ASRWorkerProtocol/ASRWorkerProtocol.swift
+index 439ddd0..0014d53 100644
+--- a/Packages/ASRWorkerProtocol/Sources/ASRWorkerProtocol/ASRWorkerProtocol.swift
++++ b/Packages/ASRWorkerProtocol/Sources/ASRWorkerProtocol/ASRWorkerProtocol.swift
+@@ -5,14 +5,35 @@ import Foundation
+ /// There is deliberately no socket address or discovery mechanism: the two
+ /// pipe descriptors inherited at launch are the entire authority boundary.
+ public enum ASRWorkerProtocol {
+-    public static let version: UInt16 = 1
++    public static let version: UInt16 = 2
+     public static let sampleRate = 16_000
+     public static let maximumSamples = 5 * 60 * sampleRate
+     public static let maximumPCMBytes = maximumSamples * MemoryLayout<Float>.size
++    public static let maximumPrefixAppendSamples = 2 * sampleRate
++    public static let closedWindowLongRouteSamples = 15 * sampleRate
++    public static let firstClosedWindowPlanningSampleCount = closedWindowLongRouteSamples + 1
++    /// The uploader must coalesce a five-minute take into at most this many
++    /// ranges. Exceeding the bound rejects the cache session and uses ordinary
++    /// whole-take transcription instead of retaining attacker-sized metadata.
++    public static let maximumPrefixSegments = 8_192
+     public static let maximumMetadataBytes = 4 * 1_024 * 1_024
+     public static let maximumTranscriptUTF8Bytes = 1 * 1_024 * 1_024
+     public static let maximumResultWords = 50_000
+     public static let maximumWordUTF8Bytes = 16 * 1_024
++
++    /// The frame kind is parsed from the fixed-size header before a body is
++    /// allocated. Keeping the append cap separate prevents a hostile child or
++    /// parent from turning one incremental upload into a five-minute buffer.
++    public static func maximumPayloadBytes(for kind: ASRWireKind) -> Int {
++        switch kind {
++        case .transcribeSamples:
++            maximumPCMBytes
++        case .appendPrefixSamples:
++            maximumPrefixAppendSamples * MemoryLayout<Float>.size
++        default:
++            0
++        }
++    }
+ }
+
+ public enum ASRWireKind: UInt16, Sendable {
+@@ -27,6 +48,116 @@ public enum ASRWireKind: UInt16, Sendable {
+     case result = 9
+     case failure = 10
+     case shutdown = 11
++    case beginPrefixSession = 12
++    case appendPrefixSamples = 13
++    case cancelPrefixSession = 14
++    case transcribePrefixSession = 15
++    case prefixSessionProgress = 16
++}
++
++/// Everything that can change recognition output while one capture is live.
++/// The worker treats this as an exact fence, not as advisory metadata.
++public struct ASRWorkerRecognitionConfiguration: Codable, Equatable, Hashable, Sendable {
++    public let epoch: UInt64
++    public let modelIdentifier: String
++    public let vocabularyRevision: UInt64?
++
++    public init(epoch: UInt64, modelIdentifier: String, vocabularyRevision: UInt64?) {
++        self.epoch = epoch
++        self.modelIdentifier = modelIdentifier
++        self.vocabularyRevision = vocabularyRevision
++    }
++}
++
++/// Stable identity for an incrementally uploaded recording. `captureStorageID`
++/// prevents a late append from an old PCM buffer from entering a reused UI
++/// session, while configuration and language fence every semantic input.
++public struct ASRWorkerPrefixSession: Codable, Equatable, Hashable, Sendable {
++    public let id: UUID
++    public let captureStorageID: UUID
++    public let languageHint: String?
++    public let configuration: ASRWorkerRecognitionConfiguration
++
++    public init(
++        id: UUID,
++        captureStorageID: UUID,
++        languageHint: String?,
++        configuration: ASRWorkerRecognitionConfiguration
++    ) {
++        self.id = id
++        self.captureStorageID = captureStorageID
++        self.languageHint = languageHint
++        self.configuration = configuration
++    }
++}
++
++public struct ASRWorkerBeginPrefixSession: Codable, Equatable, Sendable {
++    public let session: ASRWorkerPrefixSession
++    public let sampleRate: Int
++
++    public init(session: ASRWorkerPrefixSession, sampleRate: Int) {
++        self.session = session
++        self.sampleRate = sampleRate
++    }
++}
++
++/// One immutable, lossless PCM segment. The binary frame payload contains
++/// exactly `sampleCount` native-endian Float32 values beginning at
++/// `offsetSamples`; gaps, overlaps, and retries are rejected rather than
++/// repaired or zero-filled.
++public struct ASRWorkerAppendPrefixSamples: Codable, Equatable, Sendable {
++    public let session: ASRWorkerPrefixSession
++    public let offsetSamples: Int
++    public let sampleCount: Int
++
++    public init(session: ASRWorkerPrefixSession, offsetSamples: Int, sampleCount: Int) {
++        self.session = session
++        self.offsetSamples = offsetSamples
++        self.sampleCount = sampleCount
++    }
++}
++
++public struct ASRWorkerCancelPrefixSession: Codable, Equatable, Sendable {
++    public let session: ASRWorkerPrefixSession
++
++    public init(session: ASRWorkerPrefixSession) {
++        self.session = session
++    }
++}
++
++/// Foreground stop request. The worker may reuse only opaque caches that the
++/// recognizer revalidates against these exact authoritative samples.
++public struct ASRWorkerTranscribePrefixSession: Codable, Equatable, Sendable {
++    public let session: ASRWorkerPrefixSession
++    public let sampleRate: Int
++    public let sampleCount: Int
++
++    public init(session: ASRWorkerPrefixSession, sampleRate: Int, sampleCount: Int) {
++        self.session = session
++        self.sampleRate = sampleRate
++        self.sampleCount = sampleCount
++    }
++}
++
++/// Optional progress response for acknowledgements and diagnostics. It never
++/// authorizes the app to drop its authoritative PCM.
++public struct ASRWorkerPrefixSessionProgress: Codable, Equatable, Sendable {
++    public let sessionID: UUID
++    public let captureStorageID: UUID
++    public let contiguousSampleCount: Int
++    public let cachedClosedWindowCount: Int
++
++    public init(
++        sessionID: UUID,
++        captureStorageID: UUID,
++        contiguousSampleCount: Int,
++        cachedClosedWindowCount: Int
++    ) {
++        self.sessionID = sessionID
++        self.captureStorageID = captureStorageID
++        self.contiguousSampleCount = contiguousSampleCount
++        self.cachedClosedWindowCount = cachedClosedWindowCount
++    }
+ }
+
+ public struct ASRWorkerHello: Codable, Equatable, Sendable {
+diff --git a/Packages/ASRWorkerProtocol/Tests/ASRWorkerProtocolTests/ASRWireIOTests.swift b/Packages/ASRWorkerProtocol/Tests/ASRWorkerProtocolTests/ASRWireIOTests.swift
+index e4eaf81..1700a43 100644
+--- a/Packages/ASRWorkerProtocol/Tests/ASRWorkerProtocolTests/ASRWireIOTests.swift
++++ b/Packages/ASRWorkerProtocol/Tests/ASRWorkerProtocolTests/ASRWireIOTests.swift
+@@ -93,6 +93,49 @@ struct ASRWireIOTests {
+         }
+     }
+
++    @Test("prefix append cap is enforced from the header before allocating its body")
++    func hostilePrefixAppendDeclaredLength() throws {
++        var descriptors: [Int32] = [0, 0]
++        #expect(pipe(&descriptors) == 0)
++        defer {
++            Darwin.close(descriptors[0])
++            Darwin.close(descriptors[1])
++        }
++
++        let maximum = ASRWorkerProtocol.maximumPayloadBytes(for: .appendPrefixSamples)
++        let header = makeHeader(
++            kind: ASRWireKind.appendPrefixSamples.rawValue,
++            requestID: 101,
++            metadataBytes: 0,
++            payloadBytes: UInt64(maximum + 1)
++        )
++        _ = header.withUnsafeBytes {
++            Darwin.write(descriptors[1], $0.baseAddress, $0.count)
++        }
++        #expect(throws: ASRWireError.payloadTooLarge(actual: maximum + 1, maximum: maximum)) {
++            _ = try ASRWireIO.read(from: descriptors[0])
++        }
++    }
++
++    @Test("message kinds that do not define a payload reject one")
++    func unexpectedPayload() throws {
++        let frame = ASRWireFrame(
++            kind: .beginPrefixSession,
++            requestID: 1,
++            metadata: Data(),
++            payload: Data([0])
++        )
++        var descriptors: [Int32] = [0, 0]
++        #expect(pipe(&descriptors) == 0)
++        defer {
++            Darwin.close(descriptors[0])
++            Darwin.close(descriptors[1])
++        }
++        #expect(throws: ASRWireError.payloadTooLarge(actual: 1, maximum: 0)) {
++            try ASRWireIO.write(frame, to: descriptors[1])
++        }
++    }
++
+     @Test("unknown message kinds fail closed")
+     func unknownMessageKind() throws {
+         var descriptors: [Int32] = [0, 0]
+diff --git a/Packages/DictationCore/Sources/DictationAudio/MicrophoneCapture.swift b/Packages/DictationCore/Sources/DictationAudio/MicrophoneCapture.swift
+index bf19192..87c43df 100644
+--- a/Packages/DictationCore/Sources/DictationAudio/MicrophoneCapture.swift
++++ b/Packages/DictationCore/Sources/DictationAudio/MicrophoneCapture.swift
+@@ -39,17 +39,20 @@ struct RecordingPCMFrame: Sendable {
+ /// snapshot can be flattened without holding the callback lock.
+ private final class RecordingPCMChunk: @unchecked Sendable {
+     let frame: RecordingPCMFrame
++    let startSample: Int
+     let samples: [Float]
+     let next: RecordingPCMChunk?
+     private let onRelease: (@Sendable () -> Void)?
+
+     init(
+         frame: RecordingPCMFrame,
++        startSample: Int,
+         samples: [Float],
+         next: RecordingPCMChunk?,
+         onRelease: (@Sendable () -> Void)? = nil
+     ) {
+         self.frame = frame
++        self.startSample = startSample
+         self.samples = samples
+         self.next = next
+         self.onRelease = onRelease
+@@ -58,6 +61,124 @@ private final class RecordingPCMChunk: @unchecked Sendable {
+     deinit { onRelease?() }
+ }
+
++enum RecordingPCMRangeSnapshotError: Error, Equatable, Sendable {
++    case invalidRange
++}
++
++/// O(1) immutable view of one lossless, contiguous capture prefix. Acquiring a
++/// view retains only the newest chunk. Range materialization walks and copies
++/// on the caller, which must be an off-real-time worker.
++struct RecordingPCMRangeSnapshot: Sendable {
++    let storageID: UUID
++    let sampleCount: Int
++    private let head: RecordingPCMChunk?
++
++    fileprivate init(storageID: UUID, sampleCount: Int, head: RecordingPCMChunk?) {
++        self.storageID = storageID
++        self.sampleCount = sampleCount
++        self.head = head
++    }
++
++    func samples(in range: Range<Int>) throws -> [Float] {
++        guard range.lowerBound >= 0, range.upperBound <= sampleCount else {
++            throw RecordingPCMRangeSnapshotError.invalidRange
++        }
++        guard !range.isEmpty else { return [] }
++
++        var matchingChunks: [RecordingPCMChunk] = []
++        var cursor = head
++        while let chunk = cursor {
++            let chunkEnd = chunk.startSample + chunk.samples.count
++            if chunk.startSample < range.upperBound, chunkEnd > range.lowerBound {
++                matchingChunks.append(chunk)
++            }
++            if chunkEnd <= range.lowerBound { break }
++            cursor = chunk.next
++        }
++
++        var result: [Float] = []
++        result.reserveCapacity(range.count)
++        for chunk in matchingChunks.reversed() {
++            let lower = max(range.lowerBound, chunk.startSample) - chunk.startSample
++            let upper = min(
++                range.upperBound,
++                chunk.startSample + chunk.samples.count
++            ) - chunk.startSample
++            result.append(contentsOf: chunk.samples[lower..<upper])
++        }
++        guard result.count == range.count else {
++            throw RecordingPCMRangeSnapshotError.invalidRange
++        }
++        return result
++    }
++}
++
++/// One off-RT consumer and at most one pending committed watermark. Replacing
++/// a pending view is O(1): newer views share the immutable historical chain.
++/// Session activation is an explicit fence so a late old callback cannot
++/// overwrite the current recording's watermark.
++final class CoalescingPCMRangeSnapshotObserver: @unchecked Sendable {
++    private let lock = NSLock()
++    private let queue = DispatchQueue(
++        label: "is.waiwai.dictation.capture-pcm-prefix",
++        qos: .utility
++    )
++    private let consume: @Sendable (RecordingPCMRangeSnapshot) -> Void
++    private var activeStorageID: UUID?
++    private var pending: RecordingPCMRangeSnapshot?
++    private var isDraining = false
++
++    init(consume: @escaping @Sendable (RecordingPCMRangeSnapshot) -> Void) {
++        self.consume = consume
++    }
++
++    /// Called by session ownership code, never the audio callback.
++    func activate(storageID: UUID) {
++        lock.withLock {
++            activeStorageID = storageID
++            pending = nil
++        }
++    }
++
++    func submit(_ snapshot: RecordingPCMRangeSnapshot) {
++        let shouldLaunch: Bool = lock.withLock {
++            guard activeStorageID == snapshot.storageID else { return false }
++            if let pending, pending.sampleCount >= snapshot.sampleCount {
++                return false
++            }
++            pending = snapshot
++            guard !isDraining else { return false }
++            isDraining = true
++            return true
++        }
++        if shouldLaunch { queue.async { [self] in drain() } }
++    }
++
++    /// Called off real time when a session is cancelled or handed to stop.
++    func deactivate(storageID: UUID) {
++        lock.withLock {
++            guard activeStorageID == storageID else { return }
++            activeStorageID = nil
++            pending = nil
++        }
++    }
++
++    private func drain() {
++        while true {
++            let next: RecordingPCMRangeSnapshot? = lock.withLock {
++                guard let pending else {
++                    isDraining = false
++                    return nil
++                }
++                self.pending = nil
++                return pending
++            }
++            guard let next else { return }
++            consume(next)
++        }
++    }
++}
++
+ private struct RecordingPCMStorageSnapshot: Sendable {
+     let head: RecordingPCMChunk?
+     /// Keeps an overflowed/discarded chain alive until this off-callback
+@@ -662,6 +783,7 @@ final class RecordingPCMBuffer: @unchecked Sendable {
+     }
+
+     private let lock = NSLock()
++    let storageID: UUID
+     private let maximumSamples: Int
+     private let onFlatten: (@Sendable () -> Void)?
+     private let onChunkRelease: (@Sendable () -> Void)?
+@@ -674,6 +796,8 @@ final class RecordingPCMBuffer: @unchecked Sendable {
+     private var firstFrameAt: ContinuousClock.Instant?
+     private var firstFrameSequence: UInt64?
+     private var nextIngressSequence: UInt64 = 0
++    private var nextContiguousPrefixSequence: UInt64 = 0
++    private var immutablePrefixAvailable = true
+     private var acceptingFrames = true
+     private var discarded = false
+     private var freezeWasCancelled = false
+@@ -687,12 +811,14 @@ final class RecordingPCMBuffer: @unchecked Sendable {
+
+     init(
+         maximumSamples: Int,
++        storageID: UUID = UUID(),
+         onFlatten: (@Sendable () -> Void)? = nil,
+         onChunkRelease: (@Sendable () -> Void)? = nil,
+         discardReleaseContainment: RecordingPCMDiscardReleaseContainment = .shared
+     ) {
+         precondition(maximumSamples >= 0)
+         self.maximumSamples = maximumSamples
++        self.storageID = storageID
+         self.onFlatten = onFlatten
+         self.onChunkRelease = onChunkRelease
+         self.discardReleaseContainment = discardReleaseContainment
+@@ -756,12 +882,14 @@ final class RecordingPCMBuffer: @unchecked Sendable {
+             if !committed.isEmpty {
+                 chunkHead = RecordingPCMChunk(
+                     frame: frame,
++                    startSample: retainedSampleCount,
+                     samples: committed,
+                     next: chunkHead,
+                     onRelease: onChunkRelease
+                 )
+                 retainedSampleCount += committed.count
+                 totalSamples += committed.count
++                recordPrefixCommitLocked(frame)
+             }
+             acceptingFrames = false
+             return AppendResult(
+@@ -786,11 +914,13 @@ final class RecordingPCMBuffer: @unchecked Sendable {
+             if samples.count <= remaining {
+                 chunkHead = RecordingPCMChunk(
+                     frame: frame,
++                    startSample: retainedSampleCount,
+                     samples: samples,
+                     next: chunkHead,
+                     onRelease: onChunkRelease
+                 )
+                 retainedSampleCount += samples.count
++                recordPrefixCommitLocked(frame)
+             } else {
+                 // The disk pipeline owns the complete long take. Drop every
+                 // retained chunk at once rather than keeping an unusable prefix.
+@@ -800,6 +930,7 @@ final class RecordingPCMBuffer: @unchecked Sendable {
+                 chunkHead = nil
+                 retainedSampleCount = 0
+                 memoryAvailable = false
++                immutablePrefixAvailable = false
+                 didOverflowMemory = true
+             }
+         }
+@@ -812,6 +943,33 @@ final class RecordingPCMBuffer: @unchecked Sendable {
+         )
+     }
+
++    /// Captures only a prefix whose production commits are known to match the
++    /// shipping ingress order. Any unexpected direct/out-of-order producer
++    /// permanently disables this optimization for the recording; freeze and
++    /// disk recovery remain unchanged.
++    func immutablePrefixSnapshot() -> RecordingPCMRangeSnapshot? {
++        lock.withLock {
++            guard memoryAvailable, !discarded, immutablePrefixAvailable else {
++                return nil
++            }
++            return RecordingPCMRangeSnapshot(
++                storageID: storageID,
++                sampleCount: retainedSampleCount,
++                head: chunkHead
++            )
++        }
++    }
++
++    private func recordPrefixCommitLocked(_ frame: RecordingPCMFrame) {
++        guard immutablePrefixAvailable,
++              frame.ingressSequence == nextContiguousPrefixSequence
++        else {
++            immutablePrefixAvailable = false
++            return
++        }
++        nextContiguousPrefixSequence &+= 1
++    }
++
+     func endFrame() {
+         var freezeCompletion: (CheckedContinuation<FreezeOutcome, Never>, FreezeOutcome)?
+         var recoveryCompletion: (
+diff --git a/Packages/DictationCore/Tests/DictationAudioTests/MicrophoneCaptureFormatTests.swift b/Packages/DictationCore/Tests/DictationAudioTests/MicrophoneCaptureFormatTests.swift
+index 5f9e51a..3058cb6 100644
+--- a/Packages/DictationCore/Tests/DictationAudioTests/MicrophoneCaptureFormatTests.swift
++++ b/Packages/DictationCore/Tests/DictationAudioTests/MicrophoneCaptureFormatTests.swift
+@@ -103,6 +103,34 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
+         }
+     }
+
++    private final class BlockingPCMSnapshotConsumer: @unchecked Sendable {
++        private let lock = NSLock()
++        private let entered = DispatchSemaphore(value: 0)
++        private let release = DispatchSemaphore(value: 0)
++        private var receivedCounts: [Int] = []
++
++        func consume(_ snapshot: RecordingPCMRangeSnapshot) {
++            lock.lock()
++            receivedCounts.append(snapshot.sampleCount)
++            let isFirst = receivedCounts.count == 1
++            lock.unlock()
++            if isFirst {
++                entered.signal()
++                release.wait()
++            }
++        }
++
++        func waitUntilBlocked() -> Bool {
++            entered.wait(timeout: .now() + 1) == .success
++        }
++
++        func unblock() { release.signal() }
++
++        var counts: [Int] {
++            lock.withLock { receivedCounts }
++        }
++    }
++
+     private actor SessionFailureReceiver {
+         private var activeID: UUID?
+         private var activeURL: URL?
+@@ -274,6 +302,105 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
+         XCTAssertEqual(frozen.totalSamples, 4)
+     }
+
++    func testImmutablePCMSnapshotsPreserveExactBitsAcrossChunkRanges() async throws {
++        let flattenCalls = LockedCount()
++        let storageID = UUID()
++        let buffer = RecordingPCMBuffer(
++            maximumSamples: 5,
++            storageID: storageID,
++            onFlatten: flattenCalls.increment
++        )
++        let firstBits: [UInt32] = [0x8000_0000, 0x7fc0_0042, 0x3e80_0000]
++        let firstSamples = firstBits.map(Float.init(bitPattern:))
++        let first = try XCTUnwrap(buffer.beginFrame())
++        _ = buffer.append(firstSamples, frame: first, at: .now)
++        buffer.endFrame()
++        let firstSnapshot = try XCTUnwrap(buffer.immutablePrefixSnapshot())
++
++        let second = try XCTUnwrap(buffer.beginFrame())
++        _ = buffer.append([0.5, -0.75], frame: second, at: .now)
++        buffer.endFrame()
++        let finalSnapshot = try XCTUnwrap(buffer.immutablePrefixSnapshot())
++
++        XCTAssertEqual(firstSnapshot.storageID, storageID)
++        XCTAssertEqual(firstSnapshot.sampleCount, 3)
++        XCTAssertEqual(finalSnapshot.sampleCount, 5)
++        XCTAssertEqual(
++            try firstSnapshot.samples(in: 0..<3).map(\.bitPattern),
++            firstBits
++        )
++        XCTAssertEqual(
++            try finalSnapshot.samples(in: 1..<5).map(\.bitPattern),
++            [firstBits[1], firstBits[2], Float(0.5).bitPattern, Float(-0.75).bitPattern]
++        )
++        XCTAssertEqual(flattenCalls.value, 0, "range snapshots must never flatten on capture")
++
++        let frozen = await buffer.freeze()
++        XCTAssertEqual(
++            frozen.samples?.map(\.bitPattern),
++            firstBits + [Float(0.5).bitPattern, Float(-0.75).bitPattern]
++        )
++        XCTAssertEqual(flattenCalls.value, 1)
++    }
++
++    func testImmutablePCMSnapshotRejectsInvalidRangesWithoutPadding() throws {
++        let buffer = RecordingPCMBuffer(maximumSamples: 2)
++        let frame = try XCTUnwrap(buffer.beginFrame())
++        _ = buffer.append([1, 2], frame: frame, at: .now)
++        buffer.endFrame()
++        let snapshot = try XCTUnwrap(buffer.immutablePrefixSnapshot())
++
++        XCTAssertThrowsError(try snapshot.samples(in: 0..<3)) { error in
++            XCTAssertEqual(error as? RecordingPCMRangeSnapshotError, .invalidRange)
++        }
++    }
++
++    func testOutOfOrderProducerDisablesPrefixOptimizationButKeepsFinalFreeze() async throws {
++        let buffer = RecordingPCMBuffer(maximumSamples: 2)
++        let first = try XCTUnwrap(buffer.beginFrame(sampleTime: 0))
++        let second = try XCTUnwrap(buffer.beginFrame(sampleTime: 1))
++        _ = buffer.append([2], frame: second, at: .now)
++        buffer.endFrame()
++        _ = buffer.append([1], frame: first, at: .now)
++        buffer.endFrame()
++
++        XCTAssertNil(buffer.immutablePrefixSnapshot())
++        let frozen = await buffer.freeze()
++        XCTAssertEqual(frozen.samples, [1, 2])
++    }
++
++    func testBlockedPCMSnapshotObserverKeepsOnlyNewestActiveWatermark() async throws {
++        let oldBuffer = RecordingPCMBuffer(maximumSamples: 1)
++        let oldFrame = try XCTUnwrap(oldBuffer.beginFrame())
++        _ = oldBuffer.append([0], frame: oldFrame, at: .now)
++        oldBuffer.endFrame()
++        let oldSnapshot = try XCTUnwrap(oldBuffer.immutablePrefixSnapshot())
++
++        let buffer = RecordingPCMBuffer(maximumSamples: 200)
++        let consumer = BlockingPCMSnapshotConsumer()
++        let observer = CoalescingPCMRangeSnapshotObserver(consume: consumer.consume)
++        observer.activate(storageID: buffer.storageID)
++        observer.submit(oldSnapshot)
++
++        for count in 1...200 {
++            let frame = try XCTUnwrap(buffer.beginFrame())
++            _ = buffer.append([Float(count)], frame: frame, at: .now)
++            buffer.endFrame()
++            observer.submit(try XCTUnwrap(buffer.immutablePrefixSnapshot()))
++            if count == 1 {
++                XCTAssertTrue(consumer.waitUntilBlocked())
++            }
++        }
++        XCTAssertEqual(consumer.counts, [1])
++
++        consumer.unblock()
++        for _ in 0..<200 where consumer.counts.count < 2 {
++            await Task.yield()
++            try await Task.sleep(for: .milliseconds(1))
++        }
++        XCTAssertEqual(consumer.counts, [1, 200])
++    }
++
+     func testPCMChunksFallBackToDiskAfterMemoryCap() async throws {
+         let buffer = RecordingPCMBuffer(maximumSamples: 3)
+         let first = try XCTUnwrap(buffer.beginFrame())
+@@ -651,6 +778,20 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
+         }
+         let appendElapsed = appendStart.duration(to: clock.now)
+
++        let snapshotStart = clock.now
++        let snapshot = try XCTUnwrap(buffer.immutablePrefixSnapshot())
++        let snapshotElapsed = snapshotStart.duration(to: clock.now)
++        XCTAssertEqual(snapshot.sampleCount, frameCount * chunk.count)
++        XCTAssertEqual(
++            try snapshot.samples(in: (snapshot.sampleCount - chunk.count)..<snapshot.sampleCount),
++            chunk
++        )
++        XCTAssertLessThan(
++            snapshotElapsed,
++            .milliseconds(100),
++            "a maximum-take watermark must retain one immutable head, not copy 19.2 MB"
++        )
++
+         let overflowFrame = try XCTUnwrap(buffer.beginFrame())
+         let overflowStart = clock.now
+         let overflow = buffer.append([0.2], frame: overflowFrame, at: overflowStart)
+diff --git a/Packages/LocalASR/Package.swift b/Packages/LocalASR/Package.swift
+index 4b28312..fdade84 100644
+--- a/Packages/LocalASR/Package.swift
++++ b/Packages/LocalASR/Package.swift
+@@ -1,5 +1,17 @@
+ // swift-tools-version: 6.0
+ import PackageDescription
++import Foundation
++
++let fluidAudioDependency: Package.Dependency
++if let localPath = ProcessInfo.processInfo.environment["OPENRAMBLE_FLUIDAUDIO_PATH"],
++   !localPath.isEmpty {
++    fluidAudioDependency = .package(name: "FluidAudio", path: localPath)
++} else {
++    fluidAudioDependency = .package(
++        url: "https://github.com/mikwiseman/FluidAudio.git",
++        revision: "ee9a7f12d91710da53de6d75f8b7160e09eccee4"
++    )
++}
+
+ // LocalASR - setting up the model and local recognition.
+ //
+@@ -20,10 +32,7 @@ let package = Package(
+         // reset of TDT's fully overwritten fixed-size audio input buffer and
+         // avoids NSNumber boxing at the optional CTC model boundaries. It also
+         // accepts a conservative term-index prefilter for the final rescorer.
+-        .package(
+-            url: "https://github.com/mikwiseman/FluidAudio.git",
+-            revision: "ee9a7f12d91710da53de6d75f8b7160e09eccee4"
+-        ),
++        fluidAudioDependency,
+     ],
+     targets: [
+         .target(
+diff --git a/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift b/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift
+index 45caca9..6f66c74 100644
+--- a/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift
++++ b/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift
+@@ -44,12 +44,64 @@ public enum VocabularyInferenceScheduling: String, Sendable, CaseIterable {
+     case candidateRegions
+ }
+
++/// FluidAudio stays behind this file even for speculative long-form work.
++/// These values are opaque capabilities that worker code can index and retain
++/// without importing or constructing library-owned cache objects.
++public struct LocalASRClosedWindowPlan: Sendable {
++    fileprivate let raw: ASRClosedWindowPlan
++
++    public var index: Int { raw.index }
++    public var inputStartSample: Int { raw.inputStartSample }
++    public var inputEndSample: Int { raw.inputEndSample }
++    public var earliestSafePrefixSampleCount: Int { raw.earliestSafePrefixSampleCount }
++}
++
++public struct LocalASRClosedWindowPlanningSnapshot: Sendable {
++    public let plans: [LocalASRClosedWindowPlan]
++    public let nextPlanningSampleCount: Int?
++}
++
++public struct LocalASRPreparedClosedWindow: Sendable {
++    fileprivate let raw: ASRPreparedClosedWindow
++
++    public var index: Int { raw.index }
++    public var inputSampleCount: Int { raw.inputSampleCount }
++}
++
++public struct LocalASRClosedWindowCache: Sendable {
++    fileprivate let raw: ASRClosedWindowCache
++
++    public var index: Int { raw.index }
++    public var inputSampleCount: Int { raw.inputSampleCount }
++    public var tokenCount: Int { raw.tokenCount }
++}
++
++protocol ExactTDTClosedWindowCaching: ASREngineAdapting {
++    func closedWindowPlanningSnapshot(
++        samples: [Float],
++        languageHint: String?
++    ) async throws -> LocalASRClosedWindowPlanningSnapshot
++    func prepareClosedWindow(
++        _ plan: LocalASRClosedWindowPlan,
++        samples: [Float],
++        languageHint: String?
++    ) async throws -> LocalASRPreparedClosedWindow
++    func precomputeClosedWindow(
++        _ prepared: LocalASRPreparedClosedWindow
++    ) async throws -> LocalASRClosedWindowCache
++    func transcribe(
++        samples: [Float],
++        languageHint: String?,
++        reusingClosedWindows: [LocalASRClosedWindowCache]
++    ) async throws -> DictationCore.ASRResult
++}
++
+ /// The only place in the entire project where FluidAudio is imported.
+ ///
+ /// Everything else - including the dictation controller and its tests - works through
+ /// `ASREngineAdapting` from DictationCore. If the library API goes (and it
+ /// the documentation diverges from the tag in some places), only this file will have to be repaired.
+-public actor FluidAudioAdapter: ASREngineAdapting {
++public actor FluidAudioAdapter: ASREngineAdapting, ExactTDTClosedWindowCaching {
+     private var models: AsrModels?
+     private var manager: AsrManager?
+
+@@ -748,20 +800,34 @@ public actor FluidAudioAdapter: ASREngineAdapting {
+     public func transcribe(
+         samples: [Float],
+         languageHint: String?
++    ) async throws -> DictationCore.ASRResult {
++        try await transcribe(
++            samples: samples,
++            languageHint: languageHint,
++            cachedWindows: nil
++        )
++    }
++
++    func transcribe(
++        samples: [Float],
++        languageHint: String?,
++        reusingClosedWindows: [LocalASRClosedWindowCache]
++    ) async throws -> DictationCore.ASRResult {
++        try await transcribe(
++            samples: samples,
++            languageHint: languageHint,
++            cachedWindows: reusingClosedWindows
++        )
++    }
++
++    private func transcribe(
++        samples: [Float],
++        languageHint: String?,
++        cachedWindows: [LocalASRClosedWindowCache]?
+     ) async throws -> DictationCore.ASRResult {
+         // The hint is checked before everything else: unknown code - error
+         // of the caller, and it must be visible and not silently become "auto".
+-        let language: Language?
+-        if let languageHint {
+-            guard let parsed = Language(rawValue: languageHint) else {
+-                throw ASREngineError.inferenceFailed(
+-                    "unsupported language hint: \(languageHint)"
+-                )
+-            }
+-            language = parsed
+-        } else {
+-            language = nil
+-        }
++        let language = try Self.language(from: languageHint)
+
+         guard let manager else {
+             throw ASREngineError.modelsNotLoaded
+@@ -817,6 +883,14 @@ public actor FluidAudioAdapter: ASREngineAdapting {
+                 : nil
+             let result = try await {
+                 do {
++                    if let cachedWindows {
++                        return try await manager.transcribe(
++                            samples,
++                            decoderState: &state,
++                            language: language,
++                            reusingClosedWindows: cachedWindows.map(\.raw)
++                        )
++                    }
+                     return try await manager.transcribe(
+                         samples,
+                         decoderState: &state,
+@@ -928,6 +1002,57 @@ public actor FluidAudioAdapter: ASREngineAdapting {
+         )
+     }
+
++    func closedWindowPlanningSnapshot(
++        samples: [Float],
++        languageHint: String?
++    ) async throws -> LocalASRClosedWindowPlanningSnapshot {
++        guard let manager else { throw ASREngineError.modelsNotLoaded }
++        let language = try Self.language(from: languageHint)
++        let snapshot = try await manager.closedWindowPlanningSnapshot(
++            for: samples,
++            language: language
++        )
++        return LocalASRClosedWindowPlanningSnapshot(
++            plans: snapshot.plans.map(LocalASRClosedWindowPlan.init(raw:)),
++            nextPlanningSampleCount: snapshot.nextPlanningSampleCount
++        )
++    }
++
++    func prepareClosedWindow(
++        _ plan: LocalASRClosedWindowPlan,
++        samples: [Float],
++        languageHint: String?
++    ) async throws -> LocalASRPreparedClosedWindow {
++        guard let manager else { throw ASREngineError.modelsNotLoaded }
++        let language = try Self.language(from: languageHint)
++        return try await LocalASRPreparedClosedWindow(
++            raw: manager.prepareClosedWindow(
++                plan.raw,
++                from: samples,
++                language: language
++            )
++        )
++    }
++
++    func precomputeClosedWindow(
++        _ prepared: LocalASRPreparedClosedWindow
++    ) async throws -> LocalASRClosedWindowCache {
++        guard let manager else { throw ASREngineError.modelsNotLoaded }
++        return try await LocalASRClosedWindowCache(
++            raw: manager.precomputeClosedWindow(prepared.raw)
++        )
++    }
++
++    private static func language(from languageHint: String?) throws -> Language? {
++        guard let languageHint else { return nil }
++        guard let parsed = Language(rawValue: languageHint) else {
++            throw ASREngineError.inferenceFailed(
++                "unsupported language hint: \(languageHint)"
++            )
++        }
++        return parsed
++    }
++
+     /// Search for terms in audio.
+     ///
+     /// Not an actor method intentionally: it works based on the passed snapshot of the set and not to
+diff --git a/Packages/LocalASR/Sources/LocalASR/LocalTranscriber.swift b/Packages/LocalASR/Sources/LocalASR/LocalTranscriber.swift
+index 54465a9..3188e95 100644
+--- a/Packages/LocalASR/Sources/LocalASR/LocalTranscriber.swift
++++ b/Packages/LocalASR/Sources/LocalASR/LocalTranscriber.swift
+@@ -165,6 +165,107 @@ public actor LocalTranscriber {
+         return try await engine.transcribe(samples: samples, languageHint: languageHint)
+     }
+
++    public func closedWindowPlanningSnapshot(
++        samples: [Float],
++        languageHint: String?
++    ) async throws -> LocalASRClosedWindowPlanningSnapshot {
++        guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
++        guard let caching = engine as? any ExactTDTClosedWindowCaching else {
++            throw ASREngineError.modelsUnavailable("the engine doesn't support exact closed windows")
++        }
++        activeOperations += 1
++        defer { activeOperations -= 1 }
++        let expectedGeneration = generation
++        try Task.checkCancellation()
++        let snapshot = try await caching.closedWindowPlanningSnapshot(
++            samples: samples,
++            languageHint: languageHint
++        )
++        guard generation == expectedGeneration, loadedDirectory != nil else {
++            throw CancellationError()
++        }
++        return snapshot
++    }
++
++    public func prepareClosedWindow(
++        _ plan: LocalASRClosedWindowPlan,
++        samples: [Float],
++        languageHint: String?
++    ) async throws -> LocalASRPreparedClosedWindow {
++        guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
++        guard let caching = engine as? any ExactTDTClosedWindowCaching else {
++            throw ASREngineError.modelsUnavailable("the engine doesn't support exact closed windows")
++        }
++        activeOperations += 1
++        defer { activeOperations -= 1 }
++        let expectedGeneration = generation
++        try Task.checkCancellation()
++        let prepared = try await caching.prepareClosedWindow(
++            plan,
++            samples: samples,
++            languageHint: languageHint
++        )
++        guard generation == expectedGeneration, loadedDirectory != nil else {
++            throw CancellationError()
++        }
++        return prepared
++    }
++
++    public func precomputeClosedWindow(
++        _ prepared: LocalASRPreparedClosedWindow
++    ) async throws -> LocalASRClosedWindowCache {
++        guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
++        guard let caching = engine as? any ExactTDTClosedWindowCaching else {
++            throw ASREngineError.modelsUnavailable("the engine doesn't support exact closed windows")
++        }
++        activeOperations += 1
++        defer { activeOperations -= 1 }
++        let expectedGeneration = generation
++        try Task.checkCancellation()
++        if let inferenceWarmupTask {
++            try await inferenceWarmupTask.value
++            try Task.checkCancellation()
++        }
++        guard generation == expectedGeneration, loadedDirectory != nil else {
++            throw CancellationError()
++        }
++        let cached = try await caching.precomputeClosedWindow(prepared)
++        guard generation == expectedGeneration, loadedDirectory != nil else {
++            throw CancellationError()
++        }
++        return cached
++    }
++
++    public func transcribe(
++        samples: [Float],
++        languageHint: String?,
++        reusingClosedWindows: [LocalASRClosedWindowCache]
++    ) async throws -> ASRResult {
++        guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
++        guard !samples.isEmpty else {
++            throw ASREngineError.unsupportedAudioFormat("empty recording")
++        }
++        guard let caching = engine as? any ExactTDTClosedWindowCaching else {
++            throw ASREngineError.modelsUnavailable("the engine doesn't support exact closed windows")
++        }
++        activeOperations += 1
++        defer { activeOperations -= 1 }
++        let expectedGeneration = generation
++        try Task.checkCancellation()
++        if let inferenceWarmupTask {
++            try await inferenceWarmupTask.value
++            try Task.checkCancellation()
++        }
++        guard generation == expectedGeneration, loadedDirectory != nil else {
++            throw CancellationError()
++        }
++        return try await caching.transcribe(
++            samples: samples,
++            languageHint: languageHint,
++            reusingClosedWindows: reusingClosedWindows
++        )
++    }
++
+     /// Execute representative inference after all optional models have loaded.
+     /// Loading Core ML weights alone does not compile/materialize every
+     /// prediction path; without this, the first short dictation (or the first
+diff --git a/apps/macos/OpenRambleASRWorker/WorkerRuntime.swift b/apps/macos/OpenRambleASRWorker/WorkerRuntime.swift
+index ef8e694..ffe4d08 100644
+--- a/apps/macos/OpenRambleASRWorker/WorkerRuntime.swift
++++ b/apps/macos/OpenRambleASRWorker/WorkerRuntime.swift
+@@ -36,7 +36,16 @@ actor ASRWorkerRuntime {
+                 try await transcribeSamples(frame)
+             case .transcribeFile:
+                 try await transcribeFile(frame)
+-            case .helloAcknowledged, .acknowledged, .result, .failure, .shutdown:
++            case .beginPrefixSession, .appendPrefixSamples, .cancelPrefixSession,
++                 .transcribePrefixSession:
++                // Phase one defines and falsifies the pure session/scheduler
++                // state before putting it on the production CoreML lane.
++                throw ASRWorkerFailure(
++                    code: .invalidRequest,
++                    message: "Incremental ASR sessions are not enabled in this worker build."
++                )
++            case .helloAcknowledged, .acknowledged, .result, .failure, .shutdown,
++                 .prefixSessionProgress:
+                 throw ASRWorkerFailure(code: .invalidRequest, message: "Unexpected worker message kind.")
+             }
+         } catch let failure as ASRWorkerFailure {
+diff --git a/apps/macos/OpenRambleASRWorkerTestFixture/OpenRambleASRWorkerTestFixture.swift b/apps/macos/OpenRambleASRWorkerTestFixture/OpenRambleASRWorkerTestFixture.swift
+index a6d1471..bb42087 100644
+--- a/apps/macos/OpenRambleASRWorkerTestFixture/OpenRambleASRWorkerTestFixture.swift
++++ b/apps/macos/OpenRambleASRWorkerTestFixture/OpenRambleASRWorkerTestFixture.swift
+@@ -72,7 +72,9 @@ enum OpenRambleASRWorkerTestFixture {
+                 )
+             case .shutdown:
+                 Darwin._exit(EXIT_SUCCESS)
+-            case .helloAcknowledged, .acknowledged, .result, .failure:
++            case .beginPrefixSession, .appendPrefixSamples, .cancelPrefixSession,
++                 .transcribePrefixSession, .helloAcknowledged, .acknowledged,
++                 .result, .failure, .prefixSessionProgress:
+                 Darwin._exit(EX_PROTOCOL)
+             }
+         }

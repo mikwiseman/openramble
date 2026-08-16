@@ -144,6 +144,7 @@ func isOn(_ name: String) -> Bool {
 
 func prepareTranscriber(
     performConfiguredWarmup: Bool = true,
+    collectPhaseTimings: Bool = false,
     logger: @escaping (String) -> Void = { print($0) }
 ) async throws -> LocalTranscriber {
     // An explicit bundle folder is the only way to compare two encoders: storage
@@ -245,7 +246,8 @@ func prepareTranscriber(
         dualDecodeArbitration: dualDecode,
         maxTokensPerChunk: maxTokens ?? FluidAudioAdapter.defaultMaxTokensPerChunk,
         parallelChunkConcurrency: chunkConcurrency ?? FluidAudioAdapter.defaultParallelChunkConcurrency,
-        vocabularyScheduling: vocabularyScheduling
+        vocabularyScheduling: vocabularyScheduling,
+        collectPhaseTimings: collectPhaseTimings
     )
     let transcriber = LocalTranscriber(engine: adapter)
     let started = ContinuousClock.now

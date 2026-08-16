@@ -1,0 +1,11 @@
+.../Sources/ASRWorkerProtocol/ASRWireIO.swift      |  12 +-
+ .../ASRWorkerProtocol/ASRWorkerProtocol.swift      | 133 ++++++++++++++++-
+ .../ASRWorkerProtocolTests/ASRWireIOTests.swift    |  43 ++++++
+ .../Sources/DictationAudio/MicrophoneCapture.swift | 158 +++++++++++++++++++++
+ .../MicrophoneCaptureFormatTests.swift             | 141 ++++++++++++++++++
+ Packages/LocalASR/Package.swift                    |  17 ++-
+ .../Sources/LocalASR/FluidAudioAdapter.swift       | 149 +++++++++++++++++--
+ .../Sources/LocalASR/LocalTranscriber.swift        | 101 +++++++++++++
+ apps/macos/OpenRambleASRWorker/WorkerRuntime.swift |  11 +-
+ .../OpenRambleASRWorkerTestFixture.swift           |   4 +-
+ 10 files changed, 745 insertions(+), 24 deletions(-)

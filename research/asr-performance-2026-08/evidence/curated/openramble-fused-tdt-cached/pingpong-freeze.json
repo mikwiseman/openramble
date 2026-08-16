@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "scope": "temp-only one-shot ping-pong host falsification",
+  "no_coreml_inference_during_prepare": true,
+  "source": {
+    "shared_repo_commit": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+    "shared_repo_clean": true,
+    "fluidaudio_commit": "ee9a7f12d91710da53de6d75f8b7160e09eccee4",
+    "mobius_commit": "d2398af6042684a1b06dbc6951bdb50e1cf0366a",
+    "nemo_checkpoint_sha256": "3cbdc85877e668ca7b82d0d56770eb1fac76691f55d6b97545e8d61ca588d10d",
+    "exporter_sha256": "f7c9eb784c72914faaa95ac30de558f8e5f41c2bdefcd7f85a8046c93f13a3dd",
+    "export_attestation_sha256": "6ec17706c2246fe00be12d84a940789fb0a83858acbc5d1d18624aadfb084c5e"
+  },
+  "runtime_source_sha256": {
+    "TdtCachedFusion.swift": "f93f40132b71c36b9b5136279a53971a85b6773f5c5db96dfd0f56ed8e95c7ac",
+    "TdtModelInference.swift": "84487cf43b296181e1aa7f62581136a3761a32ddcace6d254edb054b38423b78",
+    "TdtDecoderV3.swift": "ff89c0785545c268af79beaf73471095cdf9669d60bdf4be0bf490bb6a154642",
+    "TdtCachedFusionTests.swift": "c2700f2823ce8f29004d52e43fd365eb092390c4dac48ad45a6117e3c0d23af7",
+    "smoke_main.swift": "3ea963d33e6918eab864b92df53740c56e935f969ebbb2f8ce2cd95b0eac2faf",
+    "smoke_Package.swift": "c16d79296af56422bc6566965a7a9b59455d1c81b320ce9c78cab748c72ac6c1"
+  },
+  "build": {
+    "focused_tests": "21/21 PASS",
+    "focused_test_log_sha256": "848eeaf556c0248e81dded481bdc68e48421c04e5f710f2cce27c1850501794f",
+    "release_build": "PASS",
+    "release_build_log_sha256": "750bb702a18d7982d9b2ec36f5970170387b0145f30bd8ef50d0f26534f0fde0",
+    "runner_path": "$TMP/openramble-fused-tdt-cached/smoke/.build/release/fused-tdt-smoke",
+    "runner_sha256": "f3b9f18eb83670419b16e28c1eb3bf7d667a9908aa3994379c1f410d7b0e5f4f",
+    "runner_arch": "arm64",
+    "runner_bytes": 7626512
+  },
+  "artifacts": {
+    "shipping_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3",
+    "shipping_decoder_mil_sha256": "ef2a0a281695398a62fde86ac269c68f73d5b578d7ed3b31f2ba91a2d1ea1f35",
+    "shipping_decoder_weight_sha256": "48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41",
+    "shipping_joint_mil_sha256": "be60732943389a047175111a83f8839f3eb39d4803adafa828a0871b2f39818d",
+    "shipping_joint_weight_sha256": "4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e",
+    "fused_compiled_path": "$TMP/openramble-fused-tdt-cached/artifacts/compiled/DecoderJointDecisionCached.mlmodelc",
+    "fused_compiled_tree_sha256": "250848b9ac42ffdfd64b226135f2576032dcfe6d722231793dd79ab5b117337c",
+    "fused_mil_sha256": "ea509bf2e8ab1a2ac3ce7eb4ad2fe3138f0a2031dc8bc1600074a47a757b9ebc",
+    "fused_weight_sha256": "9c9476541601bd64b0563f11ad9d1c2a3fdf16eb493e06e45bb6122c600911df"
+  },
+  "cohort": {
+    "manifest_path": "$TMP/openramble-fused-tdt-cached/smoke/smoke-manifest.json",
+    "manifest_sha256": "5ed6aa08789ad8d526f414d2261e527f29fab62377d2e7a66a4c99e367a01d3a",
+    "fixtures": 4,
+    "languages": {"en": 2, "ru": 2},
+    "repeats": 5,
+    "warmup": "one A and one B per fixture, excluded",
+    "order": "alternating A/B by repetition",
+    "product_config": "mel=false/concurrency=4/TDT.maxTokensPerChunk=600/dualDecode=false/resetData=false",
+    "compute_units": "all"
+  },
+  "hard_gates": {
+    "exact_bit_parity": "4/4",
+    "fallbacks": 0,
+    "prefetched_frame_mismatches": 0,
+    "no_fixture_median_slower": true,
+    "overall_median_win_fraction_minimum": 0.05,
+    "failure_policy": "permanent close; no further graph or host tuning"
+  },
+  "execution": {
+    "environment": {"HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1"},
+    "arguments": [
+      "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3",
+      "$TMP/openramble-fused-tdt-cached/artifacts/compiled/DecoderJointDecisionCached.mlmodelc",
+      "$TMP/openramble-fused-tdt-cached/smoke/smoke-manifest.json",
+      "5",
+      "$TMP/openramble-fused-tdt-cached/smoke/pingpong-smoke-report.json"
+    ],
+    "stdout": "$TMP/openramble-fused-tdt-cached/smoke/pingpong-smoke-stdout.json",
+    "stderr": "$TMP/openramble-fused-tdt-cached/smoke/pingpong-smoke-stderr.log"
+  }
+}

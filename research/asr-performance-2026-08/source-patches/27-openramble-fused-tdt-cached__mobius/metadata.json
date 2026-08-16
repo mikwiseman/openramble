@@ -1,0 +1,9 @@
+{
+  "branch": "",
+  "head": "d2398af6042684a1b06dbc6951bdb50e1cf0366a",
+  "origin": "$TMP/openramble-short-shape/mobius",
+  "source": "$TMP/openramble-fused-tdt-cached/mobius",
+  "status": [
+    "M models/stt/parakeet-tdt-v3-0.6b/coreml/fuse_decoder_joint.py"
+  ]
+}

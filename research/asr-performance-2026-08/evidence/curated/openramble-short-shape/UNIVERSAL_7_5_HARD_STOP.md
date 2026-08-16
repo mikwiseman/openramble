@@ -1,0 +1,286 @@
+# TEMP-only universal static-7.5s experiment — hard stop
+
+Date: 2026-08-14 (Europe/Moscow)
+Host: `Mac16,10`, Apple M4, 16 GiB, macOS 26.4 (25E246)
+Shared repository changes: none (`git status --short --branch` prints only the branch line)
+
+## Decision
+
+**Reject a single static 7.5s frontend as a universal replacement for the
+shipping static 15s frontend under the current long-form chunk/merge policy.**
+
+The required material-parity hard stop fired on the real 56.104s
+`product-names.wav` fixture:
+
+- normalized short-vs-shipping WER: **15.6522%** (18 edits / 115 shipping words);
+- WER against the available frozen local golden:
+  shipping **16.0377%** (17/106), short **30.1887%** (32/106),
+  a **+14.1509 percentage-point** degradation;
+- the failure repeated exactly: transcript, normalized transcript, token timing,
+  word timing, encoder-window count, and window-layout hashes were stable in
+  both post-warmup repetitions. An immediately preceding two-repeat process
+  produced the same transcript/timing/layout hashes as well.
+
+Representative seam damage:
+
+- shipping: `...the O2 Outlier, our forward-thinking...`
+- short: `...the O two outlier are four forward thinking...`
+- shipping: `...creative solutions.`
+- short: `...creativeutions S.ol...`
+
+The 84.381s `whole-earth.wav` fixture did not regress against its frozen golden
+(1.3889% -> 0.4630% WER), but one passing long fixture cannot override the
+material failure on the other.
+
+Per the requested hard-stop rule, the n>=30 acceptance latency run was **not**
+performed. The n=2 timings below are smoke diagnostics only and are not
+decision-quality p50/p95 claims.
+
+## Exact shipping configuration used
+
+The first exploratory smoke accidentally used FluidAudio's standalone
+`ASRConfig()` default (`melChunkContext=true`). It is excluded from the decision.
+The final evidence uses the configuration explicitly constructed by the current
+OpenRamble `FluidAudioAdapter`:
+
+- encoder: palettized 6-bit, automatic placement / `MLComputeUnits.all`;
+- `TdtConfig(maxTokensPerChunk: 600)`;
+- `parallelChunkConcurrency=4`;
+- `melChunkContext=false`;
+- `dualDecodeArbitration=false`;
+- model version v3, int8 encoder loader selection;
+- post-reset cache behavior: the temp FluidAudio fork has the old returned-array
+  `resetData(to: 0)` removed for both models. There is no 240k zero-fill hidden
+  in the shipping baseline and no cache-reset saving counted twice.
+
+The direct TDT harness does not run the optional auxiliary CTC vocabulary pass;
+that pass is outside the frontend/Decoder/Joint replacement under test and was
+omitted symmetrically.
+
+Temp runtime source is FluidAudio
+`19600a485baa4998812e4654b70d2bab8f2c9949` plus a temp-only patch
+(binary diff SHA-256
+`7b125580909067433b7645d9d43b4b8c2e6b58ecff995976080f4d049d1a38ea`)
+for the 7.5s constant override, post-reset cache behavior, phase hooks, and
+read-only window diagnostics.
+
+## Chunking and merge policy (unchanged)
+
+| Property | Shipping 15s | Static 7.5s |
+|---|---:|---:|
+| Core ML maximum | 240,000 samples / 15.00s | 120,000 / 7.50s |
+| Visible frame-aligned chunk | 239,360 / 14.96s | 119,040 / 7.44s |
+| Requested overlap | 32,000 / 2.00s | 32,000 / 2.00s |
+| Nominal target stride | 207,360 / 12.96s | 87,040 / 5.44s |
+| Mel prepend | 0 | 0 |
+| Worker concurrency | 4 | 4 |
+
+Because v3 no-mel mode uses the current silence/energy-aligned start search,
+the requested 2s overlap is not the actual overlap on every transition. The
+captured static-7.5 layouts contain 39 transitions with actual overlaps from
+**0.48s to 5.76s**. No start, overlap, or splice was overridden.
+
+The merge remained exactly:
+
+1. time-tolerant contiguous token matching;
+2. LCS fallback;
+3. emitted-token midpoint fallback if no usable match;
+4. timestamp sort;
+5. `collapseSeamWordDuplicates`.
+
+Every captured window start/end and every seam's word context at the geometric
+audio-overlap midpoint +/-0.1s is in
+`reports/universal-exactconfig-analysis-smoke.json` under
+`fixtures[].shortSeamContexts`. Raw token and word timestamps are in both raw
+reports.
+
+The material `product-names` seam contexts include:
+
+| Transition | Actual overlap | Midpoint +/-0.1s: shipping | Midpoint +/-0.1s: short |
+|---:|---:|---|---|
+| 2 | 0.64s | `unique` | empty |
+| 6 | 3.52s | `with W3RAPZ` | `with W` |
+| 7 | 0.48s | `our forward-thinking` | `forward` |
+| 8 | 0.48s | `M3` | `M three` |
+| 9 | 5.76s | `At Quirk` | `At Cork` |
+| 10 | 0.96s | `creative solutions.` | `creativeutions` |
+
+These midpoints describe the captured audio overlaps; the match-based merger
+does not expose one fixed splice timestamp. The JSON explicitly preserves this
+caveat rather than presenting overlap midpoints as actual match anchors.
+
+## Frozen fixtures and parity
+
+The five boundary WAVs are byte repetitions/truncations of the pinned
+LibriSpeech fixture at exact sample counts. The 7.5s artifact was generated by
+the same existing Swift generator used for the previously frozen 14.9/15.1/
+29.9/30.1 fixtures.
+
+| Fixture | Exact / normalized parity | Ship -> short windows | Ship-vs-short WER | Frozen-golden WER ship -> short |
+|---|---|---:|---:|---:|
+| boundary 7.5s | yes / yes | 1 -> 1 | 0.0000% | unavailable |
+| boundary 14.9s | yes / yes | 1 -> 3 | 0.0000% | unavailable |
+| boundary 15.1s | no / no | 2 -> 3 | 8.3333% | unavailable |
+| boundary 29.9s | no / no | 3 -> 6 | 2.1739% | unavailable |
+| boundary 30.1s | no / no | 3 -> 6 | 3.2258% | unavailable |
+| real product-names 56.104s | no / no | 5 -> 11 | 15.6522% | 16.0377% -> 30.1887% |
+| real whole-earth 84.381s | no / no | 7 -> 16 | 0.9217% | 1.3889% -> 0.4630% |
+
+The two available references are frozen entries from transcribe.cpp
+`tests/golden/batch/parakeet-tdt-0.6b-v2.cpu.json`, not independently
+human-verified transcripts. Source commit:
+`856d7c10a1a864b900e066b7c9801edf373f5148`; golden SHA-256:
+`14b7ef93b73e09452032906dc7dc001fcbc6e9f6900779216bfb78be7ab06281`.
+
+The 15.1s diagnostic difference is confined to the deliberately truncated
+start of the third repetition:
+
+- shipping tail: `I really I really want to.`
+- short tail: `I really wondered.`
+
+The synthetic boundaries have no independent time-aligned references, so their
+shipping-vs-short WER is reported only as parity, not as ground-truth quality.
+
+## Words, timestamps, and repeated hashes
+
+All seven fixtures were stable within each exact-config process for:
+raw text, normalized text, raw token-timing JSON, word-timing JSON, actual
+encoder-call count, and actual silence-aligned layout. The earlier corrected
+two-repeat process matched these text/timing/layout hashes again.
+
+| Fixture | Raw text SHA-256 ship / short | Normalized SHA-256 ship / short | Word-timing SHA-256 ship / short |
+|---|---|---|---|
+| 7.5 | `9ff0bbd8...a75f` / same | `a4500b7e...1346` / same | `1b1438cb...2055` / `38878f09...9a5` |
+| 14.9 | `9717c489...cd19` / same | `08af7bbf...6450` / same | `ac41d9a8...c287c` / `dfbc6f89...0ce2` |
+| 15.1 | `0af51c25...7862` / `47dcabc0...2865` | `b7193045...b1e` / `f317bc1d...06e8` | `0c34206b...1b6f` / `e2768124...4ead` |
+| 29.9 | `8b00a127...f254` / `1500c871...2f3c` | `bb3fecfc...c5ef` / `fda499ba...c0df` | `2b655af2...e9f9` / `3781b910...9b73` |
+| 30.1 | `6084ed94...903a` / `92270326...b8a8` | `b0742867...b8be8` / `a5ec7375...def3` | `8dbdfc21...b633` / `c08ad03c...f3e2` |
+| product-names | `0f2125c9...dba8` / `695411ea...b4eb` | `f4f3ac0a...279b` / `bb67d0be...8e15` | `b6929a6a...f542` / `97e273eb...35e8` |
+| whole-earth | `05e6026a...0fb1` / `5ab5f2b5...e09c` | `9885a3da...72af` / `09ea170e...6586` | `9298de4d...48f8` / `64d47023...5a12` |
+
+The full 64-character values, raw words, token IDs, timestamps, confidences,
+and variant sets are in the raw reports. Even at 7.5s and 14.9s, equal text does
+not mean bit-identical timing: word-timing hashes differ. At 7.5s all 21 words
+matched; start deltas were 0, median end delta 0, and maximum end delta one
+encoder frame (0.08s).
+
+## Smoke latency, load, and RSS (not n>=30)
+
+One symmetric warmup per fixture, then n=2:
+
+| Fixture | Shipping p50 / p95 | Short p50 / p95 |
+|---|---:|---:|
+| 7.5s | 53.795 / 54.598 ms | 38.207 / 39.589 ms |
+| 14.9s | 72.167 / 73.053 ms | 63.465 / 65.026 ms |
+| 15.1s | 74.613 / 75.529 ms | 59.710 / 59.855 ms |
+| 29.9s | 115.348 / 125.540 ms | 97.600 / 97.872 ms |
+| 30.1s | 103.693 / 104.886 ms | 101.251 / 103.968 ms |
+| product-names | 174.321 / 174.898 ms | 165.445 / 165.843 ms |
+| whole-earth | 232.159 / 233.821 ms | 233.546 / 235.562 ms |
+
+The final exact-config fresh processes (content/system specialization already
+cached) measured:
+
+| Cost | Shipping | Short |
+|---|---:|---:|
+| `AsrModels.load` | 202.968 ms | 187.323 ms |
+| manager model binding | 0.031 ms | 0.030 ms |
+| first 7.5s inference | 63.883 ms | 49.288 ms |
+| peak RSS after load | 54,935,552 B | 52,854,784 B |
+| peak RSS after first inference | 96,452,608 B | 88,162,304 B |
+| process high-water after all fixtures | 149,520,384 B | 121,323,520 B |
+
+The process loaded all fixture PCM arrays, so the end high-water is a symmetric
+harness/process RSS number, not just model resident weight.
+
+Earlier in the same static-shape investigation, after the app was stopped but
+without clearing the system Core ML cache, the first observed process loads were
+13.482s shipping and 12.692s short. Those are the closest available
+first-specialization observations, not pristine-cache guarantees. After caching,
+three-run load medians were approximately 264ms shipping and 224ms short.
+A separate post-reset `/usr/bin/time -lp` run measured 85,262,336 B shipping vs
+76,857,344 B short maximum client RSS. No cache-destructive "cold reset" was
+attempted after the quality hard stop.
+
+## Exact model bytes and identities
+
+Deterministic directory fingerprint uses sorted relative path, byte count, and
+per-file SHA-256, matching `scripts/benchmark-local-asr.py:path_fingerprint`.
+
+| Bundle | Logical bytes | Files | Tree SHA-256 |
+|---|---:|---:|---|
+| shipping static 15s | 483,105,645 | 21 | `d6c10d2a84ba889b9f6c118eef0e71f5336396cc435d0db1c020894ad9127cdd` |
+| static 7.5s universal candidate | 479,378,971 | 21 | `88cd15a94f5242ec6d77c1427c04c5b6b980c262b9eeaab66140ad4551896d18` |
+
+Replacing shipping with only the 7.5s bundle would save 3,726,674 logical bytes
+(0.771%) and would not download a second ~443MB frontend graph. That storage
+advantage is moot because transcript quality failed.
+
+Static 7.5s frontend weights:
+
+- Encoder weight: 441,721,984 B,
+  SHA-256 `f6478a6803e356b0d402ad88a83fae7a46f9c1e99d08c1f581d27842e954e221`;
+- Preprocessor weight: 395,072 B,
+  SHA-256 `eb2412006697c8d82acf748f428dfdab37bdbe91141417a7fd6e6d6262194094`;
+- copied shipping Decoder:
+  `48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41`;
+- copied shipping JointDecisionv3:
+  `4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e`;
+- copied vocabulary:
+  `7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735`.
+
+Shipping model: `FluidInference/parakeet-tdt-0.6b-v3-coreml` at
+`aed02740059203c4a87495924f685de3722ae9ce`. Static export pins:
+NVIDIA checkpoint `1b6821cbe889fcf82347cb95c3f8f0c7515a60e9`,
+Mobius converter `d2398af6042684a1b06dbc6951bdb50e1cf0366a`.
+
+## Internal-only Handy estimate
+
+Do not publish this as an app comparison. Reusing the previously fair pinned
+Handy n=50 report and the prior static-7.5 single-window n=60 measurements on
+the same frozen real PCM gives a directional margin:
+
+| Frozen real fixture | Static 7.5 p50 | Pinned Handy p50 | Handy / short |
+|---|---:|---:|---:|
+| LibriSpeech EN | 30.796 ms | 120.594 ms | 3.92x |
+| VOiCES EN | 22.886 ms | 82.891 ms | 3.62x |
+| FLEURS RU row 1 | 31.318 ms | 470.707 ms | 15.03x |
+| FLEURS RU row 6 | 30.336 ms | 493.981 ms | 16.28x |
+
+Pinned Handy identity: source
+`db003f38b1aef4eb967ac3419bebc851d680f71c`, adapter binary
+`4a069f20ca3789338c8ff462dbc5d1df9250fa345eb5cfc80eb078f4d334993f`,
+Q8_0 model 739,508,576 B
+`5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7`.
+This estimate combines two frozen reports rather than a new paired universal
+run and does not rescue the failed quality gate.
+
+## Reproducibility
+
+- exact-config shipping raw report:
+  `reports/universal-shipping15-exactconfig-smoke.json`
+  SHA-256 `9ca93074387083618577111ac5cfb05718db7bd90291d4f26d39b420fee6a191`;
+- exact-config short raw report:
+  `reports/universal-short7.5-exactconfig-smoke.json`
+  SHA-256 `1ecca8a4072c9a1916d24aa40ab4bbb0aae9b8ff6de0fc000eadb57969b3f75b`;
+- derived parity/WER/seam analysis:
+  `reports/universal-exactconfig-analysis-smoke.json`
+  SHA-256 `b27e459af27b5010f7cd90794722ff77a5503312ea717e7ebf9d3bda81d4465b`;
+- model fingerprints:
+  `reports/universal-model-fingerprints.json`
+  SHA-256 `5f80655c402a9a8aabde8c60b2df439ae30f7934241a54bad2f7d354c4ec611f`;
+- frozen manifest:
+  `universal-manifest.json`
+  SHA-256 `ebcc63b6213546319b5c7d30f113c983541dfc7312773fcd2634597ebbe4cfa5`;
+- boundary generator:
+  `make_boundary_wav.swift`
+  SHA-256 `14d61cb63ff4d5b5660674b583577222ea8a587f09ff5e173cffb68eeb36e032`;
+- final harness source:
+  SHA-256 `eb3d6005107fd40558e4c06776cf1625f18e5a0d3676e7a582db1617c95c7b55`;
+- final harness binary:
+  SHA-256 `107a654d47e21932e23a74d075c46611ea67ce038722a08ff5c73d6aa7a15820`;
+- analysis script:
+  SHA-256 `1d9d1bee70f49e1c64e8e87b2bd83950279d4e19132b5446497e7f79e1d938d3`.
+
+All paths above are under `$TMP/openramble-short-shape` unless an
+absolute path is shown. No shared/tracked OpenRamble file was edited.

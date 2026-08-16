@@ -1,0 +1,79 @@
+{
+  "computeUnits" : "MLComputeUnits.all",
+  "firstInferenceFixtureID" : "real-en-librispeech-test-other",
+  "firstInferenceNanoseconds" : 699383875,
+  "firstInferenceTranscript" : "I really was very much afraid of showing him how much shocked I was at some parts of what he said",
+  "fixtures" : [
+    {
+      "audioDurationSeconds" : 7.06,
+      "elapsedNanoseconds" : [
+        422918875
+      ],
+      "firstMeasuredTranscript" : "I really was very much afraid of showing him how much shocked I was at some parts of what he said",
+      "id" : "real-en-librispeech-test-other",
+      "language" : "en",
+      "path" : "$REPO/.gstack/benchmark-fixtures/librispeech-test-other-1688-142285-0007-pcm16.wav",
+      "sampleCount" : 112960,
+      "sourceSHA256" : "0ef932371d181b185f01b2ede213ebe649650457e5781d8e428f831dfbbe5343",
+      "transcriptStable" : true,
+      "transcriptVariants" : [
+        "I really was very much afraid of showing him how much shocked I was at some parts of what he said"
+      ]
+    },
+    {
+      "audioDurationSeconds" : 3.4,
+      "elapsedNanoseconds" : [
+        415703958
+      ],
+      "firstMeasuredTranscript" : "I had that curiosity beside me at this moment.",
+      "id" : "real-en-voices-room",
+      "language" : "en",
+      "path" : "$REPO/.gstack/benchmark-fixtures/voices-room-sp0307.wav",
+      "sampleCount" : 54400,
+      "sourceSHA256" : "c65fcd726d6b08c82c1e5dc7558f863cd8d483e3ed2f4a7bcf271dc1865ada14",
+      "transcriptStable" : true,
+      "transcriptVariants" : [
+        "I had that curiosity beside me at this moment."
+      ]
+    },
+    {
+      "audioDurationSeconds" : 7.44,
+      "elapsedNanoseconds" : [
+        415974125
+      ],
+      "firstMeasuredTranscript" : "Он сказал, что создал дверной звонок, работающий от вай-фай.",
+      "id" : "real-ru-fleurs-validation-1",
+      "language" : "ru",
+      "path" : "/tmp/openramble-fleurs-ru-validation-1.wav",
+      "sampleCount" : 119040,
+      "sourceSHA256" : "363087f90513f5484750d8076da3cf7d029065d6b09f7ea68170bcf10b487d27",
+      "transcriptStable" : true,
+      "transcriptVariants" : [
+        "Он сказал, что создал дверной звонок, работающий от вай-фай."
+      ]
+    },
+    {
+      "audioDurationSeconds" : 4.8,
+      "elapsedNanoseconds" : [
+        417745667
+      ],
+      "firstMeasuredTranscript" : "О первых случаях заболевания в этом сезоне было сообщено в июле.",
+      "id" : "real-ru-fleurs-validation-6",
+      "language" : "ru",
+      "path" : "/tmp/openramble-fleurs-ru-validation-6.wav",
+      "sampleCount" : 76800,
+      "sourceSHA256" : "de6c6c691caf96369381f26aa204c4455d8f7c625dec017b634f9ff25833211f",
+      "transcriptStable" : true,
+      "transcriptVariants" : [
+        "О первых случаях заболевания в этом сезоне было сообщено в июле."
+      ]
+    }
+  ],
+  "managerLoadNanoseconds" : 37458,
+  "modelDirectory" : "$TMP/openramble-short-shape/model-root-enum-broadcast/parakeet-tdt-0.6b-v3",
+  "modelWindowSeconds" : 15,
+  "modelsLoadNanoseconds" : 9578572375,
+  "repeatCount" : 1,
+  "schemaVersion" : 1,
+  "warmupCount" : 0
+}

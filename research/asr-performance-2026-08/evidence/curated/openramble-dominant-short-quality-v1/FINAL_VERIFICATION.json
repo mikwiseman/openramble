@@ -1,0 +1,114 @@
+{
+  "archive_and_download": {
+    "archive_count": 4,
+    "cdn_range_requests": 55972,
+    "range_payload_bytes": 31829398,
+    "selected_source_bytes": 3261846,
+    "total_http_response_body_bytes": 31833644,
+    "validated_archive_member_count": 53192
+  },
+  "asr_or_coreml_runs": 0,
+  "authorized_sealer_correction": {
+    "corpus_rows_references_pcm_evaluator_gates_changed": false,
+    "corrected_sealer_sha256": "2ea7fd7251dd027dcadc6f6287affe4adf384021e02f8bd14f0676b0654ac6aa",
+    "parent_template_sealer_sha256": "72c339777d6b81d3b60e4a9760b06001878305eee4eb43306d28bb095ab7656a",
+    "reason": "replace contradictory blocked-only prose in armed output"
+  },
+  "canonical_pcm_sha256": {
+    "all_recomputed": true,
+    "count": 204,
+    "unique": 204
+  },
+  "compressed_source_sha256": {
+    "all_recomputed": true,
+    "count": 180,
+    "unique": 180
+  },
+  "counts": {
+    "by_language_duration_bin": {
+      "en": {
+        "1-2": 34,
+        "2-3": 34,
+        "3-4": 34
+      },
+      "ru": {
+        "1-2": 34,
+        "2-3": 34,
+        "3-4": 34
+      }
+    },
+    "common_voice": 180,
+    "en": 102,
+    "fixtures": 204,
+    "fleurs": 24,
+    "ru": 102,
+    "unique_common_voice_source_sha256": 180,
+    "unique_fixture_ids": 204,
+    "unique_pcm_sha256": 204
+  },
+  "duration_delta_seconds": {
+    "maximum": 0.0009375000000000355,
+    "maximum_absolute": 0.0009375000000000355,
+    "minimum": 0.0
+  },
+  "fail_closed": {
+    "bin_mismatch": 0,
+    "duplicate_pcm": 0,
+    "duplicate_source": 0,
+    "hash_mismatch": 0,
+    "locale_mismatch": 0,
+    "missing": 0,
+    "prior_pcm_overlap": 0,
+    "unexpected_model_output_jsonl": 0
+  },
+  "frozen_inputs": [
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/PREREGISTRATION.json",
+      "sha256": "fc11882edf45b3727d124f5689a6fb179e8e7123b8437498226c00c41a5dd719"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/corpus/manifest.json",
+      "sha256": "994154cd47313f2ee275716f2b6da1c43c689a211178cedaaa93086c7e3c1407"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/evaluate_one_shot.py",
+      "sha256": "e0ec47123c4e31b83da0e1ebf067f9e1f1ae10488362e967739b731491b8397d"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/seal_final_preregistration.py",
+      "sha256": "2ea7fd7251dd027dcadc6f6287affe4adf384021e02f8bd14f0676b0654ac6aa"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/supplement-audit/common-voice-17/SELECTION_PLAN.json",
+      "sha256": "de0e219fc3f21ec7cd7d400bc691cb58c5d400f85551ea306c7fecac238c8456"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/supplement-audit/common-voice-17/meta/en-dev.tsv",
+      "sha256": "d2fae3f98cbf44c7c47d6cc94449e2b6b68400c2048d73a19cb645b5df642236"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/supplement-audit/common-voice-17/meta/en-test.tsv",
+      "sha256": "b4d4db369413fcacacebee7de48e94c96c4f63383d6582e18a9b0856c5c8461a"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/supplement-audit/common-voice-17/meta/ru-dev.tsv",
+      "sha256": "e031512f0c4e18799ec6c0472552b697b069c5fc905317e0a5de9394458b81a1"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/supplement-audit/common-voice-17/meta/ru-test.tsv",
+      "sha256": "15162124bd657adea07695c22508b8bad174c282dcafe2302faaed05645cc59a"
+    }
+  ],
+  "manifest": "$TMP/openramble-dominant-short-quality-v1/final-corpus/manifest.json",
+  "manifest_sha256": "340314c63357f2ec0bcb4091438a71b43668ecba4ad376dc8844e9785d86faf6",
+  "model_outputs_inspected": false,
+  "passed": true,
+  "reference_sha256": {
+    "all_recomputed": true,
+    "count": 204
+  },
+  "schema_version": 1,
+  "shared_repo_clean": true,
+  "shared_repo_head": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+  "status": "passed_before_corrected_frozen_sealer"
+}

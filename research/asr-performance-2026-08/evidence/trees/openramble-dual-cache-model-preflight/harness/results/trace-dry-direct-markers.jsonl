@@ -1,0 +1,1 @@
+{"event":"trace_dry_sigkill_waitpid","observer_pid":17732,"process_return_code":-9,"reap_duration_ns":1611791,"sigkill_monotonic_ns":360141870141250,"speculative_pid":17731,"trial_id":"trace-dry","trial_tag":4923095561361507141,"waitpid_monotonic_ns":360141871753041}

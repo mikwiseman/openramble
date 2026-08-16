@@ -1,0 +1,19 @@
+{
+  "completed_at_utc": "REQUIRED",
+  "encoder_mil_sha256": "REQUIRED",
+  "fixture_order": "manifest_id_ascending",
+  "language_hints_from_manifest": true,
+  "manifest_sha256": "bf7e768a882b7a826ab657c32ceb71e5e5a6589833fe1aaf8ab82684c140b9c7",
+  "model_directory": "REQUIRED",
+  "prewarm_protocol": "one_process_per_model_then_one_complete_pass",
+  "process_id": "REQUIRED",
+  "product_config_sha256": "REQUIRED_IDENTICAL",
+  "role": "shipping_or_candidate",
+  "runner_binary_sha256": "REQUIRED",
+  "schema_version": 1,
+  "shape_seconds": "15.0_for_shipping_or_10.0_or_12.5_for_candidate",
+  "shared_weight_artifact_sha256": "REQUIRED_IDENTICAL",
+  "source_commit": "REQUIRED",
+  "started_at_utc": "REQUIRED",
+  "vocabulary_configured": true
+}

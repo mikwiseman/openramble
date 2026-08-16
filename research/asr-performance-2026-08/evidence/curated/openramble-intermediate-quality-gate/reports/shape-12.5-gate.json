@@ -1,0 +1,204 @@
+{
+  "aggregate": {
+    "all": {
+      "bootstrap": {
+        "cer_delta": {
+          "p025": -0.0024820153442262627,
+          "p50": -0.0009718498757747406,
+          "p975": 0.00013789917559368207
+        },
+        "iterations": 20000,
+        "method": "paired utterance bootstrap, language-stratified for combined",
+        "seed": "openramble-intermediate-holdout-bootstrap-v1-20260814|12.5|all",
+        "wer_delta": {
+          "p025": -0.0036663779424077453,
+          "p50": -0.0016316171138506164,
+          "p975": 0.00035765539036910164
+        }
+      },
+      "candidate_micro_cer": 0.022420917157759263,
+      "candidate_micro_wer": 0.052276867030965395,
+      "character_reference_length": 29526,
+      "count": 300,
+      "micro_cer_delta": -0.001016053647632595,
+      "micro_wer_delta": -0.001639344262295082,
+      "shipping_micro_cer": 0.02343697080539186,
+      "shipping_micro_wer": 0.05391621129326048,
+      "word_reference_length": 5490
+    },
+    "en": {
+      "bootstrap": {
+        "cer_delta": {
+          "p025": -0.004475466904736047,
+          "p50": -0.0016552470545240837,
+          "p975": 0.0003179524817478966
+        },
+        "iterations": 20000,
+        "method": "paired utterance bootstrap, language-stratified for combined",
+        "seed": "openramble-intermediate-holdout-bootstrap-v1-20260814|12.5|en",
+        "wer_delta": {
+          "p025": -0.0049504950495049506,
+          "p50": -0.0022522522522522522,
+          "p975": 0.00031949392480981793
+        }
+      },
+      "candidate_micro_cer": 0.026104681746449237,
+      "candidate_micro_wer": 0.05460420032310178,
+      "character_reference_length": 15208,
+      "count": 150,
+      "micro_cer_delta": -0.0017753813782219884,
+      "micro_wer_delta": -0.002261712439418417,
+      "shipping_micro_cer": 0.027880063124671225,
+      "shipping_micro_wer": 0.05686591276252019,
+      "word_reference_length": 3095
+    },
+    "ru": {
+      "bootstrap": {
+        "cer_delta": {
+          "p025": -0.0012425319125796196,
+          "p50": -0.0002055639303823489,
+          "p975": 0.0006493529922235361
+        },
+        "iterations": 20000,
+        "method": "paired utterance bootstrap, language-stratified for combined",
+        "seed": "openramble-intermediate-holdout-bootstrap-v1-20260814|12.5|ru",
+        "wer_delta": {
+          "p025": -0.003950920858336252,
+          "p50": -0.0008312551953449709,
+          "p975": 0.0020999580008399833
+        }
+      },
+      "candidate_micro_cer": 0.018508171532336918,
+      "candidate_micro_wer": 0.049269311064718165,
+      "character_reference_length": 14318,
+      "count": 150,
+      "micro_cer_delta": -0.00020952647017739908,
+      "micro_wer_delta": -0.0008350730688935282,
+      "shipping_micro_cer": 0.018717698002514317,
+      "shipping_micro_wer": 0.05010438413361169,
+      "word_reference_length": 2395
+    }
+  },
+  "cohort": "shape_12.5",
+  "counts": {
+    "en": 150,
+    "fixtures": 300,
+    "ru": 150
+  },
+  "decision": "reject",
+  "hard_gates": {
+    "combined_bootstrap_upper_wer_delta": true,
+    "combined_observed_wer_delta": true,
+    "en_bootstrap_upper_wer_delta": true,
+    "en_observed_wer_delta": true,
+    "integrity_and_structure": true,
+    "no_utterance_with_two_or_more_extra_word_errors": false,
+    "ru_bootstrap_upper_wer_delta": true,
+    "ru_observed_wer_delta": true,
+    "token_confidence_stability": true,
+    "token_exact_text_alignment": true,
+    "token_timing_stability": true,
+    "word_confidence_stability": true,
+    "word_exact_text_alignment": true,
+    "word_timing_stability": true,
+    "zero_vocabulary_candidate_false_negatives": true
+  },
+  "input_sha256": {
+    "candidate_jsonl": "8d1ea4b35f64a1c507b17a0065e4c7005edbd97c5ae658df3708ac9f7bca18a7",
+    "candidate_run_meta": "832a3f8f2b198ccfac1744a510545e7a1ab6d19e135da0273d7c4b940d8ea258",
+    "shipping_jsonl": "2395eb63d611536cc9c4e9c1d0cf0aa041f38912c35f4287835d39dd06683591",
+    "shipping_run_meta": "a7e0ae4e738e780bea3e8cd11c882314838fa5fddb09db7d2e8bd8d8bc47ab7b"
+  },
+  "integrity_failures": [],
+  "manifest_sha256": "bf7e768a882b7a826ab657c32ceb71e5e5a6589833fe1aaf8ab82684c140b9c7",
+  "preregistration_sha256": "d4752d8ea47d611101de49adcafa6778a7cc6afdcf3f228c2374246386691b20",
+  "schema_version": 1,
+  "severe_utterance_regressions": [
+    {
+      "candidate_score": {
+        "character_errors": 5,
+        "character_reference_length": 119,
+        "normalized_hypothesis": "in many cases enrolling on a capture course abroad can actually improve your chances of moving into higher education back in your home country",
+        "normalized_reference": "in many cases enrolling on a gap year course abroad can actually improve your chances of moving into higher education back in your home country",
+        "word_errors": 2,
+        "word_reference_length": 25
+      },
+      "character_error_delta": 5,
+      "fixture_id": "fleurs-holdout-en_us-0346-1519",
+      "language": "en",
+      "shape_candidate": true,
+      "shipping_candidate": true,
+      "shipping_score": {
+        "character_errors": 0,
+        "character_reference_length": 119,
+        "normalized_hypothesis": "in many cases enrolling on a gap year course abroad can actually improve your chances of moving into higher education back in your home country",
+        "normalized_reference": "in many cases enrolling on a gap year course abroad can actually improve your chances of moving into higher education back in your home country",
+        "word_errors": 0,
+        "word_reference_length": 25
+      },
+      "word_error_delta": 2
+    }
+  ],
+  "shape_seconds": 12.5,
+  "token_alignment": {
+    "absolute_confidence_delta": {
+      "count": 13429,
+      "max": 0.484375,
+      "mean": 0.0037236180227985705,
+      "min": 0,
+      "p50": 0,
+      "p95": 0.00732421875
+    },
+    "absolute_end_delta_seconds": {
+      "count": 13429,
+      "max": 1.1999999999999993,
+      "mean": 0.004307096582023981,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 2.220446049250313e-16
+    },
+    "absolute_start_delta_seconds": {
+      "count": 13429,
+      "max": 1.2799999999999994,
+      "mean": 0.003550524983245216,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "candidate_count": 13501,
+    "matched_exact_text_count": 13429,
+    "matched_fraction_symmetric": 0.9942252165543792,
+    "shipping_count": 13507
+  },
+  "vocabulary_candidate_false_negative_ids": [],
+  "word_alignment": {
+    "absolute_confidence_delta": {
+      "count": 5293,
+      "max": 0.4296875,
+      "mean": 0.007384339714296036,
+      "min": 0,
+      "p50": 0,
+      "p95": 0.03828124999999982
+    },
+    "absolute_end_delta_seconds": {
+      "count": 5293,
+      "max": 1.1999999999999993,
+      "mean": 0.005033062535424148,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 4.440892098500626e-16
+    },
+    "absolute_start_delta_seconds": {
+      "count": 5293,
+      "max": 0.08000000000000007,
+      "mean": 0.0027054600415643308,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "candidate_count": 5364,
+    "matched_exact_text_count": 5293,
+    "matched_fraction_symmetric": 0.9867636092468307,
+    "shipping_count": 5361
+  }
+}

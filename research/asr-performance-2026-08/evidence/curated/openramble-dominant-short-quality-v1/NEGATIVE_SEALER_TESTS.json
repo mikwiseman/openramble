@@ -1,0 +1,79 @@
+{
+  "asr_or_coreml_runs": 0,
+  "cases": [
+    {
+      "armed_output_absent": true,
+      "case": "missing_source",
+      "exit_code": 1,
+      "expected_diagnostic": "missing canonical/source bytes or wrong sample rate",
+      "passed": true,
+      "stderr": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/missing_source.stderr",
+      "stderr_sha256": "87ed5fd927295f030193d3771a2cb79e269218a6ccc0c7bbf959c06a24904ee4",
+      "stdout": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/missing_source.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/missing_source.manifest.json",
+      "variant_sha256": "82b41ef31d07d159594abe3fc34d601b1fcb4cbd2a5ce2dbd31dbbd3cf618de7"
+    },
+    {
+      "armed_output_absent": true,
+      "case": "duplicate_pcm",
+      "exit_code": 1,
+      "expected_diagnostic": "duplicate PCM within final corpus",
+      "passed": true,
+      "stderr": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/duplicate_pcm.stderr",
+      "stderr_sha256": "37f0c9e375818a1db8066c47a54a8b649c51be5535063a3616b2eab048127570",
+      "stdout": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/duplicate_pcm.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/duplicate_pcm.manifest.json",
+      "variant_sha256": "718a227659d5cd6cdfaf648735c6e34c35af12ab22c1c884e69e0a5d8a1b590c"
+    },
+    {
+      "armed_output_absent": true,
+      "case": "source_hash",
+      "exit_code": 1,
+      "expected_diagnostic": "source SHA mismatch",
+      "passed": true,
+      "stderr": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/source_hash.stderr",
+      "stderr_sha256": "97772e43d156c82e55c417d5e71664a794af770ec0b825f376d9bd8df343b498",
+      "stdout": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/source_hash.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/source_hash.manifest.json",
+      "variant_sha256": "456b9f3c3b92c5abab5bdd6c0cd1d9dfed306ef94046a4c8eade72244e56f91f"
+    },
+    {
+      "armed_output_absent": true,
+      "case": "locale",
+      "exit_code": 1,
+      "expected_diagnostic": "not in frozen Common Voice selection",
+      "passed": true,
+      "stderr": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/locale.stderr",
+      "stderr_sha256": "fd248dd8fb6bdbc030d5df3a15d713f9982d29aafccbe21a16088e83062466d9",
+      "stdout": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/locale.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/locale.manifest.json",
+      "variant_sha256": "d350dbf0db3cc3eb90c90eeba362464271923fa10dad4ada9683536b636e3e70"
+    },
+    {
+      "armed_output_absent": true,
+      "case": "duration_bin",
+      "exit_code": 1,
+      "expected_diagnostic": "Common Voice duration/reference mismatch",
+      "passed": true,
+      "stderr": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/duration_bin.stderr",
+      "stderr_sha256": "5efda236b7c87e6de9b7215c26f0f8cc7b6152078c7985e1d3a3a058d2164ae3",
+      "stdout": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/duration_bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "variant": "$TMP/openramble-dominant-short-quality-v1/negative-sealer-tests/duration_bin.manifest.json",
+      "variant_sha256": "3c08ff29bdce6c06675d2cd4dff3f5245f3eb42654a0305145c81509f6321687"
+    }
+  ],
+  "cases_passed": 5,
+  "passed": true,
+  "schema_version": 1,
+  "sealed_manifest": "$TMP/openramble-dominant-short-quality-v1/final-corpus/manifest.json",
+  "sealed_manifest_mutated": false,
+  "sealed_manifest_sha256": "340314c63357f2ec0bcb4091438a71b43668ecba4ad376dc8844e9785d86faf6",
+  "sealer": "$TMP/openramble-dominant-short-quality-v1/seal_final_preregistration.py",
+  "sealer_sha256": "2ea7fd7251dd027dcadc6f6287affe4adf384021e02f8bd14f0676b0654ac6aa",
+  "status": "passed"
+}

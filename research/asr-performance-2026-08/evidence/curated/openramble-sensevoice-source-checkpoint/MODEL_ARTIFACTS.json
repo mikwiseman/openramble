@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "repository": "FluidInference/sensevoice-small-coreml",
+  "revision": "cdea3526163035c19915d4a10268992d018ebd46",
+  "precision": "int8",
+  "compute_units": "cpuAndNeuralEngine",
+  "total_byte_count": 239913642,
+  "artifacts": [
+    {
+      "path": "SenseVoicePreprocessor.mlmodelc/analytics/coremldata.bin",
+      "byte_count": 243,
+      "sha256": "5bdb0b132e48c7e852ec18eeba7e217b6cb7153e6a939ce76b5ed17242e956dd"
+    },
+    {
+      "path": "SenseVoicePreprocessor.mlmodelc/coremldata.bin",
+      "byte_count": 330,
+      "sha256": "e64cc73b2a9b01bad799a23874bc20dba3cf3342c23e3f60012c3e884f682944"
+    },
+    {
+      "path": "SenseVoicePreprocessor.mlmodelc/model.mil",
+      "byte_count": 15008,
+      "sha256": "1b9b18be0a35b11165269b1ca071a30af736deb314d8bd82d9540c769137a70e"
+    },
+    {
+      "path": "SenseVoicePreprocessor.mlmodelc/weights/weight.bin",
+      "byte_count": 3037504,
+      "sha256": "69c630a115da5e4db36ec41662f0b776c0ef33ec6776d86f8cdaaba022518396"
+    },
+    {
+      "path": "SenseVoiceSmall_int8.mlmodelc/analytics/coremldata.bin",
+      "byte_count": 243,
+      "sha256": "ab5e9ee0d49e1f88838f1c2178cbe58a20dac12b50c4da803a75a54c6229845a"
+    },
+    {
+      "path": "SenseVoiceSmall_int8.mlmodelc/coremldata.bin",
+      "byte_count": 436,
+      "sha256": "55ef1c194e641418817d7d07f6bfbd8032571e800b81264caba37eb63a95335b"
+    },
+    {
+      "path": "SenseVoiceSmall_int8.mlmodelc/model.mil",
+      "byte_count": 1134696,
+      "sha256": "015fe7242a15eeb2fc0ca7f908ca3a09a5826b36e7d7f704803c8bbe60c1a148"
+    },
+    {
+      "path": "SenseVoiceSmall_int8.mlmodelc/weights/weight.bin",
+      "byte_count": 235373118,
+      "sha256": "dab122c65d5043cba5b47561d5c1d3a049dd123c662e802d9dbce8fdd0505a38"
+    },
+    {
+      "path": "vocab.json",
+      "byte_count": 352064,
+      "sha256": "a2594fc1474e78973149cba8cd1f603ebed8c39c7decb470631f66e70ce58e97"
+    }
+  ]
+}

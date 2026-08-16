@@ -123,6 +123,25 @@ for line in sys.stdin:
             ) if HANDY else None,
             "peak_rss_bytes": 123_456,
         })
+        if not HANDY:
+            base["timing"] = {
+                "schema_version": 1,
+                "clock": "monotonic_uptime",
+                "total_wall_ns": elapsed,
+                "total_wall_scope": (
+                    "predecoded_transcribe" if command == "run"
+                    else "file_decode_plus_transcribe"
+                ),
+                "phases_may_overlap": False,
+                "phases": {
+                    "primary_tdt_inference_decode_ns": 600_000,
+                    "lexical_candidate_gate_ns": 100_000,
+                    "ctc_model_inference_ns": None,
+                    "ctc_rescoring_fusion_ns": None,
+                },
+                "ctc_inference_invocations": 0,
+                "vocabulary_outcome": "no_candidate",
+            }
         emit(base)
     elif command == "shutdown":
         emit(base)
@@ -169,6 +188,76 @@ class SchedulingTests(unittest.TestCase):
         self.assertEqual(parsed.lane, "predecoded-product-warm")
         self.assertEqual(parsed.repeats, 100)
         self.assertEqual(parsed.warmups, 6)
+
+
+class TimingSchemaTests(unittest.TestCase):
+    @staticmethod
+    def timing(**overrides: object) -> dict[str, object]:
+        value: dict[str, object] = {
+            "schema_version": 1,
+            "clock": "monotonic_uptime",
+            "total_wall_ns": 1_000,
+            "total_wall_scope": "predecoded_transcribe",
+            "phases_may_overlap": False,
+            "phases": {
+                "primary_tdt_inference_decode_ns": 600,
+                "lexical_candidate_gate_ns": 100,
+                "ctc_model_inference_ns": None,
+                "ctc_rescoring_fusion_ns": None,
+            },
+            "ctc_inference_invocations": 0,
+            "vocabulary_outcome": "no_candidate",
+        }
+        value.update(overrides)
+        return value
+
+    def test_accepts_parallel_no_candidate_without_summing_phases(self) -> None:
+        timing = self.timing(
+            phases_may_overlap=True,
+            phases={
+                "primary_tdt_inference_decode_ns": 800,
+                "lexical_candidate_gate_ns": 100,
+                "ctc_model_inference_ns": 900,
+                "ctc_rescoring_fusion_ns": None,
+            },
+            ctc_inference_invocations=1,
+        )
+
+        sanitized = BENCHMARK.sanitize_timing(
+            timing, 1_000, "predecoded_transcribe", required=True
+        )
+
+        self.assertEqual(sanitized, timing)
+
+    def test_rejects_bool_numbers_and_total_or_ctc_mismatches(self) -> None:
+        invalid = [
+            self.timing(schema_version=True),
+            self.timing(
+                phases={
+                    "primary_tdt_inference_decode_ns": True,
+                    "lexical_candidate_gate_ns": 100,
+                    "ctc_model_inference_ns": None,
+                    "ctc_rescoring_fusion_ns": None,
+                }
+            ),
+            self.timing(total_wall_ns=999),
+            self.timing(ctc_inference_invocations=1),
+        ]
+
+        for timing in invalid:
+            with self.subTest(timing=timing):
+                with self.assertRaises(RuntimeError):
+                    BENCHMARK.sanitize_timing(
+                        timing, 1_000, "predecoded_transcribe", required=True
+                    )
+
+    def test_rejects_phase_values_that_contradict_outcome(self) -> None:
+        timing = self.timing(vocabulary_outcome="rescored_unmodified")
+
+        with self.assertRaisesRegex(RuntimeError, "contradict"):
+            BENCHMARK.sanitize_timing(
+                timing, 1_000, "predecoded_transcribe", required=True
+            )
 
 
 class RunnerIntegrationTests(unittest.TestCase):
@@ -270,7 +359,7 @@ class RunnerIntegrationTests(unittest.TestCase):
         first = json.loads(self.output.read_text(encoding="utf-8"))
         fixture = first["fixtures"][0]
 
-        self.assertEqual(first["schema_version"], 3)
+        self.assertEqual(first["schema_version"], 4)
         self.assertFalse(first["method"]["public_claim_eligible"])
         self.assertIn("remain alive", first["method"]["process_residency"])
         self.assertRegex(
@@ -296,6 +385,19 @@ class RunnerIntegrationTests(unittest.TestCase):
             )
         )
         self.assertIn("p99_ns", fixture["summary"]["openramble"])
+        self.assertEqual(
+            fixture["pairs"][0]["openramble"]["timing"]["schema_version"],
+            1,
+        )
+        self.assertEqual(
+            fixture["summary"]["openramble"]["phase_timings"]
+            ["primary_tdt_inference_decode_ns"]["p50_ns"],
+            600_000,
+        )
+        self.assertEqual(
+            fixture["summary"]["openramble"]["vocabulary_outcomes"],
+            {"no_candidate": 4},
+        )
         self.assertIn("maximum_ns", fixture["summary"]["handy"])
         self.assertIn(
             "handy_over_openramble_p50_ratio_ci",

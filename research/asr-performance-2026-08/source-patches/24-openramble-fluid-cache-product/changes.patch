@@ -1,0 +1,248 @@
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
+index 4a29727d..48012fd3 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
+@@ -3,7 +3,10 @@ import Foundation
+ extension AsrManager {
+
+     internal func transcribeWithState(
+-        _ audioSamples: [Float], decoderState: inout TdtDecoderState, language: Language? = nil
++        _ audioSamples: [Float],
++        decoderState: inout TdtDecoderState,
++        language: Language? = nil,
++        precomputedWindows: [Int: ASRClosedTokenWindow] = [:]
+     ) async throws -> ASRResult {
+         guard isAvailable else { throw ASRError.notInitialized }
+         let minimumRequiredSamples = ASRConstants.minimumRequiredSamples(forSampleRate: config.sampleRate)
+@@ -46,7 +49,8 @@ extension AsrManager {
+                 guard let self else { return }
+                 await self.progressEmitter.report(progress: progress)
+             },
+-            language: language
++            language: language,
++            precomputedWindows: precomputedWindows
+         )
+
+         return result
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager.swift
+index fd164d73..617ec806 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager.swift
+@@ -18,6 +18,15 @@ public actor AsrManager {
+     internal var asrModels: AsrModels?
+
+     internal let progressEmitter = ProgressEmitter()
++    /// Invalidates opaque closed-window capabilities whenever the manager's
++    /// loaded model or reusable inference state is replaced.
++    internal let closedWindowCacheIdentifier = UUID()
++    internal var closedWindowCacheEpoch: UInt64 = 1
++
++    internal func invalidateClosedWindowCaches() {
++        precondition(closedWindowCacheEpoch < .max, "closed-window epoch exhausted")
++        closedWindowCacheEpoch += 1
++    }
+
+     /// Number of decoder layers for the current model.
+     /// Returns 2 if models not loaded (v2/v3 default, tdtCtc110m uses 1).
+@@ -51,6 +60,7 @@ public actor AsrManager {
+     #if DEBUG
+     // Test-only setter
+     internal func setVocabularyForTesting(_ vocab: [Int: String]) {
++        invalidateClosedWindowCaches()
+         vocabulary = vocab
+     }
+     #endif
+@@ -124,6 +134,7 @@ public actor AsrManager {
+     public func loadModels(_ models: AsrModels) async throws {
+         logger.info("Loading AsrManager with provided models")
+
++        invalidateClosedWindowCaches()
+         self.asrModels = models
+         self.preprocessorModel = models.preprocessor
+         self.encoderModel = models.encoder
+@@ -199,10 +210,12 @@ public actor AsrManager {
+     }
+
+     public func reset() {
++        invalidateClosedWindowCaches()
+         Task { await sharedMLArrayCache.clear() }
+     }
+
+     public func cleanup() {
++        invalidateClosedWindowCaches()
+         asrModels = nil
+         preprocessorModel = nil
+         encoderModel = nil
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift
+index b5219765..a6a72839 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift
+@@ -118,6 +118,109 @@ struct ChunkProcessor {
+         )
+     }
+
++    /// Reconstructs the exact offline window plan without running inference.
++    ///
++    /// The stability bound is intentionally specific to the shipping v3/no-mel
++    /// path. Callers gate other configurations before using these descriptors.
++    func closedWindowPlans(
++        melChunkContext: Bool,
++        modelVersion: AsrModelVersion?
++    ) throws -> [ASRClosedWindowDescriptor] {
++        let layout = chunkLayout(melChunkContext: melChunkContext, modelVersion: modelVersion)
++        let decisions = try chunkStarts(
++            warmupPrefixSamples: layout.warmupPrefixSamples,
++            chunkSamples: layout.chunkSamples,
++            strideSamples: layout.strideSamples,
++            preferSilenceAlignment: !melChunkContext && modelVersion == .v3
++        )
++        let frameSamples = ASRConstants.samplesPerEncoderFrame
++        let searchRadiusFrames = max(
++            1,
++            Int((4.0 * Double(ASRConstants.sampleRate)) / Double(frameSamples))
++        )
++        var plans: [ASRClosedWindowDescriptor] = []
++        var stableThroughSampleCount = 0
++
++        for (index, decision) in decisions.enumerated() {
++            let warmupSamples =
++                index > 0 && decision.useWarmupPrefix
++                ? min(layout.warmupPrefixSamples, decision.start) : 0
++            let visibleChunkSamples = max(
++                ASRConstants.samplesPerEncoderFrame,
++                layout.chunkSamples - warmupSamples
++            )
++            let candidateEnd = decision.start + visibleChunkSamples
++            let isLastChunk = candidateEnd >= totalSamples
++            let chunkEnd = isLastChunk ? totalSamples : candidateEnd
++            guard chunkEnd > decision.start else { break }
++
++            let contextSamples = warmupSamples > 0 ? 0 : (index > 0 ? layout.melContextSamples : 0)
++            let contextStart = decision.start - max(warmupSamples, contextSamples)
++            let emitTokensAfterFrame =
++                warmupSamples > 0 ? decision.start / ASRConstants.samplesPerEncoderFrame : nil
++
++            if index > 0, !melChunkContext, modelVersion == .v3 {
++                let target = index * layout.strideSamples
++                let targetFrame = target / frameSamples
++                let completeSearchSampleCount =
++                    (targetFrame + searchRadiusFrames) * frameSamples + frameSamples
++                stableThroughSampleCount = max(stableThroughSampleCount, completeSearchSampleCount)
++            }
++
++            plans.append(
++                ASRClosedWindowDescriptor(
++                    index: index,
++                    chunkStart: decision.start,
++                    contextStart: contextStart,
++                    chunkEnd: chunkEnd,
++                    contextSamples: contextSamples,
++                    chunkStartOffset: warmupSamples > 0 ? contextStart : decision.start,
++                    isLastChunk: isLastChunk,
++                    emitTokensAfterFrame: emitTokensAfterFrame,
++                    initialTimeIndexOverride: emitTokensAfterFrame == nil ? nil : 0,
++                    stableThroughSampleCount: stableThroughSampleCount,
++                    earliestSafePrefixSampleCount: max(
++                        ASRConstants.maxModelSamples + 1,
++                        stableThroughSampleCount,
++                        candidateEnd + 1
++                    )
++                )
++            )
++            if isLastChunk { break }
++        }
++        return plans
++    }
++
++    /// Upper safe watermark for the next recursive silence-aligned decision.
++    /// It includes the latest possible target+4s boundary and one full model
++    /// input past that boundary, so callers can remain idle until the next
++    /// descriptor is both plan-stable and provably non-final.
++    func nextClosedWindowPlanningSampleCount(afterExposingThrough index: Int?) -> Int? {
++        let layout = chunkLayout(melChunkContext: false, modelVersion: .v3)
++        let nextIndex = (index ?? -1) + 1
++        if nextIndex == 0 { return ASRConstants.maxModelSamples + 1 }
++
++        let (target, targetOverflow) = nextIndex.multipliedReportingOverflow(
++            by: layout.strideSamples
++        )
++        guard !targetOverflow else { return nil }
++        let searchRadiusFrames = max(
++            1,
++            Int(
++                (4.0 * Double(ASRConstants.sampleRate))
++                    / Double(ASRConstants.samplesPerEncoderFrame)
++            )
++        )
++        let searchRadiusSamples = searchRadiusFrames * ASRConstants.samplesPerEncoderFrame
++        let (latestStart, startOverflow) = target.addingReportingOverflow(searchRadiusSamples)
++        guard !startOverflow else { return nil }
++        let (candidateEnd, endOverflow) = latestStart.addingReportingOverflow(
++            layout.chunkSamples
++        )
++        guard !endOverflow, candidateEnd < Int.max else { return nil }
++        return candidateEnd + 1
++    }
++
+     func regularChunkStarts(strideSamples: Int) -> [ChunkStartDecision] {
+         var starts = [ChunkStartDecision(start: 0, useWarmupPrefix: false)]
+         var start = strideSamples
+@@ -398,7 +501,8 @@ struct ChunkProcessor {
+         using manager: AsrManager,
+         startTime: Date,
+         progressHandler: ((Double) async -> Void)? = nil,
+-        language: Language? = nil
++        language: Language? = nil,
++        precomputedWindows: [Int: ASRClosedTokenWindow] = [:]
+     ) async throws -> ASRResult {
+         let requestedConcurrency = max(1, await manager.parallelChunkConcurrency)
+         let workers = await makeWorkerPool(using: manager, count: requestedConcurrency) ?? [manager]
+@@ -479,10 +583,37 @@ struct ChunkProcessor {
+                 let contextSamples = warmupSamples > 0 ? 0 : (chunkIndex > 0 ? melContextSamples : 0)
+                 let contextStart = chunkStart - max(warmupSamples, contextSamples)
+                 let chunkLengthWithContext = chunkEnd - contextStart
+-                let chunkSamplesArray = try readSamples(offset: contextStart, count: chunkLengthWithContext)
+                 let emitTokensAfterFrame =
+                     warmupSamples > 0 ? chunkStart / ASRConstants.samplesPerEncoderFrame : nil
+
++                let index = chunkIndex
++                chunkOutputs.append(nil)
++                if let cached = precomputedWindows[index] {
++                    chunkOutputs[index] = cached.tokens
++                    chunkIndex += 1
++
++                    if let progressHandler, !isLastChunk {
++                        let progress = min(1.0, max(0.0, Double(chunkEnd) / Double(totalSamples)))
++                        await progressHandler(progress)
++                    }
++                    if isLastChunk { break }
++                    if chunkIndex < chunkStarts.count {
++                        chunkDecision = chunkStarts[chunkIndex]
++                        chunkStart = chunkDecision.start
++                    } else {
++                        chunkStart += strideSamples
++                        chunkDecision = ChunkStartDecision(start: chunkStart, useWarmupPrefix: false)
++                    }
++                    continue
++                }
++
++                // A validated cache owns the exact raw token window, so only
++                // misses read/copy the ~1 MB model input.
++                let chunkSamplesArray = try readSamples(
++                    offset: contextStart,
++                    count: chunkLengthWithContext
++                )
++
+                 if availableWorkers.isEmpty {
+                     try await collectNextResult(&group)
+                 }
+@@ -492,9 +623,7 @@ struct ChunkProcessor {
+
+                 let workerIndex = availableWorkers.removeFirst()
+                 let worker = workers[workerIndex]
+-                let index = chunkIndex
+                 let chunkStartOffset = warmupSamples > 0 ? contextStart : chunkStart
+-                chunkOutputs.append(nil)
+
+                 group.addTask {
+                     var decoderState = TdtDecoderState.make(decoderLayers: decoderLayers)

@@ -1,0 +1,32 @@
+{
+  "error": "resource sampler failed closed: proc_pidinfo fd query failed for live 23737: errno=3",
+  "normal_pressure_level": 1,
+  "post": {
+    "captured_monotonic_ns": 363961917789333,
+    "memory_free_percent": 76,
+    "memory_pressure_query_raw": "The system has 17179869184 (1048576 pages with a page size of 16384).\nSystem-wide memory free percentage: 76%",
+    "pressure_level": 1,
+    "pressure_level_raw": "1",
+    "swap_available_bytes": 867565568,
+    "swap_encrypted": true,
+    "swap_page_size_bytes": 16384,
+    "swap_total_bytes": 8589934592,
+    "swap_used_bytes": 7722369024,
+    "swapusage_raw": "total = 8192.00M  used = 7364.62M  free = 827.38M  (encrypted)"
+  },
+  "pre": {
+    "captured_monotonic_ns": 363960183650458,
+    "memory_free_percent": 75,
+    "memory_pressure_query_raw": "The system has 17179869184 (1048576 pages with a page size of 16384).\nSystem-wide memory free percentage: 75%",
+    "pressure_level": 1,
+    "pressure_level_raw": "1",
+    "swap_available_bytes": 867565568,
+    "swap_encrypted": true,
+    "swap_page_size_bytes": 16384,
+    "swap_total_bytes": 8589934592,
+    "swap_used_bytes": 7722369024,
+    "swapusage_raw": "total = 8192.00M  used = 7364.62M  free = 827.38M  (encrypted)"
+  },
+  "schema_version": 1,
+  "swap_delta_bytes": 0
+}

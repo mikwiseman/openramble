@@ -1,0 +1,47 @@
+{
+  "artifact_hashes": {
+    "evaluator": "e0ec47123c4e31b83da0e1ebf067f9e1f1ae10488362e967739b731491b8397d",
+    "fleurs_manifest": "994154cd47313f2ee275716f2b6da1c43c689a211178cedaaa93086c7e3c1407",
+    "fleurs_selection_plan": "7b780a379c696dcfadb0d3ae518877a30bd2ba9f34475175ffaa25b2d163b415",
+    "preregistration": "fc11882edf45b3727d124f5689a6fb179e8e7123b8437498226c00c41a5dd719",
+    "sealer": "72c339777d6b81d3b60e4a9760b06001878305eee4eb43306d28bb095ab7656a",
+    "supplement_audit": "8c2a47153a6a9e4eedfd37c45253352ed77b7d81e0889f0d2410dfd9ecef72d5",
+    "supplement_selection_plan": "de0e219fc3f21ec7cd7d400bc691cb58c5d400f85551ea306c7fecac238c8456"
+  },
+  "asr_or_coreml_runs": 0,
+  "common_voice_metadata_selection": {
+    "audio_downloaded": false,
+    "counts": {
+      "en": {
+        "1-2": 34,
+        "2-3": 34,
+        "3-4": 22
+      },
+      "ru": {
+        "1-2": 34,
+        "2-3": 34,
+        "3-4": 22
+      }
+    },
+    "fixtures": 180,
+    "pcm_canonicalized": false
+  },
+  "fleurs_core": {
+    "counts": {
+      "en_3_4": 12,
+      "ru_3_4": 12
+    },
+    "eligible_pool": {
+      "en": 18,
+      "ru": 12
+    },
+    "fixtures": 24,
+    "pcm_overlap": 0,
+    "source_overlap": 0
+  },
+  "git_head": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+  "model_jsonl_count": 0,
+  "passed": true,
+  "schema_version": 1,
+  "shared_repository_clean": true
+}

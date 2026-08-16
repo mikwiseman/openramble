@@ -1,0 +1,14 @@
+{
+  "branch": "",
+  "head": "955af8b81f4023a353fa84fe096078388b3eb023",
+  "origin": "$REPO/Packages/LocalASR/.build/checkouts/FluidAudio",
+  "source": "$TMP/openramble-input-fill-bench",
+  "status": [
+    "M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/CustomVocabulary/WordSpotting/CtcKeywordSpotter+Inference.swift",
+    " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift",
+    " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift",
+    " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager.swift",
+    " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift",
+    " M Tests/FluidAudioTests/ASR/Parakeet/SlidingWindow/TDT/AsrManagerTests.swift"
+  ]
+}

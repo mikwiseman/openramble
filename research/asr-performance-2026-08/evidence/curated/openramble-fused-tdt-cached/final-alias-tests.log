@@ -1,0 +1,55 @@
+Building for debugging...
+[0/5] Write sources
+[1/5] Write swift-version--58304C5D6DBC2206.txt
+[3/7] Emitting module FluidAudio
+[4/7] Compiling FluidAudio TdtDecoderV3.swift
+[4/9] Write Objects.LinkFileList
+[5/9] Linking fluidaudiocli
+[6/9] Applying fluidaudiocli
+[8/10] Emitting module FluidAudioTests
+[8/10] Write Objects.LinkFileList
+[9/10] Linking FluidAudioPackageTests
+Build complete! (3.13s)
+Test Suite 'Selected tests' started at 2026-08-14 21:29:41.895.
+Test Suite 'FluidAudioPackageTests.xctest' started at 2026-08-14 21:29:41.896.
+Test Suite 'TdtCachedFusionTests' started at 2026-08-14 21:29:41.896.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testAliasGuardAcceptsDisjointAndAdjacentRegions]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testAliasGuardAcceptsDisjointAndAdjacentRegions]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testAliasGuardRejectsEveryMutableOutputInputCrossAlias]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testAliasGuardRejectsEveryMutableOutputInputCrossAlias]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testAliasGuardRejectsEveryMutableOutputPairIncludingPartialOverlap]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testAliasGuardRejectsEveryMutableOutputPairIncludingPartialOverlap]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testAliasGuardRejectsInvalidFakeRegion]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testAliasGuardRejectsInvalidFakeRegion]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testBlankStreakRetainsJointOnlyCachedDecoderSemantics]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testBlankStreakRetainsJointOnlyCachedDecoderSemantics]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testCancellationBetweenPredictionAndCommitLeavesVisibleStateUntouched]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testCancellationBetweenPredictionAndCommitLeavesVisibleStateUntouched]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testForcedAdvanceIsAppliedBeforeFusedFrameSelection]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testForcedAdvanceIsAppliedBeforeFusedFrameSelection]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testLastChunkMaxSymbolFlushStaysOnShippingDecoderOnlyPath]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testLastChunkMaxSymbolFlushStaysOnShippingDecoderOnlyPath]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testLongFormChunkHandoffUsesDecoderOnlyWhenNextFrameIsUnavailable]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testLongFormChunkHandoffUsesDecoderOnlyWhenNextFrameIsUnavailable]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testMaxTokenLimitStopsBeforeDecoderStateCommit]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testMaxTokenLimitStopsBeforeDecoderStateCommit]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testMissingArtifactFallsBackToSeparateDecoder]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testMissingArtifactFallsBackToSeparateDecoder]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testNonBlankDurationLeapPrefetchesThePostLeapFrame]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testNonBlankDurationLeapPrefetchesThePostLeapFrame]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testOverlapSuppressedTokenStillSchedulesStateAdvance]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testOverlapSuppressedTokenStillSchedulesStateAdvance]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testSOSPairsDecoderWithFirstJointWhenFrameExists]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testSOSPairsDecoderWithFirstJointWhenFrameExists]' passed (0.000 seconds).
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testValidationErrorBetweenPredictionAndCommitLeavesVisibleStateUntouched]' started.
+Test Case '-[FluidAudioTests.TdtCachedFusionTests testValidationErrorBetweenPredictionAndCommitLeavesVisibleStateUntouched]' passed (0.000 seconds).
+Test Suite 'TdtCachedFusionTests' passed at 2026-08-14 21:29:41.898.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'FluidAudioPackageTests.xctest' passed at 2026-08-14 21:29:41.898.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'Selected tests' passed at 2026-08-14 21:29:41.898.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
