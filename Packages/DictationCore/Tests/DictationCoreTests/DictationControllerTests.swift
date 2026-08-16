@@ -278,6 +278,18 @@ final class DictationControllerTests: XCTestCase {
     }
 
     /// Let the controller's background tasks finish their work.
+    /// Give the overlay's independently-scheduled presents time to land.
+    private func waitForPresentedStates(atLeast count: Int) async -> [DictationState] {
+        let deadline = ContinuousClock.now + .seconds(2)
+        while ContinuousClock.now < deadline {
+            let states = await overlay.presentedStates
+            if states.count >= count { return states }
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return await overlay.presentedStates
+    }
+
     private func settle(_ iterations: Int = 12) async {
         for _ in 0..<iterations {
             await Task.yield()
@@ -524,7 +536,11 @@ final class DictationControllerTests: XCTestCase {
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()
         XCTAssertEqual(controller.state, .listening)
-        let firstPresentedStates = await overlay.presentedStates.prefix(2)
+        // The overlay is an actor and each present is its own task, so on a
+        // loaded runner the second one can still be in flight. Wait for the
+        // pair to land, then assert their order — the order is the promise,
+        // the scheduler's timing is not.
+        let firstPresentedStates = await waitForPresentedStates(atLeast: 2).prefix(2)
         XCTAssertEqual(
             firstPresentedStates,
             [.preparing, .listening],
