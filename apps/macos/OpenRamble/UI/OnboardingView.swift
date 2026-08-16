@@ -210,11 +210,13 @@ struct OnboardingView: View {
                             isPreparingEngine: state.isPreparingEngine,
                             preparation: state.enginePreparation,
                             place: .onboarding,
-                            downloadMegabytes: state.remainingDownloadMegabytes
+                            downloadMegabytes: state.remainingDownloadMegabytes,
+                            isEngineReady: state.isEngineReady
                         ),
                         install: state.installModel,
                         cancel: state.cancelModelInstall,
-                        delete: state.deleteModel
+                        delete: state.deleteModel,
+                        prepare: state.prepareEngineAgain
                     )
                 }
                 .padding(14)
@@ -402,6 +404,7 @@ struct OnboardingView: View {
             accessibilityGranted: state.accessibilityGranted,
             modelState: state.modelState,
             engineReady: state.isEngineReady,
+            enginePreparing: state.isPreparingEngine,
             trialSucceeded: trialSucceeded
         )
     }

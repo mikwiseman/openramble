@@ -154,7 +154,14 @@ struct MenuContent: View {
             downloadMegabytes: state.remainingDownloadMegabytes
         )
         if state.modelState.isReady, !state.isEngineReady {
-            Text("Preparing the model for dictation…")
+            if state.isPreparingEngine {
+                Text("Preparing the model for dictation…")
+            } else {
+                // Nothing is running: the menu offers the way out instead of
+                // narrating a preparation that already gave up.
+                Text("The model needs preparing")
+                Button("Prepare Again") { state.prepareEngineAgain() }
+            }
         } else if !state.modelState.isReady {
             Text(model.progressLabel.map { "\(model.title) — \($0)" } ?? model.title)
 
@@ -162,6 +169,7 @@ struct MenuContent: View {
                 Button(model.title(for: action)) {
                     switch action {
                     case .install, .retry, .repair: state.installModel()
+                    case .prepare: state.prepareEngineAgain()
                     case .cancel: state.cancelModelInstall()
                     case .delete: break
                     }

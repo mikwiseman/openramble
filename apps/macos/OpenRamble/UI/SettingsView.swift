@@ -229,7 +229,8 @@ private struct RecognitionSettings: View {
                         isPreparingEngine: state.isPreparingEngine,
                         preparation: state.enginePreparation,
                         place: .settings,
-                        downloadMegabytes: state.remainingDownloadMegabytes
+                        downloadMegabytes: state.remainingDownloadMegabytes,
+                        isEngineReady: state.isEngineReady
                     ),
                     install: state.installModel,
                     cancel: state.cancelModelInstall,
@@ -237,7 +238,8 @@ private struct RecognitionSettings: View {
                     // worked on the first click: a miss cost half
                     // gigabyte and new download. There is nothing to cancel this, it means
                     // ask.
-                    delete: { showDeleteConfirmation = true }
+                    delete: { showDeleteConfirmation = true },
+                    prepare: state.prepareEngineAgain
                 )
             } header: {
                 Text("Speech model")

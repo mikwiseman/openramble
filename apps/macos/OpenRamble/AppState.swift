@@ -1995,6 +1995,26 @@ public final class AppState: ObservableObject {
         )
     }
 
+    /// Load the already-downloaded model again after the automatic attempts
+    /// gave up.
+    ///
+    /// The files on disk are verified; only the engine generation failed. This
+    /// is the human's explicit retry, so it opens a fresh attempt budget
+    /// instead of redownloading half a gigabyte.
+    public func prepareEngineAgain() {
+        guard modelState.isReady,
+              !isEngineReady,
+              !isPreparingEngine,
+              !isInstalling,
+              !isRecyclingEngine
+        else { return }
+        engineLog.notice("engine preparation retried by hand")
+        engineWarmupRetryRevision &+= 1
+        engineWarmupRetryTask?.cancel()
+        engineWarmupRetryTask = nil
+        Task { [weak self] in await self?.warmUpEngine() }
+    }
+
     public func installModel() {
         // Pressing again during loading does not start anything: the button is on
         // the screen lives until the first state arrives, and has time to press it

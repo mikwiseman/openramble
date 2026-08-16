@@ -14,6 +14,7 @@ final class OnboardingStepTests: XCTestCase {
         accessibility: Bool = true,
         model: ModelState? = nil,
         engineReady: Bool = true,
+        enginePreparing: Bool = true,
         trialSucceeded: Bool = true
     ) -> String? {
         OnboardingGate.blockReason(
@@ -22,6 +23,7 @@ final class OnboardingStepTests: XCTestCase {
             accessibilityGranted: accessibility,
             modelState: model ?? ready,
             engineReady: engineReady,
+            enginePreparing: enginePreparing,
             trialSucceeded: trialSucceeded
         )
     }
@@ -135,6 +137,28 @@ final class OnboardingStepTests: XCTestCase {
         XCTAssertEqual(
             reason(.setup, model: ready, engineReady: false),
             "Wait for the model to finish preparing for first use."
+        )
+    }
+
+    /// "Wait" is only honest while something is actually running.
+    ///
+    /// A first install whose automatic warm-up attempts were exhausted used to
+    /// sit here forever: everything green, Continue dead, and a hint asking
+    /// for patience no amount of which could help.
+    func testStalledPreparationOffersTheWayOutInsteadOfAskingToWait() {
+        XCTAssertEqual(
+            reason(.setup, model: ready, engineReady: false, enginePreparing: false),
+            "The model didn't finish preparing. Press “Prepare Again”."
+        )
+        XCTAssertFalse(
+            OnboardingGate.canAdvance(
+                step: .setup,
+                microphoneGranted: true,
+                accessibilityGranted: true,
+                modelState: ready,
+                engineReady: false,
+                enginePreparing: false
+            )
         )
     }
 
