@@ -369,7 +369,10 @@ public final class DictationController {
         monotonicNow: @escaping @Sendable () -> ContinuousClock.Instant = { .now },
         transcriptionDeadline: @escaping @Sendable (TimeInterval) -> Duration = TranscriptionDeadline.deadline(forAudioDuration:),
         prepareForTranscription: (@Sendable () async throws -> Void)? = nil,
-        prepareDeadline: Duration = .seconds(90),
+        // Worst measured cold reload is ~16 s of ANE respecialization plus the
+        // warm-up; 25 s covers it with margin while a genuine wedge still
+        // surfaces well before the worker's own watchdog escalates.
+        prepareDeadline: Duration = .seconds(25),
         captureFreezeDeadline: Duration = .milliseconds(500),
         recordingReadableDeadline: Duration = .seconds(2),
         recordingPreserveDeadline: Duration = .seconds(2),
@@ -907,25 +910,30 @@ public final class DictationController {
 
         let recognized: ASRResult
         do {
-            let foregroundEnd = (stopSLORequestedAt ?? .now).advanced(
+            var foregroundEnd = (stopSLORequestedAt ?? .now).advanced(
                 by: captureFreezeDeadline + transcriptionDeadline(recording.duration)
             )
             // A residency-managed engine may be cold here; the reload has
-            // been running under the person's voice since the keypress and
-            // gets its own budget. Only after the engine is in memory does
-            // the recognition deadline start counting.
+            // been running under the person's voice since the keypress.
+            // Waiting it out and inserting the words beats abandoning them,
+            // so the stop→text promise excludes the reload: the foreground
+            // deadline is re-anchored by however long preparation actually
+            // took, and only then does the recognition deadline count.
+            // `prepareDeadline` stays under the worker's 30 s per-phase
+            // watchdog, so a genuinely wedged load surfaces here first and
+            // recovery stays with the worker.
             if let prepareForTranscription {
+                let prepareStarted = ContinuousClock.now
                 do {
-                    let budget = try remainingBudget(
-                        until: foregroundEnd,
-                        stageMaximum: prepareDeadline
-                    )
-                    try await withTranscriptionDeadline(budget) {
+                    try await withTranscriptionDeadline(prepareDeadline) {
                         try await prepareForTranscription()
                     }
                 } catch is TranscriptionTimeout {
                     throw DictationPreparationTimeout()
                 }
+                foregroundEnd = foregroundEnd.advanced(
+                    by: prepareStarted.duration(to: .now)
+                )
             }
             // The deadline stands between the person and a wedged engine: a
             // CoreML prediction stuck on a dead system service ignores
