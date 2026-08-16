@@ -17,6 +17,7 @@ struct ModelStatus: Equatable {
         case install
         case retry
         case repair
+        case prepare
         case cancel
         case delete
 
@@ -27,6 +28,7 @@ struct ModelStatus: Equatable {
             case .install: return "Download Model — \(downloadMegabytes) MB"
             case .retry: return "Try Again"
             case .repair: return "Redownload Model — \(downloadMegabytes) MB"
+            case .prepare: return "Prepare Again"
             case .cancel: return "Cancel Download"
             case .delete: return "Delete Model"
             }
@@ -38,6 +40,7 @@ struct ModelStatus: Equatable {
             case .install: return "Downloads about \(downloadMegabytes) MB. This is the app's only download."
             case .retry: return "Restarts the model download from the beginning."
             case .repair: return "Downloads and verifies a fresh copy of the model. The damaged copy is not used."
+            case .prepare: return "Loads the downloaded model again. Nothing is downloaded."
             case .cancel: return "Stops the download and deletes the partially downloaded files."
             case .delete: return "Frees up disk space. Dictation stops working until the model is downloaded again."
             }
@@ -76,14 +79,16 @@ struct ModelStatus: Equatable {
         isPreparingEngine: Bool,
         preparation: EnginePreparationState? = nil,
         place: Place,
-        downloadMegabytes: Int = 586
+        downloadMegabytes: Int = 586,
+        isEngineReady: Bool = true
     ) -> ModelStatus {
         var status = makeStatus(
             state: state,
             isPreparingEngine: isPreparingEngine,
             preparation: preparation,
             place: place,
-            downloadMegabytes: downloadMegabytes
+            downloadMegabytes: downloadMegabytes,
+            isEngineReady: isEngineReady
         )
         status.downloadMegabytes = downloadMegabytes
         return status
@@ -94,7 +99,8 @@ struct ModelStatus: Equatable {
         isPreparingEngine: Bool,
         preparation: EnginePreparationState?,
         place: Place,
-        downloadMegabytes: Int
+        downloadMegabytes: Int,
+        isEngineReady: Bool = true
     ) -> ModelStatus {
         switch state {
         case .notInstalled:
@@ -141,6 +147,22 @@ struct ModelStatus: Equatable {
             )
 
         case .ready:
+            // Downloaded, verified — and still unable to recognize because the
+            // engine never finished loading. Retries are exhausted and nothing
+            // is running: saying "ready" here and asking the person to wait is
+            // a dead end. Name it and hand them the button.
+            guard isPreparingEngine || isEngineReady else {
+                return ModelStatus(
+                    title: "Model needs preparing",
+                    detail: "The files are downloaded and intact, but the recognizer "
+                        + "didn't finish loading them. Nothing needs downloading again.",
+                    progress: nil,
+                    progressLabel: nil,
+                    actions: place == .settings ? [.prepare, .delete] : [.prepare],
+                    tone: .failure,
+                    announcement: "Model needs preparing"
+                )
+            }
             return ModelStatus(
                 title: "Model ready",
                 // While the first loading into the neuromodule is in progress, the person sees
