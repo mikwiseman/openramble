@@ -241,10 +241,23 @@ private struct RecognitionSettings: View {
                     delete: { showDeleteConfirmation = true },
                     prepare: state.prepareEngineAgain
                 )
+                // Retained audio moved out of the daily menu: it is announced
+                // by the failure notice when it happens, and findable here for
+                // as long as it exists.
+                if state.recoveredRecordingCount > 0 || state.recordingRecoveryStorageFaulted {
+                    Button(
+                        state.recordingRecoveryStorageFaulted
+                            ? "Recording Support Files — Recovery Disabled…"
+                            : "Recovered Recordings (\(state.recoveredRecordingCount))…"
+                    ) {
+                        state.revealRecoveredRecordings()
+                    }
+                    .accessibilityHint("Opens the folder with retained recovery audio in Finder")
+                }
             } header: {
                 Text("Speech model")
             } footer: {
-                Text("Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days; Recovered Recordings in the menu opens the exact folder. If safe cleanup state cannot be persisted, automatic recovery stops and the menu exposes the Support files instead of guessing about voice data.")
+                Text("Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days; the Recovered Recordings button above opens the exact folder while any exist. If safe cleanup state cannot be persisted, automatic recovery stops and the menu bar exposes the Support files instead of guessing about voice data.")
             }
 
             Section {
