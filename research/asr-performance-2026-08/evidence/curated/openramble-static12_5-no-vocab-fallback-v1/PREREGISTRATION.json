@@ -1,0 +1,154 @@
+{
+  "analysis_protocol": {
+    "bootstrap_interval": "paired percentile 95% interval with linear interpolation; hard gate uses p97.5",
+    "bootstrap_iterations": 20000,
+    "bootstrap_seed": "openramble-static12.5-no-vocab-fallback-dominant-short-v1-20260814",
+    "candidate_detection_latency": "For a valid candidate outcome only, optimistic early-abort arithmetic may subtract exactly the recorded short-path ctc_model_inference_ns and ctc_rescoring_fusion_ns when phases_may_overlap=false. It may subtract nothing else. Invalid/low-integrity results pay the complete short wall before shipping fallback.",
+    "combined_bootstrap": "resample within language x duration-bin strata, preserving all six cell counts",
+    "evaluator": "$TMP/openramble-static12_5-no-vocab-fallback-v1/evaluate_policy_once.py",
+    "evaluator_sha256": "f7cc89583b3c7afb64be46c8e20d17a085e9da5d9b41bc7f0d48ff297cef68cb",
+    "normalization": "Unicode NFKC; casefold; map Russian ё to е; map Unicode punctuation/symbol/separator/control to spaces; collapse whitespace. WER splits on spaces; CER removes spaces.",
+    "one_shot": "Evaluator creates a consumed receipt before scoring and refuses an existing receipt/report. It runs only after both complete primary and duplicate pairs, clean shutdown receipts, and RAW_ARTIFACT_INDEX sealing. No subset inspection, optional stopping, or metric-driven rerun.",
+    "policy_output": "For a short-path vocabulary candidate or any invalid/low-integrity short result, use the exact shipping transcript/tokens/words/timings/confidences. Otherwise use the short result. Shipping-candidate/short-none is a hard false-negative failure.",
+    "quality_sets": "The untouched 204 result is independent. Prior 300 and engineering 122 evidence remain separate and are never pooled into its metrics."
+  },
+  "artifacts": {
+    "candidate": {
+      "encoder_mil_sha256": "40f424b3a70fe0b9c3a1e922d5fde88dfd77b13efe8b7bac308df0f93897a089",
+      "encoder_tree_sha256": "920e93fcc633b760fe8e9b0e1497212f141fde99b7f8b808d4d8d706644ba055",
+      "model_directory": "$TMP/openramble-intermediate-quality-gate/models/static-12.5s/parakeet-tdt-0.6b-v3",
+      "model_tree_sha256": "d4d61963633b25d16cfd186a4fb79964900c65c03e791cd6ee6135b503fc2e5d",
+      "preprocessor_mil_sha256": "6c0779b10bbe1da7002b4d3d36e6bdd571e66b259f0b057d475e73963913ada5",
+      "preprocessor_tree_sha256": "f89caa82ca35a86b1378d0d4edfc2d2e2ee6bd7c37e1c6c34db1986ccf4e6beb",
+      "shape_seconds": 12.5
+    },
+    "lineage": {
+      "path": "$TMP/openramble-intermediate-quality-gate/ARTIFACT_LINEAGE.json",
+      "sha256": "4b976c8be281ed945f0a84064f4c0965d65139c35723f847b72b4c81b89cbc29"
+    },
+    "runner": {
+      "binary": "$TMP/openramble-short-quality-gate/src/Packages/LocalASR/.build/release/asr-bench",
+      "binary_sha256": "ad44aca599256b562e10418c210d58c81f1e501545836dad98c6d76bf7a19d2b",
+      "orchestrator": "$TMP/openramble-static12_5-no-vocab-fallback-v1/run_complete_protocol.py",
+      "orchestrator_sha256": "df311a47130639db7f935869671875bcf5f912ad838e85927720c85c5e67a464"
+    },
+    "shipping": {
+      "encoder_mil_sha256": "ed7b19156ca29fa7dfd6891deb9fda4b0e8893f68597c985d135736546a43808",
+      "encoder_tree_sha256": "33fc56706af086e9aafb753b8a363bb48cdec24feb3c828d5661f3e4cd9f75b7",
+      "model_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3",
+      "model_revision": "aed02740059203c4a87495924f685de3722ae9ce",
+      "model_tree_sha256": "d95e38b4482129e12b9319444cb2cee4494236610cd5b9d3155218dff0ee3807",
+      "preprocessor_mil_sha256": "4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93",
+      "shape_seconds": 15.0,
+      "shared_encoder_weight_sha256": "e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421"
+    }
+  },
+  "corpus": {
+    "final_fixture_count": 204,
+    "final_manifest": "$TMP/openramble-dominant-short-quality-v1/final-corpus/manifest.json",
+    "final_manifest_sha256": "340314c63357f2ec0bcb4091438a71b43668ecba4ad376dc8844e9785d86faf6",
+    "independence": "Zero source-identity and PCM-SHA overlap with the prior 128-row engineering manifest and 300-row holdout manifest.",
+    "required_counts": {
+      "en": {"1-2": 34, "2-3": 34, "3-4": 34},
+      "ru": {"1-2": 34, "2-3": 34, "3-4": 34}
+    },
+    "untouched_outputs_present_at_freeze": false
+  },
+  "created_at_utc": "2026-08-14T20:42:34Z",
+  "decision_rule": {
+    "current_decision": "REJECT before untouched-204 inference because prior hard speed/tail gates and the engineering +2-error gate failed.",
+    "final_counterfactual_rule": "Had prior eligibility passed, INTEGRATE only if every independent-204 hard gate passed in both complete passes. Any failure means REJECT.",
+    "future_change": "Any attempt to run this hypothesis requires a new versioned hypothesis and preregistration. This rejected preregistration must never be changed to armed in place."
+  },
+  "hard_gates": {
+    "aligned_confidence_absolute_p95_max": 0.1,
+    "aligned_timing_absolute_p95_seconds_max": 0.12,
+    "combined_bootstrap_p975_wer_delta_max": 0.0075,
+    "combined_observed_wer_delta_max": 0.002,
+    "each_duration_bin_bootstrap_p975_wer_delta_max": 0.015,
+    "each_duration_bin_observed_wer_delta_max": 0.005,
+    "each_language_bootstrap_p975_wer_delta_max": 0.01,
+    "each_language_observed_wer_delta_max": 0.004,
+    "emission_validation_failures_max": 0,
+    "expected_stop_win_fraction_min": 0.15,
+    "fallback_subgroup_serial_p95_must_not_exceed_shipping_subgroup_p95": true,
+    "invalid_token_or_word_structures_max": 0,
+    "maximum_extra_word_errors_per_utterance_exclusive": 2,
+    "overall_policy_p95_must_not_exceed_shipping_p95": true,
+    "token_alignment_fraction_min": 0.98,
+    "vocabulary_candidate_false_negatives_max": 0,
+    "word_alignment_fraction_min": 0.97
+  },
+  "hypothesis": "Use static 12.5s only when the short path has no acoustic-vocabulary candidate and the result is structurally valid; otherwise serially rerun exact shipping 15s and return exact shipping output.",
+  "inference_allowed": false,
+  "packaging": {
+    "audit": "$TMP/openramble-static12_5-no-vocab-fallback-v1/PACKAGING_AUDIT.json",
+    "audit_sha256": "596867385b786f62c9b67f0852dcc9745996c5f024832a1afb53cc8c777cc082",
+    "hard_gate": "Encoder-only current interface must be exact and packageable with bounded unique bytes.",
+    "status": "failed: shipping preprocessor emits 1501 mel frames while candidate encoder requires 1251; standalone compatible preprocessor+encoder adds 445432595 exact unique bytes; semantic overlay has no complete 614-reference attestation."
+  },
+  "prior_eligibility": {
+    "analysis_script": "$TMP/openramble-static12_5-no-vocab-fallback-v1/analyze_prior_evidence.py",
+    "analysis_script_sha256": "18e1b768619798fe98540632509653b12e6161e8aeae427bf71de18e9424d796",
+    "failed_hard_gates": [
+      "engineering122_no_residual_plus_two",
+      "holdout300_primary_expected_mean_stop_win_at_least_15pct",
+      "holdout300_duplicate_expected_mean_stop_win_at_least_15pct",
+      "holdout300_primary_expected_p50_stop_win_at_least_15pct",
+      "holdout300_duplicate_expected_p50_stop_win_at_least_15pct",
+      "holdout300_primary_overall_p95_not_worse",
+      "holdout300_duplicate_overall_p95_not_worse",
+      "holdout300_primary_fallback_p95_not_worse",
+      "holdout300_duplicate_fallback_p95_not_worse"
+    ],
+    "report": "$TMP/openramble-static12_5-no-vocab-fallback-v1/PRIOR_EVIDENCE_REPORT.json",
+    "report_sha256": "87dab0840be5b27d302149ed50c2a50373791405abbd43bf18020e83b9073d77",
+    "selection_rule_fitted_thresholds": false,
+    "status": "failed"
+  },
+  "product_config": {
+    "path": "$TMP/openramble-intermediate-quality-gate/PRODUCT_CONFIG.json",
+    "sha256": "98338d07767b45d3abaf222a790b6070b4a0dae6291343034cd7b91f16f3c59b",
+    "summary": "mel=false, concurrency=4, TDT maxTokens=600, dualDecode=false, resetData=false, computeUnits=.all, vocabulary enabled with frozen 28 terms, per-fixture language hints"
+  },
+  "proposed_commands": {
+    "candidate": "python3 $TMP/openramble-static12_5-no-vocab-fallback-v1/run_complete_protocol.py --variant candidate-12.5",
+    "evaluator": "python3 $TMP/openramble-static12_5-no-vocab-fallback-v1/evaluate_policy_once.py --preregistration $TMP/openramble-static12_5-no-vocab-fallback-v1/PREREGISTRATION.json --manifest $TMP/openramble-dominant-short-quality-v1/final-corpus/manifest.json --shipping-jsonl $TMP/openramble-static12_5-no-vocab-fallback-v1/raw/shipping.primary.jsonl --candidate-jsonl $TMP/openramble-static12_5-no-vocab-fallback-v1/raw/candidate-12.5.primary.jsonl --shipping-duplicate-jsonl $TMP/openramble-static12_5-no-vocab-fallback-v1/raw/shipping.duplicate.jsonl --candidate-duplicate-jsonl $TMP/openramble-static12_5-no-vocab-fallback-v1/raw/candidate-12.5.duplicate.jsonl --shipping-run-meta $TMP/openramble-static12_5-no-vocab-fallback-v1/run-metadata/shipping.json --candidate-run-meta $TMP/openramble-static12_5-no-vocab-fallback-v1/run-metadata/candidate-12.5.json --shipping-completion $TMP/openramble-static12_5-no-vocab-fallback-v1/run-metadata/shipping.completion.json --candidate-completion $TMP/openramble-static12_5-no-vocab-fallback-v1/run-metadata/candidate-12.5.completion.json --raw-artifact-index $TMP/openramble-static12_5-no-vocab-fallback-v1/RAW_ARTIFACT_INDEX.json --output $TMP/openramble-static12_5-no-vocab-fallback-v1/FINAL_POLICY_GATE.json",
+    "sealer": "python3 $TMP/openramble-static12_5-no-vocab-fallback-v1/seal_eval_inputs.py",
+    "shipping": "python3 $TMP/openramble-static12_5-no-vocab-fallback-v1/run_complete_protocol.py --variant shipping",
+    "status": "frozen_counterfactual_only; runner refuses with exit 78 because inference_allowed=false"
+  },
+  "run_contract": {
+    "complete_before_inspection": "Run complete shipping primary+duplicate and candidate primary+duplicate cohorts, shut down each process, then seal RAW_ARTIFACT_INDEX. Do not inspect any transcript or metric before both receipts are complete.",
+    "hard_stop_during_collection": "Only load/crash/protocol/structural corruption may stop collection. Quality and latency are evaluated once after complete immutable pairs.",
+    "required_equal_fields": [
+      "runner_binary_sha256",
+      "source_commit",
+      "product_config_sha256",
+      "shared_weight_artifact_sha256"
+    ],
+    "required_nonempty_fields": [
+      "runner_binary_sha256",
+      "source_commit",
+      "product_config_sha256",
+      "shared_weight_artifact_sha256",
+      "encoder_mil_sha256",
+      "model_tree_sha256"
+    ],
+    "required_same_behavior": [
+      "vocabulary_configured=true with exact frozen 28 terms",
+      "language_hints_from_manifest=true",
+      "same frozen PCM bytes and fixture order",
+      "same prewarm and primary+duplicate protocol",
+      "same product config except declared candidate artifacts"
+    ],
+    "sealer": "$TMP/openramble-static12_5-no-vocab-fallback-v1/seal_eval_inputs.py",
+    "sealer_sha256": "b30a5887ddf6438b770725bd129a83d5a995646efd966d59c8f059cb10e6f4bd"
+  },
+  "schema_version": 1,
+  "source_parent_preregistration": {
+    "path": "$TMP/openramble-dominant-short-quality-v1/PREREGISTRATION_ARMED.json",
+    "sha256": "59f6ced1b7fe68ab88a7e65e4665997d2831d0568decfa35d889ee06297e52bb"
+  },
+  "status": "rejected_and_sealed_before_untouched_inference"
+}

@@ -1,0 +1,975 @@
+{
+  "candidates": {
+    "10.0": {
+      "encoder": {
+        "file_count": 5,
+        "files": [
+          {
+            "bytes": 243,
+            "path": "analytics/coremldata.bin",
+            "sha256": "3326edd824f15be95f53a0fd07e753b78c2f2c9e805212ceac12a826f071f449"
+          },
+          {
+            "bytes": 532,
+            "path": "coremldata.bin",
+            "sha256": "baf6ec6aea4ef3a093a506b346d281c0e0fcbdd227b8ddb1f9fa66eb09bdfdc0"
+          },
+          {
+            "bytes": 2947,
+            "path": "metadata.json",
+            "sha256": "68d19c4c5f6aebe9b69dd656bd5d4afc53e30b901229a2ff2aab65691530d24b"
+          },
+          {
+            "bytes": 842183,
+            "path": "model.mil",
+            "sha256": "e4319980fe2a710a0e581155ee815b09342361462f94821b892a58cf7b2e48c1"
+          },
+          {
+            "bytes": 442901632,
+            "path": "weights/weight.bin",
+            "sha256": "69d4084782882e3227de7f9fe3a85d2546cd671db4b3a528e147899c7a854233"
+          }
+        ],
+        "fingerprint_algorithm": "sha256(canonical JSON sorted file inventory: path,bytes,sha256)",
+        "logical_bytes": 443747537,
+        "model_mil_sha256": "e4319980fe2a710a0e581155ee815b09342361462f94821b892a58cf7b2e48c1",
+        "path": "$TMP/openramble-intermediate-quality-gate/models/static-10.0s/parakeet-tdt-0.6b-v3/Encoder.mlmodelc",
+        "tree_sha256": "3316260c04d0a9d774c8a2162e54046adfdc7bab84e0fa69bca543edfbc297af"
+      },
+      "model": {
+        "file_count": 21,
+        "files": [
+          {
+            "bytes": 243,
+            "path": "Decoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "4238c4e81ecd0dc94bd7dfbb60f7e2cc824107c1ffe0387b8607b72833dba350"
+          },
+          {
+            "bytes": 554,
+            "path": "Decoder.mlmodelc/coremldata.bin",
+            "sha256": "18647af085d87bd8f3121c8a9b4d4564c1ede038dab63d295b4e745cf2d7fb99"
+          },
+          {
+            "bytes": 3427,
+            "path": "Decoder.mlmodelc/metadata.json",
+            "sha256": "a39e93cd8371b8ded92635c7804fcd0590f0d1dd9415c6d19a0484be073077d9"
+          },
+          {
+            "bytes": 13110,
+            "path": "Decoder.mlmodelc/model.mil",
+            "sha256": "ef2a0a281695398a62fde86ac269c68f73d5b578d7ed3b31f2ba91a2d1ea1f35"
+          },
+          {
+            "bytes": 23604992,
+            "path": "Decoder.mlmodelc/weights/weight.bin",
+            "sha256": "48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41"
+          },
+          {
+            "bytes": 243,
+            "path": "Encoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "3326edd824f15be95f53a0fd07e753b78c2f2c9e805212ceac12a826f071f449"
+          },
+          {
+            "bytes": 532,
+            "path": "Encoder.mlmodelc/coremldata.bin",
+            "sha256": "baf6ec6aea4ef3a093a506b346d281c0e0fcbdd227b8ddb1f9fa66eb09bdfdc0"
+          },
+          {
+            "bytes": 2947,
+            "path": "Encoder.mlmodelc/metadata.json",
+            "sha256": "68d19c4c5f6aebe9b69dd656bd5d4afc53e30b901229a2ff2aab65691530d24b"
+          },
+          {
+            "bytes": 842183,
+            "path": "Encoder.mlmodelc/model.mil",
+            "sha256": "e4319980fe2a710a0e581155ee815b09342361462f94821b892a58cf7b2e48c1"
+          },
+          {
+            "bytes": 442901632,
+            "path": "Encoder.mlmodelc/weights/weight.bin",
+            "sha256": "69d4084782882e3227de7f9fe3a85d2546cd671db4b3a528e147899c7a854233"
+          },
+          {
+            "bytes": 243,
+            "path": "JointDecisionv3.mlmodelc/analytics/coremldata.bin",
+            "sha256": "26def4bf73dd56d29dee21c8ef97cb8969e62f6120ed1adc91e46828e2737b6c"
+          },
+          {
+            "bytes": 521,
+            "path": "JointDecisionv3.mlmodelc/coremldata.bin",
+            "sha256": "f5fc08b741400f0088492c9e839418b1e18522f19cba28d361dd030c5f398342"
+          },
+          {
+            "bytes": 3453,
+            "path": "JointDecisionv3.mlmodelc/metadata.json",
+            "sha256": "d9307211b9a37e0f0ac260c7660b1571a3de25841035cfdf9b58fd40425f890f"
+          },
+          {
+            "bytes": 11775,
+            "path": "JointDecisionv3.mlmodelc/model.mil",
+            "sha256": "be60732943389a047175111a83f8839f3eb39d4803adafa828a0871b2f39818d"
+          },
+          {
+            "bytes": 12642764,
+            "path": "JointDecisionv3.mlmodelc/weights/weight.bin",
+            "sha256": "4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e"
+          },
+          {
+            "bytes": 243,
+            "path": "Preprocessor.mlmodelc/analytics/coremldata.bin",
+            "sha256": "d78305023cb7efd671adef119b9996c3febf9c3be57d49f374b6a5bdc628e7ba"
+          },
+          {
+            "bytes": 539,
+            "path": "Preprocessor.mlmodelc/coremldata.bin",
+            "sha256": "de60f48838be8e48d6a5c881a4173ee9b194f3ca904436f7d1a2868459913dc0"
+          },
+          {
+            "bytes": 2885,
+            "path": "Preprocessor.mlmodelc/metadata.json",
+            "sha256": "ee350551cb822c7081f06871efbb5aaa7a18207e710b91c9bbe73ece71646f17"
+          },
+          {
+            "bytes": 25179,
+            "path": "Preprocessor.mlmodelc/model.mil",
+            "sha256": "b9d57c3413a07d7d8569174d33b6f1e5021ca366c8fc02306384233673da8ad5"
+          },
+          {
+            "bytes": 427072,
+            "path": "Preprocessor.mlmodelc/weights/weight.bin",
+            "sha256": "7afef1c4207815ecf4027b2fbecb2e2f4d41ba889aa2a966614479f4a226f007"
+          },
+          {
+            "bytes": 151122,
+            "path": "parakeet_vocab.json",
+            "sha256": "7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735"
+          }
+        ],
+        "fingerprint_algorithm": "sha256(canonical JSON sorted file inventory: path,bytes,sha256)",
+        "logical_bytes": 480635659,
+        "path": "$TMP/openramble-intermediate-quality-gate/models/static-10.0s/parakeet-tdt-0.6b-v3",
+        "tree_sha256": "147c7ffb46a0795d0af1ab03e550372526138f185a1b1e44ade24cb98422f15d"
+      },
+      "packaging": "standalone byte-as-exported Encoder and Preprocessor; no shared-weight overlay",
+      "preprocessor": {
+        "file_count": 5,
+        "files": [
+          {
+            "bytes": 243,
+            "path": "analytics/coremldata.bin",
+            "sha256": "d78305023cb7efd671adef119b9996c3febf9c3be57d49f374b6a5bdc628e7ba"
+          },
+          {
+            "bytes": 539,
+            "path": "coremldata.bin",
+            "sha256": "de60f48838be8e48d6a5c881a4173ee9b194f3ca904436f7d1a2868459913dc0"
+          },
+          {
+            "bytes": 2885,
+            "path": "metadata.json",
+            "sha256": "ee350551cb822c7081f06871efbb5aaa7a18207e710b91c9bbe73ece71646f17"
+          },
+          {
+            "bytes": 25179,
+            "path": "model.mil",
+            "sha256": "b9d57c3413a07d7d8569174d33b6f1e5021ca366c8fc02306384233673da8ad5"
+          },
+          {
+            "bytes": 427072,
+            "path": "weights/weight.bin",
+            "sha256": "7afef1c4207815ecf4027b2fbecb2e2f4d41ba889aa2a966614479f4a226f007"
+          }
+        ],
+        "fingerprint_algorithm": "sha256(canonical JSON sorted file inventory: path,bytes,sha256)",
+        "logical_bytes": 455918,
+        "model_mil_sha256": "b9d57c3413a07d7d8569174d33b6f1e5021ca366c8fc02306384233673da8ad5",
+        "path": "$TMP/openramble-intermediate-quality-gate/models/static-10.0s/parakeet-tdt-0.6b-v3/Preprocessor.mlmodelc",
+        "tree_sha256": "998f53fc1a5b5561ecd41fd089d8a12ba12e5a124e9e668c31aa21ef7fc4faf4"
+      },
+      "shape_seconds": 10.0,
+      "source_export": {
+        "file_count": 7,
+        "files": [
+          {
+            "bytes": 640376,
+            "path": "Encoder.mlpackage/Data/com.apple.CoreML/model.mlmodel",
+            "sha256": "48c3d76c7d8e57c78d34f11556d6c795d328f78dd3543d95e73e71f225081ca4"
+          },
+          {
+            "bytes": 442901632,
+            "path": "Encoder.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
+            "sha256": "69d4084782882e3227de7f9fe3a85d2546cd671db4b3a528e147899c7a854233"
+          },
+          {
+            "bytes": 617,
+            "path": "Encoder.mlpackage/Manifest.json",
+            "sha256": "85c16add24ecdd3052b22e9720dac106fdabb46b3bccd9ea26a702c1f027f5dd"
+          },
+          {
+            "bytes": 19507,
+            "path": "Preprocessor.mlpackage/Data/com.apple.CoreML/model.mlmodel",
+            "sha256": "054c4f315254890949406476d7c11db269c2a1b54b93780496eef0dd7cc65886"
+          },
+          {
+            "bytes": 427072,
+            "path": "Preprocessor.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
+            "sha256": "7afef1c4207815ecf4027b2fbecb2e2f4d41ba889aa2a966614479f4a226f007"
+          },
+          {
+            "bytes": 617,
+            "path": "Preprocessor.mlpackage/Manifest.json",
+            "sha256": "9472fda97d3e62d5a43cce85d06ec8adb48477f9ccee8edc5a9003f7713a76e7"
+          },
+          {
+            "bytes": 2519,
+            "path": "prototype-metadata.json",
+            "sha256": "d7f7cbfcb01021afce3bd160161b01c2bccaa376939a30367279b0bfd012b6cb"
+          }
+        ],
+        "fingerprint_algorithm": "sha256(canonical JSON sorted file inventory: path,bytes,sha256)",
+        "logical_bytes": 443992340,
+        "path": "$TMP/openramble-intermediate-quality-gate/artifacts/export-10.0s",
+        "tree_sha256": "12cdc3f10742be9600b496df37beebf0eeb60bf5c828686af0afd3888d5e64ea"
+      },
+      "source_export_metadata_sha256": "d7f7cbfcb01021afce3bd160161b01c2bccaa376939a30367279b0bfd012b6cb",
+      "source_package_inputs": {
+        "encoder": [
+          {
+            "data_type": 65568,
+            "name": "mel",
+            "shape": [
+              1,
+              128,
+              1001
+            ]
+          },
+          {
+            "data_type": 131104,
+            "name": "mel_length",
+            "shape": [
+              1
+            ]
+          }
+        ],
+        "preprocessor": [
+          {
+            "data_type": 65568,
+            "name": "audio_signal",
+            "shape": [
+              1,
+              160000
+            ]
+          },
+          {
+            "data_type": 131104,
+            "name": "audio_length",
+            "shape": [
+              1
+            ]
+          }
+        ]
+      }
+    },
+    "12.5": {
+      "encoder": {
+        "file_count": 5,
+        "files": [
+          {
+            "bytes": 243,
+            "path": "analytics/coremldata.bin",
+            "sha256": "cf6b1cbb86ff7a26de527cfec4dd9513dbbcbe29fdf955dc8d25f737730021c7"
+          },
+          {
+            "bytes": 533,
+            "path": "coremldata.bin",
+            "sha256": "42960d58e96d3b8e563919ee6d31e3f339cd3792249b7385474a37a69d4dbcf2"
+          },
+          {
+            "bytes": 2947,
+            "path": "metadata.json",
+            "sha256": "9e6a250d4bfa9440e6cc931b4409f81b6d3652fbdbcded5bcbd9fd3afa38b192"
+          },
+          {
+            "bytes": 895038,
+            "path": "model.mil",
+            "sha256": "40f424b3a70fe0b9c3a1e922d5fde88dfd77b13efe8b7bac308df0f93897a089"
+          },
+          {
+            "bytes": 444044416,
+            "path": "weights/weight.bin",
+            "sha256": "2de581c1b2ed74ab6569c27838a723fd596365c5abcbbf7ed3c2f8fa5d739e84"
+          }
+        ],
+        "fingerprint_algorithm": "sha256(canonical JSON sorted file inventory: path,bytes,sha256)",
+        "logical_bytes": 444943177,
+        "model_mil_sha256": "40f424b3a70fe0b9c3a1e922d5fde88dfd77b13efe8b7bac308df0f93897a089",
+        "path": "$TMP/openramble-intermediate-quality-gate/models/static-12.5s/parakeet-tdt-0.6b-v3/Encoder.mlmodelc",
+        "tree_sha256": "920e93fcc633b760fe8e9b0e1497212f141fde99b7f8b808d4d8d706644ba055"
+      },
+      "model": {
+        "file_count": 21,
+        "files": [
+          {
+            "bytes": 243,
+            "path": "Decoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "4238c4e81ecd0dc94bd7dfbb60f7e2cc824107c1ffe0387b8607b72833dba350"
+          },
+          {
+            "bytes": 554,
+            "path": "Decoder.mlmodelc/coremldata.bin",
+            "sha256": "18647af085d87bd8f3121c8a9b4d4564c1ede038dab63d295b4e745cf2d7fb99"
+          },
+          {
+            "bytes": 3427,
+            "path": "Decoder.mlmodelc/metadata.json",
+            "sha256": "a39e93cd8371b8ded92635c7804fcd0590f0d1dd9415c6d19a0484be073077d9"
+          },
+          {
+            "bytes": 13110,
+            "path": "Decoder.mlmodelc/model.mil",
+            "sha256": "ef2a0a281695398a62fde86ac269c68f73d5b578d7ed3b31f2ba91a2d1ea1f35"
+          },
+          {
+            "bytes": 23604992,
+            "path": "Decoder.mlmodelc/weights/weight.bin",
+            "sha256": "48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41"
+          },
+          {
+            "bytes": 243,
+            "path": "Encoder.mlmodelc/analytics/coremldata.bin",
+            "sha256": "cf6b1cbb86ff7a26de527cfec4dd9513dbbcbe29fdf955dc8d25f737730021c7"
+          },
+          {
+            "bytes": 533,
+            "path": "Encoder.mlmodelc/coremldata.bin",
+            "sha256": "42960d58e96d3b8e563919ee6d31e3f339cd3792249b7385474a37a69d4dbcf2"
+          },
+          {
+            "bytes": 2947,
+            "path": "Encoder.mlmodelc/metadata.json",
+            "sha256": "9e6a250d4bfa9440e6cc931b4409f81b6d3652fbdbcded5bcbd9fd3afa38b192"
+          },
+          {
+            "bytes": 895038,
+            "path": "Encoder.mlmodelc/model.mil",
+            "sha256": "40f424b3a70fe0b9c3a1e922d5fde88dfd77b13efe8b7bac308df0f93897a089"
+          },
+          {
+            "bytes": 444044416,
+            "path": "Encoder.mlmodelc/weights/weight.bin",
+            "sha256": "2de581c1b2ed74ab6569c27838a723fd596365c5abcbbf7ed3c2f8fa5d739e84"
+          },
+          {
+            "bytes": 243,
+            "path": "JointDecisionv3.mlmodelc/analytics/coremldata.bin",
+            "sha256": "26def4bf73dd56d29dee21c8ef97cb8969e62f6120ed1adc91e46828e2737b6c"
+          },
+          {
+            "bytes": 521,
+            "path": "JointDecisionv3.mlmodelc/coremldata.bin",
+            "sha256": "f5fc08b741400f0088492c9e839418b1e18522f19cba28d361dd030c5f398342"
+          },
+          {
+            "bytes": 3453,
+            "path": "JointDecisionv3.mlmodelc/metadata.json",
+            "sha256": "d9307211b9a37e0f0ac260c7660b1571a3de25841035cfdf9b58fd40425f890f"
+          },
+          {
+            "bytes": 11775,
+            "path": "JointDecisionv3.mlmodelc/model.mil",
+            "sha256": "be60732943389a047175111a83f8839f3eb39d4803adafa828a0871b2f39818d"
+          },
+          {
+            "bytes": 12642764,
+            "path": "JointDecisionv3.mlmodelc/weights/weight.bin",
+            "sha256": "4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e"
+          },
+          {
+            "bytes": 243,
+            "path": "Preprocessor.mlmodelc/analytics/coremldata.bin",
+            "sha256": "fd4de5b7245398b70a9ff83c147de4875cb7f5214d0eb47b8b3fadb1fe7ea74e"
+          },
+          {
+            "bytes": 539,
+            "path": "Preprocessor.mlmodelc/coremldata.bin",
+            "sha256": "19a0a7cd8b8baccb85669cf0d1b1ba15e56116a0858a813f15493e7009d37e18"
+          },
+          {
+            "bytes": 2885,
+            "path": "Preprocessor.mlmodelc/metadata.json",
+            "sha256": "33dce6dc72733ffdd8ce35224f1053d299bbf84ceb084b2b6296ca098b0ecefe"
+          },
+          {
+            "bytes": 26679,
+            "path": "Preprocessor.mlmodelc/model.mil",
+            "sha256": "6c0779b10bbe1da7002b4d3d36e6bdd571e66b259f0b057d475e73963913ada5"
+          },
+          {
+            "bytes": 459072,
+            "path": "Preprocessor.mlmodelc/weights/weight.bin",
+            "sha256": "75aacff84a2d1cd0ceead3b4739879c50048bf8a6ea4ec51f417f1e6dcfb5e4e"
+          },
+          {
+            "bytes": 151122,
+            "path": "parakeet_vocab.json",
+            "sha256": "7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735"
+          }
+        ],
+        "fingerprint_algorithm": "sha256(canonical JSON sorted file inventory: path,bytes,sha256)",
+        "logical_bytes": 481864799,
+        "path": "$TMP/openramble-intermediate-quality-gate/models/static-12.5s/parakeet-tdt-0.6b-v3",
+        "tree_sha256": "d4d61963633b25d16cfd186a4fb79964900c65c03e791cd6ee6135b503fc2e5d"
+      },
+      "packaging": "standalone byte-as-exported Encoder and Preprocessor; no shared-weight overlay",
+      "preprocessor": {
+        "file_count": 5,
+        "files": [
+          {
+            "bytes": 243,
+            "path": "analytics/coremldata.bin",
+            "sha256": "fd4de5b7245398b70a9ff83c147de4875cb7f5214d0eb47b8b3fadb1fe7ea74e"
+          },
+          {
+            "bytes": 539,
+            "path": "coremldata.bin",
+            "sha256": "19a0a7cd8b8baccb85669cf0d1b1ba15e56116a0858a813f15493e7009d37e18"
+          },
+          {
+            "bytes": 2885,
+            "path": "metadata.json",
+            "sha256": "33dce6dc72733ffdd8ce35224f1053d299bbf84ceb084b2b6296ca098b0ecefe"
+          },
+          {
+            "bytes": 26679,
+            "path": "model.mil",
+            "sha256": "6c0779b10bbe1da7002b4d3d36e6bdd571e66b259f0b057d475e73963913ada5"
+          },
+          {
+            "bytes": 459072,
+            "path": "weights/weight.bin",
+            "sha256": "75aacff84a2d1cd0ceead3b4739879c50048bf8a6ea4ec51f417f1e6dcfb5e4e"
+          }
+        ],
+        "fingerprint_algorithm": "sha256(canonical JSON sorted file inventory: path,bytes,sha256)",
+        "logical_bytes": 489418,
+        "model_mil_sha256": "6c0779b10bbe1da7002b4d3d36e6bdd571e66b259f0b057d475e73963913ada5",
+        "path": "$TMP/openramble-intermediate-quality-gate/models/static-12.5s/parakeet-tdt-0.6b-v3/Preprocessor.mlmodelc",
+        "tree_sha256": "f89caa82ca35a86b1378d0d4edfc2d2e2ee6bd7c37e1c6c34db1986ccf4e6beb"
+      },
+      "shape_seconds": 12.5,
+      "source_export": {
+        "file_count": 7,
+        "files": [
+          {
+            "bytes": 650884,
+            "path": "Encoder.mlpackage/Data/com.apple.CoreML/model.mlmodel",
+            "sha256": "46b631742bdaf84dfc34cb81ef17b14d3f1ef85cedb4e5268055a3066c92bb79"
+          },
+          {
+            "bytes": 444044416,
+            "path": "Encoder.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
+            "sha256": "2de581c1b2ed74ab6569c27838a723fd596365c5abcbbf7ed3c2f8fa5d739e84"
+          },
+          {
+            "bytes": 617,
+            "path": "Encoder.mlpackage/Manifest.json",
+            "sha256": "39cecef15672583b1b5e94c42d8b1abba5fb78ceb3cf13ea18cad6ac18dc0294"
+          },
+          {
+            "bytes": 20007,
+            "path": "Preprocessor.mlpackage/Data/com.apple.CoreML/model.mlmodel",
+            "sha256": "fb12f18858f11ad48d56f5f65f64f66e193d4752dfc8fc52fe18c5cf64939a9d"
+          },
+          {
+            "bytes": 459072,
+            "path": "Preprocessor.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
+            "sha256": "75aacff84a2d1cd0ceead3b4739879c50048bf8a6ea4ec51f417f1e6dcfb5e4e"
+          },
+          {
+            "bytes": 617,
+            "path": "Preprocessor.mlpackage/Manifest.json",
+            "sha256": "0644921a8e63e3775a72a5114922f769e33cd076efc783aafc4321af55b0acf9"
+          },
+          {
+            "bytes": 2522,
+            "path": "prototype-metadata.json",
+            "sha256": "9d48cb7bf9a5ea48113ae0a0aa75c709e6cf9ac1bbc3a33157f6726b9900d961"
+          }
+        ],
+        "fingerprint_algorithm": "sha256(canonical JSON sorted file inventory: path,bytes,sha256)",
+        "logical_bytes": 445178135,
+        "path": "$TMP/openramble-intermediate-quality-gate/artifacts/export-12.5s",
+        "tree_sha256": "36c8a2099b2241778a4144601f8be0925cecf98a02d079bbbd111a782f8b4d21"
+      },
+      "source_export_metadata_sha256": "9d48cb7bf9a5ea48113ae0a0aa75c709e6cf9ac1bbc3a33157f6726b9900d961",
+      "source_package_inputs": {
+        "encoder": [
+          {
+            "data_type": 65568,
+            "name": "mel",
+            "shape": [
+              1,
+              128,
+              1251
+            ]
+          },
+          {
+            "data_type": 131104,
+            "name": "mel_length",
+            "shape": [
+              1
+            ]
+          }
+        ],
+        "preprocessor": [
+          {
+            "data_type": 65568,
+            "name": "audio_signal",
+            "shape": [
+              1,
+              200000
+            ]
+          },
+          {
+            "data_type": 131104,
+            "name": "audio_length",
+            "shape": [
+              1
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "created_at_utc": "2026-08-14T17:36:42.387442+00:00",
+  "exporter": {
+    "hybrid_script_path": "$TMP/openramble-short-shape/hybrid_shared_weights.py",
+    "hybrid_script_sha256": "714d4674700f103c792d27ac193d4a84d9d2798104c7245dba75072984698b2e",
+    "hybrid_used_for_quality_gate": false,
+    "mobius": {
+      "binary_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "changed_file_inventory": [],
+      "commit": "d2398af6042684a1b06dbc6951bdb50e1cf0366a",
+      "effective_overlay_sha256": "60121e74fa67b0ff7d9ac12d995b77e033e0073cf0195cfe0ce970f5081ae2b7",
+      "path": "$TMP/openramble-short-shape/mobius",
+      "status": []
+    },
+    "nemo_path": "$TMP/openramble-short-shape/parakeet-tdt-0.6b-v3.nemo",
+    "nemo_sha256": "3cbdc85877e668ca7b82d0d56770eb1fac76691f55d6b97545e8d61ca588d10d",
+    "script_path": "$TMP/openramble-short-shape/short_export.py",
+    "script_sha256": "58944318cb4590b88d60956fc32c3d88d86dc39d947a7f5e1750da3118143d58",
+    "upstream_checkpoint_revision": "1b6821cbe889fcf82347cb95c3f8f0c7515a60e9"
+  },
+  "frozen_inputs": {
+    "evaluator_sha256": "d140daa510e4e4baa57dafe1b90a414859a81c309bc24f7926e341208ffff935",
+    "manifest_path": "$TMP/openramble-intermediate-quality-gate/corpus/manifest.json",
+    "manifest_sha256": "bf7e768a882b7a826ab657c32ceb71e5e5a6589833fe1aaf8ab82684c140b9c7",
+    "pcm_index_sha256": "a2dff16accccf0aa9133f56f75da53319b466eba97167e47b0a731fb5cd01c90",
+    "preregistration_sha256": "d4752d8ea47d611101de49adcafa6778a7cc6afdcf3f228c2374246386691b20"
+  },
+  "host": {
+    "coremltools": "9.0b1",
+    "machine": "arm64",
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python": "3.10.12"
+  },
+  "hybrid_preflight_finding": {
+    "candidate_10_operation_count": 3396,
+    "candidate_12_5_operation_count": 3396,
+    "quality_action": "standalone_only",
+    "shipping_operation_count": 3398
+  },
+  "runner": {
+    "binary_bytes": 9527336,
+    "binary_path": "$TMP/openramble-short-quality-gate/src/Packages/LocalASR/.build/release/asr-bench",
+    "binary_sha256": "ad44aca599256b562e10418c210d58c81f1e501545836dad98c6d76bf7a19d2b",
+    "fluid_audio_source": {
+      "binary_diff_sha256": "573c09ae6bb8fdd4a70e80a077ffc4a88034477e73059dcdad31ae12b72dd150",
+      "changed_file_inventory": [
+        {
+          "bytes": 12957,
+          "path": "Sources/FluidAudio/ASR/Parakeet/SlidingWindow/CustomVocabulary/WordSpotting/CtcKeywordSpotter.swift",
+          "sha256": "bcfd118ba3ff8155c786fe58c48d971e83ffdb2334f36d35a4a97dacc44710d1",
+          "status": " M"
+        },
+        {
+          "bytes": 8417,
+          "path": "Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift",
+          "sha256": "f3ae9d360633b3da3d3de7bbab4e5be5678e220512f35e36495431d4df2716da",
+          "status": " M"
+        },
+        {
+          "bytes": 5834,
+          "path": "Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift",
+          "sha256": "bd772836e52e751a8fca56e810f5097a3d2545f9e6590634624b3ea615f9c20e",
+          "status": " M"
+        },
+        {
+          "bytes": 29250,
+          "path": "Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrModels.swift",
+          "sha256": "87acd6b54e2448375c426c7a3c6939b96e963f4a8a0cf99c9017caad17ec7555",
+          "status": " M"
+        },
+        {
+          "bytes": 37836,
+          "path": "Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtDecoderV3.swift",
+          "sha256": "aaf947eb077344183778df2687185cafade0aab881cc05884516c7a44b84d785",
+          "status": " M"
+        },
+        {
+          "bytes": 13666,
+          "path": "Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtModelInference.swift",
+          "sha256": "5bbf432f436705a03270097e0a197f07f637258c09ebe6991eaf51ffeff488a4",
+          "status": " M"
+        },
+        {
+          "bytes": 3428,
+          "path": "Sources/FluidAudio/Shared/ASRConstants.swift",
+          "sha256": "50a646aead7549c95e7cb171a06904412b03da30123805834b1c58858389cbcd",
+          "status": " M"
+        },
+        {
+          "bytes": 5594,
+          "path": "Sources/FluidAudio/Shared/TempPhaseDiagnostics.swift",
+          "sha256": "fc6c48ca73a4f6e8618e6f937b972167c38c5c6fc52115378f5d45371fd90120",
+          "status": "??"
+        }
+      ],
+      "commit": "ee9a7f12d91710da53de6d75f8b7160e09eccee4",
+      "effective_overlay_sha256": "d49e96093dc6fbf282b91b029129e931b22104b96cd52c63f05d9492957c9828",
+      "path": "$TMP/openramble-phase-breakdown-ee9a7f12/FluidAudio",
+      "status": [
+        " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/CustomVocabulary/WordSpotting/CtcKeywordSpotter.swift",
+        " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift",
+        " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift",
+        " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrModels.swift",
+        " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtDecoderV3.swift",
+        " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtModelInference.swift",
+        " M Sources/FluidAudio/Shared/ASRConstants.swift",
+        "?? Sources/FluidAudio/Shared/TempPhaseDiagnostics.swift"
+      ]
+    },
+    "openramble_source": {
+      "binary_diff_sha256": "a81f2d39c6c0923dd46d8a9729ff4780f2ca9912bdc3fca0ad0e9be5f2685da3",
+      "changed_file_inventory": [
+        {
+          "bytes": 6645,
+          "path": "Packages/DictationCore/Sources/DictationCore/ASREngineAdapting.swift",
+          "sha256": "a26a5ca186f590e44ba01d817052a0db0a93af113be6517f06fa77a2bd46f359",
+          "status": " M"
+        },
+        {
+          "bytes": 3005,
+          "path": "Packages/LocalASR/Package.swift",
+          "sha256": "1660ed864ed40178d6fad664ea73afefc2aa16690af7c274ed6b9a08bf8ff3bd",
+          "status": " M"
+        },
+        {
+          "bytes": 68658,
+          "path": "Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift",
+          "sha256": "48f8be90ea2a265abc20baeb114bf974d6d589e5eef9233b5fa11f98f98a00dd",
+          "status": " M"
+        },
+        {
+          "bytes": 17819,
+          "path": "Packages/LocalASR/Sources/asr-bench/BenchmarkJSONLServer.swift",
+          "sha256": "3beaf73589a069ea072b8074495e8126b05a52a1509563a42a9580d428289d04",
+          "status": " M"
+        }
+      ],
+      "commit": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+      "effective_overlay_sha256": "0e7adabf73979ef030a685a1fccfdf0d1afa615dde8334b016e9ad72f1c43edf",
+      "path": "$TMP/openramble-short-quality-gate/src",
+      "status": [
+        " M Packages/DictationCore/Sources/DictationCore/ASREngineAdapting.swift",
+        " M Packages/LocalASR/Package.swift",
+        " M Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift",
+        " M Packages/LocalASR/Sources/asr-bench/BenchmarkJSONLServer.swift"
+      ]
+    },
+    "product_config_path": "$TMP/openramble-intermediate-quality-gate/PRODUCT_CONFIG.json",
+    "product_config_sha256": "98338d07767b45d3abaf222a790b6070b4a0dae6291343034cd7b91f16f3c59b"
+  },
+  "schema_version": 1,
+  "shipping": {
+    "encoder": {
+      "file_count": 5,
+      "files": [
+        {
+          "bytes": 243,
+          "path": "analytics/coremldata.bin",
+          "sha256": "42e638870d73f26b332918a3496ce36793fbb413a81cbd3d16ba01328637a105"
+        },
+        {
+          "bytes": 485,
+          "path": "coremldata.bin",
+          "sha256": "d48034a167a82e88fc3df64f60af963ab3983538271175b8319e7d5720a0fb86"
+        },
+        {
+          "bytes": 2921,
+          "path": "metadata.json",
+          "sha256": "da24da9cca943fb29d7fa8e376d57fca7cb3aa08ca51b956b0b0e56813f087e9"
+        },
+        {
+          "bytes": 959769,
+          "path": "model.mil",
+          "sha256": "ed7b19156ca29fa7dfd6891deb9fda4b0e8893f68597c985d135736546a43808"
+        },
+        {
+          "bytes": 445187200,
+          "path": "weights/weight.bin",
+          "sha256": "e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421"
+        }
+      ],
+      "fingerprint_algorithm": "sha256(canonical JSON sorted file inventory: path,bytes,sha256)",
+      "logical_bytes": 446150618,
+      "model_mil_sha256": "ed7b19156ca29fa7dfd6891deb9fda4b0e8893f68597c985d135736546a43808",
+      "path": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3/Encoder.mlmodelc",
+      "tree_sha256": "33fc56706af086e9aafb753b8a363bb48cdec24feb3c828d5661f3e4cd9f75b7"
+    },
+    "model": {
+      "file_count": 21,
+      "files": [
+        {
+          "bytes": 243,
+          "path": "Decoder.mlmodelc/analytics/coremldata.bin",
+          "sha256": "4238c4e81ecd0dc94bd7dfbb60f7e2cc824107c1ffe0387b8607b72833dba350"
+        },
+        {
+          "bytes": 554,
+          "path": "Decoder.mlmodelc/coremldata.bin",
+          "sha256": "18647af085d87bd8f3121c8a9b4d4564c1ede038dab63d295b4e745cf2d7fb99"
+        },
+        {
+          "bytes": 3427,
+          "path": "Decoder.mlmodelc/metadata.json",
+          "sha256": "a39e93cd8371b8ded92635c7804fcd0590f0d1dd9415c6d19a0484be073077d9"
+        },
+        {
+          "bytes": 13110,
+          "path": "Decoder.mlmodelc/model.mil",
+          "sha256": "ef2a0a281695398a62fde86ac269c68f73d5b578d7ed3b31f2ba91a2d1ea1f35"
+        },
+        {
+          "bytes": 23604992,
+          "path": "Decoder.mlmodelc/weights/weight.bin",
+          "sha256": "48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41"
+        },
+        {
+          "bytes": 243,
+          "path": "Encoder.mlmodelc/analytics/coremldata.bin",
+          "sha256": "42e638870d73f26b332918a3496ce36793fbb413a81cbd3d16ba01328637a105"
+        },
+        {
+          "bytes": 485,
+          "path": "Encoder.mlmodelc/coremldata.bin",
+          "sha256": "d48034a167a82e88fc3df64f60af963ab3983538271175b8319e7d5720a0fb86"
+        },
+        {
+          "bytes": 2921,
+          "path": "Encoder.mlmodelc/metadata.json",
+          "sha256": "da24da9cca943fb29d7fa8e376d57fca7cb3aa08ca51b956b0b0e56813f087e9"
+        },
+        {
+          "bytes": 959769,
+          "path": "Encoder.mlmodelc/model.mil",
+          "sha256": "ed7b19156ca29fa7dfd6891deb9fda4b0e8893f68597c985d135736546a43808"
+        },
+        {
+          "bytes": 445187200,
+          "path": "Encoder.mlmodelc/weights/weight.bin",
+          "sha256": "e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421"
+        },
+        {
+          "bytes": 243,
+          "path": "JointDecisionv3.mlmodelc/analytics/coremldata.bin",
+          "sha256": "26def4bf73dd56d29dee21c8ef97cb8969e62f6120ed1adc91e46828e2737b6c"
+        },
+        {
+          "bytes": 521,
+          "path": "JointDecisionv3.mlmodelc/coremldata.bin",
+          "sha256": "f5fc08b741400f0088492c9e839418b1e18522f19cba28d361dd030c5f398342"
+        },
+        {
+          "bytes": 3453,
+          "path": "JointDecisionv3.mlmodelc/metadata.json",
+          "sha256": "d9307211b9a37e0f0ac260c7660b1571a3de25841035cfdf9b58fd40425f890f"
+        },
+        {
+          "bytes": 11775,
+          "path": "JointDecisionv3.mlmodelc/model.mil",
+          "sha256": "be60732943389a047175111a83f8839f3eb39d4803adafa828a0871b2f39818d"
+        },
+        {
+          "bytes": 12642764,
+          "path": "JointDecisionv3.mlmodelc/weights/weight.bin",
+          "sha256": "4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e"
+        },
+        {
+          "bytes": 243,
+          "path": "Preprocessor.mlmodelc/analytics/coremldata.bin",
+          "sha256": "c9beeb989c8d66f8be11df59bc6df277ec76cee404f6865b46243835ef562f6d"
+        },
+        {
+          "bytes": 486,
+          "path": "Preprocessor.mlmodelc/coremldata.bin",
+          "sha256": "dbde3f2300842c1fd51ef3ff948a0bcffe65ffd2dca10707f2509f32c1d65b1d"
+        },
+        {
+          "bytes": 2841,
+          "path": "Preprocessor.mlmodelc/metadata.json",
+          "sha256": "2a98699e22d279dd37fa1d238aeb1c6db1df0d6fad687775324157689d8f3acf"
+        },
+        {
+          "bytes": 28181,
+          "path": "Preprocessor.mlmodelc/model.mil",
+          "sha256": "4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93"
+        },
+        {
+          "bytes": 491072,
+          "path": "Preprocessor.mlmodelc/weights/weight.bin",
+          "sha256": "129b76e3aeafa8afa3ea76d995b964b145fe83700d579f6ff42c4c38fa0968ea"
+        },
+        {
+          "bytes": 151122,
+          "path": "parakeet_vocab.json",
+          "sha256": "7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735"
+        }
+      ],
+      "fingerprint_algorithm": "sha256(canonical JSON sorted file inventory: path,bytes,sha256)",
+      "logical_bytes": 483105645,
+      "path": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3",
+      "tree_sha256": "d95e38b4482129e12b9319444cb2cee4494236610cd5b9d3155218dff0ee3807"
+    },
+    "preprocessor": {
+      "file_count": 5,
+      "files": [
+        {
+          "bytes": 243,
+          "path": "analytics/coremldata.bin",
+          "sha256": "c9beeb989c8d66f8be11df59bc6df277ec76cee404f6865b46243835ef562f6d"
+        },
+        {
+          "bytes": 486,
+          "path": "coremldata.bin",
+          "sha256": "dbde3f2300842c1fd51ef3ff948a0bcffe65ffd2dca10707f2509f32c1d65b1d"
+        },
+        {
+          "bytes": 2841,
+          "path": "metadata.json",
+          "sha256": "2a98699e22d279dd37fa1d238aeb1c6db1df0d6fad687775324157689d8f3acf"
+        },
+        {
+          "bytes": 28181,
+          "path": "model.mil",
+          "sha256": "4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93"
+        },
+        {
+          "bytes": 491072,
+          "path": "weights/weight.bin",
+          "sha256": "129b76e3aeafa8afa3ea76d995b964b145fe83700d579f6ff42c4c38fa0968ea"
+        }
+      ],
+      "fingerprint_algorithm": "sha256(canonical JSON sorted file inventory: path,bytes,sha256)",
+      "logical_bytes": 522823,
+      "model_mil_sha256": "4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93",
+      "path": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3/Preprocessor.mlmodelc",
+      "tree_sha256": "4e83b8858ccb3ef86877561c84e31eafcd1ab6a2d13ca5beaed5a792ae464b44"
+    },
+    "shape_seconds": 15.0,
+    "shared_encoder_weight_path": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3/Encoder.mlmodelc/weights/weight.bin",
+    "shared_encoder_weight_sha256": "e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421",
+    "shared_source_weight_path": "$TMP/openramble-short-shape/hf-shipping-source/mlpackages/Encoder.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
+    "shared_source_weight_sha256": "e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421"
+  },
+  "status": "sealed_before_any_coreml_load_or_inference",
+  "vocabulary_model": {
+    "file_count": 16,
+    "files": [
+      {
+        "bytes": 243,
+        "path": "AudioEncoder.mlmodelc/analytics/coremldata.bin",
+        "sha256": "8906c823e9bb3bf6b16d9f0308f98cd70573526333ad85dd767dc3f9ae6b25fa"
+      },
+      {
+        "bytes": 505,
+        "path": "AudioEncoder.mlmodelc/coremldata.bin",
+        "sha256": "a88b002b58193b4c31211754cdfdf220a85f9651dc61caf336ab84400cbc191a"
+      },
+      {
+        "bytes": 3456,
+        "path": "AudioEncoder.mlmodelc/metadata.json",
+        "sha256": "4f288bfe5cbe867ef1e592cdae33578b2fe59ada69182fc12209879558f985c2"
+      },
+      {
+        "bytes": 1060924,
+        "path": "AudioEncoder.mlmodelc/model.mil",
+        "sha256": "2f84ef93a69115e55f3b5d8ce695b3c937de1833d4d229620634fae967cd587e"
+      },
+      {
+        "bytes": 100778304,
+        "path": "AudioEncoder.mlmodelc/weights/weight.bin",
+        "sha256": "af0734b4a5d7465ad9e8bb170f0c53c5e6b91ebb75a9bdf88d3f59ae4ad6aebd"
+      },
+      {
+        "bytes": 243,
+        "path": "MelSpectrogram.mlmodelc/analytics/coremldata.bin",
+        "sha256": "22f2a8cba1de25c984050566b534a1d8caf22a82f9fe6c1c6f3149a0dd7e8ae3"
+      },
+      {
+        "bytes": 330,
+        "path": "MelSpectrogram.mlmodelc/coremldata.bin",
+        "sha256": "3a32ec67c76aa0aa2faef518413c311493e89aeb7fa11289fa4b8653ab8a160c"
+      },
+      {
+        "bytes": 1962,
+        "path": "MelSpectrogram.mlmodelc/metadata.json",
+        "sha256": "5e11d21a65c02bcfc37db43e941978e5d60d59e0efeadfda08e41f33b4f835d3"
+      },
+      {
+        "bytes": 12584,
+        "path": "MelSpectrogram.mlmodelc/model.mil",
+        "sha256": "0a7cb5693b39667295218bac5c7c09053f6bcd4b32699a83d06ac35d14ac6b79"
+      },
+      {
+        "bytes": 567712,
+        "path": "MelSpectrogram.mlmodelc/weights/weight.bin",
+        "sha256": "0a89c055bfde9022029d3cc59a23e949385e063974460d8eaec3a7614c3eaaa8"
+      },
+      {
+        "bytes": 121,
+        "path": "config.json",
+        "sha256": "1fd77c83ea89285c242608d95a7992f146867481adc3938be730a064f3a63305"
+      },
+      {
+        "bytes": 382,
+        "path": "ctc_head_metadata.json",
+        "sha256": "26100793bc6d3642d345cc52d7b8611d11510fa870d4d66ad93b204e0ba29d2e"
+      },
+      {
+        "bytes": 279,
+        "path": "special_tokens_map.json",
+        "sha256": "af8c98917af6cb493513e5f1f8a35efdc28fa82cac15b2bb5f065d64f8bc904d"
+      },
+      {
+        "bytes": 360106,
+        "path": "tokenizer.json",
+        "sha256": "9f7c517c0bf644b1b690ab037bab4d4c53aecd38e047e7154d011013ab9160db"
+      },
+      {
+        "bytes": 632,
+        "path": "tokenizer_config.json",
+        "sha256": "7a29ed0fec88768d8666d65be8dc00ae41a60c4b7758c4df99a912108e62a23a"
+      },
+      {
+        "bytes": 16086,
+        "path": "vocab.json",
+        "sha256": "319d386eead79aadc80df9c3ecc8340d1a727efb7c02a8847eb940380dd61e1f"
+      }
+    ],
+    "fingerprint_algorithm": "sha256(canonical JSON sorted file inventory: path,bytes,sha256)",
+    "logical_bytes": 102803869,
+    "path": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-ctc-110m/accdafd8cf8a2ff1cabe3c11e54416b405d409aa/parakeet-ctc-110m",
+    "tree_sha256": "3e7ecef5b945845abb4342bf7be34083f1f3d18f2c80e4c79e35c49d2ad6c0ab"
+  }
+}

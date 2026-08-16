@@ -1,0 +1,19 @@
+{
+  "artifacts": [
+    {"bytes": 5053, "path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/CPU_CHECKPOINT.json", "sha256": "68c3aac210f203334274ec75b887a91aa4c82f9e91609886b94547ed8c7143d3"},
+    {"bytes": 632, "path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/CPU_TESTS.json", "sha256": "8bce16ff51d129e1ca7ac9fc26491b4792e2852423e25bb9eb96c663fc72267e"},
+    {"bytes": 606, "path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/NEGATIVE_PREFLIGHT_TESTS.json", "sha256": "fefe1ee96d4575ffce947341c1c1b30a826f31487d7ab96bf5471250fe845bb7"},
+    {"bytes": 3696, "path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/PACKAGING_AUDIT.json", "sha256": "596867385b786f62c9b67f0852dcc9745996c5f024832a1afb53cc8c777cc082"},
+    {"bytes": 11685, "path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/PREREGISTRATION.json", "sha256": "8b9b652ff519c64e815fbbf452cbb4085efd6ade55379f8e89b357840ca798c3"},
+    {"bytes": 15987, "path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/PRIOR_EVIDENCE_REPORT.json", "sha256": "87dab0840be5b27d302149ed50c2a50373791405abbd43bf18020e83b9073d77"},
+    {"bytes": 22562, "path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/analyze_prior_evidence.py", "sha256": "18e1b768619798fe98540632509653b12e6161e8aeae427bf71de18e9424d796"},
+    {"bytes": 8138, "path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/audit_packaging.py", "sha256": "e4be569ca88da49a2cc44a8df058fd94491c074531ea11550451f325d3035d3b"},
+    {"bytes": 32965, "path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/evaluate_policy_once.py", "sha256": "f7cc89583b3c7afb64be46c8e20d17a085e9da5d9b41bc7f0d48ff297cef68cb"},
+    {"bytes": 20553, "path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/run_complete_protocol.py", "sha256": "df311a47130639db7f935869671875bcf5f912ad838e85927720c85c5e67a464"},
+    {"bytes": 4000, "path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/seal_eval_inputs.py", "sha256": "b30a5887ddf6438b770725bd129a83d5a995646efd966d59c8f059cb10e6f4bd"}
+  ],
+  "asr_or_coreml_run": false,
+  "decision": "REJECT before untouched-204 inference",
+  "schema_version": 1,
+  "status": "sealed_cpu_only"
+}

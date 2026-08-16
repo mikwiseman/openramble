@@ -1,0 +1,15 @@
+{
+  "sources": {
+    "suite": "local frozen developer-term diagnostic; not public-claim eligible"
+  },
+  "fixtures": [
+    {
+      "id": "ru-developer-terms-7.578s",
+      "path": "/tmp/openramble-bench.XfRRRf/ru-short.wav",
+      "sha256": "0f581fd6f1aeb43dd121293ae02331070a3e4c68afb2a9d77a35e388bb7fa7de",
+      "language": "ru",
+      "source": "frozen local diagnostic fixture",
+      "license": "internal diagnostic only"
+    }
+  ]
+}

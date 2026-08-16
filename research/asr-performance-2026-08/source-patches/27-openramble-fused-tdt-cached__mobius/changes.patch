@@ -1,0 +1,210 @@
+diff --git a/models/stt/parakeet-tdt-v3-0.6b/coreml/fuse_decoder_joint.py b/models/stt/parakeet-tdt-v3-0.6b/coreml/fuse_decoder_joint.py
+index 04e8207..ff4b3e5 100644
+--- a/models/stt/parakeet-tdt-v3-0.6b/coreml/fuse_decoder_joint.py
++++ b/models/stt/parakeet-tdt-v3-0.6b/coreml/fuse_decoder_joint.py
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""Fused decoder+joint_decision export for Parakeet TDT v3 (B1-style fusion).
++"""Cached-semantics fused decoder+joint_decision export for Parakeet TDT v3.
+
+ Combines the RNNT prediction network (2-layer LSTM decoder) and the
+ joint+decision head (token/duration argmax + top-K) into ONE CoreML model,
+@@ -16,12 +16,13 @@ I/O contract (drop-in superset of the shipped Decoder + JointDecisionv3):
+            encoder_step [1,1024,1] f32
+   outputs: token_id [1,1,1] i32, token_prob [1,1,1] f32,
+            duration [1,1,1] i32, top_k_ids [1,1,1,64] i32,
+-           top_k_logits [1,1,1,64] f32, h_out [2,1,640] f32,
+-           c_out [2,1,640] f32
++           top_k_logits [1,1,1,64] f32, decoder [1,640,1] f32,
++           h_out [2,1,640] f32, c_out [2,1,640] f32
+
+-Host semantics: call once per joint step. On blank emission the host
+-re-feeds the previous (targets, h_in, c_in) unchanged; the LSTM recompute
+-is deterministic so behavior is identical to the two-model loop.
++Host semantics: call only when the shipping cached decoder would do decoder
++work (SOS or an accepted non-blank) and a following joint decision exists.
++The extra ``decoder`` output becomes the shipping joint-only cache for any
++following blank streak. Never recompute the LSTM on a blank/cache-hit step.
+
+ Usage:
+     uv run python fuse_decoder_joint.py export --output-dir build/fused
+@@ -31,6 +32,7 @@ Usage:
+ from __future__ import annotations
+
+ import json
++import hashlib
+ import statistics
+ import time
+ from pathlib import Path
+@@ -50,6 +52,9 @@ from individual_components import (
+ )
+
+ DEFAULT_MODEL_ID = "nvidia/parakeet-tdt-0.6b-v3"
++PINNED_NEMO_SHA256 = "3cbdc85877e668ca7b82d0d56770eb1fac76691f55d6b97545e8d61ca588d10d"
++SHIPPING_DECODER_WEIGHT_SHA256 = "48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41"
++SHIPPING_JOINT_WEIGHT_SHA256 = "4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e"
+
+ app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
+
+@@ -65,7 +70,29 @@ class FusedDecoderJointDecision(torch.nn.Module):
+     def forward(self, targets, target_length, h_in, c_in, encoder_step):
+         dec_out, h_out, c_out = self.decoder(targets, target_length, h_in, c_in)  # [1, 640, 1]
+         token_id, token_prob, duration, topk_ids, topk_logits = self.joint_decision(encoder_step, dec_out)
+-        return token_id, token_prob, duration, topk_ids, topk_logits, h_out, c_out
++        return token_id, token_prob, duration, topk_ids, topk_logits, dec_out, h_out, c_out
++
++
++def _sha256_file(path: Path) -> str:
++    digest = hashlib.sha256()
++    with path.open("rb") as handle:
++        for block in iter(lambda: handle.read(8 * 1024 * 1024), b""):
++            digest.update(block)
++    return digest.hexdigest()
++
++
++def _state_dict_manifest(module: torch.nn.Module) -> Dict[str, Dict[str, object]]:
++    manifest: Dict[str, Dict[str, object]] = {}
++    for name, tensor in sorted(module.state_dict().items()):
++        value = tensor.detach().cpu().contiguous()
++        payload = value.numpy().tobytes(order="C")
++        manifest[name] = {
++            "dtype": str(value.dtype),
++            "shape": list(value.shape),
++            "numel": value.numel(),
++            "sha256": hashlib.sha256(payload).hexdigest(),
++        }
++    return manifest
+
+
+ def _load_model(model_id: str, nemo_path: Optional[Path]):
+@@ -97,8 +124,15 @@ def export(
+     nemo_path: Optional[Path] = typer.Option(None, "--nemo-path", exists=True, resolve_path=True),
+     output_dir: Path = typer.Option(Path("build/fused"), "--output-dir"),
+ ) -> None:
+-    """Export fp32 reference pair (decoder, jd_single) + fused model (fp32 and fp16)."""
++    """Export shipping-fp16 reference pair plus cached-semantics fused fp16."""
+     output_dir.mkdir(parents=True, exist_ok=True)
++    if nemo_path is None:
++        raise typer.BadParameter("--nemo-path is required for pinned shipping provenance")
++    checkpoint_sha256 = _sha256_file(nemo_path)
++    if checkpoint_sha256 != PINNED_NEMO_SHA256:
++        raise RuntimeError(
++            f"Pinned NeMo checkpoint mismatch: {checkpoint_sha256} != {PINNED_NEMO_SHA256}"
++        )
+     m = _load_model(model_id, nemo_path)
+
+     vocab_size = int(m.tokenizer.vocab_size)
+@@ -119,6 +153,13 @@ def export(
+     ).eval()
+     fused = FusedDecoderJointDecision(m.decoder.eval(), m.joint.eval(), vocab_size, num_extra).eval()
+
++    decoder_state_dict = _state_dict_manifest(m.decoder)
++    joint_state_dict = _state_dict_manifest(m.joint)
++    if decoder_state_dict != _state_dict_manifest(fused.decoder.module):
++        raise RuntimeError("Fused decoder state_dict does not exactly match pinned decoder")
++    if joint_state_dict != _state_dict_manifest(fused.joint_decision.joint.module):
++        raise RuntimeError("Fused joint state_dict does not exactly match pinned joint")
++
+     with torch.no_grad():
+         dec_out, _, _ = decoder(targets, target_len, h, c)
+     dec_out = dec_out.clone()
+@@ -137,8 +178,9 @@ def export(
+         ct.TensorType(name="top_k_logits", dtype=np.float32),
+     ]
+
+-    # fp32 reference pair (parity baseline)
+-    typer.echo("Exporting fp32 reference decoder…")
++    # fp16 reference pair. Their weight blobs must byte-match the pinned
++    # shipping source packages before the fused artifact is accepted.
++    typer.echo("Exporting fp16 shipping-reference decoder…")
+     traced_dec = torch.jit.trace(decoder, (targets, target_len, h, c), strict=False)
+     dec_model = _coreml_convert(
+         traced_dec,
+@@ -148,11 +190,12 @@ def export(
+             ct.TensorType(name="h_out", dtype=np.float32),
+             ct.TensorType(name="c_out", dtype=np.float32),
+         ],
+-        _settings(output_dir, ct.precision.FLOAT32),
++        _settings(output_dir, ct.precision.FLOAT16),
+     )
+-    dec_model.save(str(output_dir / "decoder_fp32.mlpackage"))
++    decoder_reference_path = output_dir / "decoder_fp16_reference.mlpackage"
++    dec_model.save(str(decoder_reference_path))
+
+-    typer.echo("Exporting fp32 reference joint_decision_single_step…")
++    typer.echo("Exporting fp16 shipping-reference joint_decision_single_step…")
+     traced_jd = torch.jit.trace(jd_single, (enc_step, dec_out), strict=False)
+     jd_model = _coreml_convert(
+         traced_jd,
+@@ -161,20 +204,66 @@ def export(
+             ct.TensorType(name="decoder_step", shape=(1, decoder_hidden, 1), dtype=np.float32),
+         ],
+         decision_outputs,
+-        _settings(output_dir, ct.precision.FLOAT32),
++        _settings(output_dir, ct.precision.FLOAT16),
+     )
+-    jd_model.save(str(output_dir / "joint_decision_fp32.mlpackage"))
++    joint_reference_path = output_dir / "joint_decision_fp16_reference.mlpackage"
++    jd_model.save(str(joint_reference_path))
+
+     fused_inputs = decoder_inputs + [ct.TensorType(name="encoder_step", shape=(1, 1024, 1), dtype=np.float32)]
+     fused_outputs = decision_outputs + [
++        ct.TensorType(name="decoder", dtype=np.float32),
+         ct.TensorType(name="h_out", dtype=np.float32),
+         ct.TensorType(name="c_out", dtype=np.float32),
+     ]
+     traced_fused = torch.jit.trace(fused, (targets, target_len, h, c, enc_step), strict=False)
+-    for prec, tag in ((ct.precision.FLOAT32, "fp32"), (ct.precision.FLOAT16, "fp16")):
+-        typer.echo(f"Exporting fused decoder_joint_decision ({tag})…")
+-        fused_model = _coreml_convert(traced_fused, fused_inputs, fused_outputs, _settings(output_dir, prec))
+-        fused_model.save(str(output_dir / f"decoder_joint_decision_{tag}.mlpackage"))
++    typer.echo("Exporting cached-semantics fused decoder_joint_decision (fp16)…")
++    fused_model = _coreml_convert(
++        traced_fused, fused_inputs, fused_outputs, _settings(output_dir, ct.precision.FLOAT16)
++    )
++    fused_path = output_dir / "DecoderJointDecisionCached.mlpackage"
++    fused_model.save(str(fused_path))
++
++    decoder_weight = decoder_reference_path / "Data/com.apple.CoreML/weights/weight.bin"
++    joint_weight = joint_reference_path / "Data/com.apple.CoreML/weights/weight.bin"
++    decoder_weight_sha256 = _sha256_file(decoder_weight)
++    joint_weight_sha256 = _sha256_file(joint_weight)
++    if decoder_weight_sha256 != SHIPPING_DECODER_WEIGHT_SHA256:
++        raise RuntimeError(
++            f"Decoder reference weight mismatch: {decoder_weight_sha256} != {SHIPPING_DECODER_WEIGHT_SHA256}"
++        )
++    if joint_weight_sha256 != SHIPPING_JOINT_WEIGHT_SHA256:
++        raise RuntimeError(
++            f"Joint reference weight mismatch: {joint_weight_sha256} != {SHIPPING_JOINT_WEIGHT_SHA256}"
++        )
++
++    attestation = {
++        "schema_version": 1,
++        "checkpoint": {"path": str(nemo_path), "sha256": checkpoint_sha256},
++        "shipping_reference": {
++            "decoder_weight_sha256": decoder_weight_sha256,
++            "joint_weight_sha256": joint_weight_sha256,
++        },
++        "state_dict": {
++            "decoder": decoder_state_dict,
++            "joint": joint_state_dict,
++        },
++        "contract": {
++            "inputs": ["targets", "target_length", "h_in", "c_in", "encoder_step"],
++            "outputs": [
++                "token_id", "token_prob", "duration", "top_k_ids", "top_k_logits",
++                "decoder", "h_out", "c_out",
++            ],
++            "blank_cache_semantics": "fused only for required decoder work; joint-only on cache hits",
++        },
++        "fused_package": {
++            "path": str(fused_path),
++            "model_sha256": _sha256_file(fused_path / "Data/com.apple.CoreML/model.mlmodel"),
++            "weight_sha256": _sha256_file(fused_path / "Data/com.apple.CoreML/weights/weight.bin"),
++        },
++    }
++    (output_dir / "source-attestation.json").write_text(
++        json.dumps(attestation, indent=2, sort_keys=True) + "\n"
++    )
+
+     typer.echo(f"Done. Packages in {output_dir}")

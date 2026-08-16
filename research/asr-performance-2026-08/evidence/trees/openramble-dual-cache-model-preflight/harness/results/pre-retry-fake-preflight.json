@@ -1,0 +1,34 @@
+{
+  "ok": true,
+  "report": {
+    "arms": {
+      "baseline": {
+        "count": 10,
+        "max_ms": 0.176208,
+        "median_ms": 0.1219585,
+        "p95_ms": 0.176208
+      },
+      "dual": {
+        "count": 10,
+        "max_ms": 1.808041,
+        "median_ms": 1.1829375,
+        "p95_ms": 1.808041
+      }
+    },
+    "backend": "fake",
+    "foreground_fd_growth": 0,
+    "foreground_phys_footprint_growth_bytes": 65536,
+    "full_exact_parity": true,
+    "identity_sha256": "185195fc5d47badf219655cc6e2d7d3fac248f9a4bc5b1fdeeff1971d7ff901d",
+    "max_live_children": 2,
+    "n_per_arm": 2,
+    "offsets_ms": [
+      0,
+      25,
+      50,
+      75,
+      100
+    ],
+    "speculative_orphans": 0
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "branch": "",
+  "head": "db003f38b1aef4eb967ac3419bebc851d680f71c",
+  "origin": "$TMP/openramble-handy-current/source",
+  "source": "$TMP/openramble-handy-patch-check.fXht1B/source",
+  "status": [
+    "M src-tauri/src/cli.rs",
+    " M src-tauri/src/lib.rs",
+    " M src-tauri/src/managers/transcription.rs"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "branch": "master",
+  "head": "c3bee28c1d446d95f08c95c3b6f8d4bde052b876",
+  "origin": "file://$TMP/openramble-cargo-home/git/db/tao-9f9ecfc9576f24d2",
+  "source": "$TMP/openramble-cargo-home/git/checkouts/tao-9f9ecfc9576f24d2/c3bee28",
+  "status": [
+    "?? .cargo-ok"
+  ]
+}

@@ -1,0 +1,5 @@
+Token ceiling per window: 600
+Parallel long-form windows: 4
+Vocabulary inference scheduling: candidateRegions
+Model loaded in 0.24 s
+Prompt loaded in 11.10 with - 28 terms

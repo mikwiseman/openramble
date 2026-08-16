@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "reference_source": {
+    "path": "$TMP/openramble-short-engine.SpfSeY/transcribe.cpp/tests/golden/batch/parakeet-tdt-0.6b-v2.cpu.json",
+    "sha256": "14b7ef93b73e09452032906dc7dc001fcbc6e9f6900779216bfb78be7ab06281",
+    "source_commit": "856d7c10a1a864b900e066b7c9801edf373f5148",
+    "caveat": "Frozen local parakeet-v2 golden, not independently human-verified."
+  },
+  "fixtures": [
+    {
+      "id": "real-en-product-names-56.104s",
+      "kind": "real-long",
+      "language": "en",
+      "path": "$TMP/openramble-short-engine.SpfSeY/transcribe.cpp/samples/product-names.wav",
+      "sha256": "fdaf78bad5c6a04424c7d7a699babced0992dc4619ecb7897bdf6c7b1ab79eda",
+      "reference_key": "samples/product-names.wav",
+      "reference": "Welcome to QuirkQuidQuill Inc., where finance meets innovation. Explore diverse offerings from the P3 Quattro, a unique investment portfolio quadrant, to the O3 Omni, a platform for intricate derivative trading strategies. Delve into unconventional bond markets with our B3 Bond X and experience non-standard equity trading with E3 Equity. Personalize your wealth management with W3 RAPZ and anticipate market trends with the O2 Outlier, our forward-thinking financial forecasting tool. Explore venture capital world with U3Unifund or move your money with the M3 Mover, our sophisticated monetary transfer module. At QuirkQuidQuill Inc., we turn complex finance into creative solutions. Join us in redefining financial services."
+    },
+    {
+      "id": "real-en-whole-earth-84.381s",
+      "kind": "real-long",
+      "language": "en",
+      "path": "$TMP/openramble-short-engine.SpfSeY/transcribe.cpp/samples/whole-earth.wav",
+      "sha256": "36e10be25ed80a5d7534bf03738651bdd0cc059c36dc3162db26b28bcee895f8",
+      "reference_key": "samples/whole-earth.wav"
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "status": "sealed_before_candidate_inference_but_blocked_by_source_capability_gate",
+  "created_at_utc": "2026-08-14T20:40:30Z",
+  "purpose": "Cheap falsification of SenseVoiceSmall int8 as an OpenRamble EN+RU replacement. It cannot authorize production integration while the source capability gate is false.",
+  "source_manifest": {
+    "path": "$TMP/openramble-real-short-manifest.json",
+    "sha256": "1143305176fc436795395019f0051d8db8670d691f7c6470a81f4d872b79470c"
+  },
+  "fixtures": [
+    {
+      "id": "real-en-librispeech-test-other",
+      "language": "en",
+      "candidate_language_mode": "en",
+      "path": "$REPO/.gstack/benchmark-fixtures/librispeech-test-other-1688-142285-0007-pcm16.wav",
+      "sha256": "0ef932371d181b185f01b2ede213ebe649650457e5781d8e428f831dfbbe5343",
+      "duration_seconds": 7.06,
+      "sample_count": 112960,
+      "reference": "I really was very much afraid of showing him how much shocked I was at some parts of what he said"
+    },
+    {
+      "id": "real-en-voices-room",
+      "language": "en",
+      "candidate_language_mode": "en",
+      "path": "$REPO/.gstack/benchmark-fixtures/voices-room-sp0307.wav",
+      "sha256": "c65fcd726d6b08c82c1e5dc7558f863cd8d483e3ed2f4a7bcf271dc1865ada14",
+      "duration_seconds": 3.4,
+      "sample_count": 54400,
+      "reference": "I had that curiosity beside me at this moment"
+    },
+    {
+      "id": "real-ru-fleurs-validation-1",
+      "language": "ru",
+      "candidate_language_mode": "auto",
+      "path": "/tmp/openramble-fleurs-ru-validation-1.wav",
+      "sha256": "363087f90513f5484750d8076da3cf7d029065d6b09f7ea68170bcf10b487d27",
+      "duration_seconds": 7.44,
+      "sample_count": 119040,
+      "reference": "он сказал что создал дверной звонок работающий от wifi"
+    },
+    {
+      "id": "real-ru-fleurs-validation-6",
+      "language": "ru",
+      "candidate_language_mode": "auto",
+      "path": "/tmp/openramble-fleurs-ru-validation-6.wav",
+      "sha256": "de6c6c691caf96369381f26aa204c4455d8f7c625dec017b634f9ff25833211f",
+      "duration_seconds": 4.8,
+      "sample_count": 76800,
+      "reference": "о первых случаях заболевания в этом сезоне было сообщено в июле"
+    }
+  ],
+  "execution": {
+    "candidate": "FluidAudio ee9a7f12 + FluidInference/sensevoice-small-coreml@cdea3526 int8, preprocessor CPU-only, encoder CPU+ANE, local verified load, network denied",
+    "shipping": "OpenRamble f2b6e8cc, PRODUCT_CONFIG 98338d07, vocabulary on with 28 frozen terms",
+    "schedule": [
+      "shipping persistent generation: load, prewarm, fixtures forward, two measured repeats",
+      "candidate persistent generation: load, prewarm, fixtures forward then reverse, two measured repeats per ordering",
+      "shipping fresh persistent generation: load, prewarm, fixtures reverse, two measured repeats"
+    ],
+    "transcript_order_is_frozen": true,
+    "stop_or_optional_rerun_forbidden": true,
+    "cold_load_and_prewarm_reported_separately": true
+  },
+  "hard_gates": {
+    "artifact_identity_mismatches_max": 0,
+    "network_requests_after_model_verification_max": 0,
+    "errors_or_empty_transcripts_max": 0,
+    "ru_hypotheses_without_any_cyrillic_letter_max": 0,
+    "per_language_observed_wer_delta_max": 0.01,
+    "utterances_with_two_or_more_extra_word_errors_max": 0,
+    "warm_stop_to_text_p95_candidate_over_shipping_max": 0.8,
+    "warm_stop_to_text_max_candidate_over_shipping_max": 1.0,
+    "candidate_peak_rss_bytes_max": 1073741824,
+    "swap_growth_bytes_max": 0,
+    "memory_pressure_must_be_normal": true,
+    "word_timing_missing_max": 0,
+    "confidence_missing_max": 0,
+    "vocabulary_candidate_false_negatives_max": 0,
+    "process_reap_failures_max": 0
+  },
+  "automatic_decision": "REJECT on any hard-gate failure. PASS remains diagnostic-only and cannot override the false source capability gate."
+}

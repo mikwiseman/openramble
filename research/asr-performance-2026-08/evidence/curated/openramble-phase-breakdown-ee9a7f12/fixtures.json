@@ -1,0 +1,28 @@
+{
+  "fixtures": [
+    {
+      "id": "real-en-librispeech-test-other",
+      "path": "$REPO/.gstack/benchmark-fixtures/librispeech-test-other-1688-142285-0007-pcm16.wav",
+      "language": "en",
+      "sha256": "0ef932371d181b185f01b2ede213ebe649650457e5781d8e428f831dfbbe5343"
+    },
+    {
+      "id": "real-en-voices-room",
+      "path": "$REPO/.gstack/benchmark-fixtures/voices-room-sp0307.wav",
+      "language": "en",
+      "sha256": "c65fcd726d6b08c82c1e5dc7558f863cd8d483e3ed2f4a7bcf271dc1865ada14"
+    },
+    {
+      "id": "real-ru-fleurs-validation-1",
+      "path": "/tmp/openramble-fleurs-ru-validation-1.wav",
+      "language": "ru",
+      "sha256": "363087f90513f5484750d8076da3cf7d029065d6b09f7ea68170bcf10b487d27"
+    },
+    {
+      "id": "real-ru-fleurs-validation-6",
+      "path": "/tmp/openramble-fleurs-ru-validation-6.wav",
+      "language": "ru",
+      "sha256": "de6c6c691caf96369381f26aa204c4455d8f7c625dec017b634f9ff25833211f"
+    }
+  ]
+}

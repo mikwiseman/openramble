@@ -1,0 +1,1302 @@
+{
+  "applicationHead" : "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+  "decoderComputeUnitsOverride" : "all",
+  "firstInferenceNanoseconds" : 62062333,
+  "firstInferenceTranscript" : "I really was very much afraid of showing him how much shocked I was at some parts of what he said",
+  "fixtures" : [
+    {
+      "actualSourceSHA256" : "0ef932371d181b185f01b2ede213ebe649650457e5781d8e428f831dfbbe5343",
+      "durationSeconds" : 7.06,
+      "expectedSourceSHA256" : "0ef932371d181b185f01b2ede213ebe649650457e5781d8e428f831dfbbe5343",
+      "firstTokenTimings" : [
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 0.56,
+          "startTime" : 0.24,
+          "token" : " I",
+          "tokenId" : 380
+        },
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 0.8800000000000001,
+          "startTime" : 0.56,
+          "token" : " really",
+          "tokenId" : 5600
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.2,
+          "startTime" : 0.88,
+          "token" : " was",
+          "tokenId" : 924
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.52,
+          "startTime" : 1.2,
+          "token" : " very",
+          "tokenId" : 5254
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.68,
+          "startTime" : 1.52,
+          "token" : " much",
+          "tokenId" : 4457
+        },
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 1.8399999999999999,
+          "startTime" : 1.68,
+          "token" : " af",
+          "tokenId" : 799
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.08,
+          "startTime" : 1.84,
+          "token" : "ra",
+          "tokenId" : 314
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.24,
+          "startTime" : 2.08,
+          "token" : "id",
+          "tokenId" : 335
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.6399999999999997,
+          "startTime" : 2.4,
+          "token" : " of",
+          "tokenId" : 592
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.64,
+          "token" : " sho",
+          "tokenId" : 3306
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.8800000000000003,
+          "startTime" : 2.72,
+          "token" : "w",
+          "tokenId" : 7898
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.04,
+          "startTime" : 2.88,
+          "token" : "ing",
+          "tokenId" : 381
+        },
+        {
+          "confidence" : 0.99902344,
+          "endTime" : 3.2800000000000002,
+          "startTime" : 3.04,
+          "token" : " him",
+          "tokenId" : 4384
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.4400000000000004,
+          "startTime" : 3.2800000000000002,
+          "token" : " how",
+          "tokenId" : 6268
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.6799999999999997,
+          "startTime" : 3.44,
+          "token" : " much",
+          "tokenId" : 4457
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.8400000000000003,
+          "startTime" : 3.68,
+          "token" : " sho",
+          "tokenId" : 3306
+        },
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 4,
+          "startTime" : 3.84,
+          "token" : "ck",
+          "tokenId" : 725
+        },
+        {
+          "confidence" : 0.99902344,
+          "endTime" : 4.16,
+          "startTime" : 4,
+          "token" : "ed",
+          "tokenId" : 326
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.48,
+          "startTime" : 4.16,
+          "token" : " I",
+          "tokenId" : 380
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.48,
+          "token" : " was",
+          "tokenId" : 924
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.04,
+          "startTime" : 4.8,
+          "token" : " at",
+          "tokenId" : 407
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.28,
+          "startTime" : 5.04,
+          "token" : " some",
+          "tokenId" : 4566
+        },
+        {
+          "confidence" : 0.9741211,
+          "endTime" : 5.5200000000000005,
+          "startTime" : 5.28,
+          "token" : " par",
+          "tokenId" : 450
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.6000000000000005,
+          "startTime" : 5.5200000000000005,
+          "token" : "ts",
+          "tokenId" : 769
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.840000000000001,
+          "startTime" : 5.6000000000000005,
+          "token" : " of",
+          "tokenId" : 592
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 6.08,
+          "startTime" : 5.84,
+          "token" : " what",
+          "tokenId" : 3470
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 6.4,
+          "startTime" : 6.08,
+          "token" : " he",
+          "tokenId" : 813
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 6.720000000000001,
+          "startTime" : 6.4,
+          "token" : " said",
+          "tokenId" : 5635
+        }
+      ],
+      "firstTokenTimingsSHA256" : "ae1b2ed0896efadce82f84fb6cc1303cd375663cd26c5e384c5015908f6707a8",
+      "firstTranscript" : "I really was very much afraid of showing him how much shocked I was at some parts of what he said",
+      "id" : "real-en-librispeech-test-other",
+      "language" : "en",
+      "orchestrationResidualNanoseconds" : [
+        21624,
+        26084,
+        25334
+      ],
+      "path" : "$REPO/.gstack/benchmark-fixtures/librispeech-test-other-1688-142285-0007-pcm16.wav",
+      "phases" : [
+        {
+          "actualAudioFrames" : 89,
+          "alignmentAndPaddingNanoseconds" : 31584,
+          "blankDecisionCount" : 9,
+          "cacheReturnNanoseconds" : 2958,
+          "decoderCacheHitCount" : 34,
+          "decoderInvocationNanoseconds" : 7361082,
+          "decoderPredictionCount" : 29,
+          "decoderPredictionNanoseconds" : 7236249,
+          "durationAdvanceFrameCount" : 94,
+          "effectiveSequenceLength" : 89,
+          "emittedTokenCount" : 28,
+          "encoderInputNanoseconds" : 4917,
+          "encoderPredictionNanoseconds" : 25850208,
+          "encoderSequenceLength" : 90,
+          "encoderWindowCount" : 1,
+          "finalJointDecisionCount" : 5,
+          "finalLoopIterationCount" : 5,
+          "forcedAdvanceCount" : 0,
+          "frontendOutputExtractionNanoseconds" : 2042,
+          "innerJointDecisionCount" : 4,
+          "innerLoopIterationCount" : 4,
+          "jointInvocationNanoseconds" : 10624209,
+          "jointPredictionCount" : 38,
+          "jointPredictionNanoseconds" : 10409291,
+          "mainJointDecisionCount" : 29,
+          "mainLoopIterationCount" : 29,
+          "maxTokenLimitBreakCount" : 0,
+          "nonblankDecisionCount" : 29,
+          "pipelineNanoseconds" : 45668917,
+          "preprocessorInputNanoseconds" : 27500,
+          "preprocessorPredictionNanoseconds" : 1337916,
+          "processedTokenCount" : 28,
+          "resultProcessingNanoseconds" : 54084,
+          "tdtDecodeNanoseconds" : 18442167,
+          "transcribeInternalNanoseconds" : 45756916
+        },
+        {
+          "actualAudioFrames" : 89,
+          "alignmentAndPaddingNanoseconds" : 32291,
+          "blankDecisionCount" : 9,
+          "cacheReturnNanoseconds" : 2625,
+          "decoderCacheHitCount" : 34,
+          "decoderInvocationNanoseconds" : 7416794,
+          "decoderPredictionCount" : 29,
+          "decoderPredictionNanoseconds" : 7293333,
+          "durationAdvanceFrameCount" : 94,
+          "effectiveSequenceLength" : 89,
+          "emittedTokenCount" : 28,
+          "encoderInputNanoseconds" : 6792,
+          "encoderPredictionNanoseconds" : 26364250,
+          "encoderSequenceLength" : 90,
+          "encoderWindowCount" : 1,
+          "finalJointDecisionCount" : 5,
+          "finalLoopIterationCount" : 5,
+          "forcedAdvanceCount" : 0,
+          "frontendOutputExtractionNanoseconds" : 1834,
+          "innerJointDecisionCount" : 4,
+          "innerLoopIterationCount" : 4,
+          "jointInvocationNanoseconds" : 10830916,
+          "jointPredictionCount" : 38,
+          "jointPredictionNanoseconds" : 10622333,
+          "mainJointDecisionCount" : 29,
+          "mainLoopIterationCount" : 29,
+          "maxTokenLimitBreakCount" : 0,
+          "nonblankDecisionCount" : 29,
+          "pipelineNanoseconds" : 46470125,
+          "preprocessorInputNanoseconds" : 31583,
+          "preprocessorPredictionNanoseconds" : 1338958,
+          "processedTokenCount" : 28,
+          "resultProcessingNanoseconds" : 57500,
+          "tdtDecodeNanoseconds" : 18722458,
+          "transcribeInternalNanoseconds" : 46562417
+        },
+        {
+          "actualAudioFrames" : 89,
+          "alignmentAndPaddingNanoseconds" : 32625,
+          "blankDecisionCount" : 9,
+          "cacheReturnNanoseconds" : 2000,
+          "decoderCacheHitCount" : 34,
+          "decoderInvocationNanoseconds" : 7433920,
+          "decoderPredictionCount" : 29,
+          "decoderPredictionNanoseconds" : 7311417,
+          "durationAdvanceFrameCount" : 94,
+          "effectiveSequenceLength" : 89,
+          "emittedTokenCount" : 28,
+          "encoderInputNanoseconds" : 4333,
+          "encoderPredictionNanoseconds" : 26523875,
+          "encoderSequenceLength" : 90,
+          "encoderWindowCount" : 1,
+          "finalJointDecisionCount" : 5,
+          "finalLoopIterationCount" : 5,
+          "forcedAdvanceCount" : 0,
+          "frontendOutputExtractionNanoseconds" : 1875,
+          "innerJointDecisionCount" : 4,
+          "innerLoopIterationCount" : 4,
+          "jointInvocationNanoseconds" : 10733833,
+          "jointPredictionCount" : 38,
+          "jointPredictionNanoseconds" : 10526542,
+          "mainJointDecisionCount" : 29,
+          "mainLoopIterationCount" : 29,
+          "maxTokenLimitBreakCount" : 0,
+          "nonblankDecisionCount" : 29,
+          "pipelineNanoseconds" : 46532625,
+          "preprocessorInputNanoseconds" : 30000,
+          "preprocessorPredictionNanoseconds" : 1343125,
+          "processedTokenCount" : 28,
+          "resultProcessingNanoseconds" : 56791,
+          "tdtDecodeNanoseconds" : 18626375,
+          "transcribeInternalNanoseconds" : 46624500
+        }
+      ],
+      "sampleCount" : 112960,
+      "sourceHashMatches" : true,
+      "tdtSwiftResidualNanoseconds" : [
+        796627,
+        806792,
+        788416
+      ],
+      "tokenTimingHashVariants" : [
+        "ae1b2ed0896efadce82f84fb6cc1303cd375663cd26c5e384c5015908f6707a8"
+      ],
+      "tokenTimingsStable" : true,
+      "transcriptSHA256" : "de779a17ef1f131e54fff2c068b2dd146c6fbee92d471e37b32ad27fa969b70f",
+      "transcriptStable" : true,
+      "transcriptVariants" : [
+        "I really was very much afraid of showing him how much shocked I was at some parts of what he said"
+      ],
+      "wallNanoseconds" : [
+        45775000,
+        46584375,
+        46646333
+      ]
+    },
+    {
+      "actualSourceSHA256" : "c65fcd726d6b08c82c1e5dc7558f863cd8d483e3ed2f4a7bcf271dc1865ada14",
+      "durationSeconds" : 3.4,
+      "expectedSourceSHA256" : "c65fcd726d6b08c82c1e5dc7558f863cd8d483e3ed2f4a7bcf271dc1865ada14",
+      "firstTokenTimings" : [
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 0.56,
+          "startTime" : 0.24,
+          "token" : " I",
+          "tokenId" : 380
+        },
+        {
+          "confidence" : 0.96875,
+          "endTime" : 0.7200000000000001,
+          "startTime" : 0.56,
+          "token" : " had",
+          "tokenId" : 1923
+        },
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 1.04,
+          "startTime" : 0.72,
+          "token" : " that",
+          "tokenId" : 1050
+        },
+        {
+          "confidence" : 0.99902344,
+          "endTime" : 1.2,
+          "startTime" : 1.04,
+          "token" : " cu",
+          "tokenId" : 852
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.3599999999999999,
+          "startTime" : 1.2,
+          "token" : "ri",
+          "tokenId" : 330
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.6,
+          "startTime" : 1.36,
+          "token" : "os",
+          "tokenId" : 308
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.76,
+          "startTime" : 1.6,
+          "token" : "ity",
+          "tokenId" : 1460
+        },
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 2,
+          "startTime" : 1.76,
+          "token" : " bes",
+          "tokenId" : 1558
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 2,
+          "token" : "ide",
+          "tokenId" : 1267
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.4000000000000004,
+          "startTime" : 2.16,
+          "token" : " me",
+          "tokenId" : 525
+        },
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 2.56,
+          "startTime" : 2.4,
+          "token" : " at",
+          "tokenId" : 407
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.88,
+          "startTime" : 2.56,
+          "token" : " this",
+          "tokenId" : 1974
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.1999999999999997,
+          "startTime" : 2.88,
+          "token" : " moment",
+          "tokenId" : 3621
+        },
+        {
+          "confidence" : 0.6567383,
+          "endTime" : 3.4400000000000004,
+          "startTime" : 3.2800000000000002,
+          "token" : ".",
+          "tokenId" : 7883
+        }
+      ],
+      "firstTokenTimingsSHA256" : "cf569a35a5d7631363eb188a714c3fc5185ce5aed3266504ce9c283a1af413d0",
+      "firstTranscript" : "I had that curiosity beside me at this moment.",
+      "id" : "real-en-voices-room",
+      "language" : "en",
+      "orchestrationResidualNanoseconds" : [
+        25959,
+        22290,
+        20502
+      ],
+      "path" : "$REPO/.gstack/benchmark-fixtures/voices-room-sp0307.wav",
+      "phases" : [
+        {
+          "actualAudioFrames" : 43,
+          "alignmentAndPaddingNanoseconds" : 29875,
+          "blankDecisionCount" : 8,
+          "cacheReturnNanoseconds" : 2042,
+          "decoderCacheHitCount" : 22,
+          "decoderInvocationNanoseconds" : 3863291,
+          "decoderPredictionCount" : 15,
+          "decoderPredictionNanoseconds" : 3797457,
+          "durationAdvanceFrameCount" : 55,
+          "effectiveSequenceLength" : 43,
+          "emittedTokenCount" : 14,
+          "encoderInputNanoseconds" : 6250,
+          "encoderPredictionNanoseconds" : 26446958,
+          "encoderSequenceLength" : 44,
+          "encoderWindowCount" : 1,
+          "finalJointDecisionCount" : 8,
+          "finalLoopIterationCount" : 8,
+          "forcedAdvanceCount" : 0,
+          "frontendOutputExtractionNanoseconds" : 1708,
+          "innerJointDecisionCount" : 1,
+          "innerLoopIterationCount" : 1,
+          "jointInvocationNanoseconds" : 6161167,
+          "jointPredictionCount" : 23,
+          "jointPredictionNanoseconds" : 6036835,
+          "mainJointDecisionCount" : 14,
+          "mainLoopIterationCount" : 14,
+          "maxTokenLimitBreakCount" : 0,
+          "nonblankDecisionCount" : 15,
+          "pipelineNanoseconds" : 38232959,
+          "preprocessorInputNanoseconds" : 24417,
+          "preprocessorPredictionNanoseconds" : 1364708,
+          "processedTokenCount" : 13,
+          "resultProcessingNanoseconds" : 43708,
+          "tdtDecodeNanoseconds" : 10385875,
+          "transcribeInternalNanoseconds" : 38308667
+        },
+        {
+          "actualAudioFrames" : 43,
+          "alignmentAndPaddingNanoseconds" : 30291,
+          "blankDecisionCount" : 8,
+          "cacheReturnNanoseconds" : 2459,
+          "decoderCacheHitCount" : 22,
+          "decoderInvocationNanoseconds" : 4072792,
+          "decoderPredictionCount" : 15,
+          "decoderPredictionNanoseconds" : 3989625,
+          "durationAdvanceFrameCount" : 55,
+          "effectiveSequenceLength" : 43,
+          "emittedTokenCount" : 14,
+          "encoderInputNanoseconds" : 9000,
+          "encoderPredictionNanoseconds" : 26383458,
+          "encoderSequenceLength" : 44,
+          "encoderWindowCount" : 1,
+          "finalJointDecisionCount" : 8,
+          "finalLoopIterationCount" : 8,
+          "forcedAdvanceCount" : 0,
+          "frontendOutputExtractionNanoseconds" : 3250,
+          "innerJointDecisionCount" : 1,
+          "innerLoopIterationCount" : 1,
+          "jointInvocationNanoseconds" : 6562379,
+          "jointPredictionCount" : 23,
+          "jointPredictionNanoseconds" : 6425793,
+          "mainJointDecisionCount" : 14,
+          "mainLoopIterationCount" : 14,
+          "maxTokenLimitBreakCount" : 0,
+          "nonblankDecisionCount" : 15,
+          "pipelineNanoseconds" : 39086459,
+          "preprocessorInputNanoseconds" : 27084,
+          "preprocessorPredictionNanoseconds" : 1603500,
+          "processedTokenCount" : 13,
+          "resultProcessingNanoseconds" : 48792,
+          "tdtDecodeNanoseconds" : 11056042,
+          "transcribeInternalNanoseconds" : 39168041
+        },
+        {
+          "actualAudioFrames" : 43,
+          "alignmentAndPaddingNanoseconds" : 32416,
+          "blankDecisionCount" : 8,
+          "cacheReturnNanoseconds" : 2000,
+          "decoderCacheHitCount" : 22,
+          "decoderInvocationNanoseconds" : 3912001,
+          "decoderPredictionCount" : 15,
+          "decoderPredictionNanoseconds" : 3842710,
+          "durationAdvanceFrameCount" : 55,
+          "effectiveSequenceLength" : 43,
+          "emittedTokenCount" : 14,
+          "encoderInputNanoseconds" : 5666,
+          "encoderPredictionNanoseconds" : 26442875,
+          "encoderSequenceLength" : 44,
+          "encoderWindowCount" : 1,
+          "finalJointDecisionCount" : 8,
+          "finalLoopIterationCount" : 8,
+          "forcedAdvanceCount" : 0,
+          "frontendOutputExtractionNanoseconds" : 2208,
+          "innerJointDecisionCount" : 1,
+          "innerLoopIterationCount" : 1,
+          "jointInvocationNanoseconds" : 6412457,
+          "jointPredictionCount" : 23,
+          "jointPredictionNanoseconds" : 6286457,
+          "mainJointDecisionCount" : 14,
+          "mainLoopIterationCount" : 14,
+          "maxTokenLimitBreakCount" : 0,
+          "nonblankDecisionCount" : 15,
+          "pipelineNanoseconds" : 38514125,
+          "preprocessorInputNanoseconds" : 30000,
+          "preprocessorPredictionNanoseconds" : 1334625,
+          "processedTokenCount" : 13,
+          "resultProcessingNanoseconds" : 44917,
+          "tdtDecodeNanoseconds" : 10695833,
+          "transcribeInternalNanoseconds" : 38593500
+        }
+      ],
+      "sampleCount" : 54400,
+      "sourceHashMatches" : true,
+      "tdtSwiftResidualNanoseconds" : [
+        551583,
+        640624,
+        566666
+      ],
+      "tokenTimingHashVariants" : [
+        "cf569a35a5d7631363eb188a714c3fc5185ce5aed3266504ce9c283a1af413d0"
+      ],
+      "tokenTimingsStable" : true,
+      "transcriptSHA256" : "3a4531980d66676f383e36269a847e2a037dbb2ca4b5255f35ceb09d518b2268",
+      "transcriptStable" : true,
+      "transcriptVariants" : [
+        "I had that curiosity beside me at this moment."
+      ],
+      "wallNanoseconds" : [
+        38331500,
+        39186166,
+        38611042
+      ]
+    },
+    {
+      "actualSourceSHA256" : "363087f90513f5484750d8076da3cf7d029065d6b09f7ea68170bcf10b487d27",
+      "durationSeconds" : 7.44,
+      "expectedSourceSHA256" : "363087f90513f5484750d8076da3cf7d029065d6b09f7ea68170bcf10b487d27",
+      "firstTokenTimings" : [
+        {
+          "confidence" : 0.98876953,
+          "endTime" : 1.84,
+          "startTime" : 1.52,
+          "token" : " Он",
+          "tokenId" : 4082
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.16,
+          "startTime" : 1.84,
+          "token" : " сказа",
+          "tokenId" : 3436
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.3200000000000003,
+          "startTime" : 2.16,
+          "token" : "л",
+          "tokenId" : 7900
+        },
+        {
+          "confidence" : 0.99902344,
+          "endTime" : 2.4,
+          "startTime" : 2.32,
+          "token" : ",",
+          "tokenId" : 7877
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.6399999999999997,
+          "startTime" : 2.4,
+          "token" : " что",
+          "tokenId" : 862
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.88,
+          "startTime" : 2.64,
+          "token" : " со",
+          "tokenId" : 1215
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.04,
+          "startTime" : 2.88,
+          "token" : "зда",
+          "tokenId" : 5317
+        },
+        {
+          "confidence" : 0.99853516,
+          "endTime" : 3.2,
+          "startTime" : 3.04,
+          "token" : "л",
+          "tokenId" : 7900
+        },
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 3.3600000000000003,
+          "startTime" : 3.2,
+          "token" : " д",
+          "tokenId" : 361
+        },
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 3.52,
+          "startTime" : 3.36,
+          "token" : "вер",
+          "tokenId" : 1941
+        },
+        {
+          "confidence" : 0.99560547,
+          "endTime" : 3.68,
+          "startTime" : 3.52,
+          "token" : "ной",
+          "tokenId" : 3844
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.8400000000000003,
+          "startTime" : 3.7600000000000002,
+          "token" : " з",
+          "tokenId" : 395
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4,
+          "startTime" : 3.84,
+          "token" : "во",
+          "tokenId" : 512
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.24,
+          "startTime" : 4,
+          "token" : "нок",
+          "tokenId" : 7461
+        },
+        {
+          "confidence" : 0.8520508,
+          "endTime" : 4.32,
+          "startTime" : 4.24,
+          "token" : ",",
+          "tokenId" : 7877
+        },
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.32,
+          "token" : " работа",
+          "tokenId" : 4789
+        },
+        {
+          "confidence" : 0.99316406,
+          "endTime" : 4.8,
+          "startTime" : 4.64,
+          "token" : "ющи",
+          "tokenId" : 5938
+        },
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 5.12,
+          "startTime" : 4.96,
+          "token" : "й",
+          "tokenId" : 7952
+        },
+        {
+          "confidence" : 0.98046875,
+          "endTime" : 5.36,
+          "startTime" : 5.12,
+          "token" : " от",
+          "tokenId" : 672
+        },
+        {
+          "confidence" : 0.9604492,
+          "endTime" : 5.44,
+          "startTime" : 5.36,
+          "token" : " ва",
+          "tokenId" : 1243
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 5.6000000000000005,
+          "startTime" : 5.5200000000000005,
+          "token" : "й",
+          "tokenId" : 7952
+        },
+        {
+          "confidence" : 0.8408203,
+          "endTime" : 5.680000000000001,
+          "startTime" : 5.6000000000000005,
+          "token" : "-",
+          "tokenId" : 7918
+        },
+        {
+          "confidence" : 0.9951172,
+          "endTime" : 5.84,
+          "startTime" : 5.68,
+          "token" : "ф",
+          "tokenId" : 8022
+        },
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 5.92,
+          "startTime" : 5.84,
+          "token" : "а",
+          "tokenId" : 7887
+        },
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 6,
+          "startTime" : 5.92,
+          "token" : "й",
+          "tokenId" : 7952
+        },
+        {
+          "confidence" : 0.5185547,
+          "endTime" : 6.4,
+          "startTime" : 6.08,
+          "token" : ".",
+          "tokenId" : 7883
+        }
+      ],
+      "firstTokenTimingsSHA256" : "700d924b185b18d64529dbdd13e0cae0c6eaabf96815ccc7d1e8419c85db72c8",
+      "firstTranscript" : "Он сказал, что создал дверной звонок, работающий от вай-фай.",
+      "id" : "real-ru-fleurs-validation-1",
+      "language" : "ru",
+      "orchestrationResidualNanoseconds" : [
+        26667,
+        25125,
+        27582
+      ],
+      "path" : "/tmp/openramble-fleurs-ru-validation-1.wav",
+      "phases" : [
+        {
+          "actualAudioFrames" : 93,
+          "alignmentAndPaddingNanoseconds" : 24792,
+          "blankDecisionCount" : 17,
+          "cacheReturnNanoseconds" : 2125,
+          "decoderCacheHitCount" : 32,
+          "decoderInvocationNanoseconds" : 7014712,
+          "decoderPredictionCount" : 27,
+          "decoderPredictionNanoseconds" : 6898835,
+          "durationAdvanceFrameCount" : 102,
+          "effectiveSequenceLength" : 93,
+          "emittedTokenCount" : 26,
+          "encoderInputNanoseconds" : 5375,
+          "encoderPredictionNanoseconds" : 26391042,
+          "encoderSequenceLength" : 94,
+          "encoderWindowCount" : 1,
+          "finalJointDecisionCount" : 5,
+          "finalLoopIterationCount" : 5,
+          "forcedAdvanceCount" : 0,
+          "frontendOutputExtractionNanoseconds" : 1666,
+          "innerJointDecisionCount" : 11,
+          "innerLoopIterationCount" : 11,
+          "jointInvocationNanoseconds" : 11499126,
+          "jointPredictionCount" : 43,
+          "jointPredictionNanoseconds" : 11269829,
+          "mainJointDecisionCount" : 27,
+          "mainLoopIterationCount" : 27,
+          "maxTokenLimitBreakCount" : 0,
+          "nonblankDecisionCount" : 26,
+          "pipelineNanoseconds" : 46697000,
+          "preprocessorInputNanoseconds" : 29458,
+          "preprocessorPredictionNanoseconds" : 1297125,
+          "processedTokenCount" : 26,
+          "resultProcessingNanoseconds" : 61000,
+          "tdtDecodeNanoseconds" : 18969000,
+          "transcribeInternalNanoseconds" : 46785458
+        },
+        {
+          "actualAudioFrames" : 93,
+          "alignmentAndPaddingNanoseconds" : 23500,
+          "blankDecisionCount" : 17,
+          "cacheReturnNanoseconds" : 2750,
+          "decoderCacheHitCount" : 32,
+          "decoderInvocationNanoseconds" : 6839458,
+          "decoderPredictionCount" : 27,
+          "decoderPredictionNanoseconds" : 6703125,
+          "durationAdvanceFrameCount" : 102,
+          "effectiveSequenceLength" : 93,
+          "emittedTokenCount" : 26,
+          "encoderInputNanoseconds" : 5417,
+          "encoderPredictionNanoseconds" : 25962959,
+          "encoderSequenceLength" : 94,
+          "encoderWindowCount" : 1,
+          "finalJointDecisionCount" : 5,
+          "finalLoopIterationCount" : 5,
+          "forcedAdvanceCount" : 0,
+          "frontendOutputExtractionNanoseconds" : 6083,
+          "innerJointDecisionCount" : 11,
+          "innerLoopIterationCount" : 11,
+          "jointInvocationNanoseconds" : 11088373,
+          "jointPredictionCount" : 43,
+          "jointPredictionNanoseconds" : 10855662,
+          "mainJointDecisionCount" : 27,
+          "mainLoopIterationCount" : 27,
+          "maxTokenLimitBreakCount" : 0,
+          "nonblankDecisionCount" : 26,
+          "pipelineNanoseconds" : 45757375,
+          "preprocessorInputNanoseconds" : 28000,
+          "preprocessorPredictionNanoseconds" : 1346333,
+          "processedTokenCount" : 26,
+          "resultProcessingNanoseconds" : 65875,
+          "tdtDecodeNanoseconds" : 18404500,
+          "transcribeInternalNanoseconds" : 45849292
+        },
+        {
+          "actualAudioFrames" : 93,
+          "alignmentAndPaddingNanoseconds" : 22167,
+          "blankDecisionCount" : 17,
+          "cacheReturnNanoseconds" : 1917,
+          "decoderCacheHitCount" : 32,
+          "decoderInvocationNanoseconds" : 6935749,
+          "decoderPredictionCount" : 27,
+          "decoderPredictionNanoseconds" : 6814125,
+          "durationAdvanceFrameCount" : 102,
+          "effectiveSequenceLength" : 93,
+          "emittedTokenCount" : 26,
+          "encoderInputNanoseconds" : 5958,
+          "encoderPredictionNanoseconds" : 28940500,
+          "encoderSequenceLength" : 94,
+          "encoderWindowCount" : 1,
+          "finalJointDecisionCount" : 5,
+          "finalLoopIterationCount" : 5,
+          "forcedAdvanceCount" : 0,
+          "frontendOutputExtractionNanoseconds" : 2209,
+          "innerJointDecisionCount" : 11,
+          "innerLoopIterationCount" : 11,
+          "jointInvocationNanoseconds" : 11685291,
+          "jointPredictionCount" : 43,
+          "jointPredictionNanoseconds" : 11452915,
+          "mainJointDecisionCount" : 27,
+          "mainLoopIterationCount" : 27,
+          "maxTokenLimitBreakCount" : 0,
+          "nonblankDecisionCount" : 26,
+          "pipelineNanoseconds" : 49409500,
+          "preprocessorInputNanoseconds" : 27834,
+          "preprocessorPredictionNanoseconds" : 1347917,
+          "processedTokenCount" : 26,
+          "resultProcessingNanoseconds" : 59958,
+          "tdtDecodeNanoseconds" : 19082000,
+          "transcribeInternalNanoseconds" : 49494083
+        }
+      ],
+      "sampleCount" : 119040,
+      "sourceHashMatches" : true,
+      "tdtSwiftResidualNanoseconds" : [
+        800336,
+        845713,
+        814960
+      ],
+      "tokenTimingHashVariants" : [
+        "700d924b185b18d64529dbdd13e0cae0c6eaabf96815ccc7d1e8419c85db72c8"
+      ],
+      "tokenTimingsStable" : true,
+      "transcriptSHA256" : "316fbcba203437b57c0bc88e5bc925e3712ac80ecff77d2517e8223fa3d548bd",
+      "transcriptStable" : true,
+      "transcriptVariants" : [
+        "Он сказал, что создал дверной звонок, работающий от вай-фай."
+      ],
+      "wallNanoseconds" : [
+        46808250,
+        45870542,
+        49518042
+      ]
+    },
+    {
+      "actualSourceSHA256" : "de6c6c691caf96369381f26aa204c4455d8f7c625dec017b634f9ff25833211f",
+      "durationSeconds" : 4.8,
+      "expectedSourceSHA256" : "de6c6c691caf96369381f26aa204c4455d8f7c625dec017b634f9ff25833211f",
+      "firstTokenTimings" : [
+        {
+          "confidence" : 0.9995117,
+          "endTime" : 0.56,
+          "startTime" : 0.24,
+          "token" : " О",
+          "tokenId" : 1052
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 0.8,
+          "startTime" : 0.64,
+          "token" : " пер",
+          "tokenId" : 3193
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 0.9600000000000001,
+          "startTime" : 0.8,
+          "token" : "вы",
+          "tokenId" : 2418
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.04,
+          "startTime" : 0.96,
+          "token" : "х",
+          "tokenId" : 7958
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.2,
+          "startTime" : 1.04,
+          "token" : " слу",
+          "tokenId" : 3181
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.28,
+          "startTime" : 1.2,
+          "token" : "ча",
+          "tokenId" : 859
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.36,
+          "startTime" : 1.28,
+          "token" : "я",
+          "tokenId" : 7914
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.4400000000000002,
+          "startTime" : 1.36,
+          "token" : "х",
+          "tokenId" : 7958
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.68,
+          "startTime" : 1.52,
+          "token" : " за",
+          "tokenId" : 486
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.8399999999999999,
+          "startTime" : 1.68,
+          "token" : "бо",
+          "tokenId" : 866
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 1.9200000000000002,
+          "startTime" : 1.84,
+          "token" : "ле",
+          "tokenId" : 511
+        },
+        {
+          "confidence" : 0.95654297,
+          "endTime" : 2,
+          "startTime" : 1.92,
+          "token" : "вания",
+          "tokenId" : 5992
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.3200000000000003,
+          "startTime" : 2.24,
+          "token" : " в",
+          "tokenId" : 338
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.5599999999999996,
+          "startTime" : 2.32,
+          "token" : " этом",
+          "tokenId" : 5899
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.72,
+          "startTime" : 2.56,
+          "token" : " се",
+          "tokenId" : 656
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 2.96,
+          "startTime" : 2.72,
+          "token" : "зо",
+          "tokenId" : 1621
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.12,
+          "startTime" : 2.96,
+          "token" : "не",
+          "tokenId" : 613
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.3600000000000003,
+          "startTime" : 3.12,
+          "token" : " было",
+          "tokenId" : 3952
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.52,
+          "startTime" : 3.36,
+          "token" : " со",
+          "tokenId" : 1215
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.6,
+          "startTime" : 3.52,
+          "token" : "об",
+          "tokenId" : 2200
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.7600000000000002,
+          "startTime" : 3.6,
+          "token" : "ще",
+          "tokenId" : 879
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 3.9200000000000004,
+          "startTime" : 3.7600000000000002,
+          "token" : "но",
+          "tokenId" : 390
+        },
+        {
+          "confidence" : 0.9980469,
+          "endTime" : 4.08,
+          "startTime" : 3.92,
+          "token" : " в",
+          "tokenId" : 338
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.24,
+          "startTime" : 4.08,
+          "token" : " и",
+          "tokenId" : 402
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.32,
+          "startTime" : 4.24,
+          "token" : "ю",
+          "tokenId" : 7976
+        },
+        {
+          "confidence" : 1,
+          "endTime" : 4.5600000000000005,
+          "startTime" : 4.32,
+          "token" : "ле",
+          "tokenId" : 511
+        },
+        {
+          "confidence" : 0.9970703,
+          "endTime" : 4.640000000000001,
+          "startTime" : 4.5600000000000005,
+          "token" : ".",
+          "tokenId" : 7883
+        }
+      ],
+      "firstTokenTimingsSHA256" : "8b1d6b2e17977faed0a3bd3ae695d3465d71a8f8909b36f51830dc0928683d2b",
+      "firstTranscript" : "О первых случаях заболевания в этом сезоне было сообщено в июле.",
+      "id" : "real-ru-fleurs-validation-6",
+      "language" : "ru",
+      "orchestrationResidualNanoseconds" : [
+        24708,
+        24583,
+        23375
+      ],
+      "path" : "/tmp/openramble-fleurs-ru-validation-6.wav",
+      "phases" : [
+        {
+          "actualAudioFrames" : 60,
+          "alignmentAndPaddingNanoseconds" : 26334,
+          "blankDecisionCount" : 10,
+          "cacheReturnNanoseconds" : 2333,
+          "decoderCacheHitCount" : 33,
+          "decoderInvocationNanoseconds" : 7151626,
+          "decoderPredictionCount" : 28,
+          "decoderPredictionNanoseconds" : 7031210,
+          "durationAdvanceFrameCount" : 70,
+          "effectiveSequenceLength" : 60,
+          "emittedTokenCount" : 27,
+          "encoderInputNanoseconds" : 4000,
+          "encoderPredictionNanoseconds" : 26441125,
+          "encoderSequenceLength" : 61,
+          "encoderWindowCount" : 1,
+          "finalJointDecisionCount" : 5,
+          "finalLoopIterationCount" : 5,
+          "forcedAdvanceCount" : 0,
+          "frontendOutputExtractionNanoseconds" : 1666,
+          "innerJointDecisionCount" : 4,
+          "innerLoopIterationCount" : 4,
+          "jointInvocationNanoseconds" : 10417498,
+          "jointPredictionCount" : 37,
+          "jointPredictionNanoseconds" : 10217289,
+          "mainJointDecisionCount" : 28,
+          "mainLoopIterationCount" : 28,
+          "maxTokenLimitBreakCount" : 0,
+          "nonblankDecisionCount" : 27,
+          "pipelineNanoseconds" : 45781750,
+          "preprocessorInputNanoseconds" : 30750,
+          "preprocessorPredictionNanoseconds" : 1280500,
+          "processedTokenCount" : 27,
+          "resultProcessingNanoseconds" : 58750,
+          "tdtDecodeNanoseconds" : 18020042,
+          "transcribeInternalNanoseconds" : 45869291
+        },
+        {
+          "actualAudioFrames" : 60,
+          "alignmentAndPaddingNanoseconds" : 24792,
+          "blankDecisionCount" : 10,
+          "cacheReturnNanoseconds" : 1959,
+          "decoderCacheHitCount" : 33,
+          "decoderInvocationNanoseconds" : 7180044,
+          "decoderPredictionCount" : 28,
+          "decoderPredictionNanoseconds" : 7058460,
+          "durationAdvanceFrameCount" : 70,
+          "effectiveSequenceLength" : 60,
+          "emittedTokenCount" : 27,
+          "encoderInputNanoseconds" : 6000,
+          "encoderPredictionNanoseconds" : 26642375,
+          "encoderSequenceLength" : 61,
+          "encoderWindowCount" : 1,
+          "finalJointDecisionCount" : 5,
+          "finalLoopIterationCount" : 5,
+          "forcedAdvanceCount" : 0,
+          "frontendOutputExtractionNanoseconds" : 1791,
+          "innerJointDecisionCount" : 4,
+          "innerLoopIterationCount" : 4,
+          "jointInvocationNanoseconds" : 10572330,
+          "jointPredictionCount" : 37,
+          "jointPredictionNanoseconds" : 10372540,
+          "mainJointDecisionCount" : 28,
+          "mainLoopIterationCount" : 28,
+          "maxTokenLimitBreakCount" : 0,
+          "nonblankDecisionCount" : 27,
+          "pipelineNanoseconds" : 46197125,
+          "preprocessorInputNanoseconds" : 26459,
+          "preprocessorPredictionNanoseconds" : 1307958,
+          "processedTokenCount" : 27,
+          "resultProcessingNanoseconds" : 66333,
+          "tdtDecodeNanoseconds" : 18209250,
+          "transcribeInternalNanoseconds" : 46290875
+        },
+        {
+          "actualAudioFrames" : 60,
+          "alignmentAndPaddingNanoseconds" : 25958,
+          "blankDecisionCount" : 10,
+          "cacheReturnNanoseconds" : 1917,
+          "decoderCacheHitCount" : 33,
+          "decoderInvocationNanoseconds" : 7161123,
+          "decoderPredictionCount" : 28,
+          "decoderPredictionNanoseconds" : 7042127,
+          "durationAdvanceFrameCount" : 70,
+          "effectiveSequenceLength" : 60,
+          "emittedTokenCount" : 27,
+          "encoderInputNanoseconds" : 5583,
+          "encoderPredictionNanoseconds" : 26371958,
+          "encoderSequenceLength" : 61,
+          "encoderWindowCount" : 1,
+          "finalJointDecisionCount" : 5,
+          "finalLoopIterationCount" : 5,
+          "forcedAdvanceCount" : 0,
+          "frontendOutputExtractionNanoseconds" : 1625,
+          "innerJointDecisionCount" : 4,
+          "innerLoopIterationCount" : 4,
+          "jointInvocationNanoseconds" : 10424414,
+          "jointPredictionCount" : 37,
+          "jointPredictionNanoseconds" : 10226708,
+          "mainJointDecisionCount" : 28,
+          "mainLoopIterationCount" : 28,
+          "maxTokenLimitBreakCount" : 0,
+          "nonblankDecisionCount" : 27,
+          "pipelineNanoseconds" : 45799916,
+          "preprocessorInputNanoseconds" : 27416,
+          "preprocessorPredictionNanoseconds" : 1361375,
+          "processedTokenCount" : 27,
+          "resultProcessingNanoseconds" : 61709,
+          "tdtDecodeNanoseconds" : 18028667,
+          "transcribeInternalNanoseconds" : 45890042
+        }
+      ],
+      "sampleCount" : 76800,
+      "sourceHashMatches" : true,
+      "tdtSwiftResidualNanoseconds" : [
+        771543,
+        778250,
+        759832
+      ],
+      "tokenTimingHashVariants" : [
+        "8b1d6b2e17977faed0a3bd3ae695d3465d71a8f8909b36f51830dc0928683d2b"
+      ],
+      "tokenTimingsStable" : true,
+      "transcriptSHA256" : "7fc4182a756bd6e07183fc11c53110c14081922cd574f3e3983e0a6d6c3cbd7d",
+      "transcriptStable" : true,
+      "transcriptVariants" : [
+        "О первых случаях заболевания в этом сезоне было сообщено в июле."
+      ],
+      "wallNanoseconds" : [
+        45890208,
+        46311500,
+        45909583
+      ]
+    }
+  ],
+  "fluidAudioBaseRevision" : "ee9a7f12d91710da53de6d75f8b7160e09eccee4",
+  "jointComputeUnitsOverride" : "cpuAndNeuralEngine",
+  "managerLoadNanoseconds" : 28208,
+  "maxModelSamples" : 240000,
+  "modelDirectory" : "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3",
+  "modelLoadNanoseconds" : 147304125,
+  "modelWindowSeconds" : 15,
+  "peakRSSAfterFirstInferenceBytes" : 83689472,
+  "peakRSSAfterModelLoadBytes" : 67682304,
+  "peakRSSAtEndBytes" : 86343680,
+  "peakRSSAtStartBytes" : 13336576,
+  "persistentProcess" : true,
+  "repeatCountPerFixture" : 3,
+  "schemaVersion" : 1,
+  "shippingConfiguration" : {
+    "cacheReturnResetData" : false,
+    "computeUnits" : "MLComputeUnits.all",
+    "dualDecodeArbitration" : false,
+    "encoderComputeUnits" : "MLComputeUnits.all",
+    "encoderPrecision" : "int8",
+    "maxTokensPerChunk" : 600,
+    "melChunkContext" : false,
+    "parallelChunkConcurrency" : 4
+  },
+  "warmupCountPerFixture" : 3
+}

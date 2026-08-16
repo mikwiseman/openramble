@@ -1,0 +1,10 @@
+{
+  "branch": "",
+  "head": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+  "origin": "https://github.com/mikwiseman/openramble.git",
+  "source": "$TMP/openramble-derived-overlay-installer-f2b6e8cc",
+  "status": [
+    "?? Packages/LocalASR/Sources/LocalASR/DerivedModelOverlayInstaller.swift",
+    "?? Packages/LocalASR/Tests/LocalASRTests/DerivedModelOverlayInstallerTests.swift"
+  ]
+}

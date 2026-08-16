@@ -1,0 +1,149 @@
+{
+  "artifacts": [
+    {
+      "bytes": 1137859,
+      "line_count": 200,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/candidate-10.0.duplicate.jsonl",
+      "sha256": "19aa76bd21276a99e7d210cce2735ed1dd516c4b81ccce630b20780e08c094dc"
+    },
+    {
+      "bytes": 1137857,
+      "line_count": 200,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/candidate-10.0.primary.jsonl",
+      "sha256": "b661e15bc7dbd6f0eea8a76a1e6eddcdf76cca94b922d239cb3ca7bf82dd62a2"
+    },
+    {
+      "bytes": 16530,
+      "line_count": 4,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/candidate-10.0.smoke.jsonl",
+      "sha256": "6ede033be6fc1c74a5df7cdb226d930d76f26f6bb3cede6a3d0b4c2f220f82b6"
+    },
+    {
+      "bytes": 2480088,
+      "line_count": 611,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/candidate-10.0.wire.jsonl",
+      "sha256": "e7d35fa64c26fcb21ca22690b0800de45a2b9ba9e7e0b85bb6b138fd483889b1"
+    },
+    {
+      "bytes": 1849262,
+      "line_count": 300,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/candidate-12.5.duplicate.jsonl",
+      "sha256": "9a61df7364be3491b8108ceadc24ae31bfc3438b15791ced1fd555fa4d67dd4e"
+    },
+    {
+      "bytes": 1849263,
+      "line_count": 300,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/candidate-12.5.primary.jsonl",
+      "sha256": "8d1ea4b35f64a1c507b17a0065e4c7005edbd97c5ae658df3708ac9f7bca18a7"
+    },
+    {
+      "bytes": 16596,
+      "line_count": 4,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/candidate-12.5.smoke.jsonl",
+      "sha256": "e26a9e5734b9655bde54801dad50b00d14a2b34e28acb21bffdd9d18ab570831"
+    },
+    {
+      "bytes": 4023861,
+      "line_count": 911,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/candidate-12.5.wire.jsonl",
+      "sha256": "01cce316c85ccf3dc8c634d6707a204f3e6f7cf630ab67b0e394fdb07c7760df"
+    },
+    {
+      "bytes": 1849347,
+      "line_count": 300,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/shipping.duplicate.jsonl",
+      "sha256": "f2b92733b3ab52f0b715e3a78becdda9cd623fcba2241e8de65e52835a1e341e"
+    },
+    {
+      "bytes": 1849350,
+      "line_count": 300,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/shipping.primary.jsonl",
+      "sha256": "2395eb63d611536cc9c4e9c1d0cf0aa041f38912c35f4287835d39dd06683591"
+    },
+    {
+      "bytes": 1138637,
+      "line_count": 200,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/shipping.shape-10.0.duplicate.jsonl",
+      "sha256": "aa4dce856eae11dbeaaf21f8617ef6c0c17f19831544c09e49b12afab33924f3"
+    },
+    {
+      "bytes": 1138638,
+      "line_count": 200,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/shipping.shape-10.0.primary.jsonl",
+      "sha256": "308ec62fb0843b5ae80b26e5300bf855107ea58c201f3b0d4baa655fcd7d610c"
+    },
+    {
+      "bytes": 16576,
+      "line_count": 4,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/shipping.smoke.jsonl",
+      "sha256": "a0eaadd9dc55fd615285ca3a0e94ed0232e28bef5c5fd267e12cd32741fdcf30"
+    },
+    {
+      "bytes": 4024931,
+      "line_count": 911,
+      "path": "$TMP/openramble-intermediate-quality-gate/raw/shipping.wire.jsonl",
+      "sha256": "ae2813f56b7d9953b96d14b7e8bf350ffaf3a842e9b0fdc406a83a58a2273ee8"
+    },
+    {
+      "bytes": 508,
+      "line_count": 11,
+      "path": "$TMP/openramble-intermediate-quality-gate/logs/candidate-10.0.stderr.log",
+      "sha256": "e580083772ba40e579f4e84cda51575bff0be6e6bc7d39ef9591bb4ceb00678c"
+    },
+    {
+      "bytes": 509,
+      "line_count": 11,
+      "path": "$TMP/openramble-intermediate-quality-gate/logs/candidate-12.5.stderr.log",
+      "sha256": "6393b2105c0dfdf8b8924293f36c58bb428374e68e5a39ff6b0eb56f98def691"
+    },
+    {
+      "bytes": 565,
+      "line_count": 11,
+      "path": "$TMP/openramble-intermediate-quality-gate/logs/shipping.stderr.log",
+      "sha256": "11b9b150e945a185b41692c15f6950ce73098a1622a22d0386ed95c2961fa2e6"
+    },
+    {
+      "bytes": 999,
+      "line_count": 29,
+      "path": "$TMP/openramble-intermediate-quality-gate/run-metadata/candidate-10.0.completion.json",
+      "sha256": "afcc0041a1509aab19942a661748737e975930aa5c0608f6da76f832d12e63af"
+    },
+    {
+      "bytes": 2143,
+      "line_count": 33,
+      "path": "$TMP/openramble-intermediate-quality-gate/run-metadata/candidate-10.0.json",
+      "sha256": "4a31394eb0454d4c10ef97917a2ea7e1ea984bf9a9d49958aef7a31268c1fb3d"
+    },
+    {
+      "bytes": 999,
+      "line_count": 29,
+      "path": "$TMP/openramble-intermediate-quality-gate/run-metadata/candidate-12.5.completion.json",
+      "sha256": "302dc73f946dd7fc51c15da2d716c45fb1447fd888157748c5faf9265fbd6a68"
+    },
+    {
+      "bytes": 2143,
+      "line_count": 33,
+      "path": "$TMP/openramble-intermediate-quality-gate/run-metadata/candidate-12.5.json",
+      "sha256": "832a3f8f2b198ccfac1744a510545e7a1ab6d19e135da0273d7c4b940d8ea258"
+    },
+    {
+      "bytes": 993,
+      "line_count": 29,
+      "path": "$TMP/openramble-intermediate-quality-gate/run-metadata/shipping.completion.json",
+      "sha256": "06b12bcb54a64a33da1076b80c6f18c030631ad4493ebfb7066032417088ea78"
+    },
+    {
+      "bytes": 2183,
+      "line_count": 33,
+      "path": "$TMP/openramble-intermediate-quality-gate/run-metadata/shipping.json",
+      "sha256": "a7e0ae4e738e780bea3e8cd11c882314838fa5fddb09db7d2e8bd8d8bc47ab7b"
+    }
+  ],
+  "cohort_counts": {
+    "shape_10.0": 200,
+    "shape_12.5": 300
+  },
+  "created_at_utc": "2026-08-14T17:44:24.091649+00:00",
+  "schema_version": 1,
+  "status": "sealed_after_all_protocol_shutdown_and_before_frozen_evaluation"
+}

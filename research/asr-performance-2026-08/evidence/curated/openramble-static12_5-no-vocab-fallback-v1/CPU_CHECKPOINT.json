@@ -1,0 +1,92 @@
+{
+  "asr_or_coreml_run": false,
+  "created_at_utc": "2026-08-14T20:42:34Z",
+  "decision": "REJECT before untouched-204 inference",
+  "engineering122_proxy": {
+    "effective_cer": 0.02478378727249258,
+    "effective_wer": 0.06787330316742081,
+    "fallback_all": "17/128 (13.28125%)",
+    "fallback_scored": "11/122 (9.016393%)",
+    "micro_cer_delta": -0.0006454111268878275,
+    "micro_wer_delta": 0.002585649644473174,
+    "residual_plus_two_word_error_ids": [
+      "fleurs-en_us-0066-1615",
+      "fleurs-en_us-0124-1543",
+      "fleurs-ru_ru-0355-1560"
+    ],
+    "role": "development-only 7.5s risk proxy; never pooled with direct 12.5s holdout or untouched 204"
+  },
+  "failed_hard_gates": [
+    "engineering122_no_residual_plus_two",
+    "holdout300_primary_expected_mean_stop_win_at_least_15pct",
+    "holdout300_duplicate_expected_mean_stop_win_at_least_15pct",
+    "holdout300_primary_expected_p50_stop_win_at_least_15pct",
+    "holdout300_duplicate_expected_p50_stop_win_at_least_15pct",
+    "holdout300_primary_overall_p95_not_worse",
+    "holdout300_duplicate_overall_p95_not_worse",
+    "holdout300_primary_fallback_p95_not_worse",
+    "holdout300_duplicate_fallback_p95_not_worse"
+  ],
+  "frozen_artifacts": {
+    "cpu_tests": {"path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/CPU_TESTS.json", "sha256": "8bce16ff51d129e1ca7ac9fc26491b4792e2852423e25bb9eb96c663fc72267e"},
+    "evaluator": {"path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/evaluate_policy_once.py", "sha256": "f7cc89583b3c7afb64be46c8e20d17a085e9da5d9b41bc7f0d48ff297cef68cb"},
+    "negative_preflight_tests": {"path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/NEGATIVE_PREFLIGHT_TESTS.json", "sha256": "fefe1ee96d4575ffce947341c1c1b30a826f31487d7ab96bf5471250fe845bb7"},
+    "packaging_audit": {"path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/PACKAGING_AUDIT.json", "sha256": "596867385b786f62c9b67f0852dcc9745996c5f024832a1afb53cc8c777cc082"},
+    "preregistration": {"path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/PREREGISTRATION.json", "sha256": "8b9b652ff519c64e815fbbf452cbb4085efd6ade55379f8e89b357840ca798c3"},
+    "prior_evidence_report": {"path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/PRIOR_EVIDENCE_REPORT.json", "sha256": "87dab0840be5b27d302149ed50c2a50373791405abbd43bf18020e83b9073d77"},
+    "runner_orchestrator": {"path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/run_complete_protocol.py", "sha256": "df311a47130639db7f935869671875bcf5f912ad838e85927720c85c5e67a464"},
+    "sealer": {"path": "$TMP/openramble-static12_5-no-vocab-fallback-v1/seal_eval_inputs.py", "sha256": "b30a5887ddf6438b770725bd129a83d5a995646efd966d59c8f059cb10e6f4bd"}
+  },
+  "holdout300_direct_12_5": {
+    "duplicate": {
+      "fallback_policy_p95_ms": 155.58867005000002,
+      "mean_stop_win_fraction": -0.08149979898153935,
+      "overall_policy_p95_ms": 129.33589314999998,
+      "p50_stop_win_fraction": 0.004915092801390259,
+      "shipping_p95_ms": 74.45491045
+    },
+    "effective_cer": 0.02218383797331166,
+    "effective_wer": 0.05191256830601093,
+    "fallback": "28/300 (9.333333%)",
+    "micro_cer_delta": -0.0012531328320802004,
+    "micro_wer_delta": -0.0020036429872495446,
+    "primary": {
+      "fallback_policy_p95_ms": 155.13944594999998,
+      "mean_stop_win_fraction": -0.06823426509160598,
+      "overall_policy_p95_ms": 128.26829665,
+      "p50_stop_win_fraction": 0.013984685623900182,
+      "shipping_p95_ms": 74.42281700000001
+    },
+    "residual_plus_two_word_error_ids": [],
+    "shipping_candidate_short_none_false_negatives": []
+  },
+  "packaging": {
+    "candidate_encoder_exact_shared_bytes_with_shipping_encoder": 0,
+    "candidate_encoder_incremental_logical_bytes": 444943177,
+    "candidate_model_incremental_unique_bytes_after_exact_file_dedupe": 445432595,
+    "candidate_requires_mel_frames": 1251,
+    "complete_12_5_semantic_614_reference_attestation_present": false,
+    "shipping_preprocessor_emits_mel_frames": 1501,
+    "status": "not feasible as exact encoder-only package; standalone pair is large; semantic overlay is unproven"
+  },
+  "proposed_exact_command": "python3 $TMP/openramble-static12_5-no-vocab-fallback-v1/run_complete_protocol.py --variant candidate-12.5",
+  "proposed_exact_command_behavior": "Exit 78 before process spawn because frozen inference_allowed=false.",
+  "runner": {
+    "coreml_slot_used_by_this_lane": false,
+    "model_process_started_by_this_lane": false,
+    "negative_preflight_exit_code": 78
+  },
+  "shared_repository": {
+    "head": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+    "tracked_changes_from_this_lane": false
+  },
+  "status": "complete_cpu_only_rejected",
+  "untouched_204": {
+    "manifest_sha256": "340314c63357f2ec0bcb4091438a71b43668ecba4ad376dc8844e9785d86faf6",
+    "output_files_created": 0,
+    "outputs_inspected": false,
+    "preregistered_counterfactual_gate": true,
+    "preregistration_inference_allowed": false,
+    "rows": 204
+  }
+}

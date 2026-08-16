@@ -1,0 +1,106 @@
+[
+  {
+    "assetStatus" : "installed",
+    "durationSeconds" : 2.7,
+    "events" : [
+      {
+        "deliveredNS" : 870885042,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 0.72,
+        "rangeStartSeconds" : 0,
+        "text" : "He"
+      },
+      {
+        "deliveredNS" : 1086987334,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 0.96,
+        "rangeStartSeconds" : 0,
+        "text" : "He bought"
+      },
+      {
+        "deliveredNS" : 1327128959,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 1.2,
+        "rangeStartSeconds" : 0,
+        "text" : "He bought the"
+      },
+      {
+        "deliveredNS" : 1333115459,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 1.2,
+        "rangeStartSeconds" : 0,
+        "text" : "He bought the wife"
+      },
+      {
+        "deliveredNS" : 1548964292,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 1.44,
+        "rangeStartSeconds" : 0,
+        "text" : "He bought the Wi-Fi"
+      },
+      {
+        "deliveredNS" : 1785091167,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 1.68,
+        "rangeStartSeconds" : 0,
+        "text" : "He bought the Wi-Fi door"
+      },
+      {
+        "deliveredNS" : 2033659750,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 1.92,
+        "rangeStartSeconds" : 0,
+        "text" : "He bought the Wi-Fi doorbell"
+      },
+      {
+        "deliveredNS" : 2258210375,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 2.16,
+        "rangeStartSeconds" : 0,
+        "text" : "He bought the Wi-Fi doorbell he"
+      },
+      {
+        "deliveredNS" : 2749444875,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 2.7,
+        "rangeStartSeconds" : 0,
+        "text" : "He bought the Wi-Fi doorbell. He died"
+      },
+      {
+        "deliveredNS" : 2755096667,
+        "finalizationSeconds" : 0,
+        "isFinal" : false,
+        "rangeDurationSeconds" : 2.7,
+        "rangeStartSeconds" : 0,
+        "text" : "He bought the Wi-Fi doorbell. He died."
+      },
+      {
+        "deliveredNS" : 2775540834,
+        "finalizationSeconds" : 2.7,
+        "isFinal" : true,
+        "rangeDurationSeconds" : 2.52,
+        "rangeStartSeconds" : 0.18,
+        "text" : "He bought the Wi-Fi doorbell. He died."
+      }
+    ],
+    "feedWallNS" : 2701967250,
+    "finalText" : "He bought the Wi-Fi doorbell. He died.",
+    "fixtureSHA256" : "35e1ce4c8a1238d9439f4a86a600f228ae1c194be1b79e5d86d4893a3769eade",
+    "locale" : "en_US",
+    "paced" : true,
+    "prepareNS" : 153416166,
+    "sampleCount" : 43200,
+    "startNS" : 14667,
+    "stopToFinalizeNS" : 81497208,
+    "totalWallNS" : 2936903250
+  }
+]

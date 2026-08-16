@@ -1,0 +1,2027 @@
+{
+  "acceptanceN30Run": false,
+  "decision": "HARD_STOP_MATERIAL_PARITY_FAILURE",
+  "fixtures": [
+    {
+      "alignedWordTimingSummary": {
+        "matchedWordCount": 21,
+        "maximumAbsoluteEndDeltaSeconds": 0.08000000000000007,
+        "maximumAbsoluteStartDeltaSeconds": 0.0,
+        "medianAbsoluteEndDeltaSeconds": 0.0,
+        "medianAbsoluteStartDeltaSeconds": 0.0,
+        "shippingWordCount": 21,
+        "shortWordCount": 21
+      },
+      "durationSeconds": 7.5,
+      "exactTranscriptEqual": true,
+      "frozenReference": null,
+      "frozenReferenceProvenance": null,
+      "id": "boundary-en-repeat-7.5s",
+      "latencyCaveat": "smoke n=2 only; acceptance n>=30 intentionally not run after hard stop",
+      "normalizedTranscriptEqual": true,
+      "shippingEncoderWindows": [
+        1,
+        1
+      ],
+      "shippingNormalizedTranscriptSHA256": "a4500b7e3625c956baa80fc62dd25900a2589014bf73cbb39bda885306dc1346",
+      "shippingTokenTimingHashVariants": [
+        "ac16a4b9d2d5065fdbb2fc912a47b7cefca6b0d401d9b1c9dfed3af0f59d476b"
+      ],
+      "shippingTokenTimingStable": true,
+      "shippingTranscript": "I really was very much afraid of showing him how much shocked I was at some parts of what he said.",
+      "shippingTranscriptSHA256": "9ff0bbd8c282679516d904987db7e1119e07b59936d900d2be8609898ac5a75f",
+      "shippingTranscriptStable": true,
+      "shippingVsShortWER": {
+        "edits": 0,
+        "hypothesis_words": 21,
+        "reference_words": 21,
+        "wer": 0.0
+      },
+      "shippingWERAgainstFrozenReference": null,
+      "shippingWarmSmokeLatencyNanoseconds": [
+        53692292,
+        53825458
+      ],
+      "shippingWarmSmokeP50Nanoseconds": 53758875.0,
+      "shippingWarmSmokeP95Nanoseconds": 53818799.7,
+      "shippingWordCount": 21,
+      "shippingWordTimingHashVariants": [
+        "1b1438cbfd77d2b3cae6e6d8d8d724d5508069a7453a86b1ad6d47d5b3922055"
+      ],
+      "shippingWordTimingStable": true,
+      "shortEncoderWindows": [
+        1,
+        1
+      ],
+      "shortNormalizedTranscriptSHA256": "a4500b7e3625c956baa80fc62dd25900a2589014bf73cbb39bda885306dc1346",
+      "shortSeamContexts": [],
+      "shortTokenTimingHashVariants": [
+        "7e1fa5d967ae1133cec07cf1bbff6df7e8223d4440d7f05483a9a3d29c285480"
+      ],
+      "shortTokenTimingStable": true,
+      "shortTranscript": "I really was very much afraid of showing him how much shocked I was at some parts of what he said.",
+      "shortTranscriptSHA256": "9ff0bbd8c282679516d904987db7e1119e07b59936d900d2be8609898ac5a75f",
+      "shortTranscriptStable": true,
+      "shortWERAgainstFrozenReference": null,
+      "shortWarmSmokeLatencyNanoseconds": [
+        40620208,
+        40328500
+      ],
+      "shortWarmSmokeP50Nanoseconds": 40474354.0,
+      "shortWarmSmokeP95Nanoseconds": 40605622.6,
+      "shortWordCount": 21,
+      "shortWordTimingHashVariants": [
+        "38878f096515d3a78c64a22d357fcd566218757d7d16758cb98c646ecd4469a5"
+      ],
+      "shortWordTimingStable": true,
+      "sourceSHA256": "f51d18f1f2a6944f195ab94b3f25263ba0a544ecb827142057363bd663d995fa",
+      "wordDiff": []
+    },
+    {
+      "alignedWordTimingSummary": {
+        "matchedWordCount": 42,
+        "maximumAbsoluteEndDeltaSeconds": 0.4800000000000004,
+        "maximumAbsoluteStartDeltaSeconds": 0.3200000000000003,
+        "medianAbsoluteEndDeltaSeconds": 0.08000000000000007,
+        "medianAbsoluteStartDeltaSeconds": 0.0,
+        "shippingWordCount": 42,
+        "shortWordCount": 42
+      },
+      "durationSeconds": 14.9,
+      "exactTranscriptEqual": true,
+      "frozenReference": null,
+      "frozenReferenceProvenance": null,
+      "id": "boundary-en-repeat-14.9s",
+      "latencyCaveat": "smoke n=2 only; acceptance n>=30 intentionally not run after hard stop",
+      "normalizedTranscriptEqual": true,
+      "shippingEncoderWindows": [
+        1,
+        1
+      ],
+      "shippingNormalizedTranscriptSHA256": "08af7bbf4747ca238c9971711b59fb2035259440cb550b400cea0bf893276450",
+      "shippingTokenTimingHashVariants": [
+        "63f258696eb5e76bfa0d015a338a31674f5206c32df40a3306b3eef80660b178"
+      ],
+      "shippingTokenTimingStable": true,
+      "shippingTranscript": "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said.",
+      "shippingTranscriptSHA256": "9717c489b8053f6f6b6543f3e7690482f74f79b5b7b7491f1c9853e18fd1cd19",
+      "shippingTranscriptStable": true,
+      "shippingVsShortWER": {
+        "edits": 0,
+        "hypothesis_words": 42,
+        "reference_words": 42,
+        "wer": 0.0
+      },
+      "shippingWERAgainstFrozenReference": null,
+      "shippingWarmSmokeLatencyNanoseconds": [
+        69126834,
+        72305958
+      ],
+      "shippingWarmSmokeP50Nanoseconds": 70716396.0,
+      "shippingWarmSmokeP95Nanoseconds": 72147001.8,
+      "shippingWordCount": 42,
+      "shippingWordTimingHashVariants": [
+        "ac41d9a8817d220b7a635e2845f07bd689bde2217210a90c39cc8bacd96c287c"
+      ],
+      "shippingWordTimingStable": true,
+      "shortEncoderWindows": [
+        3,
+        3
+      ],
+      "shortNormalizedTranscriptSHA256": "08af7bbf4747ca238c9971711b59fb2035259440cb550b400cea0bf893276450",
+      "shortSeamContexts": [
+        {
+          "actualOverlapSeconds": 2.7200000000000006,
+          "geometricOverlapMidpointSeconds": 6.08,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 7.44,
+          "overlapStartSeconds": 4.72,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 6.16,
+              "startTime": 5.84,
+              "word": "what"
+            },
+            {
+              "endTime": 6.48,
+              "startTime": 6.16,
+              "word": "he"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 6.08,
+              "startTime": 5.84,
+              "word": "what"
+            },
+            {
+              "endTime": 6.4,
+              "startTime": 6.08,
+              "word": "he"
+            }
+          ],
+          "transition": 1
+        },
+        {
+          "actualOverlapSeconds": 2.5600000000000005,
+          "geometricOverlapMidpointSeconds": 10.879999999999999,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 12.16,
+          "overlapStartSeconds": 9.6,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 11.280000000000001,
+              "startTime": 10.72,
+              "word": "shocked"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 11.040000000000001,
+              "startTime": 10.64,
+              "word": "shocked"
+            }
+          ],
+          "transition": 2
+        }
+      ],
+      "shortTokenTimingHashVariants": [
+        "a40df910f2002054acb9482ea436c42dc82452c2f1668535bd1c6c2d8fe9a8b6"
+      ],
+      "shortTokenTimingStable": true,
+      "shortTranscript": "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said.",
+      "shortTranscriptSHA256": "9717c489b8053f6f6b6543f3e7690482f74f79b5b7b7491f1c9853e18fd1cd19",
+      "shortTranscriptStable": true,
+      "shortWERAgainstFrozenReference": null,
+      "shortWarmSmokeLatencyNanoseconds": [
+        62375791,
+        56895542
+      ],
+      "shortWarmSmokeP50Nanoseconds": 59635666.5,
+      "shortWarmSmokeP95Nanoseconds": 62101778.55,
+      "shortWordCount": 42,
+      "shortWordTimingHashVariants": [
+        "dfbc6f891cc81c2d037923d62475e496fc709cd29cde1057642ed5d0f01a0ce2"
+      ],
+      "shortWordTimingStable": true,
+      "sourceSHA256": "8fb05e8621be9346ee81d53f530252c26528e62a5799fad832802ba2ed3690c0",
+      "wordDiff": []
+    },
+    {
+      "alignedWordTimingSummary": {
+        "matchedWordCount": 44,
+        "maximumAbsoluteEndDeltaSeconds": 0.4800000000000004,
+        "maximumAbsoluteStartDeltaSeconds": 0.3200000000000003,
+        "medianAbsoluteEndDeltaSeconds": 0.08000000000000007,
+        "medianAbsoluteStartDeltaSeconds": 0.07999999999999918,
+        "shippingWordCount": 48,
+        "shortWordCount": 45
+      },
+      "durationSeconds": 15.1,
+      "exactTranscriptEqual": false,
+      "frozenReference": null,
+      "frozenReferenceProvenance": null,
+      "id": "boundary-en-repeat-15.1s",
+      "latencyCaveat": "smoke n=2 only; acceptance n>=30 intentionally not run after hard stop",
+      "normalizedTranscriptEqual": false,
+      "shippingEncoderWindows": [
+        2,
+        2
+      ],
+      "shippingNormalizedTranscriptSHA256": "b7193045c1377e3654c7ad657353b497a7bd42f3303cdb89f7dbbd70a41bdb1e",
+      "shippingTokenTimingHashVariants": [
+        "b8cd51e27eec52b0e89fb4f8ba56582310acb45255acbd29bf380f141a0e48f3"
+      ],
+      "shippingTokenTimingStable": true,
+      "shippingTranscript": "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really I really want to.",
+      "shippingTranscriptSHA256": "0af51c25c852b414aef9244e4bdfe3757fe582ce2d470ade56b493913eb97862",
+      "shippingTranscriptStable": true,
+      "shippingVsShortWER": {
+        "edits": 4,
+        "hypothesis_words": 45,
+        "reference_words": 48,
+        "wer": 0.08333333333333333
+      },
+      "shippingWERAgainstFrozenReference": null,
+      "shippingWarmSmokeLatencyNanoseconds": [
+        72717833,
+        75485042
+      ],
+      "shippingWarmSmokeP50Nanoseconds": 74101437.5,
+      "shippingWarmSmokeP95Nanoseconds": 75346681.55,
+      "shippingWordCount": 48,
+      "shippingWordTimingHashVariants": [
+        "0c34206b7bfcf2486c4052a4e5c02f11d1e18bce28947632c2fe09baec051b6f"
+      ],
+      "shippingWordTimingStable": true,
+      "shortEncoderWindows": [
+        3,
+        3
+      ],
+      "shortNormalizedTranscriptSHA256": "f317bc1d96bf8ecf6d075d7530d63f4e8feb60817f51d8d614b5bcf0222306e8",
+      "shortSeamContexts": [
+        {
+          "actualOverlapSeconds": 2.7200000000000006,
+          "geometricOverlapMidpointSeconds": 6.08,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 7.44,
+          "overlapStartSeconds": 4.72,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 6.16,
+              "startTime": 5.92,
+              "word": "what"
+            },
+            {
+              "endTime": 6.48,
+              "startTime": 6.16,
+              "word": "he"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 6.08,
+              "startTime": 5.84,
+              "word": "what"
+            },
+            {
+              "endTime": 6.4,
+              "startTime": 6.08,
+              "word": "he"
+            }
+          ],
+          "transition": 1
+        },
+        {
+          "actualOverlapSeconds": 2.5600000000000005,
+          "geometricOverlapMidpointSeconds": 10.879999999999999,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 12.16,
+          "overlapStartSeconds": 9.6,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 11.280000000000001,
+              "startTime": 10.72,
+              "word": "shocked"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 11.040000000000001,
+              "startTime": 10.64,
+              "word": "shocked"
+            }
+          ],
+          "transition": 2
+        }
+      ],
+      "shortTokenTimingHashVariants": [
+        "0d01d074506270b55fd56647ee7f12d45c376f809a1b471c881ca45a31713848"
+      ],
+      "shortTokenTimingStable": true,
+      "shortTranscript": "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really wondered.",
+      "shortTranscriptSHA256": "47dcabc0b2517162c1f77182f3805eb06e593adc8c3e45e23334daab1a362865",
+      "shortTranscriptStable": true,
+      "shortWERAgainstFrozenReference": null,
+      "shortWarmSmokeLatencyNanoseconds": [
+        60894417,
+        59810125
+      ],
+      "shortWarmSmokeP50Nanoseconds": 60352271.0,
+      "shortWarmSmokeP95Nanoseconds": 60840202.4,
+      "shortWordCount": 45,
+      "shortWordTimingHashVariants": [
+        "e2768124ba8df113d12e6c49315337b68d63c1580c9a05def611656454074ead"
+      ],
+      "shortWordTimingStable": true,
+      "sourceSHA256": "e8a97e9ec6534cdf5cb7b22ee6a9cfa9dc8bdeaa633d43c4a098a28eff5fddec",
+      "wordDiff": [
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "i",
+            "really",
+            "want",
+            "to"
+          ],
+          "short_words": [
+            "wondered"
+          ]
+        }
+      ]
+    },
+    {
+      "alignedWordTimingSummary": {
+        "matchedWordCount": 90,
+        "maximumAbsoluteEndDeltaSeconds": 0.6400000000000006,
+        "maximumAbsoluteStartDeltaSeconds": 0.5599999999999987,
+        "medianAbsoluteEndDeltaSeconds": 0.08000000000000007,
+        "medianAbsoluteStartDeltaSeconds": 0.0799999999999983,
+        "shippingWordCount": 92,
+        "shortWordCount": 90
+      },
+      "durationSeconds": 29.9,
+      "exactTranscriptEqual": false,
+      "frozenReference": null,
+      "frozenReferenceProvenance": null,
+      "id": "boundary-en-repeat-29.9s",
+      "latencyCaveat": "smoke n=2 only; acceptance n>=30 intentionally not run after hard stop",
+      "normalizedTranscriptEqual": false,
+      "shippingEncoderWindows": [
+        3,
+        3
+      ],
+      "shippingNormalizedTranscriptSHA256": "bb3fecfc8da3341f466b3b034fb3a4b7e20d4ed31327ad058711dbd77415c5ef",
+      "shippingTokenTimingHashVariants": [
+        "e870ffecba6707192e9e4fd662b1a748f3911d93d70193e77d81fb7cf593550b"
+      ],
+      "shippingTokenTimingStable": true,
+      "shippingTranscript": "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much excited.",
+      "shippingTranscriptSHA256": "8b00a1277d4b1556e7d83185be54035470fc2b50707a9d83307d40dbcf9df254",
+      "shippingTranscriptStable": true,
+      "shippingVsShortWER": {
+        "edits": 2,
+        "hypothesis_words": 90,
+        "reference_words": 92,
+        "wer": 0.021739130434782608
+      },
+      "shippingWERAgainstFrozenReference": null,
+      "shippingWarmSmokeLatencyNanoseconds": [
+        103966167,
+        127341958
+      ],
+      "shippingWarmSmokeP50Nanoseconds": 115654062.5,
+      "shippingWarmSmokeP95Nanoseconds": 126173168.45,
+      "shippingWordCount": 92,
+      "shippingWordTimingHashVariants": [
+        "2b655af289c4f799dc0d336a3082d6ff0c19082690ec0949fbee19880478e9f9"
+      ],
+      "shippingWordTimingStable": true,
+      "shortEncoderWindows": [
+        6,
+        6
+      ],
+      "shortNormalizedTranscriptSHA256": "fda499bafd78afafbd84b8faf5f9ca1e5e21323565efa58ab11bde0589e2c0df",
+      "shortSeamContexts": [
+        {
+          "actualOverlapSeconds": 2.7200000000000006,
+          "geometricOverlapMidpointSeconds": 6.08,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 7.44,
+          "overlapStartSeconds": 4.72,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 6.16,
+              "startTime": 5.92,
+              "word": "what"
+            },
+            {
+              "endTime": 6.48,
+              "startTime": 6.16,
+              "word": "he"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 6.08,
+              "startTime": 5.84,
+              "word": "what"
+            },
+            {
+              "endTime": 6.4,
+              "startTime": 6.08,
+              "word": "he"
+            }
+          ],
+          "transition": 1
+        },
+        {
+          "actualOverlapSeconds": 2.5600000000000005,
+          "geometricOverlapMidpointSeconds": 10.879999999999999,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 12.16,
+          "overlapStartSeconds": 9.6,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 11.280000000000001,
+              "startTime": 10.72,
+              "word": "shocked"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 11.040000000000001,
+              "startTime": 10.64,
+              "word": "shocked"
+            }
+          ],
+          "transition": 2
+        },
+        {
+          "actualOverlapSeconds": 2.5599999999999987,
+          "geometricOverlapMidpointSeconds": 15.76,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 17.04,
+          "overlapStartSeconds": 14.48,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 15.68,
+              "startTime": 15.36,
+              "word": "very"
+            },
+            {
+              "endTime": 15.84,
+              "startTime": 15.68,
+              "word": "much"
+            },
+            {
+              "endTime": 16.48,
+              "startTime": 15.84,
+              "word": "afraid"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 16.08,
+              "startTime": 15.6,
+              "word": "afraid"
+            }
+          ],
+          "transition": 3
+        },
+        {
+          "actualOverlapSeconds": 3.120000000000001,
+          "geometricOverlapMidpointSeconds": 20.36,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 21.92,
+          "overlapStartSeconds": 18.8,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 20.32,
+              "startTime": 20,
+              "word": "what"
+            },
+            {
+              "endTime": 20.64,
+              "startTime": 20.32,
+              "word": "he"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 20.48,
+              "startTime": 20.16,
+              "word": "he"
+            }
+          ],
+          "transition": 4
+        },
+        {
+          "actualOverlapSeconds": 2.5599999999999987,
+          "geometricOverlapMidpointSeconds": 24.96,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 26.24,
+          "overlapStartSeconds": 23.68,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 25.36,
+              "startTime": 24.8,
+              "word": "shocked"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 25.2,
+              "startTime": 24.8,
+              "word": "shocked"
+            }
+          ],
+          "transition": 5
+        }
+      ],
+      "shortTokenTimingHashVariants": [
+        "5eecc7af0be1c615aa4251a512c4bf5df81bacbaebd35f3d8f874cf347b5a1a4"
+      ],
+      "shortTokenTimingStable": true,
+      "shortTranscript": "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much excited.",
+      "shortTranscriptSHA256": "1500c8717c9fbf4636ddb369b8cb155a72ee92f8d4f4539beb123703880a2f3c",
+      "shortTranscriptStable": true,
+      "shortWERAgainstFrozenReference": null,
+      "shortWarmSmokeLatencyNanoseconds": [
+        97623792,
+        96867792
+      ],
+      "shortWarmSmokeP50Nanoseconds": 97245792.0,
+      "shortWarmSmokeP95Nanoseconds": 97585992.0,
+      "shortWordCount": 90,
+      "shortWordTimingHashVariants": [
+        "3781b910ad257c377fea2e8826268ffffec51d4b4fab7c2e74cb0d9d097e9b73"
+      ],
+      "shortWordTimingStable": true,
+      "sourceSHA256": "349d497e54f48d7fec1a9c8d7a849500606a2076a4cda164477553998c827e28",
+      "wordDiff": [
+        {
+          "operation": "delete",
+          "shipping_words": [
+            "i",
+            "really"
+          ],
+          "short_words": []
+        }
+      ]
+    },
+    {
+      "alignedWordTimingSummary": {
+        "matchedWordCount": 49,
+        "maximumAbsoluteEndDeltaSeconds": 14.640000000000002,
+        "maximumAbsoluteStartDeltaSeconds": 14.480000000000002,
+        "medianAbsoluteEndDeltaSeconds": 14.16,
+        "medianAbsoluteStartDeltaSeconds": 14.16,
+        "shippingWordCount": 93,
+        "shortWordCount": 90
+      },
+      "durationSeconds": 30.1,
+      "exactTranscriptEqual": false,
+      "frozenReference": null,
+      "frozenReferenceProvenance": null,
+      "id": "boundary-en-repeat-30.1s",
+      "latencyCaveat": "smoke n=2 only; acceptance n>=30 intentionally not run after hard stop",
+      "normalizedTranscriptEqual": false,
+      "shippingEncoderWindows": [
+        3,
+        3
+      ],
+      "shippingNormalizedTranscriptSHA256": "b074286785f11dcecbc31fada606a48409bc6232bc8016f77e9873183d7b8be8",
+      "shippingTokenTimingHashVariants": [
+        "f2754fc09c02cb831837f0f3c500e494ba6e3204ca8accfc53f49e01ae1ea1fe"
+      ],
+      "shippingTokenTimingStable": true,
+      "shippingTranscript": "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of",
+      "shippingTranscriptSHA256": "6084ed9473ac74643f28c3c6d04de6fd6b586229c3c114cf4b5065c70c91903a",
+      "shippingTranscriptStable": true,
+      "shippingVsShortWER": {
+        "edits": 3,
+        "hypothesis_words": 90,
+        "reference_words": 93,
+        "wer": 0.03225806451612903
+      },
+      "shippingWERAgainstFrozenReference": null,
+      "shippingWarmSmokeLatencyNanoseconds": [
+        125408250,
+        127298917
+      ],
+      "shippingWarmSmokeP50Nanoseconds": 126353583.5,
+      "shippingWarmSmokeP95Nanoseconds": 127204383.65,
+      "shippingWordCount": 93,
+      "shippingWordTimingHashVariants": [
+        "8dbdfc21bd349301bf9706bc8961e05a671243a02ef3295a93cd6fb64812b633"
+      ],
+      "shippingWordTimingStable": true,
+      "shortEncoderWindows": [
+        6,
+        6
+      ],
+      "shortNormalizedTranscriptSHA256": "a5ec7375d092f41e1d0ab4608895e6d9dcedb75c5261a91440e9070f4af0def3",
+      "shortSeamContexts": [
+        {
+          "actualOverlapSeconds": 2.7200000000000006,
+          "geometricOverlapMidpointSeconds": 6.08,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 7.44,
+          "overlapStartSeconds": 4.72,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 6.16,
+              "startTime": 5.92,
+              "word": "what"
+            },
+            {
+              "endTime": 6.48,
+              "startTime": 6.16,
+              "word": "he"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 6.08,
+              "startTime": 5.84,
+              "word": "what"
+            },
+            {
+              "endTime": 6.4,
+              "startTime": 6.08,
+              "word": "he"
+            }
+          ],
+          "transition": 1
+        },
+        {
+          "actualOverlapSeconds": 2.5600000000000005,
+          "geometricOverlapMidpointSeconds": 10.879999999999999,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 12.16,
+          "overlapStartSeconds": 9.6,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 11.280000000000001,
+              "startTime": 10.72,
+              "word": "shocked"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 11.040000000000001,
+              "startTime": 10.64,
+              "word": "shocked"
+            }
+          ],
+          "transition": 2
+        },
+        {
+          "actualOverlapSeconds": 2.5599999999999987,
+          "geometricOverlapMidpointSeconds": 15.76,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 17.04,
+          "overlapStartSeconds": 14.48,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 15.68,
+              "startTime": 15.36,
+              "word": "very"
+            },
+            {
+              "endTime": 15.84,
+              "startTime": 15.68,
+              "word": "much"
+            },
+            {
+              "endTime": 16.48,
+              "startTime": 15.84,
+              "word": "afraid"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 16.08,
+              "startTime": 15.6,
+              "word": "afraid"
+            }
+          ],
+          "transition": 3
+        },
+        {
+          "actualOverlapSeconds": 3.120000000000001,
+          "geometricOverlapMidpointSeconds": 20.36,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 21.92,
+          "overlapStartSeconds": 18.8,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 20.32,
+              "startTime": 20,
+              "word": "what"
+            },
+            {
+              "endTime": 20.64,
+              "startTime": 20.32,
+              "word": "he"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 20.48,
+              "startTime": 20.16,
+              "word": "he"
+            }
+          ],
+          "transition": 4
+        },
+        {
+          "actualOverlapSeconds": 2.5599999999999987,
+          "geometricOverlapMidpointSeconds": 24.96,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 26.24,
+          "overlapStartSeconds": 23.68,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 25.36,
+              "startTime": 24.8,
+              "word": "shocked"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 25.2,
+              "startTime": 24.8,
+              "word": "shocked"
+            }
+          ],
+          "transition": 5
+        }
+      ],
+      "shortTokenTimingHashVariants": [
+        "aa27265cafc9bfbaf4057bb5ef731927253b26007acb722e52183efe317bb68f"
+      ],
+      "shortTokenTimingStable": true,
+      "shortTranscript": "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid.",
+      "shortTranscriptSHA256": "9227032618f18156b89f9ada25e7334b0032741dc306f36f345d26479cfbb8a8",
+      "shortTranscriptStable": true,
+      "shortWERAgainstFrozenReference": null,
+      "shortWarmSmokeLatencyNanoseconds": [
+        98090875,
+        98016208
+      ],
+      "shortWarmSmokeP50Nanoseconds": 98053541.5,
+      "shortWarmSmokeP95Nanoseconds": 98087141.65,
+      "shortWordCount": 90,
+      "shortWordTimingHashVariants": [
+        "c08ad03cc314217f9a8355a209dcfb1ef0cc916ed4ff6fcd960e44fc5721f3e2"
+      ],
+      "shortWordTimingStable": true,
+      "sourceSHA256": "a51d735c585019651b1c26184e95bc0b4a155bbc5a5ad7ad30244dbcc0cf30cd",
+      "wordDiff": [
+        {
+          "operation": "delete",
+          "shipping_words": [
+            "i",
+            "really",
+            "was",
+            "very",
+            "much",
+            "afraid",
+            "of",
+            "showing",
+            "him",
+            "how",
+            "much",
+            "shocked",
+            "i",
+            "was",
+            "at",
+            "some",
+            "parts",
+            "of",
+            "what",
+            "he",
+            "said",
+            "i",
+            "really",
+            "was",
+            "very",
+            "much",
+            "afraid",
+            "of",
+            "showing",
+            "him",
+            "how",
+            "much",
+            "shocked",
+            "i",
+            "was",
+            "at",
+            "some",
+            "parts",
+            "of",
+            "what",
+            "he",
+            "said",
+            "i",
+            "really"
+          ],
+          "short_words": []
+        },
+        {
+          "operation": "insert",
+          "shipping_words": [],
+          "short_words": [
+            "showing",
+            "him",
+            "how",
+            "much",
+            "shocked",
+            "i",
+            "was",
+            "at",
+            "some",
+            "parts",
+            "of",
+            "what",
+            "he",
+            "said",
+            "i",
+            "really",
+            "was",
+            "very",
+            "much",
+            "afraid",
+            "of",
+            "showing",
+            "him",
+            "how",
+            "much",
+            "shocked",
+            "i",
+            "was",
+            "at",
+            "some",
+            "parts",
+            "of",
+            "what",
+            "he",
+            "said",
+            "i",
+            "really",
+            "was",
+            "very",
+            "much",
+            "afraid"
+          ]
+        }
+      ]
+    },
+    {
+      "alignedWordTimingSummary": {
+        "matchedWordCount": 102,
+        "maximumAbsoluteEndDeltaSeconds": 0.8000000000000007,
+        "maximumAbsoluteStartDeltaSeconds": 0.480000000000004,
+        "medianAbsoluteEndDeltaSeconds": 0.0799999999999983,
+        "medianAbsoluteStartDeltaSeconds": 0.0,
+        "shippingWordCount": 113,
+        "shortWordCount": 123
+      },
+      "durationSeconds": 56.104,
+      "exactTranscriptEqual": false,
+      "frozenReference": "Welcome to QuirkQuidQuill Inc., where finance meets innovation. Explore diverse offerings from the P3 Quattro, a unique investment portfolio quadrant, to the O3 Omni, a platform for intricate derivative trading strategies. Delve into unconventional bond markets with our B3 Bond X and experience non-standard equity trading with E3 Equity. Personalize your wealth management with W3 RAPZ and anticipate market trends with the O2 Outlier, our forward-thinking financial forecasting tool. Explore venture capital world with U3Unifund or move your money with the M3 Mover, our sophisticated monetary transfer module. At QuirkQuidQuill Inc., we turn complex finance into creative solutions. Join us in redefining financial services.",
+      "frozenReferenceProvenance": "transcribe.cpp tests/golden/batch/parakeet-tdt-0.6b-v2.cpu.json; frozen ASR golden, not an independently human-verified transcript",
+      "id": "real-en-product-names-56.104s",
+      "latencyCaveat": "smoke n=2 only; acceptance n>=30 intentionally not run after hard stop",
+      "normalizedTranscriptEqual": false,
+      "shippingEncoderWindows": [
+        5,
+        5
+      ],
+      "shippingNormalizedTranscriptSHA256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+      "shippingTokenTimingHashVariants": [
+        "b354d9e15956f1facd5a08941aabbddcaf00d079e3f916ed43850131a0e93e0b"
+      ],
+      "shippingTokenTimingStable": true,
+      "shippingTranscript": "Welcome to Quirk Quid Quill Inc., where finance meets innovation. Explore diverse offerings from the P3 Quattro, a unique investment portfolio quadrant to the O three Omni a platform for intricate derivative trading strategies. Delve into unconventional bond markets with our B three bond X and our and experience non-standard equity trading with E3 Equity. Personalize your wealth management with W3RAPZ and anticipate market trends with the O2 Outlier, our forward-thinking financial forecasting tool. Explore venture capital world with U3 Unifund or Move Your Money with the M3 Mover, our sophistic sophisticated monetary transfer module. At Quirk Quid Quill Inc., we turn complex finance into creative solutions. Join us in redefining financial services.",
+      "shippingTranscriptSHA256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+      "shippingTranscriptStable": true,
+      "shippingVsShortWER": {
+        "edits": 18,
+        "hypothesis_words": 124,
+        "reference_words": 115,
+        "wer": 0.1565217391304348
+      },
+      "shippingWERAgainstFrozenReference": {
+        "edits": 17,
+        "hypothesis_words": 115,
+        "reference_words": 106,
+        "wer": 0.16037735849056603
+      },
+      "shippingWarmSmokeLatencyNanoseconds": [
+        173415459,
+        172889625
+      ],
+      "shippingWarmSmokeP50Nanoseconds": 173152542.0,
+      "shippingWarmSmokeP95Nanoseconds": 173389167.3,
+      "shippingWordCount": 113,
+      "shippingWordTimingHashVariants": [
+        "b6929a6a9b71303df87657a6d7d1452b79eadac638dd2232e0a2eb8aef7cf542"
+      ],
+      "shippingWordTimingStable": true,
+      "shortEncoderWindows": [
+        11,
+        11
+      ],
+      "shortNormalizedTranscriptSHA256": "bb67d0be61a683149fa1082c8e7623006421f21c1b08580bd91907f9e5908e15",
+      "shortSeamContexts": [
+        {
+          "actualOverlapSeconds": 4.16,
+          "geometricOverlapMidpointSeconds": 5.36,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 7.44,
+          "overlapStartSeconds": 3.28,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 5.36,
+              "startTime": 4.96,
+              "word": "finance"
+            },
+            {
+              "endTime": 5.680000000000001,
+              "startTime": 5.36,
+              "word": "meets"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 5.36,
+              "startTime": 4.96,
+              "word": "finance"
+            },
+            {
+              "endTime": 5.680000000000001,
+              "startTime": 5.36,
+              "word": "meets"
+            }
+          ],
+          "transition": 1
+        },
+        {
+          "actualOverlapSeconds": 0.6400000000000006,
+          "geometricOverlapMidpointSeconds": 10.4,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 10.72,
+          "overlapStartSeconds": 10.08,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 10.64,
+              "startTime": 10.16,
+              "word": "unique"
+            }
+          ],
+          "shortWords": [],
+          "transition": 2
+        },
+        {
+          "actualOverlapSeconds": 4.16,
+          "geometricOverlapMidpointSeconds": 15.44,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 17.52,
+          "overlapStartSeconds": 13.36,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 15.600000000000001,
+              "startTime": 15.280000000000001,
+              "word": "a"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 15.600000000000001,
+              "startTime": 15.280000000000001,
+              "word": "a"
+            }
+          ],
+          "transition": 3
+        },
+        {
+          "actualOverlapSeconds": 0.7200000000000024,
+          "geometricOverlapMidpointSeconds": 20.439999999999998,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 20.8,
+          "overlapStartSeconds": 20.08,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 20.56,
+              "startTime": 20.32,
+              "word": "into"
+            }
+          ],
+          "shortWords": [],
+          "transition": 4
+        },
+        {
+          "actualOverlapSeconds": 1.9199999999999982,
+          "geometricOverlapMidpointSeconds": 26.560000000000002,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 27.52,
+          "overlapStartSeconds": 25.6,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 27.12,
+              "startTime": 26.400000000000002,
+              "word": "non-standard"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 26.64,
+              "startTime": 26.400000000000002,
+              "word": "non"
+            },
+            {
+              "endTime": 26.96,
+              "startTime": 26.64,
+              "word": "standard"
+            }
+          ],
+          "transition": 5
+        },
+        {
+          "actualOverlapSeconds": 3.5199999999999996,
+          "geometricOverlapMidpointSeconds": 31.28,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 33.04,
+          "overlapStartSeconds": 29.52,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 31.28,
+              "startTime": 30.96,
+              "word": "with"
+            },
+            {
+              "endTime": 33.12,
+              "startTime": 31.28,
+              "word": "W3RAPZ"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 31.2,
+              "startTime": 30.88,
+              "word": "with"
+            },
+            {
+              "endTime": 31.439999999999998,
+              "startTime": 31.2,
+              "word": "W"
+            }
+          ],
+          "transition": 6
+        },
+        {
+          "actualOverlapSeconds": 0.480000000000004,
+          "geometricOverlapMidpointSeconds": 36.72,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 36.96,
+          "overlapStartSeconds": 36.48,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 36.64,
+              "startTime": 36.4,
+              "word": "our"
+            },
+            {
+              "endTime": 37.440000000000005,
+              "startTime": 36.64,
+              "word": "forward-thinking"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 36.96,
+              "startTime": 36.64,
+              "word": "forward"
+            }
+          ],
+          "transition": 7
+        },
+        {
+          "actualOverlapSeconds": 0.480000000000004,
+          "geometricOverlapMidpointSeconds": 43.68,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 43.92,
+          "overlapStartSeconds": 43.44,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 43.68,
+              "startTime": 43.36,
+              "word": "M3"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 43.6,
+              "startTime": 43.52,
+              "word": "M"
+            },
+            {
+              "endTime": 43.919999999999995,
+              "startTime": 43.6,
+              "word": "three"
+            }
+          ],
+          "transition": 8
+        },
+        {
+          "actualOverlapSeconds": 5.760000000000005,
+          "geometricOverlapMidpointSeconds": 48.0,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 50.88,
+          "overlapStartSeconds": 45.12,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 48.080000000000005,
+              "startTime": 47.84,
+              "word": "At"
+            },
+            {
+              "endTime": 48.559999999999995,
+              "startTime": 48.08,
+              "word": "Quirk"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 48.080000000000005,
+              "startTime": 47.84,
+              "word": "At"
+            },
+            {
+              "endTime": 48.4,
+              "startTime": 48.08,
+              "word": "Cork"
+            }
+          ],
+          "transition": 9
+        },
+        {
+          "actualOverlapSeconds": 0.9600000000000009,
+          "geometricOverlapMidpointSeconds": 52.08,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 52.56,
+          "overlapStartSeconds": 51.6,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 52.160000000000004,
+              "startTime": 51.76,
+              "word": "creative"
+            },
+            {
+              "endTime": 52.8,
+              "startTime": 52.160000000000004,
+              "word": "solutions."
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 52.24,
+              "startTime": 51.68,
+              "word": "creativeutions"
+            }
+          ],
+          "transition": 10
+        }
+      ],
+      "shortTokenTimingHashVariants": [
+        "a4b84b4fbefd83d5026bd8be617cf1ca0f10374bb607deb1883e10c0849fea08"
+      ],
+      "shortTokenTimingStable": true,
+      "shortTranscript": "Welcome to Quirk Quid Quill Inc., where finance meets innovation. Explore diverse offerings from the P three quatro a unique investment portfolio quadrant to the O three Omni, a platform for intricate derivative trading strategies. Delve into unconventional bond markets with our B three bond X and our and experienced non standard equity trading with E3 equity. Personalize your wealth management with W three Rap Z and anticipate market trends with the O two outlier are four forward thinking financial forecasting tool. Explore venture capital world with U3 Unifund or move your money with the M3 M three mover, our sophistic sophisticated monetary Transfer Module. At Cork Quid Quill Inc., we turn complex finance into creativeutions S.ol Join us in redefining financial services.",
+      "shortTranscriptSHA256": "695411ea1b9f0caf541c5452c8155af135c7877027a7632f49bc63de44cdb4eb",
+      "shortTranscriptStable": true,
+      "shortWERAgainstFrozenReference": {
+        "edits": 32,
+        "hypothesis_words": 124,
+        "reference_words": 106,
+        "wer": 0.3018867924528302
+      },
+      "shortWarmSmokeLatencyNanoseconds": [
+        164765292,
+        169366958
+      ],
+      "shortWarmSmokeP50Nanoseconds": 167066125.0,
+      "shortWarmSmokeP95Nanoseconds": 169136874.7,
+      "shortWordCount": 123,
+      "shortWordTimingHashVariants": [
+        "97e273eb51c50c611b8c978ab29fd71fa692267fa12d1ce347fa98b1899135e8"
+      ],
+      "shortWordTimingStable": true,
+      "sourceSHA256": "fdaf78bad5c6a04424c7d7a699babced0992dc4619ecb7897bdf6c7b1ab79eda",
+      "wordDiff": [
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "p3",
+            "quattro"
+          ],
+          "short_words": [
+            "p",
+            "three",
+            "quatro"
+          ]
+        },
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "experience"
+          ],
+          "short_words": [
+            "experienced"
+          ]
+        },
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "w3rapz"
+          ],
+          "short_words": [
+            "w",
+            "three",
+            "rap",
+            "z"
+          ]
+        },
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "o2"
+          ],
+          "short_words": [
+            "o",
+            "two"
+          ]
+        },
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "our"
+          ],
+          "short_words": [
+            "are",
+            "four"
+          ]
+        },
+        {
+          "operation": "insert",
+          "shipping_words": [],
+          "short_words": [
+            "m",
+            "three"
+          ]
+        },
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "quirk"
+          ],
+          "short_words": [
+            "cork"
+          ]
+        },
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "creative",
+            "solutions"
+          ],
+          "short_words": [
+            "creativeutions",
+            "s",
+            "ol"
+          ]
+        }
+      ]
+    },
+    {
+      "alignedWordTimingSummary": {
+        "matchedWordCount": 213,
+        "maximumAbsoluteEndDeltaSeconds": 1.0399999999999991,
+        "maximumAbsoluteStartDeltaSeconds": 0.4000000000000057,
+        "medianAbsoluteEndDeltaSeconds": 0.0,
+        "medianAbsoluteStartDeltaSeconds": 0.0,
+        "shippingWordCount": 215,
+        "shortWordCount": 216
+      },
+      "durationSeconds": 84.3809375,
+      "exactTranscriptEqual": false,
+      "frozenReference": "When I was young, there was an amazing publication called the Whole Earth Catalog, which was one of the Bibles of my generation. It was created by a fellow named Stuart Brand not far from here in Menlo Park, and he brought it to life with his poetic touch. This was in the late 60s, before personal computers and desktop publishing, so it was all made with typewriters, scissors, and Polaroid cameras. It was sort of like Google in paperback form 35 years before Google came along. It was idealistic, overflowing with neat tools and great notions. Stuart and his team put out several issues of the Whole Earth Catalog, and then, when it had run its course, they put out a final issue. It was the mid-1970s, and I was your age. On the back cover of their final issue was a photograph of an early morning country road, the kind you might find yourself hitchhiking on if you were so adventurous. Beneath it were the words, stay hungry, stay foolish. It was their farewell message as they signed off: stay hungry, stay foolish. And I have always wished that for myself. And now, as you graduate to begin anew, I wish that for you. Stay hungry, stay foolish. Thank you all very much.",
+      "frozenReferenceProvenance": "transcribe.cpp tests/golden/batch/parakeet-tdt-0.6b-v2.cpu.json; frozen ASR golden, not an independently human-verified transcript",
+      "id": "real-en-whole-earth-84.381s",
+      "latencyCaveat": "smoke n=2 only; acceptance n>=30 intentionally not run after hard stop",
+      "normalizedTranscriptEqual": false,
+      "shippingEncoderWindows": [
+        7,
+        7
+      ],
+      "shippingNormalizedTranscriptSHA256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+      "shippingTokenTimingHashVariants": [
+        "b654366739108cf21d3c54aaea40342b17730c37d509864bb9149c1ee8f30f2f"
+      ],
+      "shippingTokenTimingStable": true,
+      "shippingTranscript": "When I was young, there was an amazing publication called The Whole Earth Catalog, which was one of the Bibles of my generation. It was created by a fellow named Stuart Brand, not far from here in Menlo Park, and he brought it to life with his poetic touch. This was in the late 60s, before personal computers and desktop publishing, so it was all made with typewriters, scissors, and Polaroid cameras. It was sort of like Google in paperback form, thirty-five years before Google came along. It was idealistic, overflowing with neat tools, and great notions. Stewart and his team put out several issues of the whole earth catalog, and then when it had run its course, they put out a final issue. It was the mid-1970s, and I was your age. On the back cover of their final issue was a photograph of an early morning country road, the kind you might find yourself hitchhiking on if you were so adventurous. Beneath it were the words: stay hungry, stay foolish. It was their farewell message as they signed off. Stay hungry, stay foolish. And I have always wished that for myself. And now, as you graduate to begin anew, I wish that for you. Stay hungry, stay foolish. Thank you all very much.",
+      "shippingTranscriptSHA256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+      "shippingTranscriptStable": true,
+      "shippingVsShortWER": {
+        "edits": 2,
+        "hypothesis_words": 216,
+        "reference_words": 217,
+        "wer": 0.009216589861751152
+      },
+      "shippingWERAgainstFrozenReference": {
+        "edits": 3,
+        "hypothesis_words": 217,
+        "reference_words": 216,
+        "wer": 0.013888888888888888
+      },
+      "shippingWarmSmokeLatencyNanoseconds": [
+        228019333,
+        228236833
+      ],
+      "shippingWarmSmokeP50Nanoseconds": 228128083.0,
+      "shippingWarmSmokeP95Nanoseconds": 228225958.0,
+      "shippingWordCount": 215,
+      "shippingWordTimingHashVariants": [
+        "9298de4d4eb2b5f5ee848c3c033067018d7bed7f6adaa9323aad12a4507a48f8"
+      ],
+      "shippingWordTimingStable": true,
+      "shortEncoderWindows": [
+        16,
+        16
+      ],
+      "shortNormalizedTranscriptSHA256": "09ea170e77b5a078821830d8c1f1b0a43fe359eeab510ad538b5fbd1495c6586",
+      "shortSeamContexts": [
+        {
+          "actualOverlapSeconds": 1.9200000000000008,
+          "geometricOverlapMidpointSeconds": 6.48,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 7.44,
+          "overlapStartSeconds": 5.52,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 6.4,
+              "startTime": 6.32,
+              "word": "of"
+            },
+            {
+              "endTime": 6.5600000000000005,
+              "startTime": 6.4,
+              "word": "the"
+            },
+            {
+              "endTime": 7.04,
+              "startTime": 6.5600000000000005,
+              "word": "Bibles"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 6.4,
+              "startTime": 6.32,
+              "word": "the"
+            },
+            {
+              "endTime": 6.720000000000001,
+              "startTime": 6.4,
+              "word": "Bibles"
+            }
+          ],
+          "transition": 1
+        },
+        {
+          "actualOverlapSeconds": 4.5600000000000005,
+          "geometricOverlapMidpointSeconds": 10.68,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 12.96,
+          "overlapStartSeconds": 8.4,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 10.64,
+              "startTime": 10.16,
+              "word": "Stuart"
+            },
+            {
+              "endTime": 11.280000000000001,
+              "startTime": 10.64,
+              "word": "Brand,"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 10.64,
+              "startTime": 10.16,
+              "word": "Stuart"
+            },
+            {
+              "endTime": 11.280000000000001,
+              "startTime": 10.64,
+              "word": "Brand,"
+            }
+          ],
+          "transition": 2
+        },
+        {
+          "actualOverlapSeconds": 2.7200000000000006,
+          "geometricOverlapMidpointSeconds": 14.48,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 15.84,
+          "overlapStartSeconds": 13.12,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 14.48,
+              "startTime": 14.32,
+              "word": "with"
+            },
+            {
+              "endTime": 14.56,
+              "startTime": 14.48,
+              "word": "his"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 14.56,
+              "startTime": 14.32,
+              "word": "life"
+            },
+            {
+              "endTime": 14.72,
+              "startTime": 14.56,
+              "word": "with"
+            }
+          ],
+          "transition": 3
+        },
+        {
+          "actualOverlapSeconds": 0.4800000000000004,
+          "geometricOverlapMidpointSeconds": 20.32,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 20.56,
+          "overlapStartSeconds": 20.08,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 20.8,
+              "startTime": 20,
+              "word": "publishing,"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 20.32,
+              "startTime": 19.92,
+              "word": "publishing."
+            }
+          ],
+          "transition": 4
+        },
+        {
+          "actualOverlapSeconds": 2.8000000000000007,
+          "geometricOverlapMidpointSeconds": 26.119999999999997,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 27.52,
+          "overlapStartSeconds": 24.72,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 26.16,
+              "startTime": 25.76,
+              "word": "Google"
+            },
+            {
+              "endTime": 26.32,
+              "startTime": 26.16,
+              "word": "in"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 26.16,
+              "startTime": 25.76,
+              "word": "Google"
+            },
+            {
+              "endTime": 26.32,
+              "startTime": 26.16,
+              "word": "in"
+            }
+          ],
+          "transition": 5
+        },
+        {
+          "actualOverlapSeconds": 1.759999999999998,
+          "geometricOverlapMidpointSeconds": 31.279999999999998,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 32.16,
+          "overlapStartSeconds": 30.4,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 31.919999999999998,
+              "startTime": 30.8,
+              "word": "idealistic,"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 31.919999999999998,
+              "startTime": 30.64,
+              "word": "idealistic,"
+            }
+          ],
+          "transition": 6
+        },
+        {
+          "actualOverlapSeconds": 2.480000000000004,
+          "geometricOverlapMidpointSeconds": 36.6,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 37.84,
+          "overlapStartSeconds": 35.36,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 36.8,
+              "startTime": 36.480000000000004,
+              "word": "team"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 36.72,
+              "startTime": 36.480000000000004,
+              "word": "team"
+            }
+          ],
+          "transition": 7
+        },
+        {
+          "actualOverlapSeconds": 1.1199999999999974,
+          "geometricOverlapMidpointSeconds": 42.239999999999995,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 42.8,
+          "overlapStartSeconds": 41.68,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 42.239999999999995,
+              "startTime": 42.08,
+              "word": "put"
+            },
+            {
+              "endTime": 42.4,
+              "startTime": 42.24,
+              "word": "out"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 42.16,
+              "startTime": 42.08,
+              "word": "out"
+            },
+            {
+              "endTime": 42.32,
+              "startTime": 42.160000000000004,
+              "word": "a"
+            },
+            {
+              "endTime": 42.64,
+              "startTime": 42.32,
+              "word": "final."
+            }
+          ],
+          "transition": 8
+        },
+        {
+          "actualOverlapSeconds": 3.1999999999999957,
+          "geometricOverlapMidpointSeconds": 47.519999999999996,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 49.12,
+          "overlapStartSeconds": 45.92,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 48.88,
+              "startTime": 47.04,
+              "word": "age."
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 47.84,
+              "startTime": 46.96,
+              "word": "age."
+            }
+          ],
+          "transition": 9
+        },
+        {
+          "actualOverlapSeconds": 0.9600000000000009,
+          "geometricOverlapMidpointSeconds": 52.879999999999995,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 53.36,
+          "overlapStartSeconds": 52.4,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 53.04,
+              "startTime": 52.64,
+              "word": "early"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 53.04,
+              "startTime": 52.72,
+              "word": "morning"
+            }
+          ],
+          "transition": 10
+        },
+        {
+          "actualOverlapSeconds": 1.0400000000000063,
+          "geometricOverlapMidpointSeconds": 59.32,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 59.84,
+          "overlapStartSeconds": 58.8,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 59.760000000000005,
+              "startTime": 59.120000000000005,
+              "word": "Beneath"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 59.760000000000005,
+              "startTime": 59.120000000000005,
+              "word": "Beneath"
+            }
+          ],
+          "transition": 11
+        },
+        {
+          "actualOverlapSeconds": 2.239999999999995,
+          "geometricOverlapMidpointSeconds": 65.12,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 66.24,
+          "overlapStartSeconds": 64.0,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 65.36,
+              "startTime": 64.72,
+              "word": "farewell"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 65.2,
+              "startTime": 64.64,
+              "word": "farewell"
+            },
+            {
+              "endTime": 65.44,
+              "startTime": 65.2,
+              "word": "message"
+            }
+          ],
+          "transition": 12
+        },
+        {
+          "actualOverlapSeconds": 4.0,
+          "geometricOverlapMidpointSeconds": 69.44,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 71.44,
+          "overlapStartSeconds": 67.44,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 69.36,
+              "startTime": 68.96000000000001,
+              "word": "stay"
+            },
+            {
+              "endTime": 70.32,
+              "startTime": 69.36,
+              "word": "foolish."
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 69.36,
+              "startTime": 68.88,
+              "word": "stay"
+            },
+            {
+              "endTime": 70.32,
+              "startTime": 69.36,
+              "word": "foolish."
+            }
+          ],
+          "transition": 13
+        },
+        {
+          "actualOverlapSeconds": 0.47999999999998977,
+          "geometricOverlapMidpointSeconds": 74.64,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 74.88,
+          "overlapStartSeconds": 74.4,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 74.8,
+              "startTime": 74.24,
+              "word": "now,"
+            }
+          ],
+          "shortWords": [],
+          "transition": 14
+        },
+        {
+          "actualOverlapSeconds": 4.240000000000009,
+          "geometricOverlapMidpointSeconds": 79.72,
+          "note": "The current merge first tries time-tolerant contiguous/LCS token matching. This is the geometric midpoint of the captured audio overlap, not proof of the actual token-match splice; midpoint fallback itself uses emitted token-stream bounds.",
+          "overlapEndSeconds": 81.84,
+          "overlapStartSeconds": 77.6,
+          "radiusSeconds": 0.1,
+          "shippingWords": [
+            {
+              "endTime": 79.76,
+              "startTime": 79.36,
+              "word": "Stay"
+            },
+            {
+              "endTime": 80.64,
+              "startTime": 79.76,
+              "word": "hungry,"
+            }
+          ],
+          "shortWords": [
+            {
+              "endTime": 79.76,
+              "startTime": 79.28,
+              "word": "Stay"
+            },
+            {
+              "endTime": 80.56,
+              "startTime": 79.76,
+              "word": "hungry,"
+            }
+          ],
+          "transition": 15
+        }
+      ],
+      "shortTokenTimingHashVariants": [
+        "71b968b6e28af958a0380713630df617a89e5531cf51025e2bcffb85193e6d43"
+      ],
+      "shortTokenTimingStable": true,
+      "shortTranscript": "When I was young, there was an amazing publication called the Whole Earth Catalog, which was one of the Bibles of my generation. It was created by a fellow named Stuart Brand, not far from here in Menlo Park, and he brought it to life with his poetic touch. This was in the late 60s, before personal computers and desktop publishing. So it was all made with typewriters, scissors, and Polaroid cameras. It was sort of like Google in paperback form 35 years before Google came along. It was idealistic, overflowing with neat tools and great notions. Stewart and his team put out several issues of the whole earth catalog, and then when it had run its course, they put out a final. issue It was the mid 1970s, and I was your age. On the back cover of their final issue was a photograph of an early morning country road, the kind you might find yourself hitchhiking on if you were so adventurous. Beneath it were the words stay hungry, stay foolish. It was their farewell message as they signed off. Stay hungry, stay foolish. And I have always wished that for myself. And now as you graduate to begin anew, I wish that for you. Stay hungry, stay foolish. Thank you all very much.",
+      "shortTranscriptSHA256": "5ab5f2b55a96f0e15753022eff8cac5be8b5d12913eb672faf03b6d00ff8e09c",
+      "shortTranscriptStable": true,
+      "shortWERAgainstFrozenReference": {
+        "edits": 1,
+        "hypothesis_words": 216,
+        "reference_words": 216,
+        "wer": 0.004629629629629629
+      },
+      "shortWarmSmokeLatencyNanoseconds": [
+        228692042,
+        228768042
+      ],
+      "shortWarmSmokeP50Nanoseconds": 228730042.0,
+      "shortWarmSmokeP95Nanoseconds": 228764242.0,
+      "shortWordCount": 216,
+      "shortWordTimingHashVariants": [
+        "64d47023c1e319fccc42b3c4dc6f787c6f1f19ff0d8015e951d5683d7a8c5a12"
+      ],
+      "shortWordTimingStable": true,
+      "sourceSHA256": "36e10be25ed80a5d7534bf03738651bdd0cc059c36dc3162db26b28bcee895f8",
+      "wordDiff": [
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "thirty",
+            "five"
+          ],
+          "short_words": [
+            "35"
+          ]
+        }
+      ]
+    }
+  ],
+  "goldenReferenceSHA256": "14b7ef93b73e09452032906dc7dc001fcbc6e9f6900779216bfb78be7ab06281",
+  "materialFailures": [
+    {
+      "id": "boundary-en-repeat-15.1s",
+      "reason": "shipping-vs-short normalized WER >= 5%",
+      "wer": 0.08333333333333333,
+      "wordDiff": [
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "i",
+            "really",
+            "want",
+            "to"
+          ],
+          "short_words": [
+            "wondered"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "real-en-product-names-56.104s",
+      "reason": "shipping-vs-short normalized WER >= 5%",
+      "wer": 0.1565217391304348,
+      "wordDiff": [
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "p3",
+            "quattro"
+          ],
+          "short_words": [
+            "p",
+            "three",
+            "quatro"
+          ]
+        },
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "experience"
+          ],
+          "short_words": [
+            "experienced"
+          ]
+        },
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "w3rapz"
+          ],
+          "short_words": [
+            "w",
+            "three",
+            "rap",
+            "z"
+          ]
+        },
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "o2"
+          ],
+          "short_words": [
+            "o",
+            "two"
+          ]
+        },
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "our"
+          ],
+          "short_words": [
+            "are",
+            "four"
+          ]
+        },
+        {
+          "operation": "insert",
+          "shipping_words": [],
+          "short_words": [
+            "m",
+            "three"
+          ]
+        },
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "quirk"
+          ],
+          "short_words": [
+            "cork"
+          ]
+        },
+        {
+          "operation": "replace",
+          "shipping_words": [
+            "creative",
+            "solutions"
+          ],
+          "short_words": [
+            "creativeutions",
+            "s",
+            "ol"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "real-en-product-names-56.104s",
+      "reason": "short frozen-reference WER degraded by >= 2 percentage points",
+      "shippingWER": 0.16037735849056603,
+      "shortWER": 0.3018867924528302
+    }
+  ],
+  "schemaVersion": 1,
+  "shippingChunkPolicy": {
+    "chunkSamples": 239360,
+    "chunkSeconds": 14.96,
+    "dualDecodeArbitration": false,
+    "melChunkContext": false,
+    "melContextSamples": 0,
+    "melContextSeconds": 0,
+    "mergePolicy": "current v3 no-mel silence-aligned starts + ChunkProcessor.mergeChunks + timestamp sort + collapseSeamWordDuplicates; unchanged",
+    "modelMaximumSamples": 240000,
+    "modelMaximumSeconds": 15,
+    "overlapSamples": 32000,
+    "overlapSeconds": 2,
+    "parallelChunkConcurrency": 4,
+    "strideSamples": 207360,
+    "strideSeconds": 12.96
+  },
+  "shippingProcess": {
+    "firstInferenceNanoseconds": 62293666,
+    "managerLoadNanoseconds": 29667,
+    "modelsLoadNanoseconds": 297647584,
+    "peakRSSAfterFirstInferenceBytes": 96665600,
+    "peakRSSAfterManagerLoadBytes": 55312384,
+    "peakRSSAfterModelsLoadBytes": 55148544,
+    "peakRSSAtEndBytes": 149667840,
+    "peakRSSAtStartBytes": 7929856
+  },
+  "shippingReportSHA256": "cb134722eb681f5a3c4895d7c7964689a3ba396b87e8bde26e1cf2b7a733550b",
+  "shortChunkPolicy": {
+    "chunkSamples": 119040,
+    "chunkSeconds": 7.44,
+    "dualDecodeArbitration": false,
+    "melChunkContext": false,
+    "melContextSamples": 0,
+    "melContextSeconds": 0,
+    "mergePolicy": "current v3 no-mel silence-aligned starts + ChunkProcessor.mergeChunks + timestamp sort + collapseSeamWordDuplicates; unchanged",
+    "modelMaximumSamples": 120000,
+    "modelMaximumSeconds": 7.5,
+    "overlapSamples": 32000,
+    "overlapSeconds": 2,
+    "parallelChunkConcurrency": 4,
+    "strideSamples": 87040,
+    "strideSeconds": 5.44
+  },
+  "shortProcess": {
+    "firstInferenceNanoseconds": 47106750,
+    "managerLoadNanoseconds": 30334,
+    "modelsLoadNanoseconds": 279504000,
+    "peakRSSAfterFirstInferenceBytes": 88211456,
+    "peakRSSAfterManagerLoadBytes": 53149696,
+    "peakRSSAfterModelsLoadBytes": 52985856,
+    "peakRSSAtEndBytes": 120160256,
+    "peakRSSAtStartBytes": 7929856
+  },
+  "shortReportSHA256": "d0830369d9941a456d543739114715bafd3bd45d46cf7353d67145d732d6157b"
+}

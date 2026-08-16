@@ -1,0 +1,5 @@
+.../Sources/DictationCore/ASREngineAdapting.swift  | 28 ++++++++++++++++++++++
+ Packages/LocalASR/Package.swift                    |  5 +---
+ .../Sources/LocalASR/FluidAudioAdapter.swift       | 12 +++++++++-
+ .../Sources/asr-bench/BenchmarkJSONLServer.swift   | 19 +++++++++++++++
+ 4 files changed, 59 insertions(+), 5 deletions(-)

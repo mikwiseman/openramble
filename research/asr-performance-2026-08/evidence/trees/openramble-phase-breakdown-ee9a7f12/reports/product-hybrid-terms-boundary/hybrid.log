@@ -1,0 +1,6 @@
+The engine folder is specified explicitly: $TMP/openramble-short-shape/model-root-hybrid-hardlink/parakeet-tdt-0.6b-v3 (frozen, past the storage)
+Encoder counts to: automatic
+Parallel long-form windows: 4
+Vocabulary inference scheduling: candidateRegions
+Model loaded in 0.10 s
+Prompt loaded in 0.15 with - 28 terms

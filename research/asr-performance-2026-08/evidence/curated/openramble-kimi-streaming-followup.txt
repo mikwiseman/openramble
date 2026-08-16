@@ -1,0 +1,16 @@
+Revise your review adversarially after inspecting the actual pinned FluidAudio checkout at:
+$REPO/Packages/LocalASR/.build/checkouts/FluidAudio
+
+Your first answer assumed an exact encoder-prefix cache might be possible. New concrete evidence:
+- The exact shipping NeMo checkpoint model_config.yaml has self_attention_model=rel_pos, att_context_size=[-1,-1], regular attention, 24 layers, and symmetric conv_context_size default. Therefore every valid encoder frame can depend on the full utterance/window; a bounded exact prefix cache for <=15s is not available.
+- Offline long-form ChunkProcessor is stateless by window: it creates a fresh TdtDecoderState per window, uses ~14.96s windows with 2s overlap, silence-aligned starts in the shipping no-mel v3 path, and merges TokenWindow outputs later.
+- The first long-form window starts at 0 and becomes provably non-final once audio exceeds its full window. Later silence-aligned starts are only stable after the full search radius is observed.
+- Current preview finish() returns String and uses stateful previous-token dedup, different 1s/0.5s/0.25s windows, autodetect language, and different streaming vocabulary semantics.
+
+Read the actual SlidingWindowAsrManager.swift, ChunkProcessor.swift, and AsrManager+Transcription.swift. Then correct your verdict and ranking. Specifically answer:
+1) Is caching complete non-final offline TokenWindow outputs under speech exact for >15s if finish recomputes the final offline chunk plan and reuses only exact sample-hash/config/language/isLast=false matches?
+2) For <=15s, state plainly whether exact current offline semantics can be finalized from a bounded tail. Do not recommend encoder feature caching if full attention invalidates it.
+3) Evaluate endpoint-cached normal batch inference after deterministic trailing-silence canonicalization: it changes semantics, but could make Stop near-zero when the user pauses. Give the precise validation bar and fallback rule.
+4) Re-rank the next three directions with likely gain, quality risk, implementation cost, and CTC/RSS/accelerator caveats.
+
+Remain read-only. Do not edit files or run benchmarks. Be concise and do not defend the prior answer.

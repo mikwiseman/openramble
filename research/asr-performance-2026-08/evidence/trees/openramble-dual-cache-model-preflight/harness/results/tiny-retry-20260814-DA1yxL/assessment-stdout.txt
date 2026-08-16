@@ -1,0 +1,16 @@
+{
+  "ok": false,
+  "report": {
+    "accepted": false,
+    "active_kills_checked": 1,
+    "cross_clock_numeric_comparisons": 0,
+    "in_flight_prediction_signpost_brackets_checked": 0,
+    "lifecycle_and_global_ane_bracket_accepted": true,
+    "process_lifecycle_timestamp_claim": "DISPATCH_PROC_EXIT notification observed in F; controller separately waits waitpid",
+    "production_blocker": "xctrace ANE hardware rows have no exact process attribution; exclusive-bracket activity is not a per-process compute-route proof",
+    "production_exact_route_accepted": false,
+    "protocol_containment_brackets_checked": 1,
+    "speculative_global_ane_tail_after_kernel_observation": 0,
+    "trace_clock_id": "xctrace-sha256:dab5863bb0f4654fcde1f397524f6ab7056de5f9d0d52b6bcb5775396b4d2bca"
+  }
+}

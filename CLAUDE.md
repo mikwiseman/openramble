@@ -1,5 +1,12 @@
 # OpenRamble repository rules
 
+## Active ASR research handoff
+
+The complete August 2026 ASR performance/reliability state is archived in
+[`research/asr-performance-2026-08/CONTINUATION_PROMPT.md`](research/asr-performance-2026-08/CONTINUATION_PROMPT.md).
+Read that prompt and its linked experiment ledger before starting or repeating
+any model, cache, benchmark, or streaming work.
+
 OpenRamble is local dictation for macOS: hold a key, speak, release it, and
 receive text in the active application.
 

@@ -1,0 +1,539 @@
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift
+index b5219765..f55035a4 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift
+@@ -118,6 +118,81 @@ struct ChunkProcessor {
+         )
+     }
+
++    /// Reconstruct the exact window plan without running Core ML.
++    ///
++    /// Temporary research seam used by the `$TMP` closed-window cache.
++    /// The conservative stability bound covers the complete ±4-second silence
++    /// search and the 80ms energy half-window. The shipping v3/no-mel path has
++    /// no warmup-prefix probe, so no farther future samples are consulted.
++    func tempWindowPlans(
++        melChunkContext: Bool,
++        modelVersion: AsrModelVersion?
++    ) throws -> [TempChunkWindowPlan] {
++        let layout = chunkLayout(melChunkContext: melChunkContext, modelVersion: modelVersion)
++        let decisions = try chunkStarts(
++            warmupPrefixSamples: layout.warmupPrefixSamples,
++            chunkSamples: layout.chunkSamples,
++            strideSamples: layout.strideSamples,
++            preferSilenceAlignment: !melChunkContext && modelVersion == .v3
++        )
++        let frameSamples = ASRConstants.samplesPerEncoderFrame
++        let searchRadiusFrames = max(
++            1,
++            Int((4.0 * Double(ASRConstants.sampleRate)) / Double(frameSamples))
++        )
++        var plans: [TempChunkWindowPlan] = []
++        var stableThroughSampleCount = 0
++
++        for (index, decision) in decisions.enumerated() {
++            let warmupSamples =
++                index > 0 && decision.useWarmupPrefix
++                ? min(layout.warmupPrefixSamples, decision.start) : 0
++            let visibleChunkSamples = max(
++                ASRConstants.samplesPerEncoderFrame,
++                layout.chunkSamples - warmupSamples
++            )
++            let candidateEnd = decision.start + visibleChunkSamples
++            let isLastChunk = candidateEnd >= totalSamples
++            let chunkEnd = isLastChunk ? totalSamples : candidateEnd
++            guard chunkEnd > decision.start else { break }
++
++            let contextSamples = warmupSamples > 0 ? 0 : (index > 0 ? layout.melContextSamples : 0)
++            let contextStart = decision.start - max(warmupSamples, contextSamples)
++            let emitTokensAfterFrame =
++                warmupSamples > 0 ? decision.start / ASRConstants.samplesPerEncoderFrame : nil
++
++            if index > 0, !melChunkContext, modelVersion == .v3 {
++                let target = index * layout.strideSamples
++                let targetFrame = target / frameSamples
++                let fullSearchSampleCount =
++                    (targetFrame + searchRadiusFrames) * frameSamples + frameSamples
++                stableThroughSampleCount = max(stableThroughSampleCount, fullSearchSampleCount)
++            }
++
++            plans.append(
++                TempChunkWindowPlan(
++                    index: index,
++                    chunkStart: decision.start,
++                    contextStart: contextStart,
++                    chunkEnd: chunkEnd,
++                    contextSamples: contextSamples,
++                    chunkStartOffset: warmupSamples > 0 ? contextStart : decision.start,
++                    isLastChunk: isLastChunk,
++                    emitTokensAfterFrame: emitTokensAfterFrame,
++                    initialTimeIndexOverride: emitTokensAfterFrame == nil ? nil : 0,
++                    stableStartPrefixSampleCount: stableThroughSampleCount,
++                    earliestSafePrefixSampleCount: max(
++                        ASRConstants.maxModelSamples + 1,
++                        stableThroughSampleCount,
++                        candidateEnd + 1
++                    )
++                )
++            )
++            if isLastChunk { break }
++        }
++        return plans
++    }
++
+     func regularChunkStarts(strideSamples: Int) -> [ChunkStartDecision] {
+         var starts = [ChunkStartDecision(start: 0, useWarmupPrefix: false)]
+         var start = strideSamples
+@@ -398,7 +473,8 @@ struct ChunkProcessor {
+         using manager: AsrManager,
+         startTime: Date,
+         progressHandler: ((Double) async -> Void)? = nil,
+-        language: Language? = nil
++        language: Language? = nil,
++        precomputedWindows: [Int: TempClosedChunkCache.Window] = [:]
+     ) async throws -> ASRResult {
+         let requestedConcurrency = max(1, await manager.parallelChunkConcurrency)
+         let workers = await makeWorkerPool(using: manager, count: requestedConcurrency) ?? [manager]
+@@ -440,9 +516,9 @@ struct ChunkProcessor {
+         var chunkOutputs: [[TokenWindow]?] = []
+         var availableWorkers = Array(workers.indices)
+         var inFlight = 0
++        var chunkIndex = 0
+         var chunkDecision = chunkStarts.first ?? ChunkStartDecision(start: 0, useWarmupPrefix: false)
+         var chunkStart = chunkDecision.start
+-        var chunkIndex = 0
+
+         func collectNextResult(
+             _ group: inout ThrowingTaskGroup<TaskResult, Error>
+@@ -483,6 +559,34 @@ struct ChunkProcessor {
+                 let emitTokensAfterFrame =
+                     warmupSamples > 0 ? chunkStart / ASRConstants.samplesPerEncoderFrame : nil
+
++                let index = chunkIndex
++                chunkOutputs.append(nil)
++                if let cached = precomputedWindows[index] {
++                    let durations =
++                        cached.durations.count == cached.tokens.count
++                        ? cached.durations : Array(repeating: 0, count: cached.tokens.count)
++                    chunkOutputs[index] = zip(
++                        zip(zip(cached.tokens, cached.timestamps), cached.confidences), durations
++                    ).map {
++                        (token: $0.0.0.0, timestamp: $0.0.0.1, confidence: $0.0.1, duration: $0.1)
++                    }
++                    chunkIndex += 1
++
++                    if let progressHandler, !isLastChunk {
++                        let progress = min(1.0, max(0.0, Double(chunkEnd) / Double(totalSamples)))
++                        await progressHandler(progress)
++                    }
++                    if isLastChunk { break }
++                    if chunkIndex < chunkStarts.count {
++                        chunkDecision = chunkStarts[chunkIndex]
++                        chunkStart = chunkDecision.start
++                    } else {
++                        chunkStart += strideSamples
++                        chunkDecision = ChunkStartDecision(start: chunkStart, useWarmupPrefix: false)
++                    }
++                    continue
++                }
++
+                 if availableWorkers.isEmpty {
+                     try await collectNextResult(&group)
+                 }
+@@ -492,9 +596,7 @@ struct ChunkProcessor {
+
+                 let workerIndex = availableWorkers.removeFirst()
+                 let worker = workers[workerIndex]
+-                let index = chunkIndex
+                 let chunkStartOffset = warmupSamples > 0 ? contextStart : chunkStart
+-                chunkOutputs.append(nil)
+
+                 group.addTask {
+                     var decoderState = TdtDecoderState.make(decoderLayers: decoderLayers)
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/TempFirstClosedChunkCache.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/TempFirstClosedChunkCache.swift
+new file mode 100644
+index 00000000..f6669c72
+--- /dev/null
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/TempFirstClosedChunkCache.swift
+@@ -0,0 +1,381 @@
++import Foundation
++
++/// Temporary research-only cache for the first immutable offline long-form window.
++///
++/// This API exists only in the `$TMP` prototype. It deliberately caches
++/// the exact stateless `ChunkProcessor` output, not sliding-window preview state.
++public struct TempFirstClosedChunkCache: Sendable {
++    struct Window: Sendable {
++        let tokens: [Int]
++        let timestamps: [Int]
++        let confidences: [Float]
++        let durations: [Int]
++    }
++
++    let managerIdentifier: ObjectIdentifier
++    let languageRawValue: String?
++    let inputSamples: [Float]
++    let window: Window
++
++    public let inputStartSample: Int
++    public let inputEndSample: Int
++    public let earliestSafePrefixSampleCount: Int
++
++    public var inputSampleCount: Int { inputEndSample - inputStartSample }
++    public var inputEndSeconds: Double {
++        Double(inputEndSample) / Double(ASRConstants.sampleRate)
++    }
++    public var earliestSafePrefixSeconds: Double {
++        Double(earliestSafePrefixSampleCount) / Double(ASRConstants.sampleRate)
++    }
++    public var tokenCount: Int { window.tokens.count }
++}
++
++extension AsrManager {
++    /// Precompute the exact first non-final window used by shipping long-form transcription.
++    ///
++    /// The prefix must already exceed the 15-second single-window routing threshold.
++    /// Only then is it proven that the first 14.96-second window will be decoded with
++    /// `isLastChunk == false` by the eventual offline final pass.
++    public func tempPrecomputeFirstClosedChunk(
++        _ audioPrefix: [Float],
++        language: Language? = nil
++    ) async throws -> TempFirstClosedChunkCache {
++        guard isAvailable else { throw ASRError.notInitialized }
++        guard audioPrefix.count > ASRConstants.maxModelSamples else {
++            throw ASRError.invalidAudioData
++        }
++        guard modelVersion == .v3, melChunkContext == false, dualDecodeArbitration == false else {
++            throw ASRError.processingFailed(
++                "temporary closed-window cache requires shipping v3/no-mel/single-decode configuration"
++            )
++        }
++
++        let probe = ChunkProcessor(audioSamples: audioPrefix)
++        let layout = probe.chunkLayout(melChunkContext: melChunkContext, modelVersion: modelVersion)
++        let firstWindowEnd = layout.chunkSamples
++        guard firstWindowEnd < audioPrefix.count else {
++            throw ASRError.invalidAudioData
++        }
++
++        let input = Array(audioPrefix[..<firstWindowEnd])
++        var state = TdtDecoderState.make(decoderLayers: decoderLayerCount)
++        state.reset()
++        let output = try await ChunkProcessor.transcribeChunk(
++            samples: input,
++            contextSamples: 0,
++            chunkStart: 0,
++            isLastChunk: false,
++            using: self,
++            decoderState: &state,
++            maxModelSamples: ASRConstants.maxModelSamples,
++            language: language
++        )
++
++        return TempFirstClosedChunkCache(
++            managerIdentifier: ObjectIdentifier(self),
++            languageRawValue: language?.rawValue,
++            inputSamples: input,
++            window: TempFirstClosedChunkCache.Window(
++                tokens: output.tokens,
++                timestamps: output.timestamps,
++                confidences: output.confidences,
++                durations: output.durations
++            ),
++            inputStartSample: 0,
++            inputEndSample: firstWindowEnd,
++            earliestSafePrefixSampleCount: ASRConstants.maxModelSamples + 1
++        )
++    }
++
++    /// Run the unchanged offline merge/timing path while substituting one validated
++    /// first-window result that was computed under speech.
++    public func tempTranscribeUsingFirstClosedChunk(
++        _ audioSamples: [Float],
++        cache: TempFirstClosedChunkCache,
++        language: Language? = nil
++    ) async throws -> ASRResult {
++        guard isAvailable else { throw ASRError.notInitialized }
++        guard audioSamples.count > ASRConstants.maxModelSamples else {
++            throw ASRError.invalidAudioData
++        }
++        guard cache.managerIdentifier == ObjectIdentifier(self) else {
++            throw ASRError.processingFailed("closed-window cache belongs to a different AsrManager")
++        }
++        guard cache.languageRawValue == language?.rawValue else {
++            throw ASRError.processingFailed("closed-window cache language does not match final transcription")
++        }
++        guard cache.inputStartSample == 0,
++            cache.inputEndSample <= audioSamples.count,
++            cache.inputSamples.count == cache.inputEndSample
++        else {
++            throw ASRError.processingFailed("closed-window cache range is invalid for final audio")
++        }
++        guard
++            Self.tempSamplesMatchExactly(
++                cache.inputSamples,
++                audioSamples[cache.inputStartSample..<cache.inputEndSample]
++            )
++        else {
++            throw ASRError.processingFailed("closed-window cache input does not match final audio")
++        }
++
++        let startTime = Date()
++        let processor = ChunkProcessor(audioSamples: audioSamples)
++        return try await processor.process(
++            using: self,
++            startTime: startTime,
++            language: language,
++            precomputedWindows: [
++                0: TempClosedChunkCache.Window(
++                    plan: TempChunkWindowPlan(
++                        index: 0,
++                        chunkStart: cache.inputStartSample,
++                        contextStart: cache.inputStartSample,
++                        chunkEnd: cache.inputEndSample,
++                        contextSamples: 0,
++                        chunkStartOffset: 0,
++                        isLastChunk: false,
++                        emitTokensAfterFrame: nil,
++                        initialTimeIndexOverride: nil,
++                        stableStartPrefixSampleCount: 0,
++                        earliestSafePrefixSampleCount: cache.earliestSafePrefixSampleCount
++                    ),
++                    inputSamples: cache.inputSamples,
++                    tokens: cache.window.tokens,
++                    timestamps: cache.window.timestamps,
++                    confidences: cache.window.confidences,
++                    durations: cache.window.durations,
++                    precomputeWallMilliseconds: 0
++                )
++            ]
++        )
++    }
++
++    private nonisolated static func tempSamplesMatchExactly(
++        _ cached: [Float],
++        _ final: ArraySlice<Float>
++    ) -> Bool {
++        guard cached.count == final.count else { return false }
++        return zip(cached, final).allSatisfy { $0.bitPattern == $1.bitPattern }
++    }
++}
++
++struct TempChunkWindowPlan: Sendable, Equatable {
++    let index: Int
++    let chunkStart: Int
++    let contextStart: Int
++    let chunkEnd: Int
++    let contextSamples: Int
++    let chunkStartOffset: Int
++    let isLastChunk: Bool
++    let emitTokensAfterFrame: Int?
++    let initialTimeIndexOverride: Int?
++    let stableStartPrefixSampleCount: Int
++    let earliestSafePrefixSampleCount: Int
++
++    var inputSampleCount: Int { chunkEnd - contextStart }
++}
++
++public struct TempClosedChunkMetadata: Codable, Sendable {
++    public let index: Int
++    public let chunkStartSample: Int
++    public let inputStartSample: Int
++    public let inputEndSample: Int
++    public let stableStartPrefixSampleCount: Int
++    public let earliestSafePrefixSampleCount: Int
++    public let tokenCount: Int
++    public let inputByteCount: Int
++    public let precomputeWallMilliseconds: Double
++
++    public var chunkStartSeconds: Double {
++        Double(chunkStartSample) / Double(ASRConstants.sampleRate)
++    }
++    public var inputEndSeconds: Double {
++        Double(inputEndSample) / Double(ASRConstants.sampleRate)
++    }
++    public var stableStartPrefixSeconds: Double {
++        Double(stableStartPrefixSampleCount) / Double(ASRConstants.sampleRate)
++    }
++    public var earliestSafePrefixSeconds: Double {
++        Double(earliestSafePrefixSampleCount) / Double(ASRConstants.sampleRate)
++    }
++}
++
++public struct TempClosedChunkCache: Sendable {
++    struct Window: Sendable {
++        let plan: TempChunkWindowPlan
++        let inputSamples: [Float]
++        let tokens: [Int]
++        let timestamps: [Int]
++        let confidences: [Float]
++        let durations: [Int]
++        let precomputeWallMilliseconds: Double
++    }
++
++    let managerIdentifier: ObjectIdentifier
++    let languageRawValue: String?
++    let windows: [Window]
++
++    public let metadata: [TempClosedChunkMetadata]
++
++    public var cachedWindowCount: Int { windows.count }
++    public var totalInputByteCount: Int { metadata.reduce(0) { $0 + $1.inputByteCount } }
++    public var totalPrecomputeWallMilliseconds: Double {
++        metadata.reduce(0) { $0 + $1.precomputeWallMilliseconds }
++    }
++}
++
++extension AsrManager {
++    /// Simulate an under-speech scheduler and precompute every window that a
++    /// prefix-only plan proves complete, stable, and non-final.
++    ///
++    /// For each window, the plan is recomputed using only samples available at
++    /// `earliestSafePrefixSampleCount`; future audio is used solely to verify the
++    /// eventual final plan in this research harness.
++    public func tempPrecomputeAllProvablyClosedChunks(
++        _ completeAudio: [Float],
++        language: Language? = nil
++    ) async throws -> TempClosedChunkCache {
++        guard isAvailable else { throw ASRError.notInitialized }
++        guard completeAudio.count > ASRConstants.maxModelSamples else {
++            throw ASRError.invalidAudioData
++        }
++        guard modelVersion == .v3, melChunkContext == false, dualDecodeArbitration == false else {
++            throw ASRError.processingFailed(
++                "temporary closed-window cache requires shipping v3/no-mel/single-decode configuration"
++            )
++        }
++
++        let finalProcessor = ChunkProcessor(audioSamples: completeAudio)
++        let finalPlans = try finalProcessor.tempWindowPlans(
++            melChunkContext: melChunkContext,
++            modelVersion: modelVersion
++        )
++        var windows: [TempClosedChunkCache.Window] = []
++        var metadata: [TempClosedChunkMetadata] = []
++
++        for finalPlan in finalPlans where !finalPlan.isLastChunk {
++            let safeCount = finalPlan.earliestSafePrefixSampleCount
++            guard safeCount <= completeAudio.count else { continue }
++            let prefix = Array(completeAudio.prefix(safeCount))
++            let prefixProcessor = ChunkProcessor(audioSamples: prefix)
++            let prefixPlans = try prefixProcessor.tempWindowPlans(
++                melChunkContext: melChunkContext,
++                modelVersion: modelVersion
++            )
++            guard finalPlan.index < prefixPlans.count else {
++                throw ASRError.processingFailed("closed-window plan is absent at its claimed safe prefix")
++            }
++            let prefixPlan = prefixPlans[finalPlan.index]
++            guard prefixPlan == finalPlan, !prefixPlan.isLastChunk else {
++                throw ASRError.processingFailed("closed-window plan changed after its claimed safe prefix")
++            }
++
++            let input = Array(prefix[prefixPlan.contextStart..<prefixPlan.chunkEnd])
++            var state = TdtDecoderState.make(decoderLayers: decoderLayerCount)
++            state.reset()
++            let started = ContinuousClock.now
++            let output = try await ChunkProcessor.transcribeChunk(
++                samples: input,
++                contextSamples: prefixPlan.contextSamples,
++                chunkStart: prefixPlan.chunkStartOffset,
++                isLastChunk: false,
++                using: self,
++                decoderState: &state,
++                maxModelSamples: ASRConstants.maxModelSamples,
++                language: language,
++                emitTokensAfterFrame: prefixPlan.emitTokensAfterFrame,
++                initialTimeIndexOverride: prefixPlan.initialTimeIndexOverride
++            )
++            let elapsed = started.duration(to: .now)
++            let elapsedMilliseconds =
++                Double(elapsed.components.seconds) * 1_000
++                + Double(elapsed.components.attoseconds) / 1e15
++
++            windows.append(
++                TempClosedChunkCache.Window(
++                    plan: prefixPlan,
++                    inputSamples: input,
++                    tokens: output.tokens,
++                    timestamps: output.timestamps,
++                    confidences: output.confidences,
++                    durations: output.durations,
++                    precomputeWallMilliseconds: elapsedMilliseconds
++                )
++            )
++            metadata.append(
++                TempClosedChunkMetadata(
++                    index: prefixPlan.index,
++                    chunkStartSample: prefixPlan.chunkStart,
++                    inputStartSample: prefixPlan.contextStart,
++                    inputEndSample: prefixPlan.chunkEnd,
++                    stableStartPrefixSampleCount: prefixPlan.stableStartPrefixSampleCount,
++                    earliestSafePrefixSampleCount: prefixPlan.earliestSafePrefixSampleCount,
++                    tokenCount: output.tokens.count,
++                    inputByteCount: input.count * MemoryLayout<Float>.stride,
++                    precomputeWallMilliseconds: elapsedMilliseconds
++                )
++            )
++        }
++
++        return TempClosedChunkCache(
++            managerIdentifier: ObjectIdentifier(self),
++            languageRawValue: language?.rawValue,
++            windows: windows,
++            metadata: metadata
++        )
++    }
++
++    /// Recompute the full final plan and reuse only byte-identical, plan-identical
++    /// non-final windows. The existing token merge and timing construction remain unchanged.
++    public func tempTranscribeUsingAllClosedChunks(
++        _ audioSamples: [Float],
++        cache: TempClosedChunkCache,
++        language: Language? = nil
++    ) async throws -> ASRResult {
++        guard isAvailable else { throw ASRError.notInitialized }
++        guard audioSamples.count > ASRConstants.maxModelSamples else {
++            throw ASRError.invalidAudioData
++        }
++        guard cache.managerIdentifier == ObjectIdentifier(self) else {
++            throw ASRError.processingFailed("closed-window cache belongs to a different AsrManager")
++        }
++        guard cache.languageRawValue == language?.rawValue else {
++            throw ASRError.processingFailed("closed-window cache language does not match final transcription")
++        }
++
++        let processor = ChunkProcessor(audioSamples: audioSamples)
++        let finalPlans = try processor.tempWindowPlans(
++            melChunkContext: melChunkContext,
++            modelVersion: modelVersion
++        )
++        var validated: [Int: TempClosedChunkCache.Window] = [:]
++        for window in cache.windows {
++            guard window.plan.index < finalPlans.count,
++                finalPlans[window.plan.index] == window.plan,
++                !window.plan.isLastChunk,
++                window.plan.contextStart >= 0,
++                window.plan.chunkEnd <= audioSamples.count
++            else {
++                throw ASRError.processingFailed("closed-window cache does not match the final chunk plan")
++            }
++            guard
++                Self.tempSamplesMatchExactly(
++                    window.inputSamples,
++                    audioSamples[window.plan.contextStart..<window.plan.chunkEnd]
++                )
++            else {
++                throw ASRError.processingFailed("closed-window cache input does not match final audio")
++            }
++            validated[window.plan.index] = window
++        }
++
++        return try await processor.process(
++            using: self,
++            startTime: Date(),
++            language: language,
++            precomputedWindows: validated
++        )
++    }
++}

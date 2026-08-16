@@ -1,0 +1,1113 @@
+{
+  "canonicalizer": {
+    "frame_samples": 160,
+    "postroll_seconds": 0.25,
+    "rms_threshold": 0.002,
+    "settle_seconds": 0.5
+  },
+  "fixtures": [
+    {
+      "base_duration_seconds": 7.06,
+      "base_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/base.f32le",
+      "base_pcm_sha256": "4e093d093d98c71d87c1cf240c5076924c80806e0c59a4722eee47a7b41035ff",
+      "base_sample_count": 112960,
+      "fixture": {
+        "fixture_id": "libri",
+        "language": "en",
+        "vocabulary": false,
+        "wav_name": "libri.wav"
+      },
+      "resumed_speech": {
+        "digest_matches": false,
+        "final_digest": "0a39c742051060e683f244d2c6ea95c5cf08106748bd300d00319ea3c7d9b8ca",
+        "snapshot_digest": "51efd4057a532e91db6f2bb9c573ec1fcf44fd4f01df095be0740992d11376fb"
+      },
+      "tail_stats": {
+        "0.1s": {
+          "peak": 0.145172119140625,
+          "rms": 0.0535232441120196
+        },
+        "0.25s": {
+          "peak": 0.145172119140625,
+          "rms": 0.04383717609744372
+        },
+        "0.5s": {
+          "peak": 0.145172119140625,
+          "rms": 0.039817595617795354
+        },
+        "1s": {
+          "peak": 0.26849365234375,
+          "rms": 0.05291378731583353
+        }
+      },
+      "variants": [
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/append-zero-0000ms-canonical.f32le",
+          "canonical_pcm_sha256": "4e093d093d98c71d87c1cf240c5076924c80806e0c59a4722eee47a7b41035ff",
+          "canonical_sample_count": 112960,
+          "digest_matches": false,
+          "endpoint_eligible": false,
+          "final_digest": "65da38d4518746c6171b207d277cb6265aa536e9b3193affcbc3bc09a4b71f55",
+          "kind": "append_zero",
+          "label": "append-zero-0000ms",
+          "last_active_end_sample": 112960,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/append-zero-0000ms.f32le",
+          "raw_pcm_sha256": "4e093d093d98c71d87c1cf240c5076924c80806e0c59a4722eee47a7b41035ff",
+          "raw_sample_count": 112960,
+          "seconds": 0.0,
+          "snapshot_digest": null,
+          "snapshot_path": null,
+          "snapshot_pcm_sha256": null
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/append-zero-0100ms-canonical.f32le",
+          "canonical_pcm_sha256": "040b0c856cfcedc8a2377bce89e9be97a96a57118fefc4ba1eb0eeb672e6933d",
+          "canonical_sample_count": 114560,
+          "digest_matches": false,
+          "endpoint_eligible": false,
+          "final_digest": "e6cde43b9b55a22a3bd3bad4abca6afaf4141f068d745e18212aa32ad77a35c4",
+          "kind": "append_zero",
+          "label": "append-zero-0100ms",
+          "last_active_end_sample": 112960,
+          "observed_trailing_silence_samples": 1600,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/append-zero-0100ms.f32le",
+          "raw_pcm_sha256": "040b0c856cfcedc8a2377bce89e9be97a96a57118fefc4ba1eb0eeb672e6933d",
+          "raw_sample_count": 114560,
+          "seconds": 0.1,
+          "snapshot_digest": null,
+          "snapshot_path": null,
+          "snapshot_pcm_sha256": null
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/append-zero-0250ms-canonical.f32le",
+          "canonical_pcm_sha256": "b374008d14af867a7eb27295ff9ebed847749ffd7cd39a01c959d61e213a5411",
+          "canonical_sample_count": 116960,
+          "digest_matches": false,
+          "endpoint_eligible": false,
+          "final_digest": "51efd4057a532e91db6f2bb9c573ec1fcf44fd4f01df095be0740992d11376fb",
+          "kind": "append_zero",
+          "label": "append-zero-0250ms",
+          "last_active_end_sample": 112960,
+          "observed_trailing_silence_samples": 4000,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/append-zero-0250ms.f32le",
+          "raw_pcm_sha256": "b374008d14af867a7eb27295ff9ebed847749ffd7cd39a01c959d61e213a5411",
+          "raw_sample_count": 116960,
+          "seconds": 0.25,
+          "snapshot_digest": null,
+          "snapshot_path": null,
+          "snapshot_pcm_sha256": null
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/append-zero-0500ms-canonical.f32le",
+          "canonical_pcm_sha256": "b374008d14af867a7eb27295ff9ebed847749ffd7cd39a01c959d61e213a5411",
+          "canonical_sample_count": 116960,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "51efd4057a532e91db6f2bb9c573ec1fcf44fd4f01df095be0740992d11376fb",
+          "kind": "append_zero",
+          "label": "append-zero-0500ms",
+          "last_active_end_sample": 112960,
+          "observed_trailing_silence_samples": 8000,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/append-zero-0500ms.f32le",
+          "raw_pcm_sha256": "41523fc2bd4ccee8efd2efd04771a9613db8fbdb90b2a37128dafd5052fc1b1f",
+          "raw_sample_count": 120960,
+          "seconds": 0.5,
+          "snapshot_digest": "51efd4057a532e91db6f2bb9c573ec1fcf44fd4f01df095be0740992d11376fb",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/append-zero-0500ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "b374008d14af867a7eb27295ff9ebed847749ffd7cd39a01c959d61e213a5411"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/append-zero-1000ms-canonical.f32le",
+          "canonical_pcm_sha256": "b374008d14af867a7eb27295ff9ebed847749ffd7cd39a01c959d61e213a5411",
+          "canonical_sample_count": 116960,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "51efd4057a532e91db6f2bb9c573ec1fcf44fd4f01df095be0740992d11376fb",
+          "kind": "append_zero",
+          "label": "append-zero-1000ms",
+          "last_active_end_sample": 112960,
+          "observed_trailing_silence_samples": 16000,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/append-zero-1000ms.f32le",
+          "raw_pcm_sha256": "ce45a3648e3ca71ffbcba59ac740d5f23d84a2a5d9726702c632f28396ce275c",
+          "raw_sample_count": 128960,
+          "seconds": 1.0,
+          "snapshot_digest": "51efd4057a532e91db6f2bb9c573ec1fcf44fd4f01df095be0740992d11376fb",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/append-zero-1000ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "b374008d14af867a7eb27295ff9ebed847749ffd7cd39a01c959d61e213a5411"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/trim-0100ms-canonical.f32le",
+          "canonical_pcm_sha256": "16b75a39050b0420f78efd2f160e11bde1eca8e719de56f92cd2e51a4ad97ce4",
+          "canonical_sample_count": 111360,
+          "endpoint_eligible": false,
+          "final_digest": "8eceed8a2208ead0d4870567ed44d5f23360faa8e70b58c8ca6810e3d3bc5081",
+          "kind": "trim",
+          "label": "trim-0100ms",
+          "last_active_end_sample": 111360,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/trim-0100ms.f32le",
+          "raw_pcm_sha256": "16b75a39050b0420f78efd2f160e11bde1eca8e719de56f92cd2e51a4ad97ce4",
+          "raw_sample_count": 111360,
+          "seconds": 0.1
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/trim-0250ms-canonical.f32le",
+          "canonical_pcm_sha256": "9bd30e4bf0eb7a7857124b1275c68d006a25b2392599d42f3936685f83596748",
+          "canonical_sample_count": 108960,
+          "endpoint_eligible": false,
+          "final_digest": "43db86d333551852e3dba25c12affd0a0cfe1787bea1f9bdb2669d1aace2145f",
+          "kind": "trim",
+          "label": "trim-0250ms",
+          "last_active_end_sample": 108960,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/trim-0250ms.f32le",
+          "raw_pcm_sha256": "9bd30e4bf0eb7a7857124b1275c68d006a25b2392599d42f3936685f83596748",
+          "raw_sample_count": 108960,
+          "seconds": 0.25
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/trim-0500ms-canonical.f32le",
+          "canonical_pcm_sha256": "252f6c2bb386332555804dc306b7cfa81f45f277702de9ac14a2debbdf5edae3",
+          "canonical_sample_count": 104960,
+          "endpoint_eligible": false,
+          "final_digest": "445902fbca58e2be20680eb77ee242d54a23b2e35876608615031921e532208a",
+          "kind": "trim",
+          "label": "trim-0500ms",
+          "last_active_end_sample": 104960,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/trim-0500ms.f32le",
+          "raw_pcm_sha256": "252f6c2bb386332555804dc306b7cfa81f45f277702de9ac14a2debbdf5edae3",
+          "raw_sample_count": 104960,
+          "seconds": 0.5
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/trim-1000ms-canonical.f32le",
+          "canonical_pcm_sha256": "0a2ce2d286b3e7220e5896b67ed68c2812e1bb40285bb0bae408073698f67568",
+          "canonical_sample_count": 96960,
+          "endpoint_eligible": false,
+          "final_digest": "a89da033c762bf1fbfe288e41161d2f2962abc878d480e0da4b97c2653c0304f",
+          "kind": "trim",
+          "label": "trim-1000ms",
+          "last_active_end_sample": 96960,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/libri/trim-1000ms.f32le",
+          "raw_pcm_sha256": "0a2ce2d286b3e7220e5896b67ed68c2812e1bb40285bb0bae408073698f67568",
+          "raw_sample_count": 96960,
+          "seconds": 1.0
+        }
+      ]
+    },
+    {
+      "base_duration_seconds": 3.4,
+      "base_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/base.f32le",
+      "base_pcm_sha256": "07bb06869a0cd4575bd156c5304e5bc7e95884c85db278f75c8a722241580455",
+      "base_sample_count": 54400,
+      "fixture": {
+        "fixture_id": "voices",
+        "language": "en",
+        "vocabulary": false,
+        "wav_name": "voices.wav"
+      },
+      "resumed_speech": {
+        "digest_matches": false,
+        "final_digest": "a9f71488d61109f118800225f3636d27f3c81daa9b35226e681877565945494a",
+        "snapshot_digest": "26af7eed19ce7c5a8925f37220c39ca464b273dafa4e70bc42cad9f248f88f5e"
+      },
+      "tail_stats": {
+        "0.1s": {
+          "peak": 0.0225830078125,
+          "rms": 0.009994266128553428
+        },
+        "0.25s": {
+          "peak": 0.031646728515625,
+          "rms": 0.011404460624147059
+        },
+        "0.5s": {
+          "peak": 0.428131103515625,
+          "rms": 0.055804018159615144
+        },
+        "1s": {
+          "peak": 0.51190185546875,
+          "rms": 0.08997994180354867
+        }
+      },
+      "variants": [
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/append-zero-0000ms-canonical.f32le",
+          "canonical_pcm_sha256": "07bb06869a0cd4575bd156c5304e5bc7e95884c85db278f75c8a722241580455",
+          "canonical_sample_count": 54400,
+          "digest_matches": false,
+          "endpoint_eligible": false,
+          "final_digest": "3f4481033762b194faa35651751acd98dd656eacc27907b43234c75c65b798c8",
+          "kind": "append_zero",
+          "label": "append-zero-0000ms",
+          "last_active_end_sample": 54400,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/append-zero-0000ms.f32le",
+          "raw_pcm_sha256": "07bb06869a0cd4575bd156c5304e5bc7e95884c85db278f75c8a722241580455",
+          "raw_sample_count": 54400,
+          "seconds": 0.0,
+          "snapshot_digest": null,
+          "snapshot_path": null,
+          "snapshot_pcm_sha256": null
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/append-zero-0100ms-canonical.f32le",
+          "canonical_pcm_sha256": "aefb3b7a5da9526ffc213412f0fdd87a06c1e20cfb3416b6407eb511725a8537",
+          "canonical_sample_count": 56000,
+          "digest_matches": false,
+          "endpoint_eligible": false,
+          "final_digest": "e64996b754ac5e18f405c9872c5252be7f6f600771b30ee168ce053a3d99d4ea",
+          "kind": "append_zero",
+          "label": "append-zero-0100ms",
+          "last_active_end_sample": 54400,
+          "observed_trailing_silence_samples": 1600,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/append-zero-0100ms.f32le",
+          "raw_pcm_sha256": "aefb3b7a5da9526ffc213412f0fdd87a06c1e20cfb3416b6407eb511725a8537",
+          "raw_sample_count": 56000,
+          "seconds": 0.1,
+          "snapshot_digest": null,
+          "snapshot_path": null,
+          "snapshot_pcm_sha256": null
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/append-zero-0250ms-canonical.f32le",
+          "canonical_pcm_sha256": "5de9cb5f297f1744ccdf69912ea679ba72895c707ce1654b71b6c9ab8ba786d0",
+          "canonical_sample_count": 58400,
+          "digest_matches": false,
+          "endpoint_eligible": false,
+          "final_digest": "26af7eed19ce7c5a8925f37220c39ca464b273dafa4e70bc42cad9f248f88f5e",
+          "kind": "append_zero",
+          "label": "append-zero-0250ms",
+          "last_active_end_sample": 54400,
+          "observed_trailing_silence_samples": 4000,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/append-zero-0250ms.f32le",
+          "raw_pcm_sha256": "5de9cb5f297f1744ccdf69912ea679ba72895c707ce1654b71b6c9ab8ba786d0",
+          "raw_sample_count": 58400,
+          "seconds": 0.25,
+          "snapshot_digest": null,
+          "snapshot_path": null,
+          "snapshot_pcm_sha256": null
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/append-zero-0500ms-canonical.f32le",
+          "canonical_pcm_sha256": "5de9cb5f297f1744ccdf69912ea679ba72895c707ce1654b71b6c9ab8ba786d0",
+          "canonical_sample_count": 58400,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "26af7eed19ce7c5a8925f37220c39ca464b273dafa4e70bc42cad9f248f88f5e",
+          "kind": "append_zero",
+          "label": "append-zero-0500ms",
+          "last_active_end_sample": 54400,
+          "observed_trailing_silence_samples": 8000,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/append-zero-0500ms.f32le",
+          "raw_pcm_sha256": "9fa8055d7150643832df9128d57a18eaccf2e2e808cb735aca969edf2de7a5ce",
+          "raw_sample_count": 62400,
+          "seconds": 0.5,
+          "snapshot_digest": "26af7eed19ce7c5a8925f37220c39ca464b273dafa4e70bc42cad9f248f88f5e",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/append-zero-0500ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "5de9cb5f297f1744ccdf69912ea679ba72895c707ce1654b71b6c9ab8ba786d0"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/append-zero-1000ms-canonical.f32le",
+          "canonical_pcm_sha256": "5de9cb5f297f1744ccdf69912ea679ba72895c707ce1654b71b6c9ab8ba786d0",
+          "canonical_sample_count": 58400,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "26af7eed19ce7c5a8925f37220c39ca464b273dafa4e70bc42cad9f248f88f5e",
+          "kind": "append_zero",
+          "label": "append-zero-1000ms",
+          "last_active_end_sample": 54400,
+          "observed_trailing_silence_samples": 16000,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/append-zero-1000ms.f32le",
+          "raw_pcm_sha256": "6151f26b6590b7b93c37a1046916668d66695872b1cf022ced99c2ea530806cb",
+          "raw_sample_count": 70400,
+          "seconds": 1.0,
+          "snapshot_digest": "26af7eed19ce7c5a8925f37220c39ca464b273dafa4e70bc42cad9f248f88f5e",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/append-zero-1000ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "5de9cb5f297f1744ccdf69912ea679ba72895c707ce1654b71b6c9ab8ba786d0"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/trim-0100ms-canonical.f32le",
+          "canonical_pcm_sha256": "4bc417a630548c722d488b332471744eb48375081cea8a4d0cff6086c1ea27e9",
+          "canonical_sample_count": 52800,
+          "endpoint_eligible": false,
+          "final_digest": "f6be4e10b2df96b636bd43684bdc83fb1d45d7303977e1d9eb9420b24c2b26a1",
+          "kind": "trim",
+          "label": "trim-0100ms",
+          "last_active_end_sample": 52800,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/trim-0100ms.f32le",
+          "raw_pcm_sha256": "4bc417a630548c722d488b332471744eb48375081cea8a4d0cff6086c1ea27e9",
+          "raw_sample_count": 52800,
+          "seconds": 0.1
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/trim-0250ms-canonical.f32le",
+          "canonical_pcm_sha256": "dd1402444125f8fe546170e832a900e18d258078c2e7ef45f12b27a5b8badf19",
+          "canonical_sample_count": 50400,
+          "endpoint_eligible": false,
+          "final_digest": "a679f749f2ee3782eb31d73ce66e3a1f863151bfef873708d755b2c9bac8aae0",
+          "kind": "trim",
+          "label": "trim-0250ms",
+          "last_active_end_sample": 50400,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/trim-0250ms.f32le",
+          "raw_pcm_sha256": "dd1402444125f8fe546170e832a900e18d258078c2e7ef45f12b27a5b8badf19",
+          "raw_sample_count": 50400,
+          "seconds": 0.25
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/trim-0500ms-canonical.f32le",
+          "canonical_pcm_sha256": "cc8bcfc14c3e8486c921d70bdfa28c120aea477eb24f589bc12c6ba7357a7ca6",
+          "canonical_sample_count": 46400,
+          "endpoint_eligible": false,
+          "final_digest": "8ce63684ef3081be22eaaf15367b43236a28b369267a7a26de0621ce269c795a",
+          "kind": "trim",
+          "label": "trim-0500ms",
+          "last_active_end_sample": 46400,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/trim-0500ms.f32le",
+          "raw_pcm_sha256": "cc8bcfc14c3e8486c921d70bdfa28c120aea477eb24f589bc12c6ba7357a7ca6",
+          "raw_sample_count": 46400,
+          "seconds": 0.5
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/trim-1000ms-canonical.f32le",
+          "canonical_pcm_sha256": "d476c16dcd504e7dc0dfa8536e9d63cd62d808c3e2ddcc65e43cd468dbc465da",
+          "canonical_sample_count": 38400,
+          "endpoint_eligible": false,
+          "final_digest": "3da238d1a37bf55bcba25a1e55d278d6014a02de4219d82ed1a72bb565be85dd",
+          "kind": "trim",
+          "label": "trim-1000ms",
+          "last_active_end_sample": 38400,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/voices/trim-1000ms.f32le",
+          "raw_pcm_sha256": "d476c16dcd504e7dc0dfa8536e9d63cd62d808c3e2ddcc65e43cd468dbc465da",
+          "raw_sample_count": 38400,
+          "seconds": 1.0
+        }
+      ]
+    },
+    {
+      "base_duration_seconds": 7.44,
+      "base_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/base.f32le",
+      "base_pcm_sha256": "d673c2f59cc36395ad98de2d10cd0b90acefad89cf94c864d3075242fabc7f0a",
+      "base_sample_count": 119040,
+      "fixture": {
+        "fixture_id": "ru1",
+        "language": "ru",
+        "vocabulary": false,
+        "wav_name": "ru1.wav"
+      },
+      "resumed_speech": {
+        "digest_matches": false,
+        "final_digest": "460b10fdfd4bd1be4422ec16b78806a967e970b69811dd8fba7941569a1c2360",
+        "snapshot_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651"
+      },
+      "tail_stats": {
+        "0.1s": {
+          "peak": 0.0031525492668151855,
+          "rms": 0.00044732767627919575
+        },
+        "0.25s": {
+          "peak": 0.0031525492668151855,
+          "rms": 0.0003512357121637232
+        },
+        "0.5s": {
+          "peak": 0.0031525492668151855,
+          "rms": 0.0003089971406188812
+        },
+        "1s": {
+          "peak": 0.027350008487701416,
+          "rms": 0.0013622284739599052
+        }
+      },
+      "variants": [
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-0000ms-canonical.f32le",
+          "canonical_pcm_sha256": "527b7a82e540ee62212d0070b5ca7bf63065a664401c2ca657a8785a2e855e0e",
+          "canonical_sample_count": 112960,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+          "kind": "append_zero",
+          "label": "append-zero-0000ms",
+          "last_active_end_sample": 108960,
+          "observed_trailing_silence_samples": 10080,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-0000ms.f32le",
+          "raw_pcm_sha256": "d673c2f59cc36395ad98de2d10cd0b90acefad89cf94c864d3075242fabc7f0a",
+          "raw_sample_count": 119040,
+          "seconds": 0.0,
+          "snapshot_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-0000ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "527b7a82e540ee62212d0070b5ca7bf63065a664401c2ca657a8785a2e855e0e"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-0100ms-canonical.f32le",
+          "canonical_pcm_sha256": "527b7a82e540ee62212d0070b5ca7bf63065a664401c2ca657a8785a2e855e0e",
+          "canonical_sample_count": 112960,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+          "kind": "append_zero",
+          "label": "append-zero-0100ms",
+          "last_active_end_sample": 108960,
+          "observed_trailing_silence_samples": 11680,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-0100ms.f32le",
+          "raw_pcm_sha256": "97fae7241e30407c9780f0c0370ff0fc879bad7999b9f3e779f64841e3922964",
+          "raw_sample_count": 120640,
+          "seconds": 0.1,
+          "snapshot_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-0100ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "527b7a82e540ee62212d0070b5ca7bf63065a664401c2ca657a8785a2e855e0e"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-0250ms-canonical.f32le",
+          "canonical_pcm_sha256": "527b7a82e540ee62212d0070b5ca7bf63065a664401c2ca657a8785a2e855e0e",
+          "canonical_sample_count": 112960,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+          "kind": "append_zero",
+          "label": "append-zero-0250ms",
+          "last_active_end_sample": 108960,
+          "observed_trailing_silence_samples": 14080,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-0250ms.f32le",
+          "raw_pcm_sha256": "a0fedfd0b8ce90ad9ec76950f960bcd3afd2d407c832b4559aef4c8fa7a1de24",
+          "raw_sample_count": 123040,
+          "seconds": 0.25,
+          "snapshot_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-0250ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "527b7a82e540ee62212d0070b5ca7bf63065a664401c2ca657a8785a2e855e0e"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-0500ms-canonical.f32le",
+          "canonical_pcm_sha256": "527b7a82e540ee62212d0070b5ca7bf63065a664401c2ca657a8785a2e855e0e",
+          "canonical_sample_count": 112960,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+          "kind": "append_zero",
+          "label": "append-zero-0500ms",
+          "last_active_end_sample": 108960,
+          "observed_trailing_silence_samples": 18080,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-0500ms.f32le",
+          "raw_pcm_sha256": "5ff0a049c3b24a7262b88974ac1f8e23a7a37e581a8ab9f4abb4e0c266827180",
+          "raw_sample_count": 127040,
+          "seconds": 0.5,
+          "snapshot_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-0500ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "527b7a82e540ee62212d0070b5ca7bf63065a664401c2ca657a8785a2e855e0e"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-1000ms-canonical.f32le",
+          "canonical_pcm_sha256": "527b7a82e540ee62212d0070b5ca7bf63065a664401c2ca657a8785a2e855e0e",
+          "canonical_sample_count": 112960,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+          "kind": "append_zero",
+          "label": "append-zero-1000ms",
+          "last_active_end_sample": 108960,
+          "observed_trailing_silence_samples": 26080,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-1000ms.f32le",
+          "raw_pcm_sha256": "1092fb09bd56130bc19b845627dd4027415c9525a11446e8140316e571ad3a1e",
+          "raw_sample_count": 135040,
+          "seconds": 1.0,
+          "snapshot_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/append-zero-1000ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "527b7a82e540ee62212d0070b5ca7bf63065a664401c2ca657a8785a2e855e0e"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/trim-0100ms-canonical.f32le",
+          "canonical_pcm_sha256": "527b7a82e540ee62212d0070b5ca7bf63065a664401c2ca657a8785a2e855e0e",
+          "canonical_sample_count": 112960,
+          "endpoint_eligible": true,
+          "final_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+          "kind": "trim",
+          "label": "trim-0100ms",
+          "last_active_end_sample": 108960,
+          "observed_trailing_silence_samples": 8480,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/trim-0100ms.f32le",
+          "raw_pcm_sha256": "b1145bcfdbfb01b7ea0cfc60e62cdfe075b2b67623435b4b87297d46c94d98ba",
+          "raw_sample_count": 117440,
+          "seconds": 0.1
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/trim-0250ms-canonical.f32le",
+          "canonical_pcm_sha256": "527b7a82e540ee62212d0070b5ca7bf63065a664401c2ca657a8785a2e855e0e",
+          "canonical_sample_count": 112960,
+          "endpoint_eligible": false,
+          "final_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+          "kind": "trim",
+          "label": "trim-0250ms",
+          "last_active_end_sample": 108960,
+          "observed_trailing_silence_samples": 6080,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/trim-0250ms.f32le",
+          "raw_pcm_sha256": "d44d2e15513b7cbefe7d6ef6c1c2aaa959f174e84e24e686064156fd87f03e5a",
+          "raw_sample_count": 115040,
+          "seconds": 0.25
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/trim-0500ms-canonical.f32le",
+          "canonical_pcm_sha256": "e3ad028508513bbd89186a0367cf9a3ba8a022eddf8a12f68f64f366b98a6025",
+          "canonical_sample_count": 111040,
+          "endpoint_eligible": false,
+          "final_digest": "da0a5e1979358aacdde673964e08ef4ad9b54bd35a53a06534ba0ed5b2a81662",
+          "kind": "trim",
+          "label": "trim-0500ms",
+          "last_active_end_sample": 108960,
+          "observed_trailing_silence_samples": 2080,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/trim-0500ms.f32le",
+          "raw_pcm_sha256": "e3ad028508513bbd89186a0367cf9a3ba8a022eddf8a12f68f64f366b98a6025",
+          "raw_sample_count": 111040,
+          "seconds": 0.5
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/trim-1000ms-canonical.f32le",
+          "canonical_pcm_sha256": "2ca7ec9e07002b266d2dea3dc97e09444d2fdf94e2720f5332998ba4fbf504b1",
+          "canonical_sample_count": 100160,
+          "endpoint_eligible": false,
+          "final_digest": "77fca0667f66a69d732b0ba9fd10591c6c8dad0a17130b1cd56c100e9e876443",
+          "kind": "trim",
+          "label": "trim-1000ms",
+          "last_active_end_sample": 96160,
+          "observed_trailing_silence_samples": 6880,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru1/trim-1000ms.f32le",
+          "raw_pcm_sha256": "a90602b65ffe70f5049242cd8ba49756cc3f06a89a71d7767dc06febcd89b317",
+          "raw_sample_count": 103040,
+          "seconds": 1.0
+        }
+      ]
+    },
+    {
+      "base_duration_seconds": 4.8,
+      "base_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/base.f32le",
+      "base_pcm_sha256": "204acd7577005f722abdf78ae21edd53cc5a9ee88093a9f7d050d73d7fe537f0",
+      "base_sample_count": 76800,
+      "fixture": {
+        "fixture_id": "ru6",
+        "language": "ru",
+        "vocabulary": false,
+        "wav_name": "ru6.wav"
+      },
+      "resumed_speech": {
+        "digest_matches": false,
+        "final_digest": "dbda8d0a0e8a4effb670c6e2f70ca46fe06428fb294ba3371aaedc8c45cf85f0",
+        "snapshot_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26"
+      },
+      "tail_stats": {
+        "0.1s": {
+          "peak": 0.0011389851570129395,
+          "rms": 0.0003462444881931471
+        },
+        "0.25s": {
+          "peak": 0.0013226866722106934,
+          "rms": 0.0003536074693405399
+        },
+        "0.5s": {
+          "peak": 0.03011763095855713,
+          "rms": 0.004545593931743344
+        },
+        "1s": {
+          "peak": 0.050460219383239746,
+          "rms": 0.009615888866834024
+        }
+      },
+      "variants": [
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/append-zero-0000ms-canonical.f32le",
+          "canonical_pcm_sha256": "8d9e9c09891027f2f145a4c4130decae390bacf41164f2732246276dd31bea5a",
+          "canonical_sample_count": 74560,
+          "digest_matches": false,
+          "endpoint_eligible": false,
+          "final_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26",
+          "kind": "append_zero",
+          "label": "append-zero-0000ms",
+          "last_active_end_sample": 70560,
+          "observed_trailing_silence_samples": 6240,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/append-zero-0000ms.f32le",
+          "raw_pcm_sha256": "204acd7577005f722abdf78ae21edd53cc5a9ee88093a9f7d050d73d7fe537f0",
+          "raw_sample_count": 76800,
+          "seconds": 0.0,
+          "snapshot_digest": null,
+          "snapshot_path": null,
+          "snapshot_pcm_sha256": null
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/append-zero-0100ms-canonical.f32le",
+          "canonical_pcm_sha256": "8d9e9c09891027f2f145a4c4130decae390bacf41164f2732246276dd31bea5a",
+          "canonical_sample_count": 74560,
+          "digest_matches": false,
+          "endpoint_eligible": false,
+          "final_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26",
+          "kind": "append_zero",
+          "label": "append-zero-0100ms",
+          "last_active_end_sample": 70560,
+          "observed_trailing_silence_samples": 7840,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/append-zero-0100ms.f32le",
+          "raw_pcm_sha256": "ee09a6ce91b7c426c97bc31b6ccb2eba7561a174de88b00e579ef60b78bf7a13",
+          "raw_sample_count": 78400,
+          "seconds": 0.1,
+          "snapshot_digest": null,
+          "snapshot_path": null,
+          "snapshot_pcm_sha256": null
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/append-zero-0250ms-canonical.f32le",
+          "canonical_pcm_sha256": "8d9e9c09891027f2f145a4c4130decae390bacf41164f2732246276dd31bea5a",
+          "canonical_sample_count": 74560,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26",
+          "kind": "append_zero",
+          "label": "append-zero-0250ms",
+          "last_active_end_sample": 70560,
+          "observed_trailing_silence_samples": 10240,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/append-zero-0250ms.f32le",
+          "raw_pcm_sha256": "eb505a3084d6631ab74f32c95f87104137e0f701fcbf0c9ac3b652ac7f80be72",
+          "raw_sample_count": 80800,
+          "seconds": 0.25,
+          "snapshot_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/append-zero-0250ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "8d9e9c09891027f2f145a4c4130decae390bacf41164f2732246276dd31bea5a"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/append-zero-0500ms-canonical.f32le",
+          "canonical_pcm_sha256": "8d9e9c09891027f2f145a4c4130decae390bacf41164f2732246276dd31bea5a",
+          "canonical_sample_count": 74560,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26",
+          "kind": "append_zero",
+          "label": "append-zero-0500ms",
+          "last_active_end_sample": 70560,
+          "observed_trailing_silence_samples": 14240,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/append-zero-0500ms.f32le",
+          "raw_pcm_sha256": "1dc978fd57e7afd08c15576e5df6c36f55b92163a5713d2346caa73833d7e985",
+          "raw_sample_count": 84800,
+          "seconds": 0.5,
+          "snapshot_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/append-zero-0500ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "8d9e9c09891027f2f145a4c4130decae390bacf41164f2732246276dd31bea5a"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/append-zero-1000ms-canonical.f32le",
+          "canonical_pcm_sha256": "8d9e9c09891027f2f145a4c4130decae390bacf41164f2732246276dd31bea5a",
+          "canonical_sample_count": 74560,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26",
+          "kind": "append_zero",
+          "label": "append-zero-1000ms",
+          "last_active_end_sample": 70560,
+          "observed_trailing_silence_samples": 22240,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/append-zero-1000ms.f32le",
+          "raw_pcm_sha256": "64ddf0995ca64d510807676e553e711d0c6d262043b61b2d5016d37a3162c477",
+          "raw_sample_count": 92800,
+          "seconds": 1.0,
+          "snapshot_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/append-zero-1000ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "8d9e9c09891027f2f145a4c4130decae390bacf41164f2732246276dd31bea5a"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/trim-0100ms-canonical.f32le",
+          "canonical_pcm_sha256": "8d9e9c09891027f2f145a4c4130decae390bacf41164f2732246276dd31bea5a",
+          "canonical_sample_count": 74560,
+          "endpoint_eligible": false,
+          "final_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26",
+          "kind": "trim",
+          "label": "trim-0100ms",
+          "last_active_end_sample": 70560,
+          "observed_trailing_silence_samples": 4640,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/trim-0100ms.f32le",
+          "raw_pcm_sha256": "d952fdcba39bd2f97ecbd26e9ea7e14070e2269766c83a3b9e88dc4bdd28af34",
+          "raw_sample_count": 75200,
+          "seconds": 0.1
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/trim-0250ms-canonical.f32le",
+          "canonical_pcm_sha256": "bb184e477f14b3281be7eef173070190a9ee096e34c3f20f734df96aea359251",
+          "canonical_sample_count": 72800,
+          "endpoint_eligible": false,
+          "final_digest": "f6c5e9a3663c470d243beb61efb4e01a3f6a47ce84c3af3eb368b2da525e6cee",
+          "kind": "trim",
+          "label": "trim-0250ms",
+          "last_active_end_sample": 70560,
+          "observed_trailing_silence_samples": 2240,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/trim-0250ms.f32le",
+          "raw_pcm_sha256": "bb184e477f14b3281be7eef173070190a9ee096e34c3f20f734df96aea359251",
+          "raw_sample_count": 72800,
+          "seconds": 0.25
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/trim-0500ms-canonical.f32le",
+          "canonical_pcm_sha256": "e5900cbb6e2ce43f7853b0cf7092ba8867050e68c362522d9609b8b18e063a10",
+          "canonical_sample_count": 68800,
+          "endpoint_eligible": false,
+          "final_digest": "81c229798f805b7580971cc68fcbfce845e9428b1c376fa63b0e2d9b211e4028",
+          "kind": "trim",
+          "label": "trim-0500ms",
+          "last_active_end_sample": 68800,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/trim-0500ms.f32le",
+          "raw_pcm_sha256": "e5900cbb6e2ce43f7853b0cf7092ba8867050e68c362522d9609b8b18e063a10",
+          "raw_sample_count": 68800,
+          "seconds": 0.5
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/trim-1000ms-canonical.f32le",
+          "canonical_pcm_sha256": "dc3b4047c4d97e1eb8e1f2675f887c36582cdebc23f68ceae52fbe0ca3bae888",
+          "canonical_sample_count": 60800,
+          "endpoint_eligible": false,
+          "final_digest": "02bac20ff4bb64d824311381728bc9dadbb128e8f83a37e40e89dba450fd7465",
+          "kind": "trim",
+          "label": "trim-1000ms",
+          "last_active_end_sample": 60800,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/ru6/trim-1000ms.f32le",
+          "raw_pcm_sha256": "dc3b4047c4d97e1eb8e1f2675f887c36582cdebc23f68ceae52fbe0ca3bae888",
+          "raw_sample_count": 60800,
+          "seconds": 1.0
+        }
+      ]
+    },
+    {
+      "base_duration_seconds": 7.5778125,
+      "base_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/base.f32le",
+      "base_pcm_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+      "base_sample_count": 121245,
+      "fixture": {
+        "fixture_id": "terms",
+        "language": "ru",
+        "vocabulary": true,
+        "wav_name": "terms.wav"
+      },
+      "resumed_speech": {
+        "digest_matches": false,
+        "final_digest": "75eb6835acd71ddd1508a1426142fc129a68f490a5796b497b029b56d1d6a643",
+        "snapshot_digest": "b4d86fe56a54ffc6b21159c7c46d81598f98765a2e9d13f4ea6666ee1113abc6"
+      },
+      "tail_stats": {
+        "0.1s": {
+          "peak": 0.134429931640625,
+          "rms": 0.03521617302551744
+        },
+        "0.25s": {
+          "peak": 0.560394287109375,
+          "rms": 0.08525633430382538
+        },
+        "0.5s": {
+          "peak": 0.560394287109375,
+          "rms": 0.1239250921197538
+        },
+        "1s": {
+          "peak": 0.560394287109375,
+          "rms": 0.1476588979668047
+        }
+      },
+      "variants": [
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/append-zero-0000ms-canonical.f32le",
+          "canonical_pcm_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+          "canonical_sample_count": 121245,
+          "digest_matches": false,
+          "endpoint_eligible": false,
+          "final_digest": "b9b4515ec453f249cfc8c85074b18b768fa25dab379be5308c212168ddcebf71",
+          "kind": "append_zero",
+          "label": "append-zero-0000ms",
+          "last_active_end_sample": 120800,
+          "observed_trailing_silence_samples": 445,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/append-zero-0000ms.f32le",
+          "raw_pcm_sha256": "2950881e84a4a8706a5e91f525ee604214f9f2e218c3544d1b4b72d4dee7699d",
+          "raw_sample_count": 121245,
+          "seconds": 0.0,
+          "snapshot_digest": null,
+          "snapshot_path": null,
+          "snapshot_pcm_sha256": null
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/append-zero-0100ms-canonical.f32le",
+          "canonical_pcm_sha256": "ea4f9d9f365e6f09852960f9d59c8a347625661d408028c6fe4522812baa52e4",
+          "canonical_sample_count": 122845,
+          "digest_matches": false,
+          "endpoint_eligible": false,
+          "final_digest": "309fca70e90fc7af6221ece715a7fcf88455b996216bc054bb0ae7de17171292",
+          "kind": "append_zero",
+          "label": "append-zero-0100ms",
+          "last_active_end_sample": 120800,
+          "observed_trailing_silence_samples": 2045,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/append-zero-0100ms.f32le",
+          "raw_pcm_sha256": "ea4f9d9f365e6f09852960f9d59c8a347625661d408028c6fe4522812baa52e4",
+          "raw_sample_count": 122845,
+          "seconds": 0.1,
+          "snapshot_digest": null,
+          "snapshot_path": null,
+          "snapshot_pcm_sha256": null
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/append-zero-0250ms-canonical.f32le",
+          "canonical_pcm_sha256": "cfc35d67e8b31bc4d6355d454e945f953c44537c4eec2dcb62499c888fbcd67e",
+          "canonical_sample_count": 124800,
+          "digest_matches": false,
+          "endpoint_eligible": false,
+          "final_digest": "b4d86fe56a54ffc6b21159c7c46d81598f98765a2e9d13f4ea6666ee1113abc6",
+          "kind": "append_zero",
+          "label": "append-zero-0250ms",
+          "last_active_end_sample": 120800,
+          "observed_trailing_silence_samples": 4445,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/append-zero-0250ms.f32le",
+          "raw_pcm_sha256": "8f09c98f1700bf3a9ee4a4a41c9cfdb9a24f36dbb464f43fcb87fdf93796d092",
+          "raw_sample_count": 125245,
+          "seconds": 0.25,
+          "snapshot_digest": null,
+          "snapshot_path": null,
+          "snapshot_pcm_sha256": null
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/append-zero-0500ms-canonical.f32le",
+          "canonical_pcm_sha256": "cfc35d67e8b31bc4d6355d454e945f953c44537c4eec2dcb62499c888fbcd67e",
+          "canonical_sample_count": 124800,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "b4d86fe56a54ffc6b21159c7c46d81598f98765a2e9d13f4ea6666ee1113abc6",
+          "kind": "append_zero",
+          "label": "append-zero-0500ms",
+          "last_active_end_sample": 120800,
+          "observed_trailing_silence_samples": 8445,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/append-zero-0500ms.f32le",
+          "raw_pcm_sha256": "998b0d23c88d2a788779d8b45612f6b636bcbd9dac75df1863f473313639af91",
+          "raw_sample_count": 129245,
+          "seconds": 0.5,
+          "snapshot_digest": "b4d86fe56a54ffc6b21159c7c46d81598f98765a2e9d13f4ea6666ee1113abc6",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/append-zero-0500ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "cfc35d67e8b31bc4d6355d454e945f953c44537c4eec2dcb62499c888fbcd67e"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/append-zero-1000ms-canonical.f32le",
+          "canonical_pcm_sha256": "cfc35d67e8b31bc4d6355d454e945f953c44537c4eec2dcb62499c888fbcd67e",
+          "canonical_sample_count": 124800,
+          "digest_matches": true,
+          "endpoint_eligible": true,
+          "final_digest": "b4d86fe56a54ffc6b21159c7c46d81598f98765a2e9d13f4ea6666ee1113abc6",
+          "kind": "append_zero",
+          "label": "append-zero-1000ms",
+          "last_active_end_sample": 120800,
+          "observed_trailing_silence_samples": 16445,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/append-zero-1000ms.f32le",
+          "raw_pcm_sha256": "4504554e8c523066efb95d28a33a0eebda4ad3e191b562c3d8b95a1b95ad4550",
+          "raw_sample_count": 137245,
+          "seconds": 1.0,
+          "snapshot_digest": "b4d86fe56a54ffc6b21159c7c46d81598f98765a2e9d13f4ea6666ee1113abc6",
+          "snapshot_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/append-zero-1000ms-snapshot.f32le",
+          "snapshot_pcm_sha256": "cfc35d67e8b31bc4d6355d454e945f953c44537c4eec2dcb62499c888fbcd67e"
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/trim-0100ms-canonical.f32le",
+          "canonical_pcm_sha256": "8072aef5a835e07c7f41b5de80ea98c5a54b2a1e2b4fb8cd1b534cfc91ac943b",
+          "canonical_sample_count": 119645,
+          "endpoint_eligible": false,
+          "final_digest": "47ae8373c138337d25a79c4da335231f7b6b4596fc7c0923bb566c0e7d29e9cd",
+          "kind": "trim",
+          "label": "trim-0100ms",
+          "last_active_end_sample": 119645,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/trim-0100ms.f32le",
+          "raw_pcm_sha256": "8072aef5a835e07c7f41b5de80ea98c5a54b2a1e2b4fb8cd1b534cfc91ac943b",
+          "raw_sample_count": 119645,
+          "seconds": 0.1
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/trim-0250ms-canonical.f32le",
+          "canonical_pcm_sha256": "8d7d7f211fc33814b31a5843acb90c3d45ac785cdb4ee989001bc270d69e8c8a",
+          "canonical_sample_count": 117245,
+          "endpoint_eligible": false,
+          "final_digest": "07215a6937644a282f75da51d66870e49a0bfd4c198453ac368cd4d291f7b310",
+          "kind": "trim",
+          "label": "trim-0250ms",
+          "last_active_end_sample": 116960,
+          "observed_trailing_silence_samples": 285,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/trim-0250ms.f32le",
+          "raw_pcm_sha256": "8d7d7f211fc33814b31a5843acb90c3d45ac785cdb4ee989001bc270d69e8c8a",
+          "raw_sample_count": 117245,
+          "seconds": 0.25
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/trim-0500ms-canonical.f32le",
+          "canonical_pcm_sha256": "d35b1e88d059f46f4e78e94b9a0273e4f38b0d54bba403e148cc98ca60cce2ea",
+          "canonical_sample_count": 113245,
+          "endpoint_eligible": false,
+          "final_digest": "54f68b0524a9f6a3c19ed799dc0c95562b1875ec73fdc00b4b5808a85731b613",
+          "kind": "trim",
+          "label": "trim-0500ms",
+          "last_active_end_sample": 113245,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/trim-0500ms.f32le",
+          "raw_pcm_sha256": "d35b1e88d059f46f4e78e94b9a0273e4f38b0d54bba403e148cc98ca60cce2ea",
+          "raw_sample_count": 113245,
+          "seconds": 0.5
+        },
+        {
+          "canonical_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/trim-1000ms-canonical.f32le",
+          "canonical_pcm_sha256": "13b18384ecb6fe4312a1fb33da6baba0b954a2be165fc3b484f6fe930646931a",
+          "canonical_sample_count": 105245,
+          "endpoint_eligible": false,
+          "final_digest": "788060fe61a6b75ceb392cbaac95761fe712609d2739b917ed4c3a02b5def0cb",
+          "kind": "trim",
+          "label": "trim-1000ms",
+          "last_active_end_sample": 105245,
+          "observed_trailing_silence_samples": 0,
+          "raw_path": "$TMP/openramble-endpoint-cache/harness/variants/terms/trim-1000ms.f32le",
+          "raw_pcm_sha256": "13b18384ecb6fe4312a1fb33da6baba0b954a2be165fc3b484f6fe930646931a",
+          "raw_sample_count": 105245,
+          "seconds": 1.0
+        }
+      ]
+    }
+  ],
+  "parameter_falsification": [
+    {
+      "baseline_digest": "65da38d4518746c6171b207d277cb6265aa536e9b3193affcbc3bc09a4b71f55",
+      "changed_digest": "3e5dd0e03a6cecc07a4bba55b2439f00bb4dbaaf2c9500efcff85a44795420f3",
+      "changed_field": "language",
+      "digest_matches": false,
+      "fixture_id": "libri"
+    },
+    {
+      "baseline_digest": "65da38d4518746c6171b207d277cb6265aa536e9b3193affcbc3bc09a4b71f55",
+      "changed_digest": "9a090b21385f8ef47c02a380bd3b746bac7161017eefb54a97b6d3bb6ea484ab",
+      "changed_field": "model_revision",
+      "digest_matches": false,
+      "fixture_id": "libri"
+    },
+    {
+      "baseline_digest": "65da38d4518746c6171b207d277cb6265aa536e9b3193affcbc3bc09a4b71f55",
+      "changed_digest": "430e31d3e761cbfd22d53ae7452fd40536e5b10ea1a7c2e533c272964c2388d2",
+      "changed_field": "vocabulary_revision",
+      "digest_matches": false,
+      "fixture_id": "libri"
+    },
+    {
+      "baseline_digest": "65da38d4518746c6171b207d277cb6265aa536e9b3193affcbc3bc09a4b71f55",
+      "changed_digest": "4ec351ead5bca693ebacb5b6308fc914c411fe9efe980ae72c0bd4631548ee52",
+      "changed_field": "vocabulary_terms_digest",
+      "digest_matches": false,
+      "fixture_id": "libri"
+    },
+    {
+      "baseline_digest": "3f4481033762b194faa35651751acd98dd656eacc27907b43234c75c65b798c8",
+      "changed_digest": "df90ba7a494cc979aeb8eb10d6ac23fe8f3e6aa799326b57d1e1d1cf71f9b47f",
+      "changed_field": "language",
+      "digest_matches": false,
+      "fixture_id": "voices"
+    },
+    {
+      "baseline_digest": "3f4481033762b194faa35651751acd98dd656eacc27907b43234c75c65b798c8",
+      "changed_digest": "e4a15c05f0e3802b6c6b9b91317d6c0a0c52eab0a5b40073e480b73dc5dbb277",
+      "changed_field": "model_revision",
+      "digest_matches": false,
+      "fixture_id": "voices"
+    },
+    {
+      "baseline_digest": "3f4481033762b194faa35651751acd98dd656eacc27907b43234c75c65b798c8",
+      "changed_digest": "edccae55d91a9d7f3821e297c70e010f63558fc44c7ffe31c97ba24f5f2b09bf",
+      "changed_field": "vocabulary_revision",
+      "digest_matches": false,
+      "fixture_id": "voices"
+    },
+    {
+      "baseline_digest": "3f4481033762b194faa35651751acd98dd656eacc27907b43234c75c65b798c8",
+      "changed_digest": "4680f9e2552b39f353ad2195e9ec9d2f87390900b3e6e0e410e32f78974b756b",
+      "changed_field": "vocabulary_terms_digest",
+      "digest_matches": false,
+      "fixture_id": "voices"
+    },
+    {
+      "baseline_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+      "changed_digest": "1f75a003a85c462c22ef4fbea12da1e4ff9bebcc5550f7077c8b7b70c92241b0",
+      "changed_field": "language",
+      "digest_matches": false,
+      "fixture_id": "ru1"
+    },
+    {
+      "baseline_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+      "changed_digest": "b8245fe3009c5875a89bd9d5f152135b529d36fb2a9a35f8f2cdfc227ddc816b",
+      "changed_field": "model_revision",
+      "digest_matches": false,
+      "fixture_id": "ru1"
+    },
+    {
+      "baseline_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+      "changed_digest": "a66f2db97be8882dc012ec91a88f7ca0be4c9427823614941921b2a564b24872",
+      "changed_field": "vocabulary_revision",
+      "digest_matches": false,
+      "fixture_id": "ru1"
+    },
+    {
+      "baseline_digest": "cb13822be7eb0ff1c853a3495f4ce222a960c841ff9716dd0b76802f8a122651",
+      "changed_digest": "686cdcce11ecfa50ba5f3e46e3a8ae6fe2307572e11c8088449c9a8d40ef19d4",
+      "changed_field": "vocabulary_terms_digest",
+      "digest_matches": false,
+      "fixture_id": "ru1"
+    },
+    {
+      "baseline_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26",
+      "changed_digest": "16e8a0770a4bc33dfbf56db84e2b1aa4e113bb6fa17fe5b0269cd94dbe1c13a5",
+      "changed_field": "language",
+      "digest_matches": false,
+      "fixture_id": "ru6"
+    },
+    {
+      "baseline_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26",
+      "changed_digest": "ee4fc0b4a1ba5d5074141fb200e56874e23a4f9d916e5114d570a2ba74f76355",
+      "changed_field": "model_revision",
+      "digest_matches": false,
+      "fixture_id": "ru6"
+    },
+    {
+      "baseline_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26",
+      "changed_digest": "0e6347091d5bc31e9abed8c09551d2569143d5681dd0f3f86d73deebf3a8e99e",
+      "changed_field": "vocabulary_revision",
+      "digest_matches": false,
+      "fixture_id": "ru6"
+    },
+    {
+      "baseline_digest": "c860f5db1180668312f0b4c605272a86c136eb2673ee5173fb93fbb146bdeb26",
+      "changed_digest": "775d68f6742e0174451cfd803b39be193bfd55ba9843cb3123d80aafc9f2ec16",
+      "changed_field": "vocabulary_terms_digest",
+      "digest_matches": false,
+      "fixture_id": "ru6"
+    },
+    {
+      "baseline_digest": "b9b4515ec453f249cfc8c85074b18b768fa25dab379be5308c212168ddcebf71",
+      "changed_digest": "7bfce20f36309756ff136cc674df80e9c04ee8ad72a40df8a988fbd066ed694c",
+      "changed_field": "language",
+      "digest_matches": false,
+      "fixture_id": "terms"
+    },
+    {
+      "baseline_digest": "b9b4515ec453f249cfc8c85074b18b768fa25dab379be5308c212168ddcebf71",
+      "changed_digest": "955fa6bfe97ec5872bce8cfeb75e550dae10a315278e4dd65601f1e20b768f10",
+      "changed_field": "model_revision",
+      "digest_matches": false,
+      "fixture_id": "terms"
+    },
+    {
+      "baseline_digest": "b9b4515ec453f249cfc8c85074b18b768fa25dab379be5308c212168ddcebf71",
+      "changed_digest": "5511c158324befd1c2be878c5a4f08ccd913608511550fabb030903d5ccdf952",
+      "changed_field": "vocabulary_revision",
+      "digest_matches": false,
+      "fixture_id": "terms"
+    },
+    {
+      "baseline_digest": "b9b4515ec453f249cfc8c85074b18b768fa25dab379be5308c212168ddcebf71",
+      "changed_digest": "2dffd3fa3ff4ebdfb7a60ed83009c959c21f6d0dc0d4e21b22e9d9cf95f08b3e",
+      "changed_field": "vocabulary_terms_digest",
+      "digest_matches": false,
+      "fixture_id": "terms"
+    }
+  ],
+  "schema_version": 1
+}

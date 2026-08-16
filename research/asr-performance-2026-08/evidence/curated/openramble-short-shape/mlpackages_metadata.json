@@ -1,0 +1,432 @@
+{
+  "model_id": "nvidia/parakeet-tdt-0.6b-v3",
+  "sample_rate": 16000,
+  "max_audio_seconds": 15.0,
+  "max_audio_samples": 240000,
+  "max_symbol_steps": 1,
+  "vocab_size": 8192,
+  "joint_extra_outputs": 5,
+  "checkpoint": {
+    "type": "pretrained",
+    "model_id": "nvidia/parakeet-tdt-0.6b-v3"
+  },
+  "coreml": {
+    "compute_units": "ALL",
+    "compute_precision": "FLOAT32"
+  },
+  "components": {
+    "preprocessor": {
+      "inputs": {
+        "audio_signal": [
+          1,
+          240000
+        ],
+        "audio_length": [
+          1
+        ]
+      },
+      "outputs": {
+        "mel": [
+          1,
+          128,
+          1501
+        ],
+        "mel_length": [
+          1
+        ]
+      },
+      "path": "parakeet_preprocessor.mlpackage"
+    },
+    "encoder": {
+      "inputs": {
+        "mel": [
+          1,
+          128,
+          1501
+        ],
+        "mel_length": [
+          1
+        ]
+      },
+      "outputs": {
+        "encoder": [
+          1,
+          1024,
+          188
+        ],
+        "encoder_length": [
+          1
+        ]
+      },
+      "path": "parakeet_encoder.mlpackage"
+    },
+    "mel_encoder": {
+      "inputs": {
+        "audio_signal": [
+          1,
+          240000
+        ],
+        "audio_length": [
+          1
+        ]
+      },
+      "outputs": {
+        "encoder": [
+          1,
+          1024,
+          188
+        ],
+        "encoder_length": [
+          1
+        ]
+      },
+      "path": "parakeet_mel_encoder.mlpackage"
+    },
+    "decoder": {
+      "inputs": {
+        "targets": [
+          1,
+          1
+        ],
+        "target_length": [
+          1
+        ],
+        "h_in": [
+          2,
+          1,
+          640
+        ],
+        "c_in": [
+          2,
+          1,
+          640
+        ]
+      },
+      "outputs": {
+        "decoder": [
+          1,
+          640,
+          1
+        ],
+        "h_out": [
+          2,
+          1,
+          640
+        ],
+        "c_out": [
+          2,
+          1,
+          640
+        ]
+      },
+      "path": "parakeet_decoder.mlpackage"
+    },
+    "joint": {
+      "inputs": {
+        "encoder": [
+          1,
+          1024,
+          188
+        ],
+        "decoder": [
+          1,
+          640,
+          1
+        ]
+      },
+      "outputs": {
+        "logits": [
+          1,
+          188,
+          1,
+          8198
+        ]
+      },
+      "path": "parakeet_joint.mlpackage"
+    },
+    "joint_decision": {
+      "inputs": {
+        "encoder": [
+          1,
+          1024,
+          188
+        ],
+        "decoder": [
+          1,
+          640,
+          1
+        ]
+      },
+      "outputs": {
+        "token_id": [
+          1,
+          1024,
+          640
+        ],
+        "token_prob": [
+          1,
+          1024,
+          640
+        ],
+        "duration": [
+          1,
+          1024,
+          640
+        ]
+      },
+      "path": "parakeet_joint_decision.mlpackage"
+    },
+    "joint_decision_single_step": {
+      "inputs": {
+        "encoder_step": [
+          1,
+          1024,
+          1
+        ],
+        "decoder_step": [
+          1,
+          640,
+          1
+        ]
+      },
+      "outputs": {
+        "token_id": [
+          1,
+          1,
+          1
+        ],
+        "token_prob": [
+          1,
+          1,
+          1
+        ],
+        "duration": [
+          1,
+          1,
+          1
+        ]
+      },
+      "path": "parakeet_joint_decision_single_step.mlpackage"
+    }
+  },
+  "validation": {
+    "requested": true,
+    "status": "ok",
+    "atol": 0.0001,
+    "rtol": 0.001,
+    "symbol_steps": 32,
+    "audio_path": null,
+    "components": {
+      "preprocessor": {
+        "mel": {
+          "max_abs": 0.48384106159210205,
+          "max_rel": 1.9971061944961548,
+          "match": true
+        },
+        "length_match": true,
+        "latency": {
+          "runs": 5,
+          "warmup": 2,
+          "torch_ms": {
+            "mean": 1.9939915742725134,
+            "std": 0.07679941425541917
+          },
+          "coreml_ms": {
+            "mean": 1.1883336119353771,
+            "std": 0.06561290487126992
+          },
+          "rtf": {
+            "torch": 0.00013293277161816755,
+            "coreml": 7.922224079569181e-05
+          }
+        },
+        "plots": {
+          "mel_composite.png": "mel_composite.png"
+        }
+      },
+      "encoder": {
+        "encoder": {
+          "max_abs": 0.005408093333244324,
+          "max_rel": 1.9989821910858154,
+          "match": true
+        },
+        "length_match": true,
+        "latency": {
+          "runs": 5,
+          "warmup": 2,
+          "torch_ms": {
+            "mean": 1030.481566535309,
+            "std": 61.12092100354026
+          },
+          "coreml_ms": {
+            "mean": 25.444025173783302,
+            "std": 0.019404912635624456
+          },
+          "rtf": {
+            "torch": 0.06869877110235394,
+            "coreml": 0.0016962683449188868
+          }
+        },
+        "plots": {
+          "encoder_time_l2.png": "encoder_time_l2.png"
+        }
+      },
+      "decoder": {
+        "decoder": {
+          "max_abs": 0.01992393285036087,
+          "max_rel": 1.9797950983047485,
+          "match": true
+        },
+        "h_out": {
+          "max_abs": 0.048870980739593506,
+          "max_rel": 1.6649388074874878,
+          "match": true
+        },
+        "c_out": {
+          "max_abs": 0.7885193824768066,
+          "max_rel": 1.666900634765625,
+          "match": true
+        },
+        "latency": {
+          "runs": 5,
+          "warmup": 2,
+          "torch_ms": {
+            "mean": 7.512458227574825,
+            "std": 0.14005641459625567
+          },
+          "coreml_ms": {
+            "mean": 4.324891557916999,
+            "std": 0.10921706592501401
+          },
+          "rtf": {
+            "torch": 0.0005008305485049884,
+            "coreml": 0.0002883261038611333
+          }
+        },
+        "plots": {
+          "decoder_steps_l2.png": "decoder_steps_l2.png"
+        }
+      },
+      "joint": {
+        "logits": {
+          "max_abs": 0.099273681640625,
+          "max_rel": 1.917771577835083,
+          "match": true
+        },
+        "latency": {
+          "runs": 5,
+          "warmup": 2,
+          "torch_ms": {
+            "mean": 28.3439417835325,
+            "std": 0.265091042836136
+          },
+          "coreml_ms": {
+            "mean": 22.657233430072665,
+            "std": 0.20110920609593658
+          },
+          "rtf": {
+            "torch": 0.0018895961189021667,
+            "coreml": 0.001510482228671511
+          }
+        },
+        "plots": {
+          "joint_top50.png": "joint_top50.png",
+          "joint_time_l2.png": "joint_time_l2.png"
+        }
+      },
+      "mel_encoder": {
+        "encoder": {
+          "max_abs": 0.010630208998918533,
+          "max_rel": 1.9964393377304077,
+          "match": true
+        },
+        "length_match": true,
+        "vs_separate_coreml": {
+          "max_abs": 0.0089111328125,
+          "max_rel": 2.0,
+          "match": true
+        },
+        "latency": {
+          "runs": 5,
+          "warmup": 2,
+          "fused_coreml_ms": {
+            "mean": 27.10114144720137,
+            "std": 0.06494816293632807
+          },
+          "separate_coreml_ms": {
+            "mean": 26.63235878571868,
+            "std": 0.06842224725951737
+          },
+          "separate_torch_ms": {
+            "mean": 1032.4755581095815,
+            "std": 61.120969253367036
+          },
+          "rtf": {
+            "fused_coreml": 0.001806742763146758,
+            "separate_coreml": 0.0017754905857145786,
+            "separate_torch": 0.0688317038739721
+          }
+        },
+        "plots": {
+          "mel_encoder_time_l2.png": "mel_encoder_time_l2.png"
+        }
+      },
+      "joint_decision": {
+        "vs_torch_cpu": {
+          "token_id": {
+            "max_abs": 7954.0,
+            "max_rel": 0.970947265625,
+            "match": false
+          },
+          "token_prob": {
+            "max_abs": 0.006797075271606445,
+            "max_rel": 0.013232328929007053,
+            "match": true
+          },
+          "duration": {
+            "max_abs": 1.0,
+            "max_rel": 1.0,
+            "match": false
+          }
+        },
+        "vs_coreml_joint_cpu": {
+          "token_id": {
+            "max_abs": 0.0,
+            "max_rel": 0.0,
+            "match": true
+          },
+          "token_prob": {
+            "max_abs": 0.0002440810203552246,
+            "max_rel": 0.0004735384718514979,
+            "match": true
+          },
+          "duration": {
+            "max_abs": 0.0,
+            "max_rel": 0.0,
+            "match": true
+          }
+        },
+        "latency": {
+          "runs": 5,
+          "warmup": 2,
+          "fused_coreml_ms": {
+            "mean": 64.08805842511356,
+            "std": 0.596408636567345
+          },
+          "separate_joint_coreml_plus_cpu_ms": {
+            "mean": 50.046625174582005,
+            "std": 1.0175464926370517
+          },
+          "rtf": {
+            "fused_coreml": 0.004272537228340904,
+            "separate_joint_coreml_plus_cpu": 0.003336441678305467
+          }
+        },
+        "plots": {
+          "joint_decision_prob_u0.png": "joint_decision_prob_u0.png",
+          "joint_decision_token_agree.png": "joint_decision_token_agree.png"
+        }
+      }
+    }
+  }
+}

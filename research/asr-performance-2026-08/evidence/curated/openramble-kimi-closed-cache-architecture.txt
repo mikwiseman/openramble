@@ -1,0 +1,36 @@
+Continue the prior OpenRamble/FluidAudio performance review. Remain read-only: do not edit files and do not run CoreML/model benchmarks.
+
+New exact evidence supersedes speculation:
+
+- Temp prototype diff lives in `$TMP/openramble-stop-precompute-ee9a7f12/FluidAudio` (base pinned FluidAudio ee9a7f12). Read its modified `ChunkProcessor.swift` and new `TempFirstClosedChunkCache.swift`.
+- Exact report: `$TMP/openramble-stop-precompute-ee9a7f12/all-closed-cache-n5.json`; memo: `$TMP/openramble-stop-precompute-ee9a7f12/EVIDENCE_MEMO.md`.
+- Shipping configuration: v3, melChunkContext=false, parallelChunkConcurrency=4, maxTokens=600, compute units `.all`, persistent prewarmed worker.
+- The prototype recomputes the eventual final offline plan and reuses only non-final windows with identical plan, language, manager identity, and bit-exact Float input. Existing final TokenWindow merge/timing code is unchanged.
+- 25/25 pairs had exact transcript SHA and full token-timing SHA. Stop p50 baseline -> cached: real 56.104s 174.25 -> 57.75ms (3.02x); real 84.381s 233.78 -> 67.21ms (3.48x); synthetic 60s 179.62 -> 73.14ms (2.46x); 120s 300.81 -> 54.51ms (5.52x); 300s 747.69 -> 64.77ms (11.54x). Cached/final windows 4/5, 6/7, 4/5, 9/10, 23/24.
+- Under-speech precompute duty 0.46-0.56% of speech; minimum simulated completion slack 2.0-10.1s. Cache currently duplicates Float input, max 22MB at 300s, though a product cache can retain hashes+TokenWindow rather than every Float after validation.
+- Endpoint/trailing-silence canonicalization was falsified for current semantics: eligible digest match 14/14 but transcript only 11/14 and token/word timing parity 0/14, including vocabulary terms. Do not recommend it without a new product semantics + broad migration.
+
+The shipping app architecture to inspect:
+- capture: `Packages/DictationCore/Sources/DictationAudio/MicrophoneCapture.swift`, especially persistent linked `RecordingPCMBuffer` and session/disposition containment.
+- controller: `Packages/DictationCore/Sources/DictationCore/DictationController.swift`.
+- app worker boundary: `apps/macos/OpenRamble/System/ASRWorkerSupervisor.swift`, `apps/macos/OpenRambleASRWorker/WorkerRuntime.swift`.
+- wire: `Packages/ASRWorkerProtocol/Sources/ASRWorkerProtocol/ASRWorkerProtocol.swift`.
+- adapter: `Packages/LocalASR/Sources/LocalASR/{LocalTranscriber.swift,FluidAudioAdapter.swift}`.
+
+Candidate product architecture:
+1. During a recording, capture exposes a session-scoped lossless immutable prefix/range snapshot from RecordingPCMBuffer. Never use the lossy UI `onSamples` callback and never make disk/WAV a prerequisite.
+2. A coalescing background pump sends bounded incremental PCM to the existing single persistent worker. The worker owns per-session raw audio plus exact closed TokenWindow entries and computes a window only after its silence-aligned start and complete non-final input are stable.
+3. At Stop, final full audio + the same session/config generation is sent. Worker recomputes final offline plan and admits each cache entry only if window index/plan/isLast=false/config/model/language/sample hash match. Any mismatch simply recomputes that window. Existing merge/timings and final vocabulary candidateRegions/CTC remain authoritative.
+4. One worker only: under-speech precompute is low-priority/coalesced. Stop may wait for an already executing ~75ms request but must supersede all queued prefix work. Never cancel an active CoreML request because supervisor cancellation kills the generation/cache.
+5. Cache lifetime is exact session only; worker death, model/vocabulary/config/language change, cancellation, memory pressure, or new session invalidates it. TokenWindow cache is bounded; raw PCM max 5 minutes.
+
+Adversarially answer:
+A. Is this architecture semantically exact, or is there a hidden dependency in final planning/TokenWindow/merge/vocabulary that makes the evidence insufficient?
+B. Propose the smallest clear capture->supervisor->wire->worker->FluidAudio APIs and state machine. Prefer a bounded number of operations and no arbitrary synchronous callback on capture/MainActor.
+C. Identify races at Stop, late prefix append, worker restart, session reuse, vocabulary revision, language autodetect, memory pressure, and >5min capacity. Say which state/hash must fence each.
+D. How should a single-request worker prioritize Stop without killing an active prefix CoreML call? Should append and compute be distinct wire operations? Give exact queue/coalescing semantics.
+E. CTC candidateRegions currently executes after TDT. Can primary TokenWindow caching remain exact while CTC stays final-only? Is there a safe later CTC evidence cache, or should it be excluded initially?
+F. Give a test/acceptance matrix including bit-exact output, 15.0/15.1/29.9/30.1 boundaries, silence alignment adversaries, stop arriving during precompute, cancellation, generation death, pressure, 5min, and fault containment.
+G. Rank P0/P1 issues and give a go/no-go verdict for implementing the exact primary cache in product now. Explicitly distinguish proven temp simulation from unproven live capture scheduling.
+
+Do not optimize for agreement. Look for a simpler architecture if this one is overbuilt, but do not fall back to preview/streaming or encoder-prefix caching, which were already disproven for exact current semantics.

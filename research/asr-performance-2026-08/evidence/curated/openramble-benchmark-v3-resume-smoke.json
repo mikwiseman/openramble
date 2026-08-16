@@ -1,0 +1,802 @@
+{
+  "engines": {
+    "openramble": {
+      "argv": [
+        "$REPO/Packages/LocalASR/.build/arm64-apple-macosx/debug/asr-bench",
+        "serve-jsonl"
+      ],
+      "binary_sha256": "ac2c8e49b4635c931103c5a1886542d69de79bf6f82c75ddd088c60ea6e51d78",
+      "model_path_fingerprints": {
+        "model": {
+          "byte_count": 483105645,
+          "file_count": 21,
+          "files": [
+            {
+              "byte_count": 243,
+              "path": "Decoder.mlmodelc/analytics/coremldata.bin",
+              "sha256": "4238c4e81ecd0dc94bd7dfbb60f7e2cc824107c1ffe0387b8607b72833dba350"
+            },
+            {
+              "byte_count": 554,
+              "path": "Decoder.mlmodelc/coremldata.bin",
+              "sha256": "18647af085d87bd8f3121c8a9b4d4564c1ede038dab63d295b4e745cf2d7fb99"
+            },
+            {
+              "byte_count": 3427,
+              "path": "Decoder.mlmodelc/metadata.json",
+              "sha256": "a39e93cd8371b8ded92635c7804fcd0590f0d1dd9415c6d19a0484be073077d9"
+            },
+            {
+              "byte_count": 13110,
+              "path": "Decoder.mlmodelc/model.mil",
+              "sha256": "ef2a0a281695398a62fde86ac269c68f73d5b578d7ed3b31f2ba91a2d1ea1f35"
+            },
+            {
+              "byte_count": 23604992,
+              "path": "Decoder.mlmodelc/weights/weight.bin",
+              "sha256": "48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41"
+            },
+            {
+              "byte_count": 243,
+              "path": "Encoder.mlmodelc/analytics/coremldata.bin",
+              "sha256": "42e638870d73f26b332918a3496ce36793fbb413a81cbd3d16ba01328637a105"
+            },
+            {
+              "byte_count": 485,
+              "path": "Encoder.mlmodelc/coremldata.bin",
+              "sha256": "d48034a167a82e88fc3df64f60af963ab3983538271175b8319e7d5720a0fb86"
+            },
+            {
+              "byte_count": 2921,
+              "path": "Encoder.mlmodelc/metadata.json",
+              "sha256": "da24da9cca943fb29d7fa8e376d57fca7cb3aa08ca51b956b0b0e56813f087e9"
+            },
+            {
+              "byte_count": 959769,
+              "path": "Encoder.mlmodelc/model.mil",
+              "sha256": "ed7b19156ca29fa7dfd6891deb9fda4b0e8893f68597c985d135736546a43808"
+            },
+            {
+              "byte_count": 445187200,
+              "path": "Encoder.mlmodelc/weights/weight.bin",
+              "sha256": "e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421"
+            },
+            {
+              "byte_count": 243,
+              "path": "JointDecisionv3.mlmodelc/analytics/coremldata.bin",
+              "sha256": "26def4bf73dd56d29dee21c8ef97cb8969e62f6120ed1adc91e46828e2737b6c"
+            },
+            {
+              "byte_count": 521,
+              "path": "JointDecisionv3.mlmodelc/coremldata.bin",
+              "sha256": "f5fc08b741400f0088492c9e839418b1e18522f19cba28d361dd030c5f398342"
+            },
+            {
+              "byte_count": 3453,
+              "path": "JointDecisionv3.mlmodelc/metadata.json",
+              "sha256": "d9307211b9a37e0f0ac260c7660b1571a3de25841035cfdf9b58fd40425f890f"
+            },
+            {
+              "byte_count": 11775,
+              "path": "JointDecisionv3.mlmodelc/model.mil",
+              "sha256": "be60732943389a047175111a83f8839f3eb39d4803adafa828a0871b2f39818d"
+            },
+            {
+              "byte_count": 12642764,
+              "path": "JointDecisionv3.mlmodelc/weights/weight.bin",
+              "sha256": "4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e"
+            },
+            {
+              "byte_count": 243,
+              "path": "Preprocessor.mlmodelc/analytics/coremldata.bin",
+              "sha256": "c9beeb989c8d66f8be11df59bc6df277ec76cee404f6865b46243835ef562f6d"
+            },
+            {
+              "byte_count": 486,
+              "path": "Preprocessor.mlmodelc/coremldata.bin",
+              "sha256": "dbde3f2300842c1fd51ef3ff948a0bcffe65ffd2dca10707f2509f32c1d65b1d"
+            },
+            {
+              "byte_count": 2841,
+              "path": "Preprocessor.mlmodelc/metadata.json",
+              "sha256": "2a98699e22d279dd37fa1d238aeb1c6db1df0d6fad687775324157689d8f3acf"
+            },
+            {
+              "byte_count": 28181,
+              "path": "Preprocessor.mlmodelc/model.mil",
+              "sha256": "4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93"
+            },
+            {
+              "byte_count": 491072,
+              "path": "Preprocessor.mlmodelc/weights/weight.bin",
+              "sha256": "129b76e3aeafa8afa3ea76d995b964b145fe83700d579f6ff42c4c38fa0968ea"
+            },
+            {
+              "byte_count": 151122,
+              "path": "parakeet_vocab.json",
+              "sha256": "7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735"
+            }
+          ],
+          "kind": "directory",
+          "sha256": "d6c10d2a84ba889b9f6c118eef0e71f5336396cc435d0db1c020894ad9127cdd"
+        },
+        "vocabulary_model": null
+      },
+      "reported_identity": {
+        "effective_settings": {
+          "dual_decode": false,
+          "encoder": "palettized6bit",
+          "encoder_placement": "automatic",
+          "language": null,
+          "max_tokens_per_chunk": 600,
+          "mel_chunk_context": false,
+          "parallel_chunk_concurrency": 6,
+          "vocabulary_bias_weight": 3,
+          "vocabulary_enabled": false,
+          "vocabulary_scheduling": "candidateRegions",
+          "vocabulary_similarity": 0.6499999761581421,
+          "vocabulary_terms": 0
+        },
+        "model": {
+          "engine_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3",
+          "files": [
+            {
+              "byte_count": 243,
+              "path": "Decoder.mlmodelc/analytics/coremldata.bin",
+              "sha256": "4238c4e81ecd0dc94bd7dfbb60f7e2cc824107c1ffe0387b8607b72833dba350"
+            },
+            {
+              "byte_count": 554,
+              "path": "Decoder.mlmodelc/coremldata.bin",
+              "sha256": "18647af085d87bd8f3121c8a9b4d4564c1ede038dab63d295b4e745cf2d7fb99"
+            },
+            {
+              "byte_count": 3427,
+              "path": "Decoder.mlmodelc/metadata.json",
+              "sha256": "a39e93cd8371b8ded92635c7804fcd0590f0d1dd9415c6d19a0484be073077d9"
+            },
+            {
+              "byte_count": 13110,
+              "path": "Decoder.mlmodelc/model.mil",
+              "sha256": "ef2a0a281695398a62fde86ac269c68f73d5b578d7ed3b31f2ba91a2d1ea1f35"
+            },
+            {
+              "byte_count": 23604992,
+              "path": "Decoder.mlmodelc/weights/weight.bin",
+              "sha256": "48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41"
+            },
+            {
+              "byte_count": 243,
+              "path": "Encoder.mlmodelc/analytics/coremldata.bin",
+              "sha256": "42e638870d73f26b332918a3496ce36793fbb413a81cbd3d16ba01328637a105"
+            },
+            {
+              "byte_count": 485,
+              "path": "Encoder.mlmodelc/coremldata.bin",
+              "sha256": "d48034a167a82e88fc3df64f60af963ab3983538271175b8319e7d5720a0fb86"
+            },
+            {
+              "byte_count": 2921,
+              "path": "Encoder.mlmodelc/metadata.json",
+              "sha256": "da24da9cca943fb29d7fa8e376d57fca7cb3aa08ca51b956b0b0e56813f087e9"
+            },
+            {
+              "byte_count": 959769,
+              "path": "Encoder.mlmodelc/model.mil",
+              "sha256": "ed7b19156ca29fa7dfd6891deb9fda4b0e8893f68597c985d135736546a43808"
+            },
+            {
+              "byte_count": 445187200,
+              "path": "Encoder.mlmodelc/weights/weight.bin",
+              "sha256": "e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421"
+            },
+            {
+              "byte_count": 243,
+              "path": "JointDecisionv3.mlmodelc/analytics/coremldata.bin",
+              "sha256": "26def4bf73dd56d29dee21c8ef97cb8969e62f6120ed1adc91e46828e2737b6c"
+            },
+            {
+              "byte_count": 521,
+              "path": "JointDecisionv3.mlmodelc/coremldata.bin",
+              "sha256": "f5fc08b741400f0088492c9e839418b1e18522f19cba28d361dd030c5f398342"
+            },
+            {
+              "byte_count": 3453,
+              "path": "JointDecisionv3.mlmodelc/metadata.json",
+              "sha256": "d9307211b9a37e0f0ac260c7660b1571a3de25841035cfdf9b58fd40425f890f"
+            },
+            {
+              "byte_count": 11775,
+              "path": "JointDecisionv3.mlmodelc/model.mil",
+              "sha256": "be60732943389a047175111a83f8839f3eb39d4803adafa828a0871b2f39818d"
+            },
+            {
+              "byte_count": 12642764,
+              "path": "JointDecisionv3.mlmodelc/weights/weight.bin",
+              "sha256": "4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e"
+            },
+            {
+              "byte_count": 243,
+              "path": "Preprocessor.mlmodelc/analytics/coremldata.bin",
+              "sha256": "c9beeb989c8d66f8be11df59bc6df277ec76cee404f6865b46243835ef562f6d"
+            },
+            {
+              "byte_count": 486,
+              "path": "Preprocessor.mlmodelc/coremldata.bin",
+              "sha256": "dbde3f2300842c1fd51ef3ff948a0bcffe65ffd2dca10707f2509f32c1d65b1d"
+            },
+            {
+              "byte_count": 2841,
+              "path": "Preprocessor.mlmodelc/metadata.json",
+              "sha256": "2a98699e22d279dd37fa1d238aeb1c6db1df0d6fad687775324157689d8f3acf"
+            },
+            {
+              "byte_count": 28181,
+              "path": "Preprocessor.mlmodelc/model.mil",
+              "sha256": "4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93"
+            },
+            {
+              "byte_count": 491072,
+              "path": "Preprocessor.mlmodelc/weights/weight.bin",
+              "sha256": "129b76e3aeafa8afa3ea76d995b964b145fe83700d579f6ff42c4c38fa0968ea"
+            },
+            {
+              "byte_count": 151122,
+              "path": "parakeet_vocab.json",
+              "sha256": "7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735"
+            }
+          ],
+          "fluid_audio_version": "0.15.5",
+          "license": "CC-BY-4.0",
+          "manifest_sha256": "d7bb1d56263f31321712b688835a19c6d178cbf35c4bbb4c82be032b5caf8650",
+          "model_id": "parakeet-tdt-0.6b-v3",
+          "quantization": "encoder 6-bit palettized, mixed precision",
+          "repository": "FluidInference/parakeet-tdt-0.6b-v3-coreml",
+          "revision": "aed02740059203c4a87495924f685de3722ae9ce"
+        },
+        "protocol_version": 1,
+        "vocabulary_model": null
+      },
+      "requested_settings": {
+        "encoder_placement": "automatic",
+        "language": null,
+        "prewarm": true,
+        "vocabulary": false,
+        "vocabulary_scheduling": "candidateRegions",
+        "vocabulary_terms": null
+      }
+    }
+  },
+  "experiment_identity_sha256": "21a72a701ab1bba4a5475a76cdb10f34c5471e8bebdf5259cc298becccb55a2e",
+  "fixtures": [
+    {
+      "canonical_pcm": {
+        "audio_duration_ns": 7060000000,
+        "format": "f32le",
+        "sample_count": 112960,
+        "sample_rate": 16000,
+        "sha256": "4e093d093d98c71d87c1cf240c5076924c80806e0c59a4722eee47a7b41035ff"
+      },
+      "conversion": "afconvert to 16 kHz mono Int16 PCM",
+      "id": "real-en-librispeech-test-other",
+      "kind": "real",
+      "license": "CC BY 4.0",
+      "measured_schedule": [
+        "O",
+        "O"
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "openramble": {
+            "elapsed_ns": 80090083,
+            "engine_normalized_transcript_sha256": "a4500b7e3625c956baa80fc62dd25900a2589014bf73cbb39bda885306dc1346",
+            "normalized_transcript_sha256": "a4500b7e3625c956baa80fc62dd25900a2589014bf73cbb39bda885306dc1346",
+            "pcm_f32le_sha256": "4e093d093d98c71d87c1cf240c5076924c80806e0c59a4722eee47a7b41035ff",
+            "peak_rss_bytes": 84705280,
+            "prewarmed": true,
+            "raw_transcript_sha256": "de779a17ef1f131e54fff2c068b2dd146c6fbee92d471e37b32ad27fa969b70f",
+            "sample_count": 112960,
+            "sample_rate": 16000,
+            "word_error_rate": 0.0
+          },
+          "order": "O"
+        },
+        {
+          "index": 1,
+          "openramble": {
+            "elapsed_ns": 82964917,
+            "engine_normalized_transcript_sha256": "a4500b7e3625c956baa80fc62dd25900a2589014bf73cbb39bda885306dc1346",
+            "normalized_transcript_sha256": "a4500b7e3625c956baa80fc62dd25900a2589014bf73cbb39bda885306dc1346",
+            "pcm_f32le_sha256": "4e093d093d98c71d87c1cf240c5076924c80806e0c59a4722eee47a7b41035ff",
+            "peak_rss_bytes": 84721664,
+            "prewarmed": true,
+            "raw_transcript_sha256": "de779a17ef1f131e54fff2c068b2dd146c6fbee92d471e37b32ad27fa969b70f",
+            "sample_count": 112960,
+            "sample_rate": 16000,
+            "word_error_rate": 0.0
+          },
+          "order": "O"
+        }
+      ],
+      "reference_sha256": "de779a17ef1f131e54fff2c068b2dd146c6fbee92d471e37b32ad27fa969b70f",
+      "sha256": "0ef932371d181b185f01b2ede213ebe649650457e5781d8e428f831dfbbe5343",
+      "source": "LibriSpeech test-other via the official torchaudio tutorial asset",
+      "source_file_sha256": "0ef932371d181b185f01b2ede213ebe649650457e5781d8e428f831dfbbe5343",
+      "source_url": "https://download.pytorch.org/torchaudio/tutorial-assets/ctc-decoding/1688-142285-0007.wav",
+      "summary": {
+        "openramble": {
+          "by_order": {},
+          "maximum_ns": 82964917,
+          "maximum_peak_rss_bytes": 84721664,
+          "maximum_seconds": 0.082964917,
+          "minimum_ns": 80090083,
+          "p50_ns": 81527500.0,
+          "p50_realtime_factor": 86.5965471773328,
+          "p50_seconds": 0.0815275,
+          "p95_ns": 82821175.3,
+          "p95_seconds": 0.0828211753,
+          "p99_ns": 82936168.66,
+          "p99_seconds": 0.08293616865999999,
+          "runs_ns": [
+            80090083,
+            82964917
+          ],
+          "transcript_stable": true,
+          "unique_normalized_transcripts": 1,
+          "unique_raw_transcripts": 1,
+          "word_error_rate": 0.0
+        }
+      },
+      "warmup_observations": [
+        {
+          "index": 0,
+          "openramble": {
+            "elapsed_ns": 93967333,
+            "engine_normalized_transcript_sha256": "a4500b7e3625c956baa80fc62dd25900a2589014bf73cbb39bda885306dc1346",
+            "normalized_transcript_sha256": "a4500b7e3625c956baa80fc62dd25900a2589014bf73cbb39bda885306dc1346",
+            "pcm_f32le_sha256": "4e093d093d98c71d87c1cf240c5076924c80806e0c59a4722eee47a7b41035ff",
+            "peak_rss_bytes": 84508672,
+            "prewarmed": true,
+            "raw_transcript_sha256": "de779a17ef1f131e54fff2c068b2dd146c6fbee92d471e37b32ad27fa969b70f",
+            "sample_count": 112960,
+            "sample_rate": 16000,
+            "word_error_rate": 0.0
+          },
+          "order": "O"
+        },
+        {
+          "index": 1,
+          "openramble": {
+            "elapsed_ns": 81758292,
+            "engine_normalized_transcript_sha256": "a4500b7e3625c956baa80fc62dd25900a2589014bf73cbb39bda885306dc1346",
+            "normalized_transcript_sha256": "a4500b7e3625c956baa80fc62dd25900a2589014bf73cbb39bda885306dc1346",
+            "pcm_f32le_sha256": "4e093d093d98c71d87c1cf240c5076924c80806e0c59a4722eee47a7b41035ff",
+            "peak_rss_bytes": 84574208,
+            "prewarmed": true,
+            "raw_transcript_sha256": "de779a17ef1f131e54fff2c068b2dd146c6fbee92d471e37b32ad27fa969b70f",
+            "sample_count": 112960,
+            "sample_rate": 16000,
+            "word_error_rate": 0.0
+          },
+          "order": "O"
+        }
+      ],
+      "warmup_schedule": [
+        "O",
+        "O"
+      ]
+    },
+    {
+      "canonical_pcm": {
+        "audio_duration_ns": 3400000000,
+        "format": "f32le",
+        "sample_count": 54400,
+        "sample_rate": 16000,
+        "sha256": "07bb06869a0cd4575bd156c5304e5bc7e95884c85db278f75c8a722241580455"
+      },
+      "id": "real-en-voices-room",
+      "kind": "real",
+      "license": "CC BY 4.0",
+      "measured_schedule": [
+        "O",
+        "O"
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "openramble": {
+            "elapsed_ns": 72274583,
+            "engine_normalized_transcript_sha256": "b5f0cf8df94922d047c873dc00e9d488e3cfce8b25270b7667044151134dccda",
+            "normalized_transcript_sha256": "b5f0cf8df94922d047c873dc00e9d488e3cfce8b25270b7667044151134dccda",
+            "pcm_f32le_sha256": "07bb06869a0cd4575bd156c5304e5bc7e95884c85db278f75c8a722241580455",
+            "peak_rss_bytes": 85458944,
+            "prewarmed": true,
+            "raw_transcript_sha256": "3a4531980d66676f383e36269a847e2a037dbb2ca4b5255f35ceb09d518b2268",
+            "sample_count": 54400,
+            "sample_rate": 16000,
+            "word_error_rate": 0.0
+          },
+          "order": "O"
+        },
+        {
+          "index": 1,
+          "openramble": {
+            "elapsed_ns": 72318875,
+            "engine_normalized_transcript_sha256": "b5f0cf8df94922d047c873dc00e9d488e3cfce8b25270b7667044151134dccda",
+            "normalized_transcript_sha256": "b5f0cf8df94922d047c873dc00e9d488e3cfce8b25270b7667044151134dccda",
+            "pcm_f32le_sha256": "07bb06869a0cd4575bd156c5304e5bc7e95884c85db278f75c8a722241580455",
+            "peak_rss_bytes": 85475328,
+            "prewarmed": true,
+            "raw_transcript_sha256": "3a4531980d66676f383e36269a847e2a037dbb2ca4b5255f35ceb09d518b2268",
+            "sample_count": 54400,
+            "sample_rate": 16000,
+            "word_error_rate": 0.0
+          },
+          "order": "O"
+        }
+      ],
+      "reference_sha256": "d42ad0356cd8f53ed9174191503b44b998343c0968bb9626bd0b6e54d13b067e",
+      "sha256": "c65fcd726d6b08c82c1e5dc7558f863cd8d483e3ed2f4a7bcf271dc1865ada14",
+      "source": "VOiCES room recording via the official torchaudio tutorial asset",
+      "source_file_sha256": "c65fcd726d6b08c82c1e5dc7558f863cd8d483e3ed2f4a7bcf271dc1865ada14",
+      "source_url": "https://download.pytorch.org/torchaudio/tutorial-assets/Lab41-SRI-VOiCES-src-sp0307-ch127535-sg0042.wav",
+      "summary": {
+        "openramble": {
+          "by_order": {},
+          "maximum_ns": 72318875,
+          "maximum_peak_rss_bytes": 85475328,
+          "maximum_seconds": 0.072318875,
+          "minimum_ns": 72274583,
+          "p50_ns": 72296729.0,
+          "p50_realtime_factor": 47.02840705282807,
+          "p50_seconds": 0.072296729,
+          "p95_ns": 72316660.4,
+          "p95_seconds": 0.07231666040000001,
+          "p99_ns": 72318432.08,
+          "p99_seconds": 0.07231843208,
+          "runs_ns": [
+            72274583,
+            72318875
+          ],
+          "transcript_stable": true,
+          "unique_normalized_transcripts": 1,
+          "unique_raw_transcripts": 1,
+          "word_error_rate": 0.0
+        }
+      },
+      "warmup_observations": [
+        {
+          "index": 0,
+          "openramble": {
+            "elapsed_ns": 83620500,
+            "engine_normalized_transcript_sha256": "b5f0cf8df94922d047c873dc00e9d488e3cfce8b25270b7667044151134dccda",
+            "normalized_transcript_sha256": "b5f0cf8df94922d047c873dc00e9d488e3cfce8b25270b7667044151134dccda",
+            "pcm_f32le_sha256": "07bb06869a0cd4575bd156c5304e5bc7e95884c85db278f75c8a722241580455",
+            "peak_rss_bytes": 85278720,
+            "prewarmed": true,
+            "raw_transcript_sha256": "3a4531980d66676f383e36269a847e2a037dbb2ca4b5255f35ceb09d518b2268",
+            "sample_count": 54400,
+            "sample_rate": 16000,
+            "word_error_rate": 0.0
+          },
+          "order": "O"
+        },
+        {
+          "index": 1,
+          "openramble": {
+            "elapsed_ns": 80469625,
+            "engine_normalized_transcript_sha256": "b5f0cf8df94922d047c873dc00e9d488e3cfce8b25270b7667044151134dccda",
+            "normalized_transcript_sha256": "b5f0cf8df94922d047c873dc00e9d488e3cfce8b25270b7667044151134dccda",
+            "pcm_f32le_sha256": "07bb06869a0cd4575bd156c5304e5bc7e95884c85db278f75c8a722241580455",
+            "peak_rss_bytes": 85311488,
+            "prewarmed": true,
+            "raw_transcript_sha256": "3a4531980d66676f383e36269a847e2a037dbb2ca4b5255f35ceb09d518b2268",
+            "sample_count": 54400,
+            "sample_rate": 16000,
+            "word_error_rate": 0.0
+          },
+          "order": "O"
+        }
+      ],
+      "warmup_schedule": [
+        "O",
+        "O"
+      ]
+    },
+    {
+      "canonical_pcm": {
+        "audio_duration_ns": 7440000000,
+        "format": "f32le",
+        "sample_count": 119040,
+        "sample_rate": 16000,
+        "sha256": "d673c2f59cc36395ad98de2d10cd0b90acefad89cf94c864d3075242fabc7f0a"
+      },
+      "id": "real-ru-fleurs-validation-1",
+      "kind": "real",
+      "license": "CC BY 4.0",
+      "measured_schedule": [
+        "O",
+        "O"
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "openramble": {
+            "elapsed_ns": 80060417,
+            "engine_normalized_transcript_sha256": "70ed3c5cb6a65e99e7da00eb3538a2739065051b5f5076d669c971ac6d112bd8",
+            "normalized_transcript_sha256": "95b42ab555e1074ae951f9de59e09905b267f1755422066611d432dbf02597c3",
+            "pcm_f32le_sha256": "d673c2f59cc36395ad98de2d10cd0b90acefad89cf94c864d3075242fabc7f0a",
+            "peak_rss_bytes": 85950464,
+            "prewarmed": true,
+            "raw_transcript_sha256": "316fbcba203437b57c0bc88e5bc925e3712ac80ecff77d2517e8223fa3d548bd",
+            "sample_count": 119040,
+            "sample_rate": 16000,
+            "word_error_rate": 0.2222222222222222
+          },
+          "order": "O"
+        },
+        {
+          "index": 1,
+          "openramble": {
+            "elapsed_ns": 80306625,
+            "engine_normalized_transcript_sha256": "70ed3c5cb6a65e99e7da00eb3538a2739065051b5f5076d669c971ac6d112bd8",
+            "normalized_transcript_sha256": "95b42ab555e1074ae951f9de59e09905b267f1755422066611d432dbf02597c3",
+            "pcm_f32le_sha256": "d673c2f59cc36395ad98de2d10cd0b90acefad89cf94c864d3075242fabc7f0a",
+            "peak_rss_bytes": 85950464,
+            "prewarmed": true,
+            "raw_transcript_sha256": "316fbcba203437b57c0bc88e5bc925e3712ac80ecff77d2517e8223fa3d548bd",
+            "sample_count": 119040,
+            "sample_rate": 16000,
+            "word_error_rate": 0.2222222222222222
+          },
+          "order": "O"
+        }
+      ],
+      "reference_sha256": "98d86326cdde6eaa63b772d995edcac68d13d7436a9c851b350a6a4a7aee5ec1",
+      "sha256": "363087f90513f5484750d8076da3cf7d029065d6b09f7ea68170bcf10b487d27",
+      "source": "google/fleurs ru_ru validation row 1",
+      "source_file_sha256": "363087f90513f5484750d8076da3cf7d029065d6b09f7ea68170bcf10b487d27",
+      "source_revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+      "source_url": "https://huggingface.co/datasets/google/fleurs",
+      "summary": {
+        "openramble": {
+          "by_order": {},
+          "maximum_ns": 80306625,
+          "maximum_peak_rss_bytes": 85950464,
+          "maximum_seconds": 0.080306625,
+          "minimum_ns": 80060417,
+          "p50_ns": 80183521.0,
+          "p50_realtime_factor": 92.78714512923422,
+          "p50_seconds": 0.080183521,
+          "p95_ns": 80294314.60000001,
+          "p95_seconds": 0.08029431460000001,
+          "p99_ns": 80304162.92,
+          "p99_seconds": 0.08030416292,
+          "runs_ns": [
+            80060417,
+            80306625
+          ],
+          "transcript_stable": true,
+          "unique_normalized_transcripts": 1,
+          "unique_raw_transcripts": 1,
+          "word_error_rate": 0.2222222222222222
+        }
+      },
+      "warmup_observations": [
+        {
+          "index": 0,
+          "openramble": {
+            "elapsed_ns": 88619042,
+            "engine_normalized_transcript_sha256": "70ed3c5cb6a65e99e7da00eb3538a2739065051b5f5076d669c971ac6d112bd8",
+            "normalized_transcript_sha256": "95b42ab555e1074ae951f9de59e09905b267f1755422066611d432dbf02597c3",
+            "pcm_f32le_sha256": "d673c2f59cc36395ad98de2d10cd0b90acefad89cf94c864d3075242fabc7f0a",
+            "peak_rss_bytes": 85803008,
+            "prewarmed": true,
+            "raw_transcript_sha256": "316fbcba203437b57c0bc88e5bc925e3712ac80ecff77d2517e8223fa3d548bd",
+            "sample_count": 119040,
+            "sample_rate": 16000,
+            "word_error_rate": 0.2222222222222222
+          },
+          "order": "O"
+        },
+        {
+          "index": 1,
+          "openramble": {
+            "elapsed_ns": 80387541,
+            "engine_normalized_transcript_sha256": "70ed3c5cb6a65e99e7da00eb3538a2739065051b5f5076d669c971ac6d112bd8",
+            "normalized_transcript_sha256": "95b42ab555e1074ae951f9de59e09905b267f1755422066611d432dbf02597c3",
+            "pcm_f32le_sha256": "d673c2f59cc36395ad98de2d10cd0b90acefad89cf94c864d3075242fabc7f0a",
+            "peak_rss_bytes": 85803008,
+            "prewarmed": true,
+            "raw_transcript_sha256": "316fbcba203437b57c0bc88e5bc925e3712ac80ecff77d2517e8223fa3d548bd",
+            "sample_count": 119040,
+            "sample_rate": 16000,
+            "word_error_rate": 0.2222222222222222
+          },
+          "order": "O"
+        }
+      ],
+      "warmup_schedule": [
+        "O",
+        "O"
+      ]
+    },
+    {
+      "canonical_pcm": {
+        "audio_duration_ns": 4800000000,
+        "format": "f32le",
+        "sample_count": 76800,
+        "sample_rate": 16000,
+        "sha256": "204acd7577005f722abdf78ae21edd53cc5a9ee88093a9f7d050d73d7fe537f0"
+      },
+      "id": "real-ru-fleurs-validation-6",
+      "kind": "real",
+      "license": "CC BY 4.0",
+      "measured_schedule": [
+        "O",
+        "O"
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "openramble": {
+            "elapsed_ns": 79781125,
+            "engine_normalized_transcript_sha256": "b488be8156108dbacc196d9b80b9edadc74afbaa34a2ded0767bca03503759fb",
+            "normalized_transcript_sha256": "d836b3f1e90bbe795fe2cd1a8cfc0462fa94563ea63b4f8cde16bcdf7b669868",
+            "pcm_f32le_sha256": "204acd7577005f722abdf78ae21edd53cc5a9ee88093a9f7d050d73d7fe537f0",
+            "peak_rss_bytes": 87244800,
+            "prewarmed": true,
+            "raw_transcript_sha256": "7fc4182a756bd6e07183fc11c53110c14081922cd574f3e3983e0a6d6c3cbd7d",
+            "sample_count": 76800,
+            "sample_rate": 16000,
+            "word_error_rate": 0.0
+          },
+          "order": "O"
+        },
+        {
+          "index": 1,
+          "openramble": {
+            "elapsed_ns": 79854500,
+            "engine_normalized_transcript_sha256": "b488be8156108dbacc196d9b80b9edadc74afbaa34a2ded0767bca03503759fb",
+            "normalized_transcript_sha256": "d836b3f1e90bbe795fe2cd1a8cfc0462fa94563ea63b4f8cde16bcdf7b669868",
+            "pcm_f32le_sha256": "204acd7577005f722abdf78ae21edd53cc5a9ee88093a9f7d050d73d7fe537f0",
+            "peak_rss_bytes": 87244800,
+            "prewarmed": true,
+            "raw_transcript_sha256": "7fc4182a756bd6e07183fc11c53110c14081922cd574f3e3983e0a6d6c3cbd7d",
+            "sample_count": 76800,
+            "sample_rate": 16000,
+            "word_error_rate": 0.0
+          },
+          "order": "O"
+        }
+      ],
+      "reference_sha256": "d836b3f1e90bbe795fe2cd1a8cfc0462fa94563ea63b4f8cde16bcdf7b669868",
+      "sha256": "de6c6c691caf96369381f26aa204c4455d8f7c625dec017b634f9ff25833211f",
+      "source": "google/fleurs ru_ru validation row 6",
+      "source_file_sha256": "de6c6c691caf96369381f26aa204c4455d8f7c625dec017b634f9ff25833211f",
+      "source_revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+      "source_url": "https://huggingface.co/datasets/google/fleurs",
+      "summary": {
+        "openramble": {
+          "by_order": {},
+          "maximum_ns": 79854500,
+          "maximum_peak_rss_bytes": 87244800,
+          "maximum_seconds": 0.0798545,
+          "minimum_ns": 79781125,
+          "p50_ns": 79817812.5,
+          "p50_realtime_factor": 60.136952512949414,
+          "p50_seconds": 0.0798178125,
+          "p95_ns": 79850831.25,
+          "p95_seconds": 0.07985083125,
+          "p99_ns": 79853766.25,
+          "p99_seconds": 0.07985376625,
+          "runs_ns": [
+            79781125,
+            79854500
+          ],
+          "transcript_stable": true,
+          "unique_normalized_transcripts": 1,
+          "unique_raw_transcripts": 1,
+          "word_error_rate": 0.0
+        }
+      },
+      "warmup_observations": [
+        {
+          "index": 0,
+          "openramble": {
+            "elapsed_ns": 79168042,
+            "engine_normalized_transcript_sha256": "b488be8156108dbacc196d9b80b9edadc74afbaa34a2ded0767bca03503759fb",
+            "normalized_transcript_sha256": "d836b3f1e90bbe795fe2cd1a8cfc0462fa94563ea63b4f8cde16bcdf7b669868",
+            "pcm_f32le_sha256": "204acd7577005f722abdf78ae21edd53cc5a9ee88093a9f7d050d73d7fe537f0",
+            "peak_rss_bytes": 87015424,
+            "prewarmed": true,
+            "raw_transcript_sha256": "7fc4182a756bd6e07183fc11c53110c14081922cd574f3e3983e0a6d6c3cbd7d",
+            "sample_count": 76800,
+            "sample_rate": 16000,
+            "word_error_rate": 0.0
+          },
+          "order": "O"
+        },
+        {
+          "index": 1,
+          "openramble": {
+            "elapsed_ns": 80226833,
+            "engine_normalized_transcript_sha256": "b488be8156108dbacc196d9b80b9edadc74afbaa34a2ded0767bca03503759fb",
+            "normalized_transcript_sha256": "d836b3f1e90bbe795fe2cd1a8cfc0462fa94563ea63b4f8cde16bcdf7b669868",
+            "pcm_f32le_sha256": "204acd7577005f722abdf78ae21edd53cc5a9ee88093a9f7d050d73d7fe537f0",
+            "peak_rss_bytes": 87048192,
+            "prewarmed": true,
+            "raw_transcript_sha256": "7fc4182a756bd6e07183fc11c53110c14081922cd574f3e3983e0a6d6c3cbd7d",
+            "sample_count": 76800,
+            "sample_rate": 16000,
+            "word_error_rate": 0.0
+          },
+          "order": "O"
+        }
+      ],
+      "warmup_schedule": [
+        "O",
+        "O"
+      ]
+    }
+  ],
+  "generated_at": "2026-08-14T09:02:36Z",
+  "host": {
+    "chip": "Apple M4",
+    "machine": "arm64",
+    "macos": "26.4",
+    "memory_bytes": 17179869184,
+    "python": "3.12.13"
+  },
+  "manifest_sha256": "1143305176fc436795395019f0051d8db8670d691f7c6470a81f4d872b79470c",
+  "method": {
+    "bootstrap": {
+      "confidence": 0.95,
+      "resamples": 100,
+      "unit": "paired fixture repetition"
+    },
+    "lane": "predecoded-product-warm",
+    "limitations": [
+      "no competitor was configured"
+    ],
+    "measured_pairs_per_fixture": 2,
+    "metrics": [
+      "minimum",
+      "p50",
+      "p95",
+      "p99",
+      "maximum"
+    ],
+    "public_claim_eligible": false,
+    "public_claim_status": "not evaluated; requires manual quality and confidence review",
+    "quantiles": "Hyndman-Fan type 7 (linear)",
+    "schedule": "balanced deterministic interleaved OH/HO pairs",
+    "seed": 20260814,
+    "timer": "engine monotonic integer nanoseconds",
+    "warmups_per_fixture_per_engine": 2
+  },
+  "schema_version": 3,
+  "sessions": [
+    {
+      "completed_at": "2026-08-14T09:02:37Z",
+      "handy_load_ns": null,
+      "handy_prewarm_ns": null,
+      "openramble_load_ns": 113142291,
+      "openramble_prewarm_ns": 83841541,
+      "started_at": "2026-08-14T09:02:36Z"
+    },
+    {
+      "completed_at": "2026-08-14T09:02:47Z",
+      "handy_load_ns": null,
+      "handy_prewarm_ns": null,
+      "openramble_load_ns": 110778833,
+      "openramble_prewarm_ns": 83979708,
+      "started_at": "2026-08-14T09:02:47Z"
+    }
+  ],
+  "sources": {
+    "fleurs": "google/fleurs@70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+    "fleurs_license": "CC BY 4.0"
+  }
+}

@@ -1,0 +1,228 @@
+{
+  "aggregate": {
+    "all": {
+      "bootstrap": {
+        "cer_delta": {
+          "p025": -0.0001684737820862316,
+          "p50": 0.001314204362718425,
+          "p975": 0.0029241410335713886
+        },
+        "iterations": 20000,
+        "method": "paired utterance bootstrap, language-stratified for combined",
+        "seed": "openramble-intermediate-holdout-bootstrap-v1-20260814|10.0|all",
+        "wer_delta": {
+          "p025": -0.003736250228789015,
+          "p50": -0.0005963029218843172,
+          "p975": 0.0025747223993697406
+        }
+      },
+      "candidate_micro_cer": 0.01941477525589675,
+      "candidate_micro_wer": 0.04671228800952098,
+      "character_reference_length": 17976,
+      "count": 200,
+      "micro_cer_delta": 0.0013351134846461949,
+      "micro_wer_delta": -0.0005950609937518596,
+      "shipping_micro_cer": 0.018079661771250557,
+      "shipping_micro_wer": 0.04730734900327284,
+      "word_reference_length": 3361
+    },
+    "en": {
+      "bootstrap": {
+        "cer_delta": {
+          "p025": 0.0,
+          "p50": 0.002520081909608264,
+          "p975": 0.00547504554774737
+        },
+        "iterations": 20000,
+        "method": "paired utterance bootstrap, language-stratified for combined",
+        "seed": "openramble-intermediate-holdout-bootstrap-v1-20260814|10.0|en",
+        "wer_delta": {
+          "p025": -0.00254323499491353,
+          "p50": 0.001557632398753894,
+          "p975": 0.005936426346358318
+        }
+      },
+      "candidate_micro_cer": 0.026980728051391862,
+      "candidate_micro_wer": 0.05279665446941976,
+      "character_reference_length": 9340,
+      "count": 100,
+      "micro_cer_delta": 0.002569593147751606,
+      "micro_wer_delta": 0.0015682174594877157,
+      "shipping_micro_cer": 0.024411134903640257,
+      "shipping_micro_wer": 0.05122843700993204,
+      "word_reference_length": 1913
+    },
+    "ru": {
+      "bootstrap": {
+        "cer_delta": {
+          "p025": -0.0012935165440570346,
+          "p50": 0.0,
+          "p975": 0.0014452845313219999
+        },
+        "iterations": 20000,
+        "method": "paired utterance bootstrap, language-stratified for combined",
+        "seed": "openramble-intermediate-holdout-bootstrap-v1-20260814|10.0|ru",
+        "wer_delta": {
+          "p025": -0.008421200473092845,
+          "p50": -0.003417634996582365,
+          "p975": 0.0013541190760587342
+        }
+      },
+      "candidate_micro_cer": 0.011232051875868457,
+      "candidate_micro_wer": 0.03867403314917127,
+      "character_reference_length": 8636,
+      "count": 100,
+      "micro_cer_delta": 0.0,
+      "micro_wer_delta": -0.003453038674033149,
+      "shipping_micro_cer": 0.011232051875868457,
+      "shipping_micro_wer": 0.04212707182320442,
+      "word_reference_length": 1448
+    }
+  },
+  "cohort": "shape_10.0",
+  "counts": {
+    "en": 100,
+    "fixtures": 200,
+    "ru": 100
+  },
+  "decision": "reject",
+  "hard_gates": {
+    "combined_bootstrap_upper_wer_delta": true,
+    "combined_observed_wer_delta": true,
+    "en_bootstrap_upper_wer_delta": true,
+    "en_observed_wer_delta": true,
+    "integrity_and_structure": true,
+    "no_utterance_with_two_or_more_extra_word_errors": false,
+    "ru_bootstrap_upper_wer_delta": true,
+    "ru_observed_wer_delta": true,
+    "token_confidence_stability": true,
+    "token_exact_text_alignment": true,
+    "token_timing_stability": true,
+    "word_confidence_stability": true,
+    "word_exact_text_alignment": true,
+    "word_timing_stability": true,
+    "zero_vocabulary_candidate_false_negatives": true
+  },
+  "input_sha256": {
+    "candidate_jsonl": "b661e15bc7dbd6f0eea8a76a1e6eddcdf76cca94b922d239cb3ca7bf82dd62a2",
+    "candidate_run_meta": "4a31394eb0454d4c10ef97917a2ea7e1ea984bf9a9d49958aef7a31268c1fb3d",
+    "shipping_jsonl": "308ec62fb0843b5ae80b26e5300bf855107ea58c201f3b0d4baa655fcd7d610c",
+    "shipping_run_meta": "a7e0ae4e738e780bea3e8cd11c882314838fa5fddb09db7d2e8bd8d8bc47ab7b"
+  },
+  "integrity_failures": [],
+  "manifest_sha256": "bf7e768a882b7a826ab657c32ceb71e5e5a6589833fe1aaf8ab82684c140b9c7",
+  "preregistration_sha256": "d4752d8ea47d611101de49adcafa6778a7cc6afdcf3f228c2374246386691b20",
+  "schema_version": 1,
+  "severe_utterance_regressions": [
+    {
+      "candidate_score": {
+        "character_errors": 18,
+        "character_reference_length": 100,
+        "normalized_hypothesis": "new kingdom ancient egyptians marveled at their pre predeces moments which they were well over a thousand years old",
+        "normalized_reference": "new kingdom ancient egyptians marvelled at their predecessors monuments which were then well over a thousand year old",
+        "word_errors": 7,
+        "word_reference_length": 18
+      },
+      "character_error_delta": 7,
+      "fixture_id": "fleurs-holdout-en_us-0285-1631",
+      "language": "en",
+      "shape_candidate": false,
+      "shipping_candidate": false,
+      "shipping_score": {
+        "character_errors": 11,
+        "character_reference_length": 100,
+        "normalized_hypothesis": "new kingdom ancient egyptians marveled at their predecessors moments which they were well over a thousand years old",
+        "normalized_reference": "new kingdom ancient egyptians marvelled at their predecessors monuments which were then well over a thousand year old",
+        "word_errors": 5,
+        "word_reference_length": 18
+      },
+      "word_error_delta": 2
+    },
+    {
+      "candidate_score": {
+        "character_errors": 5,
+        "character_reference_length": 119,
+        "normalized_hypothesis": "in many cases enrolling on a capture course abroad can actually improve your chances of moving into higher education back in your home country",
+        "normalized_reference": "in many cases enrolling on a gap year course abroad can actually improve your chances of moving into higher education back in your home country",
+        "word_errors": 2,
+        "word_reference_length": 25
+      },
+      "character_error_delta": 5,
+      "fixture_id": "fleurs-holdout-en_us-0346-1519",
+      "language": "en",
+      "shape_candidate": true,
+      "shipping_candidate": true,
+      "shipping_score": {
+        "character_errors": 0,
+        "character_reference_length": 119,
+        "normalized_hypothesis": "in many cases enrolling on a gap year course abroad can actually improve your chances of moving into higher education back in your home country",
+        "normalized_reference": "in many cases enrolling on a gap year course abroad can actually improve your chances of moving into higher education back in your home country",
+        "word_errors": 0,
+        "word_reference_length": 25
+      },
+      "word_error_delta": 2
+    }
+  ],
+  "shape_seconds": 10.0,
+  "token_alignment": {
+    "absolute_confidence_delta": {
+      "count": 8109,
+      "max": 0.49609375,
+      "mean": 0.003879184492398937,
+      "min": 0,
+      "p50": 0,
+      "p95": 0.0048828125
+    },
+    "absolute_end_delta_seconds": {
+      "count": 8109,
+      "max": 1.2000000000000002,
+      "mean": 0.005258354914292764,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.07999999999999985
+    },
+    "absolute_start_delta_seconds": {
+      "count": 8109,
+      "max": 1.2799999999999994,
+      "mean": 0.004252065606116661,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "candidate_count": 8172,
+    "matched_exact_text_count": 8109,
+    "matched_fraction_symmetric": 0.9919266055045871,
+    "shipping_count": 8175
+  },
+  "vocabulary_candidate_false_negative_ids": [],
+  "word_alignment": {
+    "absolute_confidence_delta": {
+      "count": 3238,
+      "max": 0.47998046875,
+      "mean": 0.00743778943617151,
+      "min": 0,
+      "p50": 0.0,
+      "p95": 0.02880859375
+    },
+    "absolute_end_delta_seconds": {
+      "count": 3238,
+      "max": 1.2000000000000002,
+      "mean": 0.00600370599135269,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.07999999999999996
+    },
+    "absolute_start_delta_seconds": {
+      "count": 3238,
+      "max": 0.31999999999999995,
+      "mean": 0.003063619518221124,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "candidate_count": 3297,
+    "matched_exact_text_count": 3238,
+    "matched_fraction_symmetric": 0.9821049438883834,
+    "shipping_count": 3296
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "armed_preregistration": "$TMP/openramble-dominant-short-quality-v1/PREREGISTRATION_ARMED.json",
+  "armed_preregistration_sha256": "59f6ced1b7fe68ab88a7e65e4665997d2831d0568decfa35d889ee06297e52bb",
+  "arming_evidence": [
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/final-corpus/manifest.json",
+      "sha256": "340314c63357f2ec0bcb4091438a71b43668ecba4ad376dc8844e9785d86faf6"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/final-corpus/source-index.sha256",
+      "sha256": "b81e9872fc7a98492a175397e030c0ed715d12ee7a6ee6dcc74fa4451de892b1"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/final-corpus/pcm-index.sha256",
+      "sha256": "b3c768ad3ee9eb8298b411f44b36e29756d5bbc7295dec0148303bb6c7f8fd52"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/final-corpus/reference-index.sha256",
+      "sha256": "c501d3b10d7090d2cce04c3e1852f4de219a440828098f884eb6978f438c8cdf"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/final-corpus/archive-index.json",
+      "sha256": "077360ea92a8e5e552d190c379b14ef1d06c8dbda25232e9f81aa67d04cc56cc"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/final-corpus/canonicalizer.json",
+      "sha256": "d80c909079113b958f341a6deb0be0c2e64c792b76adb488aeb5a1e0ee462ca2"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/final-corpus/download-receipt.json",
+      "sha256": "32d40f14f443132fdcb2679107e4feef4404dc716e6902fc1a4b5911bb39dd19"
+    }
+  ],
+  "asr_or_coreml_runs": 0,
+  "blocked_state_absent": true,
+  "corpus_rows_references_pcm_evaluator_gates_product_config_changed": false,
+  "corrected_sealer_sha256": "2ea7fd7251dd027dcadc6f6287affe4adf384021e02f8bd14f0676b0654ac6aa",
+  "frozen_evaluator_sha256": "e0ec47123c4e31b83da0e1ebf067f9e1f1ae10488362e967739b731491b8397d",
+  "model_outputs_inspected": false,
+  "parent_blocked_preregistration_sha256": "fc11882edf45b3727d124f5689a6fb179e8e7123b8437498226c00c41a5dd719",
+  "passed": true,
+  "satisfied_arming_state_present": true,
+  "schema_version": 1,
+  "sealed_manifest_sha256": "340314c63357f2ec0bcb4091438a71b43668ecba4ad376dc8844e9785d86faf6",
+  "status": "passed",
+  "unofficial_internal_only_caveat_preserved": true
+}

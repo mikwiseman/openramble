@@ -1,0 +1,139 @@
+{
+  "cancellation_elapsed_milliseconds": 8.061208,
+  "cancellation_parent_fd_growth": 0,
+  "cancellation_recovery_elapsed_milliseconds": 8.8545,
+  "cancellation_recovery_succeeded": true,
+  "cancellation_tasks": 128,
+  "child_launch_count": 11,
+  "child_reaped_count": 11,
+  "cycles": 10000,
+  "descriptor_parent_fd_growth": 0,
+  "descriptor_reuse_cycles": 256,
+  "faults": [
+    {
+      "failure_elapsed_milliseconds": 0.351459,
+      "fault": "disconnect-first-inference",
+      "launch_count": 2,
+      "reaped_count": 2,
+      "recovery_succeeded": true
+    },
+    {
+      "failure_elapsed_milliseconds": 0.06375,
+      "fault": "malformed-first-inference",
+      "launch_count": 2,
+      "reaped_count": 2,
+      "recovery_succeeded": true
+    },
+    {
+      "failure_elapsed_milliseconds": 0.133667,
+      "fault": "truncated-first-inference",
+      "launch_count": 2,
+      "reaped_count": 2,
+      "recovery_succeeded": true
+    },
+    {
+      "failure_elapsed_milliseconds": 107.725833,
+      "fault": "sigstop_timeout",
+      "launch_count": 2,
+      "reaped_count": 2,
+      "recovery_succeeded": true
+    }
+  ],
+  "latency_milliseconds": {
+    "maximum": 0.179541,
+    "minimum": 0.033125,
+    "p50": 0.045875,
+    "p95": 0.05525,
+    "p99": 0.059833
+  },
+  "orphan_count": 0,
+  "parent_fd_growth": 0,
+  "parent_rss_growth_bytes": 7176192,
+  "parent_rss_peak_growth_bytes": 7176192,
+  "resource_samples": [
+    {
+      "cycle": 0,
+      "parent_file_descriptors": 9,
+      "parent_resident_bytes": 72122368,
+      "worker_file_descriptors": 3,
+      "worker_resident_bytes": 6930432
+    },
+    {
+      "cycle": 1000,
+      "parent_file_descriptors": 9,
+      "parent_resident_bytes": 72908800,
+      "worker_file_descriptors": 3,
+      "worker_resident_bytes": 7028736
+    },
+    {
+      "cycle": 2000,
+      "parent_file_descriptors": 9,
+      "parent_resident_bytes": 73613312,
+      "worker_file_descriptors": 3,
+      "worker_resident_bytes": 7028736
+    },
+    {
+      "cycle": 3000,
+      "parent_file_descriptors": 9,
+      "parent_resident_bytes": 74334208,
+      "worker_file_descriptors": 3,
+      "worker_resident_bytes": 7045120
+    },
+    {
+      "cycle": 4000,
+      "parent_file_descriptors": 9,
+      "parent_resident_bytes": 75022336,
+      "worker_file_descriptors": 3,
+      "worker_resident_bytes": 7045120
+    },
+    {
+      "cycle": 5000,
+      "parent_file_descriptors": 9,
+      "parent_resident_bytes": 75694080,
+      "worker_file_descriptors": 3,
+      "worker_resident_bytes": 7045120
+    },
+    {
+      "cycle": 6000,
+      "parent_file_descriptors": 9,
+      "parent_resident_bytes": 76464128,
+      "worker_file_descriptors": 3,
+      "worker_resident_bytes": 7077888
+    },
+    {
+      "cycle": 7000,
+      "parent_file_descriptors": 9,
+      "parent_resident_bytes": 77168640,
+      "worker_file_descriptors": 3,
+      "worker_resident_bytes": 7077888
+    },
+    {
+      "cycle": 8000,
+      "parent_file_descriptors": 9,
+      "parent_resident_bytes": 77873152,
+      "worker_file_descriptors": 3,
+      "worker_resident_bytes": 7094272
+    },
+    {
+      "cycle": 9000,
+      "parent_file_descriptors": 9,
+      "parent_resident_bytes": 78626816,
+      "worker_file_descriptors": 3,
+      "worker_resident_bytes": 7159808
+    },
+    {
+      "cycle": 10000,
+      "parent_file_descriptors": 9,
+      "parent_resident_bytes": 79298560,
+      "worker_file_descriptors": 3,
+      "worker_resident_bytes": 7159808
+    }
+  ],
+  "schema_version": 1,
+  "status": "pass",
+  "thread_sanitizer_enabled": false,
+  "transcript_text_recorded": false,
+  "worker_fd_growth": 0,
+  "worker_rss_growth_bytes": 229376,
+  "worker_rss_peak_growth_bytes": 229376
+}

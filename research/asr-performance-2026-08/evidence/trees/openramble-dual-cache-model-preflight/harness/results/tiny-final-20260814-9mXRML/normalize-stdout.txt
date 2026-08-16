@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "report": {
+    "accelerator_attribution": "global_ane_activity_in_exclusive_signpost_bracket",
+    "cross_clock_numeric_comparisons": 0,
+    "dry_run": false,
+    "exact_process_compute_route_proven": false,
+    "normalized_event_count": 4,
+    "output": "$TMP/openramble-dual-cache-model-preflight/harness/results/tiny-final-20260814-9mXRML/coreml-events.jsonl",
+    "process_exit_observation_source": "dispatch_proc_exit",
+    "process_exit_timestamp_claim": "kernel_notification_observed_in_F_not_waitpid",
+    "trace_clock_id": "xctrace-sha256:f5052323d3558b07c3d5f97945b9f5dbb1960ea708d74328aa276501ec54999a"
+  }
+}

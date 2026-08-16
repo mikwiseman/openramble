@@ -1,0 +1,20 @@
+{
+  "branch": "",
+  "head": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+  "origin": "https://github.com/mikwiseman/openramble.git",
+  "source": "$TMP/openramble-exact-cache-product",
+  "status": [
+    "M Packages/ASRWorkerProtocol/Sources/ASRWorkerProtocol/ASRWireIO.swift",
+    " M Packages/ASRWorkerProtocol/Sources/ASRWorkerProtocol/ASRWorkerProtocol.swift",
+    " M Packages/ASRWorkerProtocol/Tests/ASRWorkerProtocolTests/ASRWireIOTests.swift",
+    " M Packages/DictationCore/Sources/DictationAudio/MicrophoneCapture.swift",
+    " M Packages/DictationCore/Tests/DictationAudioTests/MicrophoneCaptureFormatTests.swift",
+    " M Packages/LocalASR/Package.swift",
+    " M Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift",
+    " M Packages/LocalASR/Sources/LocalASR/LocalTranscriber.swift",
+    " M apps/macos/OpenRambleASRWorker/WorkerRuntime.swift",
+    " M apps/macos/OpenRambleASRWorkerTestFixture/OpenRambleASRWorkerTestFixture.swift",
+    "?? Packages/ASRWorkerProtocol/Sources/ASRWorkerProtocol/ASRPrefixSessionState.swift",
+    "?? Packages/ASRWorkerProtocol/Tests/ASRWorkerProtocolTests/ASRPrefixSessionStateTests.swift"
+  ]
+}

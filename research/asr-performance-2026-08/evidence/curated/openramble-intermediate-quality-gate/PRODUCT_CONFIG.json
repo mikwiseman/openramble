@@ -1,0 +1,22 @@
+{
+  "compute_units": "all",
+  "dual_decode": false,
+  "encoder_placement": "automatic",
+  "encoder_variant": "palettized6bit",
+  "language_hint": "per_fixture_from_frozen_manifest",
+  "mel_chunk_context": false,
+  "parallel_chunk_concurrency": 4,
+  "prewarm": "explicit_protocol_command_once_per_process",
+  "reset_data_on_fully_overwritten_tdt_audio_buffer_return": false,
+  "schema_version": 1,
+  "tdt_max_tokens_per_chunk": 600,
+  "vocabulary": {
+    "bias_weight": 3.0,
+    "enabled": true,
+    "model_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-ctc-110m/accdafd8cf8a2ff1cabe3c11e54416b405d409aa/parakeet-ctc-110m",
+    "model_revision": "accdafd8cf8a2ff1cabe3c11e54416b405d409aa",
+    "scheduling": "candidateRegions",
+    "similarity": 0.65,
+    "terms": 28
+  }
+}

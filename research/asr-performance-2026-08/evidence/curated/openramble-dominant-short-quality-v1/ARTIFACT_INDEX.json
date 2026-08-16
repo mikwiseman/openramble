@@ -1,0 +1,91 @@
+{
+  "artifacts": [
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/corpus/selection-plan.json",
+      "role": "frozen FLEURS selection and availability audit",
+      "sha256": "7b780a379c696dcfadb0d3ae518877a30bd2ba9f34475175ffaa25b2d163b415"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/corpus/manifest.json",
+      "role": "sealed 24-row canonical FLEURS core manifest",
+      "sha256": "994154cd47313f2ee275716f2b6da1c43c689a211178cedaaa93086c7e3c1407"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/corpus/pcm-index.sha256",
+      "role": "24 canonical PCM hashes",
+      "sha256": "a07d213dd000e05e672c27a4d1916324f2e23de9d5eb5abea19960d9afa1ac14"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/corpus/source-index.sha256",
+      "role": "24 source WAV hashes",
+      "sha256": "b1669daa482fabb2421efe698db60a3dcee4dde68d8b1dc36bc05190adfb3712"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/prepare_fleurs_core.py",
+      "role": "FLEURS planner/canonicalizer",
+      "sha256": "66e1ddc599309dc9d893dde5fc86653758639108ffbd30dae91cc43c54b5e8b4"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/supplement-audit/common-voice-17/AUDIT.json",
+      "role": "Common Voice metadata-only availability audit",
+      "sha256": "8c2a47153a6a9e4eedfd37c45253352ed77b7d81e0889f0d2410dfd9ecef72d5"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/supplement-audit/common-voice-17/SELECTION_PLAN.json",
+      "role": "frozen 180-row Common Voice metadata selection",
+      "sha256": "de0e219fc3f21ec7cd7d400bc691cb58c5d400f85551ea306c7fecac238c8456"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/audit_common_voice_17.py",
+      "role": "Common Voice metadata auditor",
+      "sha256": "d26f5d6d44f94986c69478880bde2166d377188551d63c678da5a3da5be20410"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/PREREGISTRATION.json",
+      "role": "blocked preregistration with frozen hard gates",
+      "sha256": "fc11882edf45b3727d124f5689a6fb179e8e7123b8437498226c00c41a5dd719"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/evaluate_one_shot.py",
+      "role": "one-shot paired evaluator",
+      "sha256": "e0ec47123c4e31b83da0e1ebf067f9e1f1ae10488362e967739b731491b8397d"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/seal_final_preregistration.py",
+      "role": "fail-closed final-manifest arming sealer",
+      "sha256": "72c339777d6b81d3b60e4a9760b06001878305eee4eb43306d28bb095ab7656a"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/VERIFICATION.json",
+      "role": "successful invariant verification receipt",
+      "sha256": "f5853c068e5340513b8ad2806e64e8c8c432e0e11b1fd4bd0cfd95ab7f52fdc8"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/verify_frozen.py",
+      "role": "read-only invariant verifier",
+      "sha256": "e93100c2dfc39f1a4d43cfc556c09ecb3cc08b25b1ac6f8ae133f1dda8f68f23"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/evaluator-blocked-test.stderr",
+      "role": "expected evaluator fail-closed receipt",
+      "sha256": "d39e5a2dfc26ab6882d83e78f5ea6aba1e1b564fcb5dac8dce86a5654e7165ae"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/sealer-blocked-test.stderr",
+      "role": "expected sealer fail-closed receipt",
+      "sha256": "2c509ae8d48997285e590fe4c9ad890511bf3719daa5f33901d03e8a6a7bf0f6"
+    },
+    {
+      "path": "$TMP/openramble-dominant-short-quality-v1/REPORT.md",
+      "role": "human-readable audit report",
+      "sha256": "71eb109c26b7dcee0b788f4618d3fa27a258aeeac85bad003ff17eb56633d872"
+    }
+  ],
+  "asr_or_coreml_runs": 0,
+  "created_at_utc": "2026-08-14T19:19:53Z",
+  "model_outputs_inspected": false,
+  "schema_version": 1,
+  "shared_repository_commit": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+  "shared_repository_edits": 0,
+  "status": "frozen_blocked_before_inference"
+}

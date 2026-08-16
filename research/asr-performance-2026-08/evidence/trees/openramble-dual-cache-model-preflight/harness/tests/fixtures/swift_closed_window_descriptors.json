@@ -1,0 +1,46 @@
+[
+  {
+    "case": "real_first_window_swift_synthesized_nil_omitted",
+    "descriptor": {
+      "chunk_end": 239360,
+      "chunk_start": 0,
+      "chunk_start_offset": 0,
+      "context_samples": 0,
+      "context_start": 0,
+      "earliest_safe_prefix_sample_count": 240001,
+      "index": 0,
+      "is_last_chunk": false,
+      "stable_through_sample_count": 0
+    }
+  },
+  {
+    "case": "real_first_window_explicit_null_interop",
+    "descriptor": {
+      "chunk_end": 239360,
+      "chunk_start": 0,
+      "chunk_start_offset": 0,
+      "context_samples": 0,
+      "context_start": 0,
+      "earliest_safe_prefix_sample_count": 240001,
+      "emit_tokens_after_frame": null,
+      "index": 0,
+      "initial_time_index_override": null,
+      "is_last_chunk": false,
+      "stable_through_sample_count": 0
+    }
+  },
+  {
+    "case": "real_recursive_zero_silence_window_swift_synthesized_nil_omitted",
+    "descriptor": {
+      "chunk_end": 382720,
+      "chunk_start": 143360,
+      "chunk_start_offset": 143360,
+      "context_samples": 0,
+      "context_start": 143360,
+      "earliest_safe_prefix_sample_count": 382721,
+      "index": 1,
+      "is_last_chunk": false,
+      "stable_through_sample_count": 272640
+    }
+  }
+]

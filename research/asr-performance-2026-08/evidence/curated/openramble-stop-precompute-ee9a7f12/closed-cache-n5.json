@@ -1,0 +1,239 @@
+{
+  "applicationHead" : "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+  "fixtures" : [
+    {
+      "actualSourceSHA256" : "e8a97e9ec6534cdf5cb7b22ee6a9cfa9dc8bdeaa633d43c4a098a28eff5fddec",
+      "baselineP50Milliseconds" : 77.79825,
+      "baselineTimingHashes" : [
+        "b8cd51e27eec52b0e89fb4f8ba56582310acb45255acbd29bf380f141a0e48f3"
+      ],
+      "baselineTimingsStable" : true,
+      "baselineTranscript" : "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really I really want to.",
+      "baselineTranscriptHashes" : [
+        "0af51c25c852b414aef9244e4bdfe3757fe582ce2d470ade56b493913eb97862"
+      ],
+      "baselineTranscriptStable" : true,
+      "baselineWallMilliseconds" : [
+        77.79825,
+        72.034583,
+        96.696459,
+        96.717,
+        71.033625
+      ],
+      "cacheInputEndSample" : 239360,
+      "cacheInputSampleCount" : 239360,
+      "cacheInputStartSample" : 0,
+      "cachedFinalP50Milliseconds" : 42.647625,
+      "cachedFinalWallMilliseconds" : [
+        43.022209,
+        42.647625,
+        44.225458,
+        36.103625,
+        39.883958
+      ],
+      "cachedTimingHashes" : [
+        "b8cd51e27eec52b0e89fb4f8ba56582310acb45255acbd29bf380f141a0e48f3"
+      ],
+      "cachedTimingsStable" : true,
+      "cachedTokenCount" : 60,
+      "cachedTranscript" : "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really I really want to.",
+      "cachedTranscriptHashes" : [
+        "0af51c25c852b414aef9244e4bdfe3757fe582ce2d470ade56b493913eb97862"
+      ],
+      "cachedTranscriptStable" : true,
+      "durationSeconds" : 15.1,
+      "earliestSafePrefixSampleCount" : 240001,
+      "earliestSafePrefixSeconds" : 15.0000625,
+      "expectedSourceSHA256" : "e8a97e9ec6534cdf5cb7b22ee6a9cfa9dc8bdeaa633d43c4a098a28eff5fddec",
+      "id" : "boundary-en-repeat-15.1s",
+      "language" : "en",
+      "p50StopLatencySpeedup" : 1.8242106096177688,
+      "path" : "$TMP/openramble-short-engine.SpfSeY/boundaries/en-repeat-15.1s.wav",
+      "precomputeCouldFinishBeforeStop" : true,
+      "precomputeWallMilliseconds" : 69.170083,
+      "sampleCount" : 241600,
+      "sourceHashMatches" : true,
+      "speechSlackAfterSafePrefixMilliseconds" : 99.9375,
+      "tokenTimingsExact" : true,
+      "transcriptExact" : true
+    },
+    {
+      "actualSourceSHA256" : "349d497e54f48d7fec1a9c8d7a849500606a2076a4cda164477553998c827e28",
+      "baselineP50Milliseconds" : 107.758708,
+      "baselineTimingHashes" : [
+        "e870ffecba6707192e9e4fd662b1a748f3911d93d70193e77d81fb7cf593550b"
+      ],
+      "baselineTimingsStable" : true,
+      "baselineTranscript" : "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much excited.",
+      "baselineTranscriptHashes" : [
+        "8b00a1277d4b1556e7d83185be54035470fc2b50707a9d83307d40dbcf9df254"
+      ],
+      "baselineTranscriptStable" : true,
+      "baselineWallMilliseconds" : [
+        126.387708,
+        107.758708,
+        125.027667,
+        104.128292,
+        103.995834
+      ],
+      "cacheInputEndSample" : 239360,
+      "cacheInputSampleCount" : 239360,
+      "cacheInputStartSample" : 0,
+      "cachedFinalP50Milliseconds" : 78.603041,
+      "cachedFinalWallMilliseconds" : [
+        96.964083,
+        99.179333,
+        78.603041,
+        76.638125,
+        75.637916
+      ],
+      "cachedTimingHashes" : [
+        "e870ffecba6707192e9e4fd662b1a748f3911d93d70193e77d81fb7cf593550b"
+      ],
+      "cachedTimingsStable" : true,
+      "cachedTokenCount" : 60,
+      "cachedTranscript" : "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much excited.",
+      "cachedTranscriptHashes" : [
+        "8b00a1277d4b1556e7d83185be54035470fc2b50707a9d83307d40dbcf9df254"
+      ],
+      "cachedTranscriptStable" : true,
+      "durationSeconds" : 29.9,
+      "earliestSafePrefixSampleCount" : 240001,
+      "earliestSafePrefixSeconds" : 15.0000625,
+      "expectedSourceSHA256" : "349d497e54f48d7fec1a9c8d7a849500606a2076a4cda164477553998c827e28",
+      "id" : "boundary-en-repeat-29.9s",
+      "language" : "en",
+      "p50StopLatencySpeedup" : 1.3709228883396507,
+      "path" : "$TMP/openramble-short-engine.SpfSeY/boundaries/en-repeat-29.9s.wav",
+      "precomputeCouldFinishBeforeStop" : true,
+      "precomputeWallMilliseconds" : 63.370041,
+      "sampleCount" : 478400,
+      "sourceHashMatches" : true,
+      "speechSlackAfterSafePrefixMilliseconds" : 14899.9375,
+      "tokenTimingsExact" : true,
+      "transcriptExact" : true
+    },
+    {
+      "actualSourceSHA256" : "a51d735c585019651b1c26184e95bc0b4a155bbc5a5ad7ad30244dbcc0cf30cd",
+      "baselineP50Milliseconds" : 109.382625,
+      "baselineTimingHashes" : [
+        "f2754fc09c02cb831837f0f3c500e494ba6e3204ca8accfc53f49e01ae1ea1fe"
+      ],
+      "baselineTimingsStable" : true,
+      "baselineTranscript" : "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of",
+      "baselineTranscriptHashes" : [
+        "6084ed9473ac74643f28c3c6d04de6fd6b586229c3c114cf4b5065c70c91903a"
+      ],
+      "baselineTranscriptStable" : true,
+      "baselineWallMilliseconds" : [
+        102.853,
+        126.693,
+        131.077041,
+        107.651958,
+        109.382625
+      ],
+      "cacheInputEndSample" : 239360,
+      "cacheInputSampleCount" : 239360,
+      "cacheInputStartSample" : 0,
+      "cachedFinalP50Milliseconds" : 100.615375,
+      "cachedFinalWallMilliseconds" : [
+        99.104625,
+        102.239375,
+        105.20725,
+        100.615375,
+        100.054417
+      ],
+      "cachedTimingHashes" : [
+        "f2754fc09c02cb831837f0f3c500e494ba6e3204ca8accfc53f49e01ae1ea1fe"
+      ],
+      "cachedTimingsStable" : true,
+      "cachedTokenCount" : 60,
+      "cachedTranscript" : "I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of showing him how much shocked I was at some parts of what he said. I really was very much afraid of",
+      "cachedTranscriptHashes" : [
+        "6084ed9473ac74643f28c3c6d04de6fd6b586229c3c114cf4b5065c70c91903a"
+      ],
+      "cachedTranscriptStable" : true,
+      "durationSeconds" : 30.1,
+      "earliestSafePrefixSampleCount" : 240001,
+      "earliestSafePrefixSeconds" : 15.0000625,
+      "expectedSourceSHA256" : "a51d735c585019651b1c26184e95bc0b4a155bbc5a5ad7ad30244dbcc0cf30cd",
+      "id" : "boundary-en-repeat-30.1s",
+      "language" : "en",
+      "p50StopLatencySpeedup" : 1.0871362850856543,
+      "path" : "$TMP/openramble-short-engine.SpfSeY/boundaries/en-repeat-30.1s.wav",
+      "precomputeCouldFinishBeforeStop" : true,
+      "precomputeWallMilliseconds" : 74.779209,
+      "sampleCount" : 481600,
+      "sourceHashMatches" : true,
+      "speechSlackAfterSafePrefixMilliseconds" : 15099.9375,
+      "tokenTimingsExact" : true,
+      "transcriptExact" : true
+    },
+    {
+      "actualSourceSHA256" : "fdaf78bad5c6a04424c7d7a699babced0992dc4619ecb7897bdf6c7b1ab79eda",
+      "baselineP50Milliseconds" : 170.719583,
+      "baselineTimingHashes" : [
+        "b354d9e15956f1facd5a08941aabbddcaf00d079e3f916ed43850131a0e93e0b"
+      ],
+      "baselineTimingsStable" : true,
+      "baselineTranscript" : "Welcome to Quirk Quid Quill Inc., where finance meets innovation. Explore diverse offerings from the P3 Quattro, a unique investment portfolio quadrant to the O three Omni a platform for intricate derivative trading strategies. Delve into unconventional bond markets with our B three bond X and our and experience non-standard equity trading with E3 Equity. Personalize your wealth management with W3RAPZ and anticipate market trends with the O2 Outlier, our forward-thinking financial forecasting tool. Explore venture capital world with U3 Unifund or Move Your Money with the M3 Mover, our sophistic sophisticated monetary transfer module. At Quirk Quid Quill Inc., we turn complex finance into creative solutions. Join us in redefining financial services.",
+      "baselineTranscriptHashes" : [
+        "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8"
+      ],
+      "baselineTranscriptStable" : true,
+      "baselineWallMilliseconds" : [
+        180.427791,
+        168.409,
+        182.589292,
+        170.719583,
+        168.492917
+      ],
+      "cacheInputEndSample" : 239360,
+      "cacheInputSampleCount" : 239360,
+      "cacheInputStartSample" : 0,
+      "cachedFinalP50Milliseconds" : 168.830958,
+      "cachedFinalWallMilliseconds" : [
+        159.404208,
+        165.34625,
+        174.475667,
+        171.088875,
+        168.830958
+      ],
+      "cachedTimingHashes" : [
+        "b354d9e15956f1facd5a08941aabbddcaf00d079e3f916ed43850131a0e93e0b"
+      ],
+      "cachedTimingsStable" : true,
+      "cachedTokenCount" : 60,
+      "cachedTranscript" : "Welcome to Quirk Quid Quill Inc., where finance meets innovation. Explore diverse offerings from the P3 Quattro, a unique investment portfolio quadrant to the O three Omni a platform for intricate derivative trading strategies. Delve into unconventional bond markets with our B three bond X and our and experience non-standard equity trading with E3 Equity. Personalize your wealth management with W3RAPZ and anticipate market trends with the O2 Outlier, our forward-thinking financial forecasting tool. Explore venture capital world with U3 Unifund or Move Your Money with the M3 Mover, our sophistic sophisticated monetary transfer module. At Quirk Quid Quill Inc., we turn complex finance into creative solutions. Join us in redefining financial services.",
+      "cachedTranscriptHashes" : [
+        "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8"
+      ],
+      "cachedTranscriptStable" : true,
+      "durationSeconds" : 56.104,
+      "earliestSafePrefixSampleCount" : 240001,
+      "earliestSafePrefixSeconds" : 15.0000625,
+      "expectedSourceSHA256" : "fdaf78bad5c6a04424c7d7a699babced0992dc4619ecb7897bdf6c7b1ab79eda",
+      "id" : "real-en-product-names-56.104s",
+      "language" : "en",
+      "p50StopLatencySpeedup" : 1.0111864851231844,
+      "path" : "$TMP/openramble-short-engine.SpfSeY/transcribe.cpp/samples/product-names.wav",
+      "precomputeCouldFinishBeforeStop" : true,
+      "precomputeWallMilliseconds" : 74.283,
+      "sampleCount" : 897664,
+      "sourceHashMatches" : true,
+      "speechSlackAfterSafePrefixMilliseconds" : 41103.9375,
+      "tokenTimingsExact" : true,
+      "transcriptExact" : true
+    }
+  ],
+  "fluidAudioBaseRevision" : "ee9a7f12d91710da53de6d75f8b7160e09eccee4",
+  "modelConfiguration" : ".all, encoder=.int8/.all, mel=false, concurrency=4, maxTokens=600",
+  "modelDirectory" : "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3",
+  "modelLoadMilliseconds" : 14429.691416,
+  "peakRSSBytes" : 2263564288,
+  "persistentProcess" : true,
+  "prototypeDiffSHA256" : "3f37b4a8672b4db3a2b99dad3fafc40591db748eff55bb45edfe10fa3d0f3d2e",
+  "repeatCount" : 5,
+  "schemaVersion" : 1,
+  "warmupFixture" : "boundary-en-repeat-15.1s"
+}

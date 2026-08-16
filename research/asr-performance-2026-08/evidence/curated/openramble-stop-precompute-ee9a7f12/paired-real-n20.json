@@ -1,0 +1,3232 @@
+{
+  "engines": {
+    "handy": {
+      "adapter_patch_sha256": "26e86e86df763afe898a128470f40e7679b1943fcfe1483c2896cf27db8edcc4",
+      "binary_sha256": "4a069f20ca3789338c8ff462dbc5d1df9250fa345eb5cfc80eb078f4d334993f",
+      "effective_settings_sha256": "96817744e87430287c165f08fc2ef09159af2334e5f75f99457026d2ffc4b1a4",
+      "model_id": "handy-computer/parakeet-tdt-0.6b-v3-gguf/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+      "model_path_fingerprint": {
+        "byte_count": 739508576,
+        "kind": "file",
+        "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      },
+      "provenance": "locally built Handy backend plus benchmark adapter; not official app parity",
+      "reported_identity": {
+        "bound_backend": "MTL0",
+        "effective_settings": {
+          "benchmark_keep_model_override": true,
+          "custom_filler_words_count": 0,
+          "custom_filler_words_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+          "custom_words_count": 0,
+          "custom_words_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "persisted_model_unload_timeout": "min5",
+          "selected_language": "auto",
+          "transcribe_accelerator": "auto",
+          "transcribe_gpu_device": -1,
+          "translate_to_english": false,
+          "word_correction_threshold": 0.18
+        },
+        "model_id": "handy-computer/parakeet-tdt-0.6b-v3-gguf/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+        "model_info": {
+          "accuracy_score": 0.8799999952316284,
+          "description": "Fast and accurate. Supports 25 European languages",
+          "engine_type": "TranscribeCpp",
+          "filename": "parakeet-tdt-0.6b-v3-Q8_0.gguf",
+          "id": "handy-computer/parakeet-tdt-0.6b-v3-gguf/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+          "is_custom": false,
+          "is_directory": false,
+          "is_downloaded": true,
+          "is_downloading": false,
+          "is_recommended": false,
+          "name": "Parakeet TDT 0.6B v3",
+          "partial_size": 0,
+          "size_mb": 705,
+          "source": {
+            "HuggingFace": {
+              "repo_id": "handy-computer/parakeet-tdt-0.6b-v3-gguf",
+              "revision": "85ac09ea12fc4b1112fa76810059364bc6adc9de"
+            }
+          },
+          "speed_score": 0.7900000214576721,
+          "supported_languages": [
+            "bg",
+            "hr",
+            "cs",
+            "da",
+            "nl",
+            "en",
+            "et",
+            "fi",
+            "fr",
+            "de",
+            "el",
+            "hu",
+            "it",
+            "lv",
+            "lt",
+            "mt",
+            "pl",
+            "pt",
+            "ro",
+            "ru",
+            "sk",
+            "sl",
+            "es",
+            "sv",
+            "uk"
+          ],
+          "supports_language_detection": true,
+          "supports_language_selection": true,
+          "supports_streaming": false,
+          "supports_translation": false
+        },
+        "model_path": "$HOME/Library/Application Support/com.pais.handy/models/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+        "protocol_version": 1,
+        "requested_device_index": null,
+        "source_commit": "db003f38b1aef4eb967ac3419bebc851d680f71c"
+      },
+      "source_commit": "db003f38b1aef4eb967ac3419bebc851d680f71c"
+    },
+    "openramble": {
+      "argv": [
+        "$TMP/openramble-stop-precompute-ee9a7f12/all-closed-jsonl-wrapper",
+        "serve-jsonl"
+      ],
+      "binary_sha256": "8892c708b5a4070bfd1de7c253869fee072101483b8acb5f347eef1603f3f821",
+      "effective_settings_sha256": "eed6c95cedd5c72d15dda17452a3eeaabf09c8ce7ec138e2b3c97095d2b96205",
+      "model_path_fingerprints": {
+        "model": {
+          "byte_count": 483105645,
+          "file_count": 21,
+          "files": [
+            {
+              "byte_count": 243,
+              "path": "Decoder.mlmodelc/analytics/coremldata.bin",
+              "sha256": "4238c4e81ecd0dc94bd7dfbb60f7e2cc824107c1ffe0387b8607b72833dba350"
+            },
+            {
+              "byte_count": 554,
+              "path": "Decoder.mlmodelc/coremldata.bin",
+              "sha256": "18647af085d87bd8f3121c8a9b4d4564c1ede038dab63d295b4e745cf2d7fb99"
+            },
+            {
+              "byte_count": 3427,
+              "path": "Decoder.mlmodelc/metadata.json",
+              "sha256": "a39e93cd8371b8ded92635c7804fcd0590f0d1dd9415c6d19a0484be073077d9"
+            },
+            {
+              "byte_count": 13110,
+              "path": "Decoder.mlmodelc/model.mil",
+              "sha256": "ef2a0a281695398a62fde86ac269c68f73d5b578d7ed3b31f2ba91a2d1ea1f35"
+            },
+            {
+              "byte_count": 23604992,
+              "path": "Decoder.mlmodelc/weights/weight.bin",
+              "sha256": "48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41"
+            },
+            {
+              "byte_count": 243,
+              "path": "Encoder.mlmodelc/analytics/coremldata.bin",
+              "sha256": "42e638870d73f26b332918a3496ce36793fbb413a81cbd3d16ba01328637a105"
+            },
+            {
+              "byte_count": 485,
+              "path": "Encoder.mlmodelc/coremldata.bin",
+              "sha256": "d48034a167a82e88fc3df64f60af963ab3983538271175b8319e7d5720a0fb86"
+            },
+            {
+              "byte_count": 2921,
+              "path": "Encoder.mlmodelc/metadata.json",
+              "sha256": "da24da9cca943fb29d7fa8e376d57fca7cb3aa08ca51b956b0b0e56813f087e9"
+            },
+            {
+              "byte_count": 959769,
+              "path": "Encoder.mlmodelc/model.mil",
+              "sha256": "ed7b19156ca29fa7dfd6891deb9fda4b0e8893f68597c985d135736546a43808"
+            },
+            {
+              "byte_count": 445187200,
+              "path": "Encoder.mlmodelc/weights/weight.bin",
+              "sha256": "e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421"
+            },
+            {
+              "byte_count": 243,
+              "path": "JointDecisionv3.mlmodelc/analytics/coremldata.bin",
+              "sha256": "26def4bf73dd56d29dee21c8ef97cb8969e62f6120ed1adc91e46828e2737b6c"
+            },
+            {
+              "byte_count": 521,
+              "path": "JointDecisionv3.mlmodelc/coremldata.bin",
+              "sha256": "f5fc08b741400f0088492c9e839418b1e18522f19cba28d361dd030c5f398342"
+            },
+            {
+              "byte_count": 3453,
+              "path": "JointDecisionv3.mlmodelc/metadata.json",
+              "sha256": "d9307211b9a37e0f0ac260c7660b1571a3de25841035cfdf9b58fd40425f890f"
+            },
+            {
+              "byte_count": 11775,
+              "path": "JointDecisionv3.mlmodelc/model.mil",
+              "sha256": "be60732943389a047175111a83f8839f3eb39d4803adafa828a0871b2f39818d"
+            },
+            {
+              "byte_count": 12642764,
+              "path": "JointDecisionv3.mlmodelc/weights/weight.bin",
+              "sha256": "4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e"
+            },
+            {
+              "byte_count": 243,
+              "path": "Preprocessor.mlmodelc/analytics/coremldata.bin",
+              "sha256": "c9beeb989c8d66f8be11df59bc6df277ec76cee404f6865b46243835ef562f6d"
+            },
+            {
+              "byte_count": 486,
+              "path": "Preprocessor.mlmodelc/coremldata.bin",
+              "sha256": "dbde3f2300842c1fd51ef3ff948a0bcffe65ffd2dca10707f2509f32c1d65b1d"
+            },
+            {
+              "byte_count": 2841,
+              "path": "Preprocessor.mlmodelc/metadata.json",
+              "sha256": "2a98699e22d279dd37fa1d238aeb1c6db1df0d6fad687775324157689d8f3acf"
+            },
+            {
+              "byte_count": 28181,
+              "path": "Preprocessor.mlmodelc/model.mil",
+              "sha256": "4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93"
+            },
+            {
+              "byte_count": 491072,
+              "path": "Preprocessor.mlmodelc/weights/weight.bin",
+              "sha256": "129b76e3aeafa8afa3ea76d995b964b145fe83700d579f6ff42c4c38fa0968ea"
+            },
+            {
+              "byte_count": 151122,
+              "path": "parakeet_vocab.json",
+              "sha256": "7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735"
+            }
+          ],
+          "kind": "directory",
+          "sha256": "d6c10d2a84ba889b9f6c118eef0e71f5336396cc435d0db1c020894ad9127cdd"
+        },
+        "vocabulary_model": null
+      },
+      "reported_identity": {
+        "effective_settings": {
+          "compute_units": "all",
+          "dual_decode": false,
+          "encoder_compute_units": "all",
+          "encoder_placement": "automatic",
+          "encoder_precision": "int8_palettized6bit",
+          "language": "en",
+          "max_tokens_per_chunk": 600,
+          "mel_chunk_context": false,
+          "parallel_chunk_concurrency": 4,
+          "preprocessor_array_return_reset_data": false,
+          "vocabulary_enabled": false,
+          "vocabulary_scheduling": "candidateRegions"
+        },
+        "model": {
+          "engine_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3",
+          "model_id": "parakeet-tdt-0.6b-v3",
+          "revision": "aed02740059203c4a87495924f685de3722ae9ce"
+        },
+        "model_directory": "$HOME/Library/Application Support/OpenRamble/Models/parakeet-tdt-0.6b-v3/aed02740059203c4a87495924f685de3722ae9ce/parakeet-tdt-0.6b-v3",
+        "peak_rss_bytes": 38699008,
+        "protocol_version": 1,
+        "vocabulary_model": null
+      },
+      "requested_settings": {
+        "encoder_placement": "automatic",
+        "language": "en",
+        "prewarm": true,
+        "vocabulary": false,
+        "vocabulary_scheduling": "candidateRegions",
+        "vocabulary_terms": null
+      },
+      "requested_settings_sha256": "311d21f490c65b835f62992b4fffbbd210605ddfea766f5c36736f05c960af3c"
+    }
+  },
+  "experiment_identity_sha256": "cf8983deffbb4434e28da77900df9cb46cde69809eafb2427cc7439044a0f7a3",
+  "fixtures": [
+    {
+      "canonical_pcm": {
+        "audio_duration_ns": 56104000000,
+        "format": "f32le",
+        "sample_count": 897664,
+        "sample_rate": 16000,
+        "sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc"
+      },
+      "id": "real-en-product-names-56.104s",
+      "kind": "real-long",
+      "language": "en",
+      "measured_schedule": [
+        "OH",
+        "OH",
+        "OH",
+        "OH",
+        "HO",
+        "OH",
+        "HO",
+        "OH",
+        "HO",
+        "HO",
+        "OH",
+        "OH",
+        "HO",
+        "HO",
+        "HO",
+        "OH",
+        "HO",
+        "OH",
+        "HO",
+        "HO"
+      ],
+      "pairs": [
+        {
+          "handy": {
+            "elapsed_ns": 940302834,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 0,
+          "openramble": {
+            "elapsed_ns": 47970041,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 47970041
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 47970041,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 931756417,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 1,
+          "openramble": {
+            "elapsed_ns": 52749334,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 52749334
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 52749334,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 924147542,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 2,
+          "openramble": {
+            "elapsed_ns": 48992292,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 48992292
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 48992292,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 925606583,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 3,
+          "openramble": {
+            "elapsed_ns": 53066208,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 53066208
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 53066208,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 992981125,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 4,
+          "openramble": {
+            "elapsed_ns": 54763417,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 54763417
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 54763417,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 921239167,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 5,
+          "openramble": {
+            "elapsed_ns": 47952584,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 47952584
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 47952584,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 983990375,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 6,
+          "openramble": {
+            "elapsed_ns": 54733875,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 54733875
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 54733875,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 921093416,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 7,
+          "openramble": {
+            "elapsed_ns": 48386292,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 48386292
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 48386292,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 930951625,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 8,
+          "openramble": {
+            "elapsed_ns": 52113125,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 52113125
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 52113125,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 985255000,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 9,
+          "openramble": {
+            "elapsed_ns": 52855459,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 52855459
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 52855459,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 920340166,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 10,
+          "openramble": {
+            "elapsed_ns": 54869542,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 54869542
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 54869542,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 931016916,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 11,
+          "openramble": {
+            "elapsed_ns": 52567667,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 52567667
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 52567667,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 922433125,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 12,
+          "openramble": {
+            "elapsed_ns": 49367417,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 49367417
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 49367417,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 925347000,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 13,
+          "openramble": {
+            "elapsed_ns": 53583833,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 53583833
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 53583833,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 909685417,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 14,
+          "openramble": {
+            "elapsed_ns": 52342041,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 52342041
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 52342041,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 916811542,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 15,
+          "openramble": {
+            "elapsed_ns": 48046000,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 48046000
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 48046000,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 922771417,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 16,
+          "openramble": {
+            "elapsed_ns": 53764500,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 53764500
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 53764500,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 969525334,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 17,
+          "openramble": {
+            "elapsed_ns": 48122917,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 48122917
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 48122917,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 918151291,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 18,
+          "openramble": {
+            "elapsed_ns": 51651292,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 51651292
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 51651292,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 919314667,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 19,
+          "openramble": {
+            "elapsed_ns": 54107417,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 54107417
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 54107417,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "HO"
+        }
+      ],
+      "reference_key": "samples/product-names.wav",
+      "reference_sha256": "b91f3a86e3b3f36370e14a494f9f317fc3cc9ea04e0e4f73ac38e4e7171c3204",
+      "sha256": "fdaf78bad5c6a04424c7d7a699babced0992dc4619ecb7897bdf6c7b1ab79eda",
+      "source_file_sha256": "fdaf78bad5c6a04424c7d7a699babced0992dc4619ecb7897bdf6c7b1ab79eda",
+      "summary": {
+        "handy": {
+          "by_order": {
+            "HO": {
+              "maximum_ns": 992981125,
+              "maximum_seconds": 0.992981125,
+              "minimum_ns": 909685417,
+              "p50_ns": 924059208.5,
+              "p50_realtime_factor": 60.714724212393364,
+              "p50_seconds": 0.9240592085,
+              "p95_ns": 989504368.75,
+              "p95_seconds": 0.98950436875,
+              "p99_ns": 992285773.75,
+              "p99_seconds": 0.99228577375,
+              "runs_ns": [
+                992981125,
+                983990375,
+                930951625,
+                985255000,
+                922433125,
+                925347000,
+                909685417,
+                922771417,
+                918151291,
+                919314667
+              ]
+            },
+            "OH": {
+              "maximum_ns": 969525334,
+              "maximum_seconds": 0.969525334,
+              "minimum_ns": 916811542,
+              "p50_ns": 924877062.5,
+              "p50_realtime_factor": 60.66103515244222,
+              "p50_seconds": 0.9248770625,
+              "p95_ns": 956375209.0,
+              "p95_seconds": 0.956375209,
+              "p99_ns": 966895309.0,
+              "p99_seconds": 0.966895309,
+              "runs_ns": [
+                940302834,
+                931756417,
+                924147542,
+                925606583,
+                921239167,
+                921093416,
+                920340166,
+                931016916,
+                916811542,
+                969525334
+              ]
+            }
+          },
+          "maximum_ns": 992981125,
+          "maximum_peak_rss_bytes": null,
+          "maximum_seconds": 0.992981125,
+          "minimum_ns": 909685417,
+          "p50_ns": 924747271.0,
+          "p50_realtime_factor": 60.66954913998335,
+          "p50_seconds": 0.924747271,
+          "p95_ns": 985641306.25,
+          "p95_seconds": 0.98564130625,
+          "p99_ns": 991513161.25,
+          "p99_seconds": 0.99151316125,
+          "runs_ns": [
+            940302834,
+            931756417,
+            924147542,
+            925606583,
+            992981125,
+            921239167,
+            983990375,
+            921093416,
+            930951625,
+            985255000,
+            920340166,
+            931016916,
+            922433125,
+            925347000,
+            909685417,
+            916811542,
+            922771417,
+            969525334,
+            918151291,
+            919314667
+          ],
+          "transcript_stable": true,
+          "unique_normalized_transcripts": 1,
+          "unique_raw_transcripts": 1,
+          "word_error_rate": 0.10377358490566038
+        },
+        "openramble": {
+          "by_order": {
+            "HO": {
+              "maximum_ns": 54763417,
+              "maximum_seconds": 0.054763417,
+              "minimum_ns": 49367417,
+              "p50_ns": 53219646.0,
+              "p50_realtime_factor": 1054.197166211891,
+              "p50_seconds": 0.053219646,
+              "p95_ns": 54750123.1,
+              "p95_seconds": 0.0547501231,
+              "p99_ns": 54760758.22,
+              "p99_seconds": 0.05476075822,
+              "runs_ns": [
+                54763417,
+                54733875,
+                52113125,
+                52855459,
+                49367417,
+                53583833,
+                52342041,
+                53764500,
+                51651292,
+                54107417
+              ]
+            },
+            "OH": {
+              "maximum_ns": 54869542,
+              "maximum_seconds": 0.054869542,
+              "minimum_ns": 47952584,
+              "p50_ns": 48689292.0,
+              "p50_realtime_factor": 1152.2862152113446,
+              "p50_seconds": 0.048689292,
+              "p95_ns": 54058041.7,
+              "p95_seconds": 0.054058041700000004,
+              "p99_ns": 54707241.94,
+              "p99_seconds": 0.05470724194,
+              "runs_ns": [
+                47970041,
+                52749334,
+                48992292,
+                53066208,
+                47952584,
+                48386292,
+                54869542,
+                52567667,
+                48046000,
+                48122917
+              ]
+            }
+          },
+          "ctc_inference_invocations": {
+            "maximum": 0,
+            "minimum": 0,
+            "p50": 0.0,
+            "runs": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "maximum_ns": 54869542,
+          "maximum_peak_rss_bytes": 138936320,
+          "maximum_seconds": 0.054869542,
+          "minimum_ns": 47952584,
+          "p50_ns": 52454854.0,
+          "p50_realtime_factor": 1069.5673654910945,
+          "p50_seconds": 0.052454854,
+          "p95_ns": 54768723.25,
+          "p95_seconds": 0.05476872325,
+          "p99_ns": 54849378.25,
+          "p99_seconds": 0.05484937825,
+          "phase_timing_schema_version": 1,
+          "phase_timings": {
+            "ctc_model_inference_ns": {
+              "executed_count": 0,
+              "maximum_ns": null,
+              "maximum_seconds": null,
+              "minimum_ns": null,
+              "p50_ns": null,
+              "p50_realtime_factor": null,
+              "p50_seconds": null,
+              "p95_ns": null,
+              "p95_seconds": null,
+              "p99_ns": null,
+              "p99_seconds": null,
+              "runs_ns": [],
+              "skipped_count": 20
+            },
+            "ctc_rescoring_fusion_ns": {
+              "executed_count": 0,
+              "maximum_ns": null,
+              "maximum_seconds": null,
+              "minimum_ns": null,
+              "p50_ns": null,
+              "p50_realtime_factor": null,
+              "p50_seconds": null,
+              "p95_ns": null,
+              "p95_seconds": null,
+              "p99_ns": null,
+              "p99_seconds": null,
+              "runs_ns": [],
+              "skipped_count": 20
+            },
+            "lexical_candidate_gate_ns": {
+              "executed_count": 0,
+              "maximum_ns": null,
+              "maximum_seconds": null,
+              "minimum_ns": null,
+              "p50_ns": null,
+              "p50_realtime_factor": null,
+              "p50_seconds": null,
+              "p95_ns": null,
+              "p95_seconds": null,
+              "p99_ns": null,
+              "p99_seconds": null,
+              "runs_ns": [],
+              "skipped_count": 20
+            },
+            "primary_tdt_inference_decode_ns": {
+              "executed_count": 20,
+              "maximum_ns": 54869542,
+              "maximum_seconds": 0.054869542,
+              "minimum_ns": 47952584,
+              "p50_ns": 52454854.0,
+              "p50_realtime_factor": 1069.5673654910945,
+              "p50_seconds": 0.052454854,
+              "p95_ns": 54768723.25,
+              "p95_seconds": 0.05476872325,
+              "p99_ns": 54849378.25,
+              "p99_seconds": 0.05484937825,
+              "runs_ns": [
+                47970041,
+                52749334,
+                48992292,
+                53066208,
+                54763417,
+                47952584,
+                54733875,
+                48386292,
+                52113125,
+                52855459,
+                54869542,
+                52567667,
+                49367417,
+                53583833,
+                52342041,
+                48046000,
+                53764500,
+                48122917,
+                51651292,
+                54107417
+              ],
+              "skipped_count": 0
+            }
+          },
+          "runs_ns": [
+            47970041,
+            52749334,
+            48992292,
+            53066208,
+            54763417,
+            47952584,
+            54733875,
+            48386292,
+            52113125,
+            52855459,
+            54869542,
+            52567667,
+            49367417,
+            53583833,
+            52342041,
+            48046000,
+            53764500,
+            48122917,
+            51651292,
+            54107417
+          ],
+          "transcript_stable": true,
+          "unique_normalized_transcripts": 1,
+          "unique_raw_transcripts": 1,
+          "vocabulary_outcomes": {
+            "not_configured": 20
+          },
+          "word_error_rate": 0.16037735849056603
+        },
+        "paired_comparison": {
+          "all_normalized_transcripts_equal": false,
+          "confidence": 0.95,
+          "handy_over_openramble_p50_ratio": 17.629393668696515,
+          "handy_over_openramble_p50_ratio_ci": [
+            17.330460532019565,
+            18.806014615191675
+          ],
+          "interpretation": "ratio > 1 means OpenRamble had the lower p50; this is a local patched-backend comparison, not official Handy app parity",
+          "openramble_quality_non_inferior": false,
+          "paired_median_delta_ns": 873176145.5,
+          "paired_median_delta_ns_ci": [
+            870385042.0,
+            878922791.5
+          ],
+          "resamples": 10000
+        }
+      },
+      "warmup_observations": [
+        {
+          "handy": {
+            "elapsed_ns": 1030691500,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 0,
+          "openramble": {
+            "elapsed_ns": 55654208,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 55654208
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 55654208,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 925802458,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 1,
+          "openramble": {
+            "elapsed_ns": 54144791,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 54144791
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 54144791,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 952584042,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 2,
+          "openramble": {
+            "elapsed_ns": 54700833,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 54700833
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 54700833,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 920585000,
+            "engine_normalized_transcript_sha256": "593d9847748e472c551040f4e0b5e85222ac1a1267018461cc68129c062d5022",
+            "language_override": "en",
+            "normalized_transcript_sha256": "a51b8d24359fcfbeca8c22866855c6b84265391025d146a3eb70af249c275e73",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "d0c0fde688f8c977a9af0c490cceb2544c602374e1a75cd5269ca974cb45db5b",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.10377358490566038
+          },
+          "index": 3,
+          "openramble": {
+            "elapsed_ns": 47763791,
+            "engine_normalized_transcript_sha256": "43523f125dbed355d80f9088eac40092ba23505c83b63bcb80ca381c16d5b2b4",
+            "language_override": "en",
+            "normalized_transcript_sha256": "f4f3ac0aa09594a31f593b1986cebb306e0859a076967d307d854fdae5f9279b",
+            "pcm_f32le_sha256": "fa0fc84ee3b71f88309ee52bbcd75f5d25103ff1a022062d8fd3e55d15a260cc",
+            "peak_rss_bytes": 138936320,
+            "prewarmed": true,
+            "raw_transcript_sha256": "0f2125c9be9e66cd13f68f63934321b36e3ad2695b3ca42a05e104f0ed7fdba8",
+            "sample_count": 897664,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 47763791
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 47763791,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.16037735849056603
+          },
+          "order": "OH"
+        }
+      ],
+      "warmup_schedule": [
+        "OH",
+        "HO",
+        "HO",
+        "OH"
+      ]
+    },
+    {
+      "canonical_pcm": {
+        "audio_duration_ns": 84380937500,
+        "format": "f32le",
+        "sample_count": 1350095,
+        "sample_rate": 16000,
+        "sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a"
+      },
+      "id": "real-en-whole-earth-84.381s",
+      "kind": "real-long",
+      "language": "en",
+      "measured_schedule": [
+        "OH",
+        "OH",
+        "HO",
+        "OH",
+        "HO",
+        "OH",
+        "HO",
+        "OH",
+        "HO",
+        "HO",
+        "HO",
+        "OH",
+        "OH",
+        "HO",
+        "HO",
+        "HO",
+        "OH",
+        "OH",
+        "OH",
+        "HO"
+      ],
+      "pairs": [
+        {
+          "handy": {
+            "elapsed_ns": 5796916250,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 0,
+          "openramble": {
+            "elapsed_ns": 69384166,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 69384166
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 69384166,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5650862292,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 1,
+          "openramble": {
+            "elapsed_ns": 83323750,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 83323750
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 83323750,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5849332125,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 2,
+          "openramble": {
+            "elapsed_ns": 124203666,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 124203666
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 124203666,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5909752709,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 3,
+          "openramble": {
+            "elapsed_ns": 58096958,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 58096958
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 58096958,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5550171917,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 4,
+          "openramble": {
+            "elapsed_ns": 110880333,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 110880333
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 110880333,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5640885334,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 5,
+          "openramble": {
+            "elapsed_ns": 58733959,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 58733959
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 58733959,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5774555667,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 6,
+          "openramble": {
+            "elapsed_ns": 119080000,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 119080000
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 119080000,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5680102625,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 7,
+          "openramble": {
+            "elapsed_ns": 59992750,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 59992750
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 59992750,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5650382417,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 8,
+          "openramble": {
+            "elapsed_ns": 124339083,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 124339083
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 124339083,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5911601750,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 9,
+          "openramble": {
+            "elapsed_ns": 115182084,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 115182084
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 115182084,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5933064750,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 10,
+          "openramble": {
+            "elapsed_ns": 116454167,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 116454167
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 116454167,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5592756667,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 11,
+          "openramble": {
+            "elapsed_ns": 61328417,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 61328417
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 61328417,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5623326083,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 12,
+          "openramble": {
+            "elapsed_ns": 84018500,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 84018500
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 84018500,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5414938792,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 13,
+          "openramble": {
+            "elapsed_ns": 123739750,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 123739750
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 123739750,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5778588167,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 14,
+          "openramble": {
+            "elapsed_ns": 115650416,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 115650416
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 115650416,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5724944041,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 15,
+          "openramble": {
+            "elapsed_ns": 118144458,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 118144458
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 118144458,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5551018208,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 16,
+          "openramble": {
+            "elapsed_ns": 58421167,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 58421167
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 58421167,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5781347083,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 17,
+          "openramble": {
+            "elapsed_ns": 82858708,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 82858708
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 82858708,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5706806084,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 18,
+          "openramble": {
+            "elapsed_ns": 79457209,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 79457209
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 79457209,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5762479542,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 19,
+          "openramble": {
+            "elapsed_ns": 117576833,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 117576833
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 117576833,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "HO"
+        }
+      ],
+      "reference_key": "samples/whole-earth.wav",
+      "reference_sha256": "9539dbefb94068721ad7307ffd92917361dd3f2178478b6c08d0dea1630802bb",
+      "sha256": "36e10be25ed80a5d7534bf03738651bdd0cc059c36dc3162db26b28bcee895f8",
+      "source_file_sha256": "36e10be25ed80a5d7534bf03738651bdd0cc059c36dc3162db26b28bcee895f8",
+      "summary": {
+        "handy": {
+          "by_order": {
+            "HO": {
+              "maximum_ns": 5933064750,
+              "maximum_seconds": 5.93306475,
+              "minimum_ns": 5414938792,
+              "p50_ns": 5768517604.5,
+              "p50_realtime_factor": 14.627837390003757,
+              "p50_seconds": 5.7685176045,
+              "p95_ns": 5923406400.0,
+              "p95_seconds": 5.9234064,
+              "p99_ns": 5931133080.0,
+              "p99_seconds": 5.93113308,
+              "runs_ns": [
+                5849332125,
+                5550171917,
+                5774555667,
+                5650382417,
+                5911601750,
+                5933064750,
+                5414938792,
+                5778588167,
+                5724944041,
+                5762479542
+              ]
+            },
+            "OH": {
+              "maximum_ns": 5909752709,
+              "maximum_seconds": 5.909752709,
+              "minimum_ns": 5551018208,
+              "p50_ns": 5665482458.5,
+              "p50_realtime_factor": 14.893866165519961,
+              "p50_seconds": 5.6654824585,
+              "p95_ns": 5858976302.45,
+              "p95_seconds": 5.8589763024499995,
+              "p99_ns": 5899597427.69,
+              "p99_seconds": 5.89959742769,
+              "runs_ns": [
+                5796916250,
+                5650862292,
+                5909752709,
+                5640885334,
+                5680102625,
+                5592756667,
+                5623326083,
+                5551018208,
+                5781347083,
+                5706806084
+              ]
+            }
+          },
+          "maximum_ns": 5933064750,
+          "maximum_peak_rss_bytes": null,
+          "maximum_seconds": 5.93306475,
+          "minimum_ns": 5414938792,
+          "p50_ns": 5715875062.5,
+          "p50_realtime_factor": 14.762558064572811,
+          "p50_seconds": 5.7158750625,
+          "p95_ns": 5912674900.0,
+          "p95_seconds": 5.9126749,
+          "p99_ns": 5928986780.0,
+          "p99_seconds": 5.92898678,
+          "runs_ns": [
+            5796916250,
+            5650862292,
+            5849332125,
+            5909752709,
+            5550171917,
+            5640885334,
+            5774555667,
+            5680102625,
+            5650382417,
+            5911601750,
+            5933064750,
+            5592756667,
+            5623326083,
+            5414938792,
+            5778588167,
+            5724944041,
+            5551018208,
+            5781347083,
+            5706806084,
+            5762479542
+          ],
+          "transcript_stable": true,
+          "unique_normalized_transcripts": 1,
+          "unique_raw_transcripts": 1,
+          "word_error_rate": 0.0
+        },
+        "openramble": {
+          "by_order": {
+            "HO": {
+              "maximum_ns": 124339083,
+              "maximum_seconds": 0.124339083,
+              "minimum_ns": 110880333,
+              "p50_ns": 117860645.5,
+              "p50_realtime_factor": 715.9381924477921,
+              "p50_seconds": 0.1178606455,
+              "p95_ns": 124278145.35,
+              "p95_seconds": 0.12427814535,
+              "p99_ns": 124326895.47,
+              "p99_seconds": 0.12432689547,
+              "runs_ns": [
+                124203666,
+                110880333,
+                119080000,
+                124339083,
+                115182084,
+                116454167,
+                123739750,
+                115650416,
+                118144458,
+                117576833
+              ]
+            },
+            "OH": {
+              "maximum_ns": 84018500,
+              "maximum_seconds": 0.0840185,
+              "minimum_ns": 58096958,
+              "p50_ns": 65356291.5,
+              "p50_realtime_factor": 1291.0912716031326,
+              "p50_seconds": 0.0653562915,
+              "p95_ns": 83705862.5,
+              "p95_seconds": 0.0837058625,
+              "p99_ns": 83955972.5,
+              "p99_seconds": 0.0839559725,
+              "runs_ns": [
+                69384166,
+                83323750,
+                58096958,
+                58733959,
+                59992750,
+                61328417,
+                84018500,
+                58421167,
+                82858708,
+                79457209
+              ]
+            }
+          },
+          "ctc_inference_invocations": {
+            "maximum": 0,
+            "minimum": 0,
+            "p50": 0.0,
+            "runs": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "maximum_ns": 124339083,
+          "maximum_peak_rss_bytes": 155992064,
+          "maximum_seconds": 0.124339083,
+          "minimum_ns": 58096958,
+          "p50_ns": 97449416.5,
+          "p50_realtime_factor": 865.8947434539026,
+          "p50_seconds": 0.0974494165,
+          "p95_ns": 124210436.85,
+          "p95_seconds": 0.12421043685,
+          "p99_ns": 124313353.77,
+          "p99_seconds": 0.12431335377,
+          "phase_timing_schema_version": 1,
+          "phase_timings": {
+            "ctc_model_inference_ns": {
+              "executed_count": 0,
+              "maximum_ns": null,
+              "maximum_seconds": null,
+              "minimum_ns": null,
+              "p50_ns": null,
+              "p50_realtime_factor": null,
+              "p50_seconds": null,
+              "p95_ns": null,
+              "p95_seconds": null,
+              "p99_ns": null,
+              "p99_seconds": null,
+              "runs_ns": [],
+              "skipped_count": 20
+            },
+            "ctc_rescoring_fusion_ns": {
+              "executed_count": 0,
+              "maximum_ns": null,
+              "maximum_seconds": null,
+              "minimum_ns": null,
+              "p50_ns": null,
+              "p50_realtime_factor": null,
+              "p50_seconds": null,
+              "p95_ns": null,
+              "p95_seconds": null,
+              "p99_ns": null,
+              "p99_seconds": null,
+              "runs_ns": [],
+              "skipped_count": 20
+            },
+            "lexical_candidate_gate_ns": {
+              "executed_count": 0,
+              "maximum_ns": null,
+              "maximum_seconds": null,
+              "minimum_ns": null,
+              "p50_ns": null,
+              "p50_realtime_factor": null,
+              "p50_seconds": null,
+              "p95_ns": null,
+              "p95_seconds": null,
+              "p99_ns": null,
+              "p99_seconds": null,
+              "runs_ns": [],
+              "skipped_count": 20
+            },
+            "primary_tdt_inference_decode_ns": {
+              "executed_count": 20,
+              "maximum_ns": 124339083,
+              "maximum_seconds": 0.124339083,
+              "minimum_ns": 58096958,
+              "p50_ns": 97449416.5,
+              "p50_realtime_factor": 865.8947434539026,
+              "p50_seconds": 0.0974494165,
+              "p95_ns": 124210436.85,
+              "p95_seconds": 0.12421043685,
+              "p99_ns": 124313353.77,
+              "p99_seconds": 0.12431335377,
+              "runs_ns": [
+                69384166,
+                83323750,
+                124203666,
+                58096958,
+                110880333,
+                58733959,
+                119080000,
+                59992750,
+                124339083,
+                115182084,
+                116454167,
+                61328417,
+                84018500,
+                123739750,
+                115650416,
+                118144458,
+                58421167,
+                82858708,
+                79457209,
+                117576833
+              ],
+              "skipped_count": 0
+            }
+          },
+          "runs_ns": [
+            69384166,
+            83323750,
+            124203666,
+            58096958,
+            110880333,
+            58733959,
+            119080000,
+            59992750,
+            124339083,
+            115182084,
+            116454167,
+            61328417,
+            84018500,
+            123739750,
+            115650416,
+            118144458,
+            58421167,
+            82858708,
+            79457209,
+            117576833
+          ],
+          "transcript_stable": true,
+          "unique_normalized_transcripts": 1,
+          "unique_raw_transcripts": 1,
+          "vocabulary_outcomes": {
+            "not_configured": 20
+          },
+          "word_error_rate": 0.013888888888888888
+        },
+        "paired_comparison": {
+          "all_normalized_transcripts_equal": false,
+          "confidence": 0.95,
+          "handy_over_openramble_p50_ratio": 58.65479002124143,
+          "handy_over_openramble_p50_ratio_ci": [
+            48.816371225556544,
+            77.05710610372955
+          ],
+          "interpretation": "ratio > 1 means OpenRamble had the lower p50; this is a local patched-backend comparison, not official Handy app parity",
+          "openramble_quality_non_inferior": false,
+          "paired_median_delta_ns": 5623729375.0,
+          "paired_median_delta_ns_ci": [
+            5553423062.5,
+            5680713063.0
+          ],
+          "resamples": 10000
+        }
+      },
+      "warmup_observations": [
+        {
+          "handy": {
+            "elapsed_ns": 1619244167,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 0,
+          "openramble": {
+            "elapsed_ns": 66909292,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 66909292
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 66909292,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 1549125209,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 1,
+          "openramble": {
+            "elapsed_ns": 63786084,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 63786084
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 63786084,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "OH"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5724193500,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 2,
+          "openramble": {
+            "elapsed_ns": 115545000,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 115545000
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 115545000,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "HO"
+        },
+        {
+          "handy": {
+            "elapsed_ns": 5497975583,
+            "engine_normalized_transcript_sha256": "96c2dd9a974d88899e0ec0d2080ddfb945365d85e53013985bb1530c7e251ad2",
+            "language_override": "en",
+            "normalized_transcript_sha256": "98333b0dc1d45de2762effea3cc77577213afc1e0c3d2c812381c7dc639631f0",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": null,
+            "prewarmed": true,
+            "raw_transcript_sha256": "5d7236f4eb447d401944baecfe6cc4bdfe879be5b37dd2344435969e695df8eb",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": null,
+            "word_error_rate": 0.0
+          },
+          "index": 3,
+          "openramble": {
+            "elapsed_ns": 117901958,
+            "engine_normalized_transcript_sha256": "ccb13b2de8b8287fb17e953915373e1802e9f1f8ee7c8a80ae96fa8fd8b1d1c5",
+            "language_override": "en",
+            "normalized_transcript_sha256": "9885a3daf97bafecfdf8ee50e83641356b16fbe221f45e0061b16a39b0f472af",
+            "pcm_f32le_sha256": "aa84654beba0941e4a321c5b21382c44394f448978093a21c39318a6b2e07e8a",
+            "peak_rss_bytes": 155992064,
+            "prewarmed": true,
+            "raw_transcript_sha256": "05e6026aacc3bc492774953e81aa2900281e16a39e19d962b690b0cc88de0fb1",
+            "sample_count": 1350095,
+            "sample_rate": 16000,
+            "timing": {
+              "clock": "monotonic_uptime",
+              "ctc_inference_invocations": 0,
+              "phases": {
+                "ctc_model_inference_ns": null,
+                "ctc_rescoring_fusion_ns": null,
+                "lexical_candidate_gate_ns": null,
+                "primary_tdt_inference_decode_ns": 117901958
+              },
+              "phases_may_overlap": false,
+              "schema_version": 1,
+              "total_wall_ns": 117901958,
+              "total_wall_scope": "predecoded_transcribe",
+              "vocabulary_outcome": "not_configured"
+            },
+            "word_error_rate": 0.013888888888888888
+          },
+          "order": "HO"
+        }
+      ],
+      "warmup_schedule": [
+        "OH",
+        "OH",
+        "HO",
+        "HO"
+      ]
+    }
+  ],
+  "generated_at": "2026-08-14T17:00:49Z",
+  "host": {
+    "chip": "Apple M4",
+    "hardware_model": "Mac16,10",
+    "machine": "arm64",
+    "macos": "26.4",
+    "macos_build": "25E246",
+    "memory_bytes": 17179869184,
+    "python": "3.9.6"
+  },
+  "manifest_sha256": "bb1c4e2553a4f9824e326eb85bee367a6362773ded984314960734c064e81d99",
+  "method": {
+    "bootstrap": {
+      "confidence": 0.95,
+      "resamples": 10000,
+      "unit": "paired fixture repetition"
+    },
+    "lane": "predecoded-product-warm",
+    "language_policy": "the manifest language is applied per request to both engines without mutating either engine's persisted settings",
+    "limitations": [
+      "Handy uses a locally patched persistent backend harness, not the official app UI path",
+      "capture, VAD, overlay, and text insertion are outside both timed boundaries",
+      "the engine artifacts may use different formats or quantizations; recorded model fingerprints are authoritative",
+      "results apply only to the recorded host, binaries, settings, models, and fixtures"
+    ],
+    "measured_pairs_per_fixture": 20,
+    "metrics": [
+      "minimum",
+      "p50",
+      "p95",
+      "p99",
+      "maximum"
+    ],
+    "process_residency": "both engine processes remain alive, loaded, and prewarmed across every pair",
+    "public_claim_eligible": false,
+    "public_claim_status": "not evaluated; requires manual quality and confidence review",
+    "quantiles": "Hyndman-Fan type 7 (linear)",
+    "schedule": "balanced deterministic interleaved OH/HO pairs",
+    "seed": 2026081402,
+    "timer": "engine monotonic integer nanoseconds",
+    "warmups_per_fixture_per_engine": 4
+  },
+  "schema_version": 4,
+  "sessions": [
+    {
+      "completed_at": "2026-08-14T17:03:26Z",
+      "handy_load_ns": 382731042,
+      "handy_prewarm_ns": 78095625,
+      "openramble_load_ns": 119247542,
+      "openramble_prewarm_ns": 46549084,
+      "started_at": "2026-08-14T17:00:49Z"
+    }
+  ],
+  "sources": {}
+}

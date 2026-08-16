@@ -1,0 +1,16 @@
+{
+  "branch": "",
+  "head": "ee9a7f12d91710da53de6d75f8b7160e09eccee4",
+  "origin": "$REPO/Packages/LocalASR/.build/checkouts/FluidAudio",
+  "source": "$TMP/openramble-phase-breakdown-ee9a7f12/FluidAudio",
+  "status": [
+    "M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/CustomVocabulary/WordSpotting/CtcKeywordSpotter.swift",
+    " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift",
+    " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift",
+    " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrModels.swift",
+    " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtDecoderV3.swift",
+    " M Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/Decoder/TdtModelInference.swift",
+    " M Sources/FluidAudio/Shared/ASRConstants.swift",
+    "?? Sources/FluidAudio/Shared/TempPhaseDiagnostics.swift"
+  ]
+}

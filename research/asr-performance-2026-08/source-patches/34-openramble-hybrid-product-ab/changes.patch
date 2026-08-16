@@ -1,0 +1,30 @@
+diff --git a/Packages/LocalASR/Package.swift b/Packages/LocalASR/Package.swift
+index 4b28312..9be2797 100644
+--- a/Packages/LocalASR/Package.swift
++++ b/Packages/LocalASR/Package.swift
+@@ -20,10 +20,7 @@ let package = Package(
+         // reset of TDT's fully overwritten fixed-size audio input buffer and
+         // avoids NSNumber boxing at the optional CTC model boundaries. It also
+         // accepts a conservative term-index prefilter for the final rescorer.
+-        .package(
+-            url: "https://github.com/mikwiseman/FluidAudio.git",
+-            revision: "ee9a7f12d91710da53de6d75f8b7160e09eccee4"
+-        ),
++        .package(path: "$TMP/openramble-phase-breakdown-ee9a7f12/FluidAudio"),
+     ],
+     targets: [
+         .target(
+diff --git a/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift b/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift
+index 45caca9..e5ae3ac 100644
+--- a/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift
++++ b/Packages/LocalASR/Sources/LocalASR/FluidAudioAdapter.swift
+@@ -965,7 +965,8 @@ public actor FluidAudioAdapter: ASREngineAdapting {
+         helper: VocabularyHelper,
+         collectPhaseTimings: Bool = false
+     ) async throws -> VocabularyEvidenceRun {
+-        let chunkSize = ASRConstants.maxModelSamples
++        // Temp short-TDT experiment: CTC remains the shipping 15-second model.
++        let chunkSize = 240_000
+         let overlap = vocabularyChunkOverlapSamples
+         guard !candidateRegions.isEmpty else { return .empty }
+         guard samples.count > chunkSize else {

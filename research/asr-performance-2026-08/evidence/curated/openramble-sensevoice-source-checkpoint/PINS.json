@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-08-14T20:40:30Z",
+  "scope": {
+    "shared_repository_edits": 0,
+    "model_weight_downloads": 0,
+    "coreml_inference_runs": 0,
+    "coreml_model_loads": 0
+  },
+  "openramble": {
+    "repository": "$REPO",
+    "commit": "f2b6e8cc66d20f7a07094f79af0faf3ba861af64",
+    "fluid_dependency_repository": "https://github.com/mikwiseman/FluidAudio.git",
+    "fluid_dependency_revision": "ee9a7f12d91710da53de6d75f8b7160e09eccee4",
+    "shipping_model_revision": "aed02740059203c4a87495924f685de3722ae9ce",
+    "shipping_model_bytes": 483105645,
+    "shipping_vocabulary_revision": "accdafd8cf8a2ff1cabe3c11e54416b405d409aa",
+    "shipping_vocabulary_bytes": 102803869
+  },
+  "fluid_audio": {
+    "fork_revision": "ee9a7f12d91710da53de6d75f8b7160e09eccee4",
+    "fork_revision_date": "2026-08-14T18:22:38+03:00",
+    "upstream_tag": "v0.15.5",
+    "upstream_tag_revision": "19600a485baa4998812e4654b70d2bab8f2c9949",
+    "sensevoice_tree_identical_between_tag_and_fork": true,
+    "sensevoice_tree_git_sha1": "97d7b4a569390fc7a1baae947e6b7f27e0c8c331",
+    "source_blobs": {
+      "SenseVoiceConfig.swift": "748acf9622e800b185a8f104357939f9e115b235",
+      "SenseVoiceModels.swift": "7f67e5530ab3af52677e98861c0b4f264eff9543",
+      "SenseVoiceManager.swift": "e319bfa4336adb2d6056053a2eb848d678f744da",
+      "ModelNames.swift": "188b56fa6a355d9177fab66c7ab3d46ed5b0f16b",
+      "LICENSE": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64"
+    },
+    "license": {
+      "spdx": "Apache-2.0",
+      "text_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    "platforms": {
+      "macos_minimum_declared": "14.0",
+      "ios_minimum_declared": "17.0"
+    }
+  },
+  "coreml_conversion": {
+    "repository": "FluidInference/sensevoice-small-coreml",
+    "revision": "cdea3526163035c19915d4a10268992d018ebd46",
+    "last_modified_utc": "2026-05-31T23:35:23Z",
+    "model_manifest": "MODEL_ARTIFACTS.json",
+    "int8_selected_bytes": 239913642,
+    "fp16_selected_bytes": 472469017,
+    "fp32_selected_bytes": 944421839,
+    "int8_encoder_compute_units": "cpuAndNeuralEngine",
+    "preprocessor_compute_units": "cpuOnly",
+    "mil_opset": "ios17",
+    "preprocessor_coremlc_version": "3520.5.1",
+    "encoder_coremlc_version": "3520.5.1",
+    "preprocessor_waveform_samples_min": 3200,
+    "preprocessor_waveform_samples_max": 480000,
+    "preprocessor_audio_seconds_min_at_16khz": 0.2,
+    "preprocessor_audio_seconds_max_at_16khz": 30.0,
+    "encoder_feature_buckets": [128, 256, 512, 1024, 1800],
+    "ctc_vocabulary_size": 25055,
+    "ctc_blank_id": 0,
+    "license_metadata": {
+      "license": "other",
+      "license_name": "sensevoice-upstream",
+      "license_link": "https://github.com/FunAudioLLM/SenseVoice"
+    },
+    "provenance_gap": "The conversion repository does not pin the exact upstream SenseVoiceSmall model revision or source model.pt SHA-256 in its card. The CoreML artifacts themselves are pinned here."
+  },
+  "upstream_checkpoint": {
+    "repository": "FunAudioLLM/SenseVoiceSmall",
+    "current_revision_audited": "3847d57b6bdf2dd8875cb1508d2af43d80a16bf7",
+    "model_pt_sha256": "833ca2dcfdf8ec91bd4f31cfac36d6124e0c459074d5e909aec9cabe6204a3ea",
+    "tokenizer_filename": "chn_jpn_yue_eng_ko_spectok.bpe.model",
+    "tokenizer_sha256": "aa87f86064c3730d799ddf7af3c04659151102cba548bce325cf06ba4da4e6a8",
+    "official_released_asr_languages": ["zh", "yue", "en", "ja", "ko"],
+    "fluid_vocab_language_tag_count": 105,
+        "fluid_vocab_contains_ru_tag": true,
+        "fluid_vocab_cyrillic_piece_count": 0,
+        "fluid_vocab_byte_fallback_piece_count": 0,
+    "runtime_lid_map": {
+      "auto": 0,
+      "zh": 3,
+      "en": 4,
+      "yue": 7,
+      "ja": 11,
+      "ko": 12,
+      "nospeech": 13
+    },
+        "runtime_has_ru_hint": false,
+        "fluid_coreml_public_result_type": "String",
+        "fluid_coreml_preserves_detected_language": false,
+        "fluid_coreml_preserves_token_or_word_timestamps": false,
+        "fluid_coreml_preserves_confidence": false,
+        "fluid_coreml_supports_vocabulary_candidate_regions": false,
+    "license": {
+      "name": "FunASR Model Open Source License Agreement",
+      "version": "1.1",
+      "pinned_fun_asr_revision": "2e4914e7f9e0950e47eeb831675d6167a51d0632",
+      "text_sha256": "7dba975a2069691db4992b0592d70828b330d2f8a30a71450f4e152a554e84f8",
+      "attribution_and_model_name_retention_required": true,
+      "legal_review_required_before_distribution": true
+    },
+    "source_repository": {
+      "repository": "FunAudioLLM/SenseVoice",
+      "revision": "b054623cca8f015b73ec471dce4f473ac47413da",
+      "license": "MIT",
+      "license_text_sha256": "4bc3bffe14ebe38cc67309991e04f92866835eac1c5e2e1abd37163f67c6de5f"
+    }
+  },
+  "network_surface": {
+    "default_registry": "https://huggingface.co",
+    "tree_api_template": "https://huggingface.co/api/models/{repository}/tree/main[/subdirectory]",
+    "file_template": "https://huggingface.co/{repository}/resolve/main/{path}",
+    "revision_is_pinned_by_current_fluid_downloader": false,
+    "possible_redirect_hosts": ["huggingface.co", "cdn-lfs.huggingface.co", "cas-bridge.xethub.hf.co"],
+    "registry_override_environment": ["REGISTRY_URL", "MODEL_REGISTRY_URL"],
+    "authentication_environment": ["HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "HUGGINGFACEHUB_API_TOKEN"],
+    "proxy_environment": ["https_proxy", "http_proxy"],
+    "offline_gate": "ModelHub.offlineMode must be true before any loader is touched",
+    "production_safe_load": "Verify an exact per-file manifest, set offline mode, then call SenseVoiceModels.load(from:precision:). Do not call SenseVoiceManager.load()."
+  }
+}

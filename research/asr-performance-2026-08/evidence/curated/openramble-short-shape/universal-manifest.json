@@ -1,0 +1,53 @@
+{
+  "fixtures": [
+    {
+      "id": "boundary-en-repeat-7.5s",
+      "kind": "synthetic-boundary-repeat",
+      "language": "en",
+      "path": "$TMP/openramble-short-engine.SpfSeY/boundaries/en-repeat-7.5s.wav",
+      "sha256": "f51d18f1f2a6944f195ab94b3f25263ba0a544ecb827142057363bd663d995fa"
+    },
+    {
+      "id": "boundary-en-repeat-14.9s",
+      "kind": "synthetic-boundary-repeat",
+      "language": "en",
+      "path": "$TMP/openramble-short-engine.SpfSeY/boundaries/en-repeat-14.9s.wav",
+      "sha256": "8fb05e8621be9346ee81d53f530252c26528e62a5799fad832802ba2ed3690c0"
+    },
+    {
+      "id": "boundary-en-repeat-15.1s",
+      "kind": "synthetic-boundary-repeat",
+      "language": "en",
+      "path": "$TMP/openramble-short-engine.SpfSeY/boundaries/en-repeat-15.1s.wav",
+      "sha256": "e8a97e9ec6534cdf5cb7b22ee6a9cfa9dc8bdeaa633d43c4a098a28eff5fddec"
+    },
+    {
+      "id": "boundary-en-repeat-29.9s",
+      "kind": "synthetic-boundary-repeat",
+      "language": "en",
+      "path": "$TMP/openramble-short-engine.SpfSeY/boundaries/en-repeat-29.9s.wav",
+      "sha256": "349d497e54f48d7fec1a9c8d7a849500606a2076a4cda164477553998c827e28"
+    },
+    {
+      "id": "boundary-en-repeat-30.1s",
+      "kind": "synthetic-boundary-repeat",
+      "language": "en",
+      "path": "$TMP/openramble-short-engine.SpfSeY/boundaries/en-repeat-30.1s.wav",
+      "sha256": "a51d735c585019651b1c26184e95bc0b4a155bbc5a5ad7ad30244dbcc0cf30cd"
+    },
+    {
+      "id": "real-en-product-names-56.104s",
+      "kind": "real-long",
+      "language": "en",
+      "path": "$TMP/openramble-short-engine.SpfSeY/transcribe.cpp/samples/product-names.wav",
+      "sha256": "fdaf78bad5c6a04424c7d7a699babced0992dc4619ecb7897bdf6c7b1ab79eda"
+    },
+    {
+      "id": "real-en-whole-earth-84.381s",
+      "kind": "real-long",
+      "language": "en",
+      "path": "$TMP/openramble-short-engine.SpfSeY/transcribe.cpp/samples/whole-earth.wav",
+      "sha256": "36e10be25ed80a5d7534bf03738651bdd0cc059c36dc3162db26b28bcee895f8"
+    }
+  ]
+}

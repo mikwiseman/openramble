@@ -1,0 +1,248 @@
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift
+index 9e7db8ab..437e1604 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Pipeline.swift
+@@ -1,6 +1,73 @@
+ @preconcurrency import CoreML
+ import Foundation
+
++// TEMP-ONLY benchmark instrumentation. This fork exists only under $TMP.
++private actor TempASRWindowCounter {
++    static let shared = TempASRWindowCounter()
++    private var count = 0
++    private var layouts: [TempASRWindowLayout] = []
++
++    func reset() {
++        count = 0
++        layouts = []
++    }
++    func increment() { count += 1 }
++    func value() -> Int { count }
++    func append(_ layout: TempASRWindowLayout) { layouts.append(layout) }
++    func layoutValues() -> [TempASRWindowLayout] { layouts }
++}
++
++public struct TempASRWindowLayout: Codable, Hashable, Sendable {
++    public let index: Int
++    public let inputStartSample: Int
++    public let visibleStartSample: Int
++    public let visibleEndSample: Int
++    public let contextSamples: Int
++    public let isLast: Bool
++
++    public init(
++        index: Int,
++        inputStartSample: Int,
++        visibleStartSample: Int,
++        visibleEndSample: Int,
++        contextSamples: Int,
++        isLast: Bool
++    ) {
++        self.index = index
++        self.inputStartSample = inputStartSample
++        self.visibleStartSample = visibleStartSample
++        self.visibleEndSample = visibleEndSample
++        self.contextSamples = contextSamples
++        self.isLast = isLast
++    }
++}
++
++internal func recordTempASREncoderWindow() async {
++    guard ProcessInfo.processInfo.environment["OPENRAMBLE_TEMP_WINDOW_DIAGNOSTICS"] == "1" else {
++        return
++    }
++    await TempASRWindowCounter.shared.increment()
++}
++
++internal func recordTempASRWindowLayout(_ layout: TempASRWindowLayout) async {
++    guard ProcessInfo.processInfo.environment["OPENRAMBLE_TEMP_WINDOW_DIAGNOSTICS"] == "1" else {
++        return
++    }
++    await TempASRWindowCounter.shared.append(layout)
++}
++
++public func resetTempASREncoderWindowCount() async {
++    await TempASRWindowCounter.shared.reset()
++}
++
++public func tempASREncoderWindowCount() async -> Int {
++    await TempASRWindowCounter.shared.value()
++}
++
++public func tempASRWindowLayouts() async -> [TempASRWindowLayout] {
++    await TempASRWindowCounter.shared.layoutValues()
++}
++
+ extension AsrManager {
+
+     internal func executeMLInferenceWithTimings(
+@@ -16,8 +83,12 @@ extension AsrManager {
+         initialTimeIndexOverride: Int? = nil
+     ) async throws -> (hypothesis: TdtHypothesis, encoderSequenceLength: Int) {
+
++        await recordTempASREncoderWindow()
++        let diagnosticStart = DispatchTime.now().uptimeNanoseconds
++
+         let preprocessorInput = try await preparePreprocessorInput(
+             paddedAudio, actualLength: originalLength)
++        let diagnosticPrepared = DispatchTime.now().uptimeNanoseconds
+
+         let preprocessorAudioArray = preprocessorInput.featureValue(for: "audio_signal")?.multiArrayValue
+
+@@ -31,6 +102,7 @@ extension AsrManager {
+                 from: preprocessorInput,
+                 options: predictionOptions
+             )
++            let diagnosticPreprocessed = DispatchTime.now().uptimeNanoseconds
+
+             let encoderOutputProvider: MLFeatureProvider
+             if let encoderModel = encoderModel {
+@@ -50,6 +122,7 @@ extension AsrManager {
+                 // Fused frontend: preprocessor output already contains encoder features
+                 encoderOutputProvider = preprocessorOutput
+             }
++            let diagnosticEncoded = DispatchTime.now().uptimeNanoseconds
+
+             let rawEncoderOutput = try extractFeatureValue(
+                 from: encoderOutputProvider, key: "encoder", errorMessage: "Invalid encoder output")
+@@ -76,10 +149,25 @@ extension AsrManager {
+                 emitTokensAfterGlobalFrame: emitTokensAfterGlobalFrame,
+                 initialTimeIndexOverride: initialTimeIndexOverride
+             )
++            let diagnosticDecoded = DispatchTime.now().uptimeNanoseconds
++
++            if ProcessInfo.processInfo.environment["OPENRAMBLE_TDT_DIAGNOSTICS"] == "1" {
++                let line = "TDT_PHASE_NS prepare=\(diagnosticPrepared - diagnosticStart) "
++                    + "preprocessor=\(diagnosticPreprocessed - diagnosticPrepared) "
++                    + "encoder=\(diagnosticEncoded - diagnosticPreprocessed) "
++                    + "decode=\(diagnosticDecoded - diagnosticEncoded) "
++                    + "total=\(diagnosticDecoded - diagnosticStart)\n"
++                FileHandle.standardError.write(Data(line.utf8))
++            }
+
++            let diagnosticCacheReturnStarted = DispatchTime.now().uptimeNanoseconds
+             if let preprocessorAudioArray {
+                 await sharedMLArrayCache.returnArray(preprocessorAudioArray)
+             }
++            if ProcessInfo.processInfo.environment["OPENRAMBLE_TDT_DIAGNOSTICS"] == "1" {
++                let elapsed = DispatchTime.now().uptimeNanoseconds - diagnosticCacheReturnStarted
++                FileHandle.standardError.write(Data("TDT_CACHE_RETURN_NS total=\(elapsed)\n".utf8))
++            }
+
+             return (hypothesis, encoderSequenceLength)
+         } catch {
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
+index 4a29727d..df627d6b 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/AsrManager+Transcription.swift
+@@ -13,8 +13,17 @@ extension AsrManager {
+
+         // Route to appropriate processing method based on audio length
+         if audioSamples.count <= ASRConstants.maxModelSamples {
++            let diagnosticPaddingStarted = DispatchTime.now().uptimeNanoseconds
+             let (alignedSamples, frameAlignedLength) = frameAlignedAudio(audioSamples)
++            let diagnosticAligned = DispatchTime.now().uptimeNanoseconds
+             let paddedAudio: [Float] = padAudioIfNeeded(alignedSamples, targetLength: ASRConstants.maxModelSamples)
++            let diagnosticPadded = DispatchTime.now().uptimeNanoseconds
++            if ProcessInfo.processInfo.environment["OPENRAMBLE_TDT_DIAGNOSTICS"] == "1" {
++                let line = "TDT_PADDING_NS align=\(diagnosticAligned - diagnosticPaddingStarted) "
++                    + "pad=\(diagnosticPadded - diagnosticAligned) "
++                    + "total=\(diagnosticPadded - diagnosticPaddingStarted)\n"
++                FileHandle.standardError.write(Data(line.utf8))
++            }
+             let (hypothesis, encoderSequenceLength) = try await executeMLInferenceWithTimings(
+                 paddedAudio,
+                 originalLength: frameAlignedLength,
+@@ -100,17 +109,30 @@ extension AsrManager {
+         processingTime: TimeInterval
+     ) -> ASRResult {
+
++        let diagnosticStart = DispatchTime.now().uptimeNanoseconds
++
+         let text = convertTokensToText(tokenIds)
++        let diagnosticText = DispatchTime.now().uptimeNanoseconds
+         let duration = TimeInterval(audioSamples.count) / TimeInterval(config.sampleRate)
+
+         let resultTimings = createTokenTimings(
+             from: tokenIds, timestamps: timestamps, confidences: confidences, tokenDurations: tokenDurations)
++        let diagnosticTimings = DispatchTime.now().uptimeNanoseconds
+
+         let confidence = calculateConfidence(
+             tokenCount: tokenIds.count,
+             isEmpty: text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+             tokenConfidences: confidences
+         )
++        let diagnosticConfidence = DispatchTime.now().uptimeNanoseconds
++
++        if ProcessInfo.processInfo.environment["OPENRAMBLE_TDT_DIAGNOSTICS"] == "1" {
++            let line = "TDT_RESULT_NS text=\(diagnosticText - diagnosticStart) "
++                + "timings=\(diagnosticTimings - diagnosticText) "
++                + "confidence=\(diagnosticConfidence - diagnosticTimings) "
++                + "total=\(diagnosticConfidence - diagnosticStart)\n"
++            FileHandle.standardError.write(Data(line.utf8))
++        }
+
+         return ASRResult(
+             text: text,
+diff --git a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift
+index b5219765..6470ba9d 100644
+--- a/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift
++++ b/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/TDT/ChunkProcessor.swift
+@@ -482,6 +482,16 @@ struct ChunkProcessor {
+                 let chunkSamplesArray = try readSamples(offset: contextStart, count: chunkLengthWithContext)
+                 let emitTokensAfterFrame =
+                     warmupSamples > 0 ? chunkStart / ASRConstants.samplesPerEncoderFrame : nil
++                await recordTempASRWindowLayout(
++                    TempASRWindowLayout(
++                        index: chunkIndex,
++                        inputStartSample: contextStart,
++                        visibleStartSample: chunkStart,
++                        visibleEndSample: chunkEnd,
++                        contextSamples: contextSamples,
++                        isLast: isLastChunk
++                    )
++                )
+
+                 if availableWorkers.isEmpty {
+                     try await collectNextResult(&group)
+diff --git a/Sources/FluidAudio/Shared/ASRConstants.swift b/Sources/FluidAudio/Shared/ASRConstants.swift
+index 789f4da6..091b8f01 100644
+--- a/Sources/FluidAudio/Shared/ASRConstants.swift
++++ b/Sources/FluidAudio/Shared/ASRConstants.swift
+@@ -5,11 +5,19 @@ public enum ASRConstants {
+     /// Audio sample rate expected by ASR models
+     public static let sampleRate: Int = 16_000
+
+-    /// Maximum audio duration supported by CoreML encoder (seconds)
+-    public static let maxDurationSeconds: Double = 15.0
++    /// TEMP-ONLY benchmark override. Production FluidAudio remains fixed at 15 s.
++    public static let maxDurationSeconds: Double = {
++        guard
++            let raw = ProcessInfo.processInfo.environment["OPENRAMBLE_TEMP_MODEL_WINDOW_SECONDS"],
++            let value = Double(raw), value > 0
++        else { return 15.0 }
++        return value
++    }()
+
+     /// Maximum audio samples supported by CoreML encoder (sampleRate × maxDurationSeconds)
+-    public static let maxModelSamples: Int = 240_000
++    public static let maxModelSamples: Int = Int(
++        (Double(sampleRate) * maxDurationSeconds).rounded()
++    )
+
+     /// Minimum audio duration accepted by the ASR guard (seconds).
+     public static let minimumAudioDurationSeconds: Double = 0.3
+diff --git a/Sources/FluidAudio/Shared/MLArrayCache.swift b/Sources/FluidAudio/Shared/MLArrayCache.swift
+index b62ba4fb..395afe66 100644
+--- a/Sources/FluidAudio/Shared/MLArrayCache.swift
++++ b/Sources/FluidAudio/Shared/MLArrayCache.swift
+@@ -42,7 +42,8 @@ actor MLArrayCache {
+
+         // Limit cache size per key
+         if arrays.count < maxCacheSize / max(cache.count, 1) {
+-            array.resetData(to: 0)
++            // TEMP benchmark parity with OpenRamble's cache-reset optimization:
++            // callers overwrite the complete audio buffer before reuse.
+             arrays.append(array)
+             cache[key] = arrays
+         }

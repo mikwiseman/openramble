@@ -1,0 +1,32 @@
+{
+  "ok": true,
+  "report": {
+    "backend": "fake",
+    "cycles": 100,
+    "fault_counts": {
+      "cache_pcm_bitflip": 6,
+      "descriptor_mismatch": 6,
+      "duplicate_index": 6,
+      "exit_before_prediction": 6,
+      "identity_compute_units": 6,
+      "identity_config": 6,
+      "identity_coreml_binary": 6,
+      "identity_coreml_build": 6,
+      "identity_coreml_kind": 6,
+      "identity_language": 6,
+      "identity_model": 6,
+      "identity_os_build": 6,
+      "identity_vocabulary": 6,
+      "malformed_frame": 5,
+      "stall_before_prediction": 5,
+      "transport_digest": 6,
+      "wrong_generation": 6
+    },
+    "foreground_fd_growth": 0,
+    "foreground_phys_footprint_growth_bytes": 163840,
+    "full_exact_parity": true,
+    "max_live_children": 2,
+    "ordinary_fallback_exactly_once": true,
+    "speculative_orphans": 0
+  }
+}

@@ -1,0 +1,4 @@
+src-tauri/src/cli.rs                    |   5 +
+ src-tauri/src/lib.rs                    | 320 +++++++++++++++++++++++++++++++-
+ src-tauri/src/managers/transcription.rs |  26 ++-
+ 3 files changed, 347 insertions(+), 4 deletions(-)

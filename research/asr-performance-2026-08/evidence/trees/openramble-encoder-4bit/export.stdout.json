@@ -1,0 +1,103 @@
+[NeMo I 2026-08-14 22:30:35 mixins:181] Tokenizer SentencePieceTokenizer initialized with 8192 tokens
+[NeMo I 2026-08-14 22:30:37 features:305] PADDING: 0
+[NeMo I 2026-08-14 22:30:39 rnnt_models:226] Using RNNT Loss : tdt
+    Loss tdt_kwargs: {'fastemit_lambda': 0.0, 'clamp': -1.0, 'durations': [0, 1, 2, 3, 4], 'sigma': 0.02, 'omega': 0.1}
+[NeMo I 2026-08-14 22:30:39 rnnt_models:226] Using RNNT Loss : tdt
+    Loss tdt_kwargs: {'fastemit_lambda': 0.0, 'clamp': -1.0, 'durations': [0, 1, 2, 3, 4], 'sigma': 0.02, 'omega': 0.1}
+[NeMo I 2026-08-14 22:30:39 rnnt_models:226] Using RNNT Loss : tdt
+    Loss tdt_kwargs: {'fastemit_lambda': 0.0, 'clamp': -1.0, 'durations': [0, 1, 2, 3, 4], 'sigma': 0.02, 'omega': 0.1}
+[NeMo I 2026-08-14 22:30:40 save_restore_connector:275] Model EncDecRNNTBPEModel was successfully restored from $TMP/openramble-short-shape/parakeet-tdt-0.6b-v3.nemo.
+Converting: TopLevelTracedModule
+Conversion kwargs: {'convert_to': 'mlprogram', 'inputs': [TensorType(name=audio_signal, shape=(1, 240000), dtype=fp32), TensorType(name=audio_length, shape=(1,), dtype=int32)], 'outputs': [TensorType(name=mel, shape=None, dtype=fp32), TensorType(name=mel_length, shape=None, dtype=int32)], 'compute_units': <ComputeUnit.CPU_ONLY: 3>}
+Converting: TopLevelTracedModule
+Conversion kwargs: {'convert_to': 'mlprogram', 'inputs': [TensorType(name=mel, shape=(1, 128, 1501), dtype=fp32), TensorType(name=mel_length, shape=(1,), dtype=int32)], 'outputs': [TensorType(name=encoder, shape=None, dtype=fp32), TensorType(name=encoder_length, shape=None, dtype=int32)], 'compute_units': <ComputeUnit.CPU_ONLY: 3>}
+{
+  "artifacts": {
+    "encoder": [
+      {
+        "bytes": 661363,
+        "path": "Data/com.apple.CoreML/model.mlmodel",
+        "sha256": "7e666991a8d6a0bd4c76e7dde7ead278219c6cc53d6d0f34d77dc1e1e04c67e1"
+      },
+      {
+        "bytes": 297022528,
+        "path": "Data/com.apple.CoreML/weights/weight.bin",
+        "sha256": "c58fe4a97ebbaa3549ef769401bf054e6e0e72e309148135a6bc6197767742b9"
+      },
+      {
+        "bytes": 617,
+        "path": "Manifest.json",
+        "sha256": "95ec5c7cf08668e595e0077d05557f5cfb7460ecb2a305752ec52e49ac9a2141"
+      }
+    ],
+    "preprocessor": [
+      {
+        "bytes": 20507,
+        "path": "Data/com.apple.CoreML/model.mlmodel",
+        "sha256": "f9dec9f3aa6802119b211f9db0126cf5e96a8f8d991dc947a02fdd3c891658ea"
+      },
+      {
+        "bytes": 491072,
+        "path": "Data/com.apple.CoreML/weights/weight.bin",
+        "sha256": "129b76e3aeafa8afa3ea76d995b964b145fe83700d579f6ff42c4c38fa0968ea"
+      },
+      {
+        "bytes": 617,
+        "path": "Manifest.json",
+        "sha256": "c758d01837331f3f90f3d1541213c41cda3206c800b0ac3cb7c9f6eebbab5f15"
+      }
+    ]
+  },
+  "build_seconds": {
+    "checkpoint_load": 9.552409624971915,
+    "encoder_convert": 16.57408220897196,
+    "encoder_quantize": 59.454748291987926,
+    "encoder_trace": 3.682469666993711,
+    "preprocessor_convert": 0.45953316596569493,
+    "preprocessor_quantize": 0.14875795802799985,
+    "preprocessor_trace": 0.07083575002616271,
+    "total": 92.00173650000943
+  },
+  "contract": {
+    "default_seconds": 15.0,
+    "enumerated": false,
+    "sample_rate": 16000,
+    "shapes": [
+      {
+        "audio_shape": [
+          1,
+          240000
+        ],
+        "encoder_length": 188,
+        "encoder_shape": [
+          1,
+          1024,
+          188
+        ],
+        "hidden_size_compatible_with_shipping_joint": true,
+        "mel_length": 1501,
+        "mel_shape": [
+          1,
+          128,
+          1501
+        ],
+        "seconds": 15.0
+      }
+    ]
+  },
+  "host": {
+    "coremltools": "9.0b1",
+    "machine": "arm64",
+    "macos": "26.4",
+    "python": "3.10.12",
+    "torch": "2.7.0"
+  },
+  "schema_version": 1,
+  "sources": {
+    "mobius_revision": "d2398af6042684a1b06dbc6951bdb50e1cf0366a",
+    "nemo_path": "$TMP/openramble-short-shape/parakeet-tdt-0.6b-v3.nemo",
+    "nemo_sha256": "3cbdc85877e668ca7b82d0d56770eb1fac76691f55d6b97545e8d61ca588d10d",
+    "upstream_revision": "1b6821cbe889fcf82347cb95c3f8f0c7515a60e9"
+  },
+  "temporary_prototype": true
+}

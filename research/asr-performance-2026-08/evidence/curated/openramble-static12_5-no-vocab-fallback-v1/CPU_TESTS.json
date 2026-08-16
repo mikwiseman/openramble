@@ -1,0 +1,20 @@
+{
+  "asr_or_coreml_run": false,
+  "policy_helper_tests": {
+    "candidate_detection": true,
+    "candidate_early_abort_subtracts_only_recorded_ctc_model_and_fusion": true,
+    "candidate_serial_shipping_fallback": true,
+    "invalid_result_uses_full_short_then_shipping": true,
+    "no_candidate_uses_short_only": true,
+    "serial_fallback_p95_regression_detected": true,
+    "total": "6/6"
+  },
+  "python_syntax": {
+    "analyze_prior_evidence.py": "pass",
+    "audit_packaging.py": "pass",
+    "evaluate_policy_once.py": "pass",
+    "run_complete_protocol.py": "pass",
+    "seal_eval_inputs.py": "pass"
+  },
+  "status": "pass"
+}

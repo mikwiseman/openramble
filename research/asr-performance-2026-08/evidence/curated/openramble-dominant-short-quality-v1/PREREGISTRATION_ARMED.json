@@ -1,0 +1,171 @@
+{
+  "analysis_protocol": {
+    "bootstrap_interval": "paired percentile 95% interval with linear interpolation; hard gate uses p97.5",
+    "bootstrap_iterations": 20000,
+    "bootstrap_seed": "openramble-dominant-short-bootstrap-v1-20260814",
+    "combined_bootstrap": "resample within language x duration-bin strata, preserving all six cell counts",
+    "evaluator": "$TMP/openramble-dominant-short-quality-v1/evaluate_one_shot.py",
+    "evaluator_sha256": "e0ec47123c4e31b83da0e1ebf067f9e1f1ae10488362e967739b731491b8397d",
+    "normalization": "Unicode NFKC; casefold; map Russian ё to е; map Unicode punctuation/symbol/separator/control to spaces; collapse whitespace. WER splits on spaces; CER removes spaces.",
+    "one_shot": "The evaluator atomically creates a consumed receipt before scoring and refuses if either receipt or report exists. It may run only after complete immutable shipping/candidate JSONLs and metadata are sealed; partial scoring, subset selection, optional stopping, and metric-driven reruns are prohibited.",
+    "scoring": "micro WER/CER from summed edit errors and frozen reference lengths; combined, language, and duration-bin paired bootstrap intervals; per-utterance regression distribution; exact-text token/word timing and confidence alignment; vocabulary outcome false negatives"
+  },
+  "arming_evidence": {
+    "archive_index": "$TMP/openramble-dominant-short-quality-v1/final-corpus/archive-index.json",
+    "archive_index_sha256": "077360ea92a8e5e552d190c379b14ef1d06c8dbda25232e9f81aa67d04cc56cc",
+    "canonical_pcm_fixture_count": 204,
+    "canonicalizer_record": "$TMP/openramble-dominant-short-quality-v1/final-corpus/canonicalizer.json",
+    "canonicalizer_record_sha256": "d80c909079113b958f341a6deb0be0c2e64c792b76adb488aeb5a1e0ee462ca2",
+    "compressed_source_fixture_count": 180,
+    "download_receipt": "$TMP/openramble-dominant-short-quality-v1/final-corpus/download-receipt.json",
+    "download_receipt_sha256": "32d40f14f443132fdcb2679107e4feef4404dc716e6902fc1a4b5911bb39dd19",
+    "final_manifest": "$TMP/openramble-dominant-short-quality-v1/final-corpus/manifest.json",
+    "final_manifest_sha256": "340314c63357f2ec0bcb4091438a71b43668ecba4ad376dc8844e9785d86faf6",
+    "model_outputs_inspected": false,
+    "pcm_index": "$TMP/openramble-dominant-short-quality-v1/final-corpus/pcm-index.sha256",
+    "pcm_index_sha256": "b3c768ad3ee9eb8298b411f44b36e29756d5bbc7295dec0148303bb6c7f8fd52",
+    "reference_fixture_count": 204,
+    "reference_index": "$TMP/openramble-dominant-short-quality-v1/final-corpus/reference-index.sha256",
+    "reference_index_sha256": "c501d3b10d7090d2cce04c3e1852f4de219a440828098f884eb6978f438c8cdf",
+    "selected_pcm_overlap_count": 0,
+    "source_index": "$TMP/openramble-dominant-short-quality-v1/final-corpus/source-index.sha256",
+    "source_index_sha256": "b81e9872fc7a98492a175397e030c0ed715d12ee7a6ee6dcc74fa4451de892b1"
+  },
+  "corpus": {
+    "final_fixture_count": 204,
+    "final_manifest": "$TMP/openramble-dominant-short-quality-v1/final-corpus/manifest.json",
+    "final_manifest_sha256": "340314c63357f2ec0bcb4091438a71b43668ecba4ad376dc8844e9785d86faf6",
+    "fleurs_core_counts": {
+      "en": {
+        "1-2": 0,
+        "2-3": 0,
+        "3-4": 12
+      },
+      "ru": {
+        "1-2": 0,
+        "2-3": 0,
+        "3-4": 12
+      }
+    },
+    "fleurs_core_manifest": "$TMP/openramble-dominant-short-quality-v1/corpus/manifest.json",
+    "fleurs_core_manifest_sha256": "994154cd47313f2ee275716f2b6da1c43c689a211178cedaaa93086c7e3c1407",
+    "fleurs_core_pcm_index": "$TMP/openramble-dominant-short-quality-v1/corpus/pcm-index.sha256",
+    "fleurs_core_pcm_index_sha256": "a07d213dd000e05e672c27a4d1916324f2e23de9d5eb5abea19960d9afa1ac14",
+    "fleurs_core_selection_plan": "$TMP/openramble-dominant-short-quality-v1/corpus/selection-plan.json",
+    "fleurs_core_selection_plan_sha256": "7b780a379c696dcfadb0d3ae518877a30bd2ba9f34475175ffaa25b2d163b415",
+    "fleurs_core_source_index": "$TMP/openramble-dominant-short-quality-v1/corpus/source-index.sha256",
+    "fleurs_core_source_index_sha256": "b1669daa482fabb2421efe698db60a3dcee4dde68d8b1dc36bc05190adfb3712",
+    "required_counts": {
+      "en": {
+        "1-2": 34,
+        "2-3": 34,
+        "3-4": 34
+      },
+      "ru": {
+        "1-2": 34,
+        "2-3": 34,
+        "3-4": 34
+      }
+    },
+    "supplement_audit": "$TMP/openramble-dominant-short-quality-v1/supplement-audit/common-voice-17/AUDIT.json",
+    "supplement_audit_sha256": "8c2a47153a6a9e4eedfd37c45253352ed77b7d81e0889f0d2410dfd9ecef72d5",
+    "supplement_selection_plan": "$TMP/openramble-dominant-short-quality-v1/supplement-audit/common-voice-17/SELECTION_PLAN.json",
+    "supplement_selection_plan_sha256": "de0e219fc3f21ec7cd7d400bc691cb58c5d400f85551ea306c7fecac238c8456"
+  },
+  "created_at_utc": "2026-08-14T19:19:53Z",
+  "decision_rule": {
+    "arming_state": "The corpus-materialization prerequisites are satisfied by the exact sealed 204-row manifest and its compressed-source, canonical-PCM, reference, archive, canonicalizer, and download-receipt hashes. Inference is permitted only under the frozen one-shot protocol and separate CoreML runner coordination; partial scoring and output-driven selection remain forbidden.",
+    "changes_after_arming": "Any corpus row, reference, PCM byte, exclusion set, evaluator, threshold, normalization, product config, or analysis change requires a new versioned preregistration and a genuinely untouched corpus.",
+    "final": "INTEGRATE only if every hard gate is true; otherwise REJECT. Engineering and prior holdout data must never be pooled into the result."
+  },
+  "exclusions": {
+    "engineering_manifest": "$TMP/openramble-short-quality-gate/corpus/manifest.json",
+    "engineering_manifest_sha256": "fd8fe15b32d9dbe84452f43ac02b3500b9f2b44baf646dd682600896a7f31771",
+    "frozen_union_fixture_count": 428,
+    "frozen_union_fleurs_source_identity_count": 420,
+    "frozen_union_pcm_sha256_count": 428,
+    "holdout_manifest": "$TMP/openramble-intermediate-quality-gate/corpus/manifest.json",
+    "holdout_manifest_sha256": "bf7e768a882b7a826ab657c32ceb71e5e5a6589833fe1aaf8ab82684c140b9c7",
+    "required_final_pcm_overlap_count": 0,
+    "required_final_source_identity_overlap_count": 0
+  },
+  "hard_gate_interpretation": {
+    "cer": "CER and paired CER intervals are mandatory report fields but are not separate acceptance gates.",
+    "duration_bins": "1-2 means 1.000 <= seconds < 2.000; 2-3 means 2.000 <= seconds < 3.000; 3-4 means 3.000 <= seconds <= 4.000, based on canonical PCM sample count.",
+    "per_utterance": "Any candidate-minus-shipping word-error delta >=2 is an immediate failure.",
+    "token_structure": "Both paths must have zero structural/emission failures. Exact-text SequenceMatcher alignment is matched/max(shipping_count,candidate_count); aligned p95 start/end and confidence limits apply separately to tokens and words.",
+    "vocabulary_false_negative": "Shipping outcome is a vocabulary candidate/rescored outcome while candidate path has no vocabulary candidate outcome.",
+    "wer_delta_units": "absolute rate; 0.002 = +0.20 percentage points"
+  },
+  "hard_gates": {
+    "aligned_confidence_absolute_p95_max": 0.1,
+    "aligned_timing_absolute_p95_seconds_max": 0.12,
+    "combined_bootstrap_p975_wer_delta_max": 0.0075,
+    "combined_observed_wer_delta_max": 0.002,
+    "each_duration_bin_bootstrap_p975_wer_delta_max": 0.015,
+    "each_duration_bin_observed_wer_delta_max": 0.005,
+    "each_language_bootstrap_p975_wer_delta_max": 0.01,
+    "each_language_observed_wer_delta_max": 0.004,
+    "emission_validation_failures_max": 0,
+    "invalid_token_or_word_structures_max": 0,
+    "maximum_extra_word_errors_per_utterance_exclusive": 2,
+    "token_alignment_fraction_min": 0.98,
+    "vocabulary_candidate_false_negatives_max": 0,
+    "word_alignment_fraction_min": 0.97
+  },
+  "inference_allowed": true,
+  "parent_blocked_preregistration": "$TMP/openramble-dominant-short-quality-v1/PREREGISTRATION.json",
+  "parent_blocked_preregistration_sha256": "fc11882edf45b3727d124f5689a6fb179e8e7123b8437498226c00c41a5dd719",
+  "product_config": {
+    "path": "$TMP/openramble-intermediate-quality-gate/PRODUCT_CONFIG.json",
+    "sha256": "98338d07767b45d3abaf222a790b6070b4a0dae6291343034cd7b91f16f3c59b",
+    "summary": "mel=false, concurrency=4, TDT maxTokens=600, dualDecode=false, resetData=false, computeUnits=.all, vocabulary enabled with frozen 28 terms, per-fixture language hints"
+  },
+  "provenance_caveat": {
+    "common_voice_access": "Satisfied materialization evidence: all 180 frozen Common Voice MP3 source bytes, all 180 canonical 16 kHz f32le PCM buffers, and all references are present and hash-sealed in the exact final manifest/indices. The source remains the pinned, anonymously accessible unofficial fsicoli/common_voice_17_0 mirror whose README declares CC0-1.0; these hashes attest the exact mirror bytes, not byte identity with an unavailable official archive. The assembled corpus is internal-evaluation-only and must not be redistributed.",
+    "forced_derivation": "Utterance trimming, transcript truncation, forced alignment, generated references, and duration fabrication are forbidden."
+  },
+  "run_contract": {
+    "candidate_selection_requirement": "Before any inference, seal exact model paths and SHA-256 identities, runner binary, shared weights, product config, final manifest, and output destinations in immutable run metadata.",
+    "required_equal_fields": [
+      "runner_binary_sha256",
+      "source_commit",
+      "product_config_sha256",
+      "shared_weight_artifact_sha256"
+    ],
+    "required_nonempty_fields": [
+      "runner_binary_sha256",
+      "source_commit",
+      "product_config_sha256",
+      "shared_weight_artifact_sha256",
+      "encoder_mil_sha256",
+      "model_tree_sha256",
+      "output_jsonl_sha256"
+    ],
+    "required_same_behavior": [
+      "vocabulary_configured=true",
+      "language_hints_from_manifest=true",
+      "same frozen PCM bytes and fixture order",
+      "same prewarm protocol",
+      "same product config except the explicitly declared candidate artifact"
+    ]
+  },
+  "schema_version": 1,
+  "scope": {
+    "asr_or_coreml_runs_during_preparation": 0,
+    "fleurs_availability_audit": "Pinned FLEURS train/test maximum is 18 EN and 12 RU, all in 3-4s; the frozen language-balanced core is 12+12.",
+    "holdout_role": "Future one-shot acceptance of a candidate short path versus shipping on exactly balanced genuine 1-4s EN/RU utterances.",
+    "model_outputs_inspected": false,
+    "shared_repository_edits": 0,
+    "supplement_role": "Frozen metadata-only Common Voice selection supplies 34/34/22 per language for 1-2/2-3/3-4; with the 12 FLEURS 3-4s rows this yields 34 per bin and 102 per language."
+  },
+  "sealing": {
+    "armed_output": "$TMP/openramble-dominant-short-quality-v1/PREREGISTRATION_ARMED.json",
+    "correction_id": "armed-state-materialization-claim-v2",
+    "correction_scope": "Replace contradictory blocked-only prose after prerequisites pass; corpus rows, references, PCM, evaluator, thresholds, normalization, and product config unchanged.",
+    "sealer": "$TMP/openramble-dominant-short-quality-v1/seal_final_preregistration.py",
+    "sealer_sha256": "2ea7fd7251dd027dcadc6f6287affe4adf384021e02f8bd14f0676b0654ac6aa",
+    "template_parent_sealer_sha256": "72c339777d6b81d3b60e4a9760b06001878305eee4eb43306d28bb095ab7656a"
+  },
+  "status": "armed_and_sealed_before_inference"
+}
