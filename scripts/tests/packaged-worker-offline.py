@@ -20,7 +20,7 @@ from typing import BinaryIO
 
 
 MAGIC = b"ORAS"
-VERSION = 1
+VERSION = 2
 HEADER = struct.Struct(">4sHHQIQ")
 
 HELLO = 1
