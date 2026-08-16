@@ -210,7 +210,8 @@ struct OnboardingView: View {
                             preparation: state.enginePreparation,
                             place: .onboarding,
                             downloadMegabytes: state.remainingDownloadMegabytes,
-                            isEngineReady: state.isEngineReady
+                            isEngineReady: state.isEngineReady,
+                            isPreparingEngine: state.isPreparingEngine
                         ),
                         install: state.installModel,
                         cancel: state.cancelModelInstall,
@@ -402,6 +403,7 @@ struct OnboardingView: View {
             accessibilityGranted: state.accessibilityGranted,
             modelState: state.modelState,
             engineReady: state.isEngineReady,
+            enginePreparing: state.isPreparingEngine,
             trialSucceeded: trialSucceeded
         )
     }
