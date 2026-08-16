@@ -242,6 +242,75 @@ struct ASRWorkerSupervisorTests {
         #expect(errno == ESRCH)
     }
 
+    @Test("a slow but CPU-burning preparation outlives a tiny stall window")
+    func slowPreparationSurvivesTheStallWatchdog() async throws {
+        let fixture = try makeHangingWorker(mode: "slow-prepare")
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        // The old fixed deadline would have killed this healthy 2.5 s
+        // specialization long before it finished; the stall watchdog sees the
+        // burn and waits it out, even with a stall window far below the work.
+        let supervisor = ASRWorkerSupervisor(
+            executableURL: fixture.executable,
+            executableArguments: [fixture.processLog.path, fixture.mode],
+            deadlines: ASRWorkerDeadlines(
+                hello: .seconds(1),
+                preparation: .seconds(15),
+                vocabulary: .seconds(1),
+                warmup: .seconds(1),
+                fileTranscription: .seconds(1),
+                transcription: { _ in .seconds(1) }
+            ),
+            stallPolicy: PreparationStallPolicy(
+                stallWindow: .milliseconds(700),
+                minimumProgress: .milliseconds(20),
+                sampleInterval: .milliseconds(100)
+            )
+        )
+
+        try await supervisor.prepare(modelDirectory: URL(fileURLWithPath: "/tmp/main-model"))
+        #expect(readProcessIdentifiers(from: fixture.processLog).count == 1)
+        await supervisor.unload()
+    }
+
+    @Test("a windless preparation is killed by the stall verdict, not the ceiling")
+    func hungPreparationIsKilledByStall() async throws {
+        let fixture = try makeHangingWorker(mode: "hang-prepare")
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let supervisor = ASRWorkerSupervisor(
+            executableURL: fixture.executable,
+            executableArguments: [fixture.processLog.path, fixture.mode],
+            deadlines: ASRWorkerDeadlines(
+                hello: .seconds(1),
+                // The ceiling is far away; only the stall verdict can act fast.
+                preparation: .seconds(60),
+                vocabulary: .seconds(1),
+                warmup: .seconds(1),
+                fileTranscription: .seconds(1),
+                transcription: { _ in .seconds(1) }
+            ),
+            stallPolicy: PreparationStallPolicy(
+                stallWindow: .milliseconds(400),
+                minimumProgress: .milliseconds(20),
+                sampleInterval: .milliseconds(100)
+            )
+        )
+
+        let started = ContinuousClock.now
+        do {
+            try await supervisor.prepare(modelDirectory: URL(fileURLWithPath: "/tmp/main-model"))
+            Issue.record("hanging preparation unexpectedly returned")
+        } catch let error as ASRWorkerTransportError {
+            #expect(error == .requestTimedOut)
+        } catch {
+            Issue.record("unexpected preparation error: \(type(of: error))")
+        }
+        #expect(
+            started.duration(to: .now) < .seconds(10),
+            "the wedge must surface via stall long before the 60 s ceiling"
+        )
+        await supervisor.unload()
+    }
+
     @Test("a pre-inference disconnect is retried exactly once")
     func preparationDisconnectRetriesOnce() async throws {
         let fixture = try makeHangingWorker(mode: "disconnect-first-prepare")

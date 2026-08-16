@@ -78,16 +78,15 @@ struct ASRWorkerDeadlines: Sendable {
     var hello: Duration = .seconds(2)
     // Main TDT and the optional CTC vocabulary graph are both materialized
     // before Ready, and a first-ever Core ML/ANE specialization owns most of
-    // that time. The old 30 s ceiling raced the app's own honest "usually
-    // 20–40 seconds" first-run estimate: on a slower or busy Mac the watchdog
-    // killed a healthy specialization, the retry started it over from scratch,
-    // and after the retry budget a fresh install dead-ended with everything
-    // looking green. These are wedge bounds, not performance promises — two
-    // minutes still surfaces a genuinely stuck native call, while every
-    // observed healthy first load fits with margin.
-    var preparation: Duration = .seconds(120)
-    var vocabulary: Duration = .seconds(120)
-    var warmup: Duration = .seconds(120)
+    // that time — heavy CPU work of machine-dependent length. Preparation
+    // phases are therefore watched for STALL (no CPU burn; see
+    // PreparationStallPolicy), which catches a call wedged on a dead system
+    // service in ~30 s regardless of these values. The durations below are
+    // only the far ceiling for the pathological spin that burns CPU without
+    // finishing; a healthy slow Mac never meets either bound.
+    var preparation: Duration = .seconds(600)
+    var vocabulary: Duration = .seconds(600)
+    var warmup: Duration = .seconds(600)
     // Dropping loaded models is bookkeeping plus deallocations, never a model
     // load; a worker that cannot answer in five seconds has earned the kill
     // fallback.
@@ -212,6 +211,11 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
     private var recoveryTask: Task<Void, Never>?
     private var readinessObservers: [UUID: AsyncStream<Bool>.Continuation] = [:]
 
+    /// Stall detection for preparation phases; injectable so tests exercise
+    /// both verdicts without production-scale windows.
+    private let stallPolicy: PreparationStallPolicy
+    /// Reads the worker's cumulative CPU time; injectable for determinism.
+    private let workerCPUTime: @Sendable (Int32) -> Duration?
     /// Reports the current memory-pressure tier; the default keeps every
     /// existing construction (and test) on the old always-respawn behavior.
     private let pressureTier: @Sendable () -> MemoryPressureTier
@@ -224,6 +228,9 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
         executableURL: URL,
         executableArguments: [String] = [],
         deadlines: ASRWorkerDeadlines = ASRWorkerDeadlines(),
+        stallPolicy: PreparationStallPolicy = PreparationStallPolicy(),
+        workerCPUTime: @escaping @Sendable (Int32) -> Duration? =
+            ASRWorkerSupervisor.processCPUTime,
         pressureTier: @escaping @Sendable () -> MemoryPressureTier = { .normal },
         recoveryBackoffDecision: @escaping @Sendable (MemoryPressureTier)
             -> WorkerRecoveryBackoffPolicy.Decision = { tier in
@@ -236,6 +243,8 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
         self.executableURL = executableURL
         self.executableArguments = executableArguments
         self.deadlines = deadlines
+        self.stallPolicy = stallPolicy
+        self.workerCPUTime = workerCPUTime
         self.pressureTier = pressureTier
         self.recoveryBackoffDecision = recoveryBackoffDecision
     }
@@ -711,17 +720,25 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
             throw ASRWorkerTransportError.disconnected
         }
 
+        let workerProcessIdentifier = snapshot.process.processIdentifier
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation {
                 (continuation: CheckedContinuation<ASRWireFrame, Error>) in
-                let watchdog = Task { [weak self] in
-                    do {
-                        try await Task.sleep(for: deadline)
-                    } catch {
-                        return
+                let watchdog = Self.isPreparationPhase(kind)
+                    ? makeStallWatchdog(
+                        requestID: requestID,
+                        generation: generation,
+                        processIdentifier: workerProcessIdentifier,
+                        ceiling: deadline
+                    )
+                    : Task { [weak self] in
+                        do {
+                            try await Task.sleep(for: deadline)
+                        } catch {
+                            return
+                        }
+                        await self?.requestTimedOut(requestID: requestID, generation: generation)
                     }
-                    await self?.requestTimedOut(requestID: requestID, generation: generation)
-                }
                 pendingRequest = PendingRequest(
                     requestID: requestID,
                     generation: generation,
@@ -800,6 +817,85 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
         } else {
             pendingRequest.continuation.resume(returning: frame)
         }
+    }
+
+    private static func isPreparationPhase(_ kind: ASRWireKind) -> Bool {
+        switch kind {
+        case .prepareMain, .prepareVocabulary, .warmInference:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// A stall-aware watchdog for preparation phases: kills on a windless
+    /// stretch of worker CPU, not on honest slowness. The ceiling only bounds
+    /// a pathological spin.
+    private func makeStallWatchdog(
+        requestID: UInt64,
+        generation: UInt64,
+        processIdentifier: Int32,
+        ceiling: Duration
+    ) -> Task<Void, Never> {
+        Task { [weak self, stallPolicy, workerCPUTime] in
+            let cadence = stallPolicy.effectiveSampleInterval(ceiling: ceiling)
+            var lastCPU = workerCPUTime(processIdentifier) ?? .zero
+            var sinceProgress: Duration = .zero
+            var total: Duration = .zero
+            while total < ceiling {
+                do {
+                    try await Task.sleep(for: cadence)
+                } catch {
+                    return
+                }
+                total += cadence
+                if let cpu = workerCPUTime(processIdentifier), cpu > lastCPU {
+                    if cpu - lastCPU >= stallPolicy.minimumProgress {
+                        sinceProgress = .zero
+                    } else {
+                        sinceProgress += cadence
+                    }
+                    lastCPU = cpu
+                } else {
+                    // A vanished reading counts as no progress; a dead process
+                    // is reported by its own exit path first.
+                    sinceProgress += cadence
+                }
+                if stallPolicy.verdict(elapsedSinceProgress: sinceProgress) == .wedged {
+                    break
+                }
+            }
+            await self?.requestTimedOut(requestID: requestID, generation: generation)
+        }
+    }
+
+    /// One timebase read for the process lifetime; numer/denom never change.
+    private static let machTimebase: mach_timebase_info_data_t = {
+        var info = mach_timebase_info_data_t()
+        mach_timebase_info(&info)
+        return info
+    }()
+
+    /// Cumulative user+system CPU time of the exact worker process.
+    static func processCPUTime(_ processIdentifier: Int32) -> Duration? {
+        var info = rusage_info_current()
+        let succeeded = withUnsafeMutablePointer(to: &info) { pointer in
+            pointer.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) { rebound in
+                proc_pid_rusage(processIdentifier, RUSAGE_INFO_CURRENT, rebound) == 0
+            }
+        }
+        guard succeeded else { return nil }
+        // ri_*_time are Mach time units, not nanoseconds: on Apple Silicon a
+        // tick is 125/3 ns, and reading ticks as nanoseconds shrank real burn
+        // ~41× below the progress threshold — a live specialization looked
+        // windless. Convert exactly, split to dodge overflow.
+        let timebase = Self.machTimebase
+        guard timebase.denom != 0 else { return nil }
+        let ticks = info.ri_user_time &+ info.ri_system_time
+        let numer = UInt64(timebase.numer)
+        let denom = UInt64(timebase.denom)
+        let nanos = (ticks / denom) * numer + ((ticks % denom) * numer) / denom
+        return .nanoseconds(Int64(clamping: nanos))
     }
 
     private func requestTimedOut(requestID: UInt64, generation: UInt64) {
