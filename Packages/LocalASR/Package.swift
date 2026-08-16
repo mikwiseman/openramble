@@ -20,9 +20,11 @@ let package = Package(
         // reset of TDT's fully overwritten fixed-size audio input buffer and
         // avoids NSNumber boxing at the optional CTC model boundaries. It also
         // accepts a conservative term-index prefilter for the final rescorer.
+        // The typed Float16 paths carry arch(arm64) guards so the universal
+        // Release archive's x86_64 slice keeps compiling.
         .package(
             url: "https://github.com/mikwiseman/FluidAudio.git",
-            revision: "ee9a7f12d91710da53de6d75f8b7160e09eccee4"
+            revision: "ad35b9e7f424bc6b2eda45db61302e1599618bfc"
         ),
     ],
     targets: [
