@@ -289,3 +289,27 @@ Reproduce the warmed product path with:
 WAI_VOCAB=on WAI_ASR_PREWARM=on \
   ./Packages/LocalASR/.build/release/asr-bench bench path/to/audio.wav
 ```
+
+## Reload economics (2026-08-16, Apple M4 Pro, macOS build 25G72)
+
+Measured with `scripts/bench-cold-reload.sh` in an exclusive window (both
+dictation apps stopped by exact PID) on the 0.8.0 code. The e5rt
+specialization cliff was captured live: the window's very first load — the
+OS had purged the ANE program cache earlier that day — took **15.56 s**;
+every load after it, in any process, stayed at ~0.11 s. That pair is the
+entire story the 0.8.0 residency work is built around.
+
+- In-process model comeback (`unloadModels` → prepare → warm, the resident
+  worker path a residency or idle unload now takes): prepare 0.101–0.106 s +
+  warm-up 0.043–0.048 s, **0.145–0.154 s total** across three cycles.
+- Fresh-process comeback (spawn + dyld + init + load + warm, the pre-0.8
+  path): **0.161–0.197 s** across three runs — the process overhead itself
+  is small; the historic 13–16 s stalls were always the specialization
+  cache, which is exactly what the early-rewarm and wait-and-insert changes
+  absorb.
+- Peak worker RSS with models loaded in the reload lane: 2.26 GB.
+- The APFS-clone cache-key scenario (forcing respecialization without
+  touching host caches) and the placement matrix did not run in this window
+  because of a since-fixed engine-path bug in the script; the live-captured
+  15.56 s cold / 0.11 s warm pair stands as the cliff evidence until the
+  next exclusive window.

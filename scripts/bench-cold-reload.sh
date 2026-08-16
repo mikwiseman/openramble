@@ -39,6 +39,11 @@ if [ -z "$MODEL_DIR" ]; then
   echo "model is not installed; run: asr-bench install" >&2
   exit 69
 fi
+# `status` prints the installed revision root; the engine bundle the loader
+# validates lives one level deeper.
+if [ -d "$MODEL_DIR/parakeet-tdt-0.6b-v3" ]; then
+  MODEL_DIR="$MODEL_DIR/parakeet-tdt-0.6b-v3"
+fi
 echo "→ engine bundle: $MODEL_DIR" >&2
 
 # The probe measures the engine alone; the vocabulary phase is a separate,

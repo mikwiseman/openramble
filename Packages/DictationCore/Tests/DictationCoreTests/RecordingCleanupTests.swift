@@ -265,7 +265,13 @@ final class RecordingCleanupTests: XCTestCase {
             inserter: FakeInserter(),
             overlay: overlay,
             sounds: FakeSounds(),
-            recordingRecovery: RecordingRecoveryStore(directory: recovered)
+            recordingRecovery: RecordingRecoveryStore(directory: recovered),
+            // The checkpoint below observes .transcribing while the gated
+            // freeze is still open. A loaded CI runner can spend more than
+            // the 500 ms production default just scheduling tasks, which
+            // used to expire the freeze and race the checkpoint to .idle;
+            // the deadline is irrelevant to what this test proves.
+            captureFreezeDeadline: .seconds(10)
         )
         controller.onNotice = { notices.append($0) }
 
