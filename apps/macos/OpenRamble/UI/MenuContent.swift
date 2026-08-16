@@ -21,8 +21,7 @@ struct MenuContent: View {
             state: state.dictationState,
             isDictationReady: state.isDictationReady,
             hasRecoveredText: state.recoveredText != nil,
-            hasRecoveredRecordings: state.recoveredRecordingCount > 0
-                || state.recordingRecoveryStorageFaulted,
+            recoveryStorageFaulted: state.recordingRecoveryStorageFaulted,
             hasRecents: !state.recentDictations.isEmpty,
             canCopyAsSpoken: state.canCopyRawDictation
         )
