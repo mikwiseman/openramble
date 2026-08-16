@@ -17,7 +17,6 @@ struct ModelStatus: Equatable {
         case install
         case retry
         case repair
-        case prepare
         case cancel
         case delete
 
@@ -28,7 +27,6 @@ struct ModelStatus: Equatable {
             case .install: return "Download Model — \(downloadMegabytes) MB"
             case .retry: return "Try Again"
             case .repair: return "Redownload Model — \(downloadMegabytes) MB"
-            case .prepare: return "Prepare Again"
             case .cancel: return "Cancel Download"
             case .delete: return "Delete Model"
             }
@@ -40,7 +38,6 @@ struct ModelStatus: Equatable {
             case .install: return "Downloads about \(downloadMegabytes) MB. This is the app's only download."
             case .retry: return "Restarts the model download from the beginning."
             case .repair: return "Downloads and verifies a fresh copy of the model. The damaged copy is not used."
-            case .prepare: return "Loads the downloaded model again. Nothing is downloaded."
             case .cancel: return "Stops the download and deletes the partially downloaded files."
             case .delete: return "Frees up disk space. Dictation stops working until the model is downloaded again."
             }
@@ -74,9 +71,11 @@ struct ModelStatus: Equatable {
         action.hint(downloadMegabytes: downloadMegabytes)
     }
 
+    /// The card reads two facts: is the recognizer usable, and how long the
+    /// current preparation has been running. A separate "is preparing" flag
+    /// could disagree with them, so there isn't one.
     static func make(
         state: ModelState,
-        isPreparingEngine: Bool,
         preparation: EnginePreparationState? = nil,
         place: Place,
         downloadMegabytes: Int = 586,
@@ -84,7 +83,6 @@ struct ModelStatus: Equatable {
     ) -> ModelStatus {
         var status = makeStatus(
             state: state,
-            isPreparingEngine: isPreparingEngine,
             preparation: preparation,
             place: place,
             downloadMegabytes: downloadMegabytes,
@@ -96,7 +94,6 @@ struct ModelStatus: Equatable {
 
     private static func makeStatus(
         state: ModelState,
-        isPreparingEngine: Bool,
         preparation: EnginePreparationState?,
         place: Place,
         downloadMegabytes: Int,
@@ -106,7 +103,7 @@ struct ModelStatus: Equatable {
         case .notInstalled:
             return ModelStatus(
                 title: "Model not installed",
-                detail: "\(downloadMegabytes) MB from the Hugging Face CDN; a GitHub mirror if it's unavailable. After verification, recognition works without the network.",
+                detail: "\(downloadMegabytes) MB from the GitHub release mirror; the Hugging Face CDN if it's unavailable. After verification, recognition works without the network.",
                 progress: nil,
                 progressLabel: nil,
                 actions: [.install],
@@ -147,37 +144,32 @@ struct ModelStatus: Equatable {
             )
 
         case .ready:
-            // Downloaded, verified — and still unable to recognize because the
-            // engine never finished loading. Retries are exhausted and nothing
-            // is running: saying "ready" here and asking the person to wait is
-            // a dead end. Name it and hand them the button.
-            guard isPreparingEngine || isEngineReady else {
+            // Two honest phases, never both at once: the download is done, and
+            // the model is either still being prepared for this Mac or ready.
+            // Saying "ready" while dictation would still have to wait is the
+            // sentence that made a first run feel broken.
+            guard isEngineReady else {
                 return ModelStatus(
-                    title: "Model needs preparing",
-                    detail: "The files are downloaded and intact, but the recognizer "
-                        + "didn't finish loading them. Nothing needs downloading again.",
+                    title: "Preparing the model",
+                    // Live seconds, not "usually 20-40": a wait with a moving
+                    // counter reads as work, without one it reads as stuck.
+                    detail: preparation?.title
+                        ?? "Preparing for this Mac — usually 20–40 seconds, and only once.",
                     progress: nil,
                     progressLabel: nil,
-                    actions: place == .settings ? [.prepare, .delete] : [.prepare],
-                    tone: .failure,
-                    announcement: "Model needs preparing"
+                    actions: place == .settings ? [.delete] : [],
+                    tone: .neutral,
+                    announcement: "Preparing the model for first use"
                 )
             }
             return ModelStatus(
                 title: "Model ready",
-                // While the first loading into the neuromodule is in progress, the person sees
-                // “ready”, but the dictation will still think about it. To remain silent about this means
-                // get a complaint about being slow the first time.
-                // Live seconds, not "usually 20–40": waiting with the going
-                // with the counter it is read as work, and without it it is read as stuck.
-                detail: isPreparingEngine
-                    ? (preparation?.title ?? "Preparing for this Mac — usually 20–40 seconds, and only once.")
-                    : nil,
+                detail: nil,
                 progress: nil,
                 progressLabel: nil,
                 actions: place == .settings ? [.delete] : [],
                 tone: .success,
-                announcement: isPreparingEngine ? "Model ready, preparing for first use" : "Model ready"
+                announcement: "Model ready"
             )
 
         case let .repairRequired(detail):

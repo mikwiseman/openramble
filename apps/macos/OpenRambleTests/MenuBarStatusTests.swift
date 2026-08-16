@@ -73,7 +73,7 @@ final class MenuBarStatusTests: XCTestCase {
 @MainActor
 final class MenuModelOfferTests: XCTestCase {
     private func status(for state: ModelState) -> ModelStatus {
-        ModelStatus.make(state: state, isPreparingEngine: false, place: .settings)
+        ModelStatus.make(state: state, place: .settings)
     }
 
     func testScenario006() {
@@ -113,7 +113,6 @@ final class MenuModelOfferTests: XCTestCase {
     func testScenario010() {
         let model = ModelStatus.make(
             state: .notInstalled,
-            isPreparingEngine: false,
             place: .settings,
             downloadMegabytes: 103
         )

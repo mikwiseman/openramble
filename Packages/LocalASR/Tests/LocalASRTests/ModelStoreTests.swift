@@ -63,8 +63,15 @@ actor FakeDownloader: ModelDownloading {
         }
 
         // We look for the key at the tail of the address - this way the test does not depend on the form of the link.
+        // Both shapes are real: the origin keeps the repository path, while a
+        // GitHub release asset cannot contain slashes and arrives flattened.
         let table = contentsByHost[host] ?? contents
-        let key = table.keys.first { url.absoluteString.hasSuffix($0) }
+        let key = table.keys.first { candidate in
+            url.absoluteString.hasSuffix(candidate)
+                || url.absoluteString.hasSuffix(
+                    candidate.replacingOccurrences(of: "/", with: "__")
+                )
+        }
         guard let key, let data = table[key] else {
             throw ModelDownloadError.httpStatus(404)
         }

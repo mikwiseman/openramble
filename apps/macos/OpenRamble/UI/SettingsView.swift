@@ -226,7 +226,6 @@ private struct RecognitionSettings: View {
                 ModelStatusView(
                     status: ModelStatus.make(
                         state: state.modelState,
-                        isPreparingEngine: state.isPreparingEngine,
                         preparation: state.enginePreparation,
                         place: .settings,
                         downloadMegabytes: state.remainingDownloadMegabytes,
@@ -238,8 +237,7 @@ private struct RecognitionSettings: View {
                     // worked on the first click: a miss cost half
                     // gigabyte and new download. There is nothing to cancel this, it means
                     // ask.
-                    delete: { showDeleteConfirmation = true },
-                    prepare: state.prepareEngineAgain
+                    delete: { showDeleteConfirmation = true }
                 )
                 // Retained audio moved out of the daily menu: it is announced
                 // by the failure notice when it happens, and findable here for

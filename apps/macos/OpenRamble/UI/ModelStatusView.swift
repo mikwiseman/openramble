@@ -8,9 +8,6 @@ struct ModelStatusView: View {
     let install: () -> Void
     let cancel: () -> Void
     let delete: () -> Void
-    /// Loading verified files again is not a download; the default keeps every
-    /// existing call site unchanged.
-    var prepare: () -> Void = {}
     var announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer()
 
     /// What has already been said out loud. The load share changes dozens of times per second -
@@ -79,10 +76,6 @@ struct ModelStatusView: View {
                 .accessibilityHint(status.hint(for: action))
         case .retry, .repair:
             Button(status.title(for: action), action: install)
-                .accessibilityHint(status.hint(for: action))
-        case .prepare:
-            Button(status.title(for: action), action: prepare)
-                .buttonStyle(.borderedProminent)
                 .accessibilityHint(status.hint(for: action))
         case .cancel:
             Button(status.title(for: action), role: .cancel, action: cancel)

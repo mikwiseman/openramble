@@ -72,15 +72,14 @@ public struct AppEnvironment {
     /// and tests share the same bounded state transition.
     public var recoveryInsertionDeadline: Duration
     /// A worker timeout is not evidence that verified model files are bad.
-    /// Retry timing is injectable so that the exact recovery policy is testable
-    /// without making the suite sleep for production-scale intervals.
-    public var engineWarmupRetryDelay: Duration
+    /// Preparation retries forever with a backoff ladder; this scale keeps the
+    /// suite from sleeping production-scale intervals (nil = the real ladder).
+    public var engineWarmupRetryDelay: Duration?
     /// Warning-tier rewarm settle window; injectable for the same reason.
     public var pressureRewarmSettleDelay: Duration
     /// Test-only override for the idle-unload countdown: the policy's real
     /// options start at two minutes, and suites never sleep that long.
     public var idleUnloadDelayOverride: Duration?
-    public var engineWarmupRetryLimit: Int
     /// Crash-recovery timing is injectable so launch-to-idle maintenance can
     /// be proven without sleeping for the production compatibility window.
     public var recordingRecoveryCompatibilityGrace: TimeInterval
@@ -132,10 +131,9 @@ public struct AppEnvironment {
         ) -> any AudioCapturing,
         transcribe: @escaping (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult,
         recoveryInsertionDeadline: Duration = .seconds(2),
-        engineWarmupRetryDelay: Duration = .seconds(1),
+        engineWarmupRetryDelay: Duration? = nil,
         pressureRewarmSettleDelay: Duration = EngineRewarmPolicy.defaultSettleWindow,
         idleUnloadDelayOverride: Duration? = nil,
-        engineWarmupRetryLimit: Int = 2,
         recordingRecoveryCompatibilityGrace: TimeInterval = 60,
         recordingRecoveryMaintenanceRetryDelay: TimeInterval = 5,
         recordingRecoveryIdleScanInterval: TimeInterval = 60,
@@ -166,7 +164,6 @@ public struct AppEnvironment {
         self.engineWarmupRetryDelay = engineWarmupRetryDelay
         self.pressureRewarmSettleDelay = pressureRewarmSettleDelay
         self.idleUnloadDelayOverride = idleUnloadDelayOverride
-        self.engineWarmupRetryLimit = max(0, engineWarmupRetryLimit)
         self.recordingRecoveryCompatibilityGrace = recordingRecoveryCompatibilityGrace
         self.recordingRecoveryMaintenanceRetryDelay = recordingRecoveryMaintenanceRetryDelay
         self.recordingRecoveryIdleScanInterval = recordingRecoveryIdleScanInterval
@@ -409,8 +406,7 @@ public final class AppState: ObservableObject {
     ) -> any AudioCapturing
     private let transcribe: (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult
     private let recoveryInsertionDeadline: Duration
-    private let engineWarmupRetryDelay: Duration
-    private let engineWarmupRetryLimit: Int
+    private let engineWarmupRetryDelayOverride: Duration?
     private let recordingRecoveryCompatibilityGrace: TimeInterval
     private let recordingRecoveryMaintenanceRetryDelay: TimeInterval
     private let recordingRecoveryIdleScanInterval: TimeInterval
@@ -564,12 +560,11 @@ public final class AppState: ObservableObject {
         makeCapture = environment.makeCapture
         transcribe = environment.transcribe
         recoveryInsertionDeadline = environment.recoveryInsertionDeadline
-        engineWarmupRetryDelay = environment.engineWarmupRetryDelay
+        engineWarmupRetryDelayOverride = environment.engineWarmupRetryDelay
         pressureRewarmSettleDelay = environment.pressureRewarmSettleDelay
         idleUnloadDelayOverride = environment.idleUnloadDelayOverride
         environmentPressureGauge = environment.pressureGauge
         modelUnloadTimeout = IdleUnloadPolicy.stored(in: environment.defaults)
-        engineWarmupRetryLimit = environment.engineWarmupRetryLimit
         recordingRecoveryCompatibilityGrace = environment.recordingRecoveryCompatibilityGrace
         recordingRecoveryMaintenanceRetryDelay = environment.recordingRecoveryMaintenanceRetryDelay
         recordingRecoveryIdleScanInterval = environment.recordingRecoveryIdleScanInterval
@@ -1995,26 +1990,6 @@ public final class AppState: ObservableObject {
         )
     }
 
-    /// Load the already-downloaded model again after the automatic attempts
-    /// gave up.
-    ///
-    /// The files on disk are verified; only the engine generation failed. This
-    /// is the human's explicit retry, so it opens a fresh attempt budget
-    /// instead of redownloading half a gigabyte.
-    public func prepareEngineAgain() {
-        guard modelState.isReady,
-              !isEngineReady,
-              !isPreparingEngine,
-              !isInstalling,
-              !isRecyclingEngine
-        else { return }
-        engineLog.notice("engine preparation retried by hand")
-        engineWarmupRetryRevision &+= 1
-        engineWarmupRetryTask?.cancel()
-        engineWarmupRetryTask = nil
-        Task { [weak self] in await self?.warmUpEngine() }
-    }
-
     public func installModel() {
         // Pressing again during loading does not start anything: the button is on
         // the screen lives until the first state arrives, and has time to press it
@@ -2193,10 +2168,17 @@ public final class AppState: ObservableObject {
         guard case .ready = await store.currentState() else { return .skipped }
         isEngineReady = false
         isPreparingEngine = true
-        beginPreparationCountdown(phase: .loadingRecognizer)
+        // The retry loop owns one continuous countdown across its waits; a
+        // lone attempt owns its own. Whoever owns it also ends it, so the
+        // indicator never blinks between two attempts of the same preparation.
+        if engineWarmupRetryTask == nil {
+            beginPreparationCountdown(phase: .loadingRecognizer)
+        }
         defer {
-            isPreparingEngine = false
-            endPreparationCountdown()
+            if engineWarmupRetryTask == nil {
+                isPreparingEngine = false
+                endPreparationCountdown()
+            }
         }
 
         do {
@@ -2330,64 +2312,72 @@ public final class AppState: ObservableObject {
         return reason
     }
 
-    /// A single task performs a finite number of retries. It neither deletes
-    /// model files nor accumulates retry tasks if several lifecycle events
-    /// observe the same failed worker generation.
+    /// Keep preparing until it works. There is nothing else to do.
+    ///
+    /// The files are verified; only the worker generation failed, and the
+    /// commonest reason is a Mac momentarily busy with the 586 MB it just
+    /// wrote. A budget of attempts turned that into a permanent "give up"
+    /// state with a button, on the very first run — the app now simply waits
+    /// longer between attempts and stays honestly "preparing" throughout, so
+    /// the interface never has to ask a person to retry work it can do itself.
+    /// One task at a time, fenced by revision, cancelled by unload and delete.
     private func scheduleEngineWarmupRetry(after initialDetail: String) {
-        guard engineWarmupRetryLimit > 0 else {
-            notifyEngineWarmupRetryExhausted(detail: initialDetail)
-            return
-        }
         guard engineWarmupRetryTask == nil, modelState.isReady else { return }
 
         engineWarmupRetryRevision &+= 1
         let revision = engineWarmupRetryRevision
-        notify(
-            DictationNotice(
-                kind: .warning,
-                message: "The recognizer worker restarted while warming up. "
-                    + "OpenRamble is retrying automatically; downloaded models were kept."
-            )
+        engineLog.info(
+            "engine rewarm scheduled: \(initialDetail, privacy: .public)"
         )
+        // The countdown keeps running across the waits: the person sees one
+        // continuous "preparing", which is exactly what is happening.
+        isPreparingEngine = true
+        beginPreparationCountdown(phase: .loadingRecognizer)
         engineWarmupRetryTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            var lastDetail = initialDetail
-            for _ in 0..<self.engineWarmupRetryLimit {
+            var failures = 0
+            while true {
+                // Re-assert after each attempt: the attempt's own bookkeeping
+                // runs while this loop is still going to try again.
+                self.isPreparingEngine = true
                 do {
-                    try await Task.sleep(for: self.engineWarmupRetryDelay)
+                    try await Task.sleep(
+                        for: self.engineWarmupRetryDelay(afterFailures: failures)
+                    )
                 } catch {
+                    self.finishRetryPresentation(revision: revision)
                     return
                 }
                 guard self.engineWarmupRetryRevision == revision,
                       self.modelState.isReady
-                else { return }
+                else {
+                    self.finishRetryPresentation(revision: revision)
+                    return
+                }
 
                 let outcome = await self.warmUpEngine(allowAutomaticRetry: false)
                 switch outcome {
                 case .ready, .repairRequired, .skipped:
+                    self.finishRetryPresentation(revision: revision)
                     return
-                case let .retryable(detail):
-                    lastDetail = detail
+                case .retryable:
+                    failures += 1
                 }
             }
-
-            guard self.engineWarmupRetryRevision == revision else { return }
-            self.engineWarmupRetryTask = nil
-            self.notifyEngineWarmupRetryExhausted(detail: lastDetail)
         }
     }
 
-    private func notifyEngineWarmupRetryExhausted(detail: String) {
-        engineLog.error(
-            "engine automatic rewarm exhausted: \(detail, privacy: .public)"
-        )
-        notify(
-            DictationNotice(
-                kind: .failure,
-                message: "The recognizer worker couldn't become ready after automatic retries. "
-                    + "Restart OpenRamble; downloaded models were kept."
-            )
-        )
+    private func engineWarmupRetryDelay(afterFailures failures: Int) -> Duration {
+        engineWarmupRetryDelayOverride
+            ?? EngineWarmupBackoff.delay(afterFailures: failures)
+    }
+
+    /// Hand the preparation indicator back once the loop is done owning it.
+    private func finishRetryPresentation(revision: Int) {
+        guard engineWarmupRetryRevision == revision else { return }
+        engineWarmupRetryTask = nil
+        isPreparingEngine = false
+        endPreparationCountdown()
     }
 
     /// Editing the dictionary reaches the acoustics now, and not after a restart.

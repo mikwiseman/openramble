@@ -68,9 +68,9 @@ final class EnginePreparationWiringTests: XCTestCase {
     func testScenario012() {
         let status = ModelStatus.make(
             state: .ready(directory: URL(fileURLWithPath: "/tmp")),
-            isPreparingEngine: true,
             preparation: .make(phase: .loadingRecognizer, elapsed: 9),
-            place: .settings
+            place: .settings,
+            isEngineReady: false
         )
         XCTAssertEqual(status.detail, "Preparing the recognizer… 9 s")
     }
@@ -80,9 +80,9 @@ final class EnginePreparationWiringTests: XCTestCase {
     func testScenario013() {
         let status = ModelStatus.make(
             state: .ready(directory: URL(fileURLWithPath: "/tmp")),
-            isPreparingEngine: true,
             preparation: .make(phase: .loadingVocabulary, elapsed: 2),
-            place: .settings
+            place: .settings,
+            isEngineReady: false
         )
         XCTAssertEqual(status.detail, "Preparing the term booster… 2 s")
     }
@@ -91,7 +91,6 @@ final class EnginePreparationWiringTests: XCTestCase {
     func testScenario014() {
         let status = ModelStatus.make(
             state: .ready(directory: URL(fileURLWithPath: "/tmp")),
-            isPreparingEngine: false,
             preparation: .make(phase: .ready, elapsed: 0),
             place: .settings
         )
