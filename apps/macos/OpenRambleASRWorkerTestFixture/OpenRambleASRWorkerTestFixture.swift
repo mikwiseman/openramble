@@ -32,6 +32,15 @@ enum OpenRambleASRWorkerTestFixture {
                 if mode == "hang-prepare" {
                     while true { _ = Darwin.pause() }
                 }
+                if mode == "slow-prepare" {
+                    // A healthy specialization: long, but visibly burning CPU.
+                    let spinUntil = ContinuousClock.now.advanced(by: .milliseconds(2_500))
+                    var sink = 1.0
+                    while ContinuousClock.now < spinUntil {
+                        sink += (sink + 1).squareRoot()
+                    }
+                    if sink < 0 { Darwin._exit(EX_SOFTWARE) }
+                }
                 if mode == "disconnect-first-prepare", launchNumber == 1 {
                     Darwin._exit(EXIT_FAILURE)
                 }
