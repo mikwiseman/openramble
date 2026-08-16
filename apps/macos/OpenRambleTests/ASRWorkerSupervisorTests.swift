@@ -375,6 +375,227 @@ struct ASRWorkerSupervisorTests {
         #expect(errno == ESRCH)
     }
 
+    @Test("critical pressure defers the crash respawn until the tier eases")
+    func criticalPressureDefersRecoveryRespawn() async throws {
+        let fixture = try makeHangingWorker(mode: "exit-after-ready")
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let gauge = MemoryPressureGauge()
+        gauge.update(.critical)
+        let supervisor = ASRWorkerSupervisor(
+            executableURL: fixture.executable,
+            executableArguments: [fixture.processLog.path, fixture.mode],
+            deadlines: ASRWorkerDeadlines(
+                hello: .seconds(1),
+                preparation: .seconds(1),
+                vocabulary: .seconds(1),
+                warmup: .seconds(1),
+                fileTranscription: .seconds(1),
+                transcription: { _ in .seconds(1) }
+            ),
+            pressureTier: { gauge.tier },
+            recoveryBackoffDecision: { tier in
+                tier == .critical
+                    ? .deferRespawn(recheckAfter: .milliseconds(40))
+                    : .proceed
+            }
+        )
+
+        try await supervisor.prepare(modelDirectory: URL(fileURLWithPath: "/tmp/main-model"))
+        try await supervisor.prepareVocabulary(
+            modelDirectory: URL(fileURLWithPath: "/tmp/vocabulary-model"),
+            boost: VocabularyBoost(terms: [])
+        )
+        try await supervisor.warmUpInference()
+
+        // The worker exits right after Ready; recovery notices but must not
+        // respawn a multi-gigabyte process into critical pressure.
+        try await Task.sleep(for: .milliseconds(400))
+        var processIdentifiers = readProcessIdentifiers(from: fixture.processLog)
+        #expect(processIdentifiers.count == 1, "no respawn while the tier is critical")
+
+        gauge.update(.normal)
+        for _ in 0..<300 {
+            processIdentifiers = readProcessIdentifiers(from: fixture.processLog)
+            if processIdentifiers.count == 2, await supervisor.isPrepared { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(processIdentifiers.count == 2, "the eased tier releases exactly one respawn")
+        #expect(await supervisor.isPrepared)
+
+        await supervisor.unload()
+    }
+
+    @Test("a residency unload drops the models but keeps the worker process")
+    func residencyUnloadKeepsWorkerResident() async throws {
+        let fixture = try makeHangingWorker(mode: "success")
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let supervisor = ASRWorkerSupervisor(
+            executableURL: fixture.executable,
+            executableArguments: [fixture.processLog.path, fixture.mode],
+            deadlines: ASRWorkerDeadlines(
+                hello: .seconds(1),
+                preparation: .seconds(1),
+                vocabulary: .seconds(1),
+                warmup: .seconds(1),
+                unload: .seconds(1),
+                fileTranscription: .seconds(1),
+                transcription: { _ in .seconds(1) }
+            )
+        )
+
+        try await supervisor.prepare(modelDirectory: URL(fileURLWithPath: "/tmp/main-model"))
+        try await supervisor.prepareVocabulary(
+            modelDirectory: URL(fileURLWithPath: "/tmp/vocabulary-model"),
+            boost: VocabularyBoost(terms: [])
+        )
+        try await supervisor.warmUpInference()
+        #expect(await supervisor.isPrepared)
+        let firstPids = readProcessIdentifiers(from: fixture.processLog)
+        let pid = try #require(firstPids.first)
+
+        #expect(await supervisor.unloadIfIdle())
+        #expect(!(await supervisor.isPrepared), "dropped models must clear readiness")
+        #expect(Darwin.kill(pid, 0) == 0, "the worker process survives the unload")
+        #expect(readProcessIdentifiers(from: fixture.processLog).count == 1)
+
+        // The comeback reuses the same process: three phases, zero respawns.
+        try await supervisor.warmUpInference()
+        #expect(await supervisor.isPrepared)
+        #expect(
+            readProcessIdentifiers(from: fixture.processLog).count == 1,
+            "re-prepare must ride the resident process, not spawn a second one"
+        )
+
+        await supervisor.unload()
+        #expect(Darwin.kill(pid, 0) == -1)
+        #expect(errno == ESRCH)
+    }
+
+    @Test("a worker that cannot answer the unload verb earns the kill fallback")
+    func hangingUnloadFallsBackToKill() async throws {
+        let fixture = try makeHangingWorker(mode: "hang-unload")
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let supervisor = ASRWorkerSupervisor(
+            executableURL: fixture.executable,
+            executableArguments: [fixture.processLog.path, fixture.mode],
+            deadlines: ASRWorkerDeadlines(
+                hello: .seconds(1),
+                preparation: .seconds(1),
+                vocabulary: .seconds(1),
+                warmup: .seconds(1),
+                unload: .milliseconds(200),
+                fileTranscription: .seconds(1),
+                transcription: { _ in .seconds(1) }
+            )
+        )
+
+        try await supervisor.prepare(modelDirectory: URL(fileURLWithPath: "/tmp/main-model"))
+        try await supervisor.prepareVocabulary(
+            modelDirectory: URL(fileURLWithPath: "/tmp/vocabulary-model"),
+            boost: VocabularyBoost(terms: [])
+        )
+        try await supervisor.warmUpInference()
+        let pid = try #require(readProcessIdentifiers(from: fixture.processLog).first)
+
+        #expect(await supervisor.unloadIfIdle(), "the fallback still reclaims the memory")
+        #expect(!(await supervisor.isPrepared))
+        var reaped = false
+        for _ in 0..<100 {
+            if Darwin.kill(pid, 0) == -1, errno == ESRCH {
+                reaped = true
+                break
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(reaped, "a wedged unload ends in the exact-PID kill")
+
+        // The next use launches a fresh worker as before.
+        try await supervisor.warmUpInference()
+        #expect(await supervisor.isPrepared)
+        #expect(readProcessIdentifiers(from: fixture.processLog).count == 2)
+
+        await supervisor.unload()
+    }
+
+    @Test("repeated unload/re-prepare cycles ride one process")
+    func residencyCycleSoak() async throws {
+        let fixture = try makeHangingWorker(mode: "success")
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let supervisor = ASRWorkerSupervisor(
+            executableURL: fixture.executable,
+            executableArguments: [fixture.processLog.path, fixture.mode],
+            deadlines: ASRWorkerDeadlines(
+                hello: .seconds(1),
+                preparation: .seconds(1),
+                vocabulary: .seconds(1),
+                warmup: .seconds(1),
+                unload: .seconds(1),
+                fileTranscription: .seconds(1),
+                transcription: { _ in .seconds(1) }
+            )
+        )
+
+        try await supervisor.prepare(modelDirectory: URL(fileURLWithPath: "/tmp/main-model"))
+        try await supervisor.prepareVocabulary(
+            modelDirectory: URL(fileURLWithPath: "/tmp/vocabulary-model"),
+            boost: VocabularyBoost(terms: [])
+        )
+        try await supervisor.warmUpInference()
+
+        for _ in 0..<25 {
+            #expect(await supervisor.unloadIfIdle())
+            #expect(!(await supervisor.isPrepared))
+            try await supervisor.warmUpInference()
+            #expect(await supervisor.isPrepared)
+        }
+        #expect(
+            readProcessIdentifiers(from: fixture.processLog).count == 1,
+            "twenty-five comebacks, zero respawns"
+        )
+
+        await supervisor.unload()
+    }
+
+    @Test("jetsam of an empty resident worker stays quiet until the next use")
+    func emptyWorkerDeathDoesNotAutoRespawn() async throws {
+        let fixture = try makeHangingWorker(mode: "success")
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let supervisor = ASRWorkerSupervisor(
+            executableURL: fixture.executable,
+            executableArguments: [fixture.processLog.path, fixture.mode],
+            deadlines: ASRWorkerDeadlines(
+                hello: .seconds(1),
+                preparation: .seconds(1),
+                vocabulary: .seconds(1),
+                warmup: .seconds(1),
+                unload: .seconds(1),
+                fileTranscription: .seconds(1),
+                transcription: { _ in .seconds(1) }
+            )
+        )
+
+        try await supervisor.prepare(modelDirectory: URL(fileURLWithPath: "/tmp/main-model"))
+        try await supervisor.prepareVocabulary(
+            modelDirectory: URL(fileURLWithPath: "/tmp/vocabulary-model"),
+            boost: VocabularyBoost(terms: [])
+        )
+        try await supervisor.warmUpInference()
+        let pid = try #require(readProcessIdentifiers(from: fixture.processLog).first)
+        #expect(await supervisor.unloadIfIdle())
+
+        // An empty worker was never Ready, so its death must not trigger the
+        // proactive crash recovery that a warm worker's death does.
+        _ = Darwin.kill(pid, SIGKILL)
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(readProcessIdentifiers(from: fixture.processLog).count == 1)
+
+        try await supervisor.warmUpInference()
+        #expect(await supervisor.isPrepared)
+        #expect(readProcessIdentifiers(from: fixture.processLog).count == 2)
+
+        await supervisor.unload()
+    }
+
     private func launchSleepProcess() throws -> (
         process: Process,
         input: FileHandle,

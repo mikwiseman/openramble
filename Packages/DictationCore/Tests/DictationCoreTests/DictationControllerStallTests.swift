@@ -308,7 +308,10 @@ final class DictationControllerStallTests: XCTestCase {
         )
     }
 
-    func testFreezePrepareAndInferenceShareOneAbsoluteStopBudget() async throws {
+    /// The stop→text promise excludes a healthy reload: the foreground budget
+    /// is re-anchored by the prepare's actual duration, so the inference
+    /// deadline afterwards starts from zero instead of inheriting a clamp.
+    func testPrepareExtendsTheStopBudgetByItsActualDuration() async throws {
         let capture = FileCapture(directory: takes, freezeDelay: .milliseconds(40))
         let controller = DictationController(
             capture: capture,
@@ -319,7 +322,7 @@ final class DictationControllerStallTests: XCTestCase {
             recordingRecovery: RecordingRecoveryStore(directory: recovered),
             transcriptionDeadline: { _ in .milliseconds(80) },
             prepareForTranscription: { try await Task.sleep(for: .milliseconds(70)) },
-            prepareDeadline: .milliseconds(80),
+            prepareDeadline: .milliseconds(200),
             captureFreezeDeadline: .milliseconds(50),
             recoveryForegroundGrace: .milliseconds(20)
         )
@@ -330,18 +333,139 @@ final class DictationControllerStallTests: XCTestCase {
         await settle()
         let released = ContinuousClock.now
         controller.stop()
-        for _ in 0..<300 where controller.state != .idle {
+        for _ in 0..<400 where controller.state != .idle {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(1))
         }
         let elapsed = released.duration(to: .now)
 
         XCTAssertEqual(controller.state, .idle)
-        XCTAssertEqual(stalls, 1, "the remaining inference budget still owns stall recovery")
+        XCTAssertEqual(stalls, 1, "the full inference budget still owns stall recovery")
+        XCTAssertGreaterThan(
+            elapsed,
+            .milliseconds(150),
+            "the inference deadline starts only after the reload finished"
+        )
         XCTAssertLessThan(
             elapsed,
-            .milliseconds(200),
-            "stage-local ceilings must not add into an unbounded Transcribing wait"
+            .milliseconds(400),
+            "stage ceilings still bound the Transcribing wait"
+        )
+    }
+
+    /// The product case behind wait-and-insert: a reload that outlives the
+    /// old stop budget still delivers the words once it completes.
+    func testColdPrepareLongerThanStopBudgetStillInsertsText() async throws {
+        let capture = FileCapture(directory: takes)
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in
+                ASRResult(text: "words", audioDuration: 1, processingDuration: 0.1)
+            },
+            inserter: NullInserter(),
+            overlay: NullOverlay(),
+            sounds: NullSounds(),
+            recordingRecovery: RecordingRecoveryStore(directory: recovered),
+            transcriptionDeadline: { _ in .milliseconds(80) },
+            prepareForTranscription: { try await Task.sleep(for: .milliseconds(300)) },
+            prepareDeadline: .seconds(1),
+            captureFreezeDeadline: .milliseconds(50)
+        )
+        var notices: [DictationNotice] = []
+        controller.onNotice = { notices.append($0) }
+        var inserted: String?
+        controller.onTextInserted = { inserted = $0 }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        for _ in 0..<400 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertEqual(controller.state, .idle)
+        // The pipeline sentence-cases the raw engine text on the way in.
+        XCTAssertEqual(inserted, "Words")
+        XCTAssertFalse(
+            notices.contains { $0.kind == .failure },
+            "a healthy reload is not a failure: \(notices.map(\.message))"
+        )
+    }
+
+    /// After a cold prepare the wedge containment still works: exactly one
+    /// stall, one transcription deadline after the reload finished.
+    func testInferenceKeepsFullDeadlineAfterColdPrepare() async throws {
+        let capture = FileCapture(directory: takes)
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in try await suspendForever() },
+            inserter: NullInserter(),
+            overlay: NullOverlay(),
+            sounds: NullSounds(),
+            recordingRecovery: RecordingRecoveryStore(directory: recovered),
+            transcriptionDeadline: { _ in .milliseconds(80) },
+            prepareForTranscription: { try await Task.sleep(for: .milliseconds(200)) },
+            prepareDeadline: .seconds(1),
+            recoveryForegroundGrace: .milliseconds(20)
+        )
+        var notices: [DictationNotice] = []
+        controller.onNotice = { notices.append($0) }
+        var stalls = 0
+        controller.onTranscriptionStall = { stalls += 1 }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        for _ in 0..<400 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        XCTAssertEqual(controller.state, .idle)
+        XCTAssertEqual(stalls, 1, "the wedge is still contained after the reload wait")
+        let notice = try XCTUnwrap(notices.last)
+        XCTAssertTrue(notice.message.contains("took too long"))
+        XCTAssertNotNil(notice.recoveryAudio, "the words survive the contained wedge")
+    }
+
+    /// Escape while waiting out a cold reload stays a quiet cancellation.
+    func testCancelDuringColdPrepareWaitStaysQuiet() async throws {
+        let capture = FileCapture(directory: takes)
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in
+                ASRResult(text: "never reached", audioDuration: 1, processingDuration: 0.1)
+            },
+            inserter: NullInserter(),
+            overlay: NullOverlay(),
+            sounds: NullSounds(),
+            recordingRecovery: RecordingRecoveryStore(directory: recovered),
+            prepareForTranscription: { try await suspendForever() },
+            prepareDeadline: .seconds(5)
+        )
+        var notices: [DictationNotice] = []
+        controller.onNotice = { notices.append($0) }
+        var stalls = 0
+        controller.onTranscriptionStall = { stalls += 1 }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle(10)
+        XCTAssertEqual(controller.state, .transcribing)
+
+        controller.cancel()
+        for _ in 0..<200 where controller.state != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertEqual(controller.state, .idle)
+        XCTAssertEqual(stalls, 0)
+        XCTAssertFalse(
+            notices.contains { $0.kind == .failure },
+            "cancelling the wait is the person's choice, not a failure: \(notices.map(\.message))"
         )
     }
 }

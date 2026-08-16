@@ -747,6 +747,154 @@ final class AppStateTests: XCTestCase {
         )
     }
 
+    /// After a critical eviction the engine no longer waits for a `.normal`
+    /// that a busy 16 GB machine may never report: warning-tier pressure earns
+    /// one settle window and then rewarms.
+    func testWarningPressureRewarmsAfterOneSettleWindow() async throws {
+        try installModelMarker()
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        harness.pressureRewarmSettleDelay = .milliseconds(30)
+        let state = makeState()
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertTrue(state.isEngineReady)
+
+        state.registerMemoryPressure(.critical)
+        for _ in 0..<200 where state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertFalse(state.isEngineReady, "critical pressure evicts the idle engine")
+
+        state.registerMemoryPressure(.warning)
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertTrue(
+            state.isEngineReady,
+            "warning-tier pressure rewarms after the settle window instead of waiting for normal"
+        )
+    }
+
+    func testCriticalDuringSettleWindowCancelsThePendingRewarm() async throws {
+        try installModelMarker()
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        harness.pressureRewarmSettleDelay = .milliseconds(40)
+        let state = makeState()
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        state.registerMemoryPressure(.critical)
+        for _ in 0..<200 where state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertFalse(state.isEngineReady)
+
+        state.registerMemoryPressure(.warning)
+        state.registerMemoryPressure(.critical)
+        try? await Task.sleep(for: .milliseconds(120))
+        XCTAssertFalse(
+            state.isEngineReady,
+            "a stale settle window must not fire under critical pressure"
+        )
+    }
+
+    /// The key press is the earliest reload trigger and works even while the
+    /// tier is still critical — the reload rides under the voice.
+    func testKeyDownRewarmsColdEngineEvenUnderCriticalPressure() async throws {
+        try installModelMarker()
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        let state = makeState()
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        let baselineWarmUps = await recognizer.warmUps
+
+        state.registerMemoryPressure(.critical)
+        for _ in 0..<200 where state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertFalse(state.isEngineReady)
+
+        monitor.onPress?()
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertTrue(state.isEngineReady, "the press rewarms the engine regardless of tier")
+        let warmUps = await recognizer.warmUps
+        XCTAssertGreaterThan(warmUps, baselineWarmUps)
+    }
+
+    /// The Handy-style idle unload: after the countdown the engine's memory
+    /// goes back, and the next key press brings it back under the voice.
+    func testIdleUnloadFreesTheEngineAfterTheCountdown() async throws {
+        try installModelMarker()
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        harness.idleUnloadDelayOverride = .milliseconds(40)
+        let state = makeState()
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertTrue(state.isEngineReady)
+        XCTAssertEqual(state.modelUnloadTimeout, .afterFiveMinutes, "Handy's default is ours")
+
+        for _ in 0..<500 where state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertFalse(state.isEngineReady, "the countdown returns the memory")
+
+        monitor.onPress?()
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertTrue(state.isEngineReady, "the comeback rides the next key press")
+    }
+
+    func testNeverKeepsTheEngineResidentForever() async throws {
+        try installModelMarker()
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        harness.idleUnloadDelayOverride = .milliseconds(30)
+        let state = makeState()
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        state.modelUnloadTimeout = .never
+        try? await Task.sleep(for: .milliseconds(120))
+        XCTAssertTrue(state.isEngineReady, "never means the pre-0.8 behavior")
+    }
+
+    func testUnloadTimeoutPersistsAcrossAppStates() async throws {
+        try installModelMarker()
+        let first = makeState()
+        first.modelUnloadTimeout = .afterOneHour
+
+        let second = makeState()
+        XCTAssertEqual(
+            second.modelUnloadTimeout,
+            .afterOneHour,
+            "the picker's choice survives a relaunch"
+        )
+    }
+
     func testEveryReadyRecordingStartRefreshesAcceleratorResidency() async throws {
         try installModelMarker()
         let recognizer = ReadinessControlledRecognizer()

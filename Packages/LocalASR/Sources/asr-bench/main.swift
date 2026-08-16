@@ -22,6 +22,9 @@ func usage() -> Never {
       bench <file>... measure file decode + product recognition
       bench-predecoded <file>... decode once, then measure the in-memory product path
       serve-jsonl persistent benchmark protocol (JSONL on stdin/stdout)
+      cold-reload [--scenario single-load|warm-reload] [--iterations N]
+                                reload-economics probe (JSONL on stdout;
+                                see scripts/bench-cold-reload.sh)
       timings <file>... recognize and print word timings
       eval <manifest.json> run the body and calculate WER/CER
 
@@ -142,31 +145,37 @@ func isOn(_ name: String) -> Bool {
     ProcessInfo.processInfo.environment[name]?.lowercased() == "on"
 }
 
+/// Where the engine bundle lives: an explicit frozen folder or the storage.
+///
+/// An explicit bundle folder is the only way to compare two encoders: storage
+/// checks the installation against the manifest and rightly rejects the extra
+/// file (`EncoderInt4.mlmodelc` is not included in the manifest). The
+/// cold-reload probe leans on the same escape hatch to point at an APFS clone
+/// whose fresh path forces CoreML respecialization.
+func resolveEngineDirectory(
+    logger: @escaping (String) -> Void = { print($0) }
+) async throws -> URL {
+    let explicitModelDirectory = ProcessInfo.processInfo.environment["WAI_ASR_MODEL_DIR"]
+        .map { URL(fileURLWithPath: $0, isDirectory: true) }
+    if let explicitModelDirectory {
+        logger("The engine folder is specified explicitly: \(explicitModelDirectory.path) (frozen, past the storage)")
+        return explicitModelDirectory
+    }
+    let (store, layout, _) = try makeStore()
+    let state = await store.refreshState()
+    guard state.isReady else {
+        logger("The model is not installed. Run: asr-bench install")
+        exit(69)
+    }
+    return layout.engineDirectory
+}
+
 func prepareTranscriber(
     performConfiguredWarmup: Bool = true,
     collectPhaseTimings: Bool = false,
     logger: @escaping (String) -> Void = { print($0) }
 ) async throws -> LocalTranscriber {
-    // An explicit bundle folder is the only way to compare two encoders: storage
-    // checks the installation against the manifest and rightly rejects the extra file
-    // (`EncoderInt4.mlmodelc` is not included in the manifest). The same technique has already been applied to
-    // to the prompter via `WAI_VOCAB_DIR`.
-    let explicitModelDirectory = ProcessInfo.processInfo.environment["WAI_ASR_MODEL_DIR"]
-        .map { URL(fileURLWithPath: $0, isDirectory: true) }
-
-    let engineDirectory: URL
-    if let explicitModelDirectory {
-        logger("The engine folder is specified explicitly: \(explicitModelDirectory.path) (frozen, past the storage)")
-        engineDirectory = explicitModelDirectory
-    } else {
-        let (store, layout, _) = try makeStore()
-        let state = await store.refreshState()
-        guard state.isReady else {
-            logger("The model is not installed. Run: asr-bench install")
-            exit(69)
-        }
-        engineDirectory = layout.engineDirectory
-    }
+    let engineDirectory = try await resolveEngineDirectory(logger: logger)
 
     // The switch exists for the sake of measurement repeatability: it was he who showed
     // that the text at the junction of windows loses the included mel-context, and not the length of the piece.
@@ -360,6 +369,9 @@ switch command {
 case "serve-jsonl":
     guard operands.isEmpty else { usage() }
     exit(await BenchmarkJSONLServer.run())
+
+case "cold-reload":
+    try await runColdReload(operands: operands)
 
 case "status":
     let (store, layout, manifest) = try makeStore()

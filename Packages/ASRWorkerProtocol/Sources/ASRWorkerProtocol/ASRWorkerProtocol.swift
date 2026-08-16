@@ -5,7 +5,10 @@ import Foundation
 /// There is deliberately no socket address or discovery mechanism: the two
 /// pipe descriptors inherited at launch are the entire authority boundary.
 public enum ASRWorkerProtocol {
-    public static let version: UInt16 = 1
+    // Version 2 adds unloadModels: models drop while the worker process (and
+    // its dyld/framework warmth) stays resident. App and worker ship in one
+    // bundle, so the bump is atomic and hello still requires exact equality.
+    public static let version: UInt16 = 2
     public static let sampleRate = 16_000
     public static let maximumSamples = 5 * 60 * sampleRate
     public static let maximumPCMBytes = maximumSamples * MemoryLayout<Float>.size
@@ -27,6 +30,7 @@ public enum ASRWireKind: UInt16, Sendable {
     case result = 9
     case failure = 10
     case shutdown = 11
+    case unloadModels = 12
 }
 
 public struct ASRWorkerHello: Codable, Equatable, Sendable {

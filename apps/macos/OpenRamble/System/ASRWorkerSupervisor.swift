@@ -83,6 +83,10 @@ struct ASRWorkerDeadlines: Sendable {
     // well over ten seconds; this watchdog still bounds a real native wedge,
     // while the controller owns the much shorter user-visible foreground wait.
     var warmup: Duration = .seconds(30)
+    // Dropping loaded models is bookkeeping plus deallocations, never a model
+    // load; a worker that cannot answer in five seconds has earned the kill
+    // fallback.
+    var unload: Duration = .seconds(5)
     var fileTranscription: Duration = .seconds(60)
     var transcription: @Sendable (TimeInterval) -> Duration = { audioDuration in
         // DictationController owns the user-visible stop-to-text deadline. Let
@@ -203,14 +207,32 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
     private var recoveryTask: Task<Void, Never>?
     private var readinessObservers: [UUID: AsyncStream<Bool>.Continuation] = [:]
 
+    /// Reports the current memory-pressure tier; the default keeps every
+    /// existing construction (and test) on the old always-respawn behavior.
+    private let pressureTier: @Sendable () -> MemoryPressureTier
+    /// The backoff decision is injectable so tests exercise the loop without
+    /// production-scale waits; the policy's values are table-tested.
+    private let recoveryBackoffDecision:
+        @Sendable (MemoryPressureTier) -> WorkerRecoveryBackoffPolicy.Decision
+
     init(
         executableURL: URL,
         executableArguments: [String] = [],
-        deadlines: ASRWorkerDeadlines = ASRWorkerDeadlines()
+        deadlines: ASRWorkerDeadlines = ASRWorkerDeadlines(),
+        pressureTier: @escaping @Sendable () -> MemoryPressureTier = { .normal },
+        recoveryBackoffDecision: @escaping @Sendable (MemoryPressureTier)
+            -> WorkerRecoveryBackoffPolicy.Decision = { tier in
+                WorkerRecoveryBackoffPolicy.decision(
+                    tier: tier,
+                    jitterUnit: Double.random(in: 0..<1)
+                )
+            }
     ) {
         self.executableURL = executableURL
         self.executableArguments = executableArguments
         self.deadlines = deadlines
+        self.pressureTier = pressureTier
+        self.recoveryBackoffDecision = recoveryBackoffDecision
     }
 
     public var isPrepared: Bool {
@@ -381,13 +403,36 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
 
     public func unloadIfIdle() async -> Bool {
         guard !operationHeld else { return false }
-        // Keep the idle check and generation invalidation in one actor turn;
+        // Keep the idle check and the state transition in one actor turn;
         // hopping through `unload()` here would leave a reentrancy window. Hold
-        // the same operation gate through reap so a queued dictation cannot
-        // launch its generation before the old one has actually exited.
+        // the same operation gate through the whole transition so a queued
+        // dictation cannot interleave with it.
         operationHeld = true
         defer { releaseOperation() }
         cancelRecovery()
+        // Prefer dropping the models inside a living worker: spawn, dyld and
+        // framework init stay paid for, and the next prepare reuses the
+        // process. Any hiccup falls back to the old exact-PID kill.
+        if let snapshot = processHolder.snapshot(),
+           snapshot.process.isRunning,
+           loadedMainGeneration == snapshot.generation {
+            do {
+                let frame = try await request(
+                    kind: .unloadModels,
+                    metadata: Data(),
+                    generation: snapshot.generation,
+                    deadline: deadlines.unload
+                )
+                _ = try requireAcknowledgement(frame)
+                clearLoadedState(for: snapshot.generation)
+                log.notice(
+                    "worker models unloaded, process resident generation=\(snapshot.generation)"
+                )
+                return true
+            } catch {
+                log.error("in-place model unload failed; falling back to worker kill")
+            }
+        }
         invalidateCurrentGeneration(error: ASRWorkerTransportError.generationInvalidated)
         await reapKilledProcesses()
         return true
@@ -1071,6 +1116,18 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
 
     private func recoverInBackground(sequence: UInt64) async {
         do {
+            // Never respawn a multi-gigabyte worker straight into the
+            // starvation that just killed it. The wait happens before the
+            // operation gate, so a real keypress-driven prepare is never
+            // blocked behind the backoff.
+            while case let .deferRespawn(recheckAfter) = recoveryBackoffDecision(
+                pressureTier()
+            ) {
+                log.notice("worker respawn deferred under memory pressure")
+                try await Task.sleep(for: recheckAfter)
+                try Task.checkCancellation()
+                guard recoverySequence == sequence else { return }
+            }
             try await acquireOperation()
             defer { releaseOperation() }
             try Task.checkCancellation()

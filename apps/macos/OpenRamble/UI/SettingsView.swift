@@ -82,6 +82,14 @@ private struct GeneralSettings: View {
                     }
                 }
                 .accessibilityHint("Places dictation feedback at the top or bottom of the active screen")
+                Picker("Unload model", selection: $state.modelUnloadTimeout) {
+                    ForEach(IdleUnloadPolicy.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .accessibilityHint(
+                    "Frees the speech model's memory after this much idle time. It reloads under your voice at the next dictation."
+                )
             }
 
             Section {

@@ -75,6 +75,11 @@ public struct AppEnvironment {
     /// Retry timing is injectable so that the exact recovery policy is testable
     /// without making the suite sleep for production-scale intervals.
     public var engineWarmupRetryDelay: Duration
+    /// Warning-tier rewarm settle window; injectable for the same reason.
+    public var pressureRewarmSettleDelay: Duration
+    /// Test-only override for the idle-unload countdown: the policy's real
+    /// options start at two minutes, and suites never sleep that long.
+    public var idleUnloadDelayOverride: Duration?
     public var engineWarmupRetryLimit: Int
     /// Crash-recovery timing is injectable so launch-to-idle maintenance can
     /// be proven without sleeping for the production compatibility window.
@@ -106,6 +111,9 @@ public struct AppEnvironment {
     /// helper. Test environments default to a no-op and never touch the real
     /// user's Darwin temporary directory.
     public var cleanupLegacyAgentStaging: @Sendable () throws -> Void
+    /// Shared with the worker supervisor so its off-main recovery loop can
+    /// read the pressure tier without hopping through AppState.
+    public var pressureGauge: MemoryPressureGauge
 
     public init(
         defaults: UserDefaults,
@@ -125,6 +133,8 @@ public struct AppEnvironment {
         transcribe: @escaping (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult,
         recoveryInsertionDeadline: Duration = .seconds(2),
         engineWarmupRetryDelay: Duration = .seconds(1),
+        pressureRewarmSettleDelay: Duration = EngineRewarmPolicy.defaultSettleWindow,
+        idleUnloadDelayOverride: Duration? = nil,
         engineWarmupRetryLimit: Int = 2,
         recordingRecoveryCompatibilityGrace: TimeInterval = 60,
         recordingRecoveryMaintenanceRetryDelay: TimeInterval = 5,
@@ -139,7 +149,8 @@ public struct AppEnvironment {
         localTranscriber: (any DictationRecognizing)? = nil,
         focusedFieldReader: any FocusedFieldReading = SystemFocusedFieldReader(),
         clipboardRestoreReporter: ClipboardRestoreReporter? = nil,
-        cleanupLegacyAgentStaging: @escaping @Sendable () throws -> Void = {}
+        cleanupLegacyAgentStaging: @escaping @Sendable () throws -> Void = {},
+        pressureGauge: MemoryPressureGauge = MemoryPressureGauge()
     ) {
         self.defaults = defaults
         self.paths = paths
@@ -153,6 +164,8 @@ public struct AppEnvironment {
         self.transcribe = transcribe
         self.recoveryInsertionDeadline = recoveryInsertionDeadline
         self.engineWarmupRetryDelay = engineWarmupRetryDelay
+        self.pressureRewarmSettleDelay = pressureRewarmSettleDelay
+        self.idleUnloadDelayOverride = idleUnloadDelayOverride
         self.engineWarmupRetryLimit = max(0, engineWarmupRetryLimit)
         self.recordingRecoveryCompatibilityGrace = recordingRecoveryCompatibilityGrace
         self.recordingRecoveryMaintenanceRetryDelay = recordingRecoveryMaintenanceRetryDelay
@@ -168,6 +181,7 @@ public struct AppEnvironment {
         self.focusedFieldReader = focusedFieldReader
         self.clipboardRestoreReporter = clipboardRestoreReporter
         self.cleanupLegacyAgentStaging = cleanupLegacyAgentStaging
+        self.pressureGauge = pressureGauge
     }
 
     /// Real edges are what a working application is built from.
@@ -176,7 +190,11 @@ public struct AppEnvironment {
             .appendingPathComponent("Contents", isDirectory: true)
             .appendingPathComponent("MacOS", isDirectory: true)
             .appendingPathComponent("openramble-asr-worker", isDirectory: false)
-        let transcriber = ASRWorkerSupervisor(executableURL: workerURL)
+        let pressureGauge = MemoryPressureGauge()
+        let transcriber = ASRWorkerSupervisor(
+            executableURL: workerURL,
+            pressureTier: { pressureGauge.tier }
+        )
         let restoreReporter = ClipboardRestoreReporter()
         let activeApplication = ActiveApplicationSnapshot()
         return AppEnvironment(
@@ -218,7 +236,8 @@ public struct AppEnvironment {
                     bundleIdentifier: Bundle.main.bundleIdentifier
                         ?? "is.waiwai.dictation"
                 )
-            }
+            },
+            pressureGauge: pressureGauge
         )
     }
 }
@@ -546,6 +565,10 @@ public final class AppState: ObservableObject {
         transcribe = environment.transcribe
         recoveryInsertionDeadline = environment.recoveryInsertionDeadline
         engineWarmupRetryDelay = environment.engineWarmupRetryDelay
+        pressureRewarmSettleDelay = environment.pressureRewarmSettleDelay
+        idleUnloadDelayOverride = environment.idleUnloadDelayOverride
+        environmentPressureGauge = environment.pressureGauge
+        modelUnloadTimeout = IdleUnloadPolicy.stored(in: environment.defaults)
         engineWarmupRetryLimit = environment.engineWarmupRetryLimit
         recordingRecoveryCompatibilityGrace = environment.recordingRecoveryCompatibilityGrace
         recordingRecoveryMaintenanceRetryDelay = environment.recordingRecoveryMaintenanceRetryDelay
@@ -717,6 +740,9 @@ public final class AppState: ObservableObject {
                 // A finished session is a residency event: the engine just
                 // became safely idle, and a deferred unload may now proceed.
                 if state == .idle { self?.evaluateResidency(trigger: "session-idle") }
+                // Every state change re-arms or cancels the idle-unload
+                // timer: activity disarms it, idleness starts the countdown.
+                self?.rescheduleIdleUnload()
             }
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
@@ -1167,6 +1193,8 @@ public final class AppState: ObservableObject {
            accessibilityState != .repairRequired {
             accessibilityState = .restartRequired
         }
+        // Coming back to the app is a cheap hint that dictation is near.
+        rewarmEngineIfCold(trigger: .appActivation)
     }
 
     private func observe(
@@ -1250,10 +1278,9 @@ public final class AppState: ObservableObject {
         // path's own prepare, and the preparation UI narrates honestly if
         // the reload outlasts the speech.
         guard isEngineReady else {
-            if hasEngineBeenReady, !isPreparingEngine {
-                engineLog.info("engine reload under voice")
-                Task { [weak self] in await self?.warmUpEngine() }
-            }
+            // Same single-flight path the key-down trigger takes; by the time
+            // this runs the reload is usually already riding under the voice.
+            rewarmEngineIfCold(trigger: .keyDown)
             return
         }
         guard EngineWarming.shouldPingOnRecordingStart(engineReady: isEngineReady) else {
@@ -1312,13 +1339,78 @@ public final class AppState: ObservableObject {
         memoryPressureSource = source
     }
 
+    /// When to give the engine's memory back after dictation goes idle.
+    /// Mirrors Handy's "Unload Model" row; `.never` is the pre-0.8 behavior.
+    @Published public var modelUnloadTimeout: IdleUnloadPolicy {
+        didSet {
+            guard oldValue != modelUnloadTimeout else { return }
+            defaults.set(modelUnloadTimeout.rawValue, forKey: IdleUnloadPolicy.defaultsKey)
+            rescheduleIdleUnload()
+        }
+    }
+
+    /// One pending idle-unload timer at most; any dictation activity replaces
+    /// it through the state-change hook.
+    private var idleUnloadTask: Task<Void, Never>?
+
+    private func rescheduleIdleUnload() {
+        idleUnloadTask?.cancel()
+        idleUnloadTask = nil
+        guard dictationState == .idle,
+              isEngineReady,
+              let policyDelay = modelUnloadTimeout.idleDelay
+        else { return }
+        // The override shortens the countdown for tests; the decision itself
+        // (`never` keeps the engine forever) always belongs to the policy.
+        let delay = idleUnloadDelayOverride ?? policyDelay
+        idleUnloadTask = Task { [weak self] in
+            if delay > .zero {
+                try? await Task.sleep(for: delay)
+            }
+            guard !Task.isCancelled else { return }
+            await self?.performIdleUnload()
+        }
+    }
+
+    private func performIdleUnload() async {
+        idleUnloadTask = nil
+        guard dictationState == .idle,
+              !isRecoveryOperationActive,
+              !isRecyclingEngine,
+              !isPreparingEngine,
+              isEngineReady,
+              let transcriber
+        else { return }
+        engineLog.notice(
+            "engine idle unload: \(self.modelUnloadTimeout.rawValue, privacy: .public)"
+        )
+        guard await transcriber.unloadIfIdle() else { return }
+        isEngineReady = false
+        enginePreparation = .make(phase: .idle, elapsed: 0)
+        // Deliberately no proactive rewarm: the comeback is the next key
+        // press, riding under the voice.
+    }
+
     /// The most recent tier the OS reported; rules between events use it.
     private var lastPressureTier: MemoryPressureTier = .normal
+
+    /// Mirror of `lastPressureTier` for off-main readers (worker supervisor).
+    private let environmentPressureGauge: MemoryPressureGauge
+    private var pressureGauge: MemoryPressureGauge { environmentPressureGauge }
+    /// Warning-tier settle window before a proactive rewarm; injectable.
+    private let pressureRewarmSettleDelay: Duration
+    /// Test-only idle-unload countdown override (see AppEnvironment).
+    private let idleUnloadDelayOverride: Duration?
 
     /// Internal, not private: tests inject tiers the OS only sends under real
     /// memory starvation.
     func registerMemoryPressure(_ tier: MemoryPressureTier) {
         lastPressureTier = tier
+        pressureGauge.update(tier)
+        // A newer event owns the next decision; a stale settle window from the
+        // previous tier must not fire under it.
+        pendingPressureRewarmTask?.cancel()
+        pendingPressureRewarmTask = nil
         engineLog.info(
             "memory pressure tier=\(String(describing: tier), privacy: .public)"
         )
@@ -1362,20 +1454,48 @@ public final class AppState: ObservableObject {
         rewarmAfterPressureIfPossible()
     }
 
-    private func rewarmAfterPressureIfPossible() {
-        guard shouldRewarmAfterPressure,
-              lastPressureTier == .normal,
-              !isEngineReady,
-              hasEngineBeenReady,
-              modelState.isReady,
-              dictationState == .idle,
-              !isRecoveryOperationActive,
-              !isRecyclingEngine,
-              !isPreparingEngine
-        else { return }
+    /// One pending settle window at most; a newer pressure event replaces it.
+    private var pendingPressureRewarmTask: Task<Void, Never>?
 
+    private var rewarmPreconditionsHold: Bool {
+        shouldRewarmAfterPressure && !isEngineReady && hasEngineBeenReady
+            && modelState.isReady && dictationState == .idle
+            && !isRecoveryOperationActive && !isRecyclingEngine && !isPreparingEngine
+    }
+
+    private func rewarmAfterPressureIfPossible() {
+        guard rewarmPreconditionsHold else { return }
+        guard let delay = EngineRewarmPolicy.settleDelay(
+            after: lastPressureTier,
+            settleWindow: pressureRewarmSettleDelay
+        ) else {
+            return
+        }
+        guard delay > .zero else {
+            startPressureRewarm()
+            return
+        }
+        pendingPressureRewarmTask?.cancel()
+        pendingPressureRewarmTask = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            self?.finishSettledRewarm()
+        }
+    }
+
+    private func finishSettledRewarm() {
+        pendingPressureRewarmTask = nil
+        // Everything may have changed during the settle window; the tier only
+        // blocks if it turned critical meanwhile.
+        guard rewarmPreconditionsHold,
+              EngineRewarmPolicy.settleDelay(after: lastPressureTier) != nil
+        else { return }
+        startPressureRewarm()
+    }
+
+    private func startPressureRewarm() {
         shouldRewarmAfterPressure = false
-        engineLog.info("engine proactive rewarm after critical pressure")
+        engineLog.info("engine proactive rewarm after pressure")
         Task { [weak self] in
             guard let self else { return }
             await self.warmUpEngine()
@@ -1383,6 +1503,27 @@ public final class AppState: ObservableObject {
                 self.shouldRewarmAfterPressure = true
             }
         }
+    }
+
+    /// The earliest reload triggers: they fire before any readiness guard can
+    /// swallow the press. Single-flight through `warmUpEngine`'s shared task;
+    /// calling on every press is safe and free when warm.
+    func rewarmEngineIfCold(trigger: EngineRewarmPolicy.RewarmTrigger) {
+        guard transcriber != nil,
+              !isRecyclingEngine,
+              !isEngineReady,
+              hasEngineBeenReady,
+              !isPreparingEngine,
+              modelState.isReady,
+              EngineRewarmPolicy.allowsEarlyRewarm(
+                trigger: trigger,
+                tier: lastPressureTier
+              )
+        else { return }
+        engineLog.info(
+            "engine rewarm trigger=\(String(describing: trigger), privacy: .public)"
+        )
+        Task { [weak self] in await self?.warmUpEngine() }
     }
 
     /// The tier the policy sees between events: the OS's last report stands
@@ -1503,6 +1644,9 @@ public final class AppState: ObservableObject {
         hotkeyMonitor.setHotkey(hotkey)
         hotkeyMonitor.onPress = { [weak self] in
             guard let self else { return }
+            // Before any guard can swallow the press: the reload must start
+            // at the earliest observable moment of intent.
+            self.rewarmEngineIfCold(trigger: .keyDown)
             guard !self.isRecoveryOperationActive else { return }
             guard self.explainIfNotReady() else { return }
             self.controller?.begin(
@@ -2116,6 +2260,7 @@ public final class AppState: ObservableObject {
             engineWarmupRetryTask?.cancel()
             engineWarmupRetryTask = nil
             evaluateResidency(trigger: "load-completed")
+            rescheduleIdleUnload()
             let preparedVocabularyIsStale = preparedVocabularyRevision.map {
                 $0 != vocabularyRevision
             } ?? false
@@ -2292,6 +2437,7 @@ public final class AppState: ObservableObject {
                     )
                     try await transcriber.warmUpInference()
                     isEngineReady = true
+                    rescheduleIdleUnload()
                     vocabularyRebuildTask = nil
                     reportAcousticVocabularyDisabled(detail: acousticFailure)
                     return

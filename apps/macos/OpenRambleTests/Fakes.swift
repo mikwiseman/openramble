@@ -465,6 +465,8 @@ final class AppHarness {
     var permissionPollInterval: TimeInterval = 0
     var recoveryInsertionDeadline: Duration = .seconds(2)
     var engineWarmupRetryDelay: Duration = .milliseconds(10)
+    var pressureRewarmSettleDelay: Duration = .milliseconds(10)
+    var idleUnloadDelayOverride: Duration?
     var engineWarmupRetryLimit = 2
     var recordingRecoveryCompatibilityGrace: TimeInterval = 60
     var recordingRecoveryMaintenanceRetryDelay: TimeInterval = 0.01
@@ -576,6 +578,8 @@ final class AppHarness {
                 },
                 recoveryInsertionDeadline: recoveryInsertionDeadline,
                 engineWarmupRetryDelay: engineWarmupRetryDelay,
+                pressureRewarmSettleDelay: pressureRewarmSettleDelay,
+                idleUnloadDelayOverride: idleUnloadDelayOverride,
                 engineWarmupRetryLimit: engineWarmupRetryLimit,
                 recordingRecoveryCompatibilityGrace: recordingRecoveryCompatibilityGrace,
                 recordingRecoveryMaintenanceRetryDelay: recordingRecoveryMaintenanceRetryDelay,
