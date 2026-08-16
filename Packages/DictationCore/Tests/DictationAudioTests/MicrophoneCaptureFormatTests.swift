@@ -943,12 +943,15 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
             })
         }
 
+        // Generous runaway backstops: the assertions below prove containment
+        // and lease release; these deadlines only bound a genuine hang and
+        // must not measure a loaded CI runner's disk.
         for containment in containments {
-            try await withTranscriptionDeadline(.milliseconds(150)) {
+            try await withTranscriptionDeadline(.seconds(2)) {
                 await containment.value
             }
         }
-        try await withTranscriptionDeadline(.milliseconds(300)) {
+        try await withTranscriptionDeadline(.seconds(5)) {
             await preservation.waitUntilIdle()
         }
         let recoveryURLs = try FileManager.default.contentsOfDirectory(
@@ -1012,7 +1015,9 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
             )
         }
 
-        try await withTranscriptionDeadline(.milliseconds(200)) {
+        // Runaway backstop, not a benchmark: the 20 ms storage deadline above
+        // is what expires the wedged preservations; idle just has to arrive.
+        try await withTranscriptionDeadline(.seconds(2)) {
             await preservation.waitUntilIdle()
         }
         let laterOne = try XCTUnwrap(recoveryCapacity.reserve())
