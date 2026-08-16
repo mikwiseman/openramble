@@ -37,6 +37,10 @@ final class ModelDownloadRetryTests: XCTestCase {
         ["Encoder.mlmodelc/weight.bin": fileA, "vocab.json": fileB]
     }
 
+    /// Both manifest files are attempted, so a per-file expectation is the
+    /// honest way to say "one attempt, no retry".
+    private var manifestFileCount: Int { makeManifest().files.count }
+
     private func makeManifest() -> ModelManifest {
         ModelManifest(
             modelID: "test-model",
@@ -72,10 +76,10 @@ final class ModelDownloadRetryTests: XCTestCase {
 
     // MARK: - What is retried
 
-    /// The reported failure: the primary blinks, then works.
+    /// The reported failure: the leading source blinks, then works.
     func testTransientNetworkFailureIsRetriedOnTheSameSource() async throws {
         let downloader = FakeDownloader(contents: contents)
-        await downloader.setTransientFailures(1, forHost: "huggingface.co")
+        await downloader.setTransientFailures(1, forHost: "github.com")
 
         let store = makeStore(downloader)
         await store.install()
@@ -83,7 +87,10 @@ final class ModelDownloadRetryTests: XCTestCase {
         let state = await store.currentState()
         guard case .ready = state else { return XCTFail("expected a finished install, got \(state)") }
         let hosts = await downloader.requestedHosts
-        XCTAssertFalse(hosts.contains("github.com"), "a blink must not cost us the primary source")
+        XCTAssertFalse(
+            hosts.contains("huggingface.co"),
+            "a blink must not cost us the faster source"
+        )
     }
 
     /// The exact pair of errors from the screenshot: both mirrors blink inside
@@ -91,7 +98,7 @@ final class ModelDownloadRetryTests: XCTestCase {
     func testBothMirrorsBlinkingStillInstalls() async throws {
         let downloader = FakeDownloader(contents: contents)
         await downloader.setTransientFailures(
-            1, error: .network("Could not connect to the server."), forHost: "huggingface.co"
+            1, error: .network("Could not connect to the server."), forHost: "github.com"
         )
         await downloader.setTransientFailures(
             1, error: .network("A TLS error caused the secure connection to fail."), forHost: "github.com"
@@ -107,7 +114,7 @@ final class ModelDownloadRetryTests: XCTestCase {
     /// A server-side 5xx is the server's bad minute, not our bad address.
     func testServerErrorIsRetried() async throws {
         let downloader = FakeDownloader(contents: contents)
-        await downloader.setTransientFailures(1, error: .httpStatus(503), forHost: "huggingface.co")
+        await downloader.setTransientFailures(1, error: .httpStatus(503), forHost: "github.com")
 
         let store = makeStore(downloader)
         await store.install()
@@ -118,17 +125,17 @@ final class ModelDownloadRetryTests: XCTestCase {
 
     /// Retrying is bounded. An endlessly flaky source must hand over to the
     /// mirror rather than spin on half a gigabyte forever.
-    func testRetriesAreBoundedAndThenTheMirrorIsUsed() async throws {
+    func testRetriesAreBoundedAndThenTheOtherSourceIsUsed() async throws {
         let downloader = FakeDownloader(contents: contents)
-        await downloader.setFailure(.network("down"), forHost: "huggingface.co")
+        await downloader.setFailure(.network("down"), forHost: "github.com")
 
         await makeStore(downloader).install()
 
         let attempts = await downloader.attemptsByHost
-        XCTAssertNotNil(attempts["github.com"], "the mirror must be reached")
-        let primary = attempts["huggingface.co"] ?? 0
-        XCTAssertGreaterThan(primary, 2, "the primary deserves more than one try")
-        XCTAssertLessThanOrEqual(primary, 8, "but not an unbounded number of them")
+        XCTAssertNotNil(attempts["huggingface.co"], "the other source must be reached")
+        let flaky = attempts["github.com"] ?? 0
+        XCTAssertGreaterThan(flaky, 2, "a flaky source deserves more than one try")
+        XCTAssertLessThanOrEqual(flaky, 8, "but not an unbounded number of them")
     }
 
     // MARK: - What is never retried
@@ -152,35 +159,39 @@ final class ModelDownloadRetryTests: XCTestCase {
     /// Retrying it would knock on a disallowed host repeatedly.
     func testDisallowedHostIsNeverRetried() async throws {
         let downloader = FakeDownloader(contents: contents)
-        await downloader.setFailure(.unapprovedURL("evil.example.com"), forHost: "huggingface.co")
+        await downloader.setFailure(.unapprovedURL("evil.example.com"), forHost: "github.com")
 
         await makeStore(downloader).install()
 
         let attempts = await downloader.attemptsByHost
-        XCTAssertEqual(attempts["huggingface.co"], 1, "policy failures get exactly one attempt")
+        XCTAssertEqual(
+            attempts["github.com"],
+            manifestFileCount,
+            "policy failures get exactly one attempt per file, never a retry"
+        )
     }
 
     /// 404 is a wrong address. No number of retries turns it into a right one.
     func testNotFoundIsNeverRetried() async throws {
         let downloader = FakeDownloader(contents: contents)
-        await downloader.setFailure(.httpStatus(404), forHost: "huggingface.co")
+        await downloader.setFailure(.httpStatus(404), forHost: "github.com")
 
         await makeStore(downloader).install()
 
         let attempts = await downloader.attemptsByHost
-        XCTAssertEqual(attempts["huggingface.co"], 1)
+        XCTAssertEqual(attempts["github.com"], manifestFileCount)
     }
 
     /// A size mismatch means the source holds a different file. Re-pulling half
     /// a gigabyte cannot change what is on the other end.
     func testSizeMismatchIsNeverRetried() async throws {
         let downloader = FakeDownloader(contents: contents)
-        await downloader.setFailure(.unexpectedSize(expected: 10, actual: 20), forHost: "huggingface.co")
+        await downloader.setFailure(.unexpectedSize(expected: 10, actual: 20), forHost: "github.com")
 
         await makeStore(downloader).install()
 
         let attempts = await downloader.attemptsByHost
-        XCTAssertEqual(attempts["huggingface.co"], 1)
+        XCTAssertEqual(attempts["github.com"], manifestFileCount)
     }
 
     /// Both sources genuinely gone: the message still names both, as before.
@@ -355,7 +366,7 @@ final class CorruptContentFallbackTests: XCTestCase {
         XCTAssertEqual(good.count, other.count, "the fixture must defeat the size check")
 
         let downloader = FakeDownloader(contents: ["vocab.json": good])
-        await downloader.setContents(["vocab.json": other], forHost: "huggingface.co")
+        await downloader.setContents(["vocab.json": other], forHost: "github.com")
 
         let store = makeStore(downloader)
         await store.install()

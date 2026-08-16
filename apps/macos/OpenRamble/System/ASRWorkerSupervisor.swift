@@ -75,7 +75,11 @@ enum ASRWorkerDescriptor {
 }
 
 struct ASRWorkerDeadlines: Sendable {
-    var hello: Duration = .seconds(2)
+    // Launching a process and reading its first frame is not model work, but
+    // it is not instant either: right after an install the Mac is still
+    // flushing the 586 MB it just wrote, and two seconds was tight enough that
+    // a first run could time out here and burn its attempts on a busy disk.
+    var hello: Duration = .seconds(10)
     // Main TDT and the optional CTC vocabulary graph are both materialized
     // before Ready, and a first-ever Core ML/ANE specialization owns most of
     // that time — heavy CPU work of machine-dependent length. Preparation

@@ -48,7 +48,6 @@ enum OnboardingGate {
         accessibilityGranted: Bool,
         modelState: ModelState,
         engineReady: Bool = true,
-        enginePreparing: Bool = true,
         trialSucceeded: Bool = true
     ) -> String? {
         switch step {
@@ -73,13 +72,11 @@ enum OnboardingGate {
 
             switch modelState {
             case .ready:
-                if engineReady { return nil }
-                // Asking someone to wait for something that is not running is
-                // how a first install dead-ends. Only say "wait" while the
-                // preparation is actually in flight.
-                return enginePreparing
-                    ? "Wait for the model to finish preparing for first use."
-                    : "The model didn't finish preparing. Press “Prepare Again”."
+                // Preparation never gives up, so there is exactly one honest
+                // sentence here: it is still working.
+                return engineReady
+                    ? nil
+                    : "The model is getting ready for this Mac — this happens once."
             case .notInstalled: return "Download the model first — without it there is nothing to recognize with."
             case .downloading: return "Wait for the download to finish."
             case .verifying: return "The download is being verified."
@@ -96,7 +93,6 @@ enum OnboardingGate {
         accessibilityGranted: Bool,
         modelState: ModelState,
         engineReady: Bool = true,
-        enginePreparing: Bool = true,
         trialSucceeded: Bool = true
     ) -> Bool {
         blockReason(
@@ -105,7 +101,6 @@ enum OnboardingGate {
             accessibilityGranted: accessibilityGranted,
             modelState: modelState,
             engineReady: engineReady,
-            enginePreparing: enginePreparing,
             trialSucceeded: trialSucceeded
         ) == nil
     }

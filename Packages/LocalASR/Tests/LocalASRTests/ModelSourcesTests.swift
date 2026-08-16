@@ -14,8 +14,11 @@ final class ModelSourcesTests: XCTestCase {
 
     private let fileA = Data("\u{0441}\u{043E}\u{0434}\u{0435}\u{0440}\u{0436}\u{0438}\u{043C}\u{043E}\u{0435} \u{043F}\u{0435}\u{0440}\u{0432}\u{043E}\u{0433}\u{043E} \u{0444}\u{0430}\u{0439}\u{043B}\u{0430}".utf8)
     private let fileB = Data("\u{0441}\u{043E}\u{0434}\u{0435}\u{0440}\u{0436}\u{0438}\u{043C}\u{043E}\u{0435} \u{0432}\u{0442}\u{043E}\u{0440}\u{043E}\u{0433}\u{043E} \u{0444}\u{0430}\u{0439}\u{043B}\u{0430}".utf8)
-    private let primaryHost = "huggingface.co"
-    private let mirrorHost = "github.com"
+    /// The GitHub release mirror leads because it measured faster; the Hugging
+    /// Face origin backs it up. Both serve byte-identical, checksum-verified
+    /// files, so the order is only ever a speed choice.
+    private let leadingHost = "github.com"
+    private let backupHost = "huggingface.co"
 
     override func setUpWithError() throws {
         root = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -94,17 +97,17 @@ final class ModelSourcesTests: XCTestCase {
         let addresses = manifest.downloadURLs(for: file)
 
         XCTAssertEqual(addresses.count, 2, "\u{0410}\u{0434}\u{0440}\u{0435}\u{0441}\u{043E}\u{0432} \u{0434}\u{043E}\u{043B}\u{0436}\u{043D}\u{043E} \u{0431}\u{044B}\u{0442}\u{044C} \u{0434}\u{0432}\u{0430}: \u{043E}\u{0441}\u{043D}\u{043E}\u{0432}\u{043D}\u{043E}\u{0439} \u{0438} \u{0437}\u{0430}\u{043F}\u{0430}\u{0441}\u{043D}\u{043E}\u{0439}")
-        XCTAssertEqual(addresses[0].host(), primaryHost, "\u{041F}\u{0435}\u{0440}\u{0432}\u{044B}\u{043C} \u{0438}\u{0434}\u{0451}\u{0442} \u{043E}\u{0441}\u{043D}\u{043E}\u{0432}\u{043D}\u{043E}\u{0439} \u{0438}\u{0441}\u{0442}\u{043E}\u{0447}\u{043D}\u{0438}\u{043A}")
-        XCTAssertEqual(addresses[1].host(), mirrorHost)
+        XCTAssertEqual(addresses[0].host(), leadingHost, "the faster source is tried first")
+        XCTAssertEqual(addresses[1].host(), backupHost)
         // GitHub does not allow forward slashes in the attachment name - the path is flattened.
-        XCTAssertEqual(addresses[1].lastPathComponent, "Encoder.mlmodelc__weight.bin")
+        XCTAssertEqual(addresses[0].lastPathComponent, "Encoder.mlmodelc__weight.bin")
     }
 
-    func testFallsBackToMirrorWhenPrimaryIsGone() async throws {
+    func testFallsBackToTheOtherSourceWhenTheLeadingOneIsGone() async throws {
         let manifest = makeManifest()
         let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
         // The repository was deleted - exactly the scenario for which all this was done.
-        await downloader.setFailure(.httpStatus(404), forHost: primaryHost)
+        await downloader.setFailure(.httpStatus(404), forHost: leadingHost)
         let (store, layout) = makeStore(manifest: manifest, downloader: downloader)
 
         await store.install()
@@ -112,12 +115,12 @@ final class ModelSourcesTests: XCTestCase {
         let state = await store.currentState()
         XCTAssertTrue(state.isReady, "\u{0417}\u{0430}\u{043F}\u{0430}\u{0441}\u{043D}\u{043E}\u{0439} \u{0438}\u{0441}\u{0442}\u{043E}\u{0447}\u{043D}\u{0438}\u{043A} \u{043E}\u{0431}\u{044F}\u{0437}\u{0430}\u{043D} \u{0432}\u{044B}\u{0442}\u{044F}\u{043D}\u{0443}\u{0442}\u{044C} \u{0443}\u{0441}\u{0442}\u{0430}\u{043D}\u{043E}\u{0432}\u{043A}\u{0443}, \u{043F}\u{043E}\u{043B}\u{0443}\u{0447}\u{0435}\u{043D}\u{043E}: \(state)")
         let hosts = await downloader.requestedHosts
-        XCTAssertEqual(hosts.first, primaryHost, "\u{041D}\u{0430}\u{0447}\u{0438}\u{043D}\u{0430}\u{0442}\u{044C} \u{043D}\u{0430}\u{0434}\u{043E} \u{0441} \u{043E}\u{0441}\u{043D}\u{043E}\u{0432}\u{043D}\u{043E}\u{0433}\u{043E} \u{0430}\u{0434}\u{0440}\u{0435}\u{0441}\u{0430}")
-        XCTAssertTrue(hosts.contains(mirrorHost), "\u{0417}\u{0430}\u{043F}\u{0430}\u{0441}\u{043D}\u{043E}\u{0439} \u{0430}\u{0434}\u{0440}\u{0435}\u{0441} \u{043D}\u{0435} \u{0431}\u{044B}\u{043B} \u{043E}\u{043F}\u{0440}\u{043E}\u{0448}\u{0435}\u{043D}")
+        XCTAssertEqual(hosts.first, leadingHost, "the faster source is tried first")
+        XCTAssertTrue(hosts.contains(backupHost), "the backup address was never asked")
         XCTAssertTrue(FileManager.default.fileExists(atPath: layout.readyMarker.path))
     }
 
-    func testMirrorIsNotTouchedWhenPrimaryWorks() async throws {
+    func testBackupIsNotTouchedWhileTheLeadingSourceWorks() async throws {
         let manifest = makeManifest()
         let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
         let (store, _) = makeStore(manifest: manifest, downloader: downloader)
@@ -125,14 +128,14 @@ final class ModelSourcesTests: XCTestCase {
         await store.install()
 
         let hosts = await downloader.requestedHosts
-        XCTAssertFalse(hosts.contains(mirrorHost), "\u{041F}\u{043E}\u{043A}\u{0430} \u{043E}\u{0441}\u{043D}\u{043E}\u{0432}\u{043D}\u{043E}\u{0439} \u{0438}\u{0441}\u{0442}\u{043E}\u{0447}\u{043D}\u{0438}\u{043A} \u{0436}\u{0438}\u{0432}, \u{0437}\u{0435}\u{0440}\u{043A}\u{0430}\u{043B}\u{043E} \u{0442}\u{0440}\u{043E}\u{0433}\u{0430}\u{0442}\u{044C} \u{043D}\u{0435}\u{0437}\u{0430}\u{0447}\u{0435}\u{043C}")
+        XCTAssertFalse(hosts.contains(backupHost), "no reason to touch the backup while the lead works")
     }
 
     func testBothSourcesFailingNamesBoth() async throws {
         let manifest = makeManifest()
         let downloader = FakeDownloader(contents: [:])
-        await downloader.setFailure(.httpStatus(404), forHost: primaryHost)
-        await downloader.setFailure(.network("\u{0445}\u{043E}\u{0441}\u{0442} \u{043D}\u{0435}\u{0434}\u{043E}\u{0441}\u{0442}\u{0443}\u{043F}\u{0435}\u{043D}"), forHost: mirrorHost)
+        await downloader.setFailure(.httpStatus(404), forHost: backupHost)
+        await downloader.setFailure(.network("\u{0445}\u{043E}\u{0441}\u{0442} \u{043D}\u{0435}\u{0434}\u{043E}\u{0441}\u{0442}\u{0443}\u{043F}\u{0435}\u{043D}"), forHost: leadingHost)
         let (store, layout) = makeStore(manifest: manifest, downloader: downloader)
 
         await store.install()
@@ -141,17 +144,17 @@ final class ModelSourcesTests: XCTestCase {
         guard case let .failed(error) = state, case let .download(message) = error else {
             return XCTFail("\u{041E}\u{0436}\u{0438}\u{0434}\u{0430}\u{043B}\u{0441}\u{044F} \u{0432}\u{043D}\u{044F}\u{0442}\u{043D}\u{044B}\u{0439} \u{043E}\u{0442}\u{043A}\u{0430}\u{0437} \u{0437}\u{0430}\u{0433}\u{0440}\u{0443}\u{0437}\u{043A}\u{0438}, \u{043F}\u{043E}\u{043B}\u{0443}\u{0447}\u{0435}\u{043D}\u{043E}: \(state)")
         }
-        XCTAssertTrue(message.contains(primaryHost), "\u{0412} \u{043E}\u{0448}\u{0438}\u{0431}\u{043A}\u{0435} \u{043D}\u{0435}\u{0442} \u{043E}\u{0441}\u{043D}\u{043E}\u{0432}\u{043D}\u{043E}\u{0433}\u{043E} \u{0438}\u{0441}\u{0442}\u{043E}\u{0447}\u{043D}\u{0438}\u{043A}\u{0430}: \(message)")
-        XCTAssertTrue(message.contains(mirrorHost), "\u{0412} \u{043E}\u{0448}\u{0438}\u{0431}\u{043A}\u{0435} \u{043D}\u{0435}\u{0442} \u{0437}\u{0430}\u{043F}\u{0430}\u{0441}\u{043D}\u{043E}\u{0433}\u{043E} \u{0438}\u{0441}\u{0442}\u{043E}\u{0447}\u{043D}\u{0438}\u{043A}\u{0430}: \(message)")
+        XCTAssertTrue(message.contains(backupHost), "\u{0412} \u{043E}\u{0448}\u{0438}\u{0431}\u{043A}\u{0435} \u{043D}\u{0435}\u{0442} \u{043E}\u{0441}\u{043D}\u{043E}\u{0432}\u{043D}\u{043E}\u{0433}\u{043E} \u{0438}\u{0441}\u{0442}\u{043E}\u{0447}\u{043D}\u{0438}\u{043A}\u{0430}: \(message)")
+        XCTAssertTrue(message.contains(leadingHost), "\u{0412} \u{043E}\u{0448}\u{0438}\u{0431}\u{043A}\u{0435} \u{043D}\u{0435}\u{0442} \u{0437}\u{0430}\u{043F}\u{0430}\u{0441}\u{043D}\u{043E}\u{0433}\u{043E} \u{0438}\u{0441}\u{0442}\u{043E}\u{0447}\u{043D}\u{0438}\u{043A}\u{0430}: \(message)")
         XCTAssertFalse(FileManager.default.fileExists(atPath: layout.installedDirectory.path))
     }
 
     /// Source failure and user failure are two different things. After "cancellation"
     /// sorting through mirrors means downloading half a gigabyte in spite of a direct command.
-    func testCancellationDoesNotWalkToTheMirror() async throws {
+    func testCancellationDoesNotWalkToTheOtherSource() async throws {
         let manifest = makeManifest()
         let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
-        await downloader.setFailure(.cancelled, forHost: primaryHost)
+        await downloader.setFailure(.cancelled, forHost: leadingHost)
         let (store, layout) = makeStore(manifest: manifest, downloader: downloader)
 
         await store.install()
@@ -159,7 +162,7 @@ final class ModelSourcesTests: XCTestCase {
         let state = await store.currentState()
         XCTAssertEqual(state, .notInstalled, "\u{041E}\u{0442}\u{043C}\u{0435}\u{043D}\u{0430} — \u{044D}\u{0442}\u{043E} \u{043E}\u{0442}\u{043C}\u{0435}\u{043D}\u{0430}, \u{0430} \u{043D}\u{0435} \u{043F}\u{0440}\u{043E}\u{0432}\u{0430}\u{043B} \u{0443}\u{0441}\u{0442}\u{0430}\u{043D}\u{043E}\u{0432}\u{043A}\u{0438}")
         let hosts = await downloader.requestedHosts
-        XCTAssertFalse(hosts.contains(mirrorHost), "\u{041F}\u{043E}\u{0441}\u{043B}\u{0435} \u{043E}\u{0442}\u{043C}\u{0435}\u{043D}\u{044B} \u{0437}\u{0430}\u{043F}\u{0430}\u{0441}\u{043D}\u{043E}\u{0439} \u{0430}\u{0434}\u{0440}\u{0435}\u{0441} \u{0442}\u{0440}\u{043E}\u{0433}\u{0430}\u{0442}\u{044C} \u{043D}\u{0435}\u{043B}\u{044C}\u{0437}\u{044F}")
+        XCTAssertFalse(hosts.contains(backupHost), "cancellation must not walk to the next address")
         XCTAssertFalse(FileManager.default.fileExists(atPath: layout.readyMarker.path))
     }
 
@@ -168,10 +171,10 @@ final class ModelSourcesTests: XCTestCase {
     func testMirrorContentIsCheckedByTheSameChecksums() async throws {
         let manifest = makeManifest()
         let downloader = FakeDownloader(contents: ["weight.bin": fileA, "vocab.json": fileB])
-        await downloader.setFailure(.httpStatus(404), forHost: primaryHost)
+        await downloader.setFailure(.httpStatus(404), forHost: leadingHost)
         await downloader.setContents(
             ["weight.bin": fileA, "vocab.json": Data("\u{043F}\u{043E}\u{0434}\u{043C}\u{0435}\u{043D}\u{0451}\u{043D}\u{043D}\u{043E}\u{0435} \u{0441}\u{043E}\u{0434}\u{0435}\u{0440}\u{0436}\u{0438}\u{043C}\u{043E}\u{0435}".utf8)],
-            forHost: mirrorHost
+            forHost: backupHost
         )
         let (store, layout) = makeStore(manifest: manifest, downloader: downloader)
 

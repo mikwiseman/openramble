@@ -11,40 +11,10 @@ final class ModelStatusTests: XCTestCase {
 
     private func status(
         _ state: ModelState,
-        preparing: Bool = false,
         place: ModelStatus.Place = .settings,
         engineReady: Bool = true
     ) -> ModelStatus {
-        ModelStatus.make(
-            state: state,
-            isPreparingEngine: preparing,
-            place: place,
-            isEngineReady: engineReady
-        )
-    }
-
-    /// Verified files plus an engine that gave up is not "ready".
-    ///
-    /// Onboarding used to show this state as a green "Model ready" with a dead
-    /// Continue button, so a first install could end here permanently.
-    func testStalledPreparationIsNamedAndActionable() {
-        let onboarding = status(ready, place: .onboarding, engineReady: false)
-        XCTAssertEqual(onboarding.title, "Model needs preparing")
-        XCTAssertEqual(onboarding.tone, .failure)
-        XCTAssertEqual(onboarding.actions, [.prepare])
-        XCTAssertEqual(onboarding.title(for: .prepare), "Prepare Again")
-        XCTAssertTrue(
-            onboarding.detail?.contains("Nothing needs downloading again") == true,
-            "the person must know their half a gigabyte is safe: \(onboarding.detail ?? "nil")"
-        )
-
-        let settings = status(ready, place: .settings, engineReady: false)
-        XCTAssertEqual(settings.actions, [.prepare, .delete])
-
-        // A preparation that is genuinely running keeps its patient wording.
-        let preparing = status(ready, preparing: true, place: .onboarding, engineReady: false)
-        XCTAssertEqual(preparing.title, "Model ready")
-        XCTAssertTrue(preparing.actions.isEmpty)
+        ModelStatus.make(state: state, place: place, isEngineReady: engineReady)
     }
 
     // MARK: - States
@@ -101,12 +71,21 @@ final class ModelStatusTests: XCTestCase {
         XCTAssertEqual(status(ready, place: .onboarding).actions, [])
     }
 
+    /// Downloaded is not the same as usable: while the engine is still loading
+    /// for this Mac the card says so plainly instead of claiming readiness the
+    /// dictation cannot honour yet.
     func testScenario006() {
-        let status = status(ready, preparing: true)
+        let status = status(ready, engineReady: false)
 
-        XCTAssertEqual(status.title, "Model ready")
+        XCTAssertEqual(status.title, "Preparing the model")
+        XCTAssertEqual(status.tone, .neutral)
         XCTAssertEqual(status.detail?.contains("20–40 seconds"), true)
-        XCTAssertEqual(status.announcement, "Model ready, preparing for first use")
+        XCTAssertEqual(status.announcement, "Preparing the model for first use")
+        XCTAssertEqual(
+            self.status(ready, engineReady: false).title,
+            "Preparing the model",
+            "a pause between automatic attempts is still preparation, never a dead end"
+        )
     }
 
     func testScenario007() {
@@ -222,10 +201,10 @@ final class ModelStatusTests: XCTestCase {
     func testDownloadingDetailNamesTheNextStepOnlyDuringOnboarding() {
         let downloading = ModelState.downloading(receivedBytes: 1_000_000, totalBytes: 483_000_000)
         let onboarding = ModelStatus.make(
-            state: downloading, isPreparingEngine: false, place: .onboarding
+            state: downloading, place: .onboarding
         )
         let settings = ModelStatus.make(
-            state: downloading, isPreparingEngine: false, place: .settings
+            state: downloading, place: .settings
         )
 
         XCTAssertEqual(

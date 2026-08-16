@@ -207,7 +207,6 @@ struct OnboardingView: View {
                     ModelStatusView(
                         status: ModelStatus.make(
                             state: state.modelState,
-                            isPreparingEngine: state.isPreparingEngine,
                             preparation: state.enginePreparation,
                             place: .onboarding,
                             downloadMegabytes: state.remainingDownloadMegabytes,
@@ -215,8 +214,7 @@ struct OnboardingView: View {
                         ),
                         install: state.installModel,
                         cancel: state.cancelModelInstall,
-                        delete: state.deleteModel,
-                        prepare: state.prepareEngineAgain
+                        delete: state.deleteModel
                     )
                 }
                 .padding(14)
@@ -404,7 +402,6 @@ struct OnboardingView: View {
             accessibilityGranted: state.accessibilityGranted,
             modelState: state.modelState,
             engineReady: state.isEngineReady,
-            enginePreparing: state.isPreparingEngine,
             trialSucceeded: trialSucceeded
         )
     }

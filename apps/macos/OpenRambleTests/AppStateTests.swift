@@ -697,7 +697,6 @@ final class AppStateTests: XCTestCase {
         let engine = TransientWarmupASREngine(failures: 1)
         harness.warmUpEngine = engine
         harness.engineWarmupRetryDelay = .milliseconds(5)
-        harness.engineWarmupRetryLimit = 2
         let state = makeState()
 
         for _ in 0..<500 where !state.isEngineReady {
@@ -711,7 +710,9 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(state.modelState.isReady, "a pipe timeout is not model corruption")
         let notices = await overlay.notices.map(\.message)
         XCTAssertFalse(notices.contains { $0.contains("redownload") })
-        XCTAssertTrue(notices.contains { $0.contains("retrying automatically") })
+        // A transient worker hiccup is the app's own business now: it retries
+        // silently while the interface keeps saying "preparing".
+        XCTAssertFalse(notices.contains { $0.contains("retrying automatically") })
     }
 
     func testWorkerReadinessEventsInvalidateAndRestoreAppReadinessCausally() async throws {
@@ -928,31 +929,37 @@ final class AppStateTests: XCTestCase {
         }
     }
 
-    func testExhaustedWorkerRetriesStillDoNotMisclassifyTheModelAsCorrupt() async throws {
+    /// Preparation never gives up and never blames the verified files.
+    ///
+    /// This used to stop after a fixed budget and tell the person to restart
+    /// the app — the state a first install could land in for good. Now the
+    /// attempts continue, so the only honest report is "still preparing".
+    func testPersistentWorkerFailuresKeepRetryingWithoutBlamingTheModel() async throws {
         try installModelMarker()
         let engine = TransientWarmupASREngine(failures: 10)
         harness.warmUpEngine = engine
         harness.engineWarmupRetryDelay = .milliseconds(2)
-        harness.engineWarmupRetryLimit = 1
         let state = makeState()
 
-        for _ in 0..<500 where engine.loadAttempts < 2 {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        for _ in 0..<100 {
-            let messages = await overlay.notices.map(\.message)
-            if messages.contains(where: { $0.contains("couldn't become ready") }) { break }
+        for _ in 0..<800 where engine.loadAttempts < 4 {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))
         }
 
-        XCTAssertEqual(engine.loadAttempts, 2)
+        XCTAssertGreaterThanOrEqual(
+            engine.loadAttempts,
+            4,
+            "attempts continue past any fixed budget"
+        )
         XCTAssertFalse(state.isEngineReady)
-        XCTAssertTrue(state.modelState.isReady)
+        XCTAssertTrue(state.isPreparingEngine, "the interface stays honestly busy")
+        XCTAssertTrue(state.modelState.isReady, "a worker failure is not model corruption")
         let notices = await overlay.notices.map(\.message)
         XCTAssertFalse(notices.contains { $0.contains("redownload") })
-        XCTAssertTrue(notices.contains { $0.contains("downloaded models were kept") })
+        XCTAssertFalse(
+            notices.contains { $0.contains("couldn't become ready") },
+            "there is no giving-up message to show: \(notices)"
+        )
     }
 
     // MARK: - Press when not ready

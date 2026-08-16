@@ -147,20 +147,13 @@ struct MenuContent: View {
         // full 586 MB — people decide about hotel Wi-Fi with this number.
         let model = ModelStatus.make(
             state: state.modelState,
-            isPreparingEngine: state.isPreparingEngine,
             preparation: state.enginePreparation,
             place: .settings,
-            downloadMegabytes: state.remainingDownloadMegabytes
+            downloadMegabytes: state.remainingDownloadMegabytes,
+            isEngineReady: state.isEngineReady
         )
         if state.modelState.isReady, !state.isEngineReady {
-            if state.isPreparingEngine {
-                Text("Preparing the model for dictation…")
-            } else {
-                // Nothing is running: the menu offers the way out instead of
-                // narrating a preparation that already gave up.
-                Text("The model needs preparing")
-                Button("Prepare Again") { state.prepareEngineAgain() }
-            }
+            Text("Preparing the model for dictation…")
         } else if !state.modelState.isReady {
             Text(model.progressLabel.map { "\(model.title) — \($0)" } ?? model.title)
 
@@ -168,7 +161,6 @@ struct MenuContent: View {
                 Button(model.title(for: action)) {
                     switch action {
                     case .install, .retry, .repair: state.installModel()
-                    case .prepare: state.prepareEngineAgain()
                     case .cancel: state.cancelModelInstall()
                     case .delete: break
                     }
