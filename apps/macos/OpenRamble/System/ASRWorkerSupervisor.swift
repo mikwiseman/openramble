@@ -203,14 +203,32 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
     private var recoveryTask: Task<Void, Never>?
     private var readinessObservers: [UUID: AsyncStream<Bool>.Continuation] = [:]
 
+    /// Reports the current memory-pressure tier; the default keeps every
+    /// existing construction (and test) on the old always-respawn behavior.
+    private let pressureTier: @Sendable () -> MemoryPressureTier
+    /// The backoff decision is injectable so tests exercise the loop without
+    /// production-scale waits; the policy's values are table-tested.
+    private let recoveryBackoffDecision:
+        @Sendable (MemoryPressureTier) -> WorkerRecoveryBackoffPolicy.Decision
+
     init(
         executableURL: URL,
         executableArguments: [String] = [],
-        deadlines: ASRWorkerDeadlines = ASRWorkerDeadlines()
+        deadlines: ASRWorkerDeadlines = ASRWorkerDeadlines(),
+        pressureTier: @escaping @Sendable () -> MemoryPressureTier = { .normal },
+        recoveryBackoffDecision: @escaping @Sendable (MemoryPressureTier)
+            -> WorkerRecoveryBackoffPolicy.Decision = { tier in
+                WorkerRecoveryBackoffPolicy.decision(
+                    tier: tier,
+                    jitterUnit: Double.random(in: 0..<1)
+                )
+            }
     ) {
         self.executableURL = executableURL
         self.executableArguments = executableArguments
         self.deadlines = deadlines
+        self.pressureTier = pressureTier
+        self.recoveryBackoffDecision = recoveryBackoffDecision
     }
 
     public var isPrepared: Bool {
@@ -1071,6 +1089,18 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
 
     private func recoverInBackground(sequence: UInt64) async {
         do {
+            // Never respawn a multi-gigabyte worker straight into the
+            // starvation that just killed it. The wait happens before the
+            // operation gate, so a real keypress-driven prepare is never
+            // blocked behind the backoff.
+            while case let .deferRespawn(recheckAfter) = recoveryBackoffDecision(
+                pressureTier()
+            ) {
+                log.notice("worker respawn deferred under memory pressure")
+                try await Task.sleep(for: recheckAfter)
+                try Task.checkCancellation()
+                guard recoverySequence == sequence else { return }
+            }
             try await acquireOperation()
             defer { releaseOperation() }
             try Task.checkCancellation()

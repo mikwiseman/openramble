@@ -375,6 +375,56 @@ struct ASRWorkerSupervisorTests {
         #expect(errno == ESRCH)
     }
 
+    @Test("critical pressure defers the crash respawn until the tier eases")
+    func criticalPressureDefersRecoveryRespawn() async throws {
+        let fixture = try makeHangingWorker(mode: "exit-after-ready")
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let gauge = MemoryPressureGauge()
+        gauge.update(.critical)
+        let supervisor = ASRWorkerSupervisor(
+            executableURL: fixture.executable,
+            executableArguments: [fixture.processLog.path, fixture.mode],
+            deadlines: ASRWorkerDeadlines(
+                hello: .seconds(1),
+                preparation: .seconds(1),
+                vocabulary: .seconds(1),
+                warmup: .seconds(1),
+                fileTranscription: .seconds(1),
+                transcription: { _ in .seconds(1) }
+            ),
+            pressureTier: { gauge.tier },
+            recoveryBackoffDecision: { tier in
+                tier == .critical
+                    ? .deferRespawn(recheckAfter: .milliseconds(40))
+                    : .proceed
+            }
+        )
+
+        try await supervisor.prepare(modelDirectory: URL(fileURLWithPath: "/tmp/main-model"))
+        try await supervisor.prepareVocabulary(
+            modelDirectory: URL(fileURLWithPath: "/tmp/vocabulary-model"),
+            boost: VocabularyBoost(terms: [])
+        )
+        try await supervisor.warmUpInference()
+
+        // The worker exits right after Ready; recovery notices but must not
+        // respawn a multi-gigabyte process into critical pressure.
+        try await Task.sleep(for: .milliseconds(400))
+        var processIdentifiers = readProcessIdentifiers(from: fixture.processLog)
+        #expect(processIdentifiers.count == 1, "no respawn while the tier is critical")
+
+        gauge.update(.normal)
+        for _ in 0..<300 {
+            processIdentifiers = readProcessIdentifiers(from: fixture.processLog)
+            if processIdentifiers.count == 2, await supervisor.isPrepared { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(processIdentifiers.count == 2, "the eased tier releases exactly one respawn")
+        #expect(await supervisor.isPrepared)
+
+        await supervisor.unload()
+    }
+
     private func launchSleepProcess() throws -> (
         process: Process,
         input: FileHandle,

@@ -38,3 +38,81 @@ final class EngineResidencyPolicyTests: XCTestCase {
         XCTAssertEqual(decide(tier: .warning), .keep)
     }
 }
+
+/// Proactive rewarm no longer waits for a `.normal` that a busy 16 GB machine
+/// may never report again.
+final class EngineRewarmPolicyTests: XCTestCase {
+    func testNormalRewarmsImmediately() {
+        XCTAssertEqual(EngineRewarmPolicy.settleDelay(after: .normal), .zero)
+    }
+
+    func testWarningEarnsOneSettleWindow() {
+        XCTAssertEqual(EngineRewarmPolicy.settleDelay(after: .warning), .seconds(10))
+    }
+
+    func testCriticalNeverRewarmsProactively() {
+        XCTAssertNil(EngineRewarmPolicy.settleDelay(after: .critical))
+    }
+
+    /// The keypress is intent: the reload rides under the voice regardless of
+    /// tier. App activation is a hint and yields to critical pressure.
+    func testEarlyTriggers() {
+        for tier: MemoryPressureTier in [.normal, .warning, .critical] {
+            XCTAssertTrue(
+                EngineRewarmPolicy.allowsEarlyRewarm(trigger: .keyDown, tier: tier)
+            )
+        }
+        XCTAssertTrue(
+            EngineRewarmPolicy.allowsEarlyRewarm(trigger: .appActivation, tier: .normal)
+        )
+        XCTAssertTrue(
+            EngineRewarmPolicy.allowsEarlyRewarm(trigger: .appActivation, tier: .warning)
+        )
+        XCTAssertFalse(
+            EngineRewarmPolicy.allowsEarlyRewarm(trigger: .appActivation, tier: .critical)
+        )
+    }
+}
+
+/// A jetsam kill must not round-trip a 2.4 GB respawn into the same
+/// starvation that caused it.
+final class WorkerRecoveryBackoffPolicyTests: XCTestCase {
+    func testNormalAndWarningProceed() {
+        XCTAssertEqual(
+            WorkerRecoveryBackoffPolicy.decision(tier: .normal, jitterUnit: 0.5),
+            .proceed
+        )
+        XCTAssertEqual(
+            WorkerRecoveryBackoffPolicy.decision(tier: .warning, jitterUnit: 0.5),
+            .proceed
+        )
+    }
+
+    func testCriticalDefersFiveToTenSecondsJittered() {
+        XCTAssertEqual(
+            WorkerRecoveryBackoffPolicy.decision(tier: .critical, jitterUnit: 0),
+            .deferRespawn(recheckAfter: .milliseconds(5_000))
+        )
+        XCTAssertEqual(
+            WorkerRecoveryBackoffPolicy.decision(tier: .critical, jitterUnit: 0.5),
+            .deferRespawn(recheckAfter: .milliseconds(7_500))
+        )
+        // Out-of-range jitter clamps instead of exploding the wait.
+        XCTAssertEqual(
+            WorkerRecoveryBackoffPolicy.decision(tier: .critical, jitterUnit: 7),
+            .deferRespawn(recheckAfter: .milliseconds(10_000))
+        )
+    }
+}
+
+/// The gauge is the cross-isolation mirror of the last OS report.
+final class MemoryPressureGaugeTests: XCTestCase {
+    func testStartsNormalAndFollowsUpdates() {
+        let gauge = MemoryPressureGauge()
+        XCTAssertEqual(gauge.tier, .normal)
+        gauge.update(.critical)
+        XCTAssertEqual(gauge.tier, .critical)
+        gauge.update(.warning)
+        XCTAssertEqual(gauge.tier, .warning)
+    }
+}
