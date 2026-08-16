@@ -49,6 +49,11 @@ The release script requires:
 - matching marketing and bundle versions in `apps/macos/project.yml`;
 - English release notes at `docs/release-notes/<version>.md`;
 - an installed recognition model for both offline runtime checks;
+  `WAI_MODELS_ROOT` is honoured by them, so keep a release-only copy
+  (`~/.openramble/release-models`, installed with `asr-bench install` and
+  `install-vocab` under that root) and export it for the release. A machine
+  wiped for a from-scratch install test can then still cut a release, and the
+  release never depends on the tester's own installation;
 - a valid Developer ID identity and App Store Connect notarization key;
 - the permanent Sparkle private key.
 
@@ -58,6 +63,7 @@ requirements.
 ## Build, sign, notarize, and update the feed
 
 ```bash
+WAI_MODELS_ROOT="$HOME/.openramble/release-models" \
 SPARKLE_KEY_PATH="$HOME/.openramble/sparkle-key" \
 ./scripts/release.sh
 ```
