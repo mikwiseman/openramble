@@ -2547,8 +2547,21 @@ public final class AppState: ObservableObject {
     }
 
     /// Hand the preparation indicator back once the loop is done owning it.
+    ///
+    /// A revoked ladder arrives here with a stale revision by definition — that
+    /// is what revoking means — so refusing it outright left the indicator lit
+    /// with nobody behind it. Deleting the model mid-wait did exactly that: the
+    /// app went on narrating a preparation of files that no longer existed, and
+    /// because `prepareEngineIfIdleAndCold` stands down while a preparation
+    /// looks live, the next installed model could never start one.
+    ///
+    /// Only a live successor may keep the indicator, and a successor is exactly
+    /// what `engineWarmupRetryTask` being non-nil means: every revocation site
+    /// clears it, so a stale revision with nothing in that slot is a ladder that
+    /// left without an heir.
     private func finishRetryPresentation(revision: Int) {
-        guard engineWarmupRetryRevision == revision else { return }
+        guard engineWarmupRetryRevision == revision || engineWarmupRetryTask == nil
+        else { return }
         engineWarmupRetryTask = nil
         isPreparingEngine = false
         endPreparationCountdown()
