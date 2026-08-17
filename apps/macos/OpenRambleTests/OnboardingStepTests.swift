@@ -8,23 +8,39 @@ import XCTest
 final class OnboardingStepTests: XCTestCase {
     private let ready = ModelState.ready(directory: URL(fileURLWithPath: "/tmp/model"))
 
+    private func conditions(
+        microphone: Bool = true,
+        accessibility: Bool = true,
+        model: ModelState? = nil,
+        dictationBusy: Bool = false,
+        trialSucceeded: Bool = true
+    ) -> OnboardingConditions {
+        OnboardingConditions(
+            microphoneGranted: microphone,
+            accessibilityGranted: accessibility,
+            modelState: model ?? ready,
+            isDictationBusy: dictationBusy,
+            trialSucceeded: trialSucceeded
+        )
+    }
+
     private func reason(
         _ step: OnboardingStep,
         microphone: Bool = true,
         accessibility: Bool = true,
         model: ModelState? = nil,
-        engineReady: Bool = true,
-        enginePreparing: Bool = false,
+        dictationBusy: Bool = false,
         trialSucceeded: Bool = true
     ) -> String? {
         OnboardingGate.blockReason(
             step: step,
-            microphoneGranted: microphone,
-            accessibilityGranted: accessibility,
-            modelState: model ?? ready,
-            engineReady: engineReady,
-            enginePreparing: enginePreparing,
-            trialSucceeded: trialSucceeded
+            conditions: conditions(
+                microphone: microphone,
+                accessibility: accessibility,
+                model: model,
+                dictationBusy: dictationBusy,
+                trialSucceeded: trialSucceeded
+            )
         )
     }
 
@@ -98,13 +114,23 @@ final class OnboardingStepTests: XCTestCase {
     func testScenario010() {
         XCTAssertNil(reason(.setup, microphone: true, accessibility: true))
         XCTAssertTrue(
-            OnboardingGate.canAdvance(
-                step: .setup,
-                microphoneGranted: true,
-                accessibilityGranted: true,
-                modelState: ready
-            )
+            OnboardingGate.canAdvance(step: .setup, conditions: conditions())
         )
+    }
+
+    // MARK: - A running take
+
+    /// A running take is the one thing that speaks over the step's own reason.
+    ///
+    /// It ends by itself, or by the "Cancel Dictation" button standing next to
+    /// the disabled one — so it is a legitimate thing to be held by.
+    func testARunningDictationOutranksEveryStepsOwnReason() {
+        for step in OnboardingStep.allCases {
+            XCTAssertEqual(
+                reason(step, dictationBusy: true),
+                "Finish or cancel the current dictation first."
+            )
+        }
     }
 
     // MARK: - Model
@@ -129,21 +155,14 @@ final class OnboardingStepTests: XCTestCase {
         XCTAssertEqual(reason(.setup, model: .deleting), "The model is being deleted.")
     }
 
+    /// Usable files are the whole model requirement.
+    ///
+    /// The gate is not told whether the engine is loaded, and must not be: the
+    /// engine is loaded and unloaded by residency, and a resting one waits for
+    /// a key press that nobody makes on this screen. Every input here either
+    /// moves by itself or is the person's to change.
     func testScenario012() {
         XCTAssertNil(reason(.setup, model: ready))
-    }
-
-    /// The footer narrates only work that exists: the long sentence while
-    /// preparation runs, a short one in the instant before it starts.
-    func testScenario013() {
-        XCTAssertEqual(
-            reason(.setup, model: ready, engineReady: false, enginePreparing: true),
-            "The model is getting ready for this Mac — this happens once."
-        )
-        XCTAssertEqual(
-            reason(.setup, model: ready, engineReady: false),
-            "Getting the model ready…"
-        )
     }
 
     /// At no point is a disabled button left without explanation.
@@ -165,18 +184,13 @@ final class OnboardingStepTests: XCTestCase {
             for microphone in [true, false] {
                 for accessibility in [true, false] {
                     for model in states {
-                        let blocked = !OnboardingGate.canAdvance(
-                            step: step,
-                            microphoneGranted: microphone,
-                            accessibilityGranted: accessibility,
-                            modelState: model
+                        let facts = conditions(
+                            microphone: microphone,
+                            accessibility: accessibility,
+                            model: model
                         )
-                        let text = OnboardingGate.blockReason(
-                            step: step,
-                            microphoneGranted: microphone,
-                            accessibilityGranted: accessibility,
-                            modelState: model
-                        )
+                        let blocked = !OnboardingGate.canAdvance(step: step, conditions: facts)
+                        let text = OnboardingGate.blockReason(step: step, conditions: facts)
                         XCTAssertEqual(
                             blocked,
                             text?.isEmpty == false,

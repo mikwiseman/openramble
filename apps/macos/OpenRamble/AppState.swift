@@ -248,7 +248,22 @@ public struct AppEnvironment {
 public final class AppState: ObservableObject {
     // Shown in the interface.
     @Published public private(set) var dictationState: DictationState = .idle
-    @Published public private(set) var modelState: ModelState = .notInstalled
+    /// Every route by which the files become usable starts preparation.
+    ///
+    /// Readiness arrives from more places than the two that used to start a
+    /// warm-up: a finished install, yes, but also a plain look at the disk —
+    /// the Settings window refreshes on open, and a run that begins before the
+    /// download re-reads the result afterwards. Readiness discovered that way
+    /// used to start nothing, and the app sat on a ready model with a cold
+    /// engine that had never once been loaded, which is the one cold engine a
+    /// key press cannot warm. Hanging the rule on the fact itself, rather than
+    /// on the events that happen to produce it, is what makes it standing.
+    @Published public private(set) var modelState: ModelState = .notInstalled {
+        didSet {
+            guard modelState.isReady else { return }
+            prepareEngineIfIdleAndCold()
+        }
+    }
     @Published public private(set) var accessibilityGranted = false
     @Published public private(set) var accessibilityState: AccessibilityPermissionState = .denied
     @Published public private(set) var microphoneGranted = false
@@ -278,6 +293,19 @@ public final class AppState: ObservableObject {
     public private(set) var hasEngineBeenReady = false
     /// How much the installation button will download: the full volume or additional volume after the update.
     @Published public private(set) var remainingDownloadMegabytes = 586
+    /// What a fresh start costs: both models, from nothing.
+    ///
+    /// The delete confirmation asks a different question from the download
+    /// button — not "what is missing now" but "what will you pay to get this
+    /// back" — and the answer is always both models, because deleting removes
+    /// both. Asking `remainingDownloadMegabytes` there gives 0, which is why
+    /// that sentence used to carry an `== 0 ? 586` and print a constant nobody
+    /// recomputed when the manifests changed. Read from the bundled manifests,
+    /// so it needs no fallback: a run that could not read them has no store,
+    /// and therefore no model to offer for deletion.
+    public var fullModelDownloadMegabytes: Int {
+        Int((mainModelBytes + vocabularyModelBytes + 500_000) / 1_000_000)
+    }
     /// Recognition language: nil - auto-detection by sound. Code BCP-47 (“en”).
     /// Manual selection is the way out for the case when the emphasis is removed from autodetection
     /// in the wrong language; mixed speech it is contraindicated, so by default
@@ -823,9 +851,11 @@ public final class AppState: ObservableObject {
             await startEngineReadinessMonitoring()
             await startRecordingRecoveryMaintenance()
             await importAbandonedRecordings()
+            // No explicit warm-up here: reading the disk publishes the model
+            // state, and readiness itself starts preparation. Launch is not a
+            // special case, and having it be one is how the rule came to hold
+            // at launch and nowhere else.
             await refreshModelState()
-            if modelState.isReady { await warmUpEngine() }
-            prepareEngineIfIdleAndCold()
         }
     }
 
@@ -1363,11 +1393,13 @@ public final class AppState: ObservableObject {
         idleUnloadTask = nil
         guard dictationState == .idle,
               isEngineReady,
-              // Setup is not idleness. Granting two permissions takes a trip
-              // through System Settings that can outlast the timer, and the
-              // engine's comeback is the next key press — which nobody makes
-              // while still on the setup screen. Giving the memory back there
-              // stranded a fresh install on "Preparing the model" forever.
+              // Setup is not idleness: the person is granting permissions, not
+              // resting from dictation, and the try-out is a minute away. The
+              // engine stays so that first dictation is instant. Nothing
+              // depends on this any more — the setup screen no longer waits
+              // for a loaded engine, and a resting one is woken by the same
+              // key press as everywhere else — so it is a courtesy, not a
+              // guard.
               hasCompletedOnboarding,
               let policyDelay = modelUnloadTimeout.idleDelay
         else { return }
@@ -2018,26 +2050,40 @@ public final class AppState: ObservableObject {
         guard !isInstalling else { return }
         let mainState = await store.refreshState()
         let vocabularyState = await vocabularyStore?.refreshState() ?? .notInstalled
-        modelState = combinedModelState(main: mainState, vocabulary: vocabularyState)
-        remainingDownloadMegabytes = Int(
-            (ModelPairState.remainingBytes(
-                main: mainState,
-                vocabulary: vocabularyState,
-                mainTotalBytes: mainModelBytes,
-                vocabularyTotalBytes: vocabularyModelBytes
-            ) + 500_000) / 1_000_000
-        )
+        var refreshed = combinedModelState(main: mainState, vocabulary: vocabularyState)
         // Inspection of the disk does not see a Core ML failure: the files are intact, but the model has not risen.
         // Until the person explicitly requests restoration, the refusal remains on the screen -
         // otherwise the recovery button disappears and dictation still doesn't work.
-        if let engineLoadFailure, modelState.isReady {
-            modelState = .repairRequired(engineLoadFailure)
+        //
+        // Decided before publishing, not after: readiness is what starts a
+        // preparation, so a "ready" the app is about to take back would start
+        // one that instantly finds nothing to do.
+        if let engineLoadFailure, refreshed.isReady {
+            refreshed = .repairRequired(engineLoadFailure)
         }
+        modelState = refreshed
+        publishRemainingDownload(main: mainState, vocabulary: vocabularyState)
         if transcriber == nil {
             isEngineReady = modelState.isReady
         } else if !modelState.isReady {
             isEngineReady = false
         }
+    }
+
+    /// Publish what the download button would fetch if it were pressed now.
+    ///
+    /// Recomputed wherever the answer can have changed, and from one place, so
+    /// the two facts it depends on — what the disk holds and whether the engine
+    /// has rejected an intact copy — cannot be consulted by half the screens.
+    private func publishRemainingDownload(main: ModelState, vocabulary: ModelState) {
+        let bytes = ModelPairState.remainingBytes(
+            main: main,
+            vocabulary: vocabulary,
+            mainTotalBytes: mainModelBytes,
+            vocabularyTotalBytes: vocabularyModelBytes,
+            engineRejectedModels: engineLoadFailure != nil
+        )
+        remainingDownloadMegabytes = Int((bytes + 500_000) / 1_000_000)
     }
 
     private func combinedModelState(main: ModelState, vocabulary: ModelState) -> ModelState {
@@ -2121,21 +2167,21 @@ public final class AppState: ObservableObject {
             let finalMain = await store.currentState()
             let finalVocabulary = await vocabularyStore?.currentState() ?? .notInstalled
             modelState = combinedModelState(main: finalMain, vocabulary: finalVocabulary)
-            remainingDownloadMegabytes = Int(
-                (ModelPairState.remainingBytes(
-                    main: finalMain,
-                    vocabulary: finalVocabulary,
-                    mainTotalBytes: mainModelBytes,
-                    vocabularyTotalBytes: vocabularyModelBytes
-                ) + 500_000) / 1_000_000
-            )
+            publishRemainingDownload(main: finalMain, vocabulary: finalVocabulary)
             isInstalling = false
 
-            // The first load compiles the model for the neuromodule and takes
-            // seconds. We do this right away so that the user does not wait at the moment
-            // first dictation. The standing rule below is the safety net: if
-            // this attempt is skipped for any reason, readiness alone brings
-            // preparation back.
+            // The first load compiles the model for this Mac and takes tens of
+            // seconds. It starts here so that nobody pays for it under their
+            // first dictation.
+            //
+            // Launch gave up its explicit warm-up because readiness alone starts
+            // one; an install cannot, because the standing rule stands down
+            // while `isInstalling` holds — the readiness published a few lines
+            // above therefore started nothing. `isInstalling` has just been
+            // cleared, so this is the first instant the rule can speak, and it
+            // speaks in both forms: the load itself, and then the rule, for the
+            // case where that load only joined an attempt already in flight and
+            // so scheduled no retry ladder of its own.
             if modelState.isReady { await warmUpEngine() }
             prepareEngineIfIdleAndCold()
         }
@@ -2182,6 +2228,17 @@ public final class AppState: ObservableObject {
         engineWarmupRetryRevision &+= 1
         engineWarmupRetryTask?.cancel()
         engineWarmupRetryTask = nil
+        // A revoked preparation has nobody left to put its indicator down. The
+        // ladder lowers it when it finishes, but only for the revision it still
+        // owns, and the revision bump above has just taken that revision away —
+        // so a ladder cancelled mid-wait woke up belonging to nobody and left
+        // the app saying it was preparing a model that no longer exists. It
+        // said so for the rest of the run, and while it did, the standing rule
+        // was disabled: `prepareEngineIfIdleAndCold` will not start a
+        // preparation while the app believes one is already running. Deletion
+        // is where the revoking happens, so deletion is where it is undone.
+        isPreparingEngine = false
+        endPreparationCountdown()
         Task {
             await transcriber?.unload()
             await store.delete()
@@ -2195,6 +2252,42 @@ public final class AppState: ObservableObject {
         case skipped
         case retryable(String)
         case repairRequired(String)
+    }
+
+    /// Does one attempt's outcome leave the app still owing a ready engine?
+    ///
+    /// Two places read an outcome — the first attempt and the retry ladder —
+    /// and this is the only sentence either of them is allowed to read it by.
+    /// They used to answer it separately, and they answered `.skipped`
+    /// differently: 0.8.2 taught the first attempt that "nothing happened" is
+    /// one moment's answer, and left the ladder treating it as the world's. A
+    /// single cancelled load inside the ladder therefore ended preparation for
+    /// good, on the one engine nothing else can rescue — an engine that has
+    /// never been ready is not woken by a key press, has no residency comeback
+    /// to wait for, and is reloaded only when readiness changes, which it does
+    /// not, because the model has been ready the whole time. That is ⌘Q as the
+    /// only way out, which is the defect this branch exists to remove.
+    ///
+    /// With one sentence there is no second opinion left to drift.
+    private func preparationContinues(after outcome: EngineWarmupOutcome) -> Bool {
+        switch outcome {
+        case .ready:
+            // The engine is loaded. Nothing is owed.
+            return false
+        case .repairRequired:
+            // The files are the problem, and only the person can answer for
+            // them. The card says so and offers the button.
+            return false
+        case .retryable:
+            // A dead pipe, a worker watchdog, a Mac momentarily busy with the
+            // 586 MB it just wrote. The files are fine; wait longer and retry.
+            return true
+        case .skipped:
+            // Nothing happened: a cancelled request, a fenced generation, a
+            // guard that was briefly false. Whether that is the end depends on
+            // one thing only — whether the app still wants a ready engine.
+            return wantsEngineReady
+        }
     }
 
     /// Prepare one fully warm generation. Calls from launch, wake, pressure
@@ -2220,20 +2313,11 @@ public final class AppState: ObservableObject {
             engineWarmupTask = nil
         }
 
-        if allowAutomaticRetry {
-            switch outcome {
-            case let .retryable(detail):
+        if allowAutomaticRetry, preparationContinues(after: outcome) {
+            if case let .retryable(detail) = outcome {
                 scheduleEngineWarmupRetry(after: detail)
-            case .skipped where wantsEngineReady:
-                // "Nothing to do" is not a fact about the world, it is a fact
-                // about one moment: a guard that was briefly false, a state
-                // read that disagreed, an attempt that was cancelled. Treating
-                // it as final is what let a fresh install park on "Preparing
-                // the model" with nothing running. If the app still wants a
-                // ready engine, it tries again on the same ladder.
+            } else {
                 scheduleEngineWarmupRetry(after: "preparation did not start")
-            case .ready, .repairRequired, .skipped:
-                break
             }
         }
         return outcome
@@ -2363,8 +2447,16 @@ public final class AppState: ObservableObject {
             if let reason = verifiedModelRejection(from: error) {
                 let detail =
                     "the files passed verification, but Core ML couldn't load the model: \(reason)"
+                // Both stores said the files are there — the guard at the top of
+                // this function is that very statement, and it is what makes
+                // this a rejection rather than a missing model. The repair
+                // redownloads them anyway, so the volume has to be republished
+                // right here: without it the only control on the setup screen
+                // read "Redownload Model — 0 MB".
+                let filesOnDisk = modelState
                 engineLoadFailure = detail
                 modelState = .repairRequired(detail)
+                publishRemainingDownload(main: filesOnDisk, vocabulary: filesOnDisk)
                 engineWarmupRetryRevision &+= 1
                 engineWarmupRetryTask?.cancel()
                 engineWarmupRetryTask = nil
@@ -2372,7 +2464,7 @@ public final class AppState: ObservableObject {
                     DictationNotice(
                         kind: .failure,
                         message: "The model didn't load. An explicit repair will redownload "
-                            + "\(remainingDownloadMegabytes == 0 ? 586 : remainingDownloadMegabytes) MB."
+                            + "\(remainingDownloadMegabytes) MB."
                     )
                 )
                 return .repairRequired(detail)
@@ -2440,13 +2532,11 @@ public final class AppState: ObservableObject {
                 }
 
                 let outcome = await self.warmUpEngine(allowAutomaticRetry: false)
-                switch outcome {
-                case .ready, .repairRequired, .skipped:
+                guard self.preparationContinues(after: outcome) else {
                     self.finishRetryPresentation(revision: revision)
                     return
-                case .retryable:
-                    failures += 1
                 }
+                failures += 1
             }
         }
     }

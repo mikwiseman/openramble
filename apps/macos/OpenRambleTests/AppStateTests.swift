@@ -662,6 +662,23 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(state.remainingDownloadMegabytes, 103)
     }
 
+    /// The delete confirmation names what deleting will cost, not what is missing.
+    ///
+    /// Nothing is missing when the button is offered — that is the whole reason
+    /// it is offered — so the remainder is 0 there, and the sentence used to
+    /// paper over it with a hardcoded 586 that no manifest change would ever
+    /// reach. Deleting removes both models, so the honest number is both
+    /// manifests added up.
+    func testTheDeleteConfirmationNamesTheWholeDownloadItWillCost() async throws {
+        try installModelMarker()
+        let state = makeState()
+
+        await state.refreshModelState()
+
+        XCTAssertEqual(state.remainingDownloadMegabytes, 0, "nothing is missing from disk")
+        XCTAssertEqual(state.fullModelDownloadMegabytes, 586)
+    }
+
     func testScenario026() async throws {
         // The model files are intact, but Core ML does not pick them up. Inspection of the disk is like this
         //cannot see the state: it will say “ready” again.
@@ -963,6 +980,48 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(state.isEngineReady, "the standing rule brings the engine back")
         let warmUps = await recognizer.warmUps
         XCTAssertGreaterThan(warmUps, baseline)
+    }
+
+    /// Readiness learned from the disk starts preparation, like any other route.
+    ///
+    /// Letting the setup screen through is only half of a first run; the person
+    /// then presses the key. A model that became usable while the app was
+    /// already running — the download finishing, or the Settings window
+    /// re-reading the disk — used to start nothing at all, and an engine that
+    /// has never once been loaded is the one cold engine a key press cannot
+    /// warm: dictation refuses with "the model is getting ready", and nothing
+    /// is. Quitting the app was the only way out, which is the same bug one
+    /// screen further along.
+    func testReadinessLearnedFromTheDiskStartsPreparation() async throws {
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        // This run starts before the download, exactly as a wiped Mac does.
+        let state = makeState()
+        for _ in 0..<100 {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        var prepares = await recognizer.prepares
+        XCTAssertEqual(prepares, 0, "there is nothing on disk to prepare yet")
+
+        // The files become usable, and the app learns it by looking at the disk.
+        try installModelMarker()
+        await state.refreshModelState()
+
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertTrue(
+            state.isEngineReady,
+            "a usable model with a cold engine is a state the app leaves by itself"
+        )
+        XCTAssertTrue(
+            state.hasEngineBeenReady,
+            "the first dictation has something to recognize with"
+        )
+        prepares = await recognizer.prepares
+        XCTAssertGreaterThan(prepares, 0)
     }
 
     func testEveryReadyRecordingStartRefreshesAcceleratorResidency() async throws {

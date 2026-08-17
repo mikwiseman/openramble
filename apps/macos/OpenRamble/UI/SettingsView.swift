@@ -281,7 +281,7 @@ private struct RecognitionSettings: View {
             Button("Delete Model", role: .destructive) { state.deleteModel() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Dictation stops working until you download the model again — that's another \(state.remainingDownloadMegabytes == 0 ? 586 : state.remainingDownloadMegabytes) MB over the network.")
+            Text("Dictation stops working until you download the model again — that's another \(state.fullModelDownloadMegabytes) MB over the network.")
         }
     }
 }

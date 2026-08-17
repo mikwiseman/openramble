@@ -205,14 +205,7 @@ struct OnboardingView: View {
                     Label("Speech model", systemImage: "waveform")
                         .font(.headline)
                     ModelStatusView(
-                        status: ModelStatus.make(
-                            state: state.modelState,
-                            preparation: state.enginePreparation,
-                            place: .onboarding,
-                            downloadMegabytes: state.remainingDownloadMegabytes,
-                            isEngineReady: state.isEngineReady,
-                            isPreparingEngine: state.isPreparingEngine
-                        ),
+                        status: modelCard,
                         install: state.installModel,
                         cancel: state.cancelModelInstall,
                         delete: state.deleteModel
@@ -259,6 +252,20 @@ struct OnboardingView: View {
         }
     }
 
+    /// What the app has to say about the model, written once for both steps
+    /// that show it. The setup step draws the whole card; the try-out step
+    /// draws its one-line form while there is something to say.
+    private var modelCard: ModelStatus {
+        ModelStatus.make(
+            state: state.modelState,
+            preparation: state.enginePreparation,
+            place: .onboarding,
+            downloadMegabytes: state.remainingDownloadMegabytes,
+            isEngineReady: state.isEngineReady,
+            isPreparingEngine: state.isPreparingEngine
+        )
+    }
+
     private var needsAccessibilityRepair: Bool {
         switch state.accessibilityState {
         case .repairRequired, .failed:
@@ -290,6 +297,29 @@ struct OnboardingView: View {
                 title: "Try it",
                 subtitle: "Hold \(state.hotkey.title), say a few words, let go — the text lands in the field below."
             )
+
+            // The header has just asked for a key press. If the model cannot
+            // answer one yet — the one-time compile after a fresh install, or a
+            // model that was deleted from Settings meanwhile — that belongs on
+            // the screen, with the same live counter the setup step shows,
+            // rather than only in the toast that appears after the person has
+            // already pressed and seen nothing happen. A loaded engine, and a
+            // resting one whose comeback is that very press, say nothing.
+            if let line = modelCard.setupLine {
+                HStack(spacing: 8) {
+                    if state.isPreparingEngine {
+                        ProgressView()
+                            .controlSize(.small)
+                            .accessibilityHidden(true)
+                    }
+                    Text(line)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(modelCard.announcement)
+            }
 
             Picker("Dictation key", selection: $state.hotkey) {
                 ForEach(DictationHotkey.allCases, id: \.self) { key in
@@ -393,18 +423,9 @@ struct OnboardingView: View {
     }
 
     private var navigationBlockReason: String? {
-        isDictationBusy ? "Finish or cancel the current dictation first." : blockReason
-    }
-
-    private var blockReason: String? {
         OnboardingGate.blockReason(
             step: step,
-            microphoneGranted: state.microphoneGranted,
-            accessibilityGranted: state.accessibilityGranted,
-            modelState: state.modelState,
-            engineReady: state.isEngineReady,
-            enginePreparing: state.isPreparingEngine,
-            trialSucceeded: trialSucceeded
+            conditions: OnboardingConditions(state: state, trialSucceeded: trialSucceeded)
         )
     }
 
@@ -413,12 +434,7 @@ struct OnboardingView: View {
             && !trial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private var isDictationBusy: Bool {
-        switch state.dictationState {
-        case .preparing, .listening, .transcribing, .inserting: true
-        case .idle: false
-        }
-    }
+    private var isDictationBusy: Bool { state.dictationState.isBusy }
 
     private func forward() {
         guard let next = step.next else { return }
@@ -445,6 +461,38 @@ struct OnboardingView: View {
         // The window closes here. Otherwise the screen would remain blank
         // frame after configuration is complete.
         dismiss()
+    }
+}
+
+extension OnboardingConditions {
+    /// The only place onboarding reads its facts off the running app.
+    ///
+    /// One reader, on purpose. The gate is pure and its tests are cheap, but a
+    /// test that assembles the arguments itself is checking a screen of its own
+    /// invention: the engine requirement that stranded 0.8.1 and 0.8.2 could be
+    /// put back with a defaulted argument, and every test that filled in its own
+    /// arguments would have stayed green while the app deadlocked. A new fact
+    /// has to be added to `OnboardingConditions` and picked up here — where the
+    /// tests are standing too.
+    @MainActor
+    init(state: AppState, trialSucceeded: Bool) {
+        self.init(
+            microphoneGranted: state.microphoneGranted,
+            accessibilityGranted: state.accessibilityGranted,
+            modelState: state.modelState,
+            isDictationBusy: state.dictationState.isBusy,
+            trialSucceeded: trialSucceeded,
+            // Asked of the same type the key press asks, with the same
+            // arguments. Two authors for one sentence is how the setup screen
+            // came to contradict the card standing above it.
+            dictationRefusal: DictationReadiness.reason(
+                accessibilityGranted: state.accessibilityGranted,
+                microphoneGranted: state.microphoneGranted,
+                modelState: state.modelState,
+                isEngineReady: state.isEngineReady,
+                engineWasReadyBefore: state.hasEngineBeenReady
+            )
+        )
     }
 }
 

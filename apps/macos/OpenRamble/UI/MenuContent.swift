@@ -153,10 +153,12 @@ struct MenuContent: View {
             isEngineReady: state.isEngineReady,
             isPreparingEngine: state.isPreparingEngine
         )
-        if state.modelState.isReady, !state.isEngineReady {
-            Text("Preparing the model for dictation…")
-        } else if !state.modelState.isReady {
-            Text(model.progressLabel.map { "\(model.title) — \($0)" } ?? model.title)
+        // What to say, and whether to say anything, is the card type's decision
+        // — see `ModelStatus.setupLine`. The menu used to answer that question
+        // a second time and reached a different answer than the card standing
+        // next to it.
+        if let line = model.setupLine {
+            Text(line)
 
             ForEach(model.actions.filter { $0 != .delete }, id: \.self) { action in
                 Button(model.title(for: action)) {

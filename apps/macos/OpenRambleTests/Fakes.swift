@@ -813,6 +813,12 @@ final class TransientWarmupASREngine: ASREngineAdapting, VocabularyBoostCapable,
 actor ReadinessControlledRecognizer: DictationRecognizing {
     private var prepared = false
     private(set) var warmUps = 0
+    /// How many times the engine was actually asked to load the model.
+    ///
+    /// Separate from `warmUps`: the reported first-run stall is precisely the
+    /// case where nothing ever asked, so "was it asked at all" has to be
+    /// observable on its own.
+    private(set) var prepares = 0
     private var observer: AsyncStream<Bool>.Continuation?
 
     var isPrepared: Bool { prepared }
@@ -825,7 +831,7 @@ actor ReadinessControlledRecognizer: DictationRecognizing {
         }
     }
 
-    func prepare(modelDirectory: URL) async throws {}
+    func prepare(modelDirectory: URL) async throws { prepares += 1 }
     func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {}
 
     func transcribe(fileURL: URL, languageHint: String?) async throws -> ASRResult {
