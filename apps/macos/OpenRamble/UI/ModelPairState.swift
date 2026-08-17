@@ -56,14 +56,25 @@ enum ModelPairState {
         return .notInstalled
     }
 
-    /// How many bytes are left to download: the full amount for a clean installation,
-    /// only the remainder is for collection after updating the application.
+    /// How many bytes the download button will actually fetch: the full amount
+    /// for a clean installation, only the remainder for collection after
+    /// updating the application.
+    ///
+    /// `engineRejectedModels` is asked for rather than defaulted, because
+    /// forgetting it is exactly how the screen came to offer "Redownload Model
+    /// — 0 MB". After Core ML refuses an intact copy, both stores still report
+    /// `.ready`, so nothing is missing from disk — and yet `installModel`
+    /// repairs both models, which is a full download. The number was patched at
+    /// its two call sites with `== 0 ? 586`, a default that hid a wrong answer
+    /// instead of computing the right one.
     static func remainingBytes(
         main: ModelState,
         vocabulary: ModelState,
         mainTotalBytes: Int64,
-        vocabularyTotalBytes: Int64
+        vocabularyTotalBytes: Int64,
+        engineRejectedModels: Bool
     ) -> Int64 {
+        if engineRejectedModels { return mainTotalBytes + vocabularyTotalBytes }
         var bytes: Int64 = 0
         if !main.isReady { bytes += mainTotalBytes }
         if !vocabulary.isReady { bytes += vocabularyTotalBytes }

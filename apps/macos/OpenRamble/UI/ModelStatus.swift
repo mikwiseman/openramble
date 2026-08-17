@@ -63,6 +63,25 @@ struct ModelStatus: Equatable {
     /// How much the install/repair button will download - the full volume or the remainder.
     var downloadMegabytes: Int = 586
 
+    /// The whole card in one line, for the places that have room for one — the
+    /// menu and the try-out step — or nothing at all.
+    ///
+    /// A success tone means the model asks nothing of anyone: the files are
+    /// usable and, whether the engine is loaded or resting, the next key press
+    /// works. Everything else — missing, downloading, verifying, actually
+    /// preparing, damaged, failing, being deleted — either needs the person or
+    /// is visibly working, and says so.
+    ///
+    /// The menu used to write this line itself, from a ready model and a cold
+    /// engine alone, and so it announced preparation of an engine residency had
+    /// put to rest with nothing running. That is the setup screen's own bug on a
+    /// second surface. One author for the sentence, and there is no second
+    /// opinion to drift.
+    var setupLine: String? {
+        guard tone != .success else { return nil }
+        return progressLabel.map { "\(title) — \($0)" } ?? title
+    }
+
     func title(for action: Action) -> String {
         action.title(downloadMegabytes: downloadMegabytes)
     }

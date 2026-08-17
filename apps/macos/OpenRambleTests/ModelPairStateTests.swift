@@ -89,23 +89,37 @@ final class ModelPairStateTests: XCTestCase {
         XCTAssertEqual(
             ModelPairState.remainingBytes(
                 main: .notInstalled, vocabulary: .notInstalled,
-                mainTotalBytes: 480, vocabularyTotalBytes: 100
+                mainTotalBytes: 480, vocabularyTotalBytes: 100,
+                engineRejectedModels: false
             ),
             580
         )
         XCTAssertEqual(
             ModelPairState.remainingBytes(
                 main: .ready(directory: directory), vocabulary: .notInstalled,
-                mainTotalBytes: 480, vocabularyTotalBytes: 100
+                mainTotalBytes: 480, vocabularyTotalBytes: 100,
+                engineRejectedModels: false
             ),
             100
         )
         XCTAssertEqual(
             ModelPairState.remainingBytes(
                 main: .ready(directory: directory), vocabulary: .repairRequired("x"),
-                mainTotalBytes: 480, vocabularyTotalBytes: 100
+                mainTotalBytes: 480, vocabularyTotalBytes: 100,
+                engineRejectedModels: false
             ),
             100
+        )
+        // Core ML refused an intact copy: nothing is missing from disk, and the
+        // repair still downloads both models. Asking what is missing gives 0,
+        // which is what the "Redownload Model — 0 MB" button was saying.
+        XCTAssertEqual(
+            ModelPairState.remainingBytes(
+                main: .ready(directory: directory), vocabulary: .ready(directory: directory),
+                mainTotalBytes: 480, vocabularyTotalBytes: 100,
+                engineRejectedModels: true
+            ),
+            580
         )
     }
 }
