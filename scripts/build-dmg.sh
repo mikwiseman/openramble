@@ -239,6 +239,39 @@ if nm -u "$RUNTIME_BINARY" | grep -qE 'curl_easy|NSURLSession|CFNetwork|_socket$
   exit 1
 fi
 
+# SwiftPM extracts an XCFramework's macOS slice with its symlinks flattened:
+# the binary, Headers, Modules and Resources end up as real copies both at the
+# framework root and under Versions/A, and Versions/Current becomes a real
+# directory. codesign cannot classify the result — "bundle format is ambiguous
+# (could be app or framework)" — and refuses to verify the app that contains it.
+# Restore the layout Apple's framework format actually specifies before anything
+# thins or signs it.
+echo "→ Restoring the inference runtime's framework layout"
+/usr/bin/python3 - "$APP_PATH/Contents/Frameworks/CTranscribe.framework" <<'NORMALIZE'
+import os, shutil, sys
+
+framework = sys.argv[1]
+versions = os.path.join(framework, "Versions")
+current = os.path.join(versions, "Current")
+if not os.path.isdir(os.path.join(versions, "A")):
+    sys.exit(0)
+if os.path.isdir(current) and not os.path.islink(current):
+    shutil.rmtree(current)
+if not os.path.islink(current):
+    os.symlink("A", current)
+for item in os.listdir(os.path.join(versions, "A")):
+    if item == "_CodeSignature":
+        continue
+    top = os.path.join(framework, item)
+    if os.path.islink(top):
+        continue
+    if os.path.isdir(top):
+        shutil.rmtree(top)
+    elif os.path.exists(top):
+        os.remove(top)
+    os.symlink(os.path.join("Versions", "Current", item), top)
+NORMALIZE
+
 # Binary targets dependencies can arrive universal, even when our target
 # builds arm64. We remove someone else's x86_64 before the signature; lack of arm64 - hard
 # failure, not a reason to leave a mixed artifact.
