@@ -2,13 +2,32 @@ import AppKit
 import DictationCore
 import SwiftUI
 
+/// Termination hook.
+///
+/// SwiftUI's `App` has no "about to quit" callback, and the engine must be
+/// released before the process exits — the inference runtime tears its Metal
+/// device down from a static destructor, and doing that with a model still
+/// loaded aborts instead of exiting.
+private final class TerminationObserver: NSObject, NSApplicationDelegate {
+    weak var state: AppState?
+
+    func applicationWillTerminate(_ notification: Notification) {
+        state?.releaseEngineBeforeTermination()
+    }
+}
+
 @main
 struct OpenRambleApp: App {
     @StateObject private var state = AppState()
+    @NSApplicationDelegateAdaptor(TerminationObserver.self) private var termination
     @AppStorage("onboardingCompleted") private var onboardingCompleted = false
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
+        // The adaptor creates the delegate before any scene exists, so it
+        // cannot be handed the state at construction.
+        let _ = { termination.state = state }()
+
         // The application lives in the menu bar: dictation does not have its own
         // window, it works on top of where the user is now.
         MenuBarExtra {

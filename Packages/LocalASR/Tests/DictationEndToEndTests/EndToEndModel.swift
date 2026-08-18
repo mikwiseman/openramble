@@ -28,6 +28,14 @@ actor EndToEndModel {
         return value
     }
 
+    /// Give the weights back before the process exits. See
+    /// `EndToEndModelTeardown`.
+    func releaseForTermination() async {
+        guard case let .ready(transcriber) = resolved else { return }
+        await transcriber.unload()
+        resolved = nil
+    }
+
     private static func resolve() async -> Availability {
         let manifest: ModelManifest
         do {
@@ -69,8 +77,39 @@ actor EndToEndModel {
     }
 }
 
+/// Release the shared engine before the test process exits.
+///
+/// The runtime destroys its Metal device from a static destructor at `exit()`.
+/// A model still loaded when that runs is torn down with live buffers under it
+/// and the runtime aborts — the whole suite passes and the process then dies
+/// with signal 6, which is exactly how the release build failed. The
+/// application does the same thing on quit; this is the test-side half of the
+/// same rule.
+final class EndToEndModelTeardown: NSObject, XCTestObservation {
+    // XCTest refuses observer registration off the main thread, and the first
+    // caller here is an async test. Hopping is enough: the observer only has to
+    // exist before the bundle finishes, which is far later than the first test.
+    private static let installed: Void = {
+        DispatchQueue.main.async {
+            XCTestObservationCenter.shared.addTestObserver(EndToEndModelTeardown())
+        }
+    }()
+
+    static func install() { _ = installed }
+
+    func testBundleDidFinish(_ testBundle: Bundle) {
+        let done = DispatchSemaphore(value: 0)
+        Task.detached {
+            await EndToEndModel.shared.releaseForTermination()
+            done.signal()
+        }
+        _ = done.wait(timeout: .now() + 10)
+    }
+}
+
 /// Take the loaded model or explicitly skip the test.
 func requireEndToEndTranscriber() async throws -> LocalTranscriber {
+    EndToEndModelTeardown.install()
     switch await EndToEndModel.shared.availability() {
     case let .ready(transcriber):
         return transcriber

@@ -57,8 +57,16 @@ final class TermDictionaryEndToEndTests: EndToEndScenario {
             ),
             Probe(
                 "\u{041E}\u{0448}\u{0438}\u{0431}\u{043A}\u{0430} \u{043F}\u{0440}\u{0438}\u{043B}\u{0435}\u{0442}\u{0435}\u{043B}\u{0430} \u{0432} Sentry, \u{043F}\u{043E}\u{0441}\u{043C}\u{043E}\u{0442}\u{0440}\u{0438} \u{043B}\u{043E}\u{0433}\u{0438} \u{0432} Docker \u{0438} \u{0432} Kubernetes.",
-                converted: ["Docker", "Kubernetes"],
+                converted: [],
                 gaps: [
+                    // Both used to arrive in Latin because a second acoustic
+                    // model biased the recognizer toward the dictionary. That
+                    // model went with the Core ML engine, and the text-level
+                    // dictionary cannot reach these: it matches what the
+                    // recognizer wrote, and the recognizer no longer writes
+                    // anything resembling the term.
+                    ("Docker", "\u{0414}\u{0430}\u{043A}\u{0430}\u{0440}\u{044B}"),
+                    ("Kubernetes", "\u{041A}\u{044E}\u{0431}\u{0435}\u{0440}\u{043D}\u{0438}\u{0446}"),
                     // Conscious refusal, recorded in docs/benchmarks.md: “center” -
                     // an ordinary Russian word, and the replacement would break “in the city center.”
                     ("Sentry", "\u{0446}\u{0435}\u{043D}\u{0442}\u{0440}\u{0435}"),

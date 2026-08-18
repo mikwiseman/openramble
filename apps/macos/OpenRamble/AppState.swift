@@ -1361,6 +1361,28 @@ public final class AppState: ObservableObject {
         pingEngine(deadline: .seconds(30))
     }
 
+    /// Release the engine before the process exits.
+    ///
+    /// The inference runtime destroys its Metal device from a static
+    /// destructor at `exit()`. If the model is still loaded when that runs, the
+    /// device is torn down with live buffers under it and the runtime aborts —
+    /// so a quit that should be silent produces a crash report instead, every
+    /// time, on a Mac that was working perfectly.
+    ///
+    /// Unloading here is also simply correct: nearly a gigabyte goes back to
+    /// the system at the moment the person asked the app to go away. The wait
+    /// is bounded because quitting must not hang on a wedged engine; a killed
+    /// process at least fails the same way it does today rather than aborting.
+    public func releaseEngineBeforeTermination(timeout: Duration = .seconds(3)) {
+        guard let transcriber else { return }
+        let done = DispatchSemaphore(value: 0)
+        Task.detached {
+            await transcriber.unload()
+            done.signal()
+        }
+        _ = done.wait(timeout: .now() + .milliseconds(Int(timeout.components.seconds * 1000)))
+    }
+
     /// Show the support folder in Finder.
     ///
     /// Kept recordings, downloaded models — everything the app writes lives

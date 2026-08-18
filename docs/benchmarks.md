@@ -313,3 +313,34 @@ entire story the 0.8.0 residency work is built around.
   because of a since-fixed engine-path bug in the script; the live-captured
   15.56 s cold / 0.11 s warm pair stands as the cliff evidence until the
   next exclusive window.
+
+## transcribe.cpp engine (2026-08-18, Apple M4, macOS 26.4)
+
+Measured through the product path — `DictationLatencyTests`, model on disk,
+warm — against the Core ML numbers recorded above for the same fixtures.
+
+| Audio | Core ML (vocab on / off) | transcribe.cpp | |
+|---|---:|---:|---|
+| 4.08 s | 0.14 / 0.127 s | **0.055 s** | 2.5x faster |
+| 36.63 s | 0.54 / 0.352 s | **0.425 s** | comparable |
+| 183.91 s | — / 1.43 s | **3.389 s** | **2.4x slower** |
+
+The short path, which is what nearly every dictation is, got materially
+faster; long-form got materially slower and is still 54x faster than real
+time. A three-minute take costs about 3.4 s instead of about 1.4 s.
+
+Resident memory is 976 MB against 2.41 GB, a warm model load is 0.29 s against
+0.15 s warm and 13.5-16 s after the OS purged the Neural Engine cache, and a
+half-second take costs 29 ms instead of a full padded 15-second window.
+
+### Terms inside Russian speech
+
+The starter dictionary reaches 22 of its 24 terms in Latin on real model
+output. `Docker` and `Kubernetes` no longer do: they used to arrive because a
+second Core ML model biased the recognizer acoustically, and the text-level
+dictionary cannot reach them — it matches what the recognizer wrote, and the
+recognizer now writes "Дакары" and "Кюберниц". Both are recorded as measured
+gaps in `TermDictionaryEndToEndTests` rather than removed from the promise.
+
+One synthetic English fixture also regressed: the engine writes "and it" where
+the old one wrote "send it", recorded the same way.
