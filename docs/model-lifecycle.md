@@ -1,7 +1,7 @@
 # Model lifecycle
 
-OpenRamble downloads two pinned Core ML model distributions after explicit
-user action: the main Parakeet TDT model and the vocabulary prompt model.
+OpenRamble downloads one pinned model after explicit user action: Parakeet TDT
+0.6B v3, as a single GGUF file.
 
 Each committed manifest defines:
 
@@ -15,8 +15,10 @@ the complete revision is promoted atomically and marked ready. Interrupted,
 partial, oversized, missing, or corrupted downloads are never treated as an
 installed model.
 
-Changing a model revision requires a regenerated manifest, updated attribution,
-package tests, offline runtime checks, and a documented benchmark comparison.
+Changing a model revision — or its quantization; the repository also publishes
+F32, F16, Q6_K, Q5_K_M and Q4_K_M builds of the same weights — requires a
+regenerated manifest, updated attribution, package tests, offline runtime
+checks, and a documented comparison.
 Changing model quality does not block unrelated application releases, but no
 quality claim should be made without matching evidence.
 
@@ -25,51 +27,37 @@ even when application release history is cleaned up.
 
 ## Engine residency and reload economics
 
-The loaded engine costs about 2.4 GB of resident memory; the reload after
-giving it back is dominated by CoreML/ANE program specialization, whose OS
-cache (`com.apple.e5rt.e5bundlecache`) macOS purges under memory pressure.
-Measured on an M4: about 0.1–0.2 s to reload while that cache is intact,
-13.5–16 s after a purge. Every rule below exists to keep that second number
-away from the person's dictation.
+The engine is a single GGUF file of about 740 MB, run on Metal by
+transcribe.cpp. Measured on an M4: **976 MB peak process memory**, a warm model
+load of **0.29 s**, and a first-ever load of about 7 s while the OS builds the
+Metal library it then caches. Recognition runs at RTF 0.02–0.11, and a
+half-second take costs about 29 ms.
 
-When the engine's memory is given back:
+None of that needs managing, which is the point of the numbers being here.
 
-- **Critical memory pressure** always evicts a safely idle engine
-  (zero-settings behavior, unchanged).
-- **The "Unload model" setting** (Behavior tab; Never / Immediately /
-  2 / 5 / 10 / 15 minutes / 1 hour, default "After 5 minutes") returns the
-  memory after that much dictation-idle time. "Never" is the pre-0.8
-  always-resident behavior.
+The engine this replaced cost 2.4 GB resident and, far worse, spent its load
+time on Core ML program specialization for the Neural Engine — cached by the OS
+in `com.apple.e5rt.e5bundlecache`, a cache macOS purges exactly when memory is
+short. A purged cache made the next load take **13.5–16 s**. The engine was
+therefore at its slowest precisely when the machine was already struggling, and
+its own 2.4 GB made that struggle likelier.
 
-What an unload does: the worker process stays alive and drops its models
-(protocol v2 `unloadModels`), so a comeback pays no process spawn, dyld, or
-framework init. A worker that cannot answer the unload verb in five seconds
-is killed by exact PID, as before.
+Almost every lifecycle rule this document used to describe existed to keep that
+number away from a person mid-dictation: idle-unload timers, memory-pressure
+eviction, proactive rewarm with settle windows, a preparation phase in the UI, a
+wait-and-insert path at stop, and jittered respawn backoff for a worker that
+jetsam had killed. They are gone, because their cause is.
 
-When the engine comes back:
+What remains is simple enough to state in full:
 
-- the dictation key press, before any readiness guard — the reload rides
-  under the voice (app activation and wake are gentler hints);
-- pressure easing to normal — immediately; easing to warning — after a
-  10-second settle window; never proactively under critical pressure;
-- at stop, a still-loading engine is waited out (up to 25 s, well under the
-  worker's 30 s watchdog) and the words are inserted normally; the recovery
-  file remains only for genuinely wedged loads. Nothing is ever silently
-  dropped. Once such a wait passes a quarter of a second the panel says
-  "Waking the model…" instead of "Transcribing…", because the two are not the
-  same event and the difference is most visible on a short take, which has no
-  speech for the load to hide under.
+- the model loads when the app becomes ready, and stays loaded;
+- a stop-time load, if one is somehow still in flight, is waited out and the
+  words are inserted normally — the panel says "Waking the model…" rather than
+  claiming to transcribe;
+- nothing is unloaded on a timer.
 
-Crash recovery also respects pressure: a worker killed under critical
-pressure is respawned only after a jittered 5–10 s recheck shows the tier
-eased, and never ahead of a real keypress-driven prepare.
-
-Encoder placement stays `.automatic` (`MLComputeUnits.all`): on the measured
-M4 it matches the Neural Engine's ~25 ms encoder against the GPU's ~87 ms.
-Re-pinning `.gpu` (the 0.5.0 approach) would bound the worst cold reload near
-7 s but slow every dictation 2–4×; with the reload economics above, the rare
-purged-cache worst case is a visible bounded wait that still delivers the
-words. `WAI_ASR_ENCODER_PLACEMENT` remains an asr-bench lane and is never
-read by the shipping app. `scripts/bench-cold-reload.sh` reproduces all of
-these numbers, including the cache-purge cliff via an APFS clone at a fresh
-path.
+Encoder placement is pinned to Metal rather than left to the OS. That costs a
+little in the best case and removes an entire class of variance: with an
+automatic placement the same recording could take a very different path
+depending on what else on the Mac wanted the accelerator, which is not
+something anyone can explain to the person waiting.

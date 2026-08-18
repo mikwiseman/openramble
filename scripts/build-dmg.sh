@@ -264,19 +264,27 @@ done < <(find "$APP_PATH" -type f)
 # with which the application was just built.
 echo "→ Adding full third-party licenses"
 RESOURCES="$APP_PATH/Contents/Resources"
-FLUID_LICENSES="$PACKAGE_CACHE/checkouts/FluidAudio"
 SPARKLE_LICENSES="$PACKAGE_CACHE/checkouts/Sparkle"
+# The runtime ships its licences inside the XCFramework it publishes: its own,
+# plus the vendored ggml and miniz. They travel with the binary, so they are
+# taken from the artifact actually linked rather than from a checkout.
+RUNTIME_LICENSES=$(find "$PWD/Packages/LocalASR/.build/artifacts" \
+  -maxdepth 4 -type d -name "TranscribeCpp.xcframework" -print -quit)
+[[ -n "$RUNTIME_LICENSES" ]] || {
+  echo "The inference runtime artifact was not resolved; cannot collect its licences." >&2
+  exit 1
+}
 for source in \
-  "$FLUID_LICENSES/LICENSE" \
-  "$FLUID_LICENSES/ThirdPartyLicenses/fastcluster-LICENSE.md" \
-  "$FLUID_LICENSES/ThirdPartyLicenses/vbx-LICENSE.md" \
+  "$RUNTIME_LICENSES/LICENSE" \
+  "$RUNTIME_LICENSES/LICENSE.ggml" \
+  "$RUNTIME_LICENSES/LICENSE.miniz" \
   "$SPARKLE_LICENSES/LICENSE"
 do
   [[ -s "$source" ]] || { echo "No license in resolved dependency: $source" >&2; exit 1; }
 done
-cp "$FLUID_LICENSES/LICENSE" "$RESOURCES/FluidAudio-Apache-2.0.txt"
-cp "$FLUID_LICENSES/ThirdPartyLicenses/fastcluster-LICENSE.md" "$RESOURCES/FluidAudio-fastcluster-BSD.txt"
-cp "$FLUID_LICENSES/ThirdPartyLicenses/vbx-LICENSE.md" "$RESOURCES/FluidAudio-vbx-Apache-2.0.txt"
+cp "$RUNTIME_LICENSES/LICENSE" "$RESOURCES/transcribe-cpp-MIT.txt"
+cp "$RUNTIME_LICENSES/LICENSE.ggml" "$RESOURCES/ggml-MIT.txt"
+cp "$RUNTIME_LICENSES/LICENSE.miniz" "$RESOURCES/miniz-MIT.txt"
 cp "$SPARKLE_LICENSES/LICENSE" "$RESOURCES/Sparkle-LICENSE.txt"
 
 # CC BY 4.0 text has been submitted to the repository: the build should not require a network.

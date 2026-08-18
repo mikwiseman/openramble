@@ -40,27 +40,22 @@ The user downloads them explicitly from the app.
 
 | Component | Version | License | Purpose |
 |---|---|---|---|
-| [FluidAudio](https://github.com/FluidInference/FluidAudio) | 0.15.5 | Apache 2.0 | Core ML Parakeet runtime |
+| [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) | 0.2.0 | MIT | GGUF speech-recognition runtime on Metal |
 | [Sparkle](https://sparkle-project.org) | 2.9.4 | MIT | Application updates |
 
-The dependencies are pinned by immutable commit:
+The dependencies are pinned immutably:
 
-- FluidAudio: OpenRamble fork `955af8b81f4023a353fa84fe096078388b3eb023`,
-  based on upstream `19600a485baa4998812e4654b70d2bab8f2c9949`
+- transcribe.cpp: the `TranscribeCpp.xcframework.zip` asset of release `v0.2.0`,
+  SHA-256 `5fffd4557d561ab6e45edd2445978682a513c1cd030c5a330c8519c5b27b64d9`
 - Sparkle: `b6496a74a087257ef5e6da1c5b29a447a60f5bd7`
 
-The DMG includes complete license texts as `FluidAudio-Apache-2.0.txt` and
-`Sparkle-LICENSE.txt`.
+transcribe.cpp vendors two libraries, whose notices ship with it:
 
-FluidAudio also contains code from:
+- ggml, MIT License — the tensor library the runtime is built on;
+- miniz, MIT License — used for reading model archives.
 
-- fastcluster, copyright 2011 Daniel Müllner and later changes copyright
-  Google Inc., BSD 2-Clause License;
-- VBx, copyright 2021–2024 BUT Speech@FIT, Apache License 2.0.
-
-OpenRamble does not use their speaker-separation features, but the code is
-present in the distributed framework, so their full notices are included in the
-DMG as `FluidAudio-fastcluster-BSD.txt` and `FluidAudio-vbx-Apache-2.0.txt`.
+The DMG includes the complete license texts as `transcribe-cpp-MIT.txt`,
+`ggml-MIT.txt`, `miniz-MIT.txt` and `Sparkle-LICENSE.txt`.
 
 The CC BY 4.0 text for the model weights is included as
 `Parakeet-CC-BY-4.0.txt`.
