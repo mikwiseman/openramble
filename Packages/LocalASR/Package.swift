@@ -28,11 +28,27 @@ let package = Package(
         ),
     ],
     targets: [
+        // The transcribe.cpp inference runtime, as the prebuilt XCFramework
+        // published with its release. Pinned by exact URL and checksum for the
+        // same reason every other dependency here is: a build must not be able
+        // to change what it links without the change being visible in a diff.
+        //
+        // The binary was audited before adoption. Its only Objective-C class
+        // references are Metal types plus NSLock/NSString/NSURL, its only NSURL
+        // selector is `fileURLWithPath:`, and it links Metal, MetalKit,
+        // Accelerate, Foundation and libc++ — no CFNetwork, no sockets, no TLS.
+        // `scripts/check-network-surface.sh` re-runs that audit on every check.
+        .binaryTarget(
+            name: "CTranscribe",
+            url: "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.2.0/TranscribeCpp.xcframework.zip",
+            checksum: "5fffd4557d561ab6e45edd2445978682a513c1cd030c5a330c8519c5b27b64d9"
+        ),
         .target(
             name: "LocalASR",
             dependencies: [
                 .product(name: "DictationCore", package: "DictationCore"),
                 .product(name: "FluidAudio", package: "FluidAudio"),
+                "CTranscribe",
             ],
             resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v6)]
