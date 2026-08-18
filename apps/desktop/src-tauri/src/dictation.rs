@@ -262,6 +262,19 @@ impl Dictation {
 mod tests {
     use super::*;
 
+    /// Quitting calls this from the tray menu, and the exit handler calls it
+    /// again. Both paths exist on purpose — a person can quit either way — so
+    /// the second call must be harmless rather than a double free of a model.
+    #[test]
+    fn shutdown_is_safe_with_no_engine_and_safe_twice() {
+        let Some(dictation) = Dictation::new() else {
+            eprintln!("no support directory; skipping");
+            return;
+        };
+        dictation.shutdown();
+        dictation.shutdown();
+    }
+
     /// A held key with a silent microphone must read as no audio, not as a
     /// take as long as the hold.
     #[test]
