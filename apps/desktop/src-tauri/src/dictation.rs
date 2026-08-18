@@ -13,7 +13,6 @@ use ramble_model::{Manifest, ModelState, ModelStore};
 use ramble_text::pipeline::TextPipeline;
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
-use std::time::Instant;
 
 const SHIPPING_MANIFEST: &str =
     include_str!("../../../../Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json");
@@ -46,10 +45,24 @@ pub fn models_root() -> Option<PathBuf> {
     })
 }
 
+/// How much audio a take actually contains.
+///
+/// Deliberately not the wall clock. The two differ in exactly the case the
+/// silent-input rule exists for: a muted or occupied microphone returns nothing
+/// while the clock keeps running, and by the clock that reads as a perfectly
+/// good three-second take. It would go to the engine, come back empty, and the
+/// person would be told nothing at all.
+fn recorded_duration(sample_count: usize, rate: u32) -> std::time::Duration {
+    if rate == 0 {
+        return std::time::Duration::ZERO;
+    }
+    std::time::Duration::from_secs_f64(sample_count as f64 / rate as f64)
+}
+
 /// The running dictation service.
 pub struct Dictation {
     state: Mutex<DictationState>,
-    capture: Mutex<Option<(Capture, Instant)>>,
+    capture: Mutex<Option<Capture>>,
     /// Loaded on the first dictation and kept.
     ///
     /// Kept, emphatically. Unloading between takes is what made the Mac slow and
@@ -120,8 +133,7 @@ impl Dictation {
                 *self
                     .capture
                     .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner()) =
-                    Some((capture, Instant::now()));
+                    .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(capture);
                 *self.state() = DictationState::Listening;
                 Ok(())
             }
@@ -141,7 +153,7 @@ impl Dictation {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .take();
-        let Some((capture, started)) = taken else {
+        let Some(capture) = taken else {
             *self.state() = DictationState::Idle;
             return Outcome::DroppedSilently;
         };
@@ -149,7 +161,15 @@ impl Dictation {
         *self.state() = DictationState::Transcribing;
         let rate = capture.sample_rate();
         let (samples, truncated) = capture.finish();
-        let recorded = started.elapsed();
+
+        // How much audio there actually is, not how long the key was down.
+        //
+        // These differ in exactly the case the silent-input rule exists for: a
+        // muted or occupied microphone returns nothing while the clock keeps
+        // running. Measured by the clock, that reads as a perfectly good
+        // three-second take and goes to the engine, which returns nothing, and
+        // the person is told nothing at all.
+        let recorded = recorded_duration(samples.len(), rate);
 
         let finish = |outcome| {
             *self.state() = DictationState::Idle;
@@ -241,6 +261,19 @@ impl Dictation {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A held key with a silent microphone must read as no audio, not as a
+    /// take as long as the hold.
+    #[test]
+    fn a_microphone_that_gave_nothing_reads_as_nothing() {
+        assert_eq!(recorded_duration(0, 48_000), std::time::Duration::ZERO);
+        assert_eq!(
+            recorded_duration(48_000, 48_000),
+            std::time::Duration::from_secs(1)
+        );
+        // A device that reported no rate cannot divide; zero, not a panic.
+        assert_eq!(recorded_duration(1_000, 0), std::time::Duration::ZERO);
+    }
 
     #[test]
     fn the_models_root_is_per_platform_and_absolute() {

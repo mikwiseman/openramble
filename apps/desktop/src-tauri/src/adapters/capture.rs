@@ -68,9 +68,16 @@ impl TakeBuffer {
         self.samples.is_empty()
     }
 
-    pub fn take(&mut self) -> Vec<f32> {
+    /// Hand back the recording and whether it hit the ceiling, together.
+    ///
+    /// Together on purpose. These were two calls once, and taking the samples
+    /// reset the flag — so the truncation was read back as false every single
+    /// time and nobody was ever told their recording had been cut short. One
+    /// call cannot be made in the wrong order.
+    pub fn take(&mut self) -> (Vec<f32>, bool) {
+        let truncated = self.truncated;
         self.truncated = false;
-        std::mem::take(&mut self.samples)
+        (std::mem::take(&mut self.samples), truncated)
     }
 }
 
@@ -169,14 +176,10 @@ impl Capture {
 
     /// Stop and hand back what was recorded, at the engine's rate.
     pub fn finish(self) -> (Vec<f32>, bool) {
-        let (samples, truncated) = {
-            let mut buffer = self
-                .buffer
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner());
-            (buffer.take(), buffer.was_truncated())
-        };
-        (samples, truncated)
+        self.buffer
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .take()
     }
 }
 
@@ -233,8 +236,30 @@ mod tests {
     fn taking_the_recording_leaves_the_buffer_ready_for_the_next_one() {
         let mut buffer = TakeBuffer::new(16_000);
         buffer.push(&[1.0, 2.0]);
-        assert_eq!(buffer.take(), vec![1.0, 2.0]);
+        let (samples, truncated) = buffer.take();
+        assert_eq!(samples, vec![1.0, 2.0]);
+        assert!(!truncated);
         assert!(buffer.is_empty());
+        assert!(!buffer.was_truncated());
+    }
+
+    /// Taking the recording must report the truncation that happened, not the
+    /// state of the buffer afterwards.
+    ///
+    /// This was wrong: taking the samples cleared the flag first, so every
+    /// truncated recording was handed over as though it were complete and the
+    /// ceiling might as well not have existed.
+    #[test]
+    fn a_truncated_recording_still_says_so_when_it_is_taken() {
+        let mut buffer = TakeBuffer::new(1);
+        buffer.push(&vec![0.5; MAXIMUM_TAKE_SECONDS + 10]);
+        let (samples, truncated) = buffer.take();
+        assert_eq!(samples.len(), MAXIMUM_TAKE_SECONDS);
+        assert!(
+            truncated,
+            "the person must be told the recording was cut short"
+        );
+        // And the next take starts clean.
         assert!(!buffer.was_truncated());
     }
 
