@@ -52,6 +52,15 @@ public struct AppEnvironment {
     /// microphone has started.
     public var targetApplicationSnapshot: @Sendable () -> TargetApplication?
     public var overlay: any OverlayPresenting
+    /// Builds the attention sound, given the live "sounds enabled" reading.
+    ///
+    /// A factory rather than a value because the setting is read at play time,
+    /// and injected rather than constructed inside `setUp` because the
+    /// application sources are compiled straight into the test bundle: a
+    /// directly built `SystemSounds` meant every suite exercising a failure
+    /// path played Submarine through the speakers of whoever ran the tests.
+    /// A test must not be audible.
+    public var makeSounds: @MainActor (@escaping @MainActor () -> Bool) -> any Sounding
     /// Capture factory: recording folder, crash handler and live microphone samples
     /// used by the recording waveform.
     public var makeCapture: (
@@ -123,6 +132,8 @@ public struct AppEnvironment {
         inserter: any TextInserting,
         targetApplicationSnapshot: @escaping @Sendable () -> TargetApplication? = { nil },
         overlay: any OverlayPresenting,
+        makeSounds: @escaping @MainActor (@escaping @MainActor () -> Bool) -> any Sounding
+            = { SystemSounds(enabled: $0) },
         makeCapture: @escaping (
             URL,
             @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void,
@@ -158,6 +169,7 @@ public struct AppEnvironment {
         self.inserter = inserter
         self.targetApplicationSnapshot = targetApplicationSnapshot
         self.overlay = overlay
+        self.makeSounds = makeSounds
         self.makeCapture = makeCapture
         self.transcribe = transcribe
         self.recoveryInsertionDeadline = recoveryInsertionDeadline
@@ -203,6 +215,7 @@ public struct AppEnvironment {
             inserter: TextInserter(restoreReporter: restoreReporter),
             targetApplicationSnapshot: { activeApplication.current() },
             overlay: DictationOverlay(),
+            makeSounds: { SystemSounds(enabled: $0) },
             makeCapture: {
                 MicrophoneCapture(
                     directory: $0,
@@ -426,6 +439,7 @@ public final class AppState: ObservableObject {
     private let targetApplicationSnapshot: @Sendable () -> TargetApplication?
     private let clipboardRestoreReporter: ClipboardRestoreReporter?
     private let overlay: any OverlayPresenting
+    private let makeSounds: @MainActor (@escaping @MainActor () -> Bool) -> any Sounding
     private let makeCapture: (
         URL,
         @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void,
@@ -585,6 +599,7 @@ public final class AppState: ObservableObject {
         targetApplicationSnapshot = environment.targetApplicationSnapshot
         clipboardRestoreReporter = environment.clipboardRestoreReporter
         overlay = environment.overlay
+        makeSounds = environment.makeSounds
         makeCapture = environment.makeCapture
         transcribe = environment.transcribe
         recoveryInsertionDeadline = environment.recoveryInsertionDeadline
@@ -652,7 +667,7 @@ public final class AppState: ObservableObject {
     // MARK: - Assembly
 
     private func setUp() {
-        let sounds = SystemSounds(enabled: { [weak self] in self?.soundsEnabled ?? true })
+        let sounds = makeSounds { [weak self] in self?.soundsEnabled ?? true }
 
         do {
             let capture = makeCapture(
