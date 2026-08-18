@@ -1607,7 +1607,16 @@ final class AppStateTests: XCTestCase {
             try? await Task.sleep(for: .milliseconds(2))
         }
         XCTAssertEqual(state.recoveredRecordingCount, 1)
-        let notices = await overlay.notices
+        // The count and the disclosure are two events, and the notice reaches
+        // the panel asynchronously. Asserting the instant the count changes
+        // passes on a fast machine and fails on a loaded one.
+        var notices = await overlay.notices
+        for _ in 0..<500
+        where !notices.contains(where: { $0.message.contains("recovered 1 unfinished recording") }) {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+            notices = await overlay.notices
+        }
         XCTAssertTrue(
             notices.contains { $0.message.contains("recovered 1 unfinished recording") },
             "new crash recovery must be disclosed: \(notices.map(\.message))"
