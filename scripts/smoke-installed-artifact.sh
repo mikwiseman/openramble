@@ -13,7 +13,6 @@ cd "$REPOSITORY_ROOT"
 PROJECT_YML="apps/macos/project.yml"
 OFFICIAL_FEED_URL="https://mikwiseman.github.io/openramble/appcast.xml"
 PERMANENT_PUBLIC_KEY="9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI="
-ASR_WORKER_ID="is.waiwai.dictation.asr-worker"
 
 project_value() {
   sed -n "s/^ *$1: *\"\{0,1\}\([^\"]*\)\"\{0,1\} *$/\1/p" "$PROJECT_YML" | head -1
@@ -44,7 +43,7 @@ done
   exit 1
 }
 if [[ "$REQUIRE_DEVELOPER_ID" == "1" && "$REQUIRE_OFFLINE_RECOGNITION" != "1" ]]; then
-  echo "Developer ID artifact smoke requires packaged-worker recognition with network denied." >&2
+  echo "Developer ID artifact smoke requires recognition with network denied." >&2
   exit 1
 fi
 
@@ -168,15 +167,18 @@ EXECUTABLE="$APP/Contents/MacOS/$EXPECTED_APP_NAME"
 [[ -x "$EXECUTABLE" ]] || { echo "No executable: $EXECUTABLE" >&2; exit 1; }
 MCP_HELPER="$APP/Contents/MacOS/openramble-mcp"
 [[ ! -e "$MCP_HELPER" ]] || { echo "Unexpected MCP helper: $MCP_HELPER" >&2; exit 1; }
-TEST_FIXTURE="$APP/Contents/MacOS/openramble-asr-worker-test-fixture"
-[[ ! -e "$TEST_FIXTURE" ]] || { echo "Unexpected ASR test fixture: $TEST_FIXTURE" >&2; exit 1; }
-ASR_WORKER="$APP/Contents/MacOS/openramble-asr-worker"
-[[ -x "$ASR_WORKER" ]] || { echo "No private ASR worker: $ASR_WORKER" >&2; exit 1; }
+RETIRED_WORKER="$APP/Contents/MacOS/openramble-asr-worker"
+[[ ! -e "$RETIRED_WORKER" ]] || { echo "Unexpected retired ASR worker: $RETIRED_WORKER" >&2; exit 1; }
+RUNTIME="$APP/Contents/Frameworks/CTranscribe.framework"
+[[ -d "$RUNTIME" ]] || { echo "No inference runtime: $RUNTIME" >&2; exit 1; }
+RUNTIME_BINARY="$RUNTIME/Versions/A/CTranscribe"
+[[ -f "$RUNTIME_BINARY" ]] || RUNTIME_BINARY="$RUNTIME/CTranscribe"
+[[ -f "$RUNTIME_BINARY" ]] || { echo "No inference runtime binary in $RUNTIME" >&2; exit 1; }
 
 SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
 SPARKLE_VERSION="$SPARKLE/Versions/B"
 NESTED_CODE_COMPONENTS=(
-  "$ASR_WORKER"
+  "$RUNTIME"
   "$SPARKLE_VERSION/XPCServices/Installer.xpc"
   "$SPARKLE_VERSION/XPCServices/Downloader.xpc"
   "$SPARKLE_VERSION/Autoupdate"
@@ -249,62 +251,48 @@ minos=$(vtool -show-build "$EXECUTABLE" | awk '/minos/{print $2; exit}')
   echo "Invalid executable minOS: expected $EXPECTED_MIN_OS, got $minos." >&2
   exit 1
 }
-worker_minos=$(vtool -show-build "$ASR_WORKER" | awk '/minos/{print $2; exit}')
-[[ "$worker_minos" == "$EXPECTED_MIN_OS" ]] || {
-  echo "Invalid ASR worker minOS: expected $EXPECTED_MIN_OS, got $worker_minos." >&2
+# The runtime is built by its own project, so its floor only has to be at or
+# below ours — equality would fail for a dependency that supports more than we
+# ask of it.
+runtime_minos=$(vtool -show-build "$RUNTIME_BINARY" | awk '/minos/{print $2; exit}')
+runtime_major=${runtime_minos%%.*}
+expected_major=${EXPECTED_MIN_OS%%.*}
+[[ "$runtime_major" -le "$expected_major" ]] || {
+  echo "The inference runtime needs macOS $runtime_minos, above our $EXPECTED_MIN_OS floor." >&2
   exit 1
 }
 
-worker_identifier=$(codesign -dvv "$ASR_WORKER" 2>&1 | sed -n 's/^Identifier=//p' | head -1)
-[[ "$worker_identifier" == "$ASR_WORKER_ID" ]] || {
-  echo "Invalid ASR worker signature identifier: $worker_identifier" >&2
+# The inference runtime is a third-party binary inside a notarized app. What it
+# links and what it imports is verified here, on the artifact, rather than
+# trusted from its source — which is a stronger check than the engine it
+# replaced ever had.
+RUNTIME_DEPENDENCIES=$(otool -L "$RUNTIME_BINARY") || {
+  echo "Could not inspect the inference runtime's dynamic-library dependencies." >&2
   exit 1
 }
-
-WORKER_DEPENDENCIES=$(otool -L "$ASR_WORKER") || {
-  echo "Could not inspect ASR worker dynamic-library dependencies." >&2
+if printf '%s\n' "$RUNTIME_DEPENDENCIES" \
+  | grep -Eq '/(Network|NetworkExtension|CFNetwork|Security|WebKit)\.framework/|libcurl'; then
+  echo "The inference runtime links a forbidden network framework." >&2
+  exit 1
+fi
+RUNTIME_UNDEFINED_SYMBOLS=$(nm -u "$RUNTIME_BINARY" 2>/dev/null) || {
+  echo "Could not inspect undefined symbols in the inference runtime." >&2
   exit 1
 }
-if printf '%s\n' "$WORKER_DEPENDENCIES" \
-  | grep -Eq '/(Network|NetworkExtension|WebKit)\.framework/'; then
-  echo "The private ASR worker links a forbidden network/UI framework." >&2
-  exit 1
-fi
-WORKER_LINKS_CFNETWORK=0
-WORKER_CONTAINS_URLSESSION=0
-if printf '%s\n' "$WORKER_DEPENDENCIES" \
-  | grep -E '/CFNetwork\.framework/' >/dev/null; then
-  WORKER_LINKS_CFNETWORK=1
-fi
-strings "$ASR_WORKER" >/dev/null || {
-  echo "Could not inspect strings in the ASR worker." >&2
-  exit 1
-}
-if strings "$ASR_WORKER" \
-  | grep -E 'URLSessionModelDownloader|NSURLSession|https://huggingface\.co' >/dev/null; then
-  WORKER_CONTAINS_URLSESSION=1
-fi
-if [[ "$WORKER_LINKS_CFNETWORK" == "1" || "$WORKER_CONTAINS_URLSESSION" == "1" ]]; then
-  echo "NOTICE: packaged worker contains CFNetwork/URLSession downloader code via LocalASR linkage."
-  echo "No binary-level transport-free claim is made; release requires deny-network recognition."
-fi
-WORKER_UNDEFINED_SYMBOLS=$(nm -u "$ASR_WORKER" 2>/dev/null) || {
-  echo "Could not inspect undefined symbols in the ASR worker." >&2
-  exit 1
-}
-if printf '%s\n' "$WORKER_UNDEFINED_SYMBOLS" \
+if printf '%s\n' "$RUNTIME_UNDEFINED_SYMBOLS" \
   | grep -Eq '[[:space:]]_(accept|accept4|bind|connect|connectx|getaddrinfo|gethostbyname|getnameinfo|listen|recv|recvfrom|recvmsg|send|sendmsg|sendto|socket|socketpair)(\$[^[:space:]]+)?$'; then
-  echo "The private ASR worker directly imports a socket/DNS primitive." >&2
+  echo "The inference runtime directly imports a socket/DNS primitive." >&2
   exit 1
 fi
-
-scripts/test-asr-worker.sh "$ASR_WORKER"
+if printf '%s\n' "$RUNTIME_UNDEFINED_SYMBOLS" | grep -Eq 'NSURLSession|CFNetwork|curl_easy'; then
+  echo "The inference runtime references a networking API." >&2
+  exit 1
+fi
 
 for resource in \
-  LICENSE NOTICE THIRD_PARTY_LICENSES.md model-manifest.json vocabulary-manifest.json \
-  FluidAudio-Apache-2.0.txt FluidAudio-fastcluster-BSD.txt \
-  FluidAudio-vbx-Apache-2.0.txt Sparkle-LICENSE.txt \
-  Parakeet-CC-BY-4.0.txt
+  LICENSE NOTICE THIRD_PARTY_LICENSES.md model-manifest.json \
+  Sparkle-LICENSE.txt Parakeet-CC-BY-4.0.txt \
+  transcribe-cpp-MIT.txt ggml-MIT.txt miniz-MIT.txt
 do
   [[ -s "$APP/Contents/Resources/$resource" ]] || {
     echo "No required resource: $resource" >&2
@@ -332,7 +320,7 @@ PY
     )
   fi
   [[ -d "$MODEL_DIRECTORY" ]] || {
-    echo "The installed model required for packaged-worker offline proof is missing:" >&2
+    echo "The installed model required for the offline proof is missing:" >&2
     echo "  $MODEL_DIRECTORY" >&2
     exit 69
   }
@@ -371,10 +359,11 @@ except OSError:
 sys.exit(4)'
   echo "Deny-network sandbox positive control passed (connect returned EPERM)."
 
-  sandbox-exec -f "$PROFILE" /usr/bin/python3 \
-    scripts/tests/packaged-worker-offline.py \
-    "$ASR_WORKER" "$MODEL_DIRECTORY" "$FIXTURE" "$EXPECTED_TEXT"
-  echo "The exact packaged worker recognized with network access denied by macOS."
+  # Recognition now runs inside the application itself, so the offline proof
+  # exercises the same LocalASR path and the same embedded runtime through
+  # scripts/test-zero-network.sh rather than a separate worker executable.
+  WAI_EXPECTED_TEXT="$EXPECTED_TEXT" ./scripts/test-zero-network.sh "$FIXTURE"
+  echo "Recognition succeeded with network access denied by macOS."
 fi
 
-echo "Installed artifact smoke: exact identity/version/build/feed/key/minOS, arm64-only code, mounted DMG layout, private ASR protocol, dictation-only contents, entitlement, signature and resources OK."
+echo "Installed artifact smoke: exact identity/version/build/feed/key/minOS, arm64-only code, mounted DMG layout, embedded inference runtime, dictation-only contents, entitlement, signature and resources OK."

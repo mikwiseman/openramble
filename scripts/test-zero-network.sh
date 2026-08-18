@@ -14,12 +14,14 @@ cd "$(dirname "$0")/.."
 
 FIXTURE="${1:-}"
 EXPECTED="${WAI_EXPECTED_TEXT:-Checking work without the Internet}"
-BENCH=".build-zero-network/asr-bench"
+# Run the tool where it was built. It used to be copied to a stable path, which
+# stopped working the moment recognition moved to a dynamically linked runtime:
+# the copy loses its @rpath to CTranscribe.framework and aborts on launch.
+BENCH="Packages/LocalASR/.build/release/asr-bench"
 
 echo "→ Assembling the tool"
 swift build -c release --package-path Packages/LocalASR --product asr-bench 2>&1 | tail -1
 mkdir -p .build-zero-network
-cp "Packages/LocalASR/.build/release/asr-bench" "$BENCH"
 
 # The model must already be installed: loading it is the only one allowed
 # network operation, and we check what happens after it.

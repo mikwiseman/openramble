@@ -38,7 +38,7 @@ public actor LocalTranscriber {
     private var inferenceWarmupEpoch = 0
 
     public init(
-        engine: any ASREngineAdapting = FluidAudioAdapter(),
+        engine: any ASREngineAdapting = TranscribeCppAdapter(),
         reader: AudioFileReader = AudioFileReader()
     ) {
         self.engine = engine
@@ -84,29 +84,6 @@ public actor LocalTranscriber {
         loadTask = task
         defer { loadTask = nil }
         try await task.value
-    }
-
-    /// Load or rebuild the acoustic term hint.
-    ///
-    /// Separate from `prepare`, because it is a separate model with a separate
-    /// fate: without it, recognition works fully, and with it the terms
-    /// are recognized at the sound level, and not by post-processing.
-    ///
-    /// **Call this every time the user's dictionary has changed** - not
-    /// only when warming up. The repeated call reassembles the term set into
-    /// live engine; the weights of the CTC model remain loaded, so that
-    /// reassembly costs a fraction of a second, not thirteen. Empty set takes off
-    /// prompter and releases his weight.
-    ///
-    /// Errors are differentiated intentionally: `VocabularyBoostError` - trouble with the list
-    /// terms, that is, with human data, and restoring its model is not
-    /// treats; `ASREngineError.modelsUnavailable` - the problem with the weights, and there
-    /// pumping is appropriate. Catch them separately.
-    public func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {
-        guard let capable = engine as? VocabularyBoostCapable else {
-            throw ASREngineError.modelsUnavailable("the engine doesn't support vocabulary hints")
-        }
-        try await capable.loadVocabularyModels(from: modelDirectory, boost: boost)
     }
 
     /// Recognize the recorded file.
@@ -189,9 +166,6 @@ public actor LocalTranscriber {
                 samples: [Float](repeating: 0, count: 16_000),
                 languageHint: nil
             )
-            if let vocabularyWarmup = engine as? VocabularyInferenceWarmupCapable {
-                try await vocabularyWarmup.warmUpVocabularyInference()
-            }
         }
         inferenceWarmupTask = task
         activeOperations += 1
@@ -205,27 +179,6 @@ public actor LocalTranscriber {
         guard generation == expectedGeneration, loadedDirectory != nil else {
             throw CancellationError()
         }
-    }
-
-    /// Live preview: start, flow of samples, stop.
-    ///
-    /// Silently skipped if the engine can't preview: this is a decoration
-    /// on top of the dictation, and not part of it - the contract is the same as that of the language hint.
-    public func startPreview(
-        onUpdate: @escaping @Sendable (_ confirmed: String, _ volatile: String) -> Void
-    ) async throws {
-        guard let capable = engine as? LivePreviewCapable else { return }
-        try await capable.startPreview(onUpdate: onUpdate)
-    }
-
-    public func feedPreview(samples: [Float]) async {
-        guard let capable = engine as? LivePreviewCapable else { return }
-        await capable.feedPreview(samples: samples)
-    }
-
-    public func stopPreview() async {
-        guard let capable = engine as? LivePreviewCapable else { return }
-        await capable.stopPreview()
     }
 
     /// Free up memory under the model — forced.

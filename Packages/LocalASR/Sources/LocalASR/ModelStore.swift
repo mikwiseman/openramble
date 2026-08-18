@@ -209,7 +209,7 @@ public actor ModelStore {
             ? marker
             : ModelReadyMarker(
                 revision: marker.revision,
-                fluidAudioVersion: marker.fluidAudioVersion,
+                runtimeVersion: marker.runtimeVersion,
                 fileCount: marker.fileCount,
                 totalByteCount: marker.totalByteCount,
                 verifiedAt: marker.verifiedAt,

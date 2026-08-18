@@ -104,7 +104,7 @@ final class ModelInstallLayoutTests: XCTestCase {
             modelID: "parakeet",
             repository: "FluidInference/parakeet-tdt-0.6b-v3-coreml",
             revision: String(repeating: "b", count: 40),
-            fluidAudioVersion: "0.15.5",
+            runtimeVersion: "0.15.5",
             quantization: "int8",
             license: "CC-BY-4.0",
             files: [file("Encoder.mlmodelc/weight.bin")]
@@ -124,7 +124,7 @@ final class ModelReadyMarkerTests: XCTestCase {
         modelID: "parakeet",
         repository: "acme/parakeet-coreml",
         revision: String(repeating: "c", count: 40),
-        fluidAudioVersion: "0.15.5",
+        runtimeVersion: "0.15.5",
         quantization: "int8",
         license: "CC-BY-4.0",
         files: [
@@ -144,7 +144,7 @@ final class ModelReadyMarkerTests: XCTestCase {
         // between versions, and “probably will work” is unacceptable here.
         let marker = ModelReadyMarker(
             revision: manifest.revision,
-            fluidAudioVersion: "0.14.0",
+            runtimeVersion: "0.14.0",
             fileCount: manifest.files.count,
             totalByteCount: manifest.totalByteCount,
             verifiedAt: Date()
@@ -158,14 +158,14 @@ final class ModelReadyMarkerTests: XCTestCase {
         // installation is incomplete - half of the model is on the disk.
         let fewerFiles = ModelReadyMarker(
             revision: manifest.revision,
-            fluidAudioVersion: manifest.fluidAudioVersion,
+            runtimeVersion: manifest.runtimeVersion,
             fileCount: manifest.files.count - 1,
             totalByteCount: manifest.totalByteCount,
             verifiedAt: Date()
         )
         let smaller = ModelReadyMarker(
             revision: manifest.revision,
-            fluidAudioVersion: manifest.fluidAudioVersion,
+            runtimeVersion: manifest.runtimeVersion,
             fileCount: manifest.files.count,
             totalByteCount: manifest.totalByteCount - 1,
             verifiedAt: Date()

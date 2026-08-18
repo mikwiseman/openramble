@@ -23,8 +23,12 @@ existing beta installations.
 Recognition runs locally. Audio is not uploaded, accounts are not required,
 and the app contains no analytics or crash-reporting SDK.
 
-Transcripts are never written to disk or to logs. Audio is kept only after a
-failure the app has told you about, within the limits in the table below.
+Transcripts are never written to logs. Recent dictations **are** kept on this
+Mac, with their audio, so you can replay, copy or delete them: the last 5 by
+default, adjustable in Settings ▸ History, deletable individually or all at
+once. Earlier versions kept transcripts in memory only; this is a deliberate
+change, and it is the one thing this app stores that it previously did not.
+Nothing leaves the Mac either way.
 
 Recognition never uses the network. The following maintenance actions can:
 
@@ -75,7 +79,7 @@ Application data is stored under
 | Recognition models | Until removed in Settings |
 | Current recording | Queued for local deletion after success or explicit cancellation |
 | Recovery audio after a technical failure | Up to 10 WAV files, seven days, and 1 GiB |
-| Recognized text and Recent Dictations | Memory only — the last 8, never written to disk, gone at quit |
+| Dictation history: transcripts and their audio | The last 5 by default (5–50 in Settings ▸ History); older entries and their recordings are deleted when they fall off |
 | Settings and replacement dictionary | Stored in macOS defaults |
 | Text that could not be inserted | Memory only, until the next dictation or app exit |
 

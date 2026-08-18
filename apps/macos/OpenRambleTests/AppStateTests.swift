@@ -24,20 +24,23 @@ private actor OwnedPreparationProbe {
 /// deletion used to unload/delete files while the old warm-up later resumed and
 /// published Ready again.
 private actor ModelDeletionWarmupRecognizer: DictationRecognizing {
-    private var vocabularyContinuation: CheckedContinuation<Void, Never>?
-    private(set) var vocabularyPreparationStarted = false
+    private var loadContinuation: CheckedContinuation<Void, Never>?
+    private(set) var preparationStarted = false
     private(set) var warmUpCount = 0
     private(set) var unloadCount = 0
 
     var isPrepared: Bool { warmUpCount > 0 && unloadCount == 0 }
-    var isBusy: Bool { vocabularyPreparationStarted && vocabularyContinuation != nil }
+    var isBusy: Bool { preparationStarted && loadContinuation != nil }
 
-    func prepare(modelDirectory: URL) async throws {}
-
-    func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {
-        vocabularyPreparationStarted = true
-        await withCheckedContinuation { vocabularyContinuation = $0 }
+    /// Blocks until released, standing in for a model load already past the
+    /// point where cancelling it would help.
+    func prepare(modelDirectory: URL) async throws {
+        preparationStarted = true
+        await withCheckedContinuation { continuation in
+            loadContinuation = continuation
+        }
     }
+
 
     func transcribe(fileURL: URL, languageHint: String?) async throws -> ASRResult {
         ASRResult(text: "", audioDuration: 1, processingDuration: 0)
@@ -56,9 +59,9 @@ private actor ModelDeletionWarmupRecognizer: DictationRecognizing {
         return true
     }
 
-    func releaseVocabularyPreparation() {
-        vocabularyContinuation?.resume()
-        vocabularyContinuation = nil
+    func releasePreparation() {
+        loadContinuation?.resume()
+        loadContinuation = nil
     }
 }
 
@@ -585,12 +588,12 @@ final class AppStateTests: XCTestCase {
         let state = makeState()
 
         for _ in 0..<200 {
-            if await recognizer.vocabularyPreparationStarted { break }
+            if await recognizer.preparationStarted { break }
             await Task.yield()
             try await Task.sleep(for: .milliseconds(2))
         }
-        let vocabularyPreparationStarted = await recognizer.vocabularyPreparationStarted
-        XCTAssertTrue(vocabularyPreparationStarted)
+        let preparationStarted = await recognizer.preparationStarted
+        XCTAssertTrue(preparationStarted)
 
         state.deleteModel()
         XCTAssertEqual(state.modelState, .deleting)
@@ -603,7 +606,7 @@ final class AppStateTests: XCTestCase {
         let unloadCount = await recognizer.unloadCount
         XCTAssertEqual(unloadCount, 1)
 
-        await recognizer.releaseVocabularyPreparation()
+        await recognizer.releasePreparation()
         for _ in 0..<200 where state.modelState.isReady {
             await Task.yield()
             try await Task.sleep(for: .milliseconds(2))
@@ -649,26 +652,12 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(probe.result, false)
     }
 
-    func testScenario025() async throws {
-        // The person updated from a build where there was no hint yet: main
-        // the model is standing, there is no hint. For him, this is “the model is not ready,” but
-        // the button must name the real balance, and not the full 586 MB.
-        try harness.installMainModelMarkerOnly()
-        let state = makeState()
-
-        await state.refreshModelState()
-
-        XCTAssertFalse(state.modelState.isReady)
-        XCTAssertEqual(state.remainingDownloadMegabytes, 103)
-    }
-
     /// The delete confirmation names what deleting will cost, not what is missing.
     ///
     /// Nothing is missing when the button is offered — that is the whole reason
     /// it is offered — so the remainder is 0 there, and the sentence used to
-    /// paper over it with a hardcoded 586 that no manifest change would ever
-    /// reach. Deleting removes both models, so the honest number is both
-    /// manifests added up.
+    /// paper over it with a hardcoded number that no manifest change would
+    /// ever reach. It is read from the manifest instead.
     func testTheDeleteConfirmationNamesTheWholeDownloadItWillCost() async throws {
         try installModelMarker()
         let state = makeState()
@@ -676,7 +665,7 @@ final class AppStateTests: XCTestCase {
         await state.refreshModelState()
 
         XCTAssertEqual(state.remainingDownloadMegabytes, 0, "nothing is missing from disk")
-        XCTAssertEqual(state.fullModelDownloadMegabytes, 586)
+        XCTAssertEqual(state.fullModelDownloadMegabytes, 740)
     }
 
     func testScenario026() async throws {
@@ -765,69 +754,10 @@ final class AppStateTests: XCTestCase {
         )
     }
 
-    /// After a critical eviction the engine no longer waits for a `.normal`
-    /// that a busy 16 GB machine may never report: warning-tier pressure earns
-    /// one settle window and then rewarms.
-    func testWarningPressureRewarmsAfterOneSettleWindow() async throws {
-        try installModelMarker()
-        let recognizer = ReadinessControlledRecognizer()
-        harness.recognizer = recognizer
-        harness.pressureRewarmSettleDelay = .milliseconds(30)
-        let state = makeState()
-        for _ in 0..<500 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        XCTAssertTrue(state.isEngineReady)
-
-        state.registerMemoryPressure(.critical)
-        for _ in 0..<200 where state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        XCTAssertFalse(state.isEngineReady, "critical pressure evicts the idle engine")
-
-        state.registerMemoryPressure(.warning)
-        for _ in 0..<500 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        XCTAssertTrue(
-            state.isEngineReady,
-            "warning-tier pressure rewarms after the settle window instead of waiting for normal"
-        )
-    }
-
-    func testCriticalDuringSettleWindowCancelsThePendingRewarm() async throws {
-        try installModelMarker()
-        let recognizer = ReadinessControlledRecognizer()
-        harness.recognizer = recognizer
-        harness.pressureRewarmSettleDelay = .milliseconds(40)
-        let state = makeState()
-        for _ in 0..<500 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-
-        state.registerMemoryPressure(.critical)
-        for _ in 0..<200 where state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        XCTAssertFalse(state.isEngineReady)
-
-        state.registerMemoryPressure(.warning)
-        state.registerMemoryPressure(.critical)
-        try? await Task.sleep(for: .milliseconds(120))
-        XCTAssertFalse(
-            state.isEngineReady,
-            "a stale settle window must not fire under critical pressure"
-        )
-    }
-
-    /// The key press is the earliest reload trigger and works even while the
-    /// tier is still critical — the reload rides under the voice.
-    func testKeyDownRewarmsColdEngineEvenUnderCriticalPressure() async throws {
+    /// The key press is the earliest reload trigger: it fires before any
+    /// readiness guard can swallow it, so a resting engine comes back under
+    /// the voice rather than after it.
+    func testKeyDownRewarmsAColdEngine() async throws {
         try installModelMarker()
         let recognizer = ReadinessControlledRecognizer()
         harness.recognizer = recognizer
@@ -838,8 +768,13 @@ final class AppStateTests: XCTestCase {
         }
         let baselineWarmUps = await recognizer.warmUps
 
-        state.registerMemoryPressure(.critical)
-        for _ in 0..<200 where state.isEngineReady {
+        // Let the idle countdown put the engine down, which is now the only
+        // way it rests: the memory-pressure eviction that used to do this went
+        // with the 2.4 GB engine that needed it. The countdown is a courtesy
+        // to someone who has finished setting up, so say that they have.
+        harness.defaults.set(true, forKey: AppState.onboardingCompletedKey)
+        state.modelUnloadTimeout = .immediately
+        for _ in 0..<500 where state.isEngineReady {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))
         }
@@ -850,7 +785,7 @@ final class AppStateTests: XCTestCase {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))
         }
-        XCTAssertTrue(state.isEngineReady, "the press rewarms the engine regardless of tier")
+        XCTAssertTrue(state.isEngineReady, "the press rewarms a resting engine")
         let warmUps = await recognizer.warmUps
         XCTAssertGreaterThan(warmUps, baselineWarmUps)
     }
@@ -1385,22 +1320,6 @@ final class AppStateTests: XCTestCase {
         _ = try XCTUnwrap(state.lastDictation)
     }
 
-    func testScenario042() {
-        let state = makeState()
-        XCTAssertNil(state.recognitionLanguage, "Default - auto detection")
-
-        state.recognitionLanguage = "en"
-        XCTAssertEqual(harness.defaults.string(forKey: AppState.recognitionLanguageKey), "en")
-
-        // "Restart": new AppState with the same defaults.
-        let restarted = makeState()
-        XCTAssertEqual(restarted.recognitionLanguage, "en")
-
-        // Returning to autodetection removes the key rather than writing an empty string.
-        restarted.recognitionLanguage = nil
-        XCTAssertNil(harness.defaults.string(forKey: AppState.recognitionLanguageKey))
-    }
-
     func testScenario043() {
         let state = makeState()
 
@@ -1634,7 +1553,16 @@ final class AppStateTests: XCTestCase {
             try? await Task.sleep(for: .milliseconds(2))
         }
         XCTAssertEqual(state.recoveredRecordingCount, 1)
-        let notices = await overlay.notices
+        // The count and the disclosure are two events, and the notice reaches
+        // the panel asynchronously. Asserting the instant the count changes
+        // passes on a fast machine and fails on a loaded one.
+        var notices = await overlay.notices
+        for _ in 0..<500
+        where !notices.contains(where: { $0.message.contains("recovered 1 unfinished recording") }) {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+            notices = await overlay.notices
+        }
         XCTAssertTrue(
             notices.contains { $0.message.contains("recovered 1 unfinished recording") },
             "new crash recovery must be disclosed: \(notices.map(\.message))"
@@ -1668,7 +1596,17 @@ final class AppStateTests: XCTestCase {
 
         XCTAssertEqual(state.recoveredRecordingCount, 1)
         XCTAssertFalse(FileManager.default.fileExists(atPath: orphan.path))
-        let notices = await overlay.notices
+        // The count and the notice do not arrive together: the notice is
+        // dispatched to the panel asynchronously, so asserting on it the
+        // instant the count changes passes on a fast machine and fails on a
+        // loaded one. Wait for the thing being asserted.
+        var notices = await overlay.notices
+        for _ in 0..<500
+        where !notices.contains(where: { $0.message.contains("recovered 1 unfinished recording") }) {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+            notices = await overlay.notices
+        }
         XCTAssertTrue(notices.contains { $0.message.contains("recovered 1 unfinished recording") })
     }
 
@@ -1960,387 +1898,5 @@ final class RecoveredFileTests: XCTestCase {
 
         XCTAssertNil(state.recoveredText)
         XCTAssertEqual(state.recentDictations.first?.text, "Ping test")
-    }
-}
-
-/// Saved recognition language.
-@MainActor
-final class RecognitionLanguageTests: XCTestCase {
-    func testScenario058() throws {
-        let harness = try AppHarness()
-        defer { harness.tearDown() }
-        harness.defaults.set("xx-not-a-language", forKey: AppState.recognitionLanguageKey)
-
-        let state = harness.makeState()
-
-        XCTAssertNil(
-            state.recognitionLanguage,
-            "Code that the engine doesn't know would drop every dictation and save WAV to the rescue"
-        )
-    }
-
-    func testScenario059() throws {
-        let harness = try AppHarness()
-        defer { harness.tearDown() }
-        harness.defaults.set("ru", forKey: AppState.recognitionLanguageKey)
-
-        let state = harness.makeState()
-
-        XCTAssertEqual(state.recognitionLanguage, "ru")
-    }
-}
-
-/// Editing the dictionary reaches the acoustic prompt without restarting.
-@MainActor
-final class VocabularyRebuildTests: XCTestCase {
-    /// The engine that counts the reassemblies of the tooltip.
-    private final class RebuildCountingEngine: ASREngineAdapting, VocabularyBoostCapable, @unchecked Sendable {
-        private let lock = NSLock()
-        private var _prepares = 0
-        private var _modelLoads = 0
-        private var _unloads = 0
-        private var _inferences = 0
-        private var _lastTermCount = -1
-        private var _delayNext = false
-        private var _delayedStarts = 0
-        private var _cancelledPrepares = 0
-        private var _emptyVocabularyLoads = 0
-        private var _failNextVocabularyLoad = false
-        private var _cancelNextVocabularyLoad = false
-        private var _failNextVocabularyWarm = false
-        private var _vocabularyActive = false
-        var prepares: Int { lock.withLock { _prepares } }
-        var modelLoads: Int { lock.withLock { _modelLoads } }
-        var unloads: Int { lock.withLock { _unloads } }
-        var inferences: Int { lock.withLock { _inferences } }
-        var lastTermCount: Int { lock.withLock { _lastTermCount } }
-        var delayedStarts: Int { lock.withLock { _delayedStarts } }
-        var cancelledPrepares: Int { lock.withLock { _cancelledPrepares } }
-        var emptyVocabularyLoads: Int { lock.withLock { _emptyVocabularyLoads } }
-
-        func delayNextRebuild() { lock.withLock { _delayNext = true } }
-        func failNextVocabularyLoad() { lock.withLock { _failNextVocabularyLoad = true } }
-        func cancelNextVocabularyLoad() { lock.withLock { _cancelNextVocabularyLoad = true } }
-        func failNextVocabularyWarm() { lock.withLock { _failNextVocabularyWarm = true } }
-
-        func loadModels(from directory: URL) async throws {
-            lock.withLock { _modelLoads += 1 }
-        }
-        func transcribe(samples: [Float]) async throws -> ASRResult {
-            let shouldFail = lock.withLock {
-                _inferences += 1
-                guard _failNextVocabularyWarm, _vocabularyActive else { return false }
-                _failNextVocabularyWarm = false
-                return true
-            }
-            if shouldFail { throw ASREngineError.inferenceFailed("CTC warm failed") }
-            return ASRResult(text: "", audioDuration: 0, processingDuration: 0)
-        }
-        func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
-            let shouldFail = lock.withLock {
-                _inferences += 1
-                guard _failNextVocabularyWarm, _vocabularyActive else { return false }
-                _failNextVocabularyWarm = false
-                return true
-            }
-            if shouldFail { throw ASREngineError.inferenceFailed("CTC warm failed") }
-            return ASRResult(text: "", audioDuration: 0, processingDuration: 0)
-        }
-        // A real unload drops the acoustic boost together with the weights —
-        // the marker resets so a reload must re-issue the vocabulary to pass.
-        func unload() async {
-            lock.withLock {
-                _unloads += 1
-                _lastTermCount = -1
-                _vocabularyActive = false
-            }
-        }
-        func loadVocabularyModels(from directory: URL, boost: VocabularyBoost) async throws {
-            let plan = lock.withLock {
-                _prepares += 1
-                let delay = _delayNext
-                _delayNext = false
-                if delay { _delayedStarts += 1 }
-                let fail = _failNextVocabularyLoad
-                _failNextVocabularyLoad = false
-                let cancel = _cancelNextVocabularyLoad
-                _cancelNextVocabularyLoad = false
-                return (delay, fail, cancel)
-            }
-            if plan.0 {
-                do {
-                    try await Task.sleep(for: .milliseconds(150))
-                } catch {
-                    lock.withLock { _cancelledPrepares += 1 }
-                    throw error
-                }
-            }
-            try Task.checkCancellation()
-            if plan.2 { throw CancellationError() }
-            if plan.1 { throw ASREngineError.modelsUnavailable("CTC unavailable") }
-            lock.withLock {
-                _lastTermCount = boost.terms.count
-                _vocabularyActive = !boost.isEmpty
-                if boost.isEmpty { _emptyVocabularyLoads += 1 }
-            }
-        }
-    }
-
-    func testScenario060() async throws {
-        let harness = try AppHarness()
-        defer { harness.tearDown() }
-        try harness.installModelMarker()
-        let engine = RebuildCountingEngine()
-        harness.warmUpEngine = engine
-        let state = harness.makeState()
-
-        //Wait for warm-up - the first preparation of the prompter occurs there.
-        for _ in 0..<400 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        XCTAssertTrue(state.isEngineReady, "Warming must take place")
-        XCTAssertEqual(engine.inferences, 1, "ready means one full inference path is warm")
-        let after = engine.prepares
-
-        state.addReplacement(spoken: "Sentry", written: "Sentry")
-
-        for _ in 0..<400 where engine.prepares == after {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        XCTAssertGreaterThan(
-            engine.prepares, after,
-            "Text replacement works immediately - acoustics has no right to wait for a restart"
-        )
-    }
-
-    func testRapidDictionaryEditsLeaveTheNewestAcousticSnapshotInstalled() async throws {
-        let harness = try AppHarness()
-        defer { harness.tearDown() }
-        try harness.installModelMarker()
-        let engine = RebuildCountingEngine()
-        harness.warmUpEngine = engine
-        let state = harness.makeState()
-
-        for _ in 0..<400 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        let baseline = engine.lastTermCount
-        let baselineInferences = engine.inferences
-        engine.delayNextRebuild()
-
-        state.addReplacement(spoken: "alpha spoken", written: "AlphaCanonical")
-        for _ in 0..<200 where engine.delayedStarts == 0 { await Task.yield() }
-        state.addReplacement(spoken: "beta spoken", written: "BetaCanonical")
-
-        for _ in 0..<400 where engine.lastTermCount != baseline + 2 {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        try? await Task.sleep(for: .milliseconds(200))
-
-        XCTAssertEqual(engine.lastTermCount, baseline + 2, "an older rebuild completed after the newest edit")
-        XCTAssertEqual(
-            engine.cancelledPrepares, 0,
-            "a newer dictionary snapshot must not cancel and kill the active worker generation"
-        )
-        XCTAssertGreaterThan(
-            engine.inferences, baselineInferences,
-            "the newest dictionary generation must be warmed before it is considered installed"
-        )
-        let notices = await harness.overlay.notices
-        XCTAssertFalse(
-            notices.contains { $0.message.contains("acoustic boosting") },
-            "cancellation of an obsolete rebuild must stay silent"
-        )
-    }
-
-    func testDictionaryEditDuringInitialWarmupIsAppliedAfterReady() async throws {
-        let harness = try AppHarness()
-        defer { harness.tearDown() }
-        try harness.installModelMarker()
-        let engine = RebuildCountingEngine()
-        engine.delayNextRebuild()
-        harness.warmUpEngine = engine
-        let state = harness.makeState()
-
-        for _ in 0..<400 where engine.delayedStarts == 0 {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        XCTAssertEqual(engine.delayedStarts, 1, "the initial vocabulary snapshot must be in flight")
-
-        state.addReplacement(spoken: "warmup edit", written: "WarmupCanonical")
-        let expectedTermCount = VocabularyBoost.withUserReplacements(state.replacements).terms.count
-        for _ in 0..<500 where !state.isEngineReady || engine.lastTermCount != expectedTermCount {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-
-        XCTAssertTrue(state.isEngineReady)
-        XCTAssertEqual(
-            engine.lastTermCount,
-            expectedTermCount,
-            "an edit made after the warm-up snapshot must schedule the newest acoustic generation"
-        )
-    }
-
-    func testInitialAcousticVocabularyLoadFailureFallsBackToReadyTDT() async throws {
-        let harness = try AppHarness()
-        defer { harness.tearDown() }
-        try harness.installModelMarker()
-        let engine = RebuildCountingEngine()
-        engine.failNextVocabularyLoad()
-        harness.warmUpEngine = engine
-        let state = harness.makeState()
-
-        for _ in 0..<500 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-
-        XCTAssertTrue(state.isEngineReady)
-        XCTAssertEqual(engine.emptyVocabularyLoads, 1)
-        XCTAssertEqual(engine.lastTermCount, 0)
-        XCTAssertEqual(engine.inferences, 1, "main TDT must be proven before Ready")
-        let notices = await harness.overlay.notices.map(\.message)
-        XCTAssertEqual(notices.filter { $0.contains("Acoustic dictionary boosting") }.count, 1)
-    }
-
-    func testAcousticVocabularyWarmFailureRetriesMainOnlyAndPublishesReady() async throws {
-        let harness = try AppHarness()
-        defer { harness.tearDown() }
-        try harness.installModelMarker()
-        let engine = RebuildCountingEngine()
-        engine.failNextVocabularyWarm()
-        harness.warmUpEngine = engine
-        let state = harness.makeState()
-
-        for _ in 0..<500 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-
-        XCTAssertTrue(state.isEngineReady)
-        XCTAssertEqual(engine.emptyVocabularyLoads, 1)
-        XCTAssertEqual(engine.lastTermCount, 0)
-        XCTAssertEqual(engine.inferences, 2, "failed CTC warm plus successful TDT-only warm")
-    }
-
-    func testLiveAcousticVocabularyFailureKeepsCoreReadyWithoutFullReload() async throws {
-        let harness = try AppHarness()
-        defer { harness.tearDown() }
-        try harness.installModelMarker()
-        let engine = RebuildCountingEngine()
-        harness.warmUpEngine = engine
-        let state = harness.makeState()
-
-        for _ in 0..<500 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        let baselineLoads = engine.modelLoads
-        engine.failNextVocabularyLoad()
-        state.addReplacement(spoken: "optional ctc", written: "Optional CTC")
-
-        for _ in 0..<500 where engine.emptyVocabularyLoads == 0 {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-
-        XCTAssertTrue(state.isEngineReady)
-        XCTAssertEqual(engine.emptyVocabularyLoads, 1)
-        XCTAssertEqual(engine.modelLoads, baselineLoads, "optional CTC must not reload the core")
-        let notices = await harness.overlay.notices.map(\.message)
-        XCTAssertEqual(notices.filter { $0.contains("Acoustic dictionary boosting") }.count, 1)
-    }
-
-    func testAcousticVocabularyCancellationDoesNotBecomeFallbackOrWarning() async throws {
-        let harness = try AppHarness()
-        defer { harness.tearDown() }
-        try harness.installModelMarker()
-        let engine = RebuildCountingEngine()
-        harness.warmUpEngine = engine
-        let state = harness.makeState()
-
-        for _ in 0..<500 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        let baselinePrepares = engine.prepares
-        engine.cancelNextVocabularyLoad()
-        state.addReplacement(spoken: "cancel ctc", written: "Cancel CTC")
-        for _ in 0..<300 where engine.prepares == baselinePrepares {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        try? await Task.sleep(for: .milliseconds(30))
-
-        XCTAssertTrue(state.isEngineReady)
-        XCTAssertEqual(engine.emptyVocabularyLoads, 0)
-        let notices = await harness.overlay.notices.map(\.message)
-        XCTAssertFalse(notices.contains { $0.contains("Acoustic dictionary boosting") })
-    }
-
-    /// The full residency round trip: critical memory pressure gives the
-    /// weights back, dictation stays enabled, and returning to normal pressure
-    /// proactively restores BOTH the weights and the boosted vocabulary. A dictionary
-    /// term must survive the trip — a reload that forgets the boost would
-    /// silently degrade recognition of exactly the words the person cared
-    /// enough to teach.
-    func testBoostedTermSurvivesPressureUnloadAndPressReload() async throws {
-        let harness = try AppHarness()
-        defer { harness.tearDown() }
-        try harness.installModelMarker()
-        let engine = RebuildCountingEngine()
-        harness.warmUpEngine = engine
-        let state = harness.makeState()
-
-        for _ in 0..<400 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        XCTAssertTrue(state.isEngineReady)
-        XCTAssertEqual(engine.modelLoads, 1, "the first warm-up loads the weights once")
-        XCTAssertEqual(engine.inferences, 1, "initial readiness includes an inference warm-up")
-
-        state.addReplacement(spoken: "open ramble term", written: "OpenRambleTerm")
-        let boosted = engine.lastTermCount + 1
-        for _ in 0..<400 where engine.lastTermCount != boosted {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        XCTAssertEqual(engine.lastTermCount, boosted)
-        let inferencesBeforePressureReload = engine.inferences
-
-        state.registerMemoryPressure(.critical)
-        for _ in 0..<400 where state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        XCTAssertFalse(state.isEngineReady, "critical pressure on an idle engine must release the memory")
-        XCTAssertEqual(engine.unloads, 1)
-        XCTAssertTrue(
-            state.isDictationReady,
-            "an unloaded engine must not block the press — the reload rides under the voice"
-        )
-
-        state.registerMemoryPressure(.normal)
-        for _ in 0..<400 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        XCTAssertTrue(state.isEngineReady, "normal pressure must restore readiness before a press")
-        XCTAssertEqual(engine.modelLoads, 2, "the reload really reloads the weights")
-        XCTAssertEqual(
-            engine.inferences, inferencesBeforePressureReload + 1,
-            "each reloaded generation is warmed before readiness"
-        )
-        XCTAssertEqual(
-            engine.lastTermCount, boosted,
-            "the boosted term survives the unload/reload round trip"
-        )
     }
 }

@@ -182,7 +182,7 @@ def generate(spec: ModelSpec) -> int:
         "modelID": spec.model_id,
         "repository": spec.repository,
         "revision": spec.revision,
-        "fluidAudioVersion": FLUIDAUDIO_VERSION,
+        "runtimeVersion": FLUIDAUDIO_VERSION,
         "quantization": spec.quantization,
         "license": spec.license,
     }

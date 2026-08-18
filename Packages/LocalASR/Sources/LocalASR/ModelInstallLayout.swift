@@ -148,7 +148,7 @@ public struct ModelReadyMarker: Codable, Sendable, Equatable {
     }
 
     public let revision: String
-    public let fluidAudioVersion: String
+    public let runtimeVersion: String
     public let fileCount: Int
     public let totalByteCount: Int64
     public let verifiedAt: Date
@@ -158,14 +158,14 @@ public struct ModelReadyMarker: Codable, Sendable, Equatable {
 
     public init(
         revision: String,
-        fluidAudioVersion: String,
+        runtimeVersion: String,
         fileCount: Int,
         totalByteCount: Int64,
         verifiedAt: Date,
         installedFiles: [InstalledFile]? = nil
     ) {
         self.revision = revision
-        self.fluidAudioVersion = fluidAudioVersion
+        self.runtimeVersion = runtimeVersion
         self.fileCount = fileCount
         self.totalByteCount = totalByteCount
         self.verifiedAt = verifiedAt
@@ -179,7 +179,7 @@ public struct ModelReadyMarker: Codable, Sendable, Equatable {
     ) {
         self.init(
             revision: manifest.revision,
-            fluidAudioVersion: manifest.fluidAudioVersion,
+            runtimeVersion: manifest.runtimeVersion,
             fileCount: manifest.files.count,
             totalByteCount: manifest.totalByteCount,
             verifiedAt: verifiedAt,
@@ -189,7 +189,7 @@ public struct ModelReadyMarker: Codable, Sendable, Equatable {
 
     /// Whether what is installed fully matches the current manifest.
     public func matches(_ manifest: ModelManifest) -> Bool {
-        describesSameFiles(manifest) && fluidAudioVersion == manifest.fluidAudioVersion
+        describesSameFiles(manifest) && runtimeVersion == manifest.runtimeVersion
     }
 
     /// Are these the same files that the manifest asks for.

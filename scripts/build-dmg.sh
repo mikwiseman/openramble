@@ -23,7 +23,6 @@ PROJECT="apps/macos/OpenRamble.xcodeproj"
 BUILD_DIR="artifacts/build"
 DMG_DIR="artifacts/dmg"
 APP_ENTITLEMENTS="apps/macos/OpenRamble/OpenRamble.entitlements"
-ASR_WORKER_ID="is.waiwai.dictation.asr-worker"
 OFFICIAL_FEED_URL="https://mikwiseman.github.io/openramble/appcast.xml"
 PERMANENT_PUBLIC_KEY="9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI="
 EXPECTED_MIN_OS="14.0"
@@ -86,7 +85,7 @@ PROJECT_PUBLIC_KEY=$(project_value SUPublicEDKey)
   exit 1
 }
 if [[ "$REQUIRE_NOTARIZATION" == "1" && "$REQUIRE_OFFLINE_RECOGNITION" != "1" ]]; then
-  echo "A notarized build requires packaged-worker recognition with network denied." >&2
+  echo "A notarized build requires recognition with network denied." >&2
   exit 1
 fi
 [[ "$UNSIGNED_RELEASE_TOPOLOGY" == "0" || "$UNSIGNED_RELEASE_TOPOLOGY" == "1" ]] || {
@@ -218,19 +217,60 @@ if [[ -e "$APP_PATH/Contents/MacOS/openramble-mcp" ]]; then
   echo "The dictation-only build unexpectedly embedded openramble-mcp" >&2
   exit 1
 fi
-if [[ -e "$APP_PATH/Contents/MacOS/openramble-asr-worker-test-fixture" ]]; then
-  echo "The release build unexpectedly embedded the ASR fault-test fixture" >&2
+if [[ -e "$APP_PATH/Contents/MacOS/openramble-asr-worker" ]]; then
+  echo "The build embedded the retired ASR worker" >&2
   exit 1
 fi
-ASR_WORKER="$APP_PATH/Contents/MacOS/openramble-asr-worker"
-if [[ ! -x "$ASR_WORKER" ]]; then
-  echo "The build did not embed the private ASR worker" >&2
+# The inference runtime is a third-party binary embedded in a notarized app, so
+# what it links is verified on the artifact rather than trusted from its source.
+RUNTIME_FRAMEWORK="$APP_PATH/Contents/Frameworks/CTranscribe.framework"
+RUNTIME_BINARY="$RUNTIME_FRAMEWORK/Versions/A/CTranscribe"
+[[ -f "$RUNTIME_BINARY" ]] || RUNTIME_BINARY="$RUNTIME_FRAMEWORK/CTranscribe"
+if [[ ! -f "$RUNTIME_BINARY" ]]; then
+  echo "The build did not embed the inference runtime" >&2
   exit 1
 fi
-if otool -L "$ASR_WORKER" | grep -q '/Network\.framework/'; then
-  echo "The private ASR worker unexpectedly links Network.framework" >&2
+if otool -L "$RUNTIME_BINARY" | grep -qE '/(Network|CFNetwork|Security)\.framework/|libcurl'; then
+  echo "The inference runtime unexpectedly links a networking framework" >&2
   exit 1
 fi
+if nm -u "$RUNTIME_BINARY" | grep -qE 'curl_easy|NSURLSession|CFNetwork|_socket$|_getaddrinfo$'; then
+  echo "The inference runtime unexpectedly references a network API" >&2
+  exit 1
+fi
+
+# SwiftPM extracts an XCFramework's macOS slice with its symlinks flattened:
+# the binary, Headers, Modules and Resources end up as real copies both at the
+# framework root and under Versions/A, and Versions/Current becomes a real
+# directory. codesign cannot classify the result — "bundle format is ambiguous
+# (could be app or framework)" — and refuses to verify the app that contains it.
+# Restore the layout Apple's framework format actually specifies before anything
+# thins or signs it.
+echo "→ Restoring the inference runtime's framework layout"
+/usr/bin/python3 - "$APP_PATH/Contents/Frameworks/CTranscribe.framework" <<'NORMALIZE'
+import os, shutil, sys
+
+framework = sys.argv[1]
+versions = os.path.join(framework, "Versions")
+current = os.path.join(versions, "Current")
+if not os.path.isdir(os.path.join(versions, "A")):
+    sys.exit(0)
+if os.path.isdir(current) and not os.path.islink(current):
+    shutil.rmtree(current)
+if not os.path.islink(current):
+    os.symlink("A", current)
+for item in os.listdir(os.path.join(versions, "A")):
+    if item == "_CodeSignature":
+        continue
+    top = os.path.join(framework, item)
+    if os.path.islink(top):
+        continue
+    if os.path.isdir(top):
+        shutil.rmtree(top)
+    elif os.path.exists(top):
+        os.remove(top)
+    os.symlink(os.path.join("Versions", "Current", item), top)
+NORMALIZE
 
 # Binary targets dependencies can arrive universal, even when our target
 # builds arm64. We remove someone else's x86_64 before the signature; lack of arm64 - hard
@@ -256,19 +296,35 @@ done < <(find "$APP_PATH" -type f)
 # with which the application was just built.
 echo "→ Adding full third-party licenses"
 RESOURCES="$APP_PATH/Contents/Resources"
-FLUID_LICENSES="$PACKAGE_CACHE/checkouts/FluidAudio"
 SPARKLE_LICENSES="$PACKAGE_CACHE/checkouts/Sparkle"
+# The runtime ships its licences inside the XCFramework it publishes: its own,
+# plus the vendored ggml and miniz. They travel with the binary, so they are
+# taken from the artifact actually linked rather than from a checkout.
+# Where the artifact lands depends on who resolved it: xcodebuild puts binary
+# targets under the cloned-packages directory, `swift build` under the package's
+# own .build. Look in both rather than assume the one that happened to be used.
+RUNTIME_LICENSES=""
+for artifact_root in "$PACKAGE_CACHE" "$PWD/Packages/LocalASR/.build"; do
+  [[ -d "$artifact_root" ]] || continue
+  RUNTIME_LICENSES=$(find "$artifact_root" -type d -name "TranscribeCpp.xcframework" -print -quit 2>/dev/null || true)
+  [[ -n "$RUNTIME_LICENSES" ]] && break
+done
+[[ -n "$RUNTIME_LICENSES" ]] || {
+  echo "The inference runtime artifact was not resolved; cannot collect its licences." >&2
+  exit 1
+}
+echo "  runtime licences from ${RUNTIME_LICENSES#$PWD/}"
 for source in \
-  "$FLUID_LICENSES/LICENSE" \
-  "$FLUID_LICENSES/ThirdPartyLicenses/fastcluster-LICENSE.md" \
-  "$FLUID_LICENSES/ThirdPartyLicenses/vbx-LICENSE.md" \
+  "$RUNTIME_LICENSES/LICENSE" \
+  "$RUNTIME_LICENSES/LICENSE.ggml" \
+  "$RUNTIME_LICENSES/LICENSE.miniz" \
   "$SPARKLE_LICENSES/LICENSE"
 do
   [[ -s "$source" ]] || { echo "No license in resolved dependency: $source" >&2; exit 1; }
 done
-cp "$FLUID_LICENSES/LICENSE" "$RESOURCES/FluidAudio-Apache-2.0.txt"
-cp "$FLUID_LICENSES/ThirdPartyLicenses/fastcluster-LICENSE.md" "$RESOURCES/FluidAudio-fastcluster-BSD.txt"
-cp "$FLUID_LICENSES/ThirdPartyLicenses/vbx-LICENSE.md" "$RESOURCES/FluidAudio-vbx-Apache-2.0.txt"
+cp "$RUNTIME_LICENSES/LICENSE" "$RESOURCES/transcribe-cpp-MIT.txt"
+cp "$RUNTIME_LICENSES/LICENSE.ggml" "$RESOURCES/ggml-MIT.txt"
+cp "$RUNTIME_LICENSES/LICENSE.miniz" "$RESOURCES/miniz-MIT.txt"
 cp "$SPARKLE_LICENSES/LICENSE" "$RESOURCES/Sparkle-LICENSE.txt"
 
 # CC BY 4.0 text has been submitted to the repository: the build should not require a network.
@@ -302,10 +358,12 @@ if [[ "$MIN_OS" != "14.0" ]]; then
   echo "Expected minOS 14.0, got $MIN_OS" >&2
   exit 1
 fi
-ASR_WORKER_MIN_OS=$(vtool -show-build "$ASR_WORKER" 2>/dev/null | grep -m1 "minos" | awk '{print $2}')
-echo "  ASR worker minos $ASR_WORKER_MIN_OS"
-if [[ "$ASR_WORKER_MIN_OS" != "14.0" ]]; then
-  echo "Expected ASR worker minOS 14.0, got $ASR_WORKER_MIN_OS" >&2
+# The runtime is built by another project; its floor only has to sit at or
+# below ours, so equality would fail on a dependency that supports more.
+RUNTIME_MIN_OS=$(vtool -show-build "$RUNTIME_BINARY" 2>/dev/null | grep -m1 "minos" | awk '{print $2}')
+echo "  inference runtime minos $RUNTIME_MIN_OS"
+if [[ "${RUNTIME_MIN_OS%%.*}" -gt "${EXPECTED_MIN_OS%%.*}" ]]; then
+  echo "The inference runtime needs macOS $RUNTIME_MIN_OS, above our $EXPECTED_MIN_OS floor" >&2
   exit 1
 fi
 
@@ -375,10 +433,14 @@ if [[ -n "$DEVELOPER_ID" ]]; then
       --options runtime --timestamp --sign "$DEVELOPER_ID" "$@"
   }
 
+  # The inference runtime is nested code too, and thinning it above invalidated
+  # whatever signature it arrived with. Same inside-out rule as Sparkle: sign it
+  # before the app that contains it.
+  sign "$APP_PATH/Contents/Frameworks/CTranscribe.framework"
+
   # If Sparkle moves to a different version letter or removes a component, silently
   # you can't skip it: the embedded code will remain with the ad-hoc assembly signature.
   for component in \
-    "$ASR_WORKER" \
     "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
     "$SPARKLE_VERSION/Autoupdate" \
@@ -393,7 +455,6 @@ if [[ -n "$DEVELOPER_ID" ]]; then
     fi
   done
 
-  sign --identifier "$ASR_WORKER_ID" "$ASR_WORKER"
   sign "$SPARKLE_VERSION/XPCServices/Installer.xpc"
   # The only component that Sparkle specifically tells to save
   #entitlements. Our application is not in the sandbox, and now there is an empty list -
@@ -421,7 +482,6 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   APP_AUTHORITY=$(codesign -dvv "$APP_PATH" 2>&1 | sed -n 's/^Authority=//p' | head -1)
   echo "credentials: ${APP_AUTHORITY:-ad-hoc}"
   for component in \
-    "$ASR_WORKER" \
     "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
     "$SPARKLE_VERSION/Autoupdate" \
@@ -451,6 +511,7 @@ else
   fi
   SPARKLE="$APP_PATH/Contents/Frameworks/Sparkle.framework"
   SPARKLE_VERSION="$SPARKLE/Versions/B"
+  codesign --force --sign - "$APP_PATH/Contents/Frameworks/CTranscribe.framework" >/dev/null 2>&1 || true
   for component in \
     "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
@@ -464,7 +525,6 @@ else
     }
   done
 
-  codesign --force --sign - --identifier "$ASR_WORKER_ID" "$ASR_WORKER"
   codesign --force --sign - "$SPARKLE_VERSION/XPCServices/Installer.xpc"
   codesign --force --sign - --preserve-metadata=entitlements \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc"
@@ -475,7 +535,6 @@ else
     --entitlements "$APP_ENTITLEMENTS" "$APP_PATH"
   codesign --verify --strict --verbose=2 "$APP_PATH"
   for component in \
-    "$ASR_WORKER" \
     "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
     "$SPARKLE_VERSION/Autoupdate" \
@@ -486,13 +545,10 @@ else
   done
 fi
 
-ASR_WORKER_ACTUAL_ID=$(codesign -dvv "$ASR_WORKER" 2>&1 \
-  | sed -n 's/^Identifier=//p' | head -1)
-if [[ "$ASR_WORKER_ACTUAL_ID" != "$ASR_WORKER_ID" ]]; then
-  echo "Wrong ASR worker signature identifier: $ASR_WORKER_ACTUAL_ID" >&2
-  exit 1
-fi
-scripts/test-asr-worker.sh "$ASR_WORKER"
+# The runtime carries the app's own signature after the inside-out pass above;
+# it has no separate bundle identity to check, being a framework rather than a
+# helper executable.
+codesign --verify --strict "$APP_PATH/Contents/Frameworks/CTranscribe.framework"
 
 echo "→ Assembling the image"
 STAGING="$DMG_DIR/staging"
@@ -518,7 +574,7 @@ hdiutil verify "$DMG_PATH" >/dev/null
 
 if [[ -n "$DEVELOPER_ID" && ${#NOTARY_ARGS[@]} -gt 0 ]]; then
   if [[ "$REQUIRE_OFFLINE_RECOGNITION" != "1" ]]; then
-    echo "A notarized build requires packaged-worker recognition with network denied." >&2
+    echo "A notarized build requires recognition with network denied." >&2
     exit 1
   fi
   echo "→ Sending for notarization (this takes a few minutes)"

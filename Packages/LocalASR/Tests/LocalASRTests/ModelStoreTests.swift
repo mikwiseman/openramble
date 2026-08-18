@@ -109,7 +109,7 @@ final class ModelStoreTests: XCTestCase {
             modelID: "test-model",
             repository: "acme/test",
             revision: String(repeating: "a", count: 40),
-            fluidAudioVersion: "0.15.5",
+            runtimeVersion: "0.15.5",
             quantization: "test",
             license: "CC-BY-4.0",
             files: [
@@ -196,7 +196,7 @@ final class ModelStoreTests: XCTestCase {
         // be considered suitable, not “probably suitable”.
         let alien = ModelReadyMarker(
             revision: String(repeating: "f", count: 40),
-            fluidAudioVersion: "0.15.5",
+            runtimeVersion: "0.15.5",
             fileCount: manifest.files.count,
             totalByteCount: manifest.totalByteCount,
             verifiedAt: Date()
@@ -438,7 +438,7 @@ final class ModelStoreTests: XCTestCase {
             modelID: installed.modelID,
             repository: installed.repository,
             revision: installed.revision,
-            fluidAudioVersion: "0.15.6",
+            runtimeVersion: "0.15.6",
             quantization: installed.quantization,
             license: installed.license,
             files: installed.files
@@ -460,7 +460,7 @@ final class ModelStoreTests: XCTestCase {
             ModelReadyMarker.self,
             from: Data(contentsOf: layout.readyMarker)
         )
-        XCTAssertEqual(marker.fluidAudioVersion, "0.15.6")
+        XCTAssertEqual(marker.runtimeVersion, "0.15.6")
         XCTAssertTrue(marker.matches(bumped))
     }
 
@@ -476,7 +476,7 @@ final class ModelStoreTests: XCTestCase {
             modelID: installed.modelID,
             repository: installed.repository,
             revision: String(repeating: "c", count: 40),
-            fluidAudioVersion: installed.fluidAudioVersion,
+            runtimeVersion: installed.runtimeVersion,
             quantization: installed.quantization,
             license: installed.license,
             files: installed.files
@@ -512,7 +512,7 @@ final class ModelStoreTests: XCTestCase {
             modelID: installed.modelID,
             repository: installed.repository,
             revision: installed.revision,
-            fluidAudioVersion: "0.15.6",
+            runtimeVersion: "0.15.6",
             quantization: installed.quantization,
             license: installed.license,
             files: installed.files

@@ -242,6 +242,14 @@ public final class DictationController {
     /// dead system service. The owner should recycle it so the next dictation
     /// runs on a fresh session instead of the same stuck one.
     public var onTranscriptionStall: (@MainActor () -> Void)?
+    /// A take that produced text, with the audio still on disk.
+    ///
+    /// Called after insertion is attempted and before the recording is
+    /// deleted, so an owner that keeps a history gets both halves of the take
+    /// while both still exist. Whether the words actually landed is not the
+    /// question here — a person who watched an insertion fail wants that
+    /// transcript more than anyone, not less.
+    public var onTakeFinished: (@MainActor (String, URL) -> Void)?
     /// The take is finished and the model is not resident yet, so the words are
     /// waiting for a load rather than for recognition.
     ///
@@ -1168,6 +1176,10 @@ public final class DictationController {
             target: insertionTarget,
             session: session
         )
+        // The last moment the take still exists. Whoever keeps a history has to
+        // take its copy now; the next line deletes the original, and that
+        // deletion is the promise that a recording does not outlive its use.
+        onTakeFinished?(processed.text, recording.url)
         await discard(recording.url, session: session)
     }
 

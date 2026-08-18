@@ -25,22 +25,21 @@ public privacy description in `README.md` if this boundary ever changes.
 
 ## Architecture
 
-- `Packages/ASRWorkerProtocol` defines the bounded private wire protocol shared
-  by the app and its recognition worker.
 - `Packages/DictationCore` contains platform-independent dictation logic and
   protocols for system boundaries.
 - `Packages/LocalASR` depends on `DictationCore` and owns model installation and
-  recognition. Only `FluidAudioAdapter.swift` may import FluidAudio.
-- `apps/macos` contains the thin SwiftUI/AppKit application layer and the
-  private persistent ASR worker embedded in the app bundle.
+  recognition. Only `TranscribeCppAdapter.swift` may import the inference
+  runtime.
+- `apps/macos` contains the thin SwiftUI/AppKit application layer.
 
-LocalASR depends on DictationCore. The app and private worker share
-ASRWorkerProtocol; the worker also depends on LocalASR and DictationCore. No
-package depends on the application layer.
+LocalASR depends on DictationCore. Recognition runs in the application process.
+No package depends on the application layer.
 
 ## Privacy and safety
 
 - Never log dictated text, individual words, keystrokes, or user file names.
+  Dictation history is the one place transcripts and audio are persisted; it is
+  bounded by an explicit retention setting and documented in `README.md`.
 - Write to the clipboard only with
   `prepareForNewContents(with: .currentHostOnly)` and the required transient and
   concealed markers. A plain `clearContents()` can leak dictation through

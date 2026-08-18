@@ -33,13 +33,11 @@ enum DictationDiagnostics {
     @MainActor
     static func noteStop(
         engineWasReady: Bool,
-        pressureTier: MemoryPressureTier,
         unloadPolicy: IdleUnloadPolicy
     ) {
         #if OPENRAMBLE_DIAGNOSTICS
         pendingStop = PendingStop(
             engineWasReady: engineWasReady,
-            pressureTier: String(describing: pressureTier),
             unloadPolicy: unloadPolicy.rawValue,
             sample: MachineSample.current()
         )
@@ -61,7 +59,6 @@ enum DictationDiagnostics {
         let record = Record(
             timestamp: ISO8601DateFormatter().string(from: Date()),
             engineWasReady: opened.engineWasReady,
-            pressureTier: opened.pressureTier,
             unloadPolicy: opened.unloadPolicy,
             characterCount: characterCount,
             audioSeconds: report.phases?.audioDuration.diagnosticSeconds,
@@ -86,7 +83,6 @@ enum DictationDiagnostics {
 
     private struct PendingStop {
         let engineWasReady: Bool
-        let pressureTier: String
         let unloadPolicy: String
         let sample: MachineSample
     }
@@ -295,7 +291,6 @@ enum DictationDiagnostics {
     private struct Record: Codable, Sendable {
         let timestamp: String
         let engineWasReady: Bool
-        let pressureTier: String
         let unloadPolicy: String
         let characterCount: Int
         let audioSeconds: Double?

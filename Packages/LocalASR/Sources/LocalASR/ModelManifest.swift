@@ -33,7 +33,7 @@ public struct ModelManifest: Codable, Sendable, Equatable {
     /// below us, and we promise reproducibility.
     public let revision: String
     /// The version of FluidAudio this set of files is tested against.
-    public let fluidAudioVersion: String
+    public let runtimeVersion: String
     /// Quantization - for fair attribution according to CC BY 4.0.
     public let quantization: String
     /// Licensing scales.
@@ -83,7 +83,7 @@ public struct ModelManifest: Codable, Sendable, Equatable {
         modelID: String,
         repository: String,
         revision: String,
-        fluidAudioVersion: String,
+        runtimeVersion: String,
         quantization: String,
         license: String,
         files: [File],
@@ -92,7 +92,7 @@ public struct ModelManifest: Codable, Sendable, Equatable {
         self.modelID = modelID
         self.repository = repository
         self.revision = revision
-        self.fluidAudioVersion = fluidAudioVersion
+        self.runtimeVersion = runtimeVersion
         self.quantization = quantization
         self.license = license
         self.files = files

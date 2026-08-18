@@ -465,7 +465,6 @@ final class AppHarness {
     var permissionPollInterval: TimeInterval = 0
     var recoveryInsertionDeadline: Duration = .seconds(2)
     var engineWarmupRetryDelay: Duration? = .milliseconds(10)
-    var pressureRewarmSettleDelay: Duration = .milliseconds(10)
     var idleUnloadDelayOverride: Duration?
     var recordingRecoveryCompatibilityGrace: TimeInterval = 60
     var recordingRecoveryMaintenanceRetryDelay: TimeInterval = 0.01
@@ -585,7 +584,6 @@ final class AppHarness {
                 },
                 recoveryInsertionDeadline: recoveryInsertionDeadline,
                 engineWarmupRetryDelay: engineWarmupRetryDelay,
-                pressureRewarmSettleDelay: pressureRewarmSettleDelay,
                 idleUnloadDelayOverride: idleUnloadDelayOverride,
                 recordingRecoveryCompatibilityGrace: recordingRecoveryCompatibilityGrace,
                 recordingRecoveryMaintenanceRetryDelay: recordingRecoveryMaintenanceRetryDelay,
@@ -618,15 +616,6 @@ final class AppHarness {
     /// 483 MB does not occupy the disk. Marker captures the same size/mtime that
     /// records a production installation that has passed SHA check.
     func installModelMarker() throws {
-        // The product considers the model ready only when both the main and
-        // term hint. The test setup marks both.
-        try installMarker(for: try ModelManifest.bundled())
-        try installMarker(for: try ModelManifest.bundledVocabulary())
-    }
-
-    /// State after updating from a build without a hint: main model
-    /// worth it, no hint - checking the selection script.
-    func installMainModelMarkerOnly() throws {
         try installMarker(for: try ModelManifest.bundled())
     }
 
@@ -785,7 +774,7 @@ final class FailingASREngine: ASREngineAdapting, @unchecked Sendable {
 /// A healthy model behind a worker generation that times out transiently.
 /// This is deliberately an app-layer transport error, not
 /// `ASREngineError.modelsUnavailable`: verified files must survive it.
-final class TransientWarmupASREngine: ASREngineAdapting, VocabularyBoostCapable, @unchecked Sendable {
+final class TransientWarmupASREngine: ASREngineAdapting, @unchecked Sendable {
     private let lock = NSLock()
     private var failuresRemaining: Int
     private var _loadAttempts = 0
@@ -805,10 +794,9 @@ final class TransientWarmupASREngine: ASREngineAdapting, VocabularyBoostCapable,
             failuresRemaining -= 1
             return true
         }
-        if shouldFail { throw ASRWorkerTransportError.requestTimedOut }
+        if shouldFail { throw ASREngineError.inferenceFailed("scripted load failure") }
     }
 
-    func loadVocabularyModels(from directory: URL, boost: VocabularyBoost) async throws {}
 
     func transcribe(samples: [Float]) async throws -> ASRResult {
         lock.withLock { _inferences += 1 }
@@ -840,7 +828,6 @@ actor ReadinessControlledRecognizer: DictationRecognizing {
     }
 
     func prepare(modelDirectory: URL) async throws { prepares += 1 }
-    func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {}
 
     func transcribe(fileURL: URL, languageHint: String?) async throws -> ASRResult {
         ASRResult(text: "", audioDuration: 1, processingDuration: 0)

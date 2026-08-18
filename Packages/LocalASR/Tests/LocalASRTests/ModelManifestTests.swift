@@ -17,7 +17,7 @@ final class ModelManifestTests: XCTestCase {
           "modelID": "parakeet-tdt-0.6b-v3",
           "repository": "FluidInference/parakeet-tdt-0.6b-v3-coreml",
           "revision": "\(revision ?? validRevision)",
-          "fluidAudioVersion": "0.15.5",
+          "runtimeVersion": "0.15.5",
           "quantization": "encoder 6-bit palettized, mixed precision",
           "license": "CC-BY-4.0",
           "files": \(files ?? defaultFiles)
@@ -125,46 +125,5 @@ final class ModelDownloadPolicyTests: XCTestCase {
         for raw in rejected {
             XCTAssertThrowsError(try policy.validate(XCTUnwrap(URL(string: raw))), raw)
         }
-    }
-
-    // MARK: - Compiled hint manifest
-
-    /// The prompter manifest is the second root of trust: without it, installation
-    /// The CTC model has neither file names nor checksums.
-    func testScenario001() throws {
-        let manifest = try ModelManifest.bundledVocabulary()
-
-        XCTAssertEqual(manifest.modelID, "parakeet-ctc-110m")
-
-        let paths = Set(manifest.files.map(\.path))
-        // CtcModels.loadDirect reads these three; CtcTokenizer.load - tokenizer.json.
-        for required in [
-            "vocab.json",
-            "tokenizer.json",
-            "MelSpectrogram.mlmodelc/coremldata.bin",
-            "AudioEncoder.mlmodelc/coremldata.bin",
-            "AudioEncoder.mlmodelc/weights/weight.bin",
-        ] {
-            XCTAssertTrue(paths.contains(required), "\u{0432} \u{043C}\u{0430}\u{043D}\u{0438}\u{0444}\u{0435}\u{0441}\u{0442}\u{0435} \u{043D}\u{0435}\u{0442} \(required)")
-        }
-
-        // The revision is recorded, the amounts for each file.
-        XCTAssertEqual(manifest.revision.count, 40)
-        XCTAssertTrue(manifest.files.allSatisfy { $0.sha256.count == 64 })
-
-        // The hint must remain a light add-on, and not a second model
-        // of the same weight: if the set suddenly grew, this is a file selection error.
-        XCTAssertLessThan(manifest.totalByteCount, 150_000_000)
-        XCTAssertGreaterThan(manifest.totalByteCount, 50_000_000)
-    }
-
-    /// Both models live in different installation folders: they have their own repositories,
-    /// revisions and life cycles.
-    func testScenario002() throws {
-        let main = try ModelManifest.bundled()
-        let vocabulary = try ModelManifest.bundledVocabulary()
-
-        XCTAssertNotEqual(main.modelID, vocabulary.modelID)
-        XCTAssertNotEqual(main.revision, vocabulary.revision)
     }
 }

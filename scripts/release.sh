@@ -250,7 +250,6 @@ run_quietly() {
   rm -f "$output"
 }
 
-run_quietly "ASRWorkerProtocol tests" swift test --package-path Packages/ASRWorkerProtocol
 run_quietly "DictationCore tests" swift test --package-path Packages/DictationCore
 run_quietly "LocalASR tests" swift test --package-path Packages/LocalASR
 XCODEGEN=$(./scripts/pinned-xcodegen.sh)
