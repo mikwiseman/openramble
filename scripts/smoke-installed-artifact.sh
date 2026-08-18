@@ -133,6 +133,16 @@ PLIST="$APP/Contents/Info.plist"
 plist_value() {
   /usr/libexec/PlistBuddy -c "Print :$1" "$PLIST" 2>/dev/null || true
 }
+
+# A diagnostics build writes durable per-take records for one machine. It is
+# built deliberately, with the same identifier and signature as a release so
+# the Accessibility grant survives — which is exactly why the artifact has to
+# be checked here rather than trusted to the shell that produced it.
+DIAGNOSTICS_MARKER=$(plist_value "OpenRambleDiagnostics")
+[[ -z "$DIAGNOSTICS_MARKER" ]] || {
+  echo "This is a diagnostics build (OpenRambleDiagnostics=$DIAGNOSTICS_MARKER); it must not be distributed." >&2
+  exit 1
+}
 expect_plist() {
   local key="$1" expected="$2" actual
   actual=$(plist_value "$key")

@@ -230,6 +230,9 @@ fi
 echo "→ Checking the network surface"
 ./scripts/check-network-surface.sh >/dev/null
 
+echo "→ Checking the diagnostics surface"
+./scripts/check-diagnostics-surface.sh >/dev/null
+
 echo "→ Running tests"
 # Quiet while they pass, loud when they do not. Sending test output straight
 # to /dev/null once cost two full release cycles: the script exited 1 with no

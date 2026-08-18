@@ -873,6 +873,10 @@ public final class DictationController {
             await fail(session: session, with: .capture(String(describing: error)))
             return
         }
+        // The capture is behind us. Marking it here, before any branch below,
+        // keeps the stage boundary at the causal event rather than at whatever
+        // check happens to run next.
+        let freezeCompletedAt = monotonicNow()
         let bufferedSamples = recording.samples
 
         guard shouldContinue(session) else {
@@ -909,6 +913,10 @@ public final class DictationController {
         }
 
         let recognized: ASRResult
+        // Stage boundaries for the speed report. Both are plain clock reads on
+        // the path that already runs; neither adds a suspension point, a lock,
+        // or a reordered call.
+        var preparationCompletedAt: ContinuousClock.Instant?
         do {
             var foregroundEnd = (stopSLORequestedAt ?? .now).advanced(
                 by: captureFreezeDeadline + transcriptionDeadline(recording.duration)
@@ -934,6 +942,7 @@ public final class DictationController {
                 foregroundEnd = foregroundEnd.advanced(
                     by: prepareStarted.duration(to: .now)
                 )
+                preparationCompletedAt = monotonicNow()
             }
             // The deadline stands between the person and a wedged engine: a
             // CoreML prediction stuck on a dead system service ignores
@@ -1058,6 +1067,23 @@ public final class DictationController {
         // session resume inside the next one.
         let microphoneStartup = recording.startupLatency
         let insertionTarget = targetApplication
+        // Recognition owns everything after preparation; without a preparation
+        // hook it owns everything after the freeze. `stopRequestedAt` is set on
+        // every path that reaches here, so the freeze stage is never guessed.
+        let recognitionStartedAt = preparationCompletedAt ?? freezeCompletedAt
+        let phases = stopRequestedAt.map { stopMark in
+            DictationPhaseBreakdown(
+                captureFreeze: stopMark.duration(to: freezeCompletedAt),
+                enginePreparation: preparationCompletedAt.map {
+                    freezeCompletedAt.duration(to: $0)
+                },
+                recognition: recognitionStartedAt.duration(to: recognizedAt),
+                engineProcessing: recognized.processingDuration > 0
+                    ? .seconds(recognized.processingDuration)
+                    : nil,
+                audioDuration: .seconds(recognized.audioDuration)
+            )
+        }
 
         guard shouldContinue(session) else {
             await discard(recording.url, session: session)
@@ -1090,6 +1116,7 @@ public final class DictationController {
             provenance: run.provenance,
             recognizedAt: recognizedAt,
             microphoneStartup: microphoneStartup,
+            phases: phases,
             target: insertionTarget,
             session: session
         )
@@ -1103,7 +1130,8 @@ public final class DictationController {
     private func reportSpeed(
         recognizedAt: ContinuousClock.Instant,
         marks: InsertionMarks,
-        microphoneStartup: Duration?
+        microphoneStartup: Duration?,
+        phases: DictationPhaseBreakdown?
     ) {
         guard let onSpeed, let stopRequestedAt else { return }
         onSpeed(
@@ -1111,7 +1139,8 @@ public final class DictationController {
                 toRecognizedText: stopRequestedAt.duration(to: recognizedAt),
                 toPasteDispatched: marks.pasteDispatchedAt.map { stopRequestedAt.duration(to: $0) },
                 toClipboardRestored: marks.clipboardRestoredAt.map { stopRequestedAt.duration(to: $0) },
-                microphoneStartup: microphoneStartup
+                microphoneStartup: microphoneStartup,
+                phases: phases
             )
         )
     }
@@ -1121,6 +1150,7 @@ public final class DictationController {
         provenance: PipelineProvenance,
         recognizedAt: ContinuousClock.Instant,
         microphoneStartup: Duration?,
+        phases: DictationPhaseBreakdown?,
         target: TargetApplication?,
         session: DictationSessionID
     ) async {
@@ -1161,7 +1191,12 @@ public final class DictationController {
         // Origin - only after a successful insertion: unsuccessful insertion does not
         // “what the person saw” and “copy verbatim” she has nothing to give.
         onDictationCompleted?(provenance)
-        reportSpeed(recognizedAt: recognizedAt, marks: marks, microphoneStartup: microphoneStartup)
+        reportSpeed(
+            recognizedAt: recognizedAt,
+            marks: marks,
+            microphoneStartup: microphoneStartup,
+            phases: phases
+        )
 
         // The click is parsed separately from the insertion intentionally. These are different
         // system calls, and the second one fails when the first one is alive - for example,

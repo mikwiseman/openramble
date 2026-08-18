@@ -102,12 +102,25 @@ if [[ "$UNSIGNED_RELEASE_TOPOLOGY" == "1" && -n "$DEVELOPER_ID" ]]; then
   exit 1
 fi
 
+# Diagnostics builds are personal, never distributable.
+#
+# The switch is here rather than in a build configuration on purpose: the
+# machine that has the slow takes runs the ordinary Release artifact with the
+# shipping bundle identifier, and a Debug-only switch would instrument a
+# different application that never sees the failure. Public releases go through
+# scripts/release.sh, which refuses an artifact carrying the marker.
+if [[ "${OPENRAMBLE_DIAGNOSTICS:-0}" == "1" ]]; then
+  BUILD_OVERRIDES+=(OPENRAMBLE_DIAGNOSTICS_CONDITION=OPENRAMBLE_DIAGNOSTICS)
+  echo "→ Diagnostics build: per-take records go to Application Support/OpenRamble/Diagnostics"
+  echo "  This artifact must not be distributed."
+fi
+
 if [[ -n "$BUILD_NUMBER_OVERRIDE" ]]; then
   [[ "$BUILD_NUMBER_OVERRIDE" =~ ^[0-9]+$ ]] || {
     echo "BUILD_NUMBER_OVERRIDE must consist of numbers only." >&2
     exit 1
   }
-  BUILD_OVERRIDES=(CURRENT_PROJECT_VERSION="$BUILD_NUMBER_OVERRIDE")
+  BUILD_OVERRIDES+=(CURRENT_PROJECT_VERSION="$BUILD_NUMBER_OVERRIDE")
   echo "→ Build number override: $BUILD_NUMBER_OVERRIDE"
 fi
 

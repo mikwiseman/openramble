@@ -760,6 +760,17 @@ public final class AppState: ObservableObject {
                 // voice, instead of trusting a device-specific idle timer and
                 // discovering a cold Core ML graph only after key-up.
                 if state == .preparing { self?.warmEngineUnderVoice() }
+                // The moment the person stopped speaking, before any of the
+                // remaining work has run. A diagnostics build samples the
+                // machine here so the closing sample has something to be
+                // differenced against; a release build does nothing at all.
+                if state == .transcribing, let self {
+                    DictationDiagnostics.noteStop(
+                        engineWasReady: self.isEngineReady,
+                        pressureTier: self.lastPressureTier,
+                        unloadPolicy: self.modelUnloadTimeout
+                    )
+                }
                 // A finished session is a residency event: the engine just
                 // became safely idle, and a deferred unload may now proceed.
                 if state == .idle { self?.evaluateResidency(trigger: "session-idle") }
@@ -807,8 +818,24 @@ public final class AppState: ObservableObject {
                 // Keep the measurement for diagnostics and performance tests, but do
                 // not cover the destination app after text has already arrived.
                 self?.lastSpeed = report
-                engineLog.info(
-                    "dictation stop→text \(report.toRecognizedText.appSeconds, format: .fixed(precision: 2))s stop→paste \(report.toPasteDispatched?.appSeconds ?? -1, format: .fixed(precision: 2))s"
+                // `notice`, not `info`: a slow take is exactly the entry that
+                // must survive in the system log long enough to be read, and
+                // `info` rotates within hours on a busy Mac. The stages travel
+                // with it because the total alone cannot name the cause.
+                engineLog.notice(
+                    """
+                    dictation stop→text \(report.toRecognizedText.appSeconds, format: .fixed(precision: 2))s \
+                    stop→paste \(report.toPasteDispatched?.appSeconds ?? -1, format: .fixed(precision: 2))s \
+                    freeze \(report.phases?.captureFreeze.appSeconds ?? -1, format: .fixed(precision: 2))s \
+                    prepare \(report.phases?.enginePreparation?.appSeconds ?? -1, format: .fixed(precision: 2))s \
+                    recognize \(report.phases?.recognition.appSeconds ?? -1, format: .fixed(precision: 2))s \
+                    engine \(report.phases?.engineProcessing?.appSeconds ?? -1, format: .fixed(precision: 2))s \
+                    audio \(report.phases?.audioDuration.appSeconds ?? -1, format: .fixed(precision: 2))s
+                    """
+                )
+                DictationDiagnostics.noteCompleted(
+                    report: report,
+                    characterCount: self?.lastDictation?.insertedText.count ?? 0
                 )
             }
             controller.onDictationCompleted = { [weak self] provenance in

@@ -23,6 +23,20 @@ packages:
 
 settings:
   base:
+    # Diagnostics are opt-in per build, not per configuration.
+    #
+    # The evidence we need is about rare slow takes in real daily use, and the
+    # daily driver is a Release build with the shipping bundle identifier — a
+    # Debug-only switch would instrument a different application (different id,
+    # different Accessibility grant, different support folder) and never see
+    # the failure. So the switch is a build setting, empty by default:
+    #
+    #   OPENRAMBLE_DIAGNOSTICS=1 ./scripts/build-installable-beta.sh
+    #
+    # A release must never carry it. `scripts/check-diagnostics-surface.sh`
+    # fails the build if the marker reaches a distributable artifact, and
+    # `scripts/release.sh` runs that check.
+    OPENRAMBLE_DIAGNOSTICS_CONDITION: ""
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
     MARKETING_VERSION: "0.8.3"
@@ -38,6 +52,14 @@ settings:
     ARCHS: arm64
     ONLY_ACTIVE_ARCH: NO
     EXCLUDED_ARCHS: x86_64
+  configs:
+    # DEBUG is spelled out because this key is set explicitly here; relying on
+    # the generator's default would silently drop `#if DEBUG` the moment the
+    # diagnostics condition was appended to it.
+    Debug:
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: "DEBUG $(OPENRAMBLE_DIAGNOSTICS_CONDITION)"
+    Release:
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(OPENRAMBLE_DIAGNOSTICS_CONDITION)"
 
 targets:
   OpenRamble:
@@ -97,6 +119,11 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleIconFile: AppIcon
+        # Empty in every distributable build. A diagnostics build stamps the
+        # condition name here so the switch is verifiable on the artifact
+        # itself rather than on the environment that produced it, which is
+        # what `scripts/check-diagnostics-surface.sh` reads.
+        OpenRambleDiagnostics: "$(OPENRAMBLE_DIAGNOSTICS_CONDITION)"
         # The application lives in the menu bar and is not shown in the Dock.
         LSUIElement: true
         # This line is read by the person in the system permission dialog - that is

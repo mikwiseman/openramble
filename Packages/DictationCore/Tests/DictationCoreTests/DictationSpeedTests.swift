@@ -307,3 +307,102 @@ final class DictationSpeedTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Phase breakdown
+
+/// One "stop → text" number cannot say which stage owned the wait, and the
+/// three stages fail for entirely different reasons. These tests pin the
+/// attribution, because a diagnosis built on a mislabelled stage is worse
+/// than no diagnosis.
+@MainActor
+final class DictationPhaseBreakdownTests: XCTestCase {
+    private func settle() async {
+        for _ in 0..<40 {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
+    private final class ScriptedClock: @unchecked Sendable {
+        private let origin = ContinuousClock.now
+        private let offsets: [Duration]
+        private var index = 0
+        private let lock = NSLock()
+
+        init(offsets: [Duration]) { self.offsets = offsets }
+
+        func next() -> ContinuousClock.Instant {
+            lock.lock()
+            defer { lock.unlock() }
+            let offset = index < offsets.count ? offsets[index] : offsets.last ?? .zero
+            index += 1
+            return origin.advanced(by: offset)
+        }
+    }
+
+    /// A cold engine is not a slow engine. The stage that waited for the model
+    /// must carry the seconds, and recognition must keep only its own.
+    func testPreparationWaitIsAttributedToPreparationNotToRecognition() async throws {
+        // stop = 0 ms, capture frozen = 40 ms, model ready = 8040 ms,
+        // text returned = 8100 ms.
+        let clock = ScriptedClock(offsets: [
+            .milliseconds(0), .milliseconds(40), .milliseconds(8040), .milliseconds(8100),
+        ])
+        var report: DictationSpeedReport?
+        let controller = DictationController(
+            capture: FakeCapture(),
+            transcribe: { _ in
+                ASRResult(text: "words", audioDuration: 2, processingDuration: 0.05)
+            },
+            inserter: FakeInserter(),
+            overlay: FakeOverlay(),
+            sounds: FakeSounds(),
+            monotonicNow: { clock.next() },
+            prepareForTranscription: {}
+        )
+        controller.onSpeed = { report = $0 }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        let phases = try XCTUnwrap(try XCTUnwrap(report).phases)
+        XCTAssertEqual(phases.captureFreeze, .milliseconds(40))
+        XCTAssertEqual(phases.enginePreparation, .milliseconds(8000))
+        XCTAssertEqual(phases.recognition, .milliseconds(60))
+        XCTAssertEqual(phases.engineProcessing, .milliseconds(50))
+        XCTAssertEqual(phases.audioDuration, .seconds(2))
+    }
+
+    /// Without a preparation hook there is no preparation stage to report, and
+    /// recognition owns everything after the freeze. Absent, never zero: a zero
+    /// would claim a stage ran instantly.
+    func testNoPreparationHookLeavesTheStageAbsentAndRecognitionWhole() async throws {
+        let clock = ScriptedClock(offsets: [
+            .milliseconds(0), .milliseconds(30), .milliseconds(230),
+        ])
+        var report: DictationSpeedReport?
+        let controller = DictationController(
+            capture: FakeCapture(),
+            transcribe: { _ in
+                ASRResult(text: "words", audioDuration: 1, processingDuration: 0.2)
+            },
+            inserter: FakeInserter(),
+            overlay: FakeOverlay(),
+            sounds: FakeSounds(),
+            monotonicNow: { clock.next() }
+        )
+        controller.onSpeed = { report = $0 }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        let phases = try XCTUnwrap(try XCTUnwrap(report).phases)
+        XCTAssertNil(phases.enginePreparation)
+        XCTAssertEqual(phases.captureFreeze, .milliseconds(30))
+        XCTAssertEqual(phases.recognition, .milliseconds(200))
+    }
+}
