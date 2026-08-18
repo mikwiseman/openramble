@@ -27,8 +27,17 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["msi", "nsis", "appimage", "deb", "rpm"],
-    "icon": ["icons/icon.png"],
+    "targets": [
+      "msi",
+      "nsis",
+      "appimage",
+      "deb",
+      "rpm"
+    ],
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
     "category": "Productivity",
     "shortDescription": "Local dictation",
     "longDescription": "Hold a key, speak, release it, and the text appears in whatever you were typing in. Recognition runs on this machine."
