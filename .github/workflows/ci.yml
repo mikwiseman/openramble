@@ -97,13 +97,18 @@ jobs:
       # WebKit on Linux and a WebView on Windows; building it here would turn
       # "did the shared logic break?" into "is this runner's system library
       # present?", which is a different question with a different answer.
+      # bash on every runner: the default Windows shell is PowerShell, which
+      # reads a trailing backslash as an operator rather than a continuation.
+      # A matrix whose members parse the command differently is not a matrix.
       - name: Lint
+        shell: bash
         run: |
           cargo fmt --all --check
           cargo clippy -p ramble-core -p ramble-text -p ramble-model -p ramble-audio \
             --all-targets --all-features -- -D warnings
 
       - name: Test
+        shell: bash
         run: |
           cargo test -p ramble-core -p ramble-text -p ramble-model -p ramble-audio \
             --all-features
@@ -130,12 +135,15 @@ jobs:
             libasound2-dev libxdo-dev libxkbcommon-dev
 
       - name: Build
+        shell: bash
         run: cargo build -p openramble-desktop --locked
 
       - name: Test
+        shell: bash
         run: cargo test -p openramble-desktop --locked
 
       - name: Lint
+        shell: bash
         run: cargo clippy -p openramble-desktop --all-targets -- -D warnings
 
   conformance:
