@@ -242,6 +242,17 @@ public final class DictationController {
     /// dead system service. The owner should recycle it so the next dictation
     /// runs on a fresh session instead of the same stuck one.
     public var onTranscriptionStall: (@MainActor () -> Void)?
+    /// The take is finished and the model is not resident yet, so the words are
+    /// waiting for a load rather than for recognition.
+    ///
+    /// The panel is the only feedback channel during dictation, and until now
+    /// it said "Transcribing…" through the whole wait — up to the preparation
+    /// deadline. Calling a wait work is a small lie that becomes a large one on
+    /// a short take, which has no speech for the load to hide under: the person
+    /// watches a spinner claim to transcribe half a second of audio for fifteen
+    /// seconds. `true` opens the wait, `false` closes it on every exit,
+    /// including a throw.
+    public var onEnginePreparationWait: (@MainActor (Bool) -> Void)?
 
     /// Whether recording occurs without holding down a key.
     public private(set) var isHandsFreeActive = false {
@@ -288,6 +299,10 @@ public final class DictationController {
     /// The reload budget. Covers a cache-purged model compile; a breach means
     /// the engine is wedged and flows into the same stall recovery.
     private let prepareDeadline: Duration
+    /// How long a stop-time model wait may stay silent before the panel says
+    /// so. Injectable so suites can prove both the announcement and the
+    /// silence without sleeping a production-scale interval.
+    private let enginePreparationNoticeDelay: Duration
     /// Capture stop owns only the audio-engine handoff and PCM freeze. Disk
     /// drain and fsync are separate milestones and do not consume this budget.
     private let captureFreezeDeadline: Duration
@@ -373,6 +388,7 @@ public final class DictationController {
         // warm-up; 25 s covers it with margin while a genuine wedge still
         // surfaces well before the worker's own watchdog escalates.
         prepareDeadline: Duration = .seconds(25),
+        enginePreparationNoticeDelay: Duration = .milliseconds(250),
         captureFreezeDeadline: Duration = .milliseconds(500),
         recordingReadableDeadline: Duration = .seconds(2),
         recordingPreserveDeadline: Duration = .seconds(2),
@@ -397,6 +413,7 @@ public final class DictationController {
         self.transcriptionDeadline = transcriptionDeadline
         self.prepareForTranscription = prepareForTranscription
         self.prepareDeadline = prepareDeadline
+        self.enginePreparationNoticeDelay = enginePreparationNoticeDelay
         self.captureFreezeDeadline = captureFreezeDeadline
         self.recordingReadableDeadline = recordingReadableDeadline
         self.recordingPreserveDeadline = recordingPreserveDeadline
@@ -683,6 +700,23 @@ public final class DictationController {
         await cleanup(session: session)
     }
 
+    /// Whether the panel is currently telling someone that the model is still
+    /// loading. Kept so the retraction is exactly as conditional as the
+    /// announcement: a `false` nobody was told about would be a lie of its own.
+    private var isAnnouncingEngineWait = false
+
+    private func beginEngineWaitAnnouncement() {
+        guard !isAnnouncingEngineWait else { return }
+        isAnnouncingEngineWait = true
+        onEnginePreparationWait?(true)
+    }
+
+    private func endEngineWaitAnnouncement() {
+        guard isAnnouncingEngineWait else { return }
+        isAnnouncingEngineWait = false
+        onEnginePreparationWait?(false)
+    }
+
     private func markStopRequested() {
         if stopRequestedAt == nil {
             stopRequestedAt = monotonicNow()
@@ -932,6 +966,20 @@ public final class DictationController {
             // recovery stays with the worker.
             if let prepareForTranscription {
                 let prepareStarted = ContinuousClock.now
+                // A resident engine answers this in microseconds, and flipping
+                // the panel to a loading message for every take would be a
+                // flicker on the overwhelmingly common path. The wait is
+                // announced only once it is long enough for someone to be
+                // looking at it, and retracted on every exit.
+                let announcement = Task { [weak self, enginePreparationNoticeDelay] in
+                    try? await Task.sleep(for: enginePreparationNoticeDelay)
+                    guard !Task.isCancelled else { return }
+                    self?.beginEngineWaitAnnouncement()
+                }
+                defer {
+                    announcement.cancel()
+                    endEngineWaitAnnouncement()
+                }
                 do {
                     try await withTranscriptionDeadline(prepareDeadline) {
                         try await prepareForTranscription()

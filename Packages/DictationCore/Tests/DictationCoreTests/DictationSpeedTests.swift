@@ -406,3 +406,99 @@ final class DictationPhaseBreakdownTests: XCTestCase {
         XCTAssertEqual(phases.recognition, .milliseconds(200))
     }
 }
+
+// MARK: - Waiting for the model
+
+/// The panel is the only feedback channel during dictation. A stop-time model
+/// load spends its whole length in the transcribing state, so the controller
+/// has to say which of the two is happening — but only when the distinction is
+/// visible to a person, never as a flicker on the warm path.
+@MainActor
+final class EnginePreparationWaitTests: XCTestCase {
+    private func settle(_ rounds: Int = 60) async {
+        for _ in 0..<rounds {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
+    /// A load long enough to be noticed is announced, and retracted once the
+    /// model is there.
+    func testALongModelWaitIsAnnouncedAndThenRetracted() async throws {
+        let announcements = Box<[Bool]>([])
+        let controller = DictationController(
+            capture: FakeCapture(),
+            transcribe: { _ in ASRResult(text: "words", audioDuration: 1, processingDuration: 0.1) },
+            inserter: FakeInserter(),
+            overlay: FakeOverlay(),
+            sounds: FakeSounds(),
+            prepareForTranscription: { try await Task.sleep(for: .milliseconds(220)) },
+            enginePreparationNoticeDelay: .milliseconds(20)
+        )
+        controller.onEnginePreparationWait = { announcements.value.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        XCTAssertEqual(announcements.value, [true, false])
+    }
+
+    /// A resident engine answers immediately. Flipping the panel for every take
+    /// would be a flicker on the path almost every dictation takes.
+    func testAWarmEngineNeverMentionsWaiting() async throws {
+        let announcements = Box<[Bool]>([])
+        let controller = DictationController(
+            capture: FakeCapture(),
+            transcribe: { _ in ASRResult(text: "words", audioDuration: 1, processingDuration: 0.1) },
+            inserter: FakeInserter(),
+            overlay: FakeOverlay(),
+            sounds: FakeSounds(),
+            prepareForTranscription: {},
+            enginePreparationNoticeDelay: .milliseconds(400)
+        )
+        controller.onEnginePreparationWait = { announcements.value.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        XCTAssertTrue(announcements.value.isEmpty)
+    }
+
+    /// A load that fails still has to take its message back. Leaving "Waking
+    /// the model…" on screen would outlive the take that owns it.
+    func testAFailedPreparationRetractsItsAnnouncement() async throws {
+        struct PreparationFailed: Error {}
+        let announcements = Box<[Bool]>([])
+        let controller = DictationController(
+            capture: FakeCapture(),
+            transcribe: { _ in ASRResult(text: "words", audioDuration: 1, processingDuration: 0.1) },
+            inserter: FakeInserter(),
+            overlay: FakeOverlay(),
+            sounds: FakeSounds(),
+            prepareForTranscription: {
+                try await Task.sleep(for: .milliseconds(60))
+                throw PreparationFailed()
+            },
+            enginePreparationNoticeDelay: .milliseconds(10)
+        )
+        controller.onEnginePreparationWait = { announcements.value.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        XCTAssertEqual(announcements.value.last, false, "the panel never keeps a stale wait")
+        XCTAssertEqual(announcements.value.filter { $0 }.count, 1)
+    }
+}
+
+/// A reference box so a `@Sendable` callback can record what it saw.
+private final class Box<Value>: @unchecked Sendable {
+    var value: Value
+    init(_ value: Value) { self.value = value }
+}

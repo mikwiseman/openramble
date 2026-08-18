@@ -814,6 +814,14 @@ public final class AppState: ObservableObject {
                     self?.learn(original: original, edited: edited)
                 }
             }
+            controller.onEnginePreparationWait = { [weak self] waiting in
+                // The panel is the only feedback channel during dictation, and
+                // a wait for a model that is still loading is not the same
+                // event as transcription. Presenters that cannot say so simply
+                // keep their previous message.
+                (self?.overlay as? any EngineWaitPresenting)?
+                    .setWaitingForEngine(waiting)
+            }
             controller.onSpeed = { [weak self] report in
                 // Keep the measurement for diagnostics and performance tests, but do
                 // not cover the destination app after text has already arrived.

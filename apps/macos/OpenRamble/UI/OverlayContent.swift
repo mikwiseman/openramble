@@ -58,7 +58,8 @@ struct OverlayContent: Equatable {
     static func make(
         state: DictationState,
         notice: DictationNotice?,
-        elapsed: TimeInterval
+        elapsed: TimeInterval,
+        isWaitingForEngine: Bool = false
     ) -> OverlayContent {
         // The message is more important than the state: it is shown instead.
         if let notice {
@@ -112,6 +113,23 @@ struct OverlayContent: Equatable {
             )
 
         case .transcribing:
+            // The words are safe either way, and the distinction is the
+            // difference between a panel that is working and a panel that is
+            // waiting. A model that has to be loaded costs seconds, and on a
+            // short take there is no speech for that load to hide under, so
+            // "Transcribing…" would spend the whole wait describing work that
+            // has not started. Nothing is lost and nothing is at risk here —
+            // say what is actually happening.
+            if isWaitingForEngine {
+                return OverlayContent(
+                    title: "Waking the model…",
+                    subtitle: "Your words are waiting, not lost.",
+                    tone: .working,
+                    accessibilityLabel: "Recording stopped, waiting for the speech model to load",
+                    announcement: "Waiting for the speech model to load",
+                    isAnnouncementUrgent: false
+                )
+            }
             return OverlayContent(
                 title: "Transcribing…",
                 // The number is the length of the finished recording, not progress.
