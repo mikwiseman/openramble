@@ -75,23 +75,30 @@ pub fn write_excluded_from_history(text: &str) -> Result<(), InjectError> {
     let _clipboard =
         Clipboard::new_attempts(10).map_err(|error| InjectError::Clipboard(error.to_string()))?;
 
+    // This one empties the clipboard first, which is what we want: the text
+    // replaces whatever was there.
     formats::Unicode
         .write_clipboard(&text)
         .map_err(|error| InjectError::Clipboard(error.to_string()))?;
 
-    // Presence of the format is the signal; the payload is ignored. Registering
-    // by name is how these are documented, and an unregistered name simply
-    // fails to resolve rather than doing something surprising.
-    for name in [
-        "ExcludeClipboardContentFromMonitorProcessing",
-        "CanIncludeInClipboardHistory",
-        "CanUploadToCloudClipboard",
+    for (name, payload) in [
+        // Presence alone is the signal for this one.
+        ("ExcludeClipboardContentFromMonitorProcessing", &[0_u8][..]),
+        // These two are read as a DWORD: zero means "no".
+        ("CanIncludeInClipboardHistory", &[0_u8, 0, 0, 0][..]),
+        ("CanUploadToCloudClipboard", &[0_u8, 0, 0, 0][..]),
     ] {
-        if let Ok(format) = clipboard_win::register_format(name) {
-            // A single zero byte: "no" for the two capability formats, and a
-            // present-but-empty marker for the exclusion one.
-            let _ = clipboard_win::raw::set(format.get(), &[0_u8]);
-        }
+        // `register_format` answers with an Option — a name that cannot be
+        // registered simply has no format, and there is nothing to do about it.
+        let Some(format) = clipboard_win::register_format(name) else {
+            continue;
+        };
+        // `set_without_clear`, emphatically. The plain `set` empties the
+        // clipboard first, so using it here would wipe the text written a moment
+        // ago and leave nothing but a marker — dictation would paste an empty
+        // string, and the privacy measure would have destroyed the feature it
+        // was protecting.
+        let _ = clipboard_win::raw::set_without_clear(format.get(), payload);
     }
     Ok(())
 }
