@@ -35,11 +35,6 @@ jobs:
           swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors
           swift test --package-path Packages/DictationCore
 
-      - name: ASRWorkerProtocol
-        run: |
-          swift build --package-path Packages/ASRWorkerProtocol --build-tests -Xswiftc -warnings-as-errors
-          swift test --package-path Packages/ASRWorkerProtocol
-
       - name: LocalASR
         run: |
           swift build --package-path Packages/LocalASR --build-tests -Xswiftc -warnings-as-errors

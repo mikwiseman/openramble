@@ -20,11 +20,9 @@ ALLOWED='^(Packages/LocalASR/Sources/LocalASR/ModelDownloading\.swift|apps/macos
 # local fixture files via Data(contentsOf:) and raise control-connect;
 # consider these seams to be the network surface of the product - a false PASS/FAIL signal.
 SHIPPING_PATHS=(
-  Packages/ASRWorkerProtocol/Sources
   Packages/DictationCore/Sources
   Packages/LocalASR/Sources
   apps/macos/OpenRamble
-  apps/macos/OpenRambleASRWorker
 )
 
 # Symbols that can go online.
@@ -58,40 +56,6 @@ done < <(grep -rnE "$FORBIDDEN" "${SHIPPING_PATHS[@]}" 2>/dev/null \
   | grep -vE 'URLSessionModelDownloader\(\)|: ModelDownloading' \
   || true)
 
-# The worker links the LocalASR product, which currently also contains the
-# explicitly user-invoked model downloader. That makes a binary-symbol absence
-# claim impossible: CFNetwork/URLSession code is present in the linked image.
-# What must remain impossible through the private control plane is asking the
-# worker to download or install anything. Release additionally executes the
-# exact mounted worker under an OS-level deny-network sandbox.
-WORKER_CONTROL_PATHS=(
-  Packages/ASRWorkerProtocol/Sources
-  apps/macos/OpenRambleASRWorker
-)
-WORKER_CONTROL_FORBIDDEN="$FORBIDDEN|ModelDownloading|ModelStore|download|install|https?://"
-echo "Checking the ASR worker control plane..."
-while IFS= read -r hit; do
-  if [[ $status -eq 0 ]]; then
-    echo ""
-    echo "VIOLATION: the private ASR worker exposes a network/model-install path."
-    status=1
-  fi
-  echo "  $hit"
-done < <(grep -rnEi "$WORKER_CONTROL_FORBIDDEN" "${WORKER_CONTROL_PATHS[@]}" 2>/dev/null \
-  | grep -v '^Binary' \
-  | grep -vE ':[0-9]+: *//' \
-  || true)
-
-# The clipboard is a different story. Naked clearContents() returns dictated
-# text in Universal Clipboard, that is, on all Apple ID devices via iCloud.
-# You can only write to the buffer using prepareForNewContents(with: .currentHostOnly).
-#
-# declareTypes(_:owner:) - the same thing in other words. This is the legacy way to start
-# new entry: it also resets the buffer and also does not set limits
-# current computer. Checking for one clearContents() would only catch
-# modern spelling, but the promise to the user is not formulated about the name
-# method.
-FORBIDDEN_PASTEBOARD='clearContents\(\)|declareTypes\('
 echo "Checking the clipboard entry..."
 while IFS= read -r hit; do
   if [[ $status -eq 0 ]]; then

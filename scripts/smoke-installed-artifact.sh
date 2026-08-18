@@ -43,7 +43,7 @@ done
   exit 1
 }
 if [[ "$REQUIRE_DEVELOPER_ID" == "1" && "$REQUIRE_OFFLINE_RECOGNITION" != "1" ]]; then
-  echo "Developer ID artifact smoke requires packaged-worker recognition with network denied." >&2
+  echo "Developer ID artifact smoke requires recognition with network denied." >&2
   exit 1
 fi
 
@@ -320,7 +320,7 @@ PY
     )
   fi
   [[ -d "$MODEL_DIRECTORY" ]] || {
-    echo "The installed model required for packaged-worker offline proof is missing:" >&2
+    echo "The installed model required for the offline proof is missing:" >&2
     echo "  $MODEL_DIRECTORY" >&2
     exit 69
   }

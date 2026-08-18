@@ -8,7 +8,6 @@ BUILD_SCRIPT="$REPOSITORY_ROOT/scripts/build-dmg.sh"
 PROJECT_YML="$REPOSITORY_ROOT/apps/macos/project.yml"
 SMOKE_SCRIPT="$REPOSITORY_ROOT/scripts/smoke-installed-artifact.sh"
 NETWORK_SCRIPT="$REPOSITORY_ROOT/scripts/check-network-surface.sh"
-OFFLINE_DRIVER="$REPOSITORY_ROOT/scripts/tests/packaged-worker-offline.py"
 RELEASE_DOC="$REPOSITORY_ROOT/docs/release.md"
 CI_WORKFLOW="$REPOSITORY_ROOT/.github/workflows/ci.yml"
 
@@ -88,26 +87,22 @@ for mounted_artifact_gate in \
   'expect_plist SUPublicEDKey "$EXPECTED_PUBLIC_KEY"' \
   'expect_plist LSMinimumSystemVersion "$EXPECTED_MIN_OS"' \
   'app_signature_identifier' \
-  'No binary-level transport-free claim is made' \
+  'The inference runtime links a forbidden network framework.' \
+  'The inference runtime references a networking API.' \
   'getnameinfo' \
   'sandbox-exec -f "$PROFILE"' \
-  'scripts/tests/packaged-worker-offline.py'
+  './scripts/test-zero-network.sh'
 do
   grep -Fq -- "$mounted_artifact_gate" "$SMOKE_SCRIPT" \
     || fail_test "mounted artifact/offline gate disappeared: $mounted_artifact_gate"
 done
 
-grep -Fq 'WORKER_CONTROL_FORBIDDEN=' "$NETWORK_SCRIPT" \
-  || fail_test "ASR worker control-plane network scan disappeared"
+grep -Fq 'Checking the inference runtime binary' "$NETWORK_SCRIPT" \
+  || fail_test "inference runtime binary network audit disappeared"
 grep -Fq 'except PermissionError as error:' "$SMOKE_SCRIPT" \
   || fail_test "deny-network sandbox has no positive control"
-grep -Fq 'Developer ID artifact smoke requires packaged-worker recognition with network denied.' "$SMOKE_SCRIPT" \
+grep -Fq 'Developer ID artifact smoke requires' "$SMOKE_SCRIPT" \
   || fail_test "Developer ID artifact smoke permits skipping offline recognition"
-grep -Fq 'PREPARE_MAIN = 3' "$OFFLINE_DRIVER" \
-  || fail_test "packaged-worker proof no longer loads the model"
-grep -Fq 'TRANSCRIBE_FILE = 7' "$OFFLINE_DRIVER" \
-  || fail_test "packaged-worker proof no longer performs recognition"
-/usr/bin/python3 -m py_compile "$OFFLINE_DRIVER"
 
 grep -Fq 'PRODUCT_NAME: OpenRamble' "$PROJECT_YML" \
   || fail_test "shipping product name is not OpenRamble"
@@ -117,8 +112,8 @@ grep -Fq 'DMG_BASENAME="OpenRamble"' "$BUILD_SCRIPT" \
   || fail_test "production DMG still uses the old product name"
 grep -Fq './scripts/smoke-installed-artifact.sh "$DMG_PATH"' "$BUILD_SCRIPT" \
   || fail_test "build-dmg.sh does not mount and smoke the DMG it just created"
-grep -Fq 'A notarized build requires packaged-worker recognition with network denied.' "$BUILD_SCRIPT" \
-  || fail_test "build-dmg.sh permits notarization without packaged-worker offline recognition"
+grep -Fq 'A notarized build requires recognition with network denied.' "$BUILD_SCRIPT" \
+  || fail_test "build-dmg.sh permits notarization without offline recognition"
 grep -Fq 'UNSIGNED_RELEASE_TOPOLOGY="${UNSIGNED_RELEASE_TOPOLOGY:-0}"' "$BUILD_SCRIPT" \
   || fail_test "build-dmg.sh lost the CI-only production Release topology"
 grep -Fq '"${CI:-}" != "true"' "$BUILD_SCRIPT" \

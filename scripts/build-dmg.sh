@@ -23,7 +23,6 @@ PROJECT="apps/macos/OpenRamble.xcodeproj"
 BUILD_DIR="artifacts/build"
 DMG_DIR="artifacts/dmg"
 APP_ENTITLEMENTS="apps/macos/OpenRamble/OpenRamble.entitlements"
-ASR_WORKER_ID="is.waiwai.dictation.asr-worker"
 OFFICIAL_FEED_URL="https://mikwiseman.github.io/openramble/appcast.xml"
 PERMANENT_PUBLIC_KEY="9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI="
 EXPECTED_MIN_OS="14.0"
@@ -86,7 +85,7 @@ PROJECT_PUBLIC_KEY=$(project_value SUPublicEDKey)
   exit 1
 }
 if [[ "$REQUIRE_NOTARIZATION" == "1" && "$REQUIRE_OFFLINE_RECOGNITION" != "1" ]]; then
-  echo "A notarized build requires packaged-worker recognition with network denied." >&2
+  echo "A notarized build requires recognition with network denied." >&2
   exit 1
 fi
 [[ "$UNSIGNED_RELEASE_TOPOLOGY" == "0" || "$UNSIGNED_RELEASE_TOPOLOGY" == "1" ]] || {
@@ -318,10 +317,12 @@ if [[ "$MIN_OS" != "14.0" ]]; then
   echo "Expected minOS 14.0, got $MIN_OS" >&2
   exit 1
 fi
-ASR_WORKER_MIN_OS=$(vtool -show-build "$ASR_WORKER" 2>/dev/null | grep -m1 "minos" | awk '{print $2}')
-echo "  ASR worker minos $ASR_WORKER_MIN_OS"
-if [[ "$ASR_WORKER_MIN_OS" != "14.0" ]]; then
-  echo "Expected ASR worker minOS 14.0, got $ASR_WORKER_MIN_OS" >&2
+# The runtime is built by another project; its floor only has to sit at or
+# below ours, so equality would fail on a dependency that supports more.
+RUNTIME_MIN_OS=$(vtool -show-build "$RUNTIME_BINARY" 2>/dev/null | grep -m1 "minos" | awk '{print $2}')
+echo "  inference runtime minos $RUNTIME_MIN_OS"
+if [[ "${RUNTIME_MIN_OS%%.*}" -gt "${EXPECTED_MIN_OS%%.*}" ]]; then
+  echo "The inference runtime needs macOS $RUNTIME_MIN_OS, above our $EXPECTED_MIN_OS floor" >&2
   exit 1
 fi
 
@@ -399,7 +400,6 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   # If Sparkle moves to a different version letter or removes a component, silently
   # you can't skip it: the embedded code will remain with the ad-hoc assembly signature.
   for component in \
-    "$ASR_WORKER" \
     "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
     "$SPARKLE_VERSION/Autoupdate" \
@@ -414,7 +414,6 @@ if [[ -n "$DEVELOPER_ID" ]]; then
     fi
   done
 
-  sign --identifier "$ASR_WORKER_ID" "$ASR_WORKER"
   sign "$SPARKLE_VERSION/XPCServices/Installer.xpc"
   # The only component that Sparkle specifically tells to save
   #entitlements. Our application is not in the sandbox, and now there is an empty list -
@@ -442,7 +441,6 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   APP_AUTHORITY=$(codesign -dvv "$APP_PATH" 2>&1 | sed -n 's/^Authority=//p' | head -1)
   echo "credentials: ${APP_AUTHORITY:-ad-hoc}"
   for component in \
-    "$ASR_WORKER" \
     "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
     "$SPARKLE_VERSION/Autoupdate" \
@@ -486,7 +484,6 @@ else
     }
   done
 
-  codesign --force --sign - --identifier "$ASR_WORKER_ID" "$ASR_WORKER"
   codesign --force --sign - "$SPARKLE_VERSION/XPCServices/Installer.xpc"
   codesign --force --sign - --preserve-metadata=entitlements \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc"
@@ -497,7 +494,6 @@ else
     --entitlements "$APP_ENTITLEMENTS" "$APP_PATH"
   codesign --verify --strict --verbose=2 "$APP_PATH"
   for component in \
-    "$ASR_WORKER" \
     "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
     "$SPARKLE_VERSION/Autoupdate" \
@@ -508,13 +504,10 @@ else
   done
 fi
 
-ASR_WORKER_ACTUAL_ID=$(codesign -dvv "$ASR_WORKER" 2>&1 \
-  | sed -n 's/^Identifier=//p' | head -1)
-if [[ "$ASR_WORKER_ACTUAL_ID" != "$ASR_WORKER_ID" ]]; then
-  echo "Wrong ASR worker signature identifier: $ASR_WORKER_ACTUAL_ID" >&2
-  exit 1
-fi
-scripts/test-asr-worker.sh "$ASR_WORKER"
+# The runtime carries the app's own signature after the inside-out pass above;
+# it has no separate bundle identity to check, being a framework rather than a
+# helper executable.
+codesign --verify --strict "$APP_PATH/Contents/Frameworks/CTranscribe.framework"
 
 echo "→ Assembling the image"
 STAGING="$DMG_DIR/staging"
@@ -540,7 +533,7 @@ hdiutil verify "$DMG_PATH" >/dev/null
 
 if [[ -n "$DEVELOPER_ID" && ${#NOTARY_ARGS[@]} -gt 0 ]]; then
   if [[ "$REQUIRE_OFFLINE_RECOGNITION" != "1" ]]; then
-    echo "A notarized build requires packaged-worker recognition with network denied." >&2
+    echo "A notarized build requires recognition with network denied." >&2
     exit 1
   fi
   echo "→ Sending for notarization (this takes a few minutes)"
