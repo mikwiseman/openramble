@@ -244,8 +244,8 @@ final class SetupScreenBarTests: XCTestCase {
         XCTAssertEqual(screen.card.actions, [.repair], "one control, and it is the way out")
         XCTAssertEqual(
             screen.card.title(for: .repair),
-            "Redownload Model — 586 MB",
-            "the repair fetches both models again, and the button says how much that is"
+            "Redownload Model — 740 MB",
+            "the repair fetches the model again, and the button says how much that is"
         )
     }
 

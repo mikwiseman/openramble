@@ -7,8 +7,6 @@ options:
   createIntermediateGroups: true
 
 packages:
-  ASRWorkerProtocol:
-    path: ../../Packages/ASRWorkerProtocol
   DictationCore:
     path: ../../Packages/DictationCore
   LocalASR:
@@ -80,13 +78,6 @@ targets:
       - path: OpenRamble/Resources/AppIcon.icns
         buildPhase: resources
     dependencies:
-      - target: OpenRambleASRWorker
-        embed: true
-        link: false
-        copy:
-          destination: executables
-      - package: ASRWorkerProtocol
-        product: ASRWorkerProtocol
       - package: DictationCore
         product: DictationCore
       - package: DictationCore
@@ -156,42 +147,6 @@ targets:
         # generate a replacement. scripts/release.sh verifies the exact pair.
         SUPublicEDKey: "9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI="
 
-  # Private lifetime boundary around FluidAudio/Core ML. There is no socket,
-  # service registration, or public API: the parent grants access only through
-  # anonymous stdin/stdout pipes inherited at launch.
-  OpenRambleASRWorker:
-    type: tool
-    platform: macOS
-    sources:
-      - path: OpenRambleASRWorker
-    dependencies:
-      - package: ASRWorkerProtocol
-        product: ASRWorkerProtocol
-      - package: DictationCore
-        product: DictationCore
-      - package: LocalASR
-        product: LocalASR
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.asr-worker
-        PRODUCT_NAME: openramble-asr-worker
-        SWIFT_STRICT_CONCURRENCY: complete
-        SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
-
-  OpenRambleASRWorkerTestFixture:
-    type: tool
-    platform: macOS
-    sources:
-      - path: OpenRambleASRWorkerTestFixture
-    dependencies:
-      - package: ASRWorkerProtocol
-        product: ASRWorkerProtocol
-    settings:
-      base:
-        PRODUCT_NAME: openramble-asr-worker-test-fixture
-        SWIFT_STRICT_CONCURRENCY: complete
-        SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
-
   # Application target tests.
   #
   # Build WITHOUT the host application (`TEST_HOST` is not set), and the sources
@@ -233,11 +188,6 @@ targets:
           fi
           /usr/bin/touch "$SCRIPT_OUTPUT_FILE_0"
     dependencies:
-      - target: OpenRambleASRWorkerTestFixture
-        embed: false
-        link: false
-      - package: ASRWorkerProtocol
-        product: ASRWorkerProtocol
       - package: DictationCore
         product: DictationCore
       - package: DictationCore

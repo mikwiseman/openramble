@@ -65,3 +65,41 @@ depend on events that the setup screen never produces.
    menu", but there was no take to offer. Either notices are raised without a take,
    or the sound outlives the notice. Either way a person hears a failure chime for
    something they cannot act on.
+
+## Open: three app tests fail on this Mac and pass on CI
+
+`AppStateTests/testScenario013`, `testScenario014` and
+`AppStateIdleTests/testScenario014` — all asserting that a take interrupted by a
+revoked Accessibility grant reaches disk — fail on this machine and pass on CI
+(0.15 s there). They fail identically on `origin/main` @ 5b1586d, so they are not
+caused by the first-run change; they also passed here during the 0.8.2 release
+run at 17:37 on 2026-08-16.
+
+Instrumented result: `stops=1 aborts=0 inserted=[] files=[] recoveredCount=0
+faulted=false`. The capture was stopped correctly, nothing was inserted, and
+nothing reached the recovery directory — the take simply disappears.
+
+Ruled out, each tested: wall-clock budget (still empty after 10 s of polling),
+free disk (50 GB reclaimed, no change), `TMPDIR`, a TCC denial recorded against
+`is.waiwai.dictation.dev` (reset, no change), the installed 559 MB model (moved
+aside, no change), 8 500 stale entries in the Darwin temp namespace (cleaned, no
+change), leftover test UserDefaults suites (none exist), and the installed
+`/Applications/OpenRamble.app` (moved aside, no change).
+
+Leads not yet closed: `RecoveryStore.swift:702` deletes a take shorter than the
+recognition minimum as "an accidental key press" — the fake writes a 15-byte
+payload, so any path that judges the file rather than the reported duration would
+drop it; the 60 s `compatibilityGrace` should protect a fresh file from the
+maintenance sweep, so if the take is being dropped it is by the main dictation
+path, not by maintenance.
+
+**Best explanation so far.** `DictationController.preserveWithinForegroundGrace`
+(`DictationController.swift:818`) races the save against `recoveryForegroundGrace`
+and, when the grace expires, returns no URL while the background save continues.
+The three tests poll the recovery directory for one second and assert on what is
+there. So the take is very likely not lost at all — it simply has not landed yet
+when the assertion runs, on a machine whose data volume is 93 % full after a night
+of parallel builds. The tests measure a deadline while claiming to measure
+survival; on CI the write wins the race, here it does not. If confirmed, the fix
+belongs in the tests: wait for the take with a runaway backstop measured in
+seconds, and assert only that it arrives.

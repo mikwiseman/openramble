@@ -105,41 +105,6 @@ final class WorkerRecoveryBackoffPolicyTests: XCTestCase {
     }
 }
 
-/// Preparation dies on stall, never on slowness.
-final class PreparationStallPolicyTests: XCTestCase {
-    func testWedgeRequiresAFullWindlessWindow() {
-        let policy = PreparationStallPolicy(stallWindow: .seconds(30))
-        XCTAssertEqual(policy.verdict(elapsedSinceProgress: .zero), .keepWaiting)
-        XCTAssertEqual(policy.verdict(elapsedSinceProgress: .seconds(29)), .keepWaiting)
-        XCTAssertEqual(policy.verdict(elapsedSinceProgress: .seconds(30)), .wedged)
-    }
-
-    /// Production keeps a calm pulse; a test-sized ceiling still gets at least
-    /// two samples before the ceiling can fire.
-    func testCadenceNeverExceedsHalfTheCeiling() {
-        let policy = PreparationStallPolicy()
-        XCTAssertEqual(
-            policy.effectiveSampleInterval(ceiling: .seconds(600)),
-            .seconds(5)
-        )
-        XCTAssertEqual(
-            policy.effectiveSampleInterval(ceiling: .milliseconds(100)),
-            .milliseconds(50)
-        )
-    }
-
-    /// The defaults promise what the docs promise: wedges surface in ~30 s,
-    /// honest work is never raced.
-    func testDefaultsMatchTheContract() {
-        let policy = PreparationStallPolicy()
-        XCTAssertEqual(policy.stallWindow, .seconds(30))
-        XCTAssertEqual(policy.minimumProgress, .milliseconds(50))
-        XCTAssertEqual(ASRWorkerDeadlines().preparation, .seconds(600))
-        XCTAssertEqual(ASRWorkerDeadlines().warmup, .seconds(600))
-        XCTAssertEqual(ASRWorkerDeadlines().vocabulary, .seconds(600))
-    }
-}
-
 /// The gauge is the cross-isolation mirror of the last OS report.
 final class MemoryPressureGaugeTests: XCTestCase {
     func testStartsNormalAndFollowsUpdates() {

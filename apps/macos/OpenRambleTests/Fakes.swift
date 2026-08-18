@@ -785,7 +785,7 @@ final class FailingASREngine: ASREngineAdapting, @unchecked Sendable {
 /// A healthy model behind a worker generation that times out transiently.
 /// This is deliberately an app-layer transport error, not
 /// `ASREngineError.modelsUnavailable`: verified files must survive it.
-final class TransientWarmupASREngine: ASREngineAdapting, VocabularyBoostCapable, @unchecked Sendable {
+final class TransientWarmupASREngine: ASREngineAdapting, @unchecked Sendable {
     private let lock = NSLock()
     private var failuresRemaining: Int
     private var _loadAttempts = 0
@@ -805,10 +805,9 @@ final class TransientWarmupASREngine: ASREngineAdapting, VocabularyBoostCapable,
             failuresRemaining -= 1
             return true
         }
-        if shouldFail { throw ASRWorkerTransportError.requestTimedOut }
+        if shouldFail { throw ASREngineError.inferenceFailed("scripted load failure") }
     }
 
-    func loadVocabularyModels(from directory: URL, boost: VocabularyBoost) async throws {}
 
     func transcribe(samples: [Float]) async throws -> ASRResult {
         lock.withLock { _inferences += 1 }
@@ -840,7 +839,6 @@ actor ReadinessControlledRecognizer: DictationRecognizing {
     }
 
     func prepare(modelDirectory: URL) async throws { prepares += 1 }
-    func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {}
 
     func transcribe(fileURL: URL, languageHint: String?) async throws -> ASRResult {
         ASRResult(text: "", audioDuration: 1, processingDuration: 0)

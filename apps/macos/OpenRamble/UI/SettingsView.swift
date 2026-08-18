@@ -209,20 +209,6 @@ private struct RecognitionSettings: View {
     var body: some View {
         Form {
             Section {
-                Picker("Recognition language", selection: $state.recognitionLanguage) {
-                    Text("Automatic — recommended").tag(String?.none)
-                    ForEach(RecognitionLanguages.options) { option in
-                        Text(option.name).tag(String?.some(option.code))
-                    }
-                }
-                .accessibilityHint("Language the engine listens for; Automatic detects it from your voice")
-            } header: {
-                Text("Language")
-            } footer: {
-                Text("Automatic handles mixed-language speech. Choose one language only if detection repeatedly guesses wrong.")
-            }
-
-            Section {
                 ModelStatusView(
                     status: ModelStatus.make(
                         state: state.modelState,

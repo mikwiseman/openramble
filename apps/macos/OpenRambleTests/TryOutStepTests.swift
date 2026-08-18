@@ -259,7 +259,6 @@ private actor SlowFirstLoadRecognizer: DictationRecognizing {
         }
     }
 
-    func prepareVocabulary(modelDirectory: URL, boost: VocabularyBoost) async throws {}
 
     func transcribe(fileURL: URL, languageHint: String?) async throws -> ASRResult {
         ASRResult(text: "", audioDuration: 1, processingDuration: 0)

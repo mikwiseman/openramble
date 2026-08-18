@@ -72,7 +72,7 @@ Check the network: curl -sSI https://github.com/sparkle-project/Sparkle/releases
 # --- Steps ------------------------------------------------------------------
 
 run_packages() {
-  for package in ASRWorkerProtocol DictationCore LocalASR; do
+  for package in DictationCore LocalASR; do
     echo "→ $package"
     local log
     log=$(mktemp)
@@ -139,12 +139,10 @@ run_app() {
   if [[ -e "$app/Contents/MacOS/openramble-mcp" ]]; then
     fail "The dictation-only artifact unexpectedly contains openramble-mcp."
   fi
-  [[ ! -e "$app/Contents/MacOS/openramble-asr-worker-test-fixture" ]] \
-    || fail "The application unexpectedly contains the ASR fault-test fixture."
-  local asr_worker="$app/Contents/MacOS/openramble-asr-worker"
-  [[ -x "$asr_worker" ]] || fail "The private ASR worker is missing from the application."
-  scripts/test-asr-worker.sh "$asr_worker" \
-    || fail "The private ASR worker protocol smoke failed."
+  [[ ! -e "$app/Contents/MacOS/openramble-asr-worker" ]] \
+    || fail "The application still embeds the retired ASR worker."
+  local framework="$app/Contents/Frameworks/CTranscribe.framework"
+  [[ -d "$framework" ]] || fail "The inference runtime is missing from the application."
 }
 
 run_network_gate() {
