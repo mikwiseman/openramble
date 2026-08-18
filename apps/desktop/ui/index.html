@@ -5,16 +5,125 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OpenRamble</title>
     <style>
-      :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
-      body { margin: 0; padding: 2rem; line-height: 1.5; }
-      h1 { font-size: 1.25rem; margin: 0 0 0.5rem; }
-      p { margin: 0.5rem 0; max-width: 40rem; }
-      .muted { opacity: 0.7; font-size: 0.9rem; }
+      :root {
+        color-scheme: light dark;
+        --ink: #1a1a1a;
+        --quiet: #6b6b6b;
+        --line: #e0e0e0;
+        --accent: #1f6feb;
+        --bad: #b3261e;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { --ink: #ededed; --quiet: #a0a0a0; --line: #333; --accent: #6ea8fe; --bad: #f2b8b5; }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; padding: 2rem 2.25rem;
+        font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: var(--ink);
+      }
+      h1 { font-size: 1.15rem; margin: 0 0 1.5rem; font-weight: 600; }
+      section { border-top: 1px solid var(--line); padding: 1.25rem 0; }
+      section:first-of-type { border-top: none; padding-top: 0; }
+      h2 { font-size: 0.95rem; margin: 0 0 0.4rem; font-weight: 600; }
+      p { margin: 0.3rem 0; color: var(--quiet); max-width: 34rem; }
+      p.plain { color: var(--ink); }
+      .row { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.85rem; flex-wrap: wrap; }
+      button {
+        font: inherit; padding: 0.45rem 1rem; border-radius: 7px;
+        border: 1px solid var(--line); background: transparent; color: var(--ink);
+        cursor: pointer;
+      }
+      button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      button:disabled { opacity: 0.5; cursor: default; }
+      kbd {
+        font: inherit; padding: 0.1rem 0.45rem; border: 1px solid var(--line);
+        border-radius: 5px; background: color-mix(in srgb, var(--ink) 7%, transparent);
+      }
+      progress { width: 100%; max-width: 24rem; height: 0.5rem; }
+      .bad { color: var(--bad); }
     </style>
   </head>
   <body>
     <h1>OpenRamble</h1>
-    <p>Hold the dictation key, speak, and release it. The text appears in whatever you were typing in.</p>
-    <p class="muted">Recognition runs on this machine. Nothing you say leaves it.</p>
+
+    <section>
+      <h2>Dictating</h2>
+      <p class="plain">Hold <kbd id="hotkey">Right Ctrl</kbd>, speak, and release it.
+        The text appears in whatever you were typing in.</p>
+      <p>Recognition runs on this machine. Nothing you say leaves it.</p>
+    </section>
+
+    <section>
+      <h2>Speech model</h2>
+      <p id="model-detail">Checking…</p>
+      <div class="row" id="model-actions" hidden>
+        <button class="primary" id="install">Download</button>
+        <button id="cancel" hidden>Stop</button>
+        <span id="size"></span>
+      </div>
+      <div class="row" id="progress-row" hidden>
+        <progress id="progress" max="100" value="0"></progress>
+        <span id="progress-text"></span>
+      </div>
+    </section>
+
+    <script type="module">
+      const invoke = window.__TAURI__.core.invoke;
+      const listen = window.__TAURI__.event.listen;
+
+      const el = (id) => document.getElementById(id);
+      const gigabytes = (bytes) => (bytes / 1e9).toFixed(2) + " GB";
+
+      async function refresh() {
+        const report = await invoke("model_report");
+        el("model-detail").textContent = report.ready
+          ? "Installed and ready."
+          : report.detail ?? "";
+        el("model-detail").classList.toggle("bad", report.problem);
+        el("model-actions").hidden = report.ready;
+        el("size").textContent = report.ready ? "" : gigabytes(report.downloadBytes) + " to download";
+      }
+
+      el("install").addEventListener("click", async () => {
+        el("install").disabled = true;
+        el("cancel").hidden = false;
+        el("progress-row").hidden = false;
+        try {
+          await invoke("install_model");
+        } catch (error) {
+          el("model-detail").textContent = String(error);
+          el("model-detail").classList.add("bad");
+          el("install").disabled = false;
+          el("cancel").hidden = true;
+          el("progress-row").hidden = true;
+        }
+      });
+
+      el("cancel").addEventListener("click", () => invoke("cancel_install"));
+
+      listen("model-progress", ({ payload }) => {
+        const done = payload.total ? (payload.received / payload.total) * 100 : 0;
+        el("progress").value = done;
+        el("progress-text").textContent =
+          gigabytes(payload.received) + " of " + gigabytes(payload.total);
+      });
+
+      listen("model-finished", async ({ payload }) => {
+        el("install").disabled = false;
+        el("cancel").hidden = true;
+        el("progress-row").hidden = true;
+        await refresh();
+        // A failure replaces the status line rather than appearing beside it:
+        // two contradictory sentences is worse than one clear one.
+        if (payload) {
+          el("model-detail").textContent = payload;
+          el("model-detail").classList.add("bad");
+        }
+      });
+
+      invoke("dictation_hotkey").then((name) => { el("hotkey").textContent = name; });
+      refresh();
+    </script>
   </body>
 </html>

@@ -5,6 +5,7 @@
 //! microphone, keyboard and clipboard.
 
 pub mod adapters;
+pub mod commands;
 pub mod dictation;
 pub mod session;
 
@@ -120,6 +121,12 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(Arc::clone(&dictation))
+        .invoke_handler(tauri::generate_handler![
+            commands::model_report,
+            commands::dictation_hotkey,
+            commands::install_model,
+            commands::cancel_install,
+        ])
         .setup(move |app| {
             let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit OpenRamble", true, None::<&str>)?;

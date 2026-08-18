@@ -94,6 +94,16 @@ impl Dictation {
         self.store.state()
     }
 
+    pub fn store(&self) -> &ModelStore {
+        &self.store
+    }
+
+    /// How much a person is being asked to download, so the number can be shown
+    /// before they commit to it rather than after.
+    pub fn download_byte_count(&self) -> i64 {
+        self.store.manifest.total_byte_count()
+    }
+
     /// Begin recording.
     pub fn begin(&self) -> Result<(), String> {
         if !crate::session::may_start(self.current_state(), self.model_is_ready()) {
