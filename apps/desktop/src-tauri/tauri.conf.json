@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "OpenRamble",
+  "version": "0.1.0",
+  "identifier": "is.waiwai.dictation.desktop",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "OpenRamble",
+        "width": 720,
+        "height": 560,
+        "resizable": true,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'"
+    },
+    "trayIcon": {
+      "id": "main",
+      "iconPath": "icons/tray.png",
+      "iconAsTemplate": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis", "appimage", "deb", "rpm"],
+    "icon": ["icons/icon.png"],
+    "category": "Productivity",
+    "shortDescription": "Local dictation",
+    "longDescription": "Hold a key, speak, release it, and the text appears in whatever you were typing in. Recognition runs on this machine."
+  }
+}

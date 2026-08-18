@@ -1,0 +1,162 @@
+//! Getting the finished text into whatever the person was typing in.
+//!
+//! There is no portable way to type text into another application's field, so
+//! this does what every dictation tool does: put the text on the clipboard, send
+//! the paste shortcut, and put the person's clipboard back afterwards.
+//!
+//! That borrowing is the delicate part, and it is where the privacy promise
+//! lives. Dictated text on the clipboard is dictated text handed to whatever
+//! else is watching the clipboard — Windows Cloud Clipboard syncs it to a
+//! Microsoft account, clipboard managers write it to disk forever. The macOS app
+//! solves this with `prepareForNewContents(with: .currentHostOnly)` plus the
+//! transient and concealed markers, and a plain `clearContents()` is banned
+//! outright and checked by CI. The same rule has to hold here, by the means each
+//! platform offers.
+
+use std::time::Duration;
+
+/// How long to wait after sending the paste before putting the clipboard back.
+///
+/// The receiving application reads the clipboard asynchronously, some of them
+/// slowly. Restoring too early hands them the person's old clipboard instead of
+/// the dictation, which looks like the dictation silently failed.
+pub const RESTORE_DELAY: Duration = Duration::from_millis(900);
+
+/// What the person had on the clipboard before a dictation borrowed it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Borrowed {
+    /// Text we can put back.
+    Text(String),
+    /// Something we could not read — an image, a file promise, a custom format.
+    ///
+    /// Kept as a distinct case rather than collapsed into "nothing": restoring
+    /// empty over an image the person had copied destroys it, and doing nothing
+    /// at least leaves the dictation there for them to see and clear.
+    Unreadable,
+    /// The clipboard was empty.
+    Nothing,
+}
+
+/// Should the clipboard be put back?
+///
+/// Two dictations inside one restore window is ordinary life, not an edge case —
+/// a short answer, then another. The rule is ownership: only restore if what is
+/// on the clipboard is still what this dictation put there. If the person copied
+/// something of their own in the meantime, theirs wins and we leave it alone.
+/// If a second dictation replaced ours, that dictation owns the restore.
+pub fn should_restore(current: Option<&str>, what_we_wrote: &str) -> bool {
+    current.is_some_and(|current| current == what_we_wrote)
+}
+
+/// What to put back, given what was borrowed.
+///
+/// `None` means leave the clipboard alone.
+pub fn restoration(borrowed: &Borrowed) -> Option<&str> {
+    match borrowed {
+        Borrowed::Text(text) => Some(text),
+        // Writing an empty string over an unreadable item destroys it. Leaving
+        // the dictation there is visible and recoverable; deleting a person's
+        // copied image is not.
+        Borrowed::Unreadable => None,
+        Borrowed::Nothing => Some(""),
+    }
+}
+
+/// Mark the clipboard so nothing syncs or archives it.
+///
+/// On Windows this registers the three formats that the shell and Cloud
+/// Clipboard honour. They are advisory — a badly behaved clipboard manager can
+/// ignore them — but they are the whole of what the platform offers, and they
+/// are what keeps a dictated password out of a Microsoft account.
+#[cfg(windows)]
+pub fn write_excluded_from_history(text: &str) -> Result<(), InjectError> {
+    use clipboard_win::{formats, Clipboard, Setter};
+
+    let _clipboard =
+        Clipboard::new_attempts(10).map_err(|error| InjectError::Clipboard(error.to_string()))?;
+
+    formats::Unicode
+        .write_clipboard(&text)
+        .map_err(|error| InjectError::Clipboard(error.to_string()))?;
+
+    // Presence of the format is the signal; the payload is ignored. Registering
+    // by name is how these are documented, and an unregistered name simply
+    // fails to resolve rather than doing something surprising.
+    for name in [
+        "ExcludeClipboardContentFromMonitorProcessing",
+        "CanIncludeInClipboardHistory",
+        "CanUploadToCloudClipboard",
+    ] {
+        if let Ok(format) = clipboard_win::register_format(name) {
+            // A single zero byte: "no" for the two capability formats, and a
+            // present-but-empty marker for the exclusion one.
+            let _ = clipboard_win::raw::set(format.get(), &[0_u8]);
+        }
+    }
+    Ok(())
+}
+
+#[derive(Debug)]
+pub enum InjectError {
+    Clipboard(String),
+    Keystroke(String),
+}
+
+impl std::fmt::Display for InjectError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InjectError::Clipboard(detail) => {
+                write!(f, "The clipboard could not be used: {detail}")
+            }
+            InjectError::Keystroke(detail) => write!(
+                f,
+                "The text could not be pasted: {detail}. \
+                 It is on the clipboard — press paste to insert it."
+            ),
+        }
+    }
+}
+
+impl std::error::Error for InjectError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn our_own_text_is_ours_to_put_back() {
+        assert!(should_restore(Some("dictated"), "dictated"));
+    }
+
+    /// The person copied something while the restore was pending. Theirs wins.
+    #[test]
+    fn a_persons_own_copy_is_never_overwritten() {
+        assert!(!should_restore(Some("their own copy"), "dictated"));
+        assert!(!should_restore(None, "dictated"));
+    }
+
+    /// Two dictations inside one restore window is ordinary life. The second one
+    /// owns the clipboard, and therefore owns putting it back.
+    #[test]
+    fn a_second_dictation_takes_over_the_restore() {
+        assert!(!should_restore(Some("the second dictation"), "the first"));
+    }
+
+    #[test]
+    fn text_is_put_back_and_an_empty_clipboard_is_emptied_again() {
+        assert_eq!(restoration(&Borrowed::Text("notes".into())), Some("notes"));
+        assert_eq!(restoration(&Borrowed::Nothing), Some(""));
+    }
+
+    /// An image the person copied is not something to overwrite with "". The
+    /// dictation staying visible is recoverable; their picture is not.
+    #[test]
+    fn something_we_could_not_read_is_left_alone_rather_than_destroyed() {
+        assert_eq!(restoration(&Borrowed::Unreadable), None);
+    }
+
+    #[test]
+    fn the_restore_waits_long_enough_for_a_slow_application_to_read() {
+        assert!(RESTORE_DELAY >= Duration::from_millis(500));
+    }
+}

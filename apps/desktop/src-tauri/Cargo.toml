@@ -1,0 +1,41 @@
+[package]
+name = "openramble-desktop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+# Tauri wants the app as a library so the mobile entry points can call it; the
+# binary below is a thin shim over `run()`.
+name = "openramble_desktop_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+ramble-audio = { path = "../../../core/ramble-audio" }
+ramble-core = { path = "../../../core/ramble-core" }
+ramble-engine = { path = "../../../core/ramble-engine" }
+ramble-model = { path = "../../../core/ramble-model" }
+ramble-text = { path = "../../../core/ramble-text" }
+
+arboard = "3"
+cpal = "0.18"
+enigo = "0.6"
+rdev = "0.5"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-opener = "2"
+
+[target.'cfg(windows)'.dependencies]
+# arboard cannot set the formats that keep dictated text out of Cloud Clipboard
+# and clipboard history, and that exclusion is a product promise rather than a
+# nicety.
+clipboard-win = "5"
+
+[lints]
+workspace = true
