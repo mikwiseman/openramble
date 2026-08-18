@@ -7,7 +7,7 @@
 # every platform.
 [workspace]
 resolver = "2"
-members = ["core/ramble-core", "core/ramble-ffi", "core/ramble-text"]
+members = ["core/ramble-core", "core/ramble-ffi", "core/ramble-model", "core/ramble-text"]
 
 [workspace.package]
 version = "0.1.0"
