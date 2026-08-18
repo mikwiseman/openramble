@@ -71,6 +71,68 @@ jobs:
           xcodebuild -project OpenRamble.xcodeproj -scheme OpenRamble \
             -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test
 
+  shared-core:
+    name: Shared core
+    # Three runners because the point of this crate is that it behaves the same
+    # everywhere. Building it only on the machine it was written on would test
+    # nothing that matters.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-26, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Rust version
+        run: |
+          rustc --version
+          cargo --version
+
+      # Warnings are bugs here for the same reason they are in the Swift
+      # packages, and the tests are linted too: a test that quietly stopped
+      # asserting still passes.
+      - name: Lint
+        run: |
+          cargo fmt --all --check
+          cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Test
+        run: cargo test --all-features
+
+  conformance:
+    name: Core matches macOS
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The committed fixtures are recordings of what the shipping Swift
+      # pipeline produced. Regenerating them here and finding a diff means one
+      # of the two implementations moved: either the Mac changed behaviour and
+      # the port has not followed, or the fixtures were edited by hand to make
+      # a failing test pass. Both are worth stopping for.
+      - name: Regenerate fixtures from the shipping pipeline
+        run: |
+          swift build --package-path core/conformance/generator
+          ./core/conformance/generator/.build/debug/GenerateFixtures \
+            core/conformance/corpus-text.json \
+            core/conformance/fixtures/text/pipeline.json
+
+      - name: Fixtures must be unchanged
+        run: |
+          if ! git diff --exit-code -- core/conformance/fixtures; then
+            echo ""
+            echo "The macOS pipeline no longer produces the committed fixtures."
+            echo "Either port the change into core/ramble-text and commit the new"
+            echo "fixtures, or this is a regression in DictationCore."
+            exit 1
+          fi
+
+      - name: Rust core must reproduce them
+        run: cargo test -p ramble-text --test conformance
+
   network-surface:
     name: Network surface
     runs-on: macos-26

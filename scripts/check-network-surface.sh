@@ -159,8 +159,58 @@ else
   done < <(otool -L "$RUNTIME_BINARY" 2>/dev/null | grep -E "CFNetwork|Network\.framework|Security\.framework|libcurl" || true)
 fi
 
+# ---------------------------------------------------------------------------
+# The same promise, on the Rust side.
+#
+# The shared core carries dictation logic for every platform, and it performs no
+# I/O at all — bytes move through ports the shell implements. Adding an HTTP
+# client here would put a network call inside code that macOS, Windows and Linux
+# all link, in the one place this audit would not have been looking. The story
+# must not fork by language.
+if [[ -d core ]]; then
+  echo ""
+  echo "Checking the Rust core..."
+
+  # Anything that opens a socket, and the async runtimes whose net features do.
+  RUST_FORBIDDEN_CRATES='reqwest|hyper|ureq|curl|isahc|attohttpc|surf|awc|tungstenite|quinn|rustls|native-tls|openssl|trust-dns|hickory'
+  while IFS= read -r hit; do
+    if [[ $status -eq 0 ]]; then
+      echo ""
+      echo "VIOLATION: the Rust core declares a networking dependency."
+      status=1
+    fi
+    echo "  $hit"
+  done < <(grep -rnE "^[[:space:]]*($RUST_FORBIDDEN_CRATES)[[:space:]]*=" core --include=Cargo.toml || true)
+
+  # The lockfile, not just the manifests. A direct dependency is the obvious way
+  # a network client arrives; a transitive one is the way it arrives unnoticed.
+  # Checking every resolved package closes that, and costs one grep.
+  if [[ -f Cargo.lock ]]; then
+    while IFS= read -r hit; do
+      if [[ $status -eq 0 ]]; then
+        echo ""
+        echo "VIOLATION: a networking crate resolved into the Rust dependency graph."
+        echo "It may be transitive — run 'cargo tree --invert <crate>' to find who pulled it."
+        status=1
+      fi
+      echo "  $hit"
+    done < <(grep -nE "^name = \"($RUST_FORBIDDEN_CRATES)\"" Cargo.lock || true)
+  fi
+
+  # std::net and the socket types reachable without a crate.
+  RUST_FORBIDDEN_SYMBOLS='std::net|TcpStream|TcpListener|UdpSocket|UnixStream|ToSocketAddrs'
+  while IFS= read -r hit; do
+    if [[ $status -eq 0 ]]; then
+      echo ""
+      echo "VIOLATION: the Rust core reaches for a socket."
+      status=1
+    fi
+    echo "  $hit"
+  done < <(grep -rnE "$RUST_FORBIDDEN_SYMBOLS" core --include=*.rs || true)
+fi
+
 if [[ $status -eq 0 ]]; then
   echo ""
-  echo "Network source surface is limited to model downloads and update checks; the inference runtime cannot reach the network at all."
+  echo "Network source surface is limited to model downloads and update checks; the inference runtime and the shared Rust core cannot reach the network at all."
 fi
 exit $status
