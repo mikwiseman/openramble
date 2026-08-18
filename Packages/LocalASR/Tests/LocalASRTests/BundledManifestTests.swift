@@ -3,58 +3,59 @@ import XCTest
 
 /// Checks the real manifest that will go to the user.
 ///
-/// These tests guard not the code, but the data: if the manifest generator one day brings
-/// the wrong set of files or it will fail at another revision, the assembly should fail here,
-/// and not for the user after 483 MB of download.
+/// These guard data rather than code: if the generator one day produces the
+/// wrong file set, or points at a different revision, the build should fail
+/// here rather than on someone's Mac after a 740 MB download.
 final class BundledManifestTests: XCTestCase {
     func testBundledManifestIsValid() throws {
-        // The very fact of successful parsing means that all decoder checks have passed:
-        // full revision, non-zero sizes, correct amounts, safe paths.
+        // Parsing at all means every decoder check passed: a full-length
+        // revision, non-zero sizes, well-formed checksums, safe paths.
         let manifest = try ModelManifest.bundled()
 
-        XCTAssertEqual(manifest.modelID, "parakeet-tdt-0.6b-v3")
-        XCTAssertEqual(manifest.repository, "FluidInference/parakeet-tdt-0.6b-v3-coreml")
-        XCTAssertEqual(manifest.revision, "aed02740059203c4a87495924f685de3722ae9ce")
-        XCTAssertEqual(manifest.fluidAudioVersion, "0.15.5")
+        XCTAssertEqual(manifest.modelID, "parakeet-tdt-0.6b-v3-gguf")
+        XCTAssertEqual(manifest.repository, "handy-computer/parakeet-tdt-0.6b-v3-gguf")
+        XCTAssertEqual(manifest.revision, "85ac09ea12fc4b1112fa76810059364bc6adc9de")
+        XCTAssertEqual(manifest.runtimeVersion, "transcribe.cpp 0.2.0")
+        XCTAssertEqual(manifest.quantization, "Q8_0")
+        // The weights are NVIDIA's Parakeet TDT 0.6B v3, and attribution is a
+        // licence condition rather than a courtesy.
         XCTAssertEqual(manifest.license, "CC-BY-4.0")
     }
 
-    func testContainsExactlyTheFourRequiredBundles() throws {
+    /// One file, not a directory tree.
+    ///
+    /// The Core ML engine needed four compiled bundles and a vocabulary file,
+    /// each a directory of weights and metadata, and most of the install
+    /// machinery exists because of that shape. A GGUF is a single file, and
+    /// this test is what keeps a future manifest from quietly reintroducing
+    /// the old complexity.
+    func testTheModelIsExactlyOneFile() throws {
         let manifest = try ModelManifest.bundled()
-        let bundles = Set(manifest.files.map { $0.path.split(separator: "/").first.map(String.init) ?? $0.path })
-
-        XCTAssertEqual(
-            bundles,
-            [
-                "Preprocessor.mlmodelc",
-                "Encoder.mlmodelc",
-                "Decoder.mlmodelc",
-                "JointDecisionv3.mlmodelc",
-                "parakeet_vocab.json",
-            ],
-            "\u{0412} \u{043C}\u{0430}\u{043D}\u{0438}\u{0444}\u{0435}\u{0441}\u{0442} \u{043F}\u{043E}\u{043F}\u{0430}\u{043B}\u{043E} \u{043B}\u{0438}\u{0448}\u{043D}\u{0435}\u{0435} \u{0438}\u{043B}\u{0438} \u{043F}\u{0440}\u{043E}\u{043F}\u{0430}\u{043B}\u{043E} \u{043D}\u{0443}\u{0436}\u{043D}\u{043E}\u{0435} — \u{0440}\u{0435}\u{043F}\u{043E}\u{0437}\u{0438}\u{0442}\u{043E}\u{0440}\u{0438}\u{0439} \u{043C}\u{043E}\u{0434}\u{0435}\u{043B}\u{0438} \u{0441}\u{043E}\u{0434}\u{0435}\u{0440}\u{0436}\u{0438}\u{0442} "
-                + "\u{0435}\u{0449}\u{0451} MelEncoder, EncoderInt4 \u{0438} JointDecisionv2, \u{043A}\u{043E}\u{0442}\u{043E}\u{0440}\u{044B}\u{0445} \u{0431}\u{044B}\u{0442}\u{044C} \u{043D}\u{0435} \u{0434}\u{043E}\u{043B}\u{0436}\u{043D}\u{043E}"
-        )
+        XCTAssertEqual(manifest.files.map(\.path), ["parakeet-tdt-0.6b-v3-Q8_0.gguf"])
     }
 
-    func testDownloadSizeStaysWithinExpectedRange() throws {
+    /// The published size, pinned.
+    ///
+    /// The repository also offers F32, F16, Q6_K, Q5_K_M and Q4_K_M builds of
+    /// the same model. Selecting a different one is a decision with quality and
+    /// memory consequences, and it should never happen by a manifest edit
+    /// nobody noticed.
+    func testDownloadSizeMatchesTheChosenQuantization() throws {
         let manifest = try ModelManifest.bundled()
         let megabytes = Double(manifest.totalByteCount) / 1_000_000
 
-        // The user is promised "about 500 MB." A sharp jump means that the set
-        // an extra bundle leaked - three gigabytes of the repository nearby.
-        XCTAssertGreaterThan(megabytes, 400, "\u{041D}\u{0430}\u{0431}\u{043E}\u{0440} \u{043F}\u{043E}\u{0434}\u{043E}\u{0437}\u{0440}\u{0438}\u{0442}\u{0435}\u{043B}\u{044C}\u{043D}\u{043E} \u{043B}\u{0451}\u{0433}\u{043A}\u{0438}\u{0439}: \(megabytes) \u{041C}\u{0411}")
-        XCTAssertLessThan(megabytes, 600, "\u{041D}\u{0430}\u{0431}\u{043E}\u{0440} \u{043F}\u{043E}\u{0434}\u{043E}\u{0437}\u{0440}\u{0438}\u{0442}\u{0435}\u{043B}\u{044C}\u{043D}\u{043E} \u{0442}\u{044F}\u{0436}\u{0451}\u{043B}\u{044B}\u{0439}: \(megabytes) \u{041C}\u{0411}")
+        XCTAssertGreaterThan(megabytes, 700, "suspiciously small for Q8_0: \(megabytes) MB")
+        XCTAssertLessThan(megabytes, 780, "suspiciously large for Q8_0: \(megabytes) MB")
     }
 
     func testEveryFileHasDistinctPathAndReachableURL() throws {
         let manifest = try ModelManifest.bundled()
         let paths = manifest.files.map(\.path)
 
-        XCTAssertEqual(Set(paths).count, paths.count, "\u{0412} \u{043C}\u{0430}\u{043D}\u{0438}\u{0444}\u{0435}\u{0441}\u{0442}\u{0435} \u{0435}\u{0441}\u{0442}\u{044C} \u{043F}\u{043E}\u{0432}\u{0442}\u{043E}\u{0440}\u{044F}\u{044E}\u{0449}\u{0438}\u{0435}\u{0441}\u{044F} \u{043F}\u{0443}\u{0442}\u{0438}")
+        XCTAssertEqual(Set(paths).count, paths.count, "the manifest repeats a path")
 
         for file in manifest.files {
-            let url = try XCTUnwrap(manifest.downloadURL(for: file), "\u{041D}\u{0435} \u{043F}\u{043E}\u{0441}\u{0442}\u{0440}\u{043E}\u{0438}\u{043B}\u{0441}\u{044F} \u{0430}\u{0434}\u{0440}\u{0435}\u{0441} \u{0434}\u{043B}\u{044F} \(file.path)")
+            let url = try XCTUnwrap(manifest.downloadURL(for: file), "no address for \(file.path)")
             XCTAssertEqual(url.scheme, "https")
             XCTAssertEqual(url.host, "huggingface.co")
         }

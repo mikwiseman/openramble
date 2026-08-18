@@ -2,7 +2,7 @@
   "modelID": "parakeet-ctc-110m",
   "repository": "FluidInference/parakeet-ctc-110m-coreml",
   "revision": "accdafd8cf8a2ff1cabe3c11e54416b405d409aa",
-  "fluidAudioVersion": "0.15.5",
+  "runtimeVersion": "0.15.5",
   "quantization": "mixed precision",
   "license": "CC-BY-4.0",
   "mirror": {

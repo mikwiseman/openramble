@@ -47,7 +47,7 @@ final class ModelSourcesTests: XCTestCase {
             modelID: "test-model",
             repository: "acme/test",
             revision: String(repeating: "a", count: 40),
-            fluidAudioVersion: "0.15.5",
+            runtimeVersion: "0.15.5",
             quantization: "test",
             license: "CC-BY-4.0",
             files: [

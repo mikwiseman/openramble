@@ -46,7 +46,7 @@ final class ModelDownloadRetryTests: XCTestCase {
             modelID: "test-model",
             repository: "acme/test",
             revision: String(repeating: "a", count: 40),
-            fluidAudioVersion: "0.15.5",
+            runtimeVersion: "0.15.5",
             quantization: "test",
             license: "CC-BY-4.0",
             files: [
@@ -236,7 +236,7 @@ final class LocalWriteFailureTests: XCTestCase {
             modelID: "test-model",
             repository: "acme/test",
             revision: String(repeating: "a", count: 40),
-            fluidAudioVersion: "0.15.5",
+            runtimeVersion: "0.15.5",
             quantization: "test",
             license: "CC-BY-4.0",
             files: [
@@ -338,7 +338,7 @@ final class CorruptContentFallbackTests: XCTestCase {
             modelID: "test-model",
             repository: "acme/test",
             revision: String(repeating: "a", count: 40),
-            fluidAudioVersion: "0.15.5",
+            runtimeVersion: "0.15.5",
             quantization: "test",
             license: "CC-BY-4.0",
             files: [.init(path: "vocab.json", byteCount: Int64(good.count), sha256: sha256(good))],

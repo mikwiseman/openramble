@@ -17,7 +17,7 @@ final class ModelManifestTests: XCTestCase {
           "modelID": "parakeet-tdt-0.6b-v3",
           "repository": "FluidInference/parakeet-tdt-0.6b-v3-coreml",
           "revision": "\(revision ?? validRevision)",
-          "fluidAudioVersion": "0.15.5",
+          "runtimeVersion": "0.15.5",
           "quantization": "encoder 6-bit palettized, mixed precision",
           "license": "CC-BY-4.0",
           "files": \(files ?? defaultFiles)

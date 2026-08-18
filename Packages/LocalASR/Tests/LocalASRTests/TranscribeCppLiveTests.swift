@@ -46,9 +46,14 @@ final class TranscribeCppLiveTests: XCTestCase {
         XCTAssertTrue(loaded)
 
         // Pinned, not requested-and-hoped-for. A silent fall back to CPU would
-        // be the kind of difference that only shows up as "sometimes it's slow".
+        // be the kind of difference that only shows up as "sometimes it's
+        // slow". The runtime names the device rather than the backend family —
+        // "MTL0" for the first Metal device — so this checks the family.
         let backend = await adapter.activeBackend
-        XCTAssertEqual(backend?.lowercased(), "metal", "the engine must run on Metal")
+        XCTAssertTrue(
+            backend?.lowercased().hasPrefix("mtl") == true,
+            "the engine must run on Metal, got \(backend ?? "nothing")"
+        )
 
         try await adapter.warmUpInference()
 
