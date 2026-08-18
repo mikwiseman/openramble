@@ -870,7 +870,11 @@ final class AppStateTests: XCTestCase {
             try? await Task.sleep(for: .milliseconds(2))
         }
         XCTAssertTrue(state.isEngineReady)
-        XCTAssertEqual(state.modelUnloadTimeout, .afterFiveMinutes, "Handy's default is ours")
+        XCTAssertEqual(state.modelUnloadTimeout, .never, "resident unless asked otherwise")
+        // The countdown is opt-in now, so this test has to ask for it. What it
+        // guards is unchanged: once chosen, the countdown really does return
+        // the memory, and the next press really does bring the engine back.
+        state.modelUnloadTimeout = .afterFiveMinutes
 
         for _ in 0..<500 where state.isEngineReady {
             await Task.yield()

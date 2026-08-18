@@ -37,9 +37,17 @@ When the engine's memory is given back:
 - **Critical memory pressure** always evicts a safely idle engine
   (zero-settings behavior, unchanged).
 - **The "Unload model" setting** (Behavior tab; Never / Immediately /
-  2 / 5 / 10 / 15 minutes / 1 hour, default "After 5 minutes") returns the
-  memory after that much dictation-idle time. "Never" is the pre-0.8
-  always-resident behavior.
+  2 / 5 / 10 / 15 minutes / 1 hour, **default "Never"**) returns the memory
+  after that much dictation-idle time.
+
+  The default was "After 5 minutes" through 0.8.2, on the argument that the
+  comeback rides under the voice. The measured reload economics below say that
+  is true only while the specialization cache survives: 0.15 s warm against
+  13.5-16 s after a purge, and the purge is ordinary on a machine under memory
+  pressure. A short take is the worst case, because it has no speech to hide
+  the reload under and the person waits through the whole load staring at
+  "Transcribing…". The countdown therefore stopped being a default and became
+  a choice; critical-pressure eviction remains the automatic floor.
 
 What an unload does: the worker process stays alive and drops its models
 (protocol v2 `unloadModels`), so a comeback pays no process spawn, dyld, or
