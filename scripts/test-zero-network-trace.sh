@@ -6,16 +6,20 @@ cd "$(dirname "$0")/.."
 
 FIXTURE="${1:-.build-zero-network/probe-en.wav}"
 EXPECTED="${WAI_EXPECTED_TEXT:-Checking work without the Internet}"
-BENCH=".build-zero-network/asr-bench"
+# Run the tool where it was built, and always rebuild it.
+#
+# This used to copy the binary aside and reuse whatever copy it found. Both
+# halves were wrong: a copy loses its @rpath to CTranscribe.framework and
+# aborts on launch, and reusing a stale copy silently tests the previous
+# build — which is how a release run reached a manifest-decoding error from a
+# binary compiled before the field was renamed.
+BENCH="Packages/LocalASR/.build/release/asr-bench"
 TRACE_DYLIB=".build-zero-network/network-trace.dylib"
 RUNNER=".build-zero-network/network-trace-runner"
 TRACE=".build-zero-network/network.trace"
 
-[[ -x "$BENCH" ]] || {
-  swift build -c release --package-path Packages/LocalASR --product asr-bench >/dev/null
-  mkdir -p .build-zero-network
-  cp Packages/LocalASR/.build/release/asr-bench "$BENCH"
-}
+swift build -c release --package-path Packages/LocalASR --product asr-bench >/dev/null
+mkdir -p .build-zero-network
 [[ -f "$FIXTURE" ]] || {
   say -v Samantha -o .build-zero-network/probe-en.aiff "Checking work without the Internet."
   afconvert -f WAVE -d LEI16@16000 -c 1 .build-zero-network/probe-en.aiff "$FIXTURE"
