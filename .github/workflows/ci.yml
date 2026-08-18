@@ -93,13 +93,50 @@ jobs:
       # Warnings are bugs here for the same reason they are in the Swift
       # packages, and the tests are linted too: a test that quietly stopped
       # asserting still passes.
+      # Scoped to the core crates on purpose. The desktop app needs GTK and
+      # WebKit on Linux and a WebView on Windows; building it here would turn
+      # "did the shared logic break?" into "is this runner's system library
+      # present?", which is a different question with a different answer.
       - name: Lint
         run: |
           cargo fmt --all --check
-          cargo clippy --all-targets --all-features -- -D warnings
+          cargo clippy -p ramble-core -p ramble-text -p ramble-model -p ramble-audio \
+            --all-targets --all-features -- -D warnings
 
       - name: Test
-        run: cargo test --all-features
+        run: |
+          cargo test -p ramble-core -p ramble-text -p ramble-model -p ramble-audio \
+            --all-features
+
+  desktop:
+    name: Desktop app
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-26]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # Tauri draws with the system WebView, and the inference runtime is
+      # compiled from source by cmake. Neither is on a bare runner.
+      - name: Linux system dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
+            libasound2-dev libxdo-dev libxkbcommon-dev
+
+      - name: Build
+        run: cargo build -p openramble-desktop --locked
+
+      - name: Test
+        run: cargo test -p openramble-desktop --locked
+
+      - name: Lint
+        run: cargo clippy -p openramble-desktop --all-targets -- -D warnings
 
   conformance:
     name: Core matches macOS
