@@ -211,6 +211,28 @@ if [[ -d core ]]; then
     done
   fi
 
+  # Where the Rust application is allowed to reach the network.
+  #
+  # The same shape as the Swift allowlist above: named files, not good
+  # intentions. The desktop app has one network area — downloading the model a
+  # person explicitly asked for — and it lives in one module so this check can
+  # be a filename rather than a judgement call.
+  RUST_ALLOWED='^apps/desktop/src-tauri/src/adapters/download\.rs$'
+  RUST_CLIENTS='reqwest|ureq|hyper::|TcpStream|UdpSocket'
+  while IFS= read -r hit; do
+    file="${hit%%:*}"
+    [[ "$file" =~ $RUST_ALLOWED ]] && continue
+    if [[ $status -eq 0 ]]; then
+      echo ""
+      echo "VIOLATION: Rust code outside the download module reaches the network."
+      status=1
+    fi
+    echo "  $hit"
+  # Comment lines are excluded: the crates below are named in prose that
+  # explains why the boundary exists, and a word in a comment is not a call.
+  done < <(grep -rnE "$RUST_CLIENTS" apps/desktop/src-tauri/src core --include=*.rs \
+             | grep -vE "^[^:]+:[0-9]+:[[:space:]]*(//|\*)" || true)
+
   # std::net and the socket types reachable without a crate.
   RUST_FORBIDDEN_SYMBOLS='std::net|TcpStream|TcpListener|UdpSocket|UnixStream|ToSocketAddrs'
   while IFS= read -r hit; do
