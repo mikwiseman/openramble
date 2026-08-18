@@ -1,0 +1,25 @@
+[package]
+name = "ramble-engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+ramble-audio = { path = "../ramble-audio" }
+
+# Default features are off so each platform states its accelerator explicitly.
+# `metal` is the crate's default and would silently follow us onto Windows.
+[target.'cfg(target_os = "macos")'.dependencies]
+transcribe-cpp = { version = "0.2", default-features = false, features = ["metal"] }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+transcribe-cpp = { version = "0.2", default-features = false, features = ["vulkan"] }
+
+[dev-dependencies]
+ramble-model = { path = "../ramble-model" }
+tempfile = "3"
+
+[lints]
+workspace = true
