@@ -307,3 +307,198 @@ final class DictationSpeedTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Phase breakdown
+
+/// One "stop → text" number cannot say which stage owned the wait, and the
+/// three stages fail for entirely different reasons. These tests pin the
+/// attribution, because a diagnosis built on a mislabelled stage is worse
+/// than no diagnosis.
+@MainActor
+final class DictationPhaseBreakdownTests: XCTestCase {
+    private func settle() async {
+        for _ in 0..<40 {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
+    private final class ScriptedClock: @unchecked Sendable {
+        private let origin = ContinuousClock.now
+        private let offsets: [Duration]
+        private var index = 0
+        private let lock = NSLock()
+
+        init(offsets: [Duration]) { self.offsets = offsets }
+
+        func next() -> ContinuousClock.Instant {
+            lock.lock()
+            defer { lock.unlock() }
+            let offset = index < offsets.count ? offsets[index] : offsets.last ?? .zero
+            index += 1
+            return origin.advanced(by: offset)
+        }
+    }
+
+    /// A cold engine is not a slow engine. The stage that waited for the model
+    /// must carry the seconds, and recognition must keep only its own.
+    func testPreparationWaitIsAttributedToPreparationNotToRecognition() async throws {
+        // stop = 0 ms, capture frozen = 40 ms, model ready = 8040 ms,
+        // text returned = 8100 ms.
+        let clock = ScriptedClock(offsets: [
+            .milliseconds(0), .milliseconds(40), .milliseconds(8040), .milliseconds(8100),
+        ])
+        var report: DictationSpeedReport?
+        let controller = DictationController(
+            capture: FakeCapture(),
+            transcribe: { _ in
+                ASRResult(text: "words", audioDuration: 2, processingDuration: 0.05)
+            },
+            inserter: FakeInserter(),
+            overlay: FakeOverlay(),
+            sounds: FakeSounds(),
+            monotonicNow: { clock.next() },
+            prepareForTranscription: {}
+        )
+        controller.onSpeed = { report = $0 }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        let phases = try XCTUnwrap(try XCTUnwrap(report).phases)
+        XCTAssertEqual(phases.captureFreeze, .milliseconds(40))
+        XCTAssertEqual(phases.enginePreparation, .milliseconds(8000))
+        XCTAssertEqual(phases.recognition, .milliseconds(60))
+        XCTAssertEqual(phases.engineProcessing, .milliseconds(50))
+        XCTAssertEqual(phases.audioDuration, .seconds(2))
+    }
+
+    /// Without a preparation hook there is no preparation stage to report, and
+    /// recognition owns everything after the freeze. Absent, never zero: a zero
+    /// would claim a stage ran instantly.
+    func testNoPreparationHookLeavesTheStageAbsentAndRecognitionWhole() async throws {
+        let clock = ScriptedClock(offsets: [
+            .milliseconds(0), .milliseconds(30), .milliseconds(230),
+        ])
+        var report: DictationSpeedReport?
+        let controller = DictationController(
+            capture: FakeCapture(),
+            transcribe: { _ in
+                ASRResult(text: "words", audioDuration: 1, processingDuration: 0.2)
+            },
+            inserter: FakeInserter(),
+            overlay: FakeOverlay(),
+            sounds: FakeSounds(),
+            monotonicNow: { clock.next() }
+        )
+        controller.onSpeed = { report = $0 }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        let phases = try XCTUnwrap(try XCTUnwrap(report).phases)
+        XCTAssertNil(phases.enginePreparation)
+        XCTAssertEqual(phases.captureFreeze, .milliseconds(30))
+        XCTAssertEqual(phases.recognition, .milliseconds(200))
+    }
+}
+
+// MARK: - Waiting for the model
+
+/// The panel is the only feedback channel during dictation. A stop-time model
+/// load spends its whole length in the transcribing state, so the controller
+/// has to say which of the two is happening — but only when the distinction is
+/// visible to a person, never as a flicker on the warm path.
+@MainActor
+final class EnginePreparationWaitTests: XCTestCase {
+    private func settle(_ rounds: Int = 60) async {
+        for _ in 0..<rounds {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
+    /// A load long enough to be noticed is announced, and retracted once the
+    /// model is there.
+    func testALongModelWaitIsAnnouncedAndThenRetracted() async throws {
+        let announcements = Box<[Bool]>([])
+        let controller = DictationController(
+            capture: FakeCapture(),
+            transcribe: { _ in ASRResult(text: "words", audioDuration: 1, processingDuration: 0.1) },
+            inserter: FakeInserter(),
+            overlay: FakeOverlay(),
+            sounds: FakeSounds(),
+            prepareForTranscription: { try await Task.sleep(for: .milliseconds(220)) },
+            enginePreparationNoticeDelay: .milliseconds(20)
+        )
+        controller.onEnginePreparationWait = { announcements.value.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        XCTAssertEqual(announcements.value, [true, false])
+    }
+
+    /// A resident engine answers immediately. Flipping the panel for every take
+    /// would be a flicker on the path almost every dictation takes.
+    func testAWarmEngineNeverMentionsWaiting() async throws {
+        let announcements = Box<[Bool]>([])
+        let controller = DictationController(
+            capture: FakeCapture(),
+            transcribe: { _ in ASRResult(text: "words", audioDuration: 1, processingDuration: 0.1) },
+            inserter: FakeInserter(),
+            overlay: FakeOverlay(),
+            sounds: FakeSounds(),
+            prepareForTranscription: {},
+            enginePreparationNoticeDelay: .milliseconds(400)
+        )
+        controller.onEnginePreparationWait = { announcements.value.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        XCTAssertTrue(announcements.value.isEmpty)
+    }
+
+    /// A load that fails still has to take its message back. Leaving "Waking
+    /// the model…" on screen would outlive the take that owns it.
+    func testAFailedPreparationRetractsItsAnnouncement() async throws {
+        struct PreparationFailed: Error {}
+        let announcements = Box<[Bool]>([])
+        let controller = DictationController(
+            capture: FakeCapture(),
+            transcribe: { _ in ASRResult(text: "words", audioDuration: 1, processingDuration: 0.1) },
+            inserter: FakeInserter(),
+            overlay: FakeOverlay(),
+            sounds: FakeSounds(),
+            prepareForTranscription: {
+                try await Task.sleep(for: .milliseconds(60))
+                throw PreparationFailed()
+            },
+            enginePreparationNoticeDelay: .milliseconds(10)
+        )
+        controller.onEnginePreparationWait = { announcements.value.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        XCTAssertEqual(announcements.value.last, false, "the panel never keeps a stale wait")
+        XCTAssertEqual(announcements.value.filter { $0 }.count, 1)
+    }
+}
+
+/// A reference box so a `@Sendable` callback can record what it saw.
+private final class Box<Value>: @unchecked Sendable {
+    var value: Value
+    init(_ value: Value) { self.value = value }
+}

@@ -151,6 +151,9 @@ run_network_gate() {
   echo "→ Network Surface"
   ./scripts/check-network-surface.sh > /dev/null || fail "Network gate failed."
   green "the promise about the network stands"
+  echo "→ Diagnostics Surface"
+  ./scripts/check-diagnostics-surface.sh > /dev/null || fail "Diagnostics gate failed."
+  green "diagnostics stay opt-in"
 }
 
 case "$MODE" in

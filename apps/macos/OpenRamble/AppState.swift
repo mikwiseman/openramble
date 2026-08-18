@@ -52,6 +52,15 @@ public struct AppEnvironment {
     /// microphone has started.
     public var targetApplicationSnapshot: @Sendable () -> TargetApplication?
     public var overlay: any OverlayPresenting
+    /// Builds the attention sound, given the live "sounds enabled" reading.
+    ///
+    /// A factory rather than a value because the setting is read at play time,
+    /// and injected rather than constructed inside `setUp` because the
+    /// application sources are compiled straight into the test bundle: a
+    /// directly built `SystemSounds` meant every suite exercising a failure
+    /// path played Submarine through the speakers of whoever ran the tests.
+    /// A test must not be audible.
+    public var makeSounds: @MainActor (@escaping @MainActor () -> Bool) -> any Sounding
     /// Capture factory: recording folder, crash handler and live microphone samples
     /// used by the recording waveform.
     public var makeCapture: (
@@ -123,6 +132,8 @@ public struct AppEnvironment {
         inserter: any TextInserting,
         targetApplicationSnapshot: @escaping @Sendable () -> TargetApplication? = { nil },
         overlay: any OverlayPresenting,
+        makeSounds: @escaping @MainActor (@escaping @MainActor () -> Bool) -> any Sounding
+            = { SystemSounds(enabled: $0) },
         makeCapture: @escaping (
             URL,
             @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void,
@@ -158,6 +169,7 @@ public struct AppEnvironment {
         self.inserter = inserter
         self.targetApplicationSnapshot = targetApplicationSnapshot
         self.overlay = overlay
+        self.makeSounds = makeSounds
         self.makeCapture = makeCapture
         self.transcribe = transcribe
         self.recoveryInsertionDeadline = recoveryInsertionDeadline
@@ -203,6 +215,7 @@ public struct AppEnvironment {
             inserter: TextInserter(restoreReporter: restoreReporter),
             targetApplicationSnapshot: { activeApplication.current() },
             overlay: DictationOverlay(),
+            makeSounds: { SystemSounds(enabled: $0) },
             makeCapture: {
                 MicrophoneCapture(
                     directory: $0,
@@ -426,6 +439,7 @@ public final class AppState: ObservableObject {
     private let targetApplicationSnapshot: @Sendable () -> TargetApplication?
     private let clipboardRestoreReporter: ClipboardRestoreReporter?
     private let overlay: any OverlayPresenting
+    private let makeSounds: @MainActor (@escaping @MainActor () -> Bool) -> any Sounding
     private let makeCapture: (
         URL,
         @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void,
@@ -585,6 +599,7 @@ public final class AppState: ObservableObject {
         targetApplicationSnapshot = environment.targetApplicationSnapshot
         clipboardRestoreReporter = environment.clipboardRestoreReporter
         overlay = environment.overlay
+        makeSounds = environment.makeSounds
         makeCapture = environment.makeCapture
         transcribe = environment.transcribe
         recoveryInsertionDeadline = environment.recoveryInsertionDeadline
@@ -652,7 +667,7 @@ public final class AppState: ObservableObject {
     // MARK: - Assembly
 
     private func setUp() {
-        let sounds = SystemSounds(enabled: { [weak self] in self?.soundsEnabled ?? true })
+        let sounds = makeSounds { [weak self] in self?.soundsEnabled ?? true }
 
         do {
             let capture = makeCapture(
@@ -760,6 +775,17 @@ public final class AppState: ObservableObject {
                 // voice, instead of trusting a device-specific idle timer and
                 // discovering a cold Core ML graph only after key-up.
                 if state == .preparing { self?.warmEngineUnderVoice() }
+                // The moment the person stopped speaking, before any of the
+                // remaining work has run. A diagnostics build samples the
+                // machine here so the closing sample has something to be
+                // differenced against; a release build does nothing at all.
+                if state == .transcribing, let self {
+                    DictationDiagnostics.noteStop(
+                        engineWasReady: self.isEngineReady,
+                        pressureTier: self.lastPressureTier,
+                        unloadPolicy: self.modelUnloadTimeout
+                    )
+                }
                 // A finished session is a residency event: the engine just
                 // became safely idle, and a deferred unload may now proceed.
                 if state == .idle { self?.evaluateResidency(trigger: "session-idle") }
@@ -803,12 +829,36 @@ public final class AppState: ObservableObject {
                     self?.learn(original: original, edited: edited)
                 }
             }
+            controller.onEnginePreparationWait = { [weak self] waiting in
+                // The panel is the only feedback channel during dictation, and
+                // a wait for a model that is still loading is not the same
+                // event as transcription. Presenters that cannot say so simply
+                // keep their previous message.
+                (self?.overlay as? any EngineWaitPresenting)?
+                    .setWaitingForEngine(waiting)
+            }
             controller.onSpeed = { [weak self] report in
                 // Keep the measurement for diagnostics and performance tests, but do
                 // not cover the destination app after text has already arrived.
                 self?.lastSpeed = report
-                engineLog.info(
-                    "dictation stop→text \(report.toRecognizedText.appSeconds, format: .fixed(precision: 2))s stop→paste \(report.toPasteDispatched?.appSeconds ?? -1, format: .fixed(precision: 2))s"
+                // `notice`, not `info`: a slow take is exactly the entry that
+                // must survive in the system log long enough to be read, and
+                // `info` rotates within hours on a busy Mac. The stages travel
+                // with it because the total alone cannot name the cause.
+                engineLog.notice(
+                    """
+                    dictation stop→text \(report.toRecognizedText.appSeconds, format: .fixed(precision: 2))s \
+                    stop→paste \(report.toPasteDispatched?.appSeconds ?? -1, format: .fixed(precision: 2))s \
+                    freeze \(report.phases?.captureFreeze.appSeconds ?? -1, format: .fixed(precision: 2))s \
+                    prepare \(report.phases?.enginePreparation?.appSeconds ?? -1, format: .fixed(precision: 2))s \
+                    recognize \(report.phases?.recognition.appSeconds ?? -1, format: .fixed(precision: 2))s \
+                    engine \(report.phases?.engineProcessing?.appSeconds ?? -1, format: .fixed(precision: 2))s \
+                    audio \(report.phases?.audioDuration.appSeconds ?? -1, format: .fixed(precision: 2))s
+                    """
+                )
+                DictationDiagnostics.noteCompleted(
+                    report: report,
+                    characterCount: self?.lastDictation?.insertedText.count ?? 0
                 )
             }
             controller.onDictationCompleted = { [weak self] provenance in

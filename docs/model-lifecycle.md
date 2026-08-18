@@ -55,7 +55,10 @@ When the engine comes back:
 - at stop, a still-loading engine is waited out (up to 25 s, well under the
   worker's 30 s watchdog) and the words are inserted normally; the recovery
   file remains only for genuinely wedged loads. Nothing is ever silently
-  dropped.
+  dropped. Once such a wait passes a quarter of a second the panel says
+  "Waking the model…" instead of "Transcribing…", because the two are not the
+  same event and the difference is most visible on a short take, which has no
+  speech for the load to hide under.
 
 Crash recovery also respects pressure: a worker killed under critical
 pressure is respawned only after a jittered 5–10 s recheck shows the tier

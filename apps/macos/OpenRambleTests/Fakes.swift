@@ -547,6 +547,9 @@ final class AppHarness {
     /// Full recognition lifecycle seam for readiness/generation tests.
     /// When present it takes precedence over the legacy in-process engine.
     var recognizer: (any DictationRecognizing)?
+    /// Counts attention sounds without making one. A suite that can be heard
+    /// is a suite nobody can run while working.
+    let sounds = SilentSounds()
 
     func makeState() -> AppState {
         AppState(
@@ -561,6 +564,11 @@ final class AppHarness {
                     inserter.frontmostApplication()
                 },
                 overlay: overlay,
+                // Silent by design. The application sources are compiled into
+                // this bundle, so a real `SystemSounds` here plays Submarine
+                // through the speakers of whoever runs the suite — once per
+                // failure path, across hundreds of tests.
+                makeSounds: { [sounds] _ in sounds },
                 makeCapture: { [capture] _, _, _, _ in capture },
                 transcribe: { [transcription] _, _ in
                     { _ in
@@ -859,5 +867,26 @@ actor ReadinessControlledRecognizer: DictationRecognizing {
     func setReady(_ value: Bool) {
         prepared = value
         observer?.yield(value)
+    }
+}
+
+/// The attention sound, counted instead of played.
+///
+/// The application sources are compiled directly into this test bundle, so
+/// anything that reaches `SystemSounds` reaches the speakers of whoever is
+/// running the suite. Hundreds of tests exercise failure paths; the result was
+/// a run that blurted Submarine at the person watching it.
+final class SilentSounds: Sounding, @unchecked Sendable {
+    private let lock = NSLock()
+    private var played = 0
+
+    var playCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return played
+    }
+
+    func playAttention() async {
+        lock.withLock { played += 1 }
     }
 }

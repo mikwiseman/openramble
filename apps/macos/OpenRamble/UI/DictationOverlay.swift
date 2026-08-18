@@ -26,6 +26,16 @@ private final class OverlayCommandOrder: @unchecked Sendable {
     }
 }
 
+/// A panel that can say it is waiting for the model rather than working.
+///
+/// Separate from `OverlayPresenting` on purpose: this is not a session command
+/// and must not travel through the ordering fence, where a queued state
+/// command could overwrite it or a wedged window server could hold it.
+@MainActor
+public protocol EngineWaitPresenting: AnyObject {
+    func setWaitingForEngine(_ waiting: Bool)
+}
+
 /// A small panel showing what's happening with dictation.
 ///
 /// The panel does not take focus: the user dictates to another application, and the
@@ -34,7 +44,7 @@ private final class OverlayCommandOrder: @unchecked Sendable {
 /// decoration: the application does not have its own window, and there is no other way to find out what
 /// the microphone is on, the blind person doesn’t have one either.
 @MainActor
-public final class DictationOverlay: OverlayPresenting {
+public final class DictationOverlay: OverlayPresenting, EngineWaitPresenting {
     private var panel: NSPanel?
     private let model: OverlayModel
     /// Synchronous issue-order fence shared with nonisolated protocol calls.
@@ -88,6 +98,11 @@ public final class DictationOverlay: OverlayPresenting {
 
     nonisolated public func dismiss() async {
         await MainActor.run { model.hide() }
+    }
+
+    @MainActor
+    public func setWaitingForEngine(_ waiting: Bool) {
+        model.setWaitingForEngine(waiting)
     }
 
     nonisolated public func presentNotice(_ notice: DictationNotice) async {
@@ -277,8 +292,17 @@ final class OverlayModel: ObservableObject {
     /// Whether the seconds are counting down.
     var isTicking: Bool { timer != nil }
 
+    /// Whether the finished take is waiting for a model load rather than for
+    /// recognition. Only the transcribing panel reads it.
+    @Published private(set) var isWaitingForEngine = false
+
     var content: OverlayContent {
-        OverlayContent.make(state: state, notice: notice, elapsed: elapsed)
+        OverlayContent.make(
+            state: state,
+            notice: notice,
+            elapsed: elapsed,
+            isWaitingForEngine: isWaitingForEngine
+        )
     }
 
     private let announcer: any AccessibilityAnnouncing
@@ -308,9 +332,23 @@ final class OverlayModel: ObservableObject {
         autoHide?.cancel()
     }
 
+    /// The take is waiting for a model that is still loading.
+    func setWaitingForEngine(_ waiting: Bool) {
+        guard isWaitingForEngine != waiting else { return }
+        isWaitingForEngine = waiting
+        // The panel is already on screen showing the transcribing state; this
+        // only changes what it says. Re-announcing lets VoiceOver hear the
+        // difference between waiting and working, which is the whole point.
+        guard state == .transcribing, notice == nil, isVisible else { return }
+        announceContent()
+    }
+
     /// Show dictation status.
     func show(_ state: DictationState, elapsed: TimeInterval) {
         cancelAutoHide()
+        // A wait belongs to exactly one take. Leaving the flag set would let a
+        // finished load narrate the next dictation.
+        if state != .transcribing { isWaitingForEngine = false }
         self.state = state
         notice = nil
         // Once text is recognized, the destination application is the only

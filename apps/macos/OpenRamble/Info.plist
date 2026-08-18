@@ -28,6 +28,8 @@
 	<string>© 2026 Mik Wiseman. MIT.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>OpenRamble needs the microphone to record your speech. The recording is processed on this Mac and is never sent anywhere.</string>
+	<key>OpenRambleDiagnostics</key>
+	<string>$(OPENRAMBLE_DIAGNOSTICS_CONDITION)</string>
 	<key>SUAllowsAutomaticUpdates</key>
 	<false/>
 	<key>SUEnableAutomaticChecks</key>

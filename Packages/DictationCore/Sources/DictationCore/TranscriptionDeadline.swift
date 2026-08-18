@@ -9,13 +9,26 @@ import Foundation
 /// The deadline converts that infinite hang into a bounded failure that keeps
 /// the recording.
 public enum TranscriptionDeadline {
-    /// A warm recognizer is over 100x real time on long audio and finishes a
-    /// short dictation in well under a second. Three seconds leaves ample p99
-    /// headroom for recordings up to ninety seconds while turning the old
-    /// twenty-second apparent freeze into a bounded recovery. Longer takes get
-    /// one second per thirty seconds of audio.
+    /// This is a backstop against a dead system service, not a performance
+    /// budget — and the difference is the whole point.
+    ///
+    /// It used to be three seconds, derived from a warm recognizer running
+    /// over 100x real time. That reasoning measured the best case and then
+    /// spent it: a take that ran slowly for an ordinary reason — the machine
+    /// paging the model back in, another application holding the accelerator,
+    /// a Mac with 8 GB of memory — blew a budget calibrated on the good day,
+    /// and the words were withheld from someone whose engine was working
+    /// perfectly. Worse, the failure destroyed the loaded model, so the next
+    /// take started cold and was even more likely to miss the same bound. A
+    /// slow machine got a spiral instead of a slow result.
+    ///
+    /// Wedge detection belongs to the watchdog that can see whether the
+    /// recognizer is burning CPU; time alone cannot tell a slow Mac from a
+    /// broken one. What remains here is a far ceiling, generous enough that no
+    /// healthy machine can reach it and small enough that a truly dead call
+    /// still ends in a recoverable failure rather than an eternal panel.
     public static func deadline(forAudioDuration duration: TimeInterval) -> Duration {
-        .seconds(max(3, duration / 30))
+        .seconds(max(120, duration * 2))
     }
 }
 

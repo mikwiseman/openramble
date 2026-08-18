@@ -190,17 +190,47 @@ struct ASRWorkerSupervisorTests {
         }
     }
 
-    @Test("short dictation watchdog has a bounded floor and ceiling")
-    func transcriptionDeadlineBounds() {
+    /// The transcription bound is a ceiling for a pathological spin, not a
+    /// budget for a slow machine. It used to be 2.5 s for a fifteen-second
+    /// take, and a healthy recognition that merely paged the model back in or
+    /// waited for a busy accelerator was killed by it — costing the person
+    /// their words and the loaded model, so the next take started cold and was
+    /// even likelier to miss the same bound. Whether this recognition is
+    /// wedged is now decided by watching the worker burn CPU.
+    @Test("the transcription bound is a far ceiling, not a budget")
+    func transcriptionDeadlineIsAFarCeiling() {
         let deadlines = ASRWorkerDeadlines()
-        #expect(deadlines.transcription(0) == .milliseconds(2_500))
-        #expect(deadlines.transcription(15) == .milliseconds(2_500))
-        #expect(deadlines.transcription(90) == .milliseconds(2_500))
-        #expect(deadlines.transcription(180) == .milliseconds(5_500))
-        #expect(
-            deadlines.transcription(180)
-                < TranscriptionDeadline.deadline(forAudioDuration: 180)
-        )
+        // Measured warm p50 for a short take is ~0.15 s. Nothing healthy can
+        // reach two minutes.
+        #expect(deadlines.transcription(0) >= .seconds(60))
+        #expect(deadlines.transcription(15) >= .seconds(60))
+        #expect(deadlines.transcription(90) >= .seconds(60))
+        // Long takes still scale, because the work really is proportional.
+        #expect(deadlines.transcription(600) > deadlines.transcription(15))
+    }
+
+    /// The worker must still win the race against the controller's own
+    /// backstop, so it can kill, fence, and schedule recovery before the outer
+    /// task is cancelled out from under it.
+    @Test("the worker bound stays inside the controller's backstop")
+    func workerDeadlineWinsTheRace() {
+        let deadlines = ASRWorkerDeadlines()
+        for duration in [0.0, 15, 90, 600] {
+            #expect(
+                deadlines.transcription(duration)
+                    < TranscriptionDeadline.deadline(forAudioDuration: duration)
+            )
+        }
+    }
+
+    /// Recognition is judged the same way preparation is: by whether the
+    /// worker is doing work. A clock cannot tell a slow Mac from a broken one.
+    @Test("recognition is judged by progress, not by the clock")
+    func recognitionUsesTheStallWatchdog() {
+        #expect(ASRWorkerSupervisor.usesStallWatchdog(.transcribeSamples))
+        #expect(ASRWorkerSupervisor.usesStallWatchdog(.transcribeFile))
+        #expect(ASRWorkerSupervisor.usesStallWatchdog(.prepareMain))
+        #expect(!ASRWorkerSupervisor.usesStallWatchdog(.unloadModels))
     }
 
     @Test("a preparation timeout is never retried")

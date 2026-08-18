@@ -9,9 +9,55 @@ final class OverlayContentTests: XCTestCase {
     private func content(
         _ state: DictationState,
         notice: DictationNotice? = nil,
-        elapsed: TimeInterval = 0
+        elapsed: TimeInterval = 0,
+        isWaitingForEngine: Bool = false
     ) -> OverlayContent {
-        OverlayContent.make(state: state, notice: notice, elapsed: elapsed)
+        OverlayContent.make(
+            state: state,
+            notice: notice,
+            elapsed: elapsed,
+            isWaitingForEngine: isWaitingForEngine
+        )
+    }
+
+    // MARK: - Waiting is not working
+
+    /// A take that has to wait for the model spends that wait in the
+    /// transcribing state. Calling it transcription is a lie that grows with
+    /// the wait, and the wait can reach the preparation deadline.
+    func testWaitingForTheModelIsNotCalledTranscribing() {
+        let waiting = content(.transcribing, isWaitingForEngine: true)
+        XCTAssertEqual(waiting.title, "Waking the model…")
+        XCTAssertNotEqual(waiting.title, content(.transcribing).title)
+        // Still work, still not a failure: the words are safe either way.
+        XCTAssertEqual(waiting.tone, .working)
+        XCTAssertNotNil(waiting.subtitle, "the panel says the words are not lost")
+        XCTAssertNotEqual(
+            waiting.accessibilityLabel,
+            content(.transcribing).accessibilityLabel,
+            "VoiceOver hears the difference too"
+        )
+    }
+
+    /// The flag belongs to the transcribing panel alone. A stray `true` must
+    /// not rewrite a state that has nothing to do with a model load.
+    func testTheModelWaitDoesNotLeakIntoOtherStates() {
+        for state in [DictationState.idle, .preparing, .listening, .inserting] {
+            XCTAssertEqual(
+                content(state, isWaitingForEngine: true).title,
+                content(state).title,
+                "\(state) is unchanged by the model wait"
+            )
+        }
+    }
+
+    /// A failure has one explanation, not two. A notice still wins.
+    func testANoticeStillOutranksTheModelWait() {
+        let notice = DictationNotice(kind: .failure, message: "Something went wrong.")
+        XCTAssertEqual(
+            content(.transcribing, notice: notice, isWaitingForEngine: true).title,
+            "Something went wrong."
+        )
     }
 
     // MARK: - States
