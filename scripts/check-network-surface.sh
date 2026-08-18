@@ -182,20 +182,56 @@ if [[ -d core ]]; then
     echo "  $hit"
   done < <(grep -rnE "^[[:space:]]*($RUST_FORBIDDEN_CRATES)[[:space:]]*=" core --include=Cargo.toml || true)
 
-  # The lockfile, not just the manifests. A direct dependency is the obvious way
-  # a network client arrives; a transitive one is the way it arrives unnoticed.
-  # Checking every resolved package closes that, and costs one grep.
-  if [[ -f Cargo.lock ]]; then
-    while IFS= read -r hit; do
-      if [[ $status -eq 0 ]]; then
-        echo ""
-        echo "VIOLATION: a networking crate resolved into the Rust dependency graph."
-        echo "It may be transitive — run 'cargo tree --invert <crate>' to find who pulled it."
-        status=1
-      fi
-      echo "  $hit"
-    done < <(grep -nE "^name = \"($RUST_FORBIDDEN_CRATES)\"" Cargo.lock || true)
+  # The dependency graph of the core crates specifically, not the whole
+  # workspace.
+  #
+  # A workspace-wide lockfile check was the first attempt and it was wrong: Tauri
+  # links reqwest unconditionally, so the moment the desktop app joined the
+  # workspace the gate failed on a dependency nobody chose. That is the same
+  # distinction the Swift side already draws — Foundation contains URLSession and
+  # is linked by everything, so the audit looks at what the code *calls*, not at
+  # what the framework happens to contain.
+  #
+  # What must stay absolutely network-free is the shared core: it is compiled
+  # into every platform's app, it is where a fetch would be least expected, and
+  # it has no business owning one. The app shell's own network use is confined to
+  # the declared areas and is caught by the source scan below.
+  if command -v cargo > /dev/null && [[ -f Cargo.lock ]]; then
+    for package in ramble-core ramble-text ramble-model ramble-audio ramble-engine; do
+      while IFS= read -r hit; do
+        if [[ $status -eq 0 ]]; then
+          echo ""
+          echo "VIOLATION: a networking crate reached the shared core."
+          status=1
+        fi
+        echo "  $package depends on $hit"
+      done < <(cargo tree --package "$package" --target all --edges normal --prefix none 2>/dev/null \
+                 | awk '{print $1}' | sort -u \
+                 | grep -xE "$RUST_FORBIDDEN_CRATES" || true)
+    done
   fi
+
+  # Where the Rust application is allowed to reach the network.
+  #
+  # The same shape as the Swift allowlist above: named files, not good
+  # intentions. The desktop app has one network area — downloading the model a
+  # person explicitly asked for — and it lives in one module so this check can
+  # be a filename rather than a judgement call.
+  RUST_ALLOWED='^apps/desktop/src-tauri/src/adapters/download\.rs$'
+  RUST_CLIENTS='reqwest|ureq|hyper::|TcpStream|UdpSocket'
+  while IFS= read -r hit; do
+    file="${hit%%:*}"
+    [[ "$file" =~ $RUST_ALLOWED ]] && continue
+    if [[ $status -eq 0 ]]; then
+      echo ""
+      echo "VIOLATION: Rust code outside the download module reaches the network."
+      status=1
+    fi
+    echo "  $hit"
+  # Comment lines are excluded: the crates below are named in prose that
+  # explains why the boundary exists, and a word in a comment is not a call.
+  done < <(grep -rnE "$RUST_CLIENTS" apps/desktop/src-tauri/src core --include=*.rs \
+             | grep -vE "^[^:]+:[0-9]+:[[:space:]]*(//|\*)" || true)
 
   # std::net and the socket types reachable without a crate.
   RUST_FORBIDDEN_SYMBOLS='std::net|TcpStream|TcpListener|UdpSocket|UnixStream|ToSocketAddrs'

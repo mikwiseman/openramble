@@ -1,0 +1,254 @@
+//! Getting the finished text into whatever the person was typing in.
+//!
+//! There is no portable way to type text into another application's field, so
+//! this does what every dictation tool does: put the text on the clipboard, send
+//! the paste shortcut, and put the person's clipboard back afterwards.
+//!
+//! That borrowing is the delicate part, and it is where the privacy promise
+//! lives. Dictated text on the clipboard is dictated text handed to whatever
+//! else is watching the clipboard — Windows Cloud Clipboard syncs it to a
+//! Microsoft account, clipboard managers write it to disk forever. The macOS app
+//! solves this with `prepareForNewContents(with: .currentHostOnly)` plus the
+//! transient and concealed markers, and a plain `clearContents()` is banned
+//! outright and checked by CI. The same rule has to hold here, by the means each
+//! platform offers.
+
+use std::time::Duration;
+
+/// How long to wait after sending the paste before putting the clipboard back.
+///
+/// The receiving application reads the clipboard asynchronously, some of them
+/// slowly. Restoring too early hands them the person's old clipboard instead of
+/// the dictation, which looks like the dictation silently failed.
+pub const RESTORE_DELAY: Duration = Duration::from_millis(900);
+
+/// What the person had on the clipboard before a dictation borrowed it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Borrowed {
+    /// Text we can put back.
+    Text(String),
+    /// Something we could not read — an image, a file promise, a custom format.
+    ///
+    /// Kept as a distinct case rather than collapsed into "nothing": restoring
+    /// empty over an image the person had copied destroys it, and doing nothing
+    /// at least leaves the dictation there for them to see and clear.
+    Unreadable,
+    /// The clipboard was empty.
+    Nothing,
+}
+
+/// Should the clipboard be put back?
+///
+/// Two dictations inside one restore window is ordinary life, not an edge case —
+/// a short answer, then another. The rule is ownership: only restore if what is
+/// on the clipboard is still what this dictation put there. If the person copied
+/// something of their own in the meantime, theirs wins and we leave it alone.
+/// If a second dictation replaced ours, that dictation owns the restore.
+pub fn should_restore(current: Option<&str>, what_we_wrote: &str) -> bool {
+    current.is_some_and(|current| current == what_we_wrote)
+}
+
+/// What to put back, given what was borrowed.
+///
+/// `None` means leave the clipboard alone.
+pub fn restoration(borrowed: &Borrowed) -> Option<&str> {
+    match borrowed {
+        Borrowed::Text(text) => Some(text),
+        // Writing an empty string over an unreadable item destroys it. Leaving
+        // the dictation there is visible and recoverable; deleting a person's
+        // copied image is not.
+        Borrowed::Unreadable => None,
+        Borrowed::Nothing => Some(""),
+    }
+}
+
+/// Mark the clipboard so nothing syncs or archives it.
+///
+/// On Windows this registers the three formats that the shell and Cloud
+/// Clipboard honour. They are advisory — a badly behaved clipboard manager can
+/// ignore them — but they are the whole of what the platform offers, and they
+/// are what keeps a dictated password out of a Microsoft account.
+#[cfg(windows)]
+pub fn write_excluded_from_history(text: &str) -> Result<(), InjectError> {
+    use clipboard_win::{formats, Clipboard, Setter};
+
+    let _clipboard =
+        Clipboard::new_attempts(10).map_err(|error| InjectError::Clipboard(error.to_string()))?;
+
+    // This one empties the clipboard first, which is what we want: the text
+    // replaces whatever was there.
+    formats::Unicode
+        .write_clipboard(&text)
+        .map_err(|error| InjectError::Clipboard(error.to_string()))?;
+
+    for (name, payload) in [
+        // Presence alone is the signal for this one.
+        ("ExcludeClipboardContentFromMonitorProcessing", &[0_u8][..]),
+        // These two are read as a DWORD: zero means "no".
+        ("CanIncludeInClipboardHistory", &[0_u8, 0, 0, 0][..]),
+        ("CanUploadToCloudClipboard", &[0_u8, 0, 0, 0][..]),
+    ] {
+        // `register_format` answers with an Option — a name that cannot be
+        // registered simply has no format, and there is nothing to do about it.
+        let Some(format) = clipboard_win::register_format(name) else {
+            continue;
+        };
+        // `set_without_clear`, emphatically. The plain `set` empties the
+        // clipboard first, so using it here would wipe the text written a moment
+        // ago and leave nothing but a marker — dictation would paste an empty
+        // string, and the privacy measure would have destroyed the feature it
+        // was protecting.
+        let _ = clipboard_win::raw::set_without_clear(format.get(), payload);
+    }
+    Ok(())
+}
+
+#[derive(Debug)]
+pub enum InjectError {
+    Clipboard(String),
+    Keystroke(String),
+}
+
+impl std::fmt::Display for InjectError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InjectError::Clipboard(detail) => {
+                write!(f, "The clipboard could not be used: {detail}")
+            }
+            InjectError::Keystroke(detail) => write!(
+                f,
+                "The text could not be pasted: {detail}. \
+                 It is on the clipboard — press paste to insert it."
+            ),
+        }
+    }
+}
+
+impl std::error::Error for InjectError {}
+
+/// Put the text into whatever has focus.
+///
+/// Borrow the clipboard, send the paste shortcut, give the receiving application
+/// time to read it, then put the person's clipboard back if it is still ours.
+///
+/// The restore runs on a thread of its own so a dictation is never held up by
+/// it: the words are already in the field by then, and making the person wait
+/// nine hundred milliseconds to press the key again for a bookkeeping step they
+/// cannot see would be the most visible part of the whole feature.
+pub fn insert(text: &str) -> Result<(), InjectError> {
+    if text.is_empty() {
+        return Ok(());
+    }
+
+    let mut clipboard =
+        arboard::Clipboard::new().map_err(|error| InjectError::Clipboard(error.to_string()))?;
+
+    let borrowed = match clipboard.get_text() {
+        Ok(previous) if previous.is_empty() => Borrowed::Nothing,
+        Ok(previous) => Borrowed::Text(previous),
+        // Distinguishing "empty" from "something we cannot read" matters: one is
+        // safe to overwrite with an empty string later, the other is a person's
+        // copied image that would be destroyed by it.
+        Err(arboard::Error::ContentNotAvailable) => Borrowed::Nothing,
+        Err(_) => Borrowed::Unreadable,
+    };
+
+    // On Windows the write has to carry the exclusion formats, or the dictation
+    // is synced to a Microsoft account by Cloud Clipboard.
+    #[cfg(windows)]
+    write_excluded_from_history(text)?;
+    #[cfg(not(windows))]
+    clipboard
+        .set_text(text.to_owned())
+        .map_err(|error| InjectError::Clipboard(error.to_string()))?;
+
+    send_paste()?;
+
+    let ours = text.to_owned();
+    std::thread::spawn(move || {
+        std::thread::sleep(RESTORE_DELAY);
+        let Ok(mut clipboard) = arboard::Clipboard::new() else {
+            return;
+        };
+        let current = clipboard.get_text().ok();
+        if !should_restore(current.as_deref(), &ours) {
+            return;
+        }
+        if let Some(previous) = restoration(&borrowed) {
+            let _ = clipboard.set_text(previous.to_owned());
+        }
+    });
+
+    Ok(())
+}
+
+/// The paste shortcut for this platform.
+fn send_paste() -> Result<(), InjectError> {
+    use enigo::{Direction, Enigo, Key, Keyboard, Settings};
+
+    let mut enigo = Enigo::new(&Settings::default())
+        .map_err(|error| InjectError::Keystroke(error.to_string()))?;
+
+    // Command on macOS, Control everywhere else.
+    let modifier = if cfg!(target_os = "macos") {
+        Key::Meta
+    } else {
+        Key::Control
+    };
+
+    let mut press = |key, direction| {
+        enigo
+            .key(key, direction)
+            .map_err(|error| InjectError::Keystroke(error.to_string()))
+    };
+
+    press(modifier, Direction::Press)?;
+    let typed = press(Key::Unicode('v'), Direction::Click);
+    // The modifier is released even if the keystroke failed. A stuck modifier
+    // would leave the person's keyboard behaving as though a key were welded
+    // down, which is far worse than a dictation that did not paste.
+    let released = press(modifier, Direction::Release);
+    typed.and(released)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn our_own_text_is_ours_to_put_back() {
+        assert!(should_restore(Some("dictated"), "dictated"));
+    }
+
+    /// The person copied something while the restore was pending. Theirs wins.
+    #[test]
+    fn a_persons_own_copy_is_never_overwritten() {
+        assert!(!should_restore(Some("their own copy"), "dictated"));
+        assert!(!should_restore(None, "dictated"));
+    }
+
+    /// Two dictations inside one restore window is ordinary life. The second one
+    /// owns the clipboard, and therefore owns putting it back.
+    #[test]
+    fn a_second_dictation_takes_over_the_restore() {
+        assert!(!should_restore(Some("the second dictation"), "the first"));
+    }
+
+    #[test]
+    fn text_is_put_back_and_an_empty_clipboard_is_emptied_again() {
+        assert_eq!(restoration(&Borrowed::Text("notes".into())), Some("notes"));
+        assert_eq!(restoration(&Borrowed::Nothing), Some(""));
+    }
+
+    /// An image the person copied is not something to overwrite with "". The
+    /// dictation staying visible is recoverable; their picture is not.
+    #[test]
+    fn something_we_could_not_read_is_left_alone_rather_than_destroyed() {
+        assert_eq!(restoration(&Borrowed::Unreadable), None);
+    }
+
+    #[test]
+    fn the_restore_waits_long_enough_for_a_slow_application_to_read() {
+        assert!(RESTORE_DELAY >= Duration::from_millis(500));
+    }
+}

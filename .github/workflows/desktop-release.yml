@@ -1,0 +1,64 @@
+name: Desktop packages
+
+# Installers for Windows and Linux. Run on demand and on a tag, because a
+# 700 MB toolchain build on three runners is not something to do on every push.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["desktop-v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    name: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: Windows (x86_64)
+            artifact: openramble-windows
+          - os: ubuntu-22.04
+            label: Linux (x86_64)
+            artifact: openramble-linux
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # 22.04 rather than latest: the AppImage and .deb link against whatever
+      # glibc built them, so building on the newest runner would produce
+      # packages that refuse to start on the distributions people actually run.
+      - name: Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
+            libasound2-dev libxdo-dev libxkbcommon-dev
+
+      - name: Install the Tauri CLI
+        shell: bash
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Bundle
+        shell: bash
+        run: cargo tauri build --config apps/desktop/src-tauri/tauri.conf.json
+
+      - name: Collect the packages
+        shell: bash
+        run: |
+          mkdir -p dist
+          find target/release/bundle -type f \
+            \( -name "*.msi" -o -name "*.exe" -o -name "*.AppImage" \
+               -o -name "*.deb" -o -name "*.rpm" \) \
+            -exec cp {} dist/ \;
+          ls -la dist
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/*
+          if-no-files-found: error

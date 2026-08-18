@@ -88,7 +88,12 @@ final class TranscriptionDeadlineTests: XCTestCase {
     func testAlreadyCancelledCallerNeverStartsTheOperation() async {
         let ran = UncheckedBox(false)
         let task = Task { () -> Int in
-            try Task.checkCancellation()
+            // Wait until cancellation is actually observable before entering the
+            // race. Calling `cancel()` on a task that may already be running is
+            // a coin toss — the body can reach the operation first — and this
+            // test is about what happens on entry when cancellation has already
+            // landed, not about who wins that toss.
+            while !Task.isCancelled { await Task.yield() }
             return try await withTranscriptionDeadline(.seconds(30)) { () -> Int in
                 ran.value = true
                 return 1

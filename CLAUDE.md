@@ -19,9 +19,15 @@ The shipping app has exactly two network areas:
    Scheduled checks are enabled by default and can be disabled in Settings;
    downloading and installing an update always requires a click.
 
+The desktop app (Windows, Linux) has one:
+
+3. Explicit model downloads through
+   `apps/desktop/src-tauri/src/adapters/download.rs`.
+
 No other shipping code may access the network. The complete denied API list is
-maintained in `scripts/check-network-surface.sh` and enforced by CI. Update the
-public privacy description in `README.md` if this boundary ever changes.
+maintained in `scripts/check-network-surface.sh` and enforced by CI — by
+filename on both sides, so the promise is checked rather than intended. Update
+the public privacy description in `README.md` if this boundary ever changes.
 
 ## Architecture
 

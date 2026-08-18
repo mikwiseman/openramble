@@ -49,3 +49,5 @@ Package.resolved
 /target/
 # Fixture generator build products — the fixtures themselves are committed.
 core/conformance/generator/.build/
+# Tauri build products
+apps/desktop/src-tauri/gen/
