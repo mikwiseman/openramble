@@ -1,0 +1,2414 @@
+[
+  {
+    "afterDictionary" : "",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "",
+    "name" : "empty",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : ""
+  },
+  {
+    "afterDictionary" : "",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "     ",
+    "name" : "blank",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : ""
+  },
+  {
+    "afterDictionary" : "привет    мир",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "  привет    мир  ",
+    "name" : "collapse-spaces",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Привет мир"
+  },
+  {
+    "afterDictionary" : "привет , мир",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "привет , мир",
+    "name" : "space-before-comma",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Привет, мир"
+  },
+  {
+    "afterDictionary" : "первый,второй,третий",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "первый,второй,третий",
+    "name" : "list-without-capital",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Первый, второй, третий"
+  },
+  {
+    "afterDictionary" : "готово.Дальше идём",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "готово.Дальше идём",
+    "name" : "sentence-boundary",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Готово. Дальше идём"
+  },
+  {
+    "afterDictionary" : "число 3.14 и версия 2.0.1",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "число 3.14 и версия 2.0.1",
+    "name" : "decimal-stays",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Число 3.14 и версия 2.0.1"
+  },
+  {
+    "afterDictionary" : "смотри wai.computer сейчас",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "смотри wai.computer сейчас",
+    "name" : "domain-stays",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Смотри wai.computer сейчас"
+  },
+  {
+    "afterDictionary" : "в 12:30 открой https://wai.computer/x",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "в 12:30 открой https://wai.computer/x",
+    "name" : "time-and-link",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 37,
+        "kind" : "path",
+        "start" : 15,
+        "text" : "https://wai.computer/x"
+      }
+    ],
+    "text" : "В 12:30 открой https://wai.computer/x"
+  },
+  {
+    "afterDictionary" : "смотри TextPipeline.Output сейчас",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "смотри TextPipeline.Output сейчас",
+    "name" : "identifier-not-split",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 26,
+        "kind" : "identifier",
+        "start" : 7,
+        "text" : "TextPipeline.Output"
+      }
+    ],
+    "text" : "Смотри TextPipeline.Output сейчас"
+  },
+  {
+    "afterDictionary" : "onTextInserted это хук",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "onTextInserted это хук",
+    "name" : "identifier-first-word",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 14,
+        "kind" : "identifier",
+        "start" : 0,
+        "text" : "onTextInserted"
+      }
+    ],
+    "text" : "onTextInserted это хук"
+  },
+  {
+    "afterDictionary" : "используем URLSession для запроса",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "используем URLSession для запроса",
+    "name" : "acronym-word",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 21,
+        "kind" : "identifier",
+        "start" : 11,
+        "text" : "URLSession"
+      }
+    ],
+    "text" : "Используем URLSession для запроса"
+  },
+  {
+    "afterDictionary" : "отдаём JSON клиенту",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "отдаём JSON клиенту",
+    "name" : "bare-acronym",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Отдаём JSON клиенту"
+  },
+  {
+    "afterDictionary" : "открой /etc/hosts потом",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "открой /etc/hosts потом",
+    "name" : "path-protected",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 17,
+        "kind" : "path",
+        "start" : 7,
+        "text" : "/etc/hosts"
+      }
+    ],
+    "text" : "Открой /etc/hosts потом"
+  },
+  {
+    "afterDictionary" : "это foo/bar или что-то",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "это foo/bar или что-то",
+    "name" : "path-two-segments",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Это foo/bar или что-то"
+  },
+  {
+    "afterDictionary" : "запусти `git   status` сейчас",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "запусти `git   status` сейчас",
+    "name" : "backticks",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 22,
+        "kind" : "backticks",
+        "start" : 8,
+        "text" : "`git   status`"
+      }
+    ],
+    "text" : "Запусти `git   status` сейчас"
+  },
+  {
+    "afterDictionary" : "строка \"`a  b`\" тут",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "строка \"`a  b`\" тут",
+    "name" : "backtick-mid-token",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 14,
+        "kind" : "backticks",
+        "start" : 8,
+        "text" : "`a  b`"
+      }
+    ],
+    "text" : "Строка \"`a  b`\" тут"
+  },
+  {
+    "afterDictionary" : "передай --dry-run в команду",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "передай --dry-run в команду",
+    "name" : "flag",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 17,
+        "kind" : "flag",
+        "start" : 8,
+        "text" : "--dry-run"
+      }
+    ],
+    "text" : "Передай --dry-run в команду"
+  },
+  {
+    "afterDictionary" : "добавь -x к вызову",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "добавь -x к вызову",
+    "name" : "short-flag",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 9,
+        "kind" : "flag",
+        "start" : 7,
+        "text" : "-x"
+      }
+    ],
+    "text" : "Добавь -x к вызову"
+  },
+  {
+    "afterDictionary" : "слово-слово не флаг",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "слово-слово не флаг",
+    "name" : "hyphen-word",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Слово-слово не флаг"
+  },
+  {
+    "afterDictionary" : "первая строка\n\nвторая строка",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "первая строка\n\nвторая строка",
+    "name" : "multiline",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Первая строка\n\nвторая строка"
+  },
+  {
+    "afterDictionary" : "он сказал “привет” и ушёл",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "он сказал “привет” и ушёл",
+    "name" : "curly-quotes",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Он сказал \"привет\" и ушёл"
+  },
+  {
+    "afterDictionary" : "текст с неразрывными",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "текст с неразрывными",
+    "name" : "nbsp",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Текст с неразрывными"
+  },
+  {
+    "afterDictionary" : "тек​ст с﻿ невидимками",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "тек​ст с﻿ невидимками",
+    "name" : "zero-width",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Текст с невидимками"
+  },
+  {
+    "afterDictionary" : "мяг­кий перенос",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "мяг­кий перенос",
+    "name" : "soft-hyphen",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Мягкий перенос"
+  },
+  {
+    "afterDictionary" : "передай −x сюда",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "передай −x сюда",
+    "name" : "minus-sign-flag",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 10,
+        "kind" : "flag",
+        "start" : 8,
+        "text" : "-x"
+      }
+    ],
+    "text" : "Передай -x сюда"
+  },
+  {
+    "afterDictionary" : "да — нет",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "да — нет",
+    "name" : "em-dash-kept",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Да — нет"
+  },
+  {
+    "afterDictionary" : "он сказал «да» вчера",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "он сказал «да» вчера",
+    "name" : "guillemets-kept",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Он сказал «да» вчера"
+  },
+  {
+    "afterDictionary" : "привет отправь",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "привет отправь",
+    "name" : "command-send",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Привет отправь"
+  },
+  {
+    "afterDictionary" : "привет отправь.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "привет отправь.",
+    "name" : "command-send-with-dot",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Привет отправь."
+  },
+  {
+    "afterDictionary" : "привет",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "привет отправь",
+    "name" : "command-send-allowed",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Привет"
+  },
+  {
+    "afterDictionary" : "отправь это завтра",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "отправь это завтра",
+    "name" : "command-send-middle",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Отправь это завтра"
+  },
+  {
+    "afterDictionary" : "переотправь",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "переотправь",
+    "name" : "command-send-suffix-of-word",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Переотправь"
+  },
+  {
+    "afterDictionary" : "отправь",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "отправь",
+    "name" : "command-send-alone",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Отправь"
+  },
+  {
+    "afterDictionary" : "первая",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "первая новая строка",
+    "name" : "command-newline",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Первая\n"
+  },
+  {
+    "afterDictionary" : "новая строка",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "новая строка",
+    "name" : "command-newline-alone",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Новая строка"
+  },
+  {
+    "afterDictionary" : "first line",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "first line new line",
+    "name" : "command-new-line-english",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "First line\n"
+  },
+  {
+    "afterDictionary" : "текст",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "текст энтер",
+    "name" : "command-enter",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Текст"
+  },
+  {
+    "afterDictionary" : "some text",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "some text press enter",
+    "name" : "command-press-enter",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Some text"
+  },
+  {
+    "afterDictionary" : "some text",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "some text send it",
+    "name" : "command-send-it",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Some text"
+  },
+  {
+    "afterDictionary" : "текст",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "текст , отправь",
+    "name" : "command-with-trailing-comma",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Текст"
+  },
+  {
+    "afterDictionary" : "сделай release",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "сделай релиз",
+    "name" : "exact-simple",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Сделай release"
+  },
+  {
+    "afterDictionary" : "до release осталось",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "до релиза осталось",
+    "name" : "exact-inflected-genitive",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "До release осталось"
+  },
+  {
+    "afterDictionary" : "в release есть баг",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "в релизе есть баг",
+    "name" : "exact-inflected-prepositional",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "В release есть баг"
+  },
+  {
+    "afterDictionary" : "работаем над release",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "работаем над релизами",
+    "name" : "exact-inflected-instrumental",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Работаем над release"
+  },
+  {
+    "afterDictionary" : "сделай deploy",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "сделай деплой",
+    "name" : "exact-short-i-nominative",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Сделай deploy"
+  },
+  {
+    "afterDictionary" : "жду deploy",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "жду деплоя",
+    "name" : "exact-short-i-accusative",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Жду deploy"
+  },
+  {
+    "afterDictionary" : "перед deploy",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "перед деплоем",
+    "name" : "exact-short-i-instrumental",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Перед deploy"
+  },
+  {
+    "afterDictionary" : "релизный процесс",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "релизный процесс",
+    "name" : "exact-inside-word-not-touched",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Релизный процесс"
+  },
+  {
+    "afterDictionary" : "пишем на Python",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "пишем на питон",
+    "name" : "exact-latin-no-inflection",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Пишем на Python"
+  },
+  {
+    "afterDictionary" : "питона нет",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "питона нет",
+    "name" : "exact-latin-not-inflected-form",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Питона нет"
+  },
+  {
+    "afterDictionary" : "сделай pull request сегодня",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "сделай пул реквест сегодня",
+    "name" : "exact-longest-wins",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Сделай pull request сегодня"
+  },
+  {
+    "afterDictionary" : "нужен code review до обеда",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "нужен код ревью до обеда",
+    "name" : "exact-multiword",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Нужен code review до обеда"
+  },
+  {
+    "afterDictionary" : "Sentry упал",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "СЕНТРИ упал",
+    "name" : "exact-case-insensitive",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Sentry упал"
+  },
+  {
+    "afterDictionary" : "release и ещё release",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "релиз и ещё релиз",
+    "name" : "exact-every-occurrence",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Release и ещё release"
+  },
+  {
+    "afterDictionary" : "ну  да",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "ээ",
+        "written" : ""
+      }
+    ],
+    "input" : "ну ээ да",
+    "name" : "exact-empty-written",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Ну да"
+  },
+  {
+    "afterDictionary" : "Bar.Output тут",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "Foo",
+        "written" : "Bar"
+      }
+    ],
+    "input" : "Foo.Output тут",
+    "name" : "exact-over-span",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 10,
+        "kind" : "identifier",
+        "start" : 0,
+        "text" : "Bar.Output"
+      }
+    ],
+    "text" : "Bar.Output тут"
+  },
+  {
+    "afterDictionary" : "сделай deploy сегодня",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "сделай диплой сегодня",
+    "name" : "phonetic-variant",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Сделай deploy сегодня"
+  },
+  {
+    "afterDictionary" : "сделай деплэй сегодня",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "сделай деплэй сегодня",
+    "name" : "phonetic-variant-2",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Сделай деплэй сегодня"
+  },
+  {
+    "afterDictionary" : "без downtime работаем",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "без даун тайм работаем",
+    "name" : "phonetic-split-word",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Без downtime работаем"
+  },
+  {
+    "afterDictionary" : "без downtime работаем",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "без даунтайма работаем",
+    "name" : "phonetic-joined-word",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Без downtime работаем"
+  },
+  {
+    "afterDictionary" : "даун, тайм разные",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "даун, тайм разные",
+    "name" : "phonetic-comma-breaks-window",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Даун, тайм разные"
+  },
+  {
+    "afterDictionary" : "код `диплой` тут",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "код `диплой` тут",
+    "name" : "phonetic-in-backticks",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 12,
+        "kind" : "backticks",
+        "start" : 4,
+        "text" : "`диплой`"
+      }
+    ],
+    "text" : "Код `диплой` тут"
+  },
+  {
+    "afterDictionary" : "даун /usr/local/bin тайм",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "даун /usr/local/bin тайм",
+    "name" : "phonetic-across-path",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 19,
+        "kind" : "path",
+        "start" : 5,
+        "text" : "/usr/local/bin"
+      }
+    ],
+    "text" : "Даун /usr/local/bin тайм"
+  },
+  {
+    "afterDictionary" : "в центре города красиво",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "в центре города красиво",
+    "name" : "phonetic-sentry-vs-centre",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "В центре города красиво"
+  },
+  {
+    "afterDictionary" : "ошибка в Sentry опять",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "ошибка в сентри опять",
+    "name" : "phonetic-sentry-variant",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Ошибка в Sentry опять"
+  },
+  {
+    "afterDictionary" : "сделай диплой сегодня",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "сделай диплой сегодня",
+    "name" : "phonetic-off",
+    "phoneticMatching" : false,
+    "spans" : [
+
+    ],
+    "text" : "Сделай диплой сегодня"
+  },
+  {
+    "afterDictionary" : "сделай commit",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "комит",
+        "written" : "commit"
+      }
+    ],
+    "input" : "сделай коммит",
+    "name" : "phonetic-doubled-letters",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Сделай commit"
+  },
+  {
+    "afterDictionary" : "release готов",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релис",
+        "written" : "Relis"
+      }
+    ],
+    "input" : "релиз готов",
+    "name" : "phonetic-ambiguous-key-dropped",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Release готов"
+  },
+  {
+    "afterDictionary" : "сделай диплой",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      }
+    ],
+    "input" : "сделай диплой",
+    "name" : "phonetic-opt-out",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Сделай диплой"
+  },
+  {
+    "afterDictionary" : "тёплый вечер сегодня",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "тёплый вечер сегодня",
+    "name" : "phonetic-teplyy-not-deploy",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Тёплый вечер сегодня"
+  },
+  {
+    "afterDictionary" : "банка стоит на столе",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "банка стоит на столе",
+    "name" : "phonetic-banka-not-python",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Банка стоит на столе"
+  },
+  {
+    "afterDictionary" : "ошибка в Sentry ,  смотри TextPipeline.Output и `git   log`",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "  ошибка в сентри ,  смотри TextPipeline.Output и `git   log`  ",
+    "name" : "everything-at-once",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 43,
+        "kind" : "identifier",
+        "start" : 24,
+        "text" : "TextPipeline.Output"
+      },
+      {
+        "end" : 57,
+        "kind" : "backticks",
+        "start" : 46,
+        "text" : "`git   log`"
+      }
+    ],
+    "text" : "Ошибка в Sentry, смотри TextPipeline.Output и `git   log`"
+  },
+  {
+    "afterDictionary" : "сделай release",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "сделай релиз отправь",
+    "name" : "dictionary-then-command",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Сделай release"
+  },
+  {
+    "afterDictionary" : "сделай release",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "сделай релиз новая строка",
+    "name" : "dictionary-then-newline",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Сделай release\n"
+  },
+  {
+    "afterDictionary" : "смотри “TextPipeline.Output” тут",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "деплой",
+        "written" : "deploy"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "сентри",
+        "written" : "Sentry"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "пул реквест",
+        "written" : "pull request"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "даунтайм",
+        "written" : "downtime"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : false,
+        "spoken" : "питон",
+        "written" : "Python"
+      },
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "код ревью",
+        "written" : "code review"
+      }
+    ],
+    "input" : "смотри “TextPipeline.Output” тут",
+    "name" : "span-and-typography",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 27,
+        "kind" : "identifier",
+        "start" : 8,
+        "text" : "TextPipeline.Output"
+      }
+    ],
+    "text" : "Смотри \"TextPipeline.Output\" тут"
+  }
+]

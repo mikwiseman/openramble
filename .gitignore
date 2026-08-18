@@ -44,3 +44,8 @@ Models/
 # and FluidAudio does not have its own dependencies at all.
 Package.resolved
 .gstack/
+
+# Rust workspace
+/target/
+# Fixture generator build products — the fixtures themselves are committed.
+core/conformance/generator/.build/
