@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 
-/// The Handy-style "Unload Model" row: seven options, resident by default.
+/// The Handy-style "Unload Model" row: seven options, five-minute default.
 final class IdleUnloadPolicyTests: XCTestCase {
     func testDelaysMatchTheirLabels() {
         XCTAssertNil(IdleUnloadPolicy.never.idleDelay)
@@ -14,13 +14,8 @@ final class IdleUnloadPolicyTests: XCTestCase {
         XCTAssertEqual(IdleUnloadPolicy.allCases.count, 7)
     }
 
-    /// The reload after an unload is invisible only while the OS still has the
-    /// model specialized; after a cache purge it costs 13.5-16 s, and the
-    /// countdown decides when to risk that on someone's behalf. Nobody opts
-    /// into that by default.
-    func testDefaultKeepsTheEngineResident() {
-        XCTAssertEqual(IdleUnloadPolicy.default, .never)
-        XCTAssertNil(IdleUnloadPolicy.default.idleDelay)
+    func testDefaultMatchesHandy() {
+        XCTAssertEqual(IdleUnloadPolicy.default, .afterFiveMinutes)
     }
 
     func testStoredFallsBackToDefaultOnGarbageAndAbsence() throws {

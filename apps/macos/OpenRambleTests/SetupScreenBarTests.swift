@@ -122,15 +122,9 @@ final class SetupScreenBarTests: XCTestCase {
     /// screen is the reason nobody makes.
     ///
     /// Only the countdown is shortened here. The decision that ends it is the
-    /// product's own — and since the countdown became opt-in, this screen has
-    /// to be put in front of someone who opted in, which is the only case where
-    /// the dead end it guards against can still happen.
+    /// product's own.
     func testSetupAdvancesAfterTheIdleTimerUnloadsTheEngineOnTheSetupScreen() async throws {
         harness.defaults.set(true, forKey: AppState.onboardingCompletedKey)
-        harness.defaults.set(
-            IdleUnloadPolicy.afterTwoMinutes.rawValue,
-            forKey: IdleUnloadPolicy.defaultsKey
-        )
         harness.idleUnloadDelayOverride = .milliseconds(20)
         harness.permissions.microphoneGranted = true
         harness.permissions.accessibilityGranted = true

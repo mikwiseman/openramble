@@ -16,22 +16,9 @@ public enum IdleUnloadPolicy: String, CaseIterable, Identifiable, Sendable {
     case afterFifteenMinutes
     case afterOneHour
 
-    /// Resident by default.
-    ///
-    /// The five-minute countdown was Handy's default and ours, on the argument
-    /// that the comeback is invisible because it rides under the voice. That
-    /// holds only while the OS still has the model's specialization cached: it
-    /// costs about 0.15 s warm and 13.5–16 s after macOS purges
-    /// `com.apple.e5rt.e5bundlecache`, and the purge is routine on a machine
-    /// under memory pressure. So the countdown bought back about 2.3 GB during
-    /// idle time and, at unpredictable intervals, charged for it at the exact
-    /// moment someone had just finished speaking — worst of all on a short
-    /// take, which has no speech to hide the reload under.
-    ///
-    /// Critical memory pressure still evicts a safely idle engine, so the
-    /// system keeps its safety valve. The countdown remains available to
-    /// anyone who wants the memory back sooner. See `docs/model-lifecycle.md`.
-    public static let `default`: IdleUnloadPolicy = .never
+    /// Handy's default too; a machine that dictates all day just re-arms the
+    /// timer and never notices.
+    public static let `default`: IdleUnloadPolicy = .afterFiveMinutes
     public static let defaultsKey = "modelUnloadTimeout"
 
     public var id: String { rawValue }
