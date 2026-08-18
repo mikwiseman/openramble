@@ -167,9 +167,8 @@ jobs:
           RESOURCES="artifacts/build/OpenRamble.xcarchive/Products/Applications/OpenRamble.app/Contents/Resources"
           for file in \
             LICENSE NOTICE THIRD_PARTY_LICENSES.md \
-            model-manifest.json vocabulary-manifest.json \
-            FluidAudio-Apache-2.0.txt FluidAudio-fastcluster-BSD.txt \
-            FluidAudio-vbx-Apache-2.0.txt Sparkle-LICENSE.txt \
+            model-manifest.json Sparkle-LICENSE.txt \
+            transcribe-cpp-MIT.txt ggml-MIT.txt miniz-MIT.txt \
             Parakeet-CC-BY-4.0.txt
           do
             test -s "$RESOURCES/$file" || { echo "No required resource: $file" >&2; exit 1; }

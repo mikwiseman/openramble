@@ -12,18 +12,4 @@ extension ModelManifest {
         }
         return try decode(from: LocalFile.read(url))
     }
-
-    /// Manifest of the acoustic term hinter (Parakeet CTC 110M).
-    ///
-    /// A separate file, not a section of the main one: the model has its own repository and its own
-    /// revision, and it has its own life cycle - installation, verification and
-    /// restoration goes through the same ModelStore as the main one.
-    public static func bundledVocabulary() throws -> ModelManifest {
-        guard
-            let url = Bundle.module.url(forResource: "vocabulary-manifest", withExtension: "json")
-        else {
-            throw ModelManifestError.resourceMissing
-        }
-        return try decode(from: LocalFile.read(url))
-    }
 }

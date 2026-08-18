@@ -618,15 +618,6 @@ final class AppHarness {
     /// 483 MB does not occupy the disk. Marker captures the same size/mtime that
     /// records a production installation that has passed SHA check.
     func installModelMarker() throws {
-        // The product considers the model ready only when both the main and
-        // term hint. The test setup marks both.
-        try installMarker(for: try ModelManifest.bundled())
-        try installMarker(for: try ModelManifest.bundledVocabulary())
-    }
-
-    /// State after updating from a build without a hint: main model
-    /// worth it, no hint - checking the selection script.
-    func installMainModelMarkerOnly() throws {
         try installMarker(for: try ModelManifest.bundled())
     }
 
