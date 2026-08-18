@@ -1641,7 +1641,17 @@ final class AppStateTests: XCTestCase {
 
         XCTAssertEqual(state.recoveredRecordingCount, 1)
         XCTAssertFalse(FileManager.default.fileExists(atPath: orphan.path))
-        let notices = await overlay.notices
+        // The count and the notice do not arrive together: the notice is
+        // dispatched to the panel asynchronously, so asserting on it the
+        // instant the count changes passes on a fast machine and fails on a
+        // loaded one. Wait for the thing being asserted.
+        var notices = await overlay.notices
+        for _ in 0..<500
+        where !notices.contains(where: { $0.message.contains("recovered 1 unfinished recording") }) {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+            notices = await overlay.notices
+        }
         XCTAssertTrue(notices.contains { $0.message.contains("recovered 1 unfinished recording") })
     }
 
