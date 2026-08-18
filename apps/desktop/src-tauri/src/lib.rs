@@ -119,6 +119,22 @@ pub fn run() {
     let for_exit = Arc::clone(&dictation);
 
     tauri::Builder::default()
+        // First, before anything else registers: a second copy must not get as
+        // far as opening a microphone.
+        //
+        // Two instances of a tray application is not a cosmetic problem. Each
+        // one watches the dictation key, so a single press starts two
+        // recordings; each loads its own copy of the model, which is about
+        // 1.5 GB between them; and both race to write the clipboard, so what
+        // gets pasted is whichever finished last. Launching a second time now
+        // surfaces the window of the copy already running, which is what a
+        // person meant by launching it anyway.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_opener::init())
         .manage(Arc::clone(&dictation))
         .invoke_handler(tauri::generate_handler![
