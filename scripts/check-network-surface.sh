@@ -56,6 +56,12 @@ done < <(grep -rnE "$FORBIDDEN" "${SHIPPING_PATHS[@]}" 2>/dev/null \
   | grep -vE 'URLSessionModelDownloader\(\)|: ModelDownloading' \
   || true)
 
+# A plain clearContents()/declareTypes() puts dictation on Universal Clipboard,
+# where it reaches every device on the Apple ID. The definition used to sit
+# beside the ASR worker's control-plane scan and was removed with it, which left
+# this check reading an unset variable: it printed an error, matched nothing and
+# exited zero — a gate that looked like it was running and was not.
+FORBIDDEN_PASTEBOARD='clearContents\(\)|declareTypes\('
 echo "Checking the clipboard entry..."
 while IFS= read -r hit; do
   if [[ $status -eq 0 ]]; then
