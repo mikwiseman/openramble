@@ -35,6 +35,22 @@ public privacy description in `README.md` if this boundary ever changes.
 LocalASR depends on DictationCore. Recognition runs in the application process.
 No package depends on the application layer.
 
+### The shared core (cross-platform work in progress)
+
+- `core/ramble-core` and `core/ramble-text` are a Cargo workspace holding the
+  dictation logic every platform shares. They perform no I/O whatsoever: no
+  files, no devices, no network, no clock of their own. Time arrives as a
+  parameter and effects leave as values.
+- These crates are ports of `Packages/DictationCore`, not a second design. While
+  both exist, the Swift side is the source of truth and the Rust side follows.
+- `core/conformance/` is what keeps them from drifting. The generator runs the
+  shipping Swift pipeline over `corpus-text.json` and records what it produced;
+  `cargo test -p ramble-text --test conformance` replays the same cases against
+  the Rust port. Never edit a fixture by hand to make a test pass — a fixture is
+  a recording, and changing it asserts the Mac behaves in a way it does not.
+- Changing behaviour means changing it in both places and regenerating the
+  fixtures in the same commit.
+
 ## Privacy and safety
 
 - Never log dictated text, individual words, keystrokes, or user file names.
@@ -63,3 +79,6 @@ See [docs/release.md](docs/release.md) and [AGENTS.md](AGENTS.md).
 - Keep policy decisions in small, pure types rather than view models.
 - Before committing, run `./scripts/check.sh` or at minimum all three Swift
   package test suites.
+- `./scripts/check.sh` also runs the Rust workspace and the conformance check.
+  For Rust alone: `cargo test`, `cargo clippy --all-targets -- -D warnings`,
+  `cargo fmt --all --check`.
