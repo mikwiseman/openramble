@@ -95,7 +95,7 @@ pub fn apply_exact(replacements: &[DictionaryReplacement], text: &str) -> String
     // for two same-length entries that both match, the platforms could otherwise
     // produce different text. Pinning the order makes this side the defined one.
     let mut ordered: Vec<&DictionaryReplacement> = replacements.iter().collect();
-    ordered.sort_by(|a, b| b.spoken.chars().count().cmp(&a.spoken.chars().count()));
+    ordered.sort_by_key(|entry| std::cmp::Reverse(entry.spoken.chars().count()));
 
     let mut result = text.to_string();
     for replacement in ordered {
@@ -148,7 +148,7 @@ const ENDINGS: &[&str] = &[
 /// "\u{0441}\u{0435}\u{043D}\u{0442}\u{0440}", and "\u{0432} \u{0446}\u{0435}\u{043D}\u{0442}\u{0440}\u{0435} \u{0433}\u{043E}\u{0440}\u{043E}\u{0434}\u{0430}" turns into "\u{0432} Sentry \u{0433}\u{043E}\u{0440}\u{043E}\u{0434}\u{0430}". The price is that
 /// such an entry only fires in the exact form it was written in.
 fn is_inflectable(needle: &str) -> bool {
-    let Some(last) = needle.split(' ').filter(|w| !w.is_empty()).next_back() else {
+    let Some(last) = needle.split(' ').rfind(|w| !w.is_empty()) else {
         return false;
     };
     if last.chars().count() < 4 {

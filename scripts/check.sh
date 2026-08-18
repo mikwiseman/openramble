@@ -99,6 +99,17 @@ run_packages() {
 run_shared_core() {
   echo "→ Shared core"
   command -v cargo > /dev/null || fail "cargo is not installed; the shared core cannot be checked."
+
+  # A local toolchain older than the pinned one runs an older clippy, which has
+  # fewer lints. It will call code green that CI then rejects — the exact
+  # failure mode this script exists to prevent, so it is said out loud.
+  local pinned local_version
+  pinned=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)
+  local_version=$(cargo --version | awk '{print $2}')
+  if [[ -n "$pinned" && "$pinned" != "$local_version" ]]; then
+    echo "  note: local Rust is $local_version, CI pins $pinned."
+    echo "        Lint results here are advisory; CI is authoritative."
+  fi
   local log
   log=$(mktemp)
   # The same gate CI runs. Saying "green" here on code CI then rejects spends

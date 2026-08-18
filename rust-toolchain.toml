@@ -1,0 +1,10 @@
+# Pinned so CI is reproducible and a newly released clippy cannot turn a green
+# branch red on its own. Raise it deliberately, with the lint fixes in the same
+# commit.
+#
+# rustup honours this file; a Homebrew or distro cargo ignores it. check.sh
+# compares the two and says so, because a local check that passes on code CI
+# then rejects spends exactly the trust it exists to earn.
+[toolchain]
+channel = "1.97.1"
+components = ["clippy", "rustfmt"]
