@@ -3557,6 +3557,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ramble-history"
+version = "0.1.0"
+dependencies = [
+ "ramble-model",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "ramble-model"
 version = "0.1.0"
 dependencies = [

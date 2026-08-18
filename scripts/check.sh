@@ -117,7 +117,7 @@ run_shared_core() {
   # The same scope CI uses: the core crates. The desktop app is built by its
   # own job, because on Linux it needs GTK and WebKit and a missing system
   # library is not a regression in the shared logic.
-  CORE_PACKAGES=(-p ramble-core -p ramble-text -p ramble-model -p ramble-audio)
+  CORE_PACKAGES=(-p ramble-core -p ramble-text -p ramble-model -p ramble-audio -p ramble-history)
   if cargo fmt --all --check > "$log" 2>&1 \
      && cargo clippy "${CORE_PACKAGES[@]}" --all-targets --all-features -- -D warnings >> "$log" 2>&1 \
      && cargo test "${CORE_PACKAGES[@]}" --all-features >> "$log" 2>&1; then

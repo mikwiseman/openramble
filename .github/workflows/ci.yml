@@ -104,13 +104,13 @@ jobs:
         shell: bash
         run: |
           cargo fmt --all --check
-          cargo clippy -p ramble-core -p ramble-text -p ramble-model -p ramble-audio \
+          cargo clippy -p ramble-core -p ramble-text -p ramble-model -p ramble-audio -p ramble-history \
             --all-targets --all-features -- -D warnings
 
       - name: Test
         shell: bash
         run: |
-          cargo test -p ramble-core -p ramble-text -p ramble-model -p ramble-audio \
+          cargo test -p ramble-core -p ramble-text -p ramble-model -p ramble-audio -p ramble-history \
             --all-features
 
   desktop:
