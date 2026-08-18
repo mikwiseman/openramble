@@ -1,0 +1,19 @@
+[package]
+name = "ramble-ffi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+# `lib` so the workspace can test it; `cdylib` because that is what Swift links.
+crate-type = ["lib", "cdylib"]
+
+[dependencies]
+ramble-core = { path = "../ramble-core" }
+ramble-text = { path = "../ramble-text" }
+uniffi = "0.32"
+
+[lints]
+workspace = true

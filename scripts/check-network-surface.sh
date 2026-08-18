@@ -182,6 +182,21 @@ if [[ -d core ]]; then
     echo "  $hit"
   done < <(grep -rnE "^[[:space:]]*($RUST_FORBIDDEN_CRATES)[[:space:]]*=" core --include=Cargo.toml || true)
 
+  # The lockfile, not just the manifests. A direct dependency is the obvious way
+  # a network client arrives; a transitive one is the way it arrives unnoticed.
+  # Checking every resolved package closes that, and costs one grep.
+  if [[ -f Cargo.lock ]]; then
+    while IFS= read -r hit; do
+      if [[ $status -eq 0 ]]; then
+        echo ""
+        echo "VIOLATION: a networking crate resolved into the Rust dependency graph."
+        echo "It may be transitive — run 'cargo tree --invert <crate>' to find who pulled it."
+        status=1
+      fi
+      echo "  $hit"
+    done < <(grep -nE "^name = \"($RUST_FORBIDDEN_CRATES)\"" Cargo.lock || true)
+  fi
+
   # std::net and the socket types reachable without a crate.
   RUST_FORBIDDEN_SYMBOLS='std::net|TcpStream|TcpListener|UdpSocket|UnixStream|ToSocketAddrs'
   while IFS= read -r hit; do
