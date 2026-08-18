@@ -97,10 +97,12 @@ struct ASRWorkerDeadlines: Sendable {
     var unload: Duration = .seconds(5)
     var fileTranscription: Duration = .seconds(60)
     var transcription: @Sendable (TimeInterval) -> Duration = { audioDuration in
-        // DictationController owns the user-visible stop-to-text deadline. Let
-        // the worker watchdog win that race by a deterministic margin so it
-        // can kill, fence, and schedule recovery before the outer task cancels
-        // it. This does not extend the public deadline.
+        // A far ceiling, not a budget: the stall watchdog decides whether this
+        // recognition is wedged by watching the worker's CPU, and this bound
+        // only catches a pathological spin that burns CPU forever without
+        // finishing. It still wins the race against DictationController's own
+        // backstop by a deterministic margin, so the worker gets to kill,
+        // fence, and schedule recovery before the outer task is cancelled.
         TranscriptionDeadline.deadline(forAudioDuration: audioDuration)
             - .milliseconds(500)
     }
@@ -728,7 +730,7 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation {
                 (continuation: CheckedContinuation<ASRWireFrame, Error>) in
-                let watchdog = Self.isPreparationPhase(kind)
+                let watchdog = Self.usesStallWatchdog(kind)
                     ? makeStallWatchdog(
                         requestID: requestID,
                         generation: generation,
@@ -823,9 +825,20 @@ public actor ASRWorkerSupervisor: DictationRecognizing {
         }
     }
 
-    private static func isPreparationPhase(_ kind: ASRWireKind) -> Bool {
+    /// Which phases are judged by whether the worker is doing work rather
+    /// than by how long it has taken.
+    ///
+    /// Preparation was given this treatment because a first specialization is
+    /// heavy work of machine-dependent length. Recognition needs it for the
+    /// same reason and with more at stake: it was killed on a fixed clock —
+    /// 2.5 s for a fifteen-second take — so a slow-but-healthy run cost the
+    /// person their words *and* the loaded model, which made the next take
+    /// cold and even more likely to miss the same bound. Judge the work, not
+    /// the clock, everywhere the clock cannot tell slow from broken.
+    static func usesStallWatchdog(_ kind: ASRWireKind) -> Bool {
         switch kind {
-        case .prepareMain, .prepareVocabulary, .warmInference:
+        case .prepareMain, .prepareVocabulary, .warmInference,
+             .transcribeSamples, .transcribeFile:
             return true
         default:
             return false
