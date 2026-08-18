@@ -1,6 +1,9 @@
 import CTranscribe
 import DictationCore
 import Foundation
+import os
+
+private let runtimeLog = Logger(subsystem: "is.waiwai.dictation", category: "asr-runtime")
 
 /// The only place in the project that talks to the transcribe.cpp runtime.
 ///
@@ -80,7 +83,31 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
     public init(backend: Backend = .metal, threadCount: Int32 = 0) {
         self.backend = backend
         self.threadCount = threadCount
+        Self.silenceRuntimeLogging()
     }
+
+    /// Route the runtime's own logging away from the console.
+    ///
+    /// Left alone it narrates every Metal kernel it compiles and every decode
+    /// it runs, straight to stderr. In a menu-bar app that is noise in the
+    /// user's system log at best, and it is not the kind of noise anyone would
+    /// think to look for. Warnings and errors are kept — at debug level, under
+    /// the project's own subsystem, where they can be read deliberately.
+    ///
+    /// The sink is global to the library, so it is installed once. Nothing
+    /// dictated reaches it: these are the runtime's own messages about kernels
+    /// and shapes.
+    private static let silenceRuntimeLogging: @Sendable () -> Void = {
+        let install: Void = {
+            transcribe_log_set({ level, message, _ in
+                guard let message,
+                      level == TRANSCRIBE_LOG_LEVEL_WARN || level == TRANSCRIBE_LOG_LEVEL_ERROR
+                else { return }
+                runtimeLog.debug("transcribe.cpp: \(String(cString: message), privacy: .public)")
+            }, nil)
+        }()
+        return { _ = install }
+    }()
 
     // MARK: - Lifecycle
 

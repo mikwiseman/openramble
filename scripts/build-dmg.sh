@@ -218,17 +218,25 @@ if [[ -e "$APP_PATH/Contents/MacOS/openramble-mcp" ]]; then
   echo "The dictation-only build unexpectedly embedded openramble-mcp" >&2
   exit 1
 fi
-if [[ -e "$APP_PATH/Contents/MacOS/openramble-asr-worker-test-fixture" ]]; then
-  echo "The release build unexpectedly embedded the ASR fault-test fixture" >&2
+if [[ -e "$APP_PATH/Contents/MacOS/openramble-asr-worker" ]]; then
+  echo "The build embedded the retired ASR worker" >&2
   exit 1
 fi
-ASR_WORKER="$APP_PATH/Contents/MacOS/openramble-asr-worker"
-if [[ ! -x "$ASR_WORKER" ]]; then
-  echo "The build did not embed the private ASR worker" >&2
+# The inference runtime is a third-party binary embedded in a notarized app, so
+# what it links is verified on the artifact rather than trusted from its source.
+RUNTIME_FRAMEWORK="$APP_PATH/Contents/Frameworks/CTranscribe.framework"
+RUNTIME_BINARY="$RUNTIME_FRAMEWORK/Versions/A/CTranscribe"
+[[ -f "$RUNTIME_BINARY" ]] || RUNTIME_BINARY="$RUNTIME_FRAMEWORK/CTranscribe"
+if [[ ! -f "$RUNTIME_BINARY" ]]; then
+  echo "The build did not embed the inference runtime" >&2
   exit 1
 fi
-if otool -L "$ASR_WORKER" | grep -q '/Network\.framework/'; then
-  echo "The private ASR worker unexpectedly links Network.framework" >&2
+if otool -L "$RUNTIME_BINARY" | grep -qE '/(Network|CFNetwork|Security)\.framework/|libcurl'; then
+  echo "The inference runtime unexpectedly links a networking framework" >&2
+  exit 1
+fi
+if nm -u "$RUNTIME_BINARY" | grep -qE 'curl_easy|NSURLSession|CFNetwork|_socket$|_getaddrinfo$'; then
+  echo "The inference runtime unexpectedly references a network API" >&2
   exit 1
 fi
 
@@ -375,6 +383,11 @@ if [[ -n "$DEVELOPER_ID" ]]; then
       --options runtime --timestamp --sign "$DEVELOPER_ID" "$@"
   }
 
+  # The inference runtime is nested code too, and thinning it above invalidated
+  # whatever signature it arrived with. Same inside-out rule as Sparkle: sign it
+  # before the app that contains it.
+  sign "$APP_PATH/Contents/Frameworks/CTranscribe.framework"
+
   # If Sparkle moves to a different version letter or removes a component, silently
   # you can't skip it: the embedded code will remain with the ad-hoc assembly signature.
   for component in \
@@ -451,6 +464,7 @@ else
   fi
   SPARKLE="$APP_PATH/Contents/Frameworks/Sparkle.framework"
   SPARKLE_VERSION="$SPARKLE/Versions/B"
+  codesign --force --sign - "$APP_PATH/Contents/Frameworks/CTranscribe.framework" >/dev/null 2>&1 || true
   for component in \
     "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
