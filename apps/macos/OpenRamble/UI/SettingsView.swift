@@ -18,6 +18,8 @@ struct SettingsView: View {
                 .tabItem { Label("General", systemImage: "gearshape") }
             RecognitionSettings(state: state)
                 .tabItem { Label("Recognition", systemImage: "waveform") }
+            HistoryView(state: state)
+                .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
             DictionarySettings(state: state)
                 .tabItem { Label("Dictionary", systemImage: "character.book.closed") }
             AboutView(updater: state.updater, revealSupportFolder: state.revealSupportFolder)

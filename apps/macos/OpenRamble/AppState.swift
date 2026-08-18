@@ -362,6 +362,20 @@ public final class AppState: ObservableObject {
     }
     @Published public private(set) var recentDictations: [RecentDictation] = []
 
+    /// Finished dictations kept on disk, newest first, with their audio.
+    @Published public private(set) var history: [HistoryEntry] = []
+
+    /// How many takes the history keeps. Changing it trims what is already
+    /// stored, so lowering the number is a deletion the person can rely on.
+    @Published public var historyLimit: Int {
+        didSet {
+            guard oldValue != historyLimit else { return }
+            defaults.set(historyLimit, forKey: DictationHistoryStore.limitKey)
+            guard let historyStore else { return }
+            history = (try? historyStore.applyLimit(historyLimit)) ?? history
+        }
+    }
+
     /// What's wrong with the dictionary. Until `nil`, the dictionary is write-locked.
     @Published public private(set) var dictionaryProblem: ReplacementsStore.Problem?
 
@@ -443,6 +457,7 @@ public final class AppState: ObservableObject {
     public let updater = SparkleUpdater()
 
     private var store: ModelStore?
+    private var historyStore: DictationHistoryStore?
     private var mainModelBytes: Int64 = 0
     private var mainModelFileCount = 0
     private var transcriber: (any DictationRecognizing)?
@@ -549,6 +564,7 @@ public final class AppState: ObservableObject {
         editWatcher = EditLearningWatcher(reader: environment.focusedFieldReader)
         // No key = disabled: `bool(forKey:)` returns false. This
         // reads someone else's window and therefore requires an explicit opt-in.
+        historyLimit = DictationHistoryStore.storedLimit(in: environment.defaults)
         learnFromEdits = environment.defaults.bool(forKey: Self.learnFromEditsKey)
         launchAtLogin = SMAppService.mainApp.status == .enabled
         paths = environment.paths
@@ -672,6 +688,13 @@ public final class AppState: ObservableObject {
             self.store = store
             mainModelBytes = manifest.totalByteCount
             mainModelFileCount = manifest.files.count
+
+            let historyStore = DictationHistoryStore(
+                directory: try paths.support()
+                    .appending(path: "History", directoryHint: .isDirectory)
+            )
+            self.historyStore = historyStore
+            history = historyStore.load()
 
             let engineDirectory = layout.engineDirectory
             self.engineDirectory = engineDirectory
@@ -803,6 +826,9 @@ public final class AppState: ObservableObject {
                     report: report,
                     characterCount: self?.lastDictation?.insertedText.count ?? 0
                 )
+            }
+            controller.onTakeFinished = { [weak self] text, audio in
+                self?.archive(text: text, audio: audio)
             }
             controller.onDictationCompleted = { [weak self] provenance in
                 self?.lastDictation = LastDictation(
@@ -1068,6 +1094,49 @@ public final class AppState: ObservableObject {
     }
 
     // MARK: - Verbatim text of the last dictation
+
+    /// Keep a finished take: its text, and a copy of its audio.
+    ///
+    /// Failures here are reported rather than swallowed. A history that
+    /// silently stops recording looks exactly like a history of someone who
+    /// stopped dictating.
+    private func archive(text: String, audio: URL) {
+        guard let historyStore else { return }
+        do {
+            history = try historyStore.record(text: text, audio: audio, limit: historyLimit)
+        } catch {
+            engineLog.error("history entry not written")
+        }
+    }
+
+    /// The take's audio, if it is still on disk.
+    public func historyAudioURL(for entry: HistoryEntry) -> URL? {
+        historyStore?.audioURL(for: entry)
+    }
+
+    public func deleteHistoryEntry(_ entry: HistoryEntry) {
+        guard let historyStore else { return }
+        history = (try? historyStore.delete(entry)) ?? history
+    }
+
+    public func clearHistory() {
+        guard let historyStore else { return }
+        try? historyStore.deleteAll()
+        history = []
+    }
+
+    /// Put a stored transcript back on the clipboard.
+    ///
+    /// Host-only and concealed, exactly like every other copy this app makes: a
+    /// transcript must not travel to another Mac through Universal Clipboard
+    /// just because it came from a list rather than from a live dictation.
+    public func copyHistoryEntry(_ entry: HistoryEntry) {
+        do {
+            try HostOnlyPasteboard().copyHostOnly(entry.text)
+        } catch {
+            notify(DictationNotice(kind: .failure, message: "Couldn't copy the dictation."))
+        }
+    }
 
     private func recordSuccessfulDictation(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
