@@ -267,12 +267,20 @@ SPARKLE_LICENSES="$PACKAGE_CACHE/checkouts/Sparkle"
 # The runtime ships its licences inside the XCFramework it publishes: its own,
 # plus the vendored ggml and miniz. They travel with the binary, so they are
 # taken from the artifact actually linked rather than from a checkout.
-RUNTIME_LICENSES=$(find "$PWD/Packages/LocalASR/.build/artifacts" \
-  -maxdepth 4 -type d -name "TranscribeCpp.xcframework" -print -quit)
+# Where the artifact lands depends on who resolved it: xcodebuild puts binary
+# targets under the cloned-packages directory, `swift build` under the package's
+# own .build. Look in both rather than assume the one that happened to be used.
+RUNTIME_LICENSES=""
+for artifact_root in "$PACKAGE_CACHE" "$PWD/Packages/LocalASR/.build"; do
+  [[ -d "$artifact_root" ]] || continue
+  RUNTIME_LICENSES=$(find "$artifact_root" -type d -name "TranscribeCpp.xcframework" -print -quit 2>/dev/null || true)
+  [[ -n "$RUNTIME_LICENSES" ]] && break
+done
 [[ -n "$RUNTIME_LICENSES" ]] || {
   echo "The inference runtime artifact was not resolved; cannot collect its licences." >&2
   exit 1
 }
+echo "  runtime licences from ${RUNTIME_LICENSES#$PWD/}"
 for source in \
   "$RUNTIME_LICENSES/LICENSE" \
   "$RUNTIME_LICENSES/LICENSE.ggml" \
