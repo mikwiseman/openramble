@@ -754,69 +754,10 @@ final class AppStateTests: XCTestCase {
         )
     }
 
-    /// After a critical eviction the engine no longer waits for a `.normal`
-    /// that a busy 16 GB machine may never report: warning-tier pressure earns
-    /// one settle window and then rewarms.
-    func testWarningPressureRewarmsAfterOneSettleWindow() async throws {
-        try installModelMarker()
-        let recognizer = ReadinessControlledRecognizer()
-        harness.recognizer = recognizer
-        harness.pressureRewarmSettleDelay = .milliseconds(30)
-        let state = makeState()
-        for _ in 0..<500 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        XCTAssertTrue(state.isEngineReady)
-
-        state.registerMemoryPressure(.critical)
-        for _ in 0..<200 where state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        XCTAssertFalse(state.isEngineReady, "critical pressure evicts the idle engine")
-
-        state.registerMemoryPressure(.warning)
-        for _ in 0..<500 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        XCTAssertTrue(
-            state.isEngineReady,
-            "warning-tier pressure rewarms after the settle window instead of waiting for normal"
-        )
-    }
-
-    func testCriticalDuringSettleWindowCancelsThePendingRewarm() async throws {
-        try installModelMarker()
-        let recognizer = ReadinessControlledRecognizer()
-        harness.recognizer = recognizer
-        harness.pressureRewarmSettleDelay = .milliseconds(40)
-        let state = makeState()
-        for _ in 0..<500 where !state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-
-        state.registerMemoryPressure(.critical)
-        for _ in 0..<200 where state.isEngineReady {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        XCTAssertFalse(state.isEngineReady)
-
-        state.registerMemoryPressure(.warning)
-        state.registerMemoryPressure(.critical)
-        try? await Task.sleep(for: .milliseconds(120))
-        XCTAssertFalse(
-            state.isEngineReady,
-            "a stale settle window must not fire under critical pressure"
-        )
-    }
-
-    /// The key press is the earliest reload trigger and works even while the
-    /// tier is still critical — the reload rides under the voice.
-    func testKeyDownRewarmsColdEngineEvenUnderCriticalPressure() async throws {
+    /// The key press is the earliest reload trigger: it fires before any
+    /// readiness guard can swallow it, so a resting engine comes back under
+    /// the voice rather than after it.
+    func testKeyDownRewarmsAColdEngine() async throws {
         try installModelMarker()
         let recognizer = ReadinessControlledRecognizer()
         harness.recognizer = recognizer
@@ -827,8 +768,13 @@ final class AppStateTests: XCTestCase {
         }
         let baselineWarmUps = await recognizer.warmUps
 
-        state.registerMemoryPressure(.critical)
-        for _ in 0..<200 where state.isEngineReady {
+        // Let the idle countdown put the engine down, which is now the only
+        // way it rests: the memory-pressure eviction that used to do this went
+        // with the 2.4 GB engine that needed it. The countdown is a courtesy
+        // to someone who has finished setting up, so say that they have.
+        harness.defaults.set(true, forKey: AppState.onboardingCompletedKey)
+        state.modelUnloadTimeout = .immediately
+        for _ in 0..<500 where state.isEngineReady {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))
         }
@@ -839,7 +785,7 @@ final class AppStateTests: XCTestCase {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))
         }
-        XCTAssertTrue(state.isEngineReady, "the press rewarms the engine regardless of tier")
+        XCTAssertTrue(state.isEngineReady, "the press rewarms a resting engine")
         let warmUps = await recognizer.warmUps
         XCTAssertGreaterThan(warmUps, baselineWarmUps)
     }

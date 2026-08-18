@@ -85,7 +85,6 @@ public struct AppEnvironment {
     /// suite from sleeping production-scale intervals (nil = the real ladder).
     public var engineWarmupRetryDelay: Duration?
     /// Warning-tier rewarm settle window; injectable for the same reason.
-    public var pressureRewarmSettleDelay: Duration
     /// Test-only override for the idle-unload countdown: the policy's real
     /// options start at two minutes, and suites never sleep that long.
     public var idleUnloadDelayOverride: Duration?
@@ -121,7 +120,6 @@ public struct AppEnvironment {
     public var cleanupLegacyAgentStaging: @Sendable () throws -> Void
     /// Shared with the worker supervisor so its off-main recovery loop can
     /// read the pressure tier without hopping through AppState.
-    public var pressureGauge: MemoryPressureGauge
 
     public init(
         defaults: UserDefaults,
@@ -143,7 +141,6 @@ public struct AppEnvironment {
         transcribe: @escaping (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult,
         recoveryInsertionDeadline: Duration = .seconds(2),
         engineWarmupRetryDelay: Duration? = nil,
-        pressureRewarmSettleDelay: Duration = EngineRewarmPolicy.defaultSettleWindow,
         idleUnloadDelayOverride: Duration? = nil,
         recordingRecoveryCompatibilityGrace: TimeInterval = 60,
         recordingRecoveryMaintenanceRetryDelay: TimeInterval = 5,
@@ -159,7 +156,6 @@ public struct AppEnvironment {
         focusedFieldReader: any FocusedFieldReading = SystemFocusedFieldReader(),
         clipboardRestoreReporter: ClipboardRestoreReporter? = nil,
         cleanupLegacyAgentStaging: @escaping @Sendable () throws -> Void = {},
-        pressureGauge: MemoryPressureGauge = MemoryPressureGauge()
     ) {
         self.defaults = defaults
         self.paths = paths
@@ -174,7 +170,6 @@ public struct AppEnvironment {
         self.transcribe = transcribe
         self.recoveryInsertionDeadline = recoveryInsertionDeadline
         self.engineWarmupRetryDelay = engineWarmupRetryDelay
-        self.pressureRewarmSettleDelay = pressureRewarmSettleDelay
         self.idleUnloadDelayOverride = idleUnloadDelayOverride
         self.recordingRecoveryCompatibilityGrace = recordingRecoveryCompatibilityGrace
         self.recordingRecoveryMaintenanceRetryDelay = recordingRecoveryMaintenanceRetryDelay
@@ -190,12 +185,10 @@ public struct AppEnvironment {
         self.focusedFieldReader = focusedFieldReader
         self.clipboardRestoreReporter = clipboardRestoreReporter
         self.cleanupLegacyAgentStaging = cleanupLegacyAgentStaging
-        self.pressureGauge = pressureGauge
     }
 
     /// Real edges are what a working application is built from.
     public static func system() -> AppEnvironment {
-        let pressureGauge = MemoryPressureGauge()
         let transcriber = LocalTranscriber()
         let restoreReporter = ClipboardRestoreReporter()
         let activeApplication = ActiveApplicationSnapshot()
@@ -240,7 +233,6 @@ public struct AppEnvironment {
                         ?? "is.waiwai.dictation"
                 )
             },
-            pressureGauge: pressureGauge
         )
     }
 }
@@ -527,7 +519,6 @@ public final class AppState: ObservableObject {
     // from the main thread: the application lives entirely on it.
     nonisolated(unsafe) private var permissionTimer: Timer?
     nonisolated(unsafe) private var systemObservers: [(center: NotificationCenter, token: any NSObjectProtocol)] = []
-    nonisolated(unsafe) private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
 
     public var isDictationReady: Bool {
         accessibilityGranted && microphoneGranted && modelState.isReady
@@ -580,9 +571,7 @@ public final class AppState: ObservableObject {
         transcribe = environment.transcribe
         recoveryInsertionDeadline = environment.recoveryInsertionDeadline
         engineWarmupRetryDelayOverride = environment.engineWarmupRetryDelay
-        pressureRewarmSettleDelay = environment.pressureRewarmSettleDelay
         idleUnloadDelayOverride = environment.idleUnloadDelayOverride
-        environmentPressureGauge = environment.pressureGauge
         modelUnloadTimeout = IdleUnloadPolicy.stored(in: environment.defaults)
         recordingRecoveryCompatibilityGrace = environment.recordingRecoveryCompatibilityGrace
         recordingRecoveryMaintenanceRetryDelay = environment.recordingRecoveryMaintenanceRetryDelay
@@ -629,7 +618,6 @@ public final class AppState: ObservableObject {
         // after the death of the owner: a weak link inside saves from falling, but
         // not from waking up.
         permissionTimer?.invalidate()
-        memoryPressureSource?.cancel()
         engineWarmupTask?.cancel()
         engineWarmupRetryTask?.cancel()
         recordingRecoveryMaintenanceTask?.cancel()
@@ -748,13 +736,9 @@ public final class AppState: ObservableObject {
                 if state == .transcribing, let self {
                     DictationDiagnostics.noteStop(
                         engineWasReady: self.isEngineReady,
-                        pressureTier: self.lastPressureTier,
                         unloadPolicy: self.modelUnloadTimeout
                     )
                 }
-                // A finished session is a residency event: the engine just
-                // became safely idle, and a deferred unload may now proceed.
-                if state == .idle { self?.evaluateResidency(trigger: "session-idle") }
                 // Every state change re-arms or cancels the idle-unload
                 // timer: activity disarms it, idleness starts the countdown.
                 self?.rescheduleIdleUnload()
@@ -863,7 +847,6 @@ public final class AppState: ObservableObject {
 
         wireHotkey()
         observeSystemEvents()
-        observeMemoryPressure()
         refreshPermissions()
         scheduleLegacyCleanup()
         Task {
@@ -1334,7 +1317,6 @@ public final class AppState: ObservableObject {
         hotkeyMonitor.stop()
         refreshPermissions()
         revalidateEngineAfterWake()
-        evaluateResidency(trigger: "wake")
     }
 
     /// Whether an engine recycle is already underway — one wedge, one cure.
@@ -1397,10 +1379,6 @@ public final class AppState: ObservableObject {
 
     // MARK: - Engine residency (automatic, zero settings)
 
-    /// Set only after a critical-pressure eviction succeeds. A later normal
-    /// event restores readiness before another dictation begins.
-    private var shouldRewarmAfterPressure = false
-
     /// True while an engine that was deliberately given back should stay cold.
     ///
     /// A residency eviction or an idle unload is a decision, not a failure: the
@@ -1409,32 +1387,6 @@ public final class AppState: ObservableObject {
     /// released. Setup never sets this, because during setup the person is
     /// waiting for the engine rather than resting from it.
     private var shouldStayUnloadedUntilUse = false
-
-    /// Give the engine's memory back when macOS says memory is tight.
-    ///
-    /// Handy asks the user to pick an unload timer from seven options; this
-    /// is the zero-settings answer. The source is an OS-driven event — the
-    /// app still does nothing at rest.
-    private func observeMemoryPressure() {
-        let source = DispatchSource.makeMemoryPressureSource(
-            eventMask: [.normal, .warning, .critical],
-            queue: .global(qos: .utility)
-        )
-        // The handler runs on the utility queue. `@Sendable` is load-bearing:
-        // without it the app target's default MainActor isolation is inferred
-        // onto this closure, and the runtime kills the process the moment the
-        // first pressure event executes it off the main thread.
-        source.setEventHandler { @Sendable [weak self, weak source] in
-            guard let event = source?.data else { return }
-            let tier: MemoryPressureTier =
-                event.contains(.critical) ? .critical
-                : event.contains(.warning) ? .warning
-                : .normal
-            Task { @MainActor in self?.registerMemoryPressure(tier) }
-        }
-        source.activate()
-        memoryPressureSource = source
-    }
 
     /// When to give the engine's memory back after dictation goes idle.
     /// Mirrors Handy's "Unload Model" row; `.never` is the pre-0.8 behavior.
@@ -1497,14 +1449,6 @@ public final class AppState: ObservableObject {
         // press, riding under the voice.
     }
 
-    /// The most recent tier the OS reported; rules between events use it.
-    private var lastPressureTier: MemoryPressureTier = .normal
-
-    /// Mirror of `lastPressureTier` for off-main readers (worker supervisor).
-    private let environmentPressureGauge: MemoryPressureGauge
-    private var pressureGauge: MemoryPressureGauge { environmentPressureGauge }
-    /// Warning-tier settle window before a proactive rewarm; injectable.
-    private let pressureRewarmSettleDelay: Duration
     /// Test-only idle-unload countdown override (see AppEnvironment).
     private let idleUnloadDelayOverride: Duration?
 
@@ -1515,110 +1459,6 @@ public final class AppState: ObservableObject {
     }
 
     nonisolated static let onboardingCompletedKey = "onboardingCompleted"
-
-    /// Internal, not private: tests inject tiers the OS only sends under real
-    /// memory starvation.
-    func registerMemoryPressure(_ tier: MemoryPressureTier) {
-        lastPressureTier = tier
-        pressureGauge.update(tier)
-        // A newer event owns the next decision; a stale settle window from the
-        // previous tier must not fire under it.
-        pendingPressureRewarmTask?.cancel()
-        pendingPressureRewarmTask = nil
-        engineLog.info(
-            "memory pressure tier=\(String(describing: tier), privacy: .public)"
-        )
-        evaluateResidency(trigger: "pressure")
-    }
-
-    /// One evaluation path for every trigger: pressure change, finished
-    /// dictation, finished load, wake, boundary timer.
-    private func evaluateResidency(trigger: StaticString) {
-        let tier: MemoryPressureTier = currentPressureTier()
-        let decision = EngineResidencyPolicy.decision(
-            tier: tier,
-            engineLoaded: isEngineReady,
-            engineBusy: dictationState != .idle || isRecoveryOperationActive
-                || isRecyclingEngine || isPreparingEngine
-        )
-
-        switch decision {
-        case .keep:
-            break
-        case .unload:
-            engineLog.notice("engine unload: tier=\(String(describing: tier), privacy: .public) trigger=\(trigger, privacy: .public)")
-            guard let transcriber else { return }
-            Task { [weak self] in
-                let unloaded = await transcriber.unloadIfIdle()
-                await MainActor.run { [weak self] in
-                    guard let self else { return }
-                    if unloaded {
-                        // hasEngineBeenReady stays true: dictation remains
-                        // enabled. Normal pressure proactively restores it.
-                        self.isEngineReady = false
-                        self.shouldStayUnloadedUntilUse = true
-                        self.shouldRewarmAfterPressure = true
-                        self.enginePreparation = .make(phase: .idle, elapsed: 0)
-                        self.rewarmAfterPressureIfPossible()
-                    } else {
-                        engineLog.info("engine unload deferred: busy at the transcriber")
-                    }
-                }
-            }
-        }
-        rewarmAfterPressureIfPossible()
-    }
-
-    /// One pending settle window at most; a newer pressure event replaces it.
-    private var pendingPressureRewarmTask: Task<Void, Never>?
-
-    private var rewarmPreconditionsHold: Bool {
-        shouldRewarmAfterPressure && !isEngineReady && hasEngineBeenReady
-            && modelState.isReady && dictationState == .idle
-            && !isRecoveryOperationActive && !isRecyclingEngine && !isPreparingEngine
-    }
-
-    private func rewarmAfterPressureIfPossible() {
-        guard rewarmPreconditionsHold else { return }
-        guard let delay = EngineRewarmPolicy.settleDelay(
-            after: lastPressureTier,
-            settleWindow: pressureRewarmSettleDelay
-        ) else {
-            return
-        }
-        guard delay > .zero else {
-            startPressureRewarm()
-            return
-        }
-        pendingPressureRewarmTask?.cancel()
-        pendingPressureRewarmTask = Task { [weak self] in
-            try? await Task.sleep(for: delay)
-            guard !Task.isCancelled else { return }
-            self?.finishSettledRewarm()
-        }
-    }
-
-    private func finishSettledRewarm() {
-        pendingPressureRewarmTask = nil
-        // Everything may have changed during the settle window; the tier only
-        // blocks if it turned critical meanwhile.
-        guard rewarmPreconditionsHold,
-              EngineRewarmPolicy.settleDelay(after: lastPressureTier) != nil
-        else { return }
-        startPressureRewarm()
-    }
-
-    private func startPressureRewarm() {
-        shouldRewarmAfterPressure = false
-        engineLog.info("engine proactive rewarm after pressure")
-        Task { [weak self] in
-            guard let self else { return }
-            await self.warmUpEngine()
-            if !self.isEngineReady, self.modelState.isReady {
-                self.shouldRewarmAfterPressure = true
-            }
-        }
-    }
 
     /// Does the app currently want a ready engine?
     ///
@@ -1654,32 +1494,33 @@ public final class AppState: ObservableObject {
         Task { [weak self] in await self?.warmUpEngine() }
     }
 
+    /// What woke the engine back up.
+    enum RewarmTrigger: String {
+        case keyDown
+        case appActivation
+    }
+
     /// The earliest reload triggers: they fire before any readiness guard can
     /// swallow the press. Single-flight through `warmUpEngine`'s shared task;
     /// calling on every press is safe and free when warm.
-    func rewarmEngineIfCold(trigger: EngineRewarmPolicy.RewarmTrigger) {
+    ///
+    /// There used to be a memory-pressure tier in this condition, deciding
+    /// whether waking was polite right now. It is gone with the rest of the
+    /// pressure machinery: reloading costs 0.29 s and 740 MB, which is not a
+    /// decision worth negotiating with the OS about.
+    func rewarmEngineIfCold(trigger: RewarmTrigger) {
         guard transcriber != nil,
               !isRecyclingEngine,
               !isEngineReady,
               hasEngineBeenReady,
               !isPreparingEngine,
-              modelState.isReady,
-              EngineRewarmPolicy.allowsEarlyRewarm(
-                trigger: trigger,
-                tier: lastPressureTier
-              )
+              modelState.isReady
         else { return }
         engineLog.info(
-            "engine rewarm trigger=\(String(describing: trigger), privacy: .public)"
+            "engine rewarm trigger=\(trigger.rawValue, privacy: .public)"
         )
         shouldStayUnloadedUntilUse = false
         Task { [weak self] in await self?.warmUpEngine() }
-    }
-
-    /// The tier the policy sees between events: the OS's last report stands
-    /// until the next event replaces it.
-    private func currentPressureTier() -> MemoryPressureTier {
-        lastPressureTier
     }
 
     /// Reload the recognition engine after a wedged transcription.
@@ -2384,7 +2225,6 @@ public final class AppState: ObservableObject {
             engineWarmupRetryRevision &+= 1
             engineWarmupRetryTask?.cancel()
             engineWarmupRetryTask = nil
-            evaluateResidency(trigger: "load-completed")
             rescheduleIdleUnload()
             return .ready
         } catch is CancellationError {

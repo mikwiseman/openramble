@@ -43,44 +43,6 @@ final class SetupScreenBarTests: XCTestCase {
 
     // MARK: - The photographed failure
 
-    /// The screenshot, reproduced through the events that produce it.
-    ///
-    /// The download finished and the engine loaded. The person left for System
-    /// Settings to grant the microphone and Accessibility. While they were
-    /// away, macOS reported critical memory pressure — the ordinary
-    /// consequence of having just written 586 MB and loaded a 2.4 GB model —
-    /// and the app gave the memory back, which is the right call. They came
-    /// back with both permissions granted.
-    ///
-    /// Now the card says "Model ready — the model rests until your next
-    /// dictation", the footer says "Getting the model ready…", and Continue is
-    /// grey. The dictation that would wake the engine is the one this very
-    /// screen exists to enable. Nothing is running, and nothing will start.
-    func testSetupAdvancesAfterMemoryPressureUnloadsTheEngineDuringSetup() async throws {
-        harness.permissions.microphoneGranted = false
-        harness.permissions.accessibilityGranted = false
-        let recognizer = ReadinessControlledRecognizer()
-        harness.recognizer = recognizer
-        try harness.installModelMarker()
-
-        let state = harness.makeState()
-        let screen = SetupScreen(state: state)
-        try await waitUntil("the install-time preparation finishes") { state.isEngineReady }
-
-        // macOS asks for the memory back while the person is away.
-        state.registerMemoryPressure(.critical)
-        try await waitUntil("the engine gives its memory back") { !state.isEngineReady }
-
-        // They come back from System Settings with both permissions granted.
-        harness.permissions.microphoneGranted = true
-        harness.permissions.accessibilityGranted = true
-        state.refreshPermissions()
-        XCTAssertTrue(state.microphoneGranted)
-        XCTAssertTrue(state.accessibilityGranted)
-
-        await assertSetupClearsTheBar(screen)
-    }
-
     /// The same picture with no residency decision behind it: the worker died.
     ///
     /// A 2.4 GB child process on a Mac that has just written 586 MB is a jetsam
@@ -204,9 +166,9 @@ final class SetupScreenBarTests: XCTestCase {
         harness.permissions.microphoneGranted = true
         state.refreshPermissions()
 
-        // The trip to System Settings for Accessibility is long, and the Mac
-        // is under memory pressure while it lasts.
-        state.registerMemoryPressure(.critical)
+        // The trip to System Settings for Accessibility is long. Nothing must
+        // have moved the setup screen into a state it cannot leave while the
+        // person was away.
         try? await Task.sleep(for: .milliseconds(50))
 
         harness.permissions.accessibilityGranted = true
