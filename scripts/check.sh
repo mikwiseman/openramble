@@ -96,6 +96,45 @@ run_packages() {
   done
 }
 
+run_shared_core() {
+  echo "→ Shared core"
+  command -v cargo > /dev/null || fail "cargo is not installed; the shared core cannot be checked."
+  local log
+  log=$(mktemp)
+  # The same gate CI runs. Saying "green" here on code CI then rejects spends
+  # exactly the trust this script exists to earn.
+  if cargo fmt --all --check > "$log" 2>&1 \
+     && cargo clippy --all-targets --all-features -- -D warnings >> "$log" 2>&1 \
+     && cargo test --all-features >> "$log" 2>&1; then
+    # Sum every suite rather than tailing: the last line is the doc-test run,
+    # which reports zero and reads like nothing happened.
+    awk '/^test result: ok/ { total += $4 } END { printf "\t Executed %d tests, with 0 failures\n", total }' "$log"
+  else
+    grep -E "^error|panicked|FAILED|Diff in" "$log" | head -20
+    rm -f "$log"
+    fail "Shared core checks failed."
+  fi
+  rm -f "$log"
+
+  # The fixtures are recordings of the shipping Swift pipeline. Regenerating
+  # them is how a change to DictationCore that the port has not followed gets
+  # noticed here rather than on a Windows machine three phases from now.
+  echo "→ Core matches macOS"
+  local generator=core/conformance/generator
+  if swift build --package-path "$generator" > /dev/null 2>&1 \
+     && "$generator/.build/debug/GenerateFixtures" \
+          core/conformance/corpus-text.json \
+          core/conformance/fixtures/text/pipeline.json 2> /dev/null; then
+    git diff --quiet -- core/conformance/fixtures \
+      || fail "The macOS pipeline no longer produces the committed fixtures."
+    cargo test -p ramble-text --test conformance > /dev/null 2>&1 \
+      || fail "The Rust core no longer reproduces what macOS produced."
+    green "both implementations agree"
+  else
+    fail "Could not regenerate the conformance fixtures."
+  fi
+}
+
 run_app() {
   warm_artifact_cache
   echo "→ Generating a project"
@@ -155,9 +194,9 @@ run_network_gate() {
 }
 
 case "$MODE" in
-  --fast) run_packages; run_network_gate ;;
+  --fast) run_packages; run_shared_core; run_network_gate ;;
   --app)  run_app ;;
-  all|*)  run_packages; run_app; run_network_gate ;;
+  all|*)  run_packages; run_shared_core; run_app; run_network_gate ;;
 esac
 
 green "
