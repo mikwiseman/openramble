@@ -4,4 +4,5 @@
 //! type that can be tested without the platform present.
 
 pub mod capture;
+pub mod hotkey;
 pub mod inject;

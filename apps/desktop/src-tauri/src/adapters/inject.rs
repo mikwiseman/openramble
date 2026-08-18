@@ -119,6 +119,91 @@ impl std::fmt::Display for InjectError {
 
 impl std::error::Error for InjectError {}
 
+/// Put the text into whatever has focus.
+///
+/// Borrow the clipboard, send the paste shortcut, give the receiving application
+/// time to read it, then put the person's clipboard back if it is still ours.
+///
+/// The restore runs on a thread of its own so a dictation is never held up by
+/// it: the words are already in the field by then, and making the person wait
+/// nine hundred milliseconds to press the key again for a bookkeeping step they
+/// cannot see would be the most visible part of the whole feature.
+pub fn insert(text: &str) -> Result<(), InjectError> {
+    if text.is_empty() {
+        return Ok(());
+    }
+
+    let mut clipboard =
+        arboard::Clipboard::new().map_err(|error| InjectError::Clipboard(error.to_string()))?;
+
+    let borrowed = match clipboard.get_text() {
+        Ok(previous) if previous.is_empty() => Borrowed::Nothing,
+        Ok(previous) => Borrowed::Text(previous),
+        // Distinguishing "empty" from "something we cannot read" matters: one is
+        // safe to overwrite with an empty string later, the other is a person's
+        // copied image that would be destroyed by it.
+        Err(arboard::Error::ContentNotAvailable) => Borrowed::Nothing,
+        Err(_) => Borrowed::Unreadable,
+    };
+
+    // On Windows the write has to carry the exclusion formats, or the dictation
+    // is synced to a Microsoft account by Cloud Clipboard.
+    #[cfg(windows)]
+    write_excluded_from_history(text)?;
+    #[cfg(not(windows))]
+    clipboard
+        .set_text(text.to_owned())
+        .map_err(|error| InjectError::Clipboard(error.to_string()))?;
+
+    send_paste()?;
+
+    let ours = text.to_owned();
+    std::thread::spawn(move || {
+        std::thread::sleep(RESTORE_DELAY);
+        let Ok(mut clipboard) = arboard::Clipboard::new() else {
+            return;
+        };
+        let current = clipboard.get_text().ok();
+        if !should_restore(current.as_deref(), &ours) {
+            return;
+        }
+        if let Some(previous) = restoration(&borrowed) {
+            let _ = clipboard.set_text(previous.to_owned());
+        }
+    });
+
+    Ok(())
+}
+
+/// The paste shortcut for this platform.
+fn send_paste() -> Result<(), InjectError> {
+    use enigo::{Direction, Enigo, Key, Keyboard, Settings};
+
+    let mut enigo = Enigo::new(&Settings::default())
+        .map_err(|error| InjectError::Keystroke(error.to_string()))?;
+
+    // Command on macOS, Control everywhere else.
+    let modifier = if cfg!(target_os = "macos") {
+        Key::Meta
+    } else {
+        Key::Control
+    };
+
+    let mut press = |key, direction| {
+        enigo
+            .key(key, direction)
+            .map_err(|error| InjectError::Keystroke(error.to_string()))
+    };
+
+    press(modifier, Direction::Press)?;
+    let typed = press(Key::Unicode('v'), Direction::Click);
+    // The modifier is released even if the keystroke failed. A stuck modifier
+    // would leave the person's keyboard behaving as though a key were welded
+    // down, which is far worse than a dictation that did not paste.
+    let released = press(modifier, Direction::Release);
+    typed.and(released)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
