@@ -17,7 +17,9 @@ impl Compiled {
     pub fn current() -> Self {
         Compiled {
             metal: cfg!(target_os = "macos"),
-            vulkan: !cfg!(target_os = "macos"),
+            // Not yet compiled in anywhere: the crate's Vulkan support needs the
+            // SDK at build time, which no stock build image has.
+            vulkan: false,
         }
     }
 }
@@ -94,9 +96,12 @@ mod tests {
     }
 
     #[test]
-    fn each_platform_compiles_the_accelerator_it_can_use() {
+    fn the_report_states_what_this_build_actually_contains() {
+        // Not what we wish it contained: a report that overstates the build is
+        // worse than no report, because it sends someone looking for a GPU
+        // problem that cannot exist.
         let compiled = Compiled::current();
         assert_eq!(compiled.metal, cfg!(target_os = "macos"));
-        assert_eq!(compiled.vulkan, !cfg!(target_os = "macos"));
+        assert!(!compiled.vulkan);
     }
 }

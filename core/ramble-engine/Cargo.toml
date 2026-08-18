@@ -14,8 +14,16 @@ ramble-audio = { path = "../ramble-audio" }
 [target.'cfg(target_os = "macos")'.dependencies]
 transcribe-cpp = { version = "0.2", default-features = false, features = ["metal"] }
 
+# No accelerator feature on Windows and Linux yet, deliberately.
+#
+# The crate's `vulkan` feature needs the Vulkan SDK present at *build* time and
+# fails the build without it — so requiring it would mean the app could only be
+# compiled on machines that have the SDK, and could not be built at all on a
+# stock CI runner. The CPU path works everywhere and is what a first release
+# should be judged on. Turning Vulkan on is its own piece of work: the SDK in
+# the build image, and a runtime report saying which one a person actually got.
 [target.'cfg(not(target_os = "macos"))'.dependencies]
-transcribe-cpp = { version = "0.2", default-features = false, features = ["vulkan"] }
+transcribe-cpp = { version = "0.2", default-features = false }
 
 [dev-dependencies]
 ramble-model = { path = "../ramble-model" }

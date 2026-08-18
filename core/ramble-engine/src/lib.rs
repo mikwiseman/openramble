@@ -168,7 +168,10 @@ fn preferred_backend() -> Backend {
     if cfg!(target_os = "macos") {
         Backend::Metal
     } else {
-        Backend::Vulkan
+        // The CPU, until a build with Vulkan compiled in exists. Asking for an
+        // accelerator this build cannot provide would fail every load rather
+        // than run slowly, which is the worse of the two outcomes.
+        Backend::Cpu
     }
 }
 
@@ -249,11 +252,13 @@ mod tests {
     }
 
     #[test]
-    fn each_platform_asks_for_its_own_accelerator() {
+    fn each_platform_asks_for_what_its_build_can_actually_provide() {
         if cfg!(target_os = "macos") {
             assert_eq!(preferred_backend(), Backend::Metal);
         } else {
-            assert_eq!(preferred_backend(), Backend::Vulkan);
+            // Asking for an accelerator this build has no support for would
+            // fail every load instead of running slowly.
+            assert_eq!(preferred_backend(), Backend::Cpu);
         }
     }
 }
