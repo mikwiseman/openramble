@@ -85,7 +85,8 @@ struct SettingsView: View {
             AboutView(
                 updater: state.updater,
                 revealSupportFolder: state.revealSupportFolder,
-                appearance: $state.appearance
+                appearance: $state.appearance,
+                detailedLogging: $state.detailedLogging
             )
         }
     }
@@ -672,6 +673,7 @@ private struct AboutView: View {
     @ObservedObject var updater: SparkleUpdater
     let revealSupportFolder: () -> Void
     @Binding var appearance: AppAppearance
+    @Binding var detailedLogging: Bool
 
     /// The one link in this window. An app whose whole claim is that speech
     /// never leaves the machine should be readable by anyone who doubts it.
@@ -777,6 +779,19 @@ private struct AboutView: View {
                         .font(.title3)
                 }
                 .accessibilityElement(children: .combine)
+                SettingRow(
+                    title: "Keep detailed logs",
+                    isChanged: detailedLogging != SettingsDefaults.detailedLogging,
+                    revert: { detailedLogging = SettingsDefaults.detailedLogging }
+                ) {
+                    Toggle("", isOn: $detailedLogging)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .accessibilityLabel("Keep detailed logs")
+                        .accessibilityHint(
+                            "Keeps the engine's notes about loading and warming, which macOS otherwise discards. Timing is always recorded either way, and nothing you say is ever written."
+                        )
+                }
                 Button("Open Log Folder", action: revealLogFolder)
                     // Logs are what a person can attach to a bug report. They
                     // hold no dictated text — the privacy rules forbid it — so

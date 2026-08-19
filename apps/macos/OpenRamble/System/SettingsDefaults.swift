@@ -17,6 +17,7 @@ public enum SettingsDefaults {
     public static let overlayPlacement: DictationOverlayPlacement = .top
     public static let appearance: AppAppearance = .system
     public static let presence: AppPresence = .menuBar
+    public static let detailedLogging = false
 }
 
 /// Which look the app takes, regardless of the rest of the system.

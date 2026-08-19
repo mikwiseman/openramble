@@ -461,6 +461,26 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// Keep the engine's own notes, not just the per-dictation numbers.
+    ///
+    /// Off by default, and what it changes is narrow: the engine already
+    /// writes notes about loading, unloading and warming, but at `info` level,
+    /// which macOS discards unless someone passes `--info` to `log show`. On,
+    /// they are written at `notice` and survive — so a slow dictation can be
+    /// explained after the fact rather than only while someone is watching.
+    ///
+    /// It does not turn on any new measurement. Every stage of every dictation
+    /// is already timed and logged, because a number that only exists when a
+    /// setting is on is a number missing from the report you actually need.
+    /// And nothing here ever carries a word of what was said.
+    @Published public var detailedLogging: Bool {
+        didSet {
+            guard oldValue != detailedLogging else { return }
+            defaults.set(detailedLogging, forKey: Keys.detailedLogging)
+            EngineNotes.isDetailed = detailedLogging
+        }
+    }
+
     /// Where the app shows itself. Never nowhere — see `AppPresence`.
     @Published public var presence: AppPresence {
         didSet {
@@ -543,6 +563,7 @@ public final class AppState: ObservableObject {
         static let appearance = "appearance"
         static let inputDevice = "inputDeviceUID"
         static let presence = "presence"
+        static let detailedLogging = "detailedLogging"
         static let overlayPlacement = "overlayPlacement"
         static let replacements = "replacements"
         /// macOS global setup: what pressing 🌐 does.
@@ -756,6 +777,8 @@ public final class AppState: ObservableObject {
         presence = AppPresence(
             rawValue: environment.defaults.string(forKey: Keys.presence) ?? ""
         ) ?? SettingsDefaults.presence
+        detailedLogging = environment.defaults.object(forKey: Keys.detailedLogging) as? Bool
+            ?? SettingsDefaults.detailedLogging
         overlayPlacement = DictationOverlayPlacement(
             rawValue: environment.defaults.string(forKey: Keys.overlayPlacement) ?? ""
         ) ?? SettingsDefaults.overlayPlacement
@@ -1774,7 +1797,7 @@ public final class AppState: ObservableObject {
               // that engine is meant to stay cold until the next key press.
               !shouldStayUnloadedUntilUse
         else { return }
-        engineLog.info("engine preparation resumed: ready model, cold engine, nothing running")
+        EngineNotes.note("engine preparation resumed: ready model, cold engine, nothing running")
         Task { [weak self] in await self?.warmUpEngine() }
     }
 
