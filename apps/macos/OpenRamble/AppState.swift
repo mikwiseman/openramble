@@ -73,7 +73,8 @@ public struct AppEnvironment {
         URL,
         @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void,
         @escaping @Sendable ([Float]) -> Void,
-        @escaping @Sendable (DictationSessionID) -> Void
+        @escaping @Sendable (DictationSessionID) -> Void,
+        AudioDeviceID?
     ) -> any AudioCapturing
     /// How to recognize. Same system edge as microphone and insert: in
     /// in the application this is a model on disk, in the test this is a previously known answer. Without
@@ -143,7 +144,8 @@ public struct AppEnvironment {
             URL,
             @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void,
             @escaping @Sendable ([Float]) -> Void,
-            @escaping @Sendable (DictationSessionID) -> Void
+            @escaping @Sendable (DictationSessionID) -> Void,
+            AudioDeviceID?
         ) -> any AudioCapturing,
         transcribe: @escaping (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult,
         recoveryInsertionDeadline: Duration = .seconds(2),
@@ -216,7 +218,8 @@ public struct AppEnvironment {
                     directory: $0,
                     onFailure: $1,
                     onSamples: $2,
-                    onMemoryLimitReached: $3
+                    onMemoryLimitReached: $3,
+                    preferredInputDeviceID: $4
                 )
             },
             transcribe: { engineDirectory, languageHint in
@@ -410,6 +413,39 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// Which microphone to record through, by its stable UID.
+    ///
+    /// `nil` means whatever the system calls default, which is what almost
+    /// everyone wants and what the app did before this existed. The UID rather
+    /// than the numeric device id, because the numbers are handed out per boot
+    /// and reused — a stored one can name a different microphone tomorrow.
+    @Published public var inputDeviceUID: String? {
+        didSet {
+            guard oldValue != inputDeviceUID else { return }
+            defaults.set(inputDeviceUID ?? "", forKey: Keys.inputDevice)
+        }
+    }
+
+    /// The microphones this Mac can hear through, right now.
+    public var availableInputDevices: [AudioInputDevice] { AudioInputDevices.available() }
+
+    /// The chosen microphone as CoreAudio knows it, or `nil` for the default.
+    ///
+    /// A device that has been unplugged resolves to `nil` rather than failing:
+    /// dictation still works through the default input, and `inputDeviceNotice`
+    /// is what makes sure the person is told rather than left wondering why
+    /// their headset is not being used.
+    var preferredInputDeviceID: AudioDeviceID? {
+        inputDeviceUID.flatMap(AudioInputDevices.deviceID(forUID:))
+    }
+
+    /// Set when the chosen microphone is not on this machine.
+    public var inputDeviceNotice: String? {
+        guard let inputDeviceUID, !inputDeviceUID.isEmpty else { return nil }
+        guard preferredInputDeviceID == nil else { return nil }
+        return "The microphone you chose isn't connected. Dictation is using the system default."
+    }
+
     /// End every dictation with a space.
     ///
     /// Off by default: most dictations land in the middle of writing, where a
@@ -486,6 +522,7 @@ public final class AppState: ObservableObject {
         static let copyShortcut = "copyShortcut"
         static let trailingSpace = "appendsTrailingSpace"
         static let appearance = "appearance"
+        static let inputDevice = "inputDeviceUID"
         static let overlayPlacement = "overlayPlacement"
         static let replacements = "replacements"
         /// macOS global setup: what pressing 🌐 does.
@@ -511,7 +548,8 @@ public final class AppState: ObservableObject {
         URL,
         @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void,
         @escaping @Sendable ([Float]) -> Void,
-        @escaping @Sendable (DictationSessionID) -> Void
+        @escaping @Sendable (DictationSessionID) -> Void,
+        AudioDeviceID?
     ) -> any AudioCapturing
     private let transcribe: (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult
     private let recoveryInsertionDeadline: Duration
@@ -693,6 +731,8 @@ public final class AppState: ObservableObject {
         appearance = AppAppearance(
             rawValue: environment.defaults.string(forKey: Keys.appearance) ?? ""
         ) ?? SettingsDefaults.appearance
+        inputDeviceUID = (environment.defaults.string(forKey: Keys.inputDevice))
+            .flatMap { $0.isEmpty ? nil : $0 }
         overlayPlacement = DictationOverlayPlacement(
             rawValue: environment.defaults.string(forKey: Keys.overlayPlacement) ?? ""
         ) ?? SettingsDefaults.overlayPlacement
@@ -757,7 +797,8 @@ public final class AppState: ObservableObject {
                     Task { @MainActor in
                         self?.controller?.stopAtCaptureMemoryLimit(session: session)
                     }
-                }
+                },
+                preferredInputDeviceID
             )
             let recordingRecovery = RecordingRecoveryStore(
                 directory: try paths.audioRecovery(),

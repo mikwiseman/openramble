@@ -189,6 +189,33 @@ private struct GeneralSettings: View {
                         )
                 }
                 SettingRow(
+                    title: "Microphone",
+                    isChanged: state.inputDeviceUID != nil,
+                    revert: { state.inputDeviceUID = nil }
+                ) {
+                    Picker("", selection: $state.inputDeviceUID) {
+                        Text("System default").tag(String?.none)
+                        ForEach(state.availableInputDevices) { device in
+                            Text(device.name).tag(String?.some(device.uid))
+                        }
+                    }
+                    .labelsHidden()
+                    .accessibilityLabel("Microphone")
+                    .accessibilityHint("Which input to record through. The system default follows whatever your Mac is using.")
+                }
+                if let notice = state.inputDeviceNotice {
+                    // Said out loud rather than swapped silently: someone who
+                    // chose a headset and quietly got the laptop lid would
+                    // only find out from the transcript.
+                    Label {
+                        Text(notice).font(.caption).foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(StatusColorRole.attention.color)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+                SettingRow(
                     title: "Dictation panel",
                     isChanged: state.overlayPlacement != SettingsDefaults.overlayPlacement,
                     revert: { state.overlayPlacement = SettingsDefaults.overlayPlacement }

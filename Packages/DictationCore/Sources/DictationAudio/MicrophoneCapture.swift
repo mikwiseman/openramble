@@ -2467,13 +2467,44 @@ public actor MicrophoneCapture: AudioCapturing {
     private let sampleObserver: CoalescingSampleObserver
     private let converterFactory: ConverterFactory
 
+    /// Which microphone to record through, or `nil` for whatever the system
+    /// calls default.
+    private let preferredInputDeviceID: AudioDeviceID?
+
+    /// Ask the engine's input unit to use one particular device.
+    ///
+    /// Refuses loudly rather than recording from the wrong microphone. Someone
+    /// who chose a headset and silently got the laptop lid instead would only
+    /// find out from the transcript, which is far too late.
+    private func selectInputDevice(_ id: AudioDeviceID, on input: AVAudioInputNode) throws {
+        guard let unit = input.audioUnit else {
+            throw AudioCaptureError.engineUnavailable("no input unit to choose a microphone on")
+        }
+        var deviceID = id
+        let status = AudioUnitSetProperty(
+            unit,
+            kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global,
+            0,
+            &deviceID,
+            UInt32(MemoryLayout<AudioDeviceID>.size)
+        )
+        guard status == noErr else {
+            throw AudioCaptureError.engineUnavailable(
+                "the chosen microphone didn't accept the recording (\(status))"
+            )
+        }
+    }
+
     public init(
         directory: URL,
         onFailure: @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void = { _, _ in },
         onSamples: @escaping @Sendable ([Float]) -> Void = { _ in },
         onMemoryLimitReached: @escaping @Sendable (DictationSessionID) -> Void = { _ in },
-        converterFactory: @escaping ConverterFactory = { AVAudioConverter(from: $0, to: $1) }
+        converterFactory: @escaping ConverterFactory = { AVAudioConverter(from: $0, to: $1) },
+        preferredInputDeviceID: AudioDeviceID? = nil
     ) {
+        self.preferredInputDeviceID = preferredInputDeviceID
         self.directory = directory
         failureObserver = CoalescingCaptureFailureObserver(consume: onFailure)
         memoryLimitObserver = CoalescingCaptureLimitObserver(consume: onMemoryLimitReached)
@@ -2579,6 +2610,12 @@ public actor MicrophoneCapture: AudioCapturing {
 
         let engine = AVAudioEngine()
         let input = engine.inputNode
+        // Point the engine at the chosen microphone before anything reads a
+        // format from it. After that the node has already negotiated with a
+        // device and changing it is ignored.
+        if let preferredInputDeviceID {
+            try selectInputDevice(preferredInputDeviceID, on: input)
+        }
         let inputFormat = input.outputFormat(forBus: 0)
 
         guard inputFormat.sampleRate > 0 else {

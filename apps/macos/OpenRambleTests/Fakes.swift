@@ -570,7 +570,7 @@ final class AppHarness {
                 // through the speakers of whoever runs the suite — once per
                 // failure path, across hundreds of tests.
                 makeSounds: { [sounds] _ in sounds },
-                makeCapture: { [capture] _, _, _, _ in capture },
+                makeCapture: { [capture] _, _, _, _, _ in capture },
                 transcribe: { [transcription] _, _ in
                     { _ in
                         if let delay = transcription.delay {
