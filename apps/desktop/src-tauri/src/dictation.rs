@@ -6,8 +6,8 @@
 
 use crate::adapters::capture::Capture;
 use crate::adapters::inject;
-use crate::session::{outcome_for_recording, Outcome};
-use ramble_core::session::DictationState;
+use crate::session::Outcome;
+use ramble_core::session::{DictationState, Effect, Event, SessionMachine};
 use ramble_engine::Engine;
 use ramble_history::HistoryStore;
 use ramble_model::{Manifest, ModelState, ModelStore};
@@ -88,7 +88,7 @@ fn recorded_duration(sample_count: usize, rate: u32) -> std::time::Duration {
 
 /// The running dictation service.
 pub struct Dictation {
-    state: Mutex<DictationState>,
+    machine: Mutex<SessionMachine>,
     capture: Mutex<Option<Capture>>,
     /// Loaded on the first dictation and kept.
     ///
@@ -109,7 +109,7 @@ impl Dictation {
         // person is shown a state.
         let _ = store.recover_interrupted_promotion();
         Some(Dictation {
-            state: Mutex::new(DictationState::Idle),
+            machine: Mutex::new(SessionMachine::new()),
             capture: Mutex::new(None),
             engine: Mutex::new(None),
             // The supplied terms are on from the start, as they are on the
@@ -123,14 +123,24 @@ impl Dictation {
         })
     }
 
-    fn state(&self) -> MutexGuard<'_, DictationState> {
-        self.state
+    fn machine(&self) -> MutexGuard<'_, SessionMachine> {
+        self.machine
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     pub fn current_state(&self) -> DictationState {
-        *self.state()
+        self.machine().state()
+    }
+
+    /// Feed the machine an event and carry out what it asks for.
+    ///
+    /// The machine decides; this only does. Keeping that split is what lets the
+    /// rules be tested without a microphone — and what stops a second, subtly
+    /// different copy of them growing here.
+    fn advance(&self, event: Event) -> Vec<Effect> {
+        let ready = self.model_is_ready();
+        self.machine().handle(event, ready)
     }
 
     pub fn model_is_ready(&self) -> bool {
@@ -157,7 +167,7 @@ impl Dictation {
 
     /// Begin recording.
     pub fn begin(&self) -> Result<(), String> {
-        if !crate::session::may_start(self.current_state(), self.model_is_ready()) {
+        if self.advance(Event::Pressed).is_empty() {
             return Err(if self.model_is_ready() {
                 "A dictation is already in progress.".into()
             } else {
@@ -165,20 +175,17 @@ impl Dictation {
             });
         }
 
-        *self.state() = DictationState::Preparing;
         match Capture::start() {
             Ok(capture) => {
                 *self
                     .capture
                     .lock()
                     .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(capture);
-                *self.state() = DictationState::Listening;
+                self.advance(Event::CaptureStarted);
                 Ok(())
             }
             Err(error) => {
-                // The microphone never opened, so the session must not be left
-                // sitting in Preparing with no way back to Idle.
-                *self.state() = DictationState::Idle;
+                self.advance(Event::CaptureFailed);
                 Err(error.to_string())
             }
         }
@@ -186,46 +193,44 @@ impl Dictation {
 
     /// Stop recording and produce the text.
     pub fn finish(&self, held: std::time::Duration) -> Outcome {
+        self.advance(Event::Released { held });
+
         let taken = self
             .capture
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .take();
         let Some(capture) = taken else {
-            *self.state() = DictationState::Idle;
+            self.advance(Event::CancelRequested);
             return Outcome::DroppedSilently;
         };
 
-        *self.state() = DictationState::Transcribing;
         let rate = capture.sample_rate();
         let (samples, truncated) = capture.finish();
 
-        // How much audio there actually is, not how long the key was down.
-        //
-        // These differ in exactly the case the silent-input rule exists for: a
-        // muted or occupied microphone returns nothing while the clock keeps
-        // running. Measured by the clock, that reads as a perfectly good
-        // three-second take and goes to the engine, which returns nothing, and
-        // the person is told nothing at all.
+        // How much audio there actually is, not how long the key was down. Those
+        // differ in exactly the case the silent-input rule exists for: a muted or
+        // occupied microphone returns nothing while the clock keeps running.
         let recorded = recorded_duration(samples.len(), rate);
+        let effects = self.advance(Event::CaptureFinished {
+            recorded,
+            truncated,
+        });
 
-        let finish = |outcome| {
-            *self.state() = DictationState::Idle;
-            outcome
-        };
-
-        if let Some(short) = outcome_for_recording(recorded, held) {
-            return finish(short);
+        if effects.contains(&Effect::FinishSilently) {
+            return Outcome::DroppedSilently;
+        }
+        if effects.contains(&Effect::ReportSilentInput) {
+            return Outcome::SilentInput;
         }
 
         let samples = match ramble_audio::resample(&samples, rate) {
             Ok(samples) => samples,
-            Err(error) => return finish(Outcome::Failed(error.to_string())),
+            Err(error) => return self.failed(error.to_string()),
         };
-
         let text = match self.transcribe(&samples) {
             Ok(text) => text,
-            Err(error) => return finish(Outcome::Failed(error)),
+            Err(error) => return self.failed(error),
         };
 
         let output = self
@@ -234,27 +239,36 @@ impl Dictation {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .process(&text);
 
-        if output.text.is_empty() {
-            // Nothing was said. Silence is the honest answer; an error would
-            // suggest a fault that is not there.
-            return finish(Outcome::DroppedSilently);
+        if self
+            .advance(Event::Transcribed {
+                is_empty: output.text.is_empty(),
+            })
+            .contains(&Effect::FinishSilently)
+        {
+            return Outcome::DroppedSilently;
         }
 
-        // Recorded before insertion, not after: if putting the text into the
+        // Recorded before insertion is attempted: if putting the text into the
         // other application fails, the words are the one thing that must not be
         // lost, and history is where a person goes to find them.
         self.remember(&output.text, &samples);
 
-        *self.state() = DictationState::Inserting;
         if let Err(error) = inject::insert(&output.text) {
-            return finish(Outcome::Failed(error.to_string()));
+            self.advance(Event::InsertionFailed);
+            return Outcome::Failed(error.to_string());
         }
+        self.advance(Event::Inserted);
 
-        finish(if truncated {
+        if truncated {
             Outcome::Truncated
         } else {
             Outcome::Inserted
-        })
+        }
+    }
+
+    fn failed(&self, detail: String) -> Outcome {
+        self.advance(Event::TranscriptionFailed);
+        Outcome::Failed(detail)
     }
 
     /// Abandon the take without inserting anything.
@@ -263,7 +277,7 @@ impl Dictation {
             .capture
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
-        *self.state() = DictationState::Idle;
+        self.advance(Event::CancelRequested);
     }
 
     /// Keep the take, with the audio that produced it.
