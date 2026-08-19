@@ -79,13 +79,13 @@ assert_release_source_unchanged() {
 #
 # The point of the gate is that the code was tested, not that a particular
 # server tested it. Waiting for GitHub adds a queue, a cold runner and a
-# network that fails — three releases died today on a TLS handshake with every
-# test green. Running the same suites here, on the machine that is about to
-# build the artifact, is the same evidence and arrives in minutes.
+# network that fails — three releases died on a TLS handshake with every test
+# green. Running the same suites here, on the machine about to build the
+# artifact, is the same evidence and arrives in minutes.
 #
-# VERIFY=local runs them now. VERIFY=ci waits for the run on this exact SHA.
-# The default tries CI first and falls back to running them, so a release is
-# never blocked by a server being slow or unreachable.
+# VERIFY=local runs them now, VERIFY=ci waits for the run on this exact SHA,
+# and the default tries CI and falls back to running them — so a slow or
+# unreachable server can never block a release.
 VERIFY="${VERIFY:-auto}"
 
 ci_is_green() {
@@ -106,13 +106,12 @@ ci_is_green() {
     "Package tests" "Application build" "Release build" "Network surface"
     "Core matches macOS" "Swift calls the core" "Apple Silicon only"
   )
-  local run_id
+  local run_id jobs job outcome
   run_id=$(gh_retry run list --branch main --limit 10 \
     --json databaseId,headSha,workflowName \
     --jq '[.[] | select(.headSha == "'"$HEAD_SHA"'") | select(.workflowName == "CI")][0].databaseId') || return 1
   [[ -n "$run_id" && "$run_id" != "null" ]] || return 1
 
-  local jobs job outcome
   jobs=$(gh_retry run view "$run_id" --json jobs) || return 1
   for job in "${required[@]}"; do
     outcome=$(printf '%s' "$jobs" | jq -r '[.jobs[] | select(.name == "'"$job"'")][0].conclusion // "missing"')
@@ -121,14 +120,10 @@ ci_is_green() {
   return 0
 }
 
-verify_locally() {
-  echo "→ Verifying this commit here"
-  ./scripts/check.sh || fail "The checks did not pass; nothing was released."
-}
-
 case "$VERIFY" in
   local)
-    verify_locally
+    echo "→ Verifying this commit here"
+    ./scripts/check.sh || fail "The checks did not pass; nothing was released."
     ;;
   ci)
     ci_is_green || fail "No green CI on SHA $HEAD_SHA for the jobs covering this artifact."
@@ -139,7 +134,7 @@ case "$VERIFY" in
       echo "→ CI: the jobs covering this artifact are green"
     else
       echo "→ CI is not green yet or is unreachable; verifying here instead"
-      verify_locally
+      ./scripts/check.sh || fail "The checks did not pass; nothing was released."
     fi
     ;;
   *)
@@ -147,6 +142,152 @@ case "$VERIFY" in
     ;;
 esac
 
+# --- Update signing key -------------------------------------------------
+
+if [[ -z "$SPARKLE_KEY_PATH" ]]; then
+  fail "SPARKLE_KEY_PATH is not specified - the file with the Sparkle private key.
+
+If you don't have the key yet:
+  ./scripts/bootstrap-release-secrets.sh
+
+A new Sparkle key cannot be generated for this product: installed
+copies need exactly the same key. The public half is already in
+apps/macos/project.yml as SUPublicEDKey. Recover the permanent key;
+never create a replacement."
+fi
+
+if [[ ! -f "$SPARKLE_KEY_PATH" ]]; then
+  fail "There is no key file: $SPARKLE_KEY_PATH
+Restore the previous key: ./scripts/bootstrap-release-secrets.sh"
+fi
+
+# --- Sparkle Tools -----------------------------------------------------
+
+# sign_update comes inside the Sparkle package. Xcode unpacks it to
+# DerivedData during the first build, so there is no need to install anything separately.
+find_sparkle_tool() {
+  local tool="$1" pattern candidate
+  if [[ -n "$SPARKLE_BIN" ]]; then
+    [[ -x "$SPARKLE_BIN/$tool" ]] && { printf '%s' "$SPARKLE_BIN/$tool"; return 0; }
+    return 1
+  fi
+  for pattern in "OpenRamble-*" "*"; do
+    for candidate in "$HOME/Library/Developer/Xcode/DerivedData"/$pattern/SourcePackages/artifacts/sparkle/Sparkle/bin/"$tool"; do
+      [[ -x "$candidate" ]] && { printf '%s' "$candidate"; return 0; }
+    done
+  done
+  return 1
+}
+
+SIGN_UPDATE=$(find_sparkle_tool sign_update) || fail "Couldn't find sign_update.
+
+It's inside the Sparkle package that Xcode unpacks when building:
+  ~/Library/Developer/Xcode/DerivedData/OpenRamble-*/SourcePackages/artifacts/sparkle/Sparkle/bin/
+
+Build the application at least once, or specify the path manually:
+  SPARKLE_BIN=/path/to/Sparkle/bin ./scripts/release.sh"
+
+# --- Signing and notarization of the application itself ---------------------------------
+
+load_release_keychain || fail "Offline release keychain failed verification."
+
+# An unnotarized Gatekeeper image will not be allowed, and the update will turn into
+# Broken application for everyone who installed it. Trial assemblies - separately,
+# via scripts/build-dmg.sh.
+if [[ -z "$DEVELOPER_ID" ]]; then
+  fail "The release is only going to be signed and notarized.
+
+First prepare a standalone keychain:
+  ./scripts/bootstrap-release-secrets.sh
+
+Legacy fallback without a separate keychain:
+  DEVELOPER_ID=\"Developer ID Application: Name (TEAMID)\"
+
+The default notarization credentials are read from:
+  $APPSTORECONNECT_CONFIG
+
+Separate Debug-probe: ./scripts/build-dmg.sh"
+fi
+
+if ! load_notary_credentials; then
+  fail "Failed to load notarization credentials.
+
+The preferred format is $APPSTORECONNECT_CONFIG with mode 0600:
+  key_filepath path to .p8 in ~/.appstoreconnect/private_keys/
+  key_id        App Store Connect API Key ID
+  issuer_id     App Store Connect API Issuer ID
+
+Alternative: exactly one NOTARY_PROFILE from notarytool store-credentials."
+fi
+
+echo "→ Notarization: $NOTARY_AUTH_SOURCE"
+
+# --- Checks before assembly --------------------------------------------------
+
+# We take the version from project.yml before building. Then we’ll check it against the collected
+# Info.plist, but a description of the changes must be requested earlier: assembly with
+# notarization takes minutes, and runs into a missing text file after
+# them - wasted time on each release.
+PROJECT_YML="apps/macos/project.yml"
+yml_value() {
+  sed -n "s/^ *$1: *\"\{0,1\}\([^\"]*\)\"\{0,1\} *$/\1/p" "$PROJECT_YML" | head -1
+}
+
+MARKETING_VERSION=$(yml_value MARKETING_VERSION)
+SHORT_VERSION=$(yml_value CFBundleShortVersionString)
+EXPECTED_BUILD=$(yml_value CURRENT_PROJECT_VERSION)
+PROJECT_MIN_OS=$(yml_value MACOSX_DEPLOYMENT_TARGET)
+PROJECT_FEED_URL=$(yml_value SUFeedURL)
+PROJECT_PUBLIC_KEY=$(yml_value SUPublicEDKey)
+
+[[ -n "$MARKETING_VERSION" && -n "$EXPECTED_BUILD" ]] \
+  || fail "MARKETING_VERSION or CURRENT_PROJECT_VERSION was not found in $PROJECT_YML"
+[[ "$PROJECT_MIN_OS" == "$EXPECTED_MIN_OS" ]] \
+  || fail "The release minOS must be $EXPECTED_MIN_OS, got ${PROJECT_MIN_OS:-missing}."
+[[ "$PROJECT_FEED_URL" == "$EXPECTED_FEED_URL" ]] \
+  || fail "The release feed must remain $EXPECTED_FEED_URL."
+[[ "$PROJECT_PUBLIC_KEY" == "$EXPECTED_PUBLIC_KEY" ]] \
+  || fail "SUPublicEDKey does not match the permanent key used by installed copies. Recover the existing key; never generate a replacement."
+
+# Two lines about the same version must match: Sparkle shows the person
+# CFBundleShortVersionString, and the image name is taken from it.
+#
+# A reference to the variable is the better of the two spellings and is accepted
+# as-is: it cannot diverge, which is the whole point of this check. A literal
+# copy can, and did — the two sat at 0.3.4 and 0.3.3 until CI compared them.
+if [[ "$SHORT_VERSION" != "\$(MARKETING_VERSION)" \
+   && "$MARKETING_VERSION" != "$SHORT_VERSION" ]]; then
+  fail "Versions in $PROJECT_YML have diverged:
+  MARKETING_VERSION           = $MARKETING_VERSION
+  CFBundleShortVersionString  = $SHORT_VERSION
+Both strings must be the same, or CFBundleShortVersionString must reference
+\$(MARKETING_VERSION)."
+fi
+
+NOTES_PATH="$NOTES_DIR/$MARKETING_VERSION.md"
+if [[ ! -f "$NOTES_PATH" ]]; then
+  mkdir -p "$NOTES_DIR"
+  LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+  {
+    if [[ -n "$LAST_TAG" ]]; then
+      git log --no-merges --pretty=format:'- %s' "$LAST_TAG..HEAD"
+    else
+      git log --no-merges --pretty=format:'- %s'
+    fi
+  } | grep -vE '^- (chore|docs|test|refactor|wip|ci)[(:]' > "$NOTES_PATH" || true
+  echo "" >> "$NOTES_PATH"
+
+  fail "There is no description of the changes - I sketched a draft from the commits:
+  $NOTES_PATH
+
+Rewrite it in clear English; everyone offered the update will see it.
+Then run the script again. The release stops before the expensive build
+and notarization steps."
+fi
+
+# The application links the shared core, and that binary is generated rather
+# than committed — so a fresh checkout, which is exactly what a release worktree
+# is, does not have it. Built before anything that compiles Swift.
 echo "→ Building the shared core for Swift"
 ./scripts/build-ffi.sh >/dev/null
 
