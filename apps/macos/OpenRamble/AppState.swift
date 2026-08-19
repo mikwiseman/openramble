@@ -46,6 +46,12 @@ public struct AppEnvironment {
     public var permissions: any PermissionReading
     public var accessibilityManager: any AccessibilityManaging
     public var hotkeyMonitor: any HotkeyMonitoring
+    /// A second watcher, for the key that copies the last dictation.
+    ///
+    /// Its own monitor rather than another callback on the first: the two keys
+    /// are different keys, and one monitor filters events by the single key it
+    /// was given.
+    public var copyHotkeyMonitor: (any HotkeyMonitoring)?
     public var inserter: any TextInserting
     /// Lock-only destination snapshot maintained ahead of the hotkey. The
     /// shipping path never asks AppKit/WindowServer synchronously after the
@@ -127,6 +133,7 @@ public struct AppEnvironment {
         permissions: any PermissionReading,
         accessibilityManager: any AccessibilityManaging,
         hotkeyMonitor: any HotkeyMonitoring,
+        copyHotkeyMonitor: (any HotkeyMonitoring)? = nil,
         inserter: any TextInserting,
         targetApplicationSnapshot: @escaping @Sendable () -> TargetApplication? = { nil },
         overlay: any OverlayPresenting,
@@ -162,6 +169,7 @@ public struct AppEnvironment {
         self.permissions = permissions
         self.accessibilityManager = accessibilityManager
         self.hotkeyMonitor = hotkeyMonitor
+        self.copyHotkeyMonitor = copyHotkeyMonitor
         self.inserter = inserter
         self.targetApplicationSnapshot = targetApplicationSnapshot
         self.overlay = overlay
@@ -198,6 +206,7 @@ public struct AppEnvironment {
             permissions: SystemPermissions(),
             accessibilityManager: SystemAccessibilityManager(),
             hotkeyMonitor: GlobalHotkeyMonitor(),
+            copyHotkeyMonitor: GlobalHotkeyMonitor(),
             inserter: TextInserter(restoreReporter: restoreReporter),
             targetApplicationSnapshot: { activeApplication.current() },
             overlay: DictationOverlay(),
@@ -377,6 +386,9 @@ public final class AppState: ObservableObject {
             guard oldValue != hotkey else { return }
             defaults.set(hotkey.rawValue, forKey: Keys.hotkey)
             hotkeyMonitor.setHotkey(hotkey)
+            // Dictation wins the key. Two watchers on one key would both fire,
+            // and the copy is the lesser of the two functions.
+            if copyHotkey == hotkey { copyHotkey = nil }
         }
     }
 
@@ -384,6 +396,50 @@ public final class AppState: ObservableObject {
         didSet {
             guard oldValue != soundsEnabled else { return }
             defaults.set(soundsEnabled, forKey: Keys.sounds)
+        }
+    }
+
+    /// Also leave the finished text on the clipboard.
+    ///
+    /// Off by default, and deliberately: dictated text on the clipboard is
+    /// dictated text handed to every clipboard manager on the machine, and the
+    /// product's promise is that what you say stays here. Someone who wants it
+    /// can ask, and then it is written host-only with the transient and
+    /// concealed markers, the same as every other copy this app makes.
+    @Published public var copiesToClipboard: Bool {
+        didSet {
+            guard oldValue != copiesToClipboard else { return }
+            defaults.set(copiesToClipboard, forKey: Keys.copyToClipboard)
+        }
+    }
+
+    /// The key that copies the last dictation, or nothing.
+    ///
+    /// Optional because most people will not want a second global key taken out
+    /// of their keyboard, and a shortcut nobody asked for is a shortcut that
+    /// collides with something they use.
+    @Published public var copyHotkey: DictationHotkey? {
+        didSet {
+            // The dictation key is not available: see `hotkey`.
+            if copyHotkey == hotkey { copyHotkey = nil; return }
+            guard oldValue != copyHotkey else { return }
+            defaults.set(copyHotkey?.rawValue ?? "", forKey: Keys.copyHotkey)
+            applyCopyHotkey()
+        }
+    }
+
+    /// Point the second watcher at the chosen key, or take it off the keyboard.
+    private func applyCopyHotkey() {
+        guard let copyHotkeyMonitor else { return }
+        guard let copyHotkey else {
+            copyHotkeyMonitor.stop()
+            return
+        }
+        copyHotkeyMonitor.setHotkey(copyHotkey)
+        // Only once dictation itself is running: before that the app has no
+        // Accessibility permission and starting would fail silently.
+        if hotkeyMonitor.isRunning, !copyHotkeyMonitor.isRunning {
+            copyHotkeyMonitor.start()
         }
     }
 
@@ -402,6 +458,8 @@ public final class AppState: ObservableObject {
     private enum Keys {
         static let hotkey = "hotkey"
         static let sounds = "soundsEnabled"
+        static let copyToClipboard = "copyToClipboard"
+        static let copyHotkey = "copyHotkey"
         static let overlayPlacement = "overlayPlacement"
         static let replacements = "replacements"
         /// macOS global setup: what pressing 🌐 does.
@@ -417,6 +475,7 @@ public final class AppState: ObservableObject {
     private let permissions: any PermissionReading
     private let accessibilityManager: any AccessibilityManaging
     private let hotkeyMonitor: any HotkeyMonitoring
+    private let copyHotkeyMonitor: (any HotkeyMonitoring)?
     private let inserter: any TextInserting
     private let targetApplicationSnapshot: @Sendable () -> TargetApplication?
     private let clipboardRestoreReporter: ClipboardRestoreReporter?
@@ -562,6 +621,7 @@ public final class AppState: ObservableObject {
         permissions = environment.permissions
         accessibilityManager = environment.accessibilityManager
         hotkeyMonitor = environment.hotkeyMonitor
+        copyHotkeyMonitor = environment.copyHotkeyMonitor
         inserter = environment.inserter
         targetApplicationSnapshot = environment.targetApplicationSnapshot
         clipboardRestoreReporter = environment.clipboardRestoreReporter
@@ -593,9 +653,16 @@ public final class AppState: ObservableObject {
         )
         cleanupLegacyAgentStaging = environment.cleanupLegacyAgentStaging
 
-        hotkey = DictationHotkey(rawValue: environment.defaults.string(forKey: Keys.hotkey) ?? "")
+        let storedHotkey = DictationHotkey(rawValue: environment.defaults.string(forKey: Keys.hotkey) ?? "")
             ?? .rightCommand
+        hotkey = storedHotkey
         soundsEnabled = environment.defaults.object(forKey: Keys.sounds) as? Bool ?? true
+        // Off unless asked for: dictated text on the clipboard is dictated text
+        // handed to every clipboard manager on the machine.
+        copiesToClipboard = environment.defaults.object(forKey: Keys.copyToClipboard) as? Bool ?? false
+        let storedCopyHotkey = (environment.defaults.string(forKey: Keys.copyHotkey))
+            .flatMap(DictationHotkey.init(rawValue:))
+        copyHotkey = storedCopyHotkey == storedHotkey ? nil : storedCopyHotkey
         overlayPlacement = DictationOverlayPlacement(
             rawValue: environment.defaults.string(forKey: Keys.overlayPlacement) ?? ""
         ) ?? .top
@@ -774,6 +841,12 @@ public final class AppState: ObservableObject {
             controller.onTextInserted = { [weak self] text in
                 guard let self else { return }
                 self.recordSuccessfulDictation(text)
+                if self.copiesToClipboard {
+                    // Host-only with the transient and concealed markers, like
+                    // every other copy this app makes: asking for the clipboard
+                    // is not asking for it to be synced to other devices.
+                    try? HostOnlyPasteboard().copyHostOnly(text)
+                }
                 guard self.learnFromEdits else { return }
                 self.editWatcher.beginWatching(inserted: text) { [weak self] original, edited in
                     self?.learn(original: original, edited: edited)
@@ -1191,6 +1264,25 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// Put the last dictation back on the clipboard.
+    ///
+    /// The text as it was inserted, not the raw words: this is the "I need that
+    /// again" action, and what the person saw appear is what they mean.
+    public func copyLastDictation() {
+        guard let text = lastDictation?.insertedText,
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else {
+            notify(DictationNotice(kind: .info, message: "Nothing dictated yet."))
+            return
+        }
+        do {
+            try HostOnlyPasteboard().copyHostOnly(text)
+            notify(DictationNotice(kind: .info, message: "Copied — to this Mac only."))
+        } catch {
+            notify(DictationNotice(kind: .failure, message: "Couldn't copy the dictation."))
+        }
+    }
+
     // MARK: - Recovering a failed insertion
 
     public func retryRecoveredText() {
@@ -1315,6 +1407,7 @@ public final class AppState: ObservableObject {
     /// Restarting tracking is the only thing that erases the memory of the started gesture.
     private func handleWake() {
         hotkeyMonitor.stop()
+        copyHotkeyMonitor?.stop()
         refreshPermissions()
         revalidateEngineAfterWake()
     }
@@ -1653,6 +1746,9 @@ public final class AppState: ObservableObject {
 
     private func wireHotkey() {
         hotkeyMonitor.setHotkey(hotkey)
+        copyHotkeyMonitor?.onPress = { [weak self] in
+            self?.copyLastDictation()
+        }
         hotkeyMonitor.onPress = { [weak self] in
             guard let self else { return }
             // Before any guard can swallow the press: the reload must start
@@ -1851,8 +1947,10 @@ public final class AppState: ObservableObject {
         // the start key would be silent until the application was restarted.
         if accessibility {
             hotkeyMonitor.start()
+            applyCopyHotkey()
         } else {
             hotkeyMonitor.stop()
+            copyHotkeyMonitor?.stop()
         }
 
         reschedulePermissionPolling()

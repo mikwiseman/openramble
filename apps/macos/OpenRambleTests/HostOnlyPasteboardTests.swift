@@ -123,6 +123,30 @@ final class HostOnlyPasteboardTests: XCTestCase {
         XCTAssertEqual(board.string(forType: .string), "new user")
     }
 
+    /// What "Also copy dictations to the clipboard" rests on.
+    ///
+    /// The setting writes the finished text in `onTextInserted`, which runs
+    /// while the insertion's own restore is still pending a second out. The
+    /// write survives only because restore checks ownership first and steps
+    /// aside when the board changed underneath it. Without that check the
+    /// setting would appear to work and then quietly undo itself a second
+    /// later — so the check is pinned here rather than left to be rediscovered.
+    func testACopyMadeAfterInsertionIsNotUndoneByTheRestore() throws {
+        board.prepareForNewContents(with: .currentHostOnly)
+        board.setString("what the person had copied", forType: .string)
+        let transaction = try pasteboard.beginHostOnlyWrite("dictated text")
+
+        // The setting's write, between the paste and the scheduled restore.
+        try pasteboard.copyHostOnly("dictated text")
+
+        XCTAssertNoThrow(try pasteboard.restore(transaction))
+        XCTAssertEqual(
+            board.string(forType: .string),
+            "dictated text",
+            "the restore must leave a copy made after the paste alone"
+        )
+    }
+
     /// Copied from a browser or messenger carries its own service types -
     /// this is normal content, not a threat. Snapshot takes any type of data
     /// byte-by-byte and returns them byte-by-byte; failure here would block

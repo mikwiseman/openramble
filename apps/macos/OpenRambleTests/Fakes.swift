@@ -453,6 +453,7 @@ final class AppHarness {
     let microphonePermissionFlow = FakeMicrophonePermissionFlow()
     let accessibilityManager = FakeAccessibilityManager()
     let monitor = FakeHotkeyMonitor()
+    let copyMonitor = FakeHotkeyMonitor()
     let overlay = FakeOverlay()
     let capture = FakeCapture()
     let inserter = FakeInserter()
@@ -558,6 +559,7 @@ final class AppHarness {
                 permissions: permissions,
                 accessibilityManager: accessibilityManager,
                 hotkeyMonitor: monitor,
+                copyHotkeyMonitor: copyMonitor,
                 inserter: inserter,
                 targetApplicationSnapshot: { [inserter] in
                     inserter.frontmostApplication()

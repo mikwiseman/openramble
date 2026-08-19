@@ -107,6 +107,16 @@ private struct GeneralSettings: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Key warning. \(warning)")
                 }
+                Picker("Copy last dictation", selection: $state.copyHotkey) {
+                    Text("Off").tag(DictationHotkey?.none)
+                    // The dictation key is missing from this list on purpose:
+                    // one key cannot mean two things, and the picker is where
+                    // that is easiest to say — by not offering it.
+                    ForEach(DictationHotkey.allCases.filter { $0 != state.hotkey }, id: \.self) { key in
+                        Text(key.title).tag(DictationHotkey?.some(key))
+                    }
+                }
+                .accessibilityHint("Press this key to put the last dictation back on the clipboard")
             } header: {
                 Text("Shortcut")
             } footer: {
@@ -120,6 +130,10 @@ private struct GeneralSettings: View {
                 // is silent, and there is no one to explain it to.
                 Toggle("Launch at login", isOn: $state.launchAtLogin)
                     .accessibilityHint("Starts OpenRamble automatically when you log in")
+                Toggle("Also copy dictations to the clipboard", isOn: $state.copiesToClipboard)
+                    .accessibilityHint(
+                        "Leaves each finished dictation on the clipboard of this Mac. Off by default — the clipboard is shared with everything else running here."
+                    )
                 Toggle("Play a sound when something needs you", isOn: $state.soundsEnabled)
                     .accessibilityHint(
                         "A quiet tone when the text didn't reach the field or nothing was recognized. A dictation that works stays silent."

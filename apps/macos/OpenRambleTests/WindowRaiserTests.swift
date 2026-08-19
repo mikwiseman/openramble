@@ -15,6 +15,26 @@ final class WindowRaiserTests: XCTestCase {
         func raiseToFront() { raises += 1 }
     }
 
+    /// The Dock icon is the price of being allowed to come to the front, and
+    /// it lasts exactly as long as there is a window to go with it.
+    ///
+    /// Measured on macOS 26: an accessory app is not granted activation, and
+    /// its Settings window stays behind whatever the person was working in —
+    /// no matter what is passed to `activate` or how often it is retried. A
+    /// regular app is granted it. So the policy follows the windows.
+    func testTheAppIsARegularOneOnlyWhileItHasAWindow() {
+        let panel = FakeWindow(raisable: false)
+        let settings = FakeWindow(raisable: true)
+
+        XCTAssertEqual(WindowRaiser.policy(for: [settings]), .regular)
+        XCTAssertEqual(WindowRaiser.policy(for: [panel, settings]), .regular)
+        // The dictation panel is not a window to have a Dock icon for: it is
+        // shown during dictation, which is every day, and a Dock icon that
+        // blinks on every phrase is worse than none.
+        XCTAssertEqual(WindowRaiser.policy(for: [panel]), .accessory)
+        XCTAssertEqual(WindowRaiser.policy(for: []), .accessory)
+    }
+
     /// The dictation panel is a borderless non-activating panel: it must never
     /// be dragged into focus by someone opening Settings.
     func testOnlyMainCapableWindowsAreRaised() {

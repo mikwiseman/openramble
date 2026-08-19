@@ -89,9 +89,20 @@ struct MenuContent: View {
 
         case .recentDictations:
             Menu("Recent Dictations") {
-                ForEach(state.recentDictations) { dictation in
-                    Button(dictation.menuTitle) {
+                ForEach(Array(state.recentDictations.enumerated()), id: \.element.id) { index, dictation in
+                    Button {
                         state.copyRecentDictation(dictation)
+                    } label: {
+                        // The copy key belongs on the first row, because the
+                        // first row is the last dictation — the one the key
+                        // copies. Written into the title rather than set as a
+                        // real shortcut: this is a held modifier, and
+                        // `keyboardShortcut` cannot express one.
+                        if index == 0, let key = state.copyHotkey {
+                            Text("\(dictation.menuTitle)   \(key.title)")
+                        } else {
+                            Text(dictation.menuTitle)
+                        }
                     }
                 }
             }
