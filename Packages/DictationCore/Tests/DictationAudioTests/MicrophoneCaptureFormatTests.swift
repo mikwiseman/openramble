@@ -1154,6 +1154,22 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
     /// test that blocks one thread and hopes the pool notices passes on a
     /// machine with a spare core, which is every developer machine and no
     /// loaded one. The label is checkable and cannot pass by luck.
+    /// Disk waits belong on the disk queue, for the same reason teardown does.
+    ///
+    /// `fsync` is non-cancellable and takes as long as the disk takes. It runs
+    /// at the instant recognition begins, and recognition is suspended on the
+    /// cooperative pool — so a slow disk was a slow dictation.
+    func testDiskWorkRunsOffTheCooperativePool() async throws {
+        let label = try await onRecordingDisk {
+            String(cString: __dispatch_queue_get_label(nil), encoding: .utf8)
+        }
+        XCTAssertEqual(
+            label,
+            "is.waiwai.dictation.recording-disk",
+            "a call that waits on a disk must not occupy a cooperative-pool thread"
+        )
+    }
+
     func testTheBlockingTeardownRunsOffTheCooperativePool() throws {
         let lane = RecordingEngineShutdownContainment()
         let ran = DispatchSemaphore(value: 0)

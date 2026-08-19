@@ -2128,6 +2128,30 @@ private final class RecordingDurabilityGate: @unchecked Sendable {
     }
 }
 
+/// Run blocking file work off Swift's cooperative pool.
+///
+/// `synchronizeAndClose` reaches `fsync(2)`, a non-cancellable kernel call that
+/// takes as long as the disk takes. It was launched with `Task.detached`, which
+/// is the cooperative pool — one thread per core, and a thread blocked there is
+/// not yielded but lost. It is created at the instant recognition begins, and
+/// recognition is suspended on that same pool.
+///
+/// This is the same defect as the audio teardown, in the same file, and it is
+/// fixed the same way: anything that may wait on a disk goes here.
+private let recordingDiskQueue = DispatchQueue(
+    label: "is.waiwai.dictation.recording-disk",
+    qos: .utility
+)
+
+/// The async face of that queue.
+func onRecordingDisk<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
+    try await withCheckedThrowingContinuation { continuation in
+        recordingDiskQueue.async {
+            continuation.resume(with: Result { try work() })
+        }
+    }
+}
+
 /// Detach disk finalization from the live capture actor. The readable task
 /// drains and seals; the durable task performs the potentially slow fsync.
 /// Neither task owns microphone state, so an old completion cannot touch a
@@ -2176,10 +2200,13 @@ func finalizeCapturedRecording(
             throw AudioCaptureError.writeFailed("recording durability is busy")
         }
         defer { RecordingDurabilityGate.shared.release() }
-        if let managedWriter {
-            try managedWriter.synchronizeAndClose()
-        } else {
-            try writer.synchronizeAndClose()
+        // `fsync` waits on the disk; it does that on a thread of its own.
+        try await onRecordingDisk {
+            if let managedWriter {
+                try managedWriter.synchronizeAndClose()
+            } else {
+                try writer.synchronizeAndClose()
+            }
         }
         return finishedURL
     }
