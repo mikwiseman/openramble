@@ -123,20 +123,31 @@ private struct GlassWindowBackground: ViewModifier {
 /// The window's material, straight from AppKit.
 ///
 /// SwiftUI has no way to say "make the window itself vibrant", so this is the
-/// one small bridge: an `NSVisualEffectView` behind the whole hierarchy. It is
-/// public API and has been since 10.14.
+/// one small bridge: an `NSVisualEffectView` behind the whole hierarchy. Public
+/// API since 10.14.
+///
+/// It also has to clear the window's own background. Without that the tab strip
+/// keeps its opaque chrome and the material only shows under the content —
+/// which produces a hard black seam across the top of the window, exactly the
+/// kind of half-applied effect that looks like a defect rather than a finish.
 private struct WindowMaterial: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
-        // The material made for a window's background, which keeps sampling the
-        // desktop instead of freezing when the window loses focus.
+        // The material made for a window background: it keeps sampling the
+        // desktop rather than freezing when the window loses focus.
         view.material = .underWindowBackground
         view.blendingMode = .behindWindow
         view.state = .active
         return view
     }
 
-    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {
+        guard let window = view.window else { return }
+        // Let the material reach the whole window, title bar included.
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.titlebarAppearsTransparent = true
+    }
 }
 
 private struct SettingsGroup: ViewModifier {

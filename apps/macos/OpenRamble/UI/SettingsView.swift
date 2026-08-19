@@ -4,37 +4,74 @@ import LocalASR
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Four tabs: what you press, what it hears, what it writes, and what the app is.
+/// Five panes behind a sidebar.
 ///
-/// The window itself carries the material, and the tabs are content on top of
-/// it. That split is the material's own rule — glass belongs to the surface
-/// floating above content, and stacking it is what makes an interface feel
-/// cluttered rather than deep.
+/// A sidebar rather than a tab strip, because on macOS a sidebar is genuinely
+/// translucent: the system gives `NavigationSplitView` real vibrancy that
+/// samples the desktop behind the window. No bridge, no override, nothing to
+/// fight — which is exactly why the tab strip could not be made to do it. Its
+/// chrome keeps an opaque background whatever is placed behind it, and the
+/// attempt left a hard band across the top of the window.
+///
+/// So the glass here is the system's own, on the surface the system already
+/// treats as floating chrome, and the detail pane stays content.
 struct SettingsView: View {
     @ObservedObject var state: AppState
+    @State private var pane: Pane = .general
 
-    var body: some View {
-        tabs
-            .glassWindowBackground()
-            // The forms draw their own opaque backing by default, which would
-            // sit on the material like a sheet of paper and hide it entirely.
-            .scrollContentBackground(.hidden)
+    enum Pane: String, CaseIterable, Identifiable {
+        case general, recognition, history, dictionary, about
+        var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .general: return "General"
+            case .recognition: return "Recognition"
+            case .history: return "History"
+            case .dictionary: return "Dictionary"
+            case .about: return "About"
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .general: return "gearshape"
+            case .recognition: return "waveform"
+            case .history: return "clock.arrow.circlepath"
+            case .dictionary: return "character.book.closed"
+            case .about: return "info.circle"
+            }
+        }
     }
 
-    private var tabs: some View {
-        TabView {
-            GeneralSettings(state: state)
-                .tabItem { Label("General", systemImage: "gearshape") }
-            RecognitionSettings(state: state)
-                .tabItem { Label("Recognition", systemImage: "waveform") }
-            HistoryView(state: state)
-                .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
-            DictionarySettings(state: state)
-                .tabItem { Label("Dictionary", systemImage: "character.book.closed") }
-            AboutView(updater: state.updater, revealSupportFolder: state.revealSupportFolder)
-                .tabItem { Label("About", systemImage: "info.circle") }
+    var body: some View {
+        NavigationSplitView {
+            List(Pane.allCases, selection: $pane) { candidate in
+                Label(candidate.title, systemImage: candidate.symbol)
+                    .tag(candidate)
+            }
+            .navigationSplitViewColumnWidth(min: 168, ideal: 178, max: 200)
+            // The sidebar's own translucency, which is the whole point of
+            // using one here.
+            .scrollContentBackground(.hidden)
+        } detail: {
+            detail
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .navigationTitle(pane.title)
         }
-        .frame(width: 640, height: 520)
+        .frame(width: 720, height: 540)
+    }
+
+    @ViewBuilder
+    private var detail: some View {
+        switch pane {
+        case .general: GeneralSettings(state: state)
+        case .recognition: RecognitionSettings(state: state)
+        case .history: HistoryView(state: state)
+        case .dictionary: DictionarySettings(state: state)
+        case .about:
+            AboutView(updater: state.updater, revealSupportFolder: state.revealSupportFolder)
+        }
     }
 }
 
