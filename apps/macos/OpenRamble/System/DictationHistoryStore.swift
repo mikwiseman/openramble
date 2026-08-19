@@ -168,6 +168,23 @@ public struct DictationHistoryStore: Sendable {
         return kept
     }
 
+    /// Put new text on an entry, leaving its audio and star alone.
+    @discardableResult
+    public func replaceText(_ text: String, for entry: HistoryEntry) throws -> [HistoryEntry] {
+        var entries = load()
+        guard let index = entries.firstIndex(where: { $0.id == entry.id }) else { return entries }
+        let existing = entries[index]
+        entries[index] = HistoryEntry(
+            id: existing.id,
+            date: existing.date,
+            text: text,
+            audioFileName: existing.audioFileName,
+            isKept: existing.isKept
+        )
+        try write(entries)
+        return entries
+    }
+
     /// Star or unstar one entry.
     @discardableResult
     public func setKept(_ isKept: Bool, for entry: HistoryEntry) throws -> [HistoryEntry] {

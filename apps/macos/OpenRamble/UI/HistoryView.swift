@@ -61,7 +61,9 @@ struct HistoryView: View {
                             player.stopIfPlaying(entry.id)
                             state.deleteHistoryEntry(entry)
                         },
-                        onToggleKept: { state.setHistoryEntryKept(!entry.isKept, for: entry) }
+                        onToggleKept: { state.setHistoryEntryKept(!entry.isKept, for: entry) },
+                        onRetranscribe: { state.retranscribeHistoryEntry(entry) },
+                        isRetranscribing: state.isRetranscribing
                     )
                     Divider()
                 }
@@ -145,6 +147,8 @@ private struct HistoryRow: View {
     let onCopy: () -> Void
     let onDelete: () -> Void
     let onToggleKept: () -> Void
+    let onRetranscribe: () -> Void
+    let isRetranscribing: Bool
 
     private var isPlaying: Bool { player.playingID == entry.id }
 
@@ -162,6 +166,16 @@ private struct HistoryRow: View {
                 .buttonStyle(.borderless)
                 .help(entry.isKept ? "Stop keeping this one" : "Keep this one")
                 .accessibilityLabel(entry.isKept ? "Kept. Stop keeping" : "Keep this dictation")
+
+                if audioURL != nil {
+                    Button(action: onRetranscribe) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(isRetranscribing)
+                    .help("Recognise this recording again")
+                    .accessibilityLabel("Recognise this recording again")
+                }
 
                 Button(action: onCopy) {
                     Image(systemName: "doc.on.doc")

@@ -225,6 +225,26 @@ final class KeptHistoryEntryTests: XCTestCase {
         )
     }
 
+    /// Re-running recognition replaces the text and nothing else.
+    ///
+    /// The audio has to survive, or a second attempt would be impossible; the
+    /// star has to survive, or re-running a kept dictation would quietly
+    /// unprotect it.
+    func testReRecognisingKeepsTheAudioAndTheStar() throws {
+        let store = store()
+        _ = try store.record(text: "as first heard", audio: nil, limit: 10)
+        let entry = try XCTUnwrap(store.load().first)
+        _ = try store.setKept(true, for: entry)
+
+        let updated = try store.replaceText("after the dictionary changed", for: entry)
+        let changed = try XCTUnwrap(updated.first { $0.id == entry.id })
+
+        XCTAssertEqual(changed.text, "after the dictionary changed")
+        XCTAssertEqual(changed.audioFileName, entry.audioFileName)
+        XCTAssertTrue(changed.isKept, "re-running must not unprotect a kept dictation")
+        XCTAssertEqual(changed.date, entry.date, "it is the same dictation, at the same time")
+    }
+
     /// A history written before stars existed must still load. A store that
     /// refused its own older files would lose the dictations this is for.
     func testAHistoryWrittenBeforeStarsStillLoads() throws {

@@ -322,6 +322,9 @@ public final class AppState: ObservableObject {
     /// limits. The menu exposes the count and an exact Finder destination;
     /// crash recovery is never a hidden disk write.
     @Published public private(set) var recoveredRecordingCount = 0
+    /// One re-run at a time: the engine takes one call, and a queue of them
+    /// would be a queue nobody asked for.
+    @Published public private(set) var isRetranscribing = false
     /// Fail-closed recovery state after the bounded delete-intent lane could
     /// no longer retain exact identities. Ambiguous audio stays untouched and
     /// the menu exposes the Support folder instead of silently guessing.
@@ -1254,6 +1257,52 @@ public final class AppState: ObservableObject {
             return
         }
         NSWorkspace.shared.activateFileViewerSelecting([target])
+    }
+
+    /// Recognise a kept recording again.
+    ///
+    /// Worth having after editing the dictionary: the words the model heard do
+    /// not change, but what they become does, and re-running is the only way to
+    /// see that without dictating the sentence a second time.
+    ///
+    /// The new text replaces the entry's text and nothing else. The audio stays
+    /// where it is, so this can be done repeatedly, and a run that fails leaves
+    /// the previous text intact rather than blanking a record of something the
+    /// person actually said.
+    public func retranscribeHistoryEntry(_ entry: HistoryEntry) {
+        guard !isRetranscribing else { return }
+        guard let audio = historyAudioURL(for: entry) else {
+            notify(DictationNotice(kind: .info, message: "That dictation's audio is gone."))
+            return
+        }
+        guard let transcriber, isEngineReady else {
+            notify(DictationNotice(kind: .info, message: "The speech model isn't ready yet."))
+            return
+        }
+        isRetranscribing = true
+        Task { [weak self] in
+            defer { Task { @MainActor in self?.isRetranscribing = false } }
+            do {
+                let result = try await transcriber.transcribe(
+                    fileURL: audio,
+                    languageHint: nil
+                )
+                let text = self?.makePipeline().run(result.text).output.text ?? result.text
+                await MainActor.run {
+                    guard let self, let store = self.historyStore else { return }
+                    self.history = (try? store.replaceText(text, for: entry)) ?? self.history
+                }
+            } catch {
+                await MainActor.run {
+                    self?.notify(
+                        DictationNotice(
+                            kind: .failure,
+                            message: "Couldn't recognise that recording again."
+                        )
+                    )
+                }
+            }
+        }
     }
 
     /// Star an entry so retention leaves it alone, or unstar it.
