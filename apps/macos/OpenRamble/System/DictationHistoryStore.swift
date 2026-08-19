@@ -9,12 +9,34 @@ public struct HistoryEntry: Identifiable, Equatable, Codable, Sendable {
     /// person may have deleted it, or a crash may have left the record without
     /// it — and an entry whose text is intact is still worth showing.
     public let audioFileName: String?
+    /// Kept regardless of the retention limit.
+    ///
+    /// Decoded with a default rather than required, so histories written by
+    /// earlier versions still load. A store that refused its own older files
+    /// would lose the very dictations this flag exists to protect.
+    public var isKept: Bool
 
-    public init(id: UUID = UUID(), date: Date, text: String, audioFileName: String?) {
+    public init(
+        id: UUID = UUID(),
+        date: Date,
+        text: String,
+        audioFileName: String?,
+        isKept: Bool = false
+    ) {
         self.id = id
         self.date = date
         self.text = text
         self.audioFileName = audioFileName
+        self.isKept = isKept
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        date = try container.decode(Date.self, forKey: .date)
+        text = try container.decode(String.self, forKey: .text)
+        audioFileName = try container.decodeIfPresent(String.self, forKey: .audioFileName)
+        isKept = try container.decodeIfPresent(Bool.self, forKey: .isKept) ?? false
     }
 }
 
@@ -126,13 +148,34 @@ public struct DictationHistoryStore: Sendable {
     @discardableResult
     public func applyLimit(_ limit: Int) throws -> [HistoryEntry] {
         let entries = load()
-        let kept = Array(entries.prefix(max(1, limit)))
+        // The limit counts ordinary dictations. A starred one is a promise
+        // that it stays, and a promise that a later dictation can break is not
+        // one — so starred entries neither count against the limit nor fall
+        // out of it. Order is untouched, so the list still reads by date.
+        var budget = max(1, limit)
+        let kept = entries.filter { entry in
+            if entry.isKept { return true }
+            guard budget > 0 else { return false }
+            budget -= 1
+            return true
+        }
         guard kept.count != entries.count else { return entries }
-        for evicted in entries.dropFirst(kept.count) {
+        let keptIDs = Set(kept.map(\.id))
+        for evicted in entries where !keptIDs.contains(evicted.id) {
             removeAudio(of: evicted)
         }
         try write(kept)
         return kept
+    }
+
+    /// Star or unstar one entry.
+    @discardableResult
+    public func setKept(_ isKept: Bool, for entry: HistoryEntry) throws -> [HistoryEntry] {
+        var entries = load()
+        guard let index = entries.firstIndex(where: { $0.id == entry.id }) else { return entries }
+        entries[index].isKept = isKept
+        try write(entries)
+        return entries
     }
 
     @discardableResult

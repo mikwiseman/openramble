@@ -60,7 +60,8 @@ struct HistoryView: View {
                         onDelete: {
                             player.stopIfPlaying(entry.id)
                             state.deleteHistoryEntry(entry)
-                        }
+                        },
+                        onToggleKept: { state.setHistoryEntryKept(!entry.isKept, for: entry) }
                     )
                     Divider()
                 }
@@ -113,6 +114,10 @@ struct HistoryView: View {
 
             Spacer()
 
+            Button("Show Recordings") { state.revealHistoryAudio() }
+                .disabled(state.history.isEmpty)
+                .accessibilityHint("Opens the folder holding the audio kept with these dictations")
+
             Button("Delete All", role: .destructive) { showClearConfirmation = true }
                 .disabled(state.history.isEmpty)
         }
@@ -139,6 +144,7 @@ private struct HistoryRow: View {
     @ObservedObject var player: HistoryAudioPlayer
     let onCopy: () -> Void
     let onDelete: () -> Void
+    let onToggleKept: () -> Void
 
     private var isPlaying: Bool { player.playingID == entry.id }
 
@@ -149,6 +155,14 @@ private struct HistoryRow: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Spacer()
+                Button(action: onToggleKept) {
+                    Image(systemName: entry.isKept ? "star.fill" : "star")
+                        .foregroundStyle(entry.isKept ? StatusColorRole.attention.color : .secondary)
+                }
+                .buttonStyle(.borderless)
+                .help(entry.isKept ? "Stop keeping this one" : "Keep this one")
+                .accessibilityLabel(entry.isKept ? "Kept. Stop keeping" : "Keep this dictation")
+
                 Button(action: onCopy) {
                     Image(systemName: "doc.on.doc")
                 }

@@ -1242,6 +1242,26 @@ public final class AppState: ObservableObject {
         historyStore?.audioURL(for: entry)
     }
 
+    /// Open the folder holding the audio kept alongside history.
+    ///
+    /// Points at a recording rather than the bare folder when there is one, so
+    /// Finder opens with something selected instead of leaving the person to
+    /// work out which of these files is theirs.
+    public func revealHistoryAudio() {
+        let target = history.compactMap(historyAudioURL(for:)).first
+        guard let target else {
+            notify(DictationNotice(kind: .info, message: "No recordings kept yet."))
+            return
+        }
+        NSWorkspace.shared.activateFileViewerSelecting([target])
+    }
+
+    /// Star an entry so retention leaves it alone, or unstar it.
+    public func setHistoryEntryKept(_ isKept: Bool, for entry: HistoryEntry) {
+        guard let historyStore else { return }
+        history = (try? historyStore.setKept(isKept, for: entry)) ?? history
+    }
+
     public func deleteHistoryEntry(_ entry: HistoryEntry) {
         guard let historyStore else { return }
         history = (try? historyStore.delete(entry)) ?? history

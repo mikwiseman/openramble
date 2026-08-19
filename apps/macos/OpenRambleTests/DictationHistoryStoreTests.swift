@@ -175,3 +175,71 @@ final class DictationHistoryStoreTests: XCTestCase {
         XCTAssertTrue(store.load().isEmpty)
     }
 }
+
+/// Starred dictations, and the promise they carry.
+final class KeptHistoryEntryTests: XCTestCase {
+    private var directory: URL!
+
+    override func setUpWithError() throws {
+        directory = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: directory)
+    }
+
+    private func store() -> DictationHistoryStore {
+        DictationHistoryStore(directory: directory)
+    }
+
+    /// A star is a promise that the dictation stays. A promise a later
+    /// dictation can break is not one, so a starred entry neither counts
+    /// against the limit nor falls out of it.
+    func testStarredEntriesSurviveTheLimit() throws {
+        let store = store()
+        // Written oldest-last, the way the store keeps them.
+        for index in 0..<6 {
+            _ = try store.record(
+                text: "dictation \(index)",
+                audio: nil,
+                limit: 100,
+                date: Date(timeIntervalSince1970: Double(1000 + index))
+            )
+        }
+        // Star the oldest, which is the first the limit would evict.
+        let oldest = try XCTUnwrap(store.load().last)
+        _ = try store.setKept(true, for: oldest)
+
+        let kept = try store.applyLimit(2)
+
+        XCTAssertTrue(
+            kept.contains { $0.id == oldest.id },
+            "the starred one is the oldest and would have been evicted first"
+        )
+        XCTAssertEqual(
+            kept.filter { !$0.isKept }.count,
+            2,
+            "the limit still counts ordinary dictations, and only those"
+        )
+    }
+
+    /// A history written before stars existed must still load. A store that
+    /// refused its own older files would lose the dictations this is for.
+    func testAHistoryWrittenBeforeStarsStillLoads() throws {
+        let older = """
+        [{"id":"\(UUID().uuidString)","date":0,"text":"from an older build","audioFileName":null}]
+        """
+        try older.write(
+            to: directory.appending(path: "history.json"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        let loaded = store().load()
+        XCTAssertEqual(loaded.count, 1)
+        XCTAssertEqual(loaded.first?.text, "from an older build")
+        XCTAssertEqual(loaded.first?.isKept, false)
+    }
+}
