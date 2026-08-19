@@ -12,7 +12,11 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded pull-request pushes are worth cancelling; pushes to main are not.
+  # A release waits for the run on the exact commit it is publishing, and
+  # cancelling that run means the release cannot proceed until somebody notices
+  # and starts another — which cost most of an afternoon once.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   test:
@@ -139,6 +143,9 @@ jobs:
     name: Desktop app
     strategy:
       fail-fast: false
+      # Fail fast is off on purpose: when one platform breaks, the others'
+      # results are exactly what tells you whether it is that platform or the
+      # change itself.
       matrix:
         os: [ubuntu-latest, windows-latest, macos-26]
     runs-on: ${{ matrix.os }}

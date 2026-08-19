@@ -76,13 +76,45 @@ assert_release_source_unchanged() {
 }
 
 command -v gh >/dev/null || fail "Gh not found for required CI check."
+# Which jobs must be green to publish a macOS build.
+#
+# Deliberately not the whole matrix. The Windows and Linux desktop builds take
+# half an hour and say nothing about the DMG being signed here; waiting for them
+# delays a Mac release without checking anything in it. Everything that does
+# cover this artifact is listed, and a missing job is a failure rather than a
+# silent pass.
+REQUIRED_JOBS=(
+  "Package tests"
+  "Application build"
+  "Release build"
+  "Network surface"
+  "Core matches macOS"
+  "Swift calls the core"
+  "Apple Silicon only"
+)
+
 CI_CONCLUSION=$(gh run list \
   --workflow CI \
   --commit "$HEAD_SHA" \
   --limit 1 \
   --json conclusion,status,headSha \
   --jq '.[0] | select(.headSha == "'"$HEAD_SHA"'") | select(.status == "completed") | .conclusion')
-[[ "$CI_CONCLUSION" == "success" ]] || fail "No green completed CI on SHA $HEAD_SHA."
+if [[ "$CI_CONCLUSION" != "success" ]]; then
+  # The whole run is not green. It may still be running the platform builds
+  # that do not cover this artifact, so check the jobs that do.
+  RUN_ID=$(gh run list --branch main --limit 10 \
+    --json databaseId,headSha,workflowName \
+    --jq '[.[] | select(.headSha == "'"$HEAD_SHA"'") | select(.workflowName == "CI")][0].databaseId')
+  [[ -n "$RUN_ID" ]] || fail "No CI run found for SHA $HEAD_SHA."
+
+  for job in "${REQUIRED_JOBS[@]}"; do
+    outcome=$(gh run view "$RUN_ID" --json jobs \
+      --jq '[.jobs[] | select(.name == "'"$job"'")][0].conclusion // "missing"')
+    [[ "$outcome" == "success" ]] \
+      || fail "The job \"$job\" is $outcome on SHA $HEAD_SHA; it covers what is being released."
+  done
+  echo "→ CI: the jobs covering this artifact are green"
+fi
 
 # --- Update signing key -------------------------------------------------
 
