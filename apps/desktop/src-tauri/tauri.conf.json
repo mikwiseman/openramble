@@ -23,7 +23,8 @@
       "id": "main",
       "iconPath": "icons/tray.png",
       "iconAsTemplate": true
-    }
+    },
+    "withGlobalTauri": true
   },
   "bundle": {
     "active": true,

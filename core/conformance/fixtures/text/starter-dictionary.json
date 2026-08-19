@@ -1,0 +1,436 @@
+[
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "пул реквест",
+    "written" : "pull request"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "пиар",
+    "written" : "PR"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "мёрдж",
+    "written" : "merge"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "ребейз",
+    "written" : "rebase"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "ревью",
+    "written" : "review"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "код ревью",
+    "written" : "code review"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : true,
+    "spoken" : "деплой",
+    "written" : "deploy"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "деплоймент",
+    "written" : "deployment"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "билд",
+    "written" : "build"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "релиз",
+    "written" : "release"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "роллбэк",
+    "written" : "rollback"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "даунтайм",
+    "written" : "downtime"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "продакшн",
+    "written" : "production"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "стейджинг",
+    "written" : "staging"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : true,
+    "noAcousticBoost" : true,
+    "spoken" : "сентри",
+    "written" : "Sentry"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "гитхаб",
+    "written" : "GitHub"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "кубернетес",
+    "written" : "Kubernetes"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "постгрес",
+    "written" : "Postgres"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "линтер",
+    "written" : "linter"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "экс код",
+    "written" : "Xcode"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "фича флаг",
+    "written" : "feature flag"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "хотфикс",
+    "written" : "hotfix"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "эндпоинт",
+    "written" : "endpoint"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "апи",
+    "written" : "API"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "бэкенд",
+    "written" : "backend"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "фронтенд",
+    "written" : "frontend"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "тайпскрипт",
+    "written" : "TypeScript"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "джаваскрипт",
+    "written" : "JavaScript"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : true,
+    "noAcousticBoost" : false,
+    "spoken" : "свифт",
+    "written" : "Swift"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "пул реквист",
+    "written" : "pull request"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "пулреквест",
+    "written" : "pull request"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "мердж",
+    "written" : "merge"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "коммит",
+    "written" : "commit"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "браннич",
+    "written" : "branch"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "ребейзнуть",
+    "written" : "rebase"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "кот ревью",
+    "written" : "code review"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "роллбук",
+    "written" : "rollback"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "доунтайм",
+    "written" : "downtime"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "продакш",
+    "written" : "production"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "центри",
+    "written" : "Sentry"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "гитхеб",
+    "written" : "GitHub"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "кубернетис",
+    "written" : "Kubernetes"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "постгриз",
+    "written" : "Postgres"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "линти",
+    "written" : "linter"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "иксод",
+    "written" : "Xcode"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "x-код",
+    "written" : "Xcode"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "фичи-флаг",
+    "written" : "feature flag"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "ход фикс",
+    "written" : "hotfix"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "бэкинг",
+    "written" : "backend"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "фронтинг",
+    "written" : "frontend"
+  },
+  {
+    "allowsPhoneticMatching" : true,
+    "inflects" : false,
+    "noAcousticBoost" : false,
+    "spoken" : "тайп-скрипт",
+    "written" : "TypeScript"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "фичер флэк",
+    "written" : "feature flag"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "комит",
+    "written" : "commit"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "эмит в",
+    "written" : "commit в"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "брандж",
+    "written" : "branch"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "поезд герз",
+    "written" : "Postgres"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "кэшвербис",
+    "written" : "кэш в Redis"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "кэшвердис",
+    "written" : "кэш в Redis"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "экскоут",
+    "written" : "Xcode"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "коутривью",
+    "written" : "code review"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "дакары в кьюберниц",
+    "written" : "Docker и в Kubernetes"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "дакаревки убернит",
+    "written" : "Docker и Kubernetes"
+  }
+]

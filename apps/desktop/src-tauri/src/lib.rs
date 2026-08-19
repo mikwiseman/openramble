@@ -92,9 +92,8 @@ fn spawn_hotkey_listener(dictation: Arc<Dictation>, hotkey: Hotkey) {
 
 fn report(outcome: &session::Outcome) {
     match outcome {
-        // The transcript itself is never logged: it is what the person said.
-        session::Outcome::Inserted(_) => {}
-        session::Outcome::Truncated(_) => {
+        session::Outcome::Inserted => {}
+        session::Outcome::Truncated => {
             eprintln!("The recording reached the ten-minute limit and was cut short.")
         }
         session::Outcome::SilentInput => eprintln!(
@@ -135,11 +134,25 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
+        // Off by default. A dictation tool that installs itself into startup
+        // without being asked is the kind of thing people uninstall.
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .plugin(tauri_plugin_opener::init())
         .manage(Arc::clone(&dictation))
         .invoke_handler(tauri::generate_handler![
             commands::model_report,
             commands::dictation_hotkey,
+            commands::session_notices,
+            commands::dictation_history,
+            commands::delete_history_entry,
+            commands::clear_history,
+            commands::dictionary,
+            commands::set_dictionary,
+            commands::start_at_login,
+            commands::set_start_at_login,
             commands::install_model,
             commands::cancel_install,
         ])

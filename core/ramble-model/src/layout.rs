@@ -104,11 +104,6 @@ impl InstallLayout {
         self.model_directory().join(format!(".staging-{attempt}"))
     }
 
-    /// Is this a scratch directory rather than an install?
-    pub fn is_scratch_directory(name: &str) -> bool {
-        name.starts_with(".staging-") || name.starts_with(".backup-")
-    }
-
     /// Where one manifest file goes inside a directory.
     ///
     /// The manifest path was already checked at parse time; it is checked again
@@ -190,17 +185,6 @@ mod tests {
             layout.staging_directory("a1"),
             layout.staging_directory("b2")
         );
-        assert!(InstallLayout::is_scratch_directory(
-            layout
-                .staging_directory("a1")
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-        ));
-        assert!(!InstallLayout::is_scratch_directory(
-            "85ac09ea12fc4b1112fa76810059364bc6adc9de"
-        ));
     }
 
     /// Files sit inside the engine folder, not at the root of the install.

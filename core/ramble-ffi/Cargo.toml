@@ -7,13 +7,25 @@ license.workspace = true
 publish = false
 
 [lib]
-# `lib` so the workspace can test it; `cdylib` because that is what Swift links.
-crate-type = ["lib", "cdylib"]
+# `lib` so the workspace can test it, `staticlib` because that is what the
+# XCFramework the Mac links contains.
+crate-type = ["lib", "staticlib"]
+
+[[bin]]
+# The bindings generator, run at build time by scripts/build-ffi.sh. A binary
+# rather than a build script so generating Swift is an explicit step someone can
+# run and inspect, not a hidden side effect of `cargo build`.
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
 
 [dependencies]
 ramble-core = { path = "../ramble-core" }
+ramble-engine = { path = "../ramble-engine" }
+ramble-history = { path = "../ramble-history" }
+ramble-model = { path = "../ramble-model" }
 ramble-text = { path = "../ramble-text" }
-uniffi = "0.32"
+thiserror = "2"
+uniffi = { version = "0.32", features = ["cli"] }
 
 [lints]
 workspace = true

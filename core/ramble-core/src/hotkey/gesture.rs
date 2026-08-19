@@ -137,10 +137,6 @@ impl GestureMachine {
         self.is_held
     }
 
-    pub fn double_tap_window(&self) -> Duration {
-        self.double_tap_window
-    }
-
     /// The binding changed.
     ///
     /// Returns an action because a change made mid-hold has to close the open

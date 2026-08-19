@@ -46,11 +46,6 @@ impl ProtectedSpan {
     pub fn contains(&self, offset: usize) -> bool {
         offset >= self.start && offset < self.end
     }
-
-    /// Do this span and a half-open range share any character?
-    pub fn overlaps(&self, start: usize, end: usize) -> bool {
-        self.start < end && start < self.end
-    }
 }
 
 /// Find the protected spans in a text.

@@ -131,6 +131,16 @@ run_shared_core() {
   fi
   rm -f "$log"
 
+  # The bridge the macOS migration crosses. Built here so an API change Swift
+  # cannot call fails now rather than at migration time.
+  echo "→ Swift calls the core"
+  if ./scripts/build-ffi.sh > /dev/null 2>&1 \
+     && swift test --package-path Packages/RambleCoreFFI > /dev/null 2>&1; then
+    green "the boundary holds"
+  else
+    fail "The Swift bridge to the shared core failed."
+  fi
+
   # The fixtures are recordings of the shipping Swift pipeline. Regenerating
   # them is how a change to DictationCore that the port has not followed gets
   # noticed here rather than on a Windows machine three phases from now.
@@ -141,7 +151,7 @@ run_shared_core() {
           core/conformance/corpus-text.json \
           core/conformance/fixtures/text/pipeline.json 2> /dev/null; then
     git diff --quiet -- core/conformance/fixtures \
-      || fail "The macOS pipeline no longer produces the committed fixtures."
+      || fail "The macOS pipeline or starter dictionary no longer matches what is committed."
     cargo test -p ramble-text --test conformance > /dev/null 2>&1 \
       || fail "The Rust core no longer reproduces what macOS produced."
     green "both implementations agree"

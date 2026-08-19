@@ -61,6 +61,145 @@ pub fn model_report(dictation: State<'_, Arc<Dictation>>) -> ModelReport {
     }
 }
 
+/// What this desktop session will not let the app do.
+///
+/// Empty on a session that can do everything. Shown in the settings window,
+/// because a dictation tool that quietly does less than it claims is worse than
+/// one that says so — the person cannot otherwise tell "this desktop forbids
+/// it" from "I am holding the key wrong".
+#[tauri::command]
+pub fn session_notices() -> Vec<String> {
+    #[cfg(target_os = "linux")]
+    {
+        crate::adapters::linux_session::detect()
+            .notices()
+            .into_iter()
+            .map(str::to_string)
+            .collect()
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        // Windows and macOS place no comparable restrictions on a tool that has
+        // been granted its permissions.
+        Vec::new()
+    }
+}
+
+/// A finished dictation, as the window shows it.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryRow {
+    pub id: String,
+    pub text: String,
+    /// Seconds since the Unix epoch, which is what a browser understands.
+    /// Stored as Foundation's own reference date; converted only here.
+    pub at: f64,
+    pub has_audio: bool,
+}
+
+#[tauri::command]
+pub fn dictation_history(dictation: State<'_, Arc<Dictation>>) -> Vec<HistoryRow> {
+    dictation
+        .history()
+        .load()
+        .into_iter()
+        .map(|entry| HistoryRow {
+            at: entry
+                .date
+                .to_system_time()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|since| since.as_secs_f64())
+                .unwrap_or(0.0),
+            has_audio: dictation.history().audio_path(&entry).is_some(),
+            id: entry.id,
+            text: entry.text,
+        })
+        .collect()
+}
+
+#[tauri::command]
+pub fn delete_history_entry(
+    dictation: State<'_, Arc<Dictation>>,
+    id: String,
+) -> Result<(), String> {
+    dictation
+        .history()
+        .delete(&id)
+        .map(|_| ())
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn clear_history(dictation: State<'_, Arc<Dictation>>) -> Result<(), String> {
+    dictation
+        .history()
+        .delete_all()
+        .map_err(|error| error.to_string())
+}
+
+/// A personal replacement, as the window edits it.
+#[derive(Debug, Clone, serde::Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DictionaryRow {
+    pub spoken: String,
+    pub written: String,
+}
+
+#[tauri::command]
+pub fn dictionary(dictation: State<'_, Arc<Dictation>>) -> Vec<DictionaryRow> {
+    dictation
+        .personal_terms()
+        .into_iter()
+        .map(|entry| DictionaryRow {
+            spoken: entry.spoken,
+            written: entry.written,
+        })
+        .collect()
+}
+
+/// Replace the personal dictionary.
+///
+/// Whole-list rather than add/remove: the list is short, editing it is rare, and
+/// a single write cannot leave the file half-updated the way a sequence of
+/// mutations can.
+#[tauri::command]
+pub fn set_dictionary(
+    dictation: State<'_, Arc<Dictation>>,
+    rows: Vec<DictionaryRow>,
+) -> Result<(), String> {
+    dictation
+        .set_personal_terms(
+            rows.into_iter()
+                .filter(|row| !row.spoken.trim().is_empty() && !row.written.trim().is_empty())
+                .map(|row| (row.spoken, row.written))
+                .collect(),
+        )
+        .map_err(|error| error.to_string())
+}
+
+/// Does OpenRamble start with the computer?
+#[tauri::command]
+pub fn start_at_login(app: tauri::AppHandle) -> bool {
+    use tauri_plugin_autostart::ManagerExt;
+    app.autolaunch().is_enabled().unwrap_or(false)
+}
+
+/// Turn starting with the computer on or off.
+///
+/// Off until asked for. A dictation tool that puts itself into startup
+/// uninvited is the kind of thing people uninstall rather than configure.
+#[tauri::command]
+pub fn set_start_at_login(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    use tauri_plugin_autostart::ManagerExt;
+    let manager = app.autolaunch();
+    let result = if enabled {
+        manager.enable()
+    } else {
+        manager.disable()
+    };
+    result.map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 pub fn dictation_hotkey() -> String {
     Hotkey::default().title().to_string()

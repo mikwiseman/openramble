@@ -146,6 +146,22 @@ jobs:
         shell: bash
         run: cargo clippy -p openramble-desktop --all-targets -- -D warnings
 
+  bridge:
+    name: Swift calls the core
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The bridge is the seam the macOS migration crosses. Building it here
+      # means an API change that Swift cannot call fails on the commit that
+      # makes it, rather than months later when the migration is attempted.
+      - name: Build the shared core for Swift
+        run: ./scripts/build-ffi.sh
+
+      - name: Test the boundary
+        run: swift test --package-path Packages/RambleCoreFFI
+
   conformance:
     name: Core matches macOS
     runs-on: macos-26

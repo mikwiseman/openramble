@@ -224,6 +224,151 @@ impl FfiGestureMachine {
     }
 }
 
+// MARK: - Installed model
+
+/// What the store knows about the install.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum FfiModelState {
+    NotInstalled,
+    Ready,
+    /// Present but unusable, with the reason a person can act on.
+    NeedsRepair {
+        reason: String,
+    },
+}
+
+/// Where an install lives and whether it is usable.
+///
+/// The layout is a contract with the shipping Mac: it must adopt a tree Swift
+/// already wrote rather than downloading 739 MB again.
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct FfiModelReport {
+    pub state: FfiModelState,
+    /// The directory to hand the recognizer. Meaningful only when ready.
+    pub engine_directory: String,
+    pub total_byte_count: i64,
+}
+
+#[uniffi::export]
+pub fn inspect_model(manifest_json: String, root: String) -> Result<FfiModelReport, FfiError> {
+    let manifest = ramble_model::Manifest::parse(&manifest_json)
+        .map_err(|error| FfiError::Manifest(error.to_string()))?;
+    let store = ramble_model::ModelStore::new(manifest, &root);
+    // Anything an interrupted install left behind is settled before a state is
+    // reported, so nobody is shown "not installed" for a tree that is merely
+    // mid-promotion.
+    let _ = store.recover_interrupted_promotion();
+
+    Ok(FfiModelReport {
+        state: match store.state() {
+            ramble_model::ModelState::NotInstalled => FfiModelState::NotInstalled,
+            ramble_model::ModelState::Ready => FfiModelState::Ready,
+            ramble_model::ModelState::NeedsRepair(reason) => FfiModelState::NeedsRepair { reason },
+        },
+        engine_directory: store.engine_directory().to_string_lossy().into_owned(),
+        total_byte_count: store.manifest.total_byte_count(),
+    })
+}
+
+// MARK: - The recogniser
+
+/// A loaded recogniser.
+///
+/// Held by Swift as an object with a lifetime, because the model is 976 MB and
+/// loading it per take is what made the Mac unpredictable in the first place.
+#[derive(uniffi::Object)]
+pub struct FfiEngine {
+    inner: std::sync::Mutex<Option<ramble_engine::Engine>>,
+}
+
+#[uniffi::export]
+impl FfiEngine {
+    /// Load the model in a directory.
+    #[uniffi::constructor]
+    pub fn load(model_directory: String) -> Result<std::sync::Arc<Self>, FfiError> {
+        let engine = ramble_engine::Engine::load(std::path::Path::new(&model_directory))
+            .map_err(|error| FfiError::Engine(error.to_string()))?;
+        Ok(std::sync::Arc::new(FfiEngine {
+            inner: std::sync::Mutex::new(Some(engine)),
+        }))
+    }
+
+    /// Recognise 16 kHz mono audio.
+    pub fn transcribe(&self, samples: Vec<f32>) -> Result<String, FfiError> {
+        let guard = self
+            .inner
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let engine = guard
+            .as_ref()
+            .ok_or_else(|| FfiError::Engine("the recogniser has been shut down".into()))?;
+        engine
+            .transcribe(&samples)
+            .map_err(|error| FfiError::Engine(error.to_string()))
+    }
+
+    /// What it is running on, when that is worth saying.
+    pub fn fallback_notice(&self) -> Option<String> {
+        self.inner
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .as_ref()
+            .and_then(|engine| engine.report().notice())
+    }
+
+    /// Drop the model before the process exits.
+    ///
+    /// Not tidiness: ggml's static destructors abort the process when a model is
+    /// still alive at exit, and the person gets a crash report after a dictation
+    /// that worked. Swift must call this from its termination handler.
+    pub fn shutdown(&self) {
+        if let Some(engine) = self
+            .inner
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .take()
+        {
+            engine.shutdown();
+        }
+    }
+}
+
+// MARK: - History
+
+/// One remembered dictation.
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct FfiHistoryEntry {
+    pub id: String,
+    /// Foundation's own reference date, so a file written by either side reads
+    /// identically on the other.
+    pub date: f64,
+    pub text: String,
+    pub audio_file_name: Option<String>,
+}
+
+#[uniffi::export]
+pub fn load_history(directory: String) -> Vec<FfiHistoryEntry> {
+    ramble_history::HistoryStore::new(&directory)
+        .load()
+        .into_iter()
+        .map(|entry| FfiHistoryEntry {
+            id: entry.id,
+            date: entry.date.0,
+            text: entry.text,
+            audio_file_name: entry.audio_file_name,
+        })
+        .collect()
+}
+
+/// What went wrong, in a form Swift can catch.
+#[derive(Debug, thiserror::Error, uniffi::Error)]
+pub enum FfiError {
+    #[error("{0}")]
+    Manifest(String),
+    #[error("{0}")]
+    Engine(String),
+}
+
 // MARK: - Text
 
 /// One dictionary entry. Mirrors [`DictionaryReplacement`].

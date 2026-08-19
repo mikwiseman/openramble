@@ -10,6 +10,7 @@ pub mod phonetic;
 pub mod pipeline;
 pub mod polish;
 pub mod span;
+pub mod starter;
 pub mod typography;
 
 pub use pipeline::{Output, Provenance, Run, TextPipeline, TrailingCommand};

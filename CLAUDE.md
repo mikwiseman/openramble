@@ -41,12 +41,22 @@ the public privacy description in `README.md` if this boundary ever changes.
 LocalASR depends on DictationCore. Recognition runs in the application process.
 No package depends on the application layer.
 
-### The shared core (cross-platform work in progress)
+### The shared core (cross-platform)
 
-- `core/ramble-core` and `core/ramble-text` are a Cargo workspace holding the
-  dictation logic every platform shares. They perform no I/O whatsoever: no
-  files, no devices, no network, no clock of their own. Time arrives as a
-  parameter and effects leave as values.
+- `core/` is a Cargo workspace holding the dictation logic every platform
+  shares: `ramble-core` (session machine, policies, gesture), `ramble-text`
+  (pipeline, dictionary), `ramble-model` (installs), `ramble-audio`,
+  `ramble-engine` (the only crate touching the inference runtime),
+  `ramble-history`, and `ramble-ffi` (the Swift boundary).
+- `ramble-core` and `ramble-text` perform no I/O whatsoever: no files, no
+  devices, no network, no clock of their own. Time arrives as a parameter and
+  effects leave as values. `SessionMachine` is the whole dictation flow in that
+  shape — feed it events, carry out the effects it returns — which is why the
+  desktop runner decides nothing itself.
+- `apps/desktop` is the Tauri app for Windows and Linux. Its network use is one
+  module and the gate checks it by filename.
+- `scripts/build-ffi.sh` produces `Packages/RambleCoreFFI`, a Swift package whose
+  implementation is Rust. Its output is generated, never committed.
 - These crates are ports of `Packages/DictationCore`, not a second design. While
   both exist, the Swift side is the source of truth and the Rust side follows.
 - `core/conformance/` is what keeps them from drifting. The generator runs the

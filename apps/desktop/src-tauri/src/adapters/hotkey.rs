@@ -102,19 +102,11 @@ impl HotkeyTracker {
         }
     }
 
-    pub fn hotkey(&self) -> Hotkey {
-        self.hotkey
-    }
-
     /// Change the bound key, closing any gesture already in progress.
     pub fn rebind(&mut self, hotkey: Hotkey) -> Action {
         self.hotkey = hotkey;
         self.pressed.clear();
         self.machine.rebind()
-    }
-
-    pub fn set_hands_free_active(&mut self, active: bool) {
-        self.machine.is_hands_free_active = active;
     }
 
     pub fn key_down(&mut self, key: Key, at: Duration) -> Action {

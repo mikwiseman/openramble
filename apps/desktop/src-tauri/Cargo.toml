@@ -19,6 +19,7 @@ tauri-build = { version = "2", features = [] }
 ramble-audio = { path = "../../../core/ramble-audio" }
 ramble-core = { path = "../../../core/ramble-core" }
 ramble-engine = { path = "../../../core/ramble-engine" }
+ramble-history = { path = "../../../core/ramble-history" }
 ramble-model = { path = "../../../core/ramble-model" }
 ramble-text = { path = "../../../core/ramble-text" }
 
@@ -32,6 +33,7 @@ reqwest = { version = "0.13", default-features = false, features = ["blocking", 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-autostart = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
 
