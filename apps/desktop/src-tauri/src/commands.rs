@@ -61,6 +61,30 @@ pub fn model_report(dictation: State<'_, Arc<Dictation>>) -> ModelReport {
     }
 }
 
+/// What this desktop session will not let the app do.
+///
+/// Empty on a session that can do everything. Shown in the settings window,
+/// because a dictation tool that quietly does less than it claims is worse than
+/// one that says so — the person cannot otherwise tell "this desktop forbids
+/// it" from "I am holding the key wrong".
+#[tauri::command]
+pub fn session_notices() -> Vec<String> {
+    #[cfg(target_os = "linux")]
+    {
+        crate::adapters::linux_session::detect()
+            .notices()
+            .into_iter()
+            .map(str::to_string)
+            .collect()
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        // Windows and macOS place no comparable restrictions on a tool that has
+        // been granted its permissions.
+        Vec::new()
+    }
+}
+
 #[tauri::command]
 pub fn dictation_hotkey() -> String {
     Hotkey::default().title().to_string()

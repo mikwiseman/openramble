@@ -33,6 +33,8 @@
          everything given `hidden` stayed on screen — the Download button and the
          progress bar were visible at the same time. */
       [hidden] { display: none !important; }
+      .limits { margin: 0.4rem 0 0; padding-left: 1.1rem; }
+      .limits li { color: var(--ink); margin: 0.3rem 0; max-width: 34rem; }
       button {
         font: inherit; padding: 0.45rem 1rem; border-radius: 7px;
         border: 1px solid var(--line); background: transparent; color: var(--ink);
@@ -56,6 +58,11 @@
       <p class="plain">Hold <kbd id="hotkey">Right Ctrl</kbd>, speak, and release it.
         The text appears in whatever you were typing in.</p>
       <p>Recognition runs on this machine. Nothing you say leaves it.</p>
+    </section>
+
+    <section id="limits-section" hidden>
+      <h2>This desktop</h2>
+      <ul id="limits" class="limits"></ul>
     </section>
 
     <section>
@@ -127,6 +134,19 @@
       });
 
       invoke("dictation_hotkey").then((name) => { el("hotkey").textContent = name; });
+
+      // Only shown when there is something to say. A section that appears when
+      // nothing is wrong stops being read.
+      invoke("session_notices").then((notices) => {
+        if (!notices.length) return;
+        el("limits").innerHTML = "";
+        for (const notice of notices) {
+          const item = document.createElement("li");
+          item.textContent = notice;
+          el("limits").appendChild(item);
+        }
+        el("limits-section").hidden = false;
+      });
       refresh();
     </script>
   </body>

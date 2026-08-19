@@ -140,6 +140,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::model_report,
             commands::dictation_hotkey,
+            commands::session_notices,
             commands::install_model,
             commands::cancel_install,
         ])
