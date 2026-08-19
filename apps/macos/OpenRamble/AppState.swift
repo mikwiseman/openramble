@@ -1924,12 +1924,29 @@ public final class AppState: ObservableObject {
     /// second on the main thread they were a standing invitation for a frozen
     /// interface the moment a daemon answered slowly under load — observed as
     /// a stuck "Transcribing…" panel while the engine was busy.
+    /// The one thread allowed to wait on the permission daemon.
+    ///
+    /// Reading these is a synchronous IPC round trip to `tccd`, and it used to
+    /// run in `Task.detached` — on Swift's cooperative pool, which has one
+    /// thread per core and must never be blocked. Once a second, forever, this
+    /// app parked a pool thread on another process answering.
+    ///
+    /// Field logs show what that costs when the daemon is slow: probes stop
+    /// arriving for seconds and then land in a single burst, one per elapsed
+    /// second, because the work was queued the whole time rather than run. The
+    /// same burst brackets the recognition stalls — anything else suspended on
+    /// that pool was waiting behind these.
+    private static let permissionQueue = DispatchQueue(
+        label: "is.waiwai.dictation.permission-poll",
+        qos: .utility
+    )
+
     private func pollPermissions() {
         let reader = permissions
-        Task.detached(priority: .utility) { [weak self] in
+        Self.permissionQueue.async { [weak self] in
             let accessibility = reader.accessibilityGranted
             let microphone = reader.microphoneGranted
-            await MainActor.run { [weak self] in
+            Task { @MainActor in
                 self?.applyPermissionSnapshot(
                     accessibility: accessibility,
                     microphone: microphone

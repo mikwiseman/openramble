@@ -1138,6 +1138,44 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
         for (buffer, _) in zip(stuckBuffers, stuckFrames) { buffer.endFrame() }
     }
 
+    /// The blocking teardown must not run on Swift's cooperative pool.
+    ///
+    /// This is the recognition stall, pinned at its cause. `engine.stop()` and
+    /// `removeTap` may block inside AVFAudio — the comment on the containment
+    /// says so — and they used to be launched with `Task.detached`, which puts
+    /// them on the cooperative pool: one thread per core, and Swift documents
+    /// that blocking one is not yielding it but losing it. The recognition
+    /// that follows a dictation is suspended on that same pool, so a parked
+    /// teardown held the finished text behind it. Field logs showed exactly
+    /// that shape — recognition seconds long around an inference call that
+    /// never exceeded 1.07 s, with the main thread awake throughout.
+    ///
+    /// Asserted by naming the queue rather than by racing the scheduler: a
+    /// test that blocks one thread and hopes the pool notices passes on a
+    /// machine with a spare core, which is every developer machine and no
+    /// loaded one. The label is checkable and cannot pass by luck.
+    func testTheBlockingTeardownRunsOffTheCooperativePool() throws {
+        let lane = RecordingEngineShutdownContainment()
+        let ran = DispatchSemaphore(value: 0)
+        let label = UnsafeMutableTransferBox<String?>(nil)
+
+        let reservation = try XCTUnwrap(lane.reserve())
+        lane.submit(reservation: reservation) {
+            label.value = String(
+                cString: __dispatch_queue_get_label(nil),
+                encoding: .utf8
+            )
+            ran.signal()
+        }
+        XCTAssertEqual(ran.wait(timeout: .now() + 2), .success)
+
+        XCTAssertEqual(
+            label.value,
+            RecordingEngineShutdownContainment.teardownQueueLabel,
+            "a call documented as blocking must not occupy a cooperative-pool thread"
+        )
+    }
+
     func testWedgedOldEngineShutdownAllowsNPlusOneWithGloballyBoundedWork() throws {
         let lane = RecordingEngineShutdownContainment()
         let oldEntered = DispatchSemaphore(value: 0)
@@ -2665,4 +2703,10 @@ private func XCTAssertThrowsErrorAsync<T>(
     } catch {
         // Expected.
     }
+}
+
+/// Carries one value out of a synchronous callback without tripping Sendable.
+final class UnsafeMutableTransferBox<Value>: @unchecked Sendable {
+    var value: Value
+    init(_ value: Value) { self.value = value }
 }

@@ -1559,8 +1559,33 @@ final class RecordingEngineShutdownContainment: @unchecked Sendable {
         if shouldLaunch { launch(job) }
     }
 
+    /// The one thread in this package allowed to block.
+    ///
+    /// `job.operation()` is `engine.stop()` + `input.removeTap(onBus:)`, and
+    /// the comment above this class says what those do: they may block inside
+    /// AVFAudio. This used to run in `Task.detached`, which puts it on Swift's
+    /// cooperative pool — the pool that has one thread per core and that Swift
+    /// documents you must never block, because a blocked thread is not yielded,
+    /// it is simply gone.
+    ///
+    /// It ran there on the ordinary stop path, at the end of every dictation.
+    /// The recognition that follows is suspended on that same pool, so a
+    /// teardown that parked inside the framework held the result behind it —
+    /// which is what the field logs show: recognition seconds long around an
+    /// inference call that never exceeded 1.07 s, with the main thread awake
+    /// the whole time and only the pool asleep.
+    ///
+    /// A dedicated queue costs one OS thread that spends its life idle. That
+    /// is the correct price for a call that is allowed to block.
+    static let teardownQueueLabel = "is.waiwai.dictation.audio-teardown"
+
+    private static let teardownQueue = DispatchQueue(
+        label: teardownQueueLabel,
+        qos: .userInitiated
+    )
+
     private func launch(_ job: Job) {
-        Task.detached(priority: .userInitiated) { [self] in
+        Self.teardownQueue.async { [self] in
             job.operation()
             finished(job)
         }
