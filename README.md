@@ -124,10 +124,21 @@ Recent Dictations — instead.
 
 ## Requirements
 
+**macOS**
+
 - macOS 14 or later
 - Apple Silicon; Intel Macs are not supported
-- About 586 MB for the recognition and vocabulary models, plus temporary space
-  while a model is downloaded and verified
+
+**Windows and Linux**
+
+- Windows 10 or later (x86_64), or a Linux desktop with X11 or Wayland
+- Recognition runs on the processor on these platforms today, so it is slower
+  than on a Mac. It is stated in Settings rather than left to be discovered.
+
+**Both**
+
+- About 740 MB for the recognition model, plus temporary space while it is
+  downloaded and verified
 
 Model files are downloaded from pinned revisions and verified against committed
 SHA-256 checksums before installation.
