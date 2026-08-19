@@ -92,9 +92,8 @@ fn spawn_hotkey_listener(dictation: Arc<Dictation>, hotkey: Hotkey) {
 
 fn report(outcome: &session::Outcome) {
     match outcome {
-        // The transcript itself is never logged: it is what the person said.
-        session::Outcome::Inserted(_) => {}
-        session::Outcome::Truncated(_) => {
+        session::Outcome::Inserted => {}
+        session::Outcome::Truncated => {
             eprintln!("The recording reached the ten-minute limit and was cut short.")
         }
         session::Outcome::SilentInput => eprintln!(

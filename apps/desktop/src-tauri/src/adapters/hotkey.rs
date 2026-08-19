@@ -102,10 +102,6 @@ impl HotkeyTracker {
         }
     }
 
-    pub fn hotkey(&self) -> Hotkey {
-        self.hotkey
-    }
-
     /// Change the bound key, closing any gesture already in progress.
     pub fn rebind(&mut self, hotkey: Hotkey) -> Action {
         self.hotkey = hotkey;

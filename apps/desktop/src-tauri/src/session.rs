@@ -11,16 +11,21 @@ use std::time::Duration;
 /// What a finished dictation produced.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Outcome {
-    /// Text is ready to insert.
-    Inserted(String),
+    /// The text was inserted.
+    ///
+    /// Carries nothing. No consumer needs the transcript, and a payload that
+    /// exists is a payload something will eventually log — which is the one
+    /// thing this product must never do with what a person said.
+    Inserted,
     /// The key was brushed and nothing was said. Nothing is shown: the person
     /// changed their mind, and an error would only alarm them.
     DroppedSilently,
     /// The key was held but the microphone gave nothing. Worth saying — the
     /// input is muted, dead, or held by another application.
     SilentInput,
-    /// The recording ran into the ceiling and was cut short.
-    Truncated(String),
+    /// The text was inserted, but the recording had hit the ceiling and was cut
+    /// short. Worth saying, because the person's last words are missing.
+    Truncated,
     /// Something failed, in words a person can act on.
     Failed(String),
 }
@@ -29,11 +34,7 @@ pub enum Outcome {
 ///
 /// Separated from the machinery so the rules — which are shared with macOS —
 /// stay testable without a microphone, a model, or a keyboard.
-pub fn outcome_for_recording(
-    recorded: Duration,
-    held: Duration,
-    truncated: bool,
-) -> Option<Outcome> {
+pub fn outcome_for_recording(recorded: Duration, held: Duration) -> Option<Outcome> {
     if !DurationPolicy::is_worth_transcribing(recorded.as_secs_f64()) {
         return Some(
             match DurationPolicy::outcome_for_short_recording(held.as_secs_f64()) {
@@ -46,9 +47,7 @@ pub fn outcome_for_recording(
             },
         );
     }
-    // Long enough to recognize. Truncation is reported alongside the text rather
-    // than instead of it — the first ten minutes are still what the person said.
-    let _ = truncated;
+    // Long enough to recognize.
     None
 }
 
@@ -63,11 +62,7 @@ mod tests {
 
     #[test]
     fn a_brushed_key_produces_nothing_and_says_nothing() {
-        let outcome = outcome_for_recording(
-            Duration::from_millis(100),
-            Duration::from_millis(150),
-            false,
-        );
+        let outcome = outcome_for_recording(Duration::from_millis(100), Duration::from_millis(150));
         assert_eq!(outcome, Some(Outcome::DroppedSilently));
     }
 
@@ -75,14 +70,13 @@ mod tests {
     /// broken input, and the person deserves to hear so.
     #[test]
     fn a_long_hold_that_recorded_nothing_is_reported() {
-        let outcome =
-            outcome_for_recording(Duration::from_millis(10), Duration::from_secs(2), false);
+        let outcome = outcome_for_recording(Duration::from_millis(10), Duration::from_secs(2));
         assert_eq!(outcome, Some(Outcome::SilentInput));
     }
 
     #[test]
     fn a_real_recording_goes_on_to_the_engine() {
-        let outcome = outcome_for_recording(Duration::from_secs(3), Duration::from_secs(3), false);
+        let outcome = outcome_for_recording(Duration::from_secs(3), Duration::from_secs(3));
         assert_eq!(outcome, None, "a real take must not be short-circuited");
     }
 
@@ -91,14 +85,12 @@ mod tests {
     fn the_threshold_is_the_shared_one() {
         assert!(outcome_for_recording(
             Duration::from_secs_f64(DurationPolicy::MINIMUM_SECONDS),
-            Duration::from_secs(1),
-            false
+            Duration::from_secs(1)
         )
         .is_none());
         assert!(outcome_for_recording(
             Duration::from_secs_f64(DurationPolicy::MINIMUM_SECONDS - 0.01),
-            Duration::from_secs(1),
-            false
+            Duration::from_secs(1)
         )
         .is_some());
     }

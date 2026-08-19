@@ -214,7 +214,7 @@ impl Dictation {
             outcome
         };
 
-        if let Some(short) = outcome_for_recording(recorded, held, truncated) {
+        if let Some(short) = outcome_for_recording(recorded, held) {
             return finish(short);
         }
 
@@ -251,9 +251,9 @@ impl Dictation {
         }
 
         finish(if truncated {
-            Outcome::Truncated(output.text)
+            Outcome::Truncated
         } else {
-            Outcome::Inserted(output.text)
+            Outcome::Inserted
         })
     }
 
