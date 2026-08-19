@@ -134,6 +134,12 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
+        // Off by default. A dictation tool that installs itself into startup
+        // without being asked is the kind of thing people uninstall.
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .plugin(tauri_plugin_opener::init())
         .manage(Arc::clone(&dictation))
         .invoke_handler(tauri::generate_handler![
@@ -145,6 +151,8 @@ pub fn run() {
             commands::clear_history,
             commands::dictionary,
             commands::set_dictionary,
+            commands::start_at_login,
+            commands::set_start_at_login,
             commands::install_model,
             commands::cancel_install,
         ])

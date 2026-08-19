@@ -52,6 +52,8 @@
       }
       .terms td { border-top: 1px solid var(--line); padding: 0.5rem 0.5rem 0.5rem 0; }
       .terms td:last-child { text-align: right; }
+      label { display: inline-flex; align-items: center; gap: 0.45rem; }
+      input[type="checkbox"] { min-width: 0; }
       input {
         font: inherit; padding: 0.4rem 0.6rem; border-radius: 7px;
         border: 1px solid var(--line); background: transparent; color: var(--ink);
@@ -80,6 +82,9 @@
       <p class="plain">Hold <kbd id="hotkey">Right Ctrl</kbd>, speak, and release it.
         The text appears in whatever you were typing in.</p>
       <p>Recognition runs on this machine. Nothing you say leaves it.</p>
+      <div class="row">
+        <label><input type="checkbox" id="start-at-login" /> Start when I log in</label>
+      </div>
     </section>
 
     <section id="limits-section" hidden>
@@ -181,6 +186,18 @@
       });
 
       invoke("dictation_hotkey").then((name) => { el("hotkey").textContent = name; });
+
+      invoke("start_at_login").then((enabled) => { el("start-at-login").checked = enabled; });
+      el("start-at-login").addEventListener("change", async (event) => {
+        try {
+          await invoke("set_start_at_login", { enabled: event.target.checked });
+        } catch (error) {
+          // Put the box back to the truth rather than leaving it showing a
+          // setting that did not take.
+          event.target.checked = await invoke("start_at_login");
+          el("model-detail").textContent = String(error);
+        }
+      });
 
       // Only shown when there is something to say. A section that appears when
       // nothing is wrong stops being read.

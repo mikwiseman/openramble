@@ -177,6 +177,29 @@ pub fn set_dictionary(
         .map_err(|error| error.to_string())
 }
 
+/// Does OpenRamble start with the computer?
+#[tauri::command]
+pub fn start_at_login(app: tauri::AppHandle) -> bool {
+    use tauri_plugin_autostart::ManagerExt;
+    app.autolaunch().is_enabled().unwrap_or(false)
+}
+
+/// Turn starting with the computer on or off.
+///
+/// Off until asked for. A dictation tool that puts itself into startup
+/// uninvited is the kind of thing people uninstall rather than configure.
+#[tauri::command]
+pub fn set_start_at_login(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    use tauri_plugin_autostart::ManagerExt;
+    let manager = app.autolaunch();
+    let result = if enabled {
+        manager.enable()
+    } else {
+        manager.disable()
+    };
+    result.map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 pub fn dictation_hotkey() -> String {
     Hotkey::default().title().to_string()
