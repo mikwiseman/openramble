@@ -13,6 +13,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# rustup's toolchain, not whatever cargo happens to be first on PATH.
+#
+# rustup is keg-only here, so a shell that has not sourced the profile finds
+# Homebrew's older rust instead and the build fails on a dependency's minimum
+# version. That is a confusing failure to hit from a release script, so the
+# path is resolved here rather than assumed.
+if [[ -x /opt/homebrew/opt/rustup/bin/cargo ]]; then
+  export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
+fi
+
 PACKAGE="Packages/RambleCoreFFI"
 BUILD=".build-ffi"
 LIB="libramble_ffi.a"
