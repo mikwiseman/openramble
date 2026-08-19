@@ -68,7 +68,7 @@ jobs:
   # macOS version was once built, version-bumped, and never shipped. A tag
   # means a release; that is what this makes true.
   publish:
-    needs: package
+    needs: bundle
     if: startsWith(github.ref, 'refs/tags/desktop-v')
     runs-on: ubuntu-latest
     permissions:
