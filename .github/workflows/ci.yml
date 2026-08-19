@@ -55,6 +55,14 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          workspaces: ". -> target"
+
       # The project is assembled from project.yml and is not in the repository.
       - name: Check pinned XcodeGen
         run: ./scripts/pinned-xcodegen.sh >/dev/null
@@ -90,6 +98,14 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          workspaces: ". -> target"
 
       - name: Rust version
         run: |
@@ -130,6 +146,14 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          workspaces: ". -> target"
+
       # Tauri draws with the system WebView, and the inference runtime is
       # compiled from source by cmake. Neither is on a bare runner.
       - name: Linux system dependencies
@@ -159,6 +183,14 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          workspaces: ". -> target"
+
       # The bridge is the seam the macOS migration crosses. Building it here
       # means an API change that Swift cannot call fails on the commit that
       # makes it, rather than months later when the migration is attempted.
@@ -174,6 +206,14 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          workspaces: ". -> target"
 
       # The committed fixtures are recordings of what the shipping Swift
       # pipeline produced. Regenerating them here and finding a diff means one
@@ -207,6 +247,14 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          workspaces: ". -> target"
+
       # The main promise of the product is verified automatically, not by word of mouth.
       - name: Check that the network is only where it is allowed
         run: ./scripts/check-network-surface.sh
@@ -218,6 +266,14 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          workspaces: ". -> target"
+
       # Safe beta only supports Apple Silicon.
       - name: LocalASR arm64
         run: swift build --package-path Packages/LocalASR --arch arm64
@@ -228,6 +284,14 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          workspaces: ". -> target"
 
       - name: Check pinned XcodeGen
         run: ./scripts/pinned-xcodegen.sh >/dev/null
