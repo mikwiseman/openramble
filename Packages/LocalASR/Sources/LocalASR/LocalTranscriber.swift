@@ -120,6 +120,12 @@ public actor LocalTranscriber {
         guard !samples.isEmpty else {
             throw ASREngineError.unsupportedAudioFormat("empty recording")
         }
+        // Stamped at the door, before any waiting. Everything between here and
+        // the engine actor — a queued continuation, a thread the cooperative
+        // pool has not handed out, another dictation holding the actor — used
+        // to be reported nowhere at all, and that interval is where every
+        // stall this app has had actually lived.
+        let arrived = ContinuousClock.now
 
         // Claim residency before waiting on the shared warm-up. Otherwise the
         // warm-up owner can drop its busy count just before this continuation
@@ -139,7 +145,17 @@ public actor LocalTranscriber {
         guard generation == expectedGeneration, loadedDirectory != nil else {
             throw CancellationError()
         }
-        return try await engine.transcribe(samples: samples, languageHint: languageHint)
+        let queued = arrived.duration(to: .now)
+        let result = try await engine.transcribe(samples: samples, languageHint: languageHint)
+        return ASRResult(
+            text: result.text,
+            words: result.words,
+            audioDuration: result.audioDuration,
+            processingDuration: result.processingDuration,
+            queueingDuration: Double(queued.components.seconds)
+                + Double(queued.components.attoseconds) / 1e18,
+            phaseTimings: result.phaseTimings
+        )
     }
 
     /// Execute representative inference after all optional models have loaded.

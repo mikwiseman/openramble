@@ -70,6 +70,14 @@ public struct ASRResult: Sendable, Equatable {
     public let audioDuration: TimeInterval
     /// How long did the recognition itself take - for measurements and for display in diagnostics.
     public let processingDuration: TimeInterval
+    /// How long the call waited before the engine began.
+    ///
+    /// `processingDuration` starts once the engine actor is entered, so
+    /// everything before that — a queued continuation, another dictation
+    /// holding the actor, a thread the cooperative pool had not handed out yet
+    /// — was reported nowhere. That interval held every second of the stalls
+    /// this app spent months not being able to name. Now it has a number.
+    public let queueingDuration: TimeInterval
     /// Benchmark-only phase measurements. Production engines leave this `nil`.
     public let phaseTimings: ASRPhaseTimings?
 
@@ -78,12 +86,14 @@ public struct ASRResult: Sendable, Equatable {
         words: [Word] = [],
         audioDuration: TimeInterval,
         processingDuration: TimeInterval,
+        queueingDuration: TimeInterval = 0,
         phaseTimings: ASRPhaseTimings? = nil
     ) {
         self.text = text
         self.words = words
         self.audioDuration = audioDuration
         self.processingDuration = processingDuration
+        self.queueingDuration = queueingDuration
         self.phaseTimings = phaseTimings
     }
 }

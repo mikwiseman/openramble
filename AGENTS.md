@@ -32,6 +32,11 @@ So:
 - **Verify by looking.** Tests cannot see a control that renders as a checkbox
   instead of a switch, a border under the close button, or a window that opens
   behind the editor. Screenshot the running app and read it.
+- **Bump the patch digit.** Frequent releases and a fast-climbing minor number
+  are not the same thing. A fix, a layout correction, a moved control — those
+  are 0.17.1, 0.17.2. The minor digit is for something a person would notice
+  as new: a feature, a setting they did not have. Shipping often should not
+  make the version look like the app was rewritten weekly.
 - **A test that passes against the broken code is worse than no test.** Before
   trusting a new test, run it against the unfixed behaviour and watch it fail.
 

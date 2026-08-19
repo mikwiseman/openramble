@@ -1137,6 +1137,9 @@ public final class DictationController {
                 engineProcessing: recognized.processingDuration > 0
                     ? .seconds(recognized.processingDuration)
                     : nil,
+                engineQueueing: recognized.queueingDuration > 0
+                    ? .seconds(recognized.queueingDuration)
+                    : nil,
                 audioDuration: .seconds(recognized.audioDuration)
             )
         }

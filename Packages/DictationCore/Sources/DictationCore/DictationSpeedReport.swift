@@ -67,6 +67,13 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
     public let recognition: Duration
     /// The same call as the engine reported it, transport excluded.
     public let engineProcessing: Duration?
+    /// How long the take waited before the engine started on it.
+    ///
+    /// The stage that was missing. `recognition` minus `engineProcessing` used
+    /// to be a single unattributed lump, and every stall this app has had lived
+    /// inside it — a blocked thread pool, a doubled inference, a disk. Naming
+    /// it means the next one identifies itself instead of needing a sampler.
+    public let engineQueueing: Duration?
     /// How much audio the take actually carried.
     public let audioDuration: Duration
 
@@ -75,12 +82,14 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         enginePreparation: Duration?,
         recognition: Duration,
         engineProcessing: Duration?,
+        engineQueueing: Duration? = nil,
         audioDuration: Duration
     ) {
         self.captureFreeze = captureFreeze
         self.enginePreparation = enginePreparation
         self.recognition = recognition
         self.engineProcessing = engineProcessing
+        self.engineQueueing = engineQueueing
         self.audioDuration = audioDuration
     }
 }

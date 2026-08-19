@@ -28,12 +28,15 @@ echo "installed version    $INSTALLED"
 # The absolute path on purpose: zsh ships a `log` builtin that shadows this.
 /usr/bin/log show --last "$WINDOW" --predicate 'process == "OpenRamble"' --info 2>/dev/null \
   | grep -F 'dictation stop→text' \
-  | sed -E 's/.*stop→text ([0-9.-]+)s.*recognize ([0-9.-]+)s engine ([0-9.-]+)s.*/\1 \2 \3/' \
+  | sed -E -e 's/.*stop→text ([0-9.-]+)s.*recognize ([0-9.-]+)s queued ([0-9.-]+)s engine ([0-9.-]+)s.*/\1 \2 \4 \3/' \
+          -e 't' \
+          -e 's/.*stop→text ([0-9.-]+)s.*recognize ([0-9.-]+)s engine ([0-9.-]+)s.*/\1 \2 \3 -1/' \
   | awk -v window="$WINDOW" '
-      NF == 3 && $3 >= 0 {
+      NF == 4 && $3 >= 0 {
         gap = $2 - $3
         if (gap < 0) gap = 0
         gaps[n++] = gap
+        if ($4 >= 0) { queued[q++] = $4; if ($4 > worstQueued) worstQueued = $4 }
         if ($3 > worstEngine) worstEngine = $3
         total += gap
       }
@@ -57,6 +60,10 @@ echo "installed version    $INSTALLED"
         printf "gap p99              %.2fs\n", p99
         printf "gap worst            %.2fs\n", gaps[n-1]
         printf "engine worst         %.2fs\n", worstEngine
+        if (q > 0)
+          printf "queued worst         %.2fs   (waiting before the engine started)\n", worstQueued
+        else
+          print  "queued               not recorded — build predates 0.17"
         printf "over 1s              %d\n", over
         print  ""
         print  "Before 0.14.0, for comparison:"
