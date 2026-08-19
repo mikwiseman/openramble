@@ -224,6 +224,86 @@ impl FfiGestureMachine {
     }
 }
 
+// MARK: - Installed model
+
+/// What the store knows about the install.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum FfiModelState {
+    NotInstalled,
+    Ready,
+    /// Present but unusable, with the reason a person can act on.
+    NeedsRepair {
+        reason: String,
+    },
+}
+
+/// Where an install lives and whether it is usable.
+///
+/// The layout is a contract with the shipping Mac: it must adopt a tree Swift
+/// already wrote rather than downloading 739 MB again.
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct FfiModelReport {
+    pub state: FfiModelState,
+    /// The directory to hand the recognizer. Meaningful only when ready.
+    pub engine_directory: String,
+    pub total_byte_count: i64,
+}
+
+#[uniffi::export]
+pub fn inspect_model(manifest_json: String, root: String) -> Result<FfiModelReport, FfiError> {
+    let manifest = ramble_model::Manifest::parse(&manifest_json)
+        .map_err(|error| FfiError::Manifest(error.to_string()))?;
+    let store = ramble_model::ModelStore::new(manifest, &root);
+    // Anything an interrupted install left behind is settled before a state is
+    // reported, so nobody is shown "not installed" for a tree that is merely
+    // mid-promotion.
+    let _ = store.recover_interrupted_promotion();
+
+    Ok(FfiModelReport {
+        state: match store.state() {
+            ramble_model::ModelState::NotInstalled => FfiModelState::NotInstalled,
+            ramble_model::ModelState::Ready => FfiModelState::Ready,
+            ramble_model::ModelState::NeedsRepair(reason) => FfiModelState::NeedsRepair { reason },
+        },
+        engine_directory: store.engine_directory().to_string_lossy().into_owned(),
+        total_byte_count: store.manifest.total_byte_count(),
+    })
+}
+
+// MARK: - History
+
+/// One remembered dictation.
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct FfiHistoryEntry {
+    pub id: String,
+    /// Foundation's own reference date, so a file written by either side reads
+    /// identically on the other.
+    pub date: f64,
+    pub text: String,
+    pub audio_file_name: Option<String>,
+}
+
+#[uniffi::export]
+pub fn load_history(directory: String) -> Vec<FfiHistoryEntry> {
+    ramble_history::HistoryStore::new(&directory)
+        .load()
+        .into_iter()
+        .map(|entry| FfiHistoryEntry {
+            id: entry.id,
+            date: entry.date.0,
+            text: entry.text,
+            audio_file_name: entry.audio_file_name,
+        })
+        .collect()
+}
+
+/// What went wrong, in a form Swift can catch.
+#[derive(Debug, thiserror::Error, uniffi::Error)]
+pub enum FfiError {
+    #[error("{0}")]
+    Manifest(String),
+}
+
 // MARK: - Text
 
 /// One dictionary entry. Mirrors [`DictionaryReplacement`].

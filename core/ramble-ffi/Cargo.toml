@@ -20,7 +20,10 @@ path = "src/bin/uniffi-bindgen.rs"
 
 [dependencies]
 ramble-core = { path = "../ramble-core" }
+ramble-history = { path = "../ramble-history" }
+ramble-model = { path = "../ramble-model" }
 ramble-text = { path = "../ramble-text" }
+thiserror = "2"
 uniffi = { version = "0.32", features = ["cli"] }
 
 [lints]

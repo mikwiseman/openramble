@@ -3599,7 +3599,10 @@ name = "ramble-ffi"
 version = "0.1.0"
 dependencies = [
  "ramble-core",
+ "ramble-history",
+ "ramble-model",
  "ramble-text",
+ "thiserror 2.0.20",
  "uniffi",
 ]
 
