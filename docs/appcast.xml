@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.18.0</title>
-      <pubDate>Wed, 19 Aug 2026 19:35:33 +0300</pubDate>
-      <sparkle:version>38</sparkle:version>
-      <sparkle:shortVersionString>0.18.0</sparkle:shortVersionString>
+      <title>0.18.1</title>
+      <pubDate>Wed, 19 Aug 2026 20:16:05 +0300</pubDate>
+      <sparkle:version>39</sparkle:version>
+      <sparkle:shortVersionString>0.18.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.18.0&lt;/h2&gt;&lt;p&gt;Keep the dictations you want to keep.&lt;/p&gt;&lt;p&gt;## A star that means something&lt;/p&gt;&lt;p&gt;Every dictation in History now has a star. A starred one stays: it does not&lt;/p&gt;&lt;p&gt;count against your &amp;quot;keep last N&amp;quot; limit, and it is not deleted when newer&lt;/p&gt;&lt;p&gt;dictations push past it. Its audio stays with it.&lt;/p&gt;&lt;p&gt;A promise that a later dictation can break is not a promise, which is why the&lt;/p&gt;&lt;p&gt;limit counts only the unstarred ones rather than starring merely delaying the&lt;/p&gt;&lt;p&gt;inevitable.&lt;/p&gt;&lt;p&gt;## Your recordings, one click away&lt;/p&gt;&lt;p&gt;History has a button that opens the folder holding the audio. It opens with a&lt;/p&gt;&lt;p&gt;recording selected rather than dumping you in a directory to work out which&lt;/p&gt;&lt;p&gt;file is yours.&lt;/p&gt;&lt;p&gt;## Histories from older versions&lt;/p&gt;&lt;p&gt;They load unchanged, and nothing in them is starred until you say so.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.18.0/OpenRamble-0.18.0.dmg" length="5799713" type="application/octet-stream" sparkle:edSignature="h/b6IEt78QqtHzv1HXgExOWlNwaOdTWEwYK7FpAhllhC9eRZT926xLwJooAIHtUGyQ/yU+w96KXrSaEfhiKxBw==" />
+      <description>&lt;h2&gt;OpenRamble 0.18.1&lt;/h2&gt;&lt;p&gt;The settings sidebar stops sliding under the window buttons.&lt;/p&gt;&lt;p&gt;Its list could scroll, and when it did the rows went up behind the red, yellow&lt;/p&gt;&lt;p&gt;and green buttons — &amp;quot;Dictionary&amp;quot; rendered directly underneath them. The last&lt;/p&gt;&lt;p&gt;release tried to fix this by giving the title bar a material to hide behind.&lt;/p&gt;&lt;p&gt;That was the wrong fix: it made the collision harder to see rather than&lt;/p&gt;&lt;p&gt;stopping it, and the rows kept moving.&lt;/p&gt;&lt;p&gt;There are five panes and they always fit, so the list has nothing to scroll.&lt;/p&gt;&lt;p&gt;It no longer can, which is a thing that cannot go wrong rather than a thing&lt;/p&gt;&lt;p&gt;that looks right.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.18.1/OpenRamble-0.18.1.dmg" length="5799611" type="application/octet-stream" sparkle:edSignature="ntow5M1bc5sNgaIqKg0RccCpfunZSzDyhaESXyA+TmD/C29dzkCm/+uBov2o4XGwHklAbH654WzVuEckpkKHCg==" />
     </item>
   </channel>
 </rss>
