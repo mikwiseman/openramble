@@ -85,6 +85,58 @@ pub fn session_notices() -> Vec<String> {
     }
 }
 
+/// A finished dictation, as the window shows it.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryRow {
+    pub id: String,
+    pub text: String,
+    /// Seconds since the Unix epoch, which is what a browser understands.
+    /// Stored as Foundation's own reference date; converted only here.
+    pub at: f64,
+    pub has_audio: bool,
+}
+
+#[tauri::command]
+pub fn dictation_history(dictation: State<'_, Arc<Dictation>>) -> Vec<HistoryRow> {
+    dictation
+        .history()
+        .load()
+        .into_iter()
+        .map(|entry| HistoryRow {
+            at: entry
+                .date
+                .to_system_time()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|since| since.as_secs_f64())
+                .unwrap_or(0.0),
+            has_audio: dictation.history().audio_path(&entry).is_some(),
+            id: entry.id,
+            text: entry.text,
+        })
+        .collect()
+}
+
+#[tauri::command]
+pub fn delete_history_entry(
+    dictation: State<'_, Arc<Dictation>>,
+    id: String,
+) -> Result<(), String> {
+    dictation
+        .history()
+        .delete(&id)
+        .map(|_| ())
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn clear_history(dictation: State<'_, Arc<Dictation>>) -> Result<(), String> {
+    dictation
+        .history()
+        .delete_all()
+        .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 pub fn dictation_hotkey() -> String {
     Hotkey::default().title().to_string()

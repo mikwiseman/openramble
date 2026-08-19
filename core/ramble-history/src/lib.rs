@@ -10,7 +10,7 @@
 //! differently from its decoder produces a history that reads back empty —
 //! silently, with no error. That has already happened once in this codebase.
 
-use ramble_model::ReferenceDate;
+pub use ramble_model::ReferenceDate;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 

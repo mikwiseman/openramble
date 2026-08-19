@@ -9,13 +9,21 @@ use crate::adapters::inject;
 use crate::session::{outcome_for_recording, Outcome};
 use ramble_core::session::DictationState;
 use ramble_engine::Engine;
+use ramble_history::HistoryStore;
 use ramble_model::{Manifest, ModelState, ModelStore};
 use ramble_text::pipeline::TextPipeline;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 
 const SHIPPING_MANIFEST: &str =
     include_str!("../../../../Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json");
+
+/// The application's own directory for things it keeps.
+fn support_root() -> Option<PathBuf> {
+    let models = models_root()?;
+    // Models live inside it, so its parent is the root itself.
+    models.parent().map(Path::to_path_buf)
+}
 
 /// Where installed models live on this platform.
 ///
@@ -90,6 +98,7 @@ pub struct Dictation {
     engine: Mutex<Option<Engine>>,
     pipeline: Mutex<TextPipeline>,
     store: ModelStore,
+    history: HistoryStore,
 }
 
 impl Dictation {
@@ -110,6 +119,7 @@ impl Dictation {
                 ramble_text::starter::developer(),
             )),
             store,
+            history: HistoryStore::new(support_root()?.join("History")),
         })
     }
 
@@ -133,6 +143,10 @@ impl Dictation {
 
     pub fn store(&self) -> &ModelStore {
         &self.store
+    }
+
+    pub fn history(&self) -> &HistoryStore {
+        &self.history
     }
 
     /// How much a person is being asked to download, so the number can be shown
@@ -226,6 +240,11 @@ impl Dictation {
             return finish(Outcome::DroppedSilently);
         }
 
+        // Recorded before insertion, not after: if putting the text into the
+        // other application fails, the words are the one thing that must not be
+        // lost, and history is where a person goes to find them.
+        self.remember(&output.text, &samples);
+
         *self.state() = DictationState::Inserting;
         if let Err(error) = inject::insert(&output.text) {
             return finish(Outcome::Failed(error.to_string()));
@@ -245,6 +264,36 @@ impl Dictation {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
         *self.state() = DictationState::Idle;
+    }
+
+    /// Keep the take, with the audio that produced it.
+    ///
+    /// Failures here are swallowed on purpose. History is a convenience; losing
+    /// it must never cost someone the dictation they just made, and an error
+    /// dialog about a bookkeeping file at the moment their words are about to
+    /// appear would be worse than the missing row.
+    fn remember(&self, text: &str, samples: &[f32]) {
+        let limit = ramble_history::DEFAULT_LIMIT;
+        let id = format!(
+            "{:x}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|since| since.as_nanos())
+                .unwrap_or(0)
+        );
+
+        let audio = std::env::temp_dir().join(format!("openramble-{id}.wav"));
+        let recorded = ramble_audio::write_wav(&audio, samples, ramble_audio::ENGINE_SAMPLE_RATE);
+        let source = recorded.is_ok().then_some(audio.as_path());
+
+        let _ = self.history.record(
+            text,
+            source,
+            limit,
+            ramble_history::ReferenceDate::now(),
+            id,
+        );
+        let _ = std::fs::remove_file(&audio);
     }
 
     fn transcribe(&self, samples: &[f32]) -> Result<String, String> {

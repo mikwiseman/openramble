@@ -141,6 +141,9 @@ pub fn run() {
             commands::model_report,
             commands::dictation_hotkey,
             commands::session_notices,
+            commands::dictation_history,
+            commands::delete_history_entry,
+            commands::clear_history,
             commands::install_model,
             commands::cancel_install,
         ])

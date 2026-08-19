@@ -3078,6 +3078,7 @@ dependencies = [
  "ramble-audio",
  "ramble-core",
  "ramble-engine",
+ "ramble-history",
  "ramble-model",
  "ramble-text",
  "rdev",

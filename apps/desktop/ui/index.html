@@ -35,6 +35,16 @@
       [hidden] { display: none !important; }
       .limits { margin: 0.4rem 0 0; padding-left: 1.1rem; }
       .limits li { color: var(--ink); margin: 0.3rem 0; max-width: 34rem; }
+      .history { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+      .history li {
+        border-top: 1px solid var(--line); padding: 0.7rem 0;
+        display: flex; gap: 0.75rem; align-items: baseline;
+      }
+      .history li:first-child { border-top: none; }
+      .history .when { color: var(--quiet); font-size: 0.85rem; white-space: nowrap; }
+      .history .said { flex: 1; overflow-wrap: anywhere; }
+      .history button { padding: 0.2rem 0.55rem; font-size: 0.85rem; }
+      .muted-note { color: var(--quiet); font-size: 0.85rem; }
       button {
         font: inherit; padding: 0.45rem 1rem; border-radius: 7px;
         border: 1px solid var(--line); background: transparent; color: var(--ink);
@@ -76,6 +86,16 @@
       <div class="row" id="progress-row" hidden>
         <progress id="progress" max="100" value="0"></progress>
         <span id="progress-text"></span>
+      </div>
+    </section>
+
+    <section>
+      <h2>Recent dictations</h2>
+      <p id="history-empty">Finished dictations appear here.</p>
+      <ul id="history" class="history"></ul>
+      <div class="row" id="history-actions" hidden>
+        <button id="clear-history">Delete all</button>
+        <span class="muted-note">Kept on this machine only.</span>
       </div>
     </section>
 
@@ -137,6 +157,45 @@
 
       // Only shown when there is something to say. A section that appears when
       // nothing is wrong stops being read.
+      async function refreshHistory() {
+        const rows = await invoke("dictation_history");
+        el("history-empty").hidden = rows.length > 0;
+        el("history-actions").hidden = rows.length === 0;
+        el("history").innerHTML = "";
+        for (const row of rows) {
+          const item = document.createElement("li");
+
+          const when = document.createElement("span");
+          when.className = "when";
+          when.textContent = new Date(row.at * 1000).toLocaleString();
+
+          const said = document.createElement("span");
+          said.className = "said";
+          // textContent, never innerHTML: this is dictated text, and it must
+          // never be interpreted as markup.
+          said.textContent = row.text;
+
+          const copy = document.createElement("button");
+          copy.textContent = "Copy";
+          copy.addEventListener("click", () => navigator.clipboard.writeText(row.text));
+
+          const remove = document.createElement("button");
+          remove.textContent = "Delete";
+          remove.addEventListener("click", async () => {
+            await invoke("delete_history_entry", { id: row.id });
+            refreshHistory();
+          });
+
+          item.append(when, said, copy, remove);
+          el("history").appendChild(item);
+        }
+      }
+
+      el("clear-history").addEventListener("click", async () => {
+        await invoke("clear_history");
+        refreshHistory();
+      });
+
       invoke("session_notices").then((notices) => {
         if (!notices.length) return;
         el("limits").innerHTML = "";
@@ -148,6 +207,7 @@
         el("limits-section").hidden = false;
       });
       refresh();
+      refreshHistory();
     </script>
   </body>
 </html>

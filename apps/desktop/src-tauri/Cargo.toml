@@ -19,6 +19,7 @@ tauri-build = { version = "2", features = [] }
 ramble-audio = { path = "../../../core/ramble-audio" }
 ramble-core = { path = "../../../core/ramble-core" }
 ramble-engine = { path = "../../../core/ramble-engine" }
+ramble-history = { path = "../../../core/ramble-history" }
 ramble-model = { path = "../../../core/ramble-model" }
 ramble-text = { path = "../../../core/ramble-text" }
 
