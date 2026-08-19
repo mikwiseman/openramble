@@ -60,6 +60,12 @@ struct SettingsView: View {
             // through raw and collided with the traffic lights: the
             // "Dictionary" row rendered straight underneath them.
             .toolbarBackground(.visible, for: .windowToolbar)
+            // Five fixed panes always fit, so there is nothing to scroll — and
+            // a list that cannot scroll cannot slide its rows up under the
+            // traffic lights, which is what kept happening. Giving the title
+            // bar a material was not enough on its own: the rows still moved,
+            // they were merely harder to see doing it.
+            .scrollDisabled(true)
         } detail: {
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
