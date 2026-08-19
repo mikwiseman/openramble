@@ -22,27 +22,46 @@ const SHIPPING_MANIFEST: &str =
 /// The macOS path matches what the Swift app already uses, so a Mac running both
 /// shares one 739 MB download rather than keeping two.
 pub fn models_root() -> Option<PathBuf> {
-    if let Ok(root) = std::env::var("OPENRAMBLE_SUPPORT_ROOT") {
-        return Some(PathBuf::from(root).join("Models"));
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .ok()?;
+    Some(models_root_from(
+        std::env::var("OPENRAMBLE_SUPPORT_ROOT").ok(),
+        std::env::var("LOCALAPPDATA").ok(),
+        std::env::var("XDG_DATA_HOME").ok(),
+        PathBuf::from(home),
+    ))
+}
+
+/// The same decision, with the environment handed in.
+///
+/// Split out so it can be tested without setting process-wide variables. Rust
+/// tests share one environment across parallel threads, so a test that calls
+/// `set_var` changes what every other test reads. That is not hypothetical: the
+/// version of this that set the variable passed here and failed on Linux, purely
+/// on which thread ran first.
+pub fn models_root_from(
+    support_root: Option<String>,
+    local_app_data: Option<String>,
+    xdg_data_home: Option<String>,
+    home: PathBuf,
+) -> PathBuf {
+    if let Some(root) = support_root {
+        return PathBuf::from(root).join("Models");
     }
-    let home = PathBuf::from(
-        std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .ok()?,
-    );
-    Some(if cfg!(target_os = "macos") {
+    if cfg!(target_os = "macos") {
         home.join("Library/Application Support/OpenRamble/Models")
     } else if cfg!(windows) {
-        // %APPDATA% proper, so the model is not in a roaming profile that a
-        // corporate sync would try to copy 739 MB of.
-        std::env::var("LOCALAPPDATA")
+        // Local rather than roaming, so a corporate profile sync does not try to
+        // copy 739 MB around.
+        local_app_data
             .map(|local| PathBuf::from(local).join("OpenRamble/Models"))
-            .unwrap_or_else(|_| home.join("AppData/Local/OpenRamble/Models"))
+            .unwrap_or_else(|| home.join("AppData/Local/OpenRamble/Models"))
     } else {
-        std::env::var("XDG_DATA_HOME")
+        xdg_data_home
             .map(|data| PathBuf::from(data).join("openramble/models"))
-            .unwrap_or_else(|_| home.join(".local/share/openramble/models"))
-    })
+            .unwrap_or_else(|| home.join(".local/share/openramble/models"))
+    }
 }
 
 /// How much audio a take actually contains.
@@ -311,19 +330,33 @@ mod tests {
         );
     }
 
+    /// The same override the Mac app uses, so a debug launch cannot touch a
+    /// person's real install.
+    ///
+    /// Handed in rather than set on the process: the version of this test that
+    /// used `set_var` broke a different test depending on which thread ran
+    /// first, and did it only on Linux.
     #[test]
     fn an_explicit_support_root_is_honoured_for_isolated_runs() {
-        // The same override the Mac app uses, so a debug launch cannot touch a
-        // person's real install.
-        let previous = std::env::var("OPENRAMBLE_SUPPORT_ROOT").ok();
-        std::env::set_var("OPENRAMBLE_SUPPORT_ROOT", "/tmp/isolated-run");
         assert_eq!(
-            models_root().unwrap(),
+            models_root_from(
+                Some("/tmp/isolated-run".into()),
+                None,
+                None,
+                PathBuf::from("/home/someone")
+            ),
             PathBuf::from("/tmp/isolated-run/Models")
         );
-        match previous {
-            Some(value) => std::env::set_var("OPENRAMBLE_SUPPORT_ROOT", value),
-            None => std::env::remove_var("OPENRAMBLE_SUPPORT_ROOT"),
-        }
+    }
+
+    #[test]
+    fn without_an_override_the_location_is_under_the_home_directory() {
+        let root = models_root_from(None, None, None, PathBuf::from("/home/someone"));
+        assert!(root.starts_with("/home/someone"), "{}", root.display());
+        assert!(
+            root.to_string_lossy().to_lowercase().contains("openramble"),
+            "{}",
+            root.display()
+        );
     }
 }
