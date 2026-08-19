@@ -98,8 +98,8 @@ struct MenuContent: View {
                         // copies. Written into the title rather than set as a
                         // real shortcut: this is a held modifier, and
                         // `keyboardShortcut` cannot express one.
-                        if index == 0, let key = state.copyHotkey {
-                            Text("\(dictation.menuTitle)   \(key.title)")
+                        if index == 0, let shortcut = state.copyShortcut {
+                            Text("\(dictation.menuTitle)   \(shortcut.displayString)")
                         } else {
                             Text(dictation.menuTitle)
                         }

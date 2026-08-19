@@ -59,7 +59,7 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .navigationTitle(pane.title)
         }
-        .frame(width: 720, height: 540)
+        .frame(minWidth: 720, idealWidth: 720, minHeight: 540, idealHeight: 540)
     }
 
     @ViewBuilder
@@ -107,16 +107,10 @@ private struct GeneralSettings: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Key warning. \(warning)")
                 }
-                Picker("Copy last dictation", selection: $state.copyHotkey) {
-                    Text("Off").tag(DictationHotkey?.none)
-                    // The dictation key is missing from this list on purpose:
-                    // one key cannot mean two things, and the picker is where
-                    // that is easiest to say — by not offering it.
-                    ForEach(DictationHotkey.allCases.filter { $0 != state.hotkey }, id: \.self) { key in
-                        Text(key.title).tag(DictationHotkey?.some(key))
-                    }
+                LabeledContent("Copy last dictation") {
+                    ShortcutRecorder(shortcut: $state.copyShortcut)
                 }
-                .accessibilityHint("Press this key to put the last dictation back on the clipboard")
+                .accessibilityHint("Press this shortcut to put the last dictation back on the clipboard")
             } header: {
                 Text("Shortcut")
             } footer: {

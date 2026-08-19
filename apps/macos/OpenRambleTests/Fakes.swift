@@ -453,7 +453,7 @@ final class AppHarness {
     let microphonePermissionFlow = FakeMicrophonePermissionFlow()
     let accessibilityManager = FakeAccessibilityManager()
     let monitor = FakeHotkeyMonitor()
-    let copyMonitor = FakeHotkeyMonitor()
+    let copyMonitor = FakeShortcutMonitor()
     let overlay = FakeOverlay()
     let capture = FakeCapture()
     let inserter = FakeInserter()
@@ -559,7 +559,7 @@ final class AppHarness {
                 permissions: permissions,
                 accessibilityManager: accessibilityManager,
                 hotkeyMonitor: monitor,
-                copyHotkeyMonitor: copyMonitor,
+                copyShortcutMonitor: copyMonitor,
                 inserter: inserter,
                 targetApplicationSnapshot: { [inserter] in
                     inserter.frontmostApplication()
@@ -878,4 +878,21 @@ final class SilentSounds: Sounding, @unchecked Sendable {
     func playAttention() async {
         lock.withLock { played += 1 }
     }
+}
+
+
+/// Stands in for the shortcut watcher.
+@MainActor
+final class FakeShortcutMonitor: ShortcutMonitoring {
+    var onPress: (() -> Void)?
+    private(set) var isRunning = false
+    private(set) var shortcut: KeyCombination?
+
+    func setShortcut(_ shortcut: KeyCombination?) {
+        self.shortcut = shortcut
+        if shortcut == nil { isRunning = false }
+    }
+
+    func start() { if shortcut != nil { isRunning = true } }
+    func stop() { isRunning = false }
 }
