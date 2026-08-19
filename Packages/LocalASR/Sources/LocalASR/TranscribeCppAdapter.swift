@@ -25,6 +25,11 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
     /// nothing resamples on the way in.
     public static let requiredSampleRate = 16_000
 
+    /// The shortest clip the mel front-end will accept without producing NaNs:
+    /// 1.25 seconds, the same constant as `MINIMUM_ENGINE_SAMPLES` in
+    /// `core/ramble-audio/src/prepare.rs`. The two must move together.
+    public static let minimumEngineSamples = requiredSampleRate * 5 / 4
+
     /// The loaded runtime, or nothing.
     ///
     /// Both pointers live in one handle so that releasing them is a single
@@ -190,8 +195,23 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
             throw ASREngineError.unsupportedAudioFormat("empty buffer")
         }
 
-        let started = ContinuousClock.now
+        // Pad a short clip with silence, exactly as `ramble-audio` does on the
+        // other platforms. Not a quality judgement: the mel front-end produces
+        // NaNs when given fewer than two frames, and the Rust port has padded
+        // for that reason since it was written. This side never did, so the
+        // same recording could be recognised on Windows and produce nothing
+        // here — a divergence the two implementations are required to close
+        // together.
+        //
+        // The silence goes on the end, so nothing that was said is displaced.
+        // The reported duration stays the real one: padding is a demand of the
+        // front-end, not something the person spoke.
         let audioDuration = Double(samples.count) / Double(Self.requiredSampleRate)
+        let samples = samples.count >= Self.minimumEngineSamples
+            ? samples
+            : samples + [Float](repeating: 0, count: Self.minimumEngineSamples - samples.count)
+
+        let started = ContinuousClock.now
 
         var params = transcribe_run_params()
         transcribe_run_params_init(&params)

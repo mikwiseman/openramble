@@ -54,6 +54,12 @@ struct SettingsView: View {
             // The sidebar's own translucency, which is the whole point of
             // using one here.
             .scrollContentBackground(.hidden)
+            // Sidebar content scrolls under the title bar, which is ordinary
+            // on macOS — but only when the title bar has a material to hide it
+            // behind. This window's was transparent, so a scrolled list showed
+            // through raw and collided with the traffic lights: the
+            // "Dictionary" row rendered straight underneath them.
+            .toolbarBackground(.visible, for: .windowToolbar)
         } detail: {
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -382,17 +388,6 @@ private struct RecognitionSettings: View {
                 Text("Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings.")
             }
 
-            Section {
-                // The only place where the application reads the content of someone else's
-                // windows. Off by default, and the footer says exactly what is
-                // read - otherwise the choice is not conscious.
-                Toggle("Learn from your edits", isOn: $state.learnFromEdits)
-                    .accessibilityHint("Reads back the field it pasted into, to learn words you fix by hand")
-            } header: {
-                Text("Personalization")
-            } footer: {
-                Text("Off by default. After a paste, OpenRamble can re-read only that field at 8 and 25 seconds to learn a correction. The content stays on this Mac.")
-            }
         }
         .formStyle(.grouped)
         .task { await state.refreshModelState() }
@@ -521,6 +516,18 @@ private struct DictionarySettings: View {
                 .buttonStyle(.borderless)
             } footer: {
                 Text("Common technical terms are handled automatically. Add personal names or phrases the model hears differently.")
+            }
+
+            Section {
+                // The only place where the application reads the content of someone else's
+                // windows. Off by default, and the footer says exactly what is
+                // read - otherwise the choice is not conscious.
+                Toggle("Learn from your edits", isOn: $state.learnFromEdits)
+                    .accessibilityHint("Reads back the field it pasted into, to learn words you fix by hand")
+            } header: {
+                Text("Personalization")
+            } footer: {
+                Text("Off by default. After a paste, OpenRamble can re-read only that field at 8 and 25 seconds to learn a correction. The content stays on this Mac.")
             }
 
             Section("Add replacement") {

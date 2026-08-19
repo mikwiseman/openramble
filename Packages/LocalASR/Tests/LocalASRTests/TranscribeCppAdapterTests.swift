@@ -119,3 +119,19 @@ final class TranscribeCppAdapterTests: XCTestCase {
         XCTAssertFalse(loaded)
     }
 }
+
+/// The two implementations must agree on what a too-short clip is.
+final class ShortClipPaddingTests: XCTestCase {
+    /// 1.25 seconds, and it is the same number on both sides.
+    ///
+    /// `core/ramble-audio/src/prepare.rs` has padded since it was written,
+    /// because the mel front-end produces NaNs on fewer than two frames. The
+    /// macOS side did not, so the same brief recording could be recognised on
+    /// Windows and produce nothing here. CLAUDE.md requires behaviour to change
+    /// in both places at once; this pins the constant so it cannot drift in one.
+    func testTheMinimumMatchesTheRustPort() {
+        // MINIMUM_ENGINE_SAMPLES = ENGINE_SAMPLE_RATE * 5 / 4
+        XCTAssertEqual(TranscribeCppAdapter.minimumEngineSamples, 16_000 * 5 / 4)
+        XCTAssertEqual(TranscribeCppAdapter.minimumEngineSamples, 20_000)
+    }
+}
