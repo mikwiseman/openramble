@@ -109,10 +109,6 @@ impl HotkeyTracker {
         self.machine.rebind()
     }
 
-    pub fn set_hands_free_active(&mut self, active: bool) {
-        self.machine.is_hands_free_active = active;
-    }
-
     pub fn key_down(&mut self, key: Key, at: Duration) -> Action {
         self.pressed.insert(key);
         if !is_modifier(key) {

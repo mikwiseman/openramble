@@ -7,7 +7,7 @@
 use crate::adapters::capture::Capture;
 use crate::adapters::inject;
 use crate::session::Outcome;
-use ramble_core::session::{DictationState, Effect, Event, SessionMachine};
+use ramble_core::session::{Effect, Event, SessionMachine};
 use ramble_engine::Engine;
 use ramble_history::HistoryStore;
 use ramble_model::{Manifest, ModelState, ModelStore};
@@ -144,10 +144,6 @@ impl Dictation {
         self.machine
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
-    }
-
-    pub fn current_state(&self) -> DictationState {
-        self.machine().state()
     }
 
     /// Feed the machine an event and carry out what it asks for.
