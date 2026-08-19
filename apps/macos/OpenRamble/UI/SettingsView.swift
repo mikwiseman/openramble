@@ -6,13 +6,22 @@ import UniformTypeIdentifiers
 
 /// Four tabs: what you press, what it hears, what it writes, and what the app is.
 ///
-/// Every tab is a grouped Form and every explanation is a Section footer —
-/// the native settings shape on modern macOS. No glass inside: settings are
-/// content, and Liquid Glass belongs to floating controls.
+/// The window itself carries the material, and the tabs are content on top of
+/// it. That split is the material's own rule — glass belongs to the surface
+/// floating above content, and stacking it is what makes an interface feel
+/// cluttered rather than deep.
 struct SettingsView: View {
     @ObservedObject var state: AppState
 
     var body: some View {
+        tabs
+            .glassWindowBackground()
+            // The forms draw their own opaque backing by default, which would
+            // sit on the material like a sheet of paper and hide it entirely.
+            .scrollContentBackground(.hidden)
+    }
+
+    private var tabs: some View {
         TabView {
             GeneralSettings(state: state)
                 .tabItem { Label("General", systemImage: "gearshape") }
@@ -25,7 +34,7 @@ struct SettingsView: View {
             AboutView(updater: state.updater, revealSupportFolder: state.revealSupportFolder)
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 620, height: 500)
+        .frame(width: 640, height: 520)
     }
 }
 

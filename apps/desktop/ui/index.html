@@ -32,6 +32,20 @@
       :root {
         color-scheme: light dark;
 
+        /* Shared with apps/macos/OpenRamble/UI/GlassTokens.swift. The two
+           platforms render differently on purpose — Apple's material samples
+           the desktop in a way a stylesheet cannot — but the geometry and
+           rhythm are one decision, made once. */
+        --radius-surface: 18px;
+        --radius-control: 10px;
+        --radius-chip: 7px;
+        --space-tight: 6px;
+        --space-inline: 10px;
+        --space-stack: 16px;
+        --space-section: 24px;
+        --space-page: 28px;
+        --stroke-hairline: 0.5px;
+
         /* Label hierarchy, the system's own values. */
         --label: rgba(0, 0, 0, 0.85);
         --label-2: rgba(0, 0, 0, 0.5);
@@ -161,8 +175,8 @@
       button, input {
         font: inherit;
         color: var(--label);
-        border: 0.5px solid var(--hairline);
-        border-radius: 9px;
+        border: var(--stroke-hairline) solid var(--hairline);
+        border-radius: var(--radius-control);
         background: var(--fill);
         box-shadow: inset 0 0.5px 0 var(--sheen);
         transition: background 0.15s ease, transform 0.1s ease;
@@ -192,7 +206,7 @@
 
       kbd {
         font: inherit; font-weight: 580; font-size: 0.9em;
-        padding: 0.1rem 0.42rem; border-radius: 6px;
+        padding: 0.1rem 0.42rem; border-radius: var(--radius-chip);
         background: var(--fill-strong);
         box-shadow: inset 0 0.5px 0 var(--sheen);
       }
@@ -216,12 +230,12 @@
         text-transform: uppercase; letter-spacing: 0.05em;
         color: var(--label-3); padding-bottom: 0.4rem;
       }
-      .terms td { border-top: 0.5px solid var(--hairline); padding: 0.45rem 0.5rem 0.45rem 0; }
+      .terms td { border-top: var(--stroke-hairline) solid var(--hairline); padding: 0.45rem 0.5rem 0.45rem 0; }
       .terms td:last-child { text-align: right; }
 
       .history { list-style: none; margin: 0.4rem 0 0; padding: 0; }
       .history li {
-        border-top: 0.5px solid var(--hairline); padding: 0.7rem 0;
+        border-top: var(--stroke-hairline) solid var(--hairline); padding: 0.7rem 0;
         display: grid;
         grid-template-columns: auto 1fr auto;
         gap: 0.85rem; align-items: baseline;
