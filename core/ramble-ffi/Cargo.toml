@@ -20,6 +20,7 @@ path = "src/bin/uniffi-bindgen.rs"
 
 [dependencies]
 ramble-core = { path = "../ramble-core" }
+ramble-engine = { path = "../ramble-engine" }
 ramble-history = { path = "../ramble-history" }
 ramble-model = { path = "../ramble-model" }
 ramble-text = { path = "../ramble-text" }

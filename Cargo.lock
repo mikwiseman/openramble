@@ -3599,6 +3599,7 @@ name = "ramble-ffi"
 version = "0.1.0"
 dependencies = [
  "ramble-core",
+ "ramble-engine",
  "ramble-history",
  "ramble-model",
  "ramble-text",

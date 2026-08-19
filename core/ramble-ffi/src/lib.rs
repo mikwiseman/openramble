@@ -270,6 +270,69 @@ pub fn inspect_model(manifest_json: String, root: String) -> Result<FfiModelRepo
     })
 }
 
+// MARK: - The recogniser
+
+/// A loaded recogniser.
+///
+/// Held by Swift as an object with a lifetime, because the model is 976 MB and
+/// loading it per take is what made the Mac unpredictable in the first place.
+#[derive(uniffi::Object)]
+pub struct FfiEngine {
+    inner: std::sync::Mutex<Option<ramble_engine::Engine>>,
+}
+
+#[uniffi::export]
+impl FfiEngine {
+    /// Load the model in a directory.
+    #[uniffi::constructor]
+    pub fn load(model_directory: String) -> Result<std::sync::Arc<Self>, FfiError> {
+        let engine = ramble_engine::Engine::load(std::path::Path::new(&model_directory))
+            .map_err(|error| FfiError::Engine(error.to_string()))?;
+        Ok(std::sync::Arc::new(FfiEngine {
+            inner: std::sync::Mutex::new(Some(engine)),
+        }))
+    }
+
+    /// Recognise 16 kHz mono audio.
+    pub fn transcribe(&self, samples: Vec<f32>) -> Result<String, FfiError> {
+        let guard = self
+            .inner
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let engine = guard
+            .as_ref()
+            .ok_or_else(|| FfiError::Engine("the recogniser has been shut down".into()))?;
+        engine
+            .transcribe(&samples)
+            .map_err(|error| FfiError::Engine(error.to_string()))
+    }
+
+    /// What it is running on, when that is worth saying.
+    pub fn fallback_notice(&self) -> Option<String> {
+        self.inner
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .as_ref()
+            .and_then(|engine| engine.report().notice())
+    }
+
+    /// Drop the model before the process exits.
+    ///
+    /// Not tidiness: ggml's static destructors abort the process when a model is
+    /// still alive at exit, and the person gets a crash report after a dictation
+    /// that worked. Swift must call this from its termination handler.
+    pub fn shutdown(&self) {
+        if let Some(engine) = self
+            .inner
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .take()
+        {
+            engine.shutdown();
+        }
+    }
+}
+
 // MARK: - History
 
 /// One remembered dictation.
@@ -302,6 +365,8 @@ pub fn load_history(directory: String) -> Vec<FfiHistoryEntry> {
 pub enum FfiError {
     #[error("{0}")]
     Manifest(String),
+    #[error("{0}")]
+    Engine(String),
 }
 
 // MARK: - Text

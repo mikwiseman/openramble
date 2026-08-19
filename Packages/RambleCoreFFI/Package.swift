@@ -19,7 +19,21 @@ let package = Package(
     ],
     targets: [
         .binaryTarget(name: "RambleCoreFFI", path: "RambleCoreFFI.xcframework"),
-        .target(name: "RambleCore", dependencies: ["RambleCoreFFI"]),
+        .target(
+            name: "RambleCore",
+            dependencies: ["RambleCoreFFI"],
+            // The core now contains the inference runtime, which is C++ built on
+            // Metal. A Rust static library carries no link instructions of its
+            // own, so the dependencies it inherited have to be named here or the
+            // symbols simply go missing at link time.
+            linkerSettings: [
+                .linkedLibrary("c++"),
+                .linkedFramework("Metal"),
+                .linkedFramework("MetalKit"),
+                .linkedFramework("Foundation"),
+                .linkedFramework("Accelerate"),
+            ]
+        ),
         .testTarget(name: "RambleCoreTests", dependencies: ["RambleCore"]),
     ]
 )

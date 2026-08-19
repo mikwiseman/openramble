@@ -154,3 +154,83 @@ final class StoreBoundaryTests: XCTestCase {
         XCTAssertLessThan(when, Date().addingTimeInterval(60))
     }
 }
+
+/// The recogniser itself, through the boundary.
+///
+/// This is the step where the Mac would stop using its own Swift adapter, so the
+/// claim has to be that audio goes in and words come out — not that the type
+/// compiles.
+final class EngineBoundaryTests: XCTestCase {
+    func testSpokenWordsComeBackThroughTheBoundary() throws {
+        let support = URL(fileURLWithPath: NSHomeDirectory())
+            .appending(path: "Library/Application Support/OpenRamble/Models", directoryHint: .isDirectory)
+        guard FileManager.default.fileExists(atPath: support.path) else {
+            throw XCTSkip("no models directory on this machine")
+        }
+
+        let manifestPath = "Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json"
+        var manifest: String?
+        for base in [FileManager.default.currentDirectoryPath, "../..", "../../.."] {
+            let url = URL(fileURLWithPath: base).appending(path: manifestPath)
+            if let text = try? String(contentsOf: url, encoding: .utf8) { manifest = text; break }
+        }
+        guard let manifest else { throw XCTSkip("the shipping manifest is not reachable") }
+
+        let report = try inspectModel(manifestJson: manifest, root: support.path)
+        guard report.state == .ready else { throw XCTSkip("no complete install: \(report.state)") }
+
+        // Speak a known sentence the same way the macOS smoke test does.
+        let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appending(path: "ramble-boundary-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let spoken = "Checking work without the Internet"
+        let aiff = directory.appending(path: "probe.aiff")
+        let wav = directory.appending(path: "probe.wav")
+        guard run("/usr/bin/say", ["-v", "Samantha", "-o", aiff.path, spoken]),
+              run("/usr/bin/afconvert",
+                  ["-f", "WAVE", "-d", "LEI16@16000", "-c", "1", aiff.path, wav.path])
+        else {
+            throw XCTSkip("speech synthesis is unavailable here")
+        }
+
+        let samples = try monoSamples(at: wav)
+        let engine = try FfiEngine.load(modelDirectory: report.engineDirectory)
+        if let notice = engine.fallbackNotice() { print("backend notice: \(notice)") }
+
+        let heard = try engine.transcribe(samples: samples).lowercased()
+        // The model must be released before this process exits or ggml aborts.
+        engine.shutdown()
+
+        for word in ["checking", "work", "internet"] {
+            XCTAssertTrue(heard.contains(word), "expected \(word) in \(heard)")
+        }
+    }
+
+    private func run(_ tool: String, _ arguments: [String]) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: tool)
+        process.arguments = arguments
+        do { try process.run() } catch { return false }
+        process.waitUntilExit()
+        return process.terminationStatus == 0
+    }
+
+    private func monoSamples(at url: URL) throws -> [Float] {
+        let data = try Data(contentsOf: url)
+        // 16-bit PCM after a 44-byte canonical header.
+        let start = 44
+        var samples: [Float] = []
+        samples.reserveCapacity((data.count - start) / 2)
+        var index = start
+        while index + 1 < data.count {
+            let value = Int16(littleEndian: data.withUnsafeBytes {
+                $0.loadUnaligned(fromByteOffset: index, as: Int16.self)
+            })
+            samples.append(Float(value) / Float(Int16.max))
+            index += 2
+        }
+        return samples
+    }
+}
