@@ -35,6 +35,10 @@ struct OpenRambleApp: App {
                 state: state,
                 showOnboarding: { onboardingCompleted = false }
             )
+            // The chosen look has to be applied to AppKit, and the menu is the
+            // one piece of this app that exists from launch — every window
+            // here is opened later, or never.
+            .task { AppState.apply(state.appearance) }
         } label: {
             // The brand mark is permanent. A small dot over its corner carries
             // the temporary states: red while recording, blue while working on

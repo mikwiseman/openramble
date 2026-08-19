@@ -410,6 +410,37 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// End every dictation with a space.
+    ///
+    /// Off by default: most dictations land in the middle of writing, where a
+    /// stray space at the end is noise. On, it is for people who dictate in
+    /// runs — without it the next phrase arrives welded to the last word.
+    @Published public var appendsTrailingSpace: Bool {
+        didSet {
+            guard oldValue != appendsTrailingSpace else { return }
+            defaults.set(appendsTrailingSpace, forKey: Keys.trailingSpace)
+        }
+    }
+
+    /// Light, dark, or whatever the machine is doing.
+    @Published public var appearance: AppAppearance {
+        didSet {
+            guard oldValue != appearance else { return }
+            defaults.set(appearance.rawValue, forKey: Keys.appearance)
+            Self.apply(appearance)
+        }
+    }
+
+    /// Hand the choice to AppKit, which owns every window including the ones
+    /// SwiftUI has not made yet.
+    static func apply(_ appearance: AppAppearance) {
+        NSApp?.appearance = switch appearance {
+        case .system: nil
+        case .light: NSAppearance(named: .aqua)
+        case .dark: NSAppearance(named: .darkAqua)
+        }
+    }
+
     /// The shortcut that copies the last dictation, or nothing.
     ///
     /// Optional because most people will not want a second global shortcut
@@ -453,6 +484,8 @@ public final class AppState: ObservableObject {
         static let sounds = "soundsEnabled"
         static let copyToClipboard = "copyToClipboard"
         static let copyShortcut = "copyShortcut"
+        static let trailingSpace = "appendsTrailingSpace"
+        static let appearance = "appearance"
         static let overlayPlacement = "overlayPlacement"
         static let replacements = "replacements"
         /// macOS global setup: what pressing 🌐 does.
@@ -647,16 +680,22 @@ public final class AppState: ObservableObject {
         cleanupLegacyAgentStaging = environment.cleanupLegacyAgentStaging
 
         hotkey = DictationHotkey(rawValue: environment.defaults.string(forKey: Keys.hotkey) ?? "")
-            ?? .rightCommand
-        soundsEnabled = environment.defaults.object(forKey: Keys.sounds) as? Bool ?? true
+            ?? SettingsDefaults.hotkey
+        soundsEnabled = environment.defaults.object(forKey: Keys.sounds) as? Bool ?? SettingsDefaults.soundsEnabled
         // Off unless asked for: dictated text on the clipboard is dictated text
         // handed to every clipboard manager on the machine.
-        copiesToClipboard = environment.defaults.object(forKey: Keys.copyToClipboard) as? Bool ?? false
+        copiesToClipboard = environment.defaults.object(forKey: Keys.copyToClipboard) as? Bool
+            ?? SettingsDefaults.copiesToClipboard
         copyShortcut = (environment.defaults.string(forKey: Keys.copyShortcut))
             .flatMap(KeyCombination.init(rawValue:))
+        appendsTrailingSpace = environment.defaults.object(forKey: Keys.trailingSpace) as? Bool
+            ?? SettingsDefaults.appendsTrailingSpace
+        appearance = AppAppearance(
+            rawValue: environment.defaults.string(forKey: Keys.appearance) ?? ""
+        ) ?? SettingsDefaults.appearance
         overlayPlacement = DictationOverlayPlacement(
             rawValue: environment.defaults.string(forKey: Keys.overlayPlacement) ?? ""
-        ) ?? .top
+        ) ?? SettingsDefaults.overlayPlacement
         let loaded = replacementsStore.load()
         replacements = loaded.replacements
         dictionaryProblem = loaded.problem
@@ -2554,8 +2593,11 @@ public final class AppState: ObservableObject {
         // remains the specification the conformance fixtures record, and
         // `SharedCorePipelineTests` compares the two on every case in that
         // corpus.
-        SharedCorePipeline(
-            replacements: StarterDictionary.missing(from: replacements) + replacements
+        TrailingSpacePipeline(
+            wrapped: SharedCorePipeline(
+                replacements: StarterDictionary.missing(from: replacements) + replacements
+            ),
+            appendsSpace: appendsTrailingSpace
         )
     }
 

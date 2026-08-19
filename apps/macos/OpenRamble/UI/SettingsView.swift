@@ -70,7 +70,11 @@ struct SettingsView: View {
         case .history: HistoryView(state: state)
         case .dictionary: DictionarySettings(state: state)
         case .about:
-            AboutView(updater: state.updater, revealSupportFolder: state.revealSupportFolder)
+            AboutView(
+                updater: state.updater,
+                revealSupportFolder: state.revealSupportFolder,
+                appearance: $state.appearance
+            )
         }
     }
 }
@@ -84,12 +88,20 @@ private struct GeneralSettings: View {
     var body: some View {
         Form {
             Section {
-                Picker("Dictation key", selection: $state.hotkey) {
-                    ForEach(DictationHotkey.allCases, id: \.self) { key in
-                        Text(key.title).tag(key)
+                SettingRow(
+                    title: "Dictation key",
+                    isChanged: state.hotkey != SettingsDefaults.hotkey,
+                    revert: { state.hotkey = SettingsDefaults.hotkey }
+                ) {
+                    Picker("", selection: $state.hotkey) {
+                        ForEach(DictationHotkey.allCases, id: \.self) { key in
+                            Text(key.title).tag(key)
+                        }
                     }
+                    .labelsHidden()
+                    .accessibilityLabel("Dictation key")
+                    .accessibilityHint("The key you hold down while dictating")
                 }
-                .accessibilityHint("The key you hold down while dictating")
 
                 if let warning = state.hotkeyWarning {
                     // Fn is the only key in the list that has its own
@@ -107,7 +119,11 @@ private struct GeneralSettings: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Key warning. \(warning)")
                 }
-                LabeledContent("Copy last dictation") {
+                SettingRow(
+                    title: "Copy last dictation",
+                    isChanged: state.copyShortcut != SettingsDefaults.copyShortcut,
+                    revert: { state.copyShortcut = SettingsDefaults.copyShortcut }
+                ) {
                     ShortcutRecorder(shortcut: $state.copyShortcut)
                 }
                 .accessibilityHint("Press this shortcut to put the last dictation back on the clipboard")
@@ -122,22 +138,70 @@ private struct GeneralSettings: View {
                 // nowhere: hotkey utility, not survived
                 // reboot, indistinguishable from a broken one - the key is just
                 // is silent, and there is no one to explain it to.
-                Toggle("Launch at login", isOn: $state.launchAtLogin)
-                    .accessibilityHint("Starts OpenRamble automatically when you log in")
-                Toggle("Also copy dictations to the clipboard", isOn: $state.copiesToClipboard)
-                    .accessibilityHint(
-                        "Leaves each finished dictation on the clipboard of this Mac. Off by default — the clipboard is shared with everything else running here."
-                    )
-                Toggle("Play a sound when something needs you", isOn: $state.soundsEnabled)
-                    .accessibilityHint(
-                        "A quiet tone when the text didn't reach the field or nothing was recognized. A dictation that works stays silent."
-                    )
-                Picker("Dictation panel", selection: $state.overlayPlacement) {
-                    ForEach(DictationOverlayPlacement.allCases) { placement in
-                        Text(placement.title).tag(placement)
-                    }
+                SettingRow(
+                    title: "Launch at login",
+                    isChanged: state.launchAtLogin != SettingsDefaults.launchAtLogin,
+                    revert: { state.launchAtLogin = SettingsDefaults.launchAtLogin }
+                ) {
+                    Toggle("", isOn: $state.launchAtLogin)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .accessibilityLabel("Launch at login")
+                        .accessibilityHint("Starts OpenRamble automatically when you log in")
                 }
-                .accessibilityHint("Places dictation feedback at the top or bottom of the active screen")
+                SettingRow(
+                    title: "Also copy dictations to the clipboard",
+                    isChanged: state.copiesToClipboard != SettingsDefaults.copiesToClipboard,
+                    revert: { state.copiesToClipboard = SettingsDefaults.copiesToClipboard }
+                ) {
+                    Toggle("", isOn: $state.copiesToClipboard)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .accessibilityLabel("Also copy dictations to the clipboard")
+                        .accessibilityHint(
+                            "Leaves each finished dictation on the clipboard of this Mac. Off by default — the clipboard is shared with everything else running here."
+                        )
+                }
+                SettingRow(
+                    title: "Add a space after each dictation",
+                    isChanged: state.appendsTrailingSpace != SettingsDefaults.appendsTrailingSpace,
+                    revert: { state.appendsTrailingSpace = SettingsDefaults.appendsTrailingSpace }
+                ) {
+                    Toggle("", isOn: $state.appendsTrailingSpace)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .accessibilityLabel("Add a space after each dictation")
+                        .accessibilityHint(
+                            "For dictating in runs, so the next phrase does not arrive welded to the last word."
+                        )
+                }
+                SettingRow(
+                    title: "Play a sound when something needs you",
+                    isChanged: state.soundsEnabled != SettingsDefaults.soundsEnabled,
+                    revert: { state.soundsEnabled = SettingsDefaults.soundsEnabled }
+                ) {
+                    Toggle("", isOn: $state.soundsEnabled)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .accessibilityLabel("Play a sound when something needs you")
+                        .accessibilityHint(
+                            "A quiet tone when the text didn't reach the field or nothing was recognized. A dictation that works stays silent."
+                        )
+                }
+                SettingRow(
+                    title: "Dictation panel",
+                    isChanged: state.overlayPlacement != SettingsDefaults.overlayPlacement,
+                    revert: { state.overlayPlacement = SettingsDefaults.overlayPlacement }
+                ) {
+                    Picker("", selection: $state.overlayPlacement) {
+                        ForEach(DictationOverlayPlacement.allCases) { placement in
+                            Text(placement.title).tag(placement)
+                        }
+                    }
+                    .labelsHidden()
+                    .accessibilityLabel("Dictation panel")
+                    .accessibilityHint("Places dictation feedback at the top or bottom of the active screen")
+                }
                 Picker("Unload model", selection: $state.modelUnloadTimeout) {
                     ForEach(IdleUnloadPolicy.allCases) { option in
                         Text(option.label).tag(option)
@@ -563,6 +627,19 @@ private struct AboutView: View {
     // Sparkle reports its changes itself; they would not have reached through AppState.
     @ObservedObject var updater: SparkleUpdater
     let revealSupportFolder: () -> Void
+    @Binding var appearance: AppAppearance
+
+    /// The one link in this window. An app whose whole claim is that speech
+    /// never leaves the machine should be readable by anyone who doubts it.
+    static let sourceURL = URL(string: "https://github.com/mikwiseman/openramble")!
+
+    /// Where the system writes this app's logs.
+    private func revealLogFolder() {
+        let logs = FileManager.default
+            .homeDirectoryForCurrentUser
+            .appending(path: "Library/Logs", directoryHint: .isDirectory)
+        NSWorkspace.shared.activateFileViewerSelecting([logs])
+    }
 
     /// Version and build number. The first thing asked in any bug report is
     /// and the only place where this could be read is not in the application
@@ -597,6 +674,23 @@ private struct AboutView: View {
                     }
                 }
                 .padding(.vertical, 4)
+            }
+
+            Section("Appearance") {
+                SettingRow(
+                    title: "Theme",
+                    isChanged: appearance != SettingsDefaults.appearance,
+                    revert: { appearance = SettingsDefaults.appearance }
+                ) {
+                    Picker("", selection: $appearance) {
+                        ForEach(AppAppearance.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                    .labelsHidden()
+                    .accessibilityLabel("Theme")
+                    .accessibilityHint("Follow the system, or keep this app light or dark on its own")
+                }
             }
 
             Section {
@@ -639,6 +733,14 @@ private struct AboutView: View {
                         .font(.title3)
                 }
                 .accessibilityElement(children: .combine)
+                Button("Open Log Folder", action: revealLogFolder)
+                    // Logs are what a person can attach to a bug report. They
+                    // hold no dictated text — the privacy rules forbid it — so
+                    // there is nothing here to warn about before opening.
+                    .accessibilityLabel("Open log folder")
+                Link("View Source on GitHub", destination: Self.sourceURL)
+                    .accessibilityLabel("View source on GitHub")
+                    .accessibilityHint("Opens the repository in your browser — the privacy promises here can be read in the code")
                 Button("Reveal Support Folder", action: revealSupportFolder)
                     // The title alone does not survive into the accessibility
                     // tree on this Form layout — VoiceOver would announce an

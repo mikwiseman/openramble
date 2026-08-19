@@ -77,3 +77,39 @@ private extension FfiSpanKind {
         }
     }
 }
+
+/// Ends the finished text with a space, when the person asked for one.
+///
+/// A wrapper rather than a stage inside the pipeline, and deliberately: the
+/// pipeline is the shared core's, recorded case by case in the conformance
+/// fixtures, and a personal preference has no business inside a recording. The
+/// polisher's whole job is to trim trailing whitespace, so this can only come
+/// after it — which is exactly what wrapping means.
+struct TrailingSpacePipeline: TextProcessing {
+    let wrapped: any TextProcessing
+    let appendsSpace: Bool
+
+    func run(_ recognized: String) -> TextPipeline.Run {
+        let run = wrapped.run(recognized)
+        guard appendsSpace, !run.output.text.isEmpty else { return run }
+        // Not after a line break: "new line" already ended the text where the
+        // person wanted it, and a space after it is an indent nobody asked for.
+        guard !run.output.text.hasSuffix("\n") else { return run }
+
+        let spaced = TextPipeline.Output(
+            text: run.output.text + " ",
+            command: run.output.command
+        )
+        // Provenance follows the text it describes, or "copy as spoken" and
+        // the edit watcher would be comparing against something never inserted.
+        return TextPipeline.Run(
+            output: spaced,
+            provenance: PipelineProvenance(
+                raw: run.provenance.raw,
+                afterDictionary: run.provenance.afterDictionary,
+                finalText: spaced.text,
+                spans: run.provenance.spans
+            )
+        )
+    }
+}
