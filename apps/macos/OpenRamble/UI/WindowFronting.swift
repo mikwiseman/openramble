@@ -86,6 +86,9 @@ enum WindowFronting {
     /// in the state the app spends nearly all its time in.
     private static var closeObserver: (any NSObjectProtocol)?
 
+    /// What policy to return to once the last window closes. Set by the app.
+    static var onWindowsClosed: (@MainActor () -> NSApplication.ActivationPolicy)?
+
     /// Watch for the last window closing, and go back to the menu bar.
     ///
     /// Registered on the way up rather than at launch: an app that has never
@@ -119,7 +122,9 @@ enum WindowFronting {
             NotificationCenter.default.removeObserver(closeObserver)
             self.closeObserver = nil
         }
-        NSApp.setActivationPolicy(.accessory)
+        // Back to whatever the person chose, not blindly to accessory: a
+        // Dock icon they asked for must survive closing a window.
+        NSApp.setActivationPolicy(onWindowsClosed?() ?? .accessory)
     }
 
     /// Bring OpenRamble's windows forward as soon as one exists.

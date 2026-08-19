@@ -32,7 +32,9 @@ struct OpenRambleApp: App {
 
         // The application lives in the menu bar: dictation does not have its own
         // window, it works on top of where the user is now.
-        MenuBarExtra {
+        // Shown unless the person moved the app to the Dock alone. There is no
+        // choice that hides both — see `AppPresence`.
+        MenuBarExtra(isInserted: .constant(state.presence.showsMenuBarIcon)) {
             MenuContent(
                 state: state,
                 showOnboarding: { onboardingCompleted = false }
@@ -40,7 +42,15 @@ struct OpenRambleApp: App {
             // The chosen look has to be applied to AppKit, and the menu is the
             // one piece of this app that exists from launch — every window
             // here is opened later, or never.
-            .task { AppState.apply(state.appearance) }
+            .task {
+                AppState.apply(state.appearance)
+                AppState.applyDockPresence(state.presence)
+                // Closing the settings window must not take away a Dock icon
+                // the person asked to keep.
+                WindowFronting.onWindowsClosed = { [weak state] in
+                    (state?.presence.showsDockIcon ?? false) ? .regular : .accessory
+                }
+            }
         } label: {
             // The brand mark is permanent. A small dot over its corner carries
             // the temporary states: red while recording, blue while working on

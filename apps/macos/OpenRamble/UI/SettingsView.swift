@@ -228,6 +228,20 @@ private struct GeneralSettings: View {
                     .accessibilityElement(children: .combine)
                 }
                 SettingRow(
+                    title: "Show OpenRamble in",
+                    isChanged: state.presence != SettingsDefaults.presence,
+                    revert: { state.presence = SettingsDefaults.presence }
+                ) {
+                    Picker("", selection: $state.presence) {
+                        ForEach(AppPresence.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                    .labelsHidden()
+                    .accessibilityLabel("Show OpenRamble in")
+                    .accessibilityHint("There is no option to hide it entirely — an app you cannot see is one you cannot open again.")
+                }
+                SettingRow(
                     title: "Dictation panel",
                     isChanged: state.overlayPlacement != SettingsDefaults.overlayPlacement,
                     revert: { state.overlayPlacement = SettingsDefaults.overlayPlacement }

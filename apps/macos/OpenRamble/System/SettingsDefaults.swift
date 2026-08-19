@@ -16,6 +16,7 @@ public enum SettingsDefaults {
     public static let launchAtLogin = false
     public static let overlayPlacement: DictationOverlayPlacement = .top
     public static let appearance: AppAppearance = .system
+    public static let presence: AppPresence = .menuBar
 }
 
 /// Which look the app takes, regardless of the rest of the system.
@@ -35,4 +36,32 @@ public enum AppAppearance: String, CaseIterable, Identifiable, Sendable {
         case .dark: return "Dark"
         }
     }
+}
+
+
+/// Where the app lives on screen.
+///
+/// There is deliberately no "nowhere". An app you cannot see is an app you
+/// cannot open to make visible again — the setting would be a door that locks
+/// behind you. So this chooses *where* OpenRamble appears, never whether.
+public enum AppPresence: String, CaseIterable, Identifiable, Sendable {
+    /// The menu bar only, which is what a dictation utility wants.
+    case menuBar
+    /// The Dock only, for people who keep a clean menu bar.
+    case dock
+    /// Both.
+    case both
+
+    public var id: Self { self }
+
+    public var title: String {
+        switch self {
+        case .menuBar: return "Menu bar"
+        case .dock: return "Dock"
+        case .both: return "Menu bar and Dock"
+        }
+    }
+
+    public var showsMenuBarIcon: Bool { self != .dock }
+    public var showsDockIcon: Bool { self != .menuBar }
 }

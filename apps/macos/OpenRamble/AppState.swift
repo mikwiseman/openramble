@@ -461,6 +461,22 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// Where the app shows itself. Never nowhere — see `AppPresence`.
+    @Published public var presence: AppPresence {
+        didSet {
+            guard oldValue != presence else { return }
+            defaults.set(presence.rawValue, forKey: Keys.presence)
+            Self.applyDockPresence(presence)
+        }
+    }
+
+    /// The Dock icon follows the choice; the menu bar icon follows it in the
+    /// view. `WindowFronting` may still raise the app to `.regular` while a
+    /// window is open, and puts it back to whatever this says afterwards.
+    static func applyDockPresence(_ presence: AppPresence) {
+        NSApp?.setActivationPolicy(presence.showsDockIcon ? .regular : .accessory)
+    }
+
     /// Light, dark, or whatever the machine is doing.
     @Published public var appearance: AppAppearance {
         didSet {
@@ -526,6 +542,7 @@ public final class AppState: ObservableObject {
         static let trailingSpace = "appendsTrailingSpace"
         static let appearance = "appearance"
         static let inputDevice = "inputDeviceUID"
+        static let presence = "presence"
         static let overlayPlacement = "overlayPlacement"
         static let replacements = "replacements"
         /// macOS global setup: what pressing 🌐 does.
@@ -736,6 +753,9 @@ public final class AppState: ObservableObject {
         ) ?? SettingsDefaults.appearance
         inputDeviceUID = (environment.defaults.string(forKey: Keys.inputDevice))
             .flatMap { $0.isEmpty ? nil : $0 }
+        presence = AppPresence(
+            rawValue: environment.defaults.string(forKey: Keys.presence) ?? ""
+        ) ?? SettingsDefaults.presence
         overlayPlacement = DictationOverlayPlacement(
             rawValue: environment.defaults.string(forKey: Keys.overlayPlacement) ?? ""
         ) ?? SettingsDefaults.overlayPlacement
