@@ -171,9 +171,17 @@ the feed is not reaching people. Check GitHub Pages for $REPO_SLUG."
 # And that the image the feed names is really there. A feed pointing at a
 # missing file updates nobody and reports nothing.
 DMG_URL=$(curl -sSf "$FEED_URL" | grep -oE 'url="[^"]+\.dmg"' | head -1 | sed 's/url="//;s/"//')
-curl -sSfI -L "$DMG_URL" >/dev/null \
-  || fail "The feed serves $VERSION but its image is unreachable:
+# Given a minute, because a freshly uploaded asset takes a few seconds to
+# become fetchable. Checked once, this reported a perfectly good release as
+# broken — a check that cries wolf gets ignored, which costs more than not
+# having it.
+image_deadline=$((SECONDS + 60))
+until curl -sSfI -L "$DMG_URL" >/dev/null 2>&1; do
+  (( SECONDS < image_deadline )) || fail "The feed serves $VERSION but its image is unreachable
+after a minute of trying:
   $DMG_URL"
+  sleep 5
+done
 
 printf '\n\033[32m%s is live. The feed serves it and its image downloads.\033[0m\n' "$VERSION"
 echo "  $FEED_URL"
