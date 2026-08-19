@@ -137,6 +137,46 @@ pub fn clear_history(dictation: State<'_, Arc<Dictation>>) -> Result<(), String>
         .map_err(|error| error.to_string())
 }
 
+/// A personal replacement, as the window edits it.
+#[derive(Debug, Clone, serde::Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DictionaryRow {
+    pub spoken: String,
+    pub written: String,
+}
+
+#[tauri::command]
+pub fn dictionary(dictation: State<'_, Arc<Dictation>>) -> Vec<DictionaryRow> {
+    dictation
+        .personal_terms()
+        .into_iter()
+        .map(|entry| DictionaryRow {
+            spoken: entry.spoken,
+            written: entry.written,
+        })
+        .collect()
+}
+
+/// Replace the personal dictionary.
+///
+/// Whole-list rather than add/remove: the list is short, editing it is rare, and
+/// a single write cannot leave the file half-updated the way a sequence of
+/// mutations can.
+#[tauri::command]
+pub fn set_dictionary(
+    dictation: State<'_, Arc<Dictation>>,
+    rows: Vec<DictionaryRow>,
+) -> Result<(), String> {
+    dictation
+        .set_personal_terms(
+            rows.into_iter()
+                .filter(|row| !row.spoken.trim().is_empty() && !row.written.trim().is_empty())
+                .map(|row| (row.spoken, row.written))
+                .collect(),
+        )
+        .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 pub fn dictation_hotkey() -> String {
     Hotkey::default().title().to_string()

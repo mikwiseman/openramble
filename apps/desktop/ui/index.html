@@ -45,6 +45,18 @@
       .history .said { flex: 1; overflow-wrap: anywhere; }
       .history button { padding: 0.2rem 0.55rem; font-size: 0.85rem; }
       .muted-note { color: var(--quiet); font-size: 0.85rem; }
+      .terms { width: 100%; border-collapse: collapse; margin-top: 0.6rem; }
+      .terms th {
+        text-align: left; font-size: 0.8rem; font-weight: 500;
+        color: var(--quiet); padding-bottom: 0.3rem;
+      }
+      .terms td { border-top: 1px solid var(--line); padding: 0.5rem 0.5rem 0.5rem 0; }
+      .terms td:last-child { text-align: right; }
+      input {
+        font: inherit; padding: 0.4rem 0.6rem; border-radius: 7px;
+        border: 1px solid var(--line); background: transparent; color: var(--ink);
+        min-width: 10rem;
+      }
       button {
         font: inherit; padding: 0.45rem 1rem; border-radius: 7px;
         border: 1px solid var(--line); background: transparent; color: var(--ink);
@@ -86,6 +98,21 @@
       <div class="row" id="progress-row" hidden>
         <progress id="progress" max="100" value="0"></progress>
         <span id="progress-text"></span>
+      </div>
+    </section>
+
+    <section>
+      <h2>Your terms</h2>
+      <p>Words the recogniser writes differently from how you mean them.
+        The supplied developer terms are already active; these are yours.</p>
+      <table class="terms">
+        <thead><tr><th>Heard as</th><th>Written as</th><th></th></tr></thead>
+        <tbody id="terms"></tbody>
+      </table>
+      <div class="row">
+        <input id="term-spoken" placeholder="сентри" aria-label="Heard as" />
+        <input id="term-written" placeholder="Sentry" aria-label="Written as" />
+        <button id="add-term">Add</button>
       </div>
     </section>
 
@@ -157,6 +184,42 @@
 
       // Only shown when there is something to say. A section that appears when
       // nothing is wrong stops being read.
+      async function refreshTerms() {
+        const rows = await invoke("dictionary");
+        const body = el("terms");
+        body.innerHTML = "";
+        for (const [index, row] of rows.entries()) {
+          const tr = document.createElement("tr");
+          const heard = document.createElement("td");
+          heard.textContent = row.spoken;
+          const written = document.createElement("td");
+          written.textContent = row.written;
+          const actions = document.createElement("td");
+          const remove = document.createElement("button");
+          remove.textContent = "Remove";
+          remove.addEventListener("click", async () => {
+            const kept = rows.filter((_, position) => position !== index);
+            await invoke("set_dictionary", { rows: kept });
+            refreshTerms();
+          });
+          actions.appendChild(remove);
+          tr.append(heard, written, actions);
+          body.appendChild(tr);
+        }
+      }
+
+      el("add-term").addEventListener("click", async () => {
+        const spoken = el("term-spoken").value.trim();
+        const written = el("term-written").value.trim();
+        if (!spoken || !written) return;
+        const rows = await invoke("dictionary");
+        rows.push({ spoken, written });
+        await invoke("set_dictionary", { rows });
+        el("term-spoken").value = "";
+        el("term-written").value = "";
+        refreshTerms();
+      });
+
       async function refreshHistory() {
         const rows = await invoke("dictation_history");
         el("history-empty").hidden = rows.length > 0;
@@ -184,6 +247,7 @@
           remove.addEventListener("click", async () => {
             await invoke("delete_history_entry", { id: row.id });
             refreshHistory();
+      refreshTerms();
           });
 
           item.append(when, said, copy, remove);
@@ -194,6 +258,7 @@
       el("clear-history").addEventListener("click", async () => {
         await invoke("clear_history");
         refreshHistory();
+      refreshTerms();
       });
 
       invoke("session_notices").then((notices) => {
@@ -208,6 +273,7 @@
       });
       refresh();
       refreshHistory();
+      refreshTerms();
     </script>
   </body>
 </html>

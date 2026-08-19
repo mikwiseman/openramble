@@ -99,6 +99,7 @@ pub struct Dictation {
     pipeline: Mutex<TextPipeline>,
     store: ModelStore,
     history: HistoryStore,
+    dictionary_directory: PathBuf,
 }
 
 impl Dictation {
@@ -108,7 +109,7 @@ impl Dictation {
         // Anything an interrupted install left behind is settled before the
         // person is shown a state.
         let _ = store.recover_interrupted_promotion();
-        Some(Dictation {
+        let dictation = Dictation {
             machine: Mutex::new(SessionMachine::new()),
             capture: Mutex::new(None),
             engine: Mutex::new(None),
@@ -120,7 +121,23 @@ impl Dictation {
             )),
             store,
             history: HistoryStore::new(support_root()?.join("History")),
-        })
+            dictionary_directory: support_root()?,
+        };
+        // Their own terms are in effect from the first dictation, not from the
+        // first time they open settings.
+        dictation.reload_pipeline();
+        Some(dictation)
+    }
+
+    /// Rebuild the pipeline from the supplied terms plus the person's own.
+    fn reload_pipeline(&self) {
+        let mut replacements = ramble_text::starter::developer();
+        replacements.extend(self.personal_terms());
+        *self
+            .pipeline
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) =
+            TextPipeline::with_replacements(replacements);
     }
 
     fn machine(&self) -> MutexGuard<'_, SessionMachine> {
@@ -153,6 +170,49 @@ impl Dictation {
 
     pub fn store(&self) -> &ModelStore {
         &self.store
+    }
+
+    /// The person's own replacements, as stored.
+    pub fn personal_terms(&self) -> Vec<ramble_text::dictionary::DictionaryReplacement> {
+        let Ok(bytes) = std::fs::read(self.dictionary_path()) else {
+            return Vec::new();
+        };
+        serde_json::from_slice(&bytes).unwrap_or_default()
+    }
+
+    /// Store the person's replacements and put them into effect at once.
+    ///
+    /// Their own entries come after the supplied ones, so a person who disagrees
+    /// with a shipped term simply wins: replacements layer, and the later rule
+    /// rewrites what the earlier produced.
+    pub fn set_personal_terms(&self, terms: Vec<(String, String)>) -> std::io::Result<()> {
+        let entries: Vec<_> = terms
+            .into_iter()
+            .enumerate()
+            .map(|(index, (spoken, written))| {
+                ramble_text::dictionary::DictionaryReplacement::new(
+                    format!("personal-{index}"),
+                    spoken,
+                    written,
+                )
+            })
+            .collect();
+
+        let path = self.dictionary_path();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(
+            &path,
+            serde_json::to_vec(&entries).map_err(std::io::Error::other)?,
+        )?;
+
+        self.reload_pipeline();
+        Ok(())
+    }
+
+    fn dictionary_path(&self) -> PathBuf {
+        self.dictionary_directory.join("dictionary.json")
     }
 
     pub fn history(&self) -> &HistoryStore {

@@ -143,6 +143,8 @@ pub fn run() {
             commands::dictation_history,
             commands::delete_history_entry,
             commands::clear_history,
+            commands::dictionary,
+            commands::set_dictionary,
             commands::install_model,
             commands::cancel_install,
         ])
