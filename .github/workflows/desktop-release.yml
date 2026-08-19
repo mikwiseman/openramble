@@ -87,6 +87,22 @@ jobs:
           # finished and downloads nothing.
           [ "$(ls -A dist)" ] || { echo "no packages to publish" >&2; exit 1; }
 
+      # The tag and the filenames must agree. They did not once: packages named
+      # 0.1.0 were published under desktop-v0.2.0, so anyone downloading the
+      # release got files claiming to be the version it replaced.
+      - name: The packages must carry the tag's version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#desktop-v}"
+          for file in dist/*; do
+            case "$(basename "$file")" in
+              *"$VERSION"*) ;;
+              *) echo "$(basename "$file") does not carry version $VERSION" >&2; exit 1 ;;
+            esac
+          done
+          echo "every package carries $VERSION"
+
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
