@@ -227,6 +227,12 @@ Then run the script again. The release stops before the expensive build
 and notarization steps."
 fi
 
+# The application links the shared core, and that binary is generated rather
+# than committed — so a fresh checkout, which is exactly what a release worktree
+# is, does not have it. Built before anything that compiles Swift.
+echo "→ Building the shared core for Swift"
+./scripts/build-ffi.sh >/dev/null
+
 echo "→ Checking the network surface"
 ./scripts/check-network-surface.sh >/dev/null
 
