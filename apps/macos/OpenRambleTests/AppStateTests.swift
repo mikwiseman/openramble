@@ -959,7 +959,26 @@ final class AppStateTests: XCTestCase {
         XCTAssertGreaterThan(prepares, 0)
     }
 
-    func testEveryReadyRecordingStartRefreshesAcceleratorResidency() async throws {
+    /// A ready engine must NOT be given a second inference when a key is pressed.
+    ///
+    /// This assertion used to say the opposite — "even a recently used ready
+    /// generation gets a representative inference under speech" — and it was
+    /// wrong, in a way that cost seconds. Every key press ran a full inference
+    /// over a second of silence and the real dictation then waited for it, so
+    /// every dictation was two inferences where the comparable app does one.
+    ///
+    /// The cost was invisible to the numbers that were supposed to find it: the
+    /// warm-up's own duration was discarded rather than reported, and the wait
+    /// sat inside the logged `recognition` but outside the logged `engine`.
+    /// That is why the engine figure never passed ~1.07 s while the unexplained
+    /// gap reached 13.74 s — the sacrificial first run paid whatever the
+    /// measured second one would have.
+    ///
+    /// Its stated purpose was keeping Core ML's prediction paths materialised.
+    /// This app has no Core ML; that engine was removed and the reason outlived
+    /// the runtime it described. Warming still happens where it is earned —
+    /// once after a model load, and once after the machine wakes.
+    func testAReadyEngineIsNotWarmedAgainOnEveryPress() async throws {
         try installModelMarker()
         let recognizer = ReadinessControlledRecognizer()
         harness.recognizer = recognizer
@@ -969,27 +988,23 @@ final class AppStateTests: XCTestCase {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))
         }
-        let baselineWarmUps = await recognizer.warmUps
-        XCTAssertGreaterThanOrEqual(baselineWarmUps, 1)
+        let afterLoad = await recognizer.warmUps
+        XCTAssertGreaterThanOrEqual(afterLoad, 1, "a freshly loaded model is warmed once")
 
         monitor.onPress?()
-        for _ in 0..<500 where await recognizer.warmUps == baselineWarmUps {
+        // Long enough that a per-press warm-up would have landed: the old
+        // behaviour was observed here within a few milliseconds.
+        for _ in 0..<100 {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))
         }
 
-        let warmUpsAfterPress = await recognizer.warmUps
+        let afterPress = await recognizer.warmUps
         XCTAssertEqual(
-            warmUpsAfterPress,
-            baselineWarmUps + 1,
-            "even a recently used ready generation gets a representative inference under speech"
+            afterPress,
+            afterLoad,
+            "pressing the key on a ready engine must not spend an inference before the dictation's own"
         )
-
-        monitor.onRelease?()
-        for _ in 0..<500 where state.dictationState != .idle {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(2))
-        }
     }
 
     /// Preparation never gives up and never blames the verified files.

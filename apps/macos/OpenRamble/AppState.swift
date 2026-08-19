@@ -1517,12 +1517,19 @@ public final class AppState: ObservableObject {
             rewarmEngineIfCold(trigger: .keyDown)
             return
         }
-        guard EngineWarming.shouldPingOnRecordingStart(engineReady: isEngineReady) else {
-            return
-        }
-        // A generous deadline: the recording gives it cover, and a real wedge
-        // still surfaces through the dictation's own deadline right after.
-        pingEngine(deadline: .seconds(30))
+        // A ready engine needs nothing further. There used to be a "ping" here
+        // — a full inference over a second of silence, on every key press,
+        // which the real dictation then waited for. That made every dictation
+        // two inferences where Handy does one, and its cost was invisible: the
+        // ping's own duration was discarded, and the waiting sat inside the
+        // reported `recognition` but outside the reported `engine`. It is also
+        // why the engine number never passed ~1.07 s while the gap reached
+        // 13.74 s — the sacrificial first run paid whatever the second would
+        // have.
+        //
+        // Its stated reason was Core ML weights not materialising every
+        // prediction path. There is no Core ML in this app; that engine was
+        // removed. The comment outlived the runtime it described.
     }
 
     /// Release the engine before the process exits.
