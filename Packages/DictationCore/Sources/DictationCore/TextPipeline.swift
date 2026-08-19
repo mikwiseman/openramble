@@ -76,6 +76,18 @@ public enum TrailingCommandParser {
     }
 }
 
+/// Anything that can turn recognized text into text to insert.
+///
+/// Exists so the application can choose its implementation while this package
+/// keeps its own. That distinction matters more than it looks: the conformance
+/// fixtures are recordings of the Swift pipeline below, and if this package
+/// delegated to the shared core instead, the fixtures would be recordings of
+/// the thing they are meant to check. The two implementations have to stay
+/// genuinely independent for the comparison to mean anything.
+public protocol TextProcessing: Sendable {
+    func run(_ recognized: String) -> TextPipeline.Run
+}
+
 /// The full path from the recognized text to what the user sees.
 ///
 /// **Table of stages.** The order is fixed and checked by golden tests for
@@ -100,7 +112,7 @@ public enum TrailingCommandParser {
 /// The key to the entire protection model: **exact replacement comes before spans at all
 /// exist**. This is the rule “the clear will of a person is higher than the protection of span” -
 /// There is no need to write a separate precedent rule, order is the rule.
-public struct TextPipeline: Sendable {
+public struct TextPipeline: Sendable, TextProcessing {
     public struct Output: Sendable, Equatable {
         /// Text ready to be inserted.
         public let text: String
@@ -110,12 +122,24 @@ public struct TextPipeline: Sendable {
         /// do - Return in someone else's window sends a message rather than transferring it
         /// string.
         public let command: TrailingCommand?
+
+        /// Public so an implementation outside this package can produce one.
+        /// The shared core does; see `TextProcessing`.
+        public init(text: String, command: TrailingCommand?) {
+            self.text = text
+            self.command = command
+        }
     }
 
     /// The result of the run along with the origin of the text.
     public struct Run: Sendable, Equatable {
         public let output: Output
         public let provenance: PipelineProvenance
+
+        public init(output: Output, provenance: PipelineProvenance) {
+            self.output = output
+            self.provenance = provenance
+        }
     }
 
     private let replacements: [DictionaryReplacement]

@@ -11,6 +11,11 @@ packages:
     path: ../../Packages/DictationCore
   LocalASR:
     path: ../../Packages/LocalASR
+  # The shared core, as a Swift package. Its binary is produced by
+  # scripts/build-ffi.sh and is not committed, so that script runs before the
+  # application is built.
+  RambleCoreFFI:
+    path: ../../Packages/RambleCoreFFI
   # Updates. The version is pinned exactly, not `from:`: Sparkle arrives
   # a ready-made binary framework inside the application, and this version will rise
   # should be done consciously, and not on its own during the next build.
@@ -82,6 +87,8 @@ targets:
         product: DictationAudio
       - package: LocalASR
         product: LocalASR
+      - package: RambleCoreFFI
+        product: RambleCore
       - package: Sparkle
         product: Sparkle
     settings:
@@ -192,6 +199,8 @@ targets:
         product: DictationAudio
       - package: LocalASR
         product: LocalASR
+      - package: RambleCoreFFI
+        product: RambleCore
       - package: Sparkle
         product: Sparkle
     settings:

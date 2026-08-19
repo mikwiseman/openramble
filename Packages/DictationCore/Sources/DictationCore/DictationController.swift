@@ -283,7 +283,7 @@ public final class DictationController {
     private let overlayDispatcher: DictationOverlayDispatcher
     private let soundDispatcher: DictationSoundDispatcher
     private let recordingRecovery: any RecordingRecoveryStoring
-    private let pipeline: () -> TextPipeline
+    private let pipeline: () -> any TextProcessing
     /// Session hours. A separate dependence for exactly the same reason as
     /// microphone.
     private let now: @Sendable () -> Date
@@ -387,7 +387,7 @@ public final class DictationController {
         overlay: any OverlayPresenting,
         sounds: any Sounding,
         recordingRecovery: any RecordingRecoveryStoring = DiscardingRecordingRecovery(),
-        pipeline: @escaping () -> TextPipeline = { TextPipeline() },
+        pipeline: @escaping () -> any TextProcessing = { TextPipeline() },
         now: @escaping @Sendable () -> Date = { Date() },
         monotonicNow: @escaping @Sendable () -> ContinuousClock.Instant = { .now },
         transcriptionDeadline: @escaping @Sendable (TimeInterval) -> Duration = TranscriptionDeadline.deadline(forAudioDuration:),

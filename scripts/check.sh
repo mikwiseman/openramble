@@ -161,6 +161,9 @@ run_shared_core() {
 }
 
 run_app() {
+  # The application links the shared core, whose binary is generated rather
+  # than committed.
+  ./scripts/build-ffi.sh > /dev/null 2>&1 || fail "The shared core could not be built for Swift."
   warm_artifact_cache
   echo "→ Generating a project"
   local xcodegen

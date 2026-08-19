@@ -59,6 +59,12 @@ jobs:
       - name: Check pinned XcodeGen
         run: ./scripts/pinned-xcodegen.sh >/dev/null
 
+      # The app runs its text pipeline through the shared core, whose binary is
+      # generated rather than committed. Without this the application does not
+      # link at all.
+      - name: Build the shared core for Swift
+        run: ./scripts/build-ffi.sh
+
       # Half of the defects of the first day lived precisely in the purpose of the application - in
       # You can't see them in the packages, because it's not included in them. We run tests, not
       # assembly only: eleven defects were found there precisely by tests, and not
@@ -225,6 +231,9 @@ jobs:
 
       - name: Check pinned XcodeGen
         run: ./scripts/pinned-xcodegen.sh >/dev/null
+
+      - name: Build the shared core for Swift
+        run: ./scripts/build-ffi.sh
 
       - name: Check release policy, bootstrap and notary credentials
         run: |
