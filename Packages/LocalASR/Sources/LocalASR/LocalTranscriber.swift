@@ -90,18 +90,57 @@ public actor LocalTranscriber {
     ///
     /// `languageHint` - BCP-47 code or `nil` for auto-detection; see
     /// `ASREngineAdapting.transcribe(samples:languageHint:)`.
+    /// The one thread allowed to wait on a recording file.
+    ///
+    /// Same rule as the audio teardown and the `fsync`: work that blocks on a
+    /// disk gets a thread of its own, never a cooperative-pool one.
+    private static let diskQueue = DispatchQueue(
+        label: "is.waiwai.dictation.transcriber-disk",
+        qos: .userInitiated
+    )
+
+    static func onDisk<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            diskQueue.async { continuation.resume(with: Result { try work() }) }
+        }
+    }
+
     public func transcribe(fileURL: URL, languageHint: String? = nil) async throws -> ASRResult {
         guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
 
+        // Stamped before the read, because the read is where the time went.
+        let arrived = ContinuousClock.now
+
+        // Reading and decoding the recording is synchronous file work, and it
+        // used to happen right here — on this actor, which runs on Swift's
+        // cooperative pool. A pool thread blocked on a disk is not yielded but
+        // lost, and the whole dictation is waiting behind it. Field logs showed
+        // recognition of 11.65 s around an engine call of 0.11 s, with the
+        // stage timer reporting a queue of zero — because the timer sat after
+        // this line rather than before it.
+        let reader = reader
         let samples: [Float]
         do {
-            samples = try reader.samples(from: fileURL)
+            samples = try await LocalTranscriber.onDisk { try reader.samples(from: fileURL) }
         } catch let failure as AudioFileReader.Failure {
             throw ASREngineError.unsupportedAudioFormat(String(describing: failure))
         }
 
         try Task.checkCancellation()
-        return try await transcribe(samples: samples, languageHint: languageHint)
+        let result = try await transcribe(samples: samples, languageHint: languageHint)
+        // Report the whole wait, decode included, rather than only the part
+        // after it. The previous number was true and useless.
+        let waited = arrived.duration(to: .now)
+        return ASRResult(
+            text: result.text,
+            words: result.words,
+            audioDuration: result.audioDuration,
+            processingDuration: result.processingDuration,
+            queueingDuration: Double(waited.components.seconds)
+                + Double(waited.components.attoseconds) / 1e18
+                - result.processingDuration,
+            phaseTimings: result.phaseTimings
+        )
     }
 
     /// Recognize a ready buffer.
