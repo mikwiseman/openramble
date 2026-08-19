@@ -207,6 +207,11 @@ jobs:
       - name: Test the boundary
         run: swift test --package-path Packages/RambleCoreFFI
 
+      # Both platforms' tokens are generated from one file. A hand edit to
+      # either side fails here rather than drifting quietly apart.
+      - name: The visual language matches on both platforms
+        run: ./scripts/generate-tokens.py --check
+
   conformance:
     name: Core matches macOS
     runs-on: macos-26

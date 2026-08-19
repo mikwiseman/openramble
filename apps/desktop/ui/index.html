@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OpenRamble</title>
+    <!-- Generated from design/tokens.json; see scripts/generate-tokens.py. -->
+    <link rel="stylesheet" href="tokens.css" />
     <style>
       /* Liquid Glass, following Apple's rules rather than an impression of them.
        *
@@ -31,21 +33,6 @@
        */
       :root {
         color-scheme: light dark;
-
-        /* Shared with apps/macos/OpenRamble/UI/GlassTokens.swift. The two
-           platforms render differently on purpose — Apple's material samples
-           the desktop in a way a stylesheet cannot — but the geometry and
-           rhythm are one decision, made once. */
-        --radius-surface: 18px;
-        --radius-control: 10px;
-        --radius-chip: 7px;
-        --space-tight: 6px;
-        --space-inline: 10px;
-        --space-stack: 16px;
-        --space-section: 24px;
-        --space-page: 28px;
-        --stroke-hairline: 0.5px;
-
         /* Label hierarchy, the system's own values. */
         --label: rgba(0, 0, 0, 0.85);
         --label-2: rgba(0, 0, 0, 0.5);

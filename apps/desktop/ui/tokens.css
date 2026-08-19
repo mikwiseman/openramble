@@ -1,0 +1,38 @@
+/* Generated from design/tokens.json by scripts/generate-tokens.py. Do not edit.
+ *
+ * The visual vocabulary shared with the macOS interface. The two render
+ * differently on purpose — only native code can call Apple's Liquid Glass,
+ * which samples and refracts the desktop behind the window — but the geometry
+ * and rhythm are one decision, made once.
+ */
+:root {
+  --radius-surface: 18px;
+  --radius-control: 10px;
+  --radius-chip: 7px;
+
+  --space-tight: 6px;
+  --space-inline: 10px;
+  --space-stack: 16px;
+  --space-section: 24px;
+  --space-page: 28px;
+
+  --stroke-hairline: 0.5px;
+  --stroke-emphasised: 0.75px;
+  --stroke-opacity: 0.12;
+  --stroke-opacity-contrast: 0.42;
+
+  --type-section-header: 11px;
+  --type-footnote: 11.5px;
+
+  --motion-control: 120ms;
+  --motion-surface: 150ms;
+}
+
+/* "Reduced Motion decreases the intensity of some effects and disables any
+   elastic properties for the material." Zero, not merely shorter. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-control: 0ms;
+    --motion-surface: 0ms;
+  }
+}

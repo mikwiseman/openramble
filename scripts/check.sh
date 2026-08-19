@@ -131,6 +131,11 @@ run_shared_core() {
   fi
   rm -f "$log"
 
+  # One design language, generated into both platforms. Typing the numbers
+  # twice is what makes them drift.
+  ./scripts/generate-tokens.py --check > /dev/null \
+    || fail "The visual tokens no longer match design/tokens.json; run scripts/generate-tokens.py."
+
   # The bridge the macOS migration crosses. Built here so an API change Swift
   # cannot call fails now rather than at migration time.
   echo "→ Swift calls the core"
