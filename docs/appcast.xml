@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.18.1</title>
-      <pubDate>Wed, 19 Aug 2026 20:16:05 +0300</pubDate>
-      <sparkle:version>39</sparkle:version>
-      <sparkle:shortVersionString>0.18.1</sparkle:shortVersionString>
+      <title>0.19.2</title>
+      <pubDate>Wed, 19 Aug 2026 21:35:48 +0300</pubDate>
+      <sparkle:version>42</sparkle:version>
+      <sparkle:shortVersionString>0.19.2</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.18.1&lt;/h2&gt;&lt;p&gt;The settings sidebar stops sliding under the window buttons.&lt;/p&gt;&lt;p&gt;Its list could scroll, and when it did the rows went up behind the red, yellow&lt;/p&gt;&lt;p&gt;and green buttons — &amp;quot;Dictionary&amp;quot; rendered directly underneath them. The last&lt;/p&gt;&lt;p&gt;release tried to fix this by giving the title bar a material to hide behind.&lt;/p&gt;&lt;p&gt;That was the wrong fix: it made the collision harder to see rather than&lt;/p&gt;&lt;p&gt;stopping it, and the rows kept moving.&lt;/p&gt;&lt;p&gt;There are five panes and they always fit, so the list has nothing to scroll.&lt;/p&gt;&lt;p&gt;It no longer can, which is a thing that cannot go wrong rather than a thing&lt;/p&gt;&lt;p&gt;that looks right.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.18.1/OpenRamble-0.18.1.dmg" length="5799611" type="application/octet-stream" sparkle:edSignature="ntow5M1bc5sNgaIqKg0RccCpfunZSzDyhaESXyA+TmD/C29dzkCm/+uBov2o4XGwHklAbH654WzVuEckpkKHCg==" />
+      <description>&lt;h2&gt;OpenRamble 0.19.2&lt;/h2&gt;&lt;p&gt;Every step of a dictation is now timed, so a slow one explains itself.&lt;/p&gt;&lt;p&gt;The record kept for each dictation already listed how long the whole thing&lt;/p&gt;&lt;p&gt;took and how long the speech model worked. Everything between those two was a&lt;/p&gt;&lt;p&gt;single unlabelled lump — and every slow dictation this app has ever had lived&lt;/p&gt;&lt;p&gt;inside it. Finding each one meant reading logs and reasoning backwards.&lt;/p&gt;&lt;p&gt;That lump is now split into named steps: freezing the recording, preparing the&lt;/p&gt;&lt;p&gt;engine, opening and decoding the audio, waiting for a turn, and the&lt;/p&gt;&lt;p&gt;recognition itself. A slow dictation says which of them it spent its time in.&lt;/p&gt;&lt;p&gt;This costs one line per dictation, numbers only, exactly as before. It grows&lt;/p&gt;&lt;p&gt;with how much you talk, not with how hard your Mac is working — logging that&lt;/p&gt;&lt;p&gt;becomes a burden of its own would be a poor way to investigate a performance&lt;/p&gt;&lt;p&gt;problem.&lt;/p&gt;&lt;p&gt;Nothing of what you say is ever written to the log. That has not changed and&lt;/p&gt;&lt;p&gt;will not.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.19.2/OpenRamble-0.19.2.dmg" length="5807509" type="application/octet-stream" sparkle:edSignature="zl0evZaul9yK9hoY17McZYPpdy/r+qHL1evQSvwKBNTGuaF/sY5FQKAp+uz5cQ5njCPWQRW7y5wf5Syew3grBw==" />
     </item>
   </channel>
 </rss>
