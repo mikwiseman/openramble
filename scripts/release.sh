@@ -76,6 +76,21 @@ assert_release_source_unchanged() {
 }
 
 command -v gh >/dev/null || fail "Gh not found for required CI check."
+
+# GitHub's API times out often enough that a single attempt is not a check, it
+# is a coin toss. Three releases died on a TLS handshake today with everything
+# green — the network was the only thing wrong, and giving up on it wasted the
+# whole build.
+gh_retry() {
+  local attempt
+  for attempt in 1 2 3 4 5; do
+    if gh "$@"; then
+      return 0
+    fi
+    sleep $((attempt * 3))
+  done
+  return 1
+}
 # Which jobs must be green to publish a macOS build.
 #
 # Deliberately not the whole matrix. The Windows and Linux desktop builds take
@@ -93,7 +108,7 @@ REQUIRED_JOBS=(
   "Apple Silicon only"
 )
 
-CI_CONCLUSION=$(gh run list \
+CI_CONCLUSION=$(gh_retry run list \
   --workflow CI \
   --commit "$HEAD_SHA" \
   --limit 1 \
@@ -102,13 +117,13 @@ CI_CONCLUSION=$(gh run list \
 if [[ "$CI_CONCLUSION" != "success" ]]; then
   # The whole run is not green. It may still be running the platform builds
   # that do not cover this artifact, so check the jobs that do.
-  RUN_ID=$(gh run list --branch main --limit 10 \
+  RUN_ID=$(gh_retry run list --branch main --limit 10 \
     --json databaseId,headSha,workflowName \
     --jq '[.[] | select(.headSha == "'"$HEAD_SHA"'") | select(.workflowName == "CI")][0].databaseId')
   [[ -n "$RUN_ID" ]] || fail "No CI run found for SHA $HEAD_SHA."
 
   for job in "${REQUIRED_JOBS[@]}"; do
-    outcome=$(gh run view "$RUN_ID" --json jobs \
+    outcome=$(gh_retry run view "$RUN_ID" --json jobs \
       --jq '[.jobs[] | select(.name == "'"$job"'")][0].conclusion // "missing"')
     [[ "$outcome" == "success" ]] \
       || fail "The job \"$job\" is $outcome on SHA $HEAD_SHA; it covers what is being released."
