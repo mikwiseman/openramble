@@ -79,7 +79,37 @@ let fixtures: [Fixture] = cases.map { testCase in
     )
 }
 
+/// The starter dictionary, recorded rather than hand-copied.
+///
+/// Its entries carry flags that were measured, not guessed — which terms must
+/// stay out of the acoustic prompt, which must never be phonetic candidates —
+/// and a second hand-maintained copy would drift from those measurements
+/// silently. Generating it keeps one source of truth.
+struct StarterEntry: Codable {
+    let spoken: String
+    let written: String
+    let inflects: Bool
+    let noAcousticBoost: Bool
+    let allowsPhoneticMatching: Bool
+}
+
+let starter = StarterDictionary.developer.map {
+    StarterEntry(
+        spoken: $0.spoken,
+        written: $0.written,
+        inflects: $0.inflects,
+        noAcousticBoost: $0.noAcousticBoost,
+        allowsPhoneticMatching: $0.allowsPhoneticMatching
+    )
+}
+
 let encoder = JSONEncoder()
 encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
 try encoder.encode(fixtures).write(to: URL(fileURLWithPath: arguments[2]))
 FileHandle.standardError.write(Data("wrote \(fixtures.count) fixtures\n".utf8))
+
+let starterURL = URL(fileURLWithPath: arguments[2])
+    .deletingLastPathComponent()
+    .appendingPathComponent("starter-dictionary.json")
+try encoder.encode(starter).write(to: starterURL)
+FileHandle.standardError.write(Data("wrote \(starter.count) starter entries\n".utf8))

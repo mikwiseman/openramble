@@ -103,7 +103,12 @@ impl Dictation {
             state: Mutex::new(DictationState::Idle),
             capture: Mutex::new(None),
             engine: Mutex::new(None),
-            pipeline: Mutex::new(TextPipeline::default()),
+            // The supplied terms are on from the start, as they are on the
+            // Mac. Someone dictating Russian with English terms should not have
+            // to discover a dictionary before the product works for them.
+            pipeline: Mutex::new(TextPipeline::with_replacements(
+                ramble_text::starter::developer(),
+            )),
             store,
         })
     }

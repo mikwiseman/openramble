@@ -141,7 +141,7 @@ run_shared_core() {
           core/conformance/corpus-text.json \
           core/conformance/fixtures/text/pipeline.json 2> /dev/null; then
     git diff --quiet -- core/conformance/fixtures \
-      || fail "The macOS pipeline no longer produces the committed fixtures."
+      || fail "The macOS pipeline or starter dictionary no longer matches what is committed."
     cargo test -p ramble-text --test conformance > /dev/null 2>&1 \
       || fail "The Rust core no longer reproduces what macOS produced."
     green "both implementations agree"
