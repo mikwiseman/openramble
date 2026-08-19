@@ -60,13 +60,42 @@ The release script requires:
 Live voice benchmarks and the optional manual evidence matrix are not release
 requirements.
 
-## Build, sign, notarize, and update the feed
+## Shipping
+
+```bash
+./scripts/ship.sh
+```
+
+That is the whole command, from any directory in the repository. It moves the
+release worktree to `origin/main`, finds the Sparkle key, the signing identity
+and the model root, runs the build below, creates the GitHub release, uploads
+the image, publishes the feed, and then **fetches the live feed off the
+internet and reads it**. It either ends by printing that the version is live
+and its image downloads, or it fails.
+
+Use `./scripts/ship.sh --dry-run` to check that a release could run — version,
+notes, keys, identity, model — without building anything.
+
+That last step is not ceremony. `release.sh` alone ends by printing four things
+to do by hand, and those four steps are where releases die: 0.11.1 was built
+and version-bumped and never existed for anyone, because the tail was never
+run and nothing said so. The feed kept serving 0.11.0 and looked healthy doing
+it. A release is not a build that succeeded; it is a feed that serves it.
+
+### Build, sign, notarize, and update the feed
+
+`ship.sh` calls this; run it directly only when you want the build without the
+publish.
 
 ```bash
 WAI_MODELS_ROOT="$HOME/.openramble/release-models" \
 SPARKLE_KEY_PATH="$HOME/.openramble/sparkle-key" \
 ./scripts/release.sh
 ```
+
+Never pipe it into `tail` or `head` to shorten the output. A pipeline reports
+the exit code of its last command, so a refusal to build reads as a release
+that worked — which is exactly how a release goes missing.
 
 The script runs package and application tests, checks the shipping network
 surface and the worker control plane, performs two in-process offline runtime
