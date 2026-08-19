@@ -129,10 +129,7 @@ pub fn run() {
         // surfaces the window of the copy already running, which is what a
         // person meant by launching it anyway.
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
+            present_settings(app);
         }))
         // Off by default. A dictation tool that installs itself into startup
         // without being asked is the kind of thing people uninstall.
@@ -168,14 +165,13 @@ pub fn run() {
                 .icon_as_template(true)
                 .tooltip(tray_tooltip(&dictation))
                 .menu(&menu)
+                // The menu opens on a left click, and it holds the only route
+                // to settings. On a platform where showing a window from a
+                // background process is restricted, that route has to exist
+                // more than one way.
                 .show_menu_on_left_click(true)
                 .on_menu_event(move |app, event| match event.id().as_ref() {
-                    "settings" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
+                    "settings" => present_settings(app),
                     "quit" => {
                         // Explicitly, before Tauri tears the process down: ggml
                         // aborts at exit() with a model still loaded.
@@ -203,6 +199,30 @@ pub fn run() {
                 for_exit.shutdown();
             }
         });
+}
+
+/// Bring the settings window in front of the person.
+///
+/// Three steps, not one. A window can be hidden, minimised, or merely behind
+/// something, and Windows in particular treats those as separate states — asking
+/// only for `show` leaves a minimised window minimised, which looks exactly like
+/// a menu item that does nothing.
+///
+/// Failures are reported rather than discarded. This is the only way to reach
+/// settings, so if it cannot be done the person needs to know that rather than
+/// clicking a dead menu item twice and giving up.
+fn present_settings(app: &tauri::AppHandle) {
+    let Some(window) = app.get_webview_window("main") else {
+        eprintln!("The settings window is missing and cannot be shown.");
+        return;
+    };
+    if let Err(error) = window
+        .unminimize()
+        .and_then(|()| window.show())
+        .and_then(|()| window.set_focus())
+    {
+        eprintln!("The settings window could not be shown: {error}");
+    }
 }
 
 /// What the tray says about itself.
