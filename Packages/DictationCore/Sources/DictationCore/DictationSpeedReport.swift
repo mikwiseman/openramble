@@ -74,6 +74,9 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
     /// inside it — a blocked thread pool, a doubled inference, a disk. Naming
     /// it means the next one identifies itself instead of needing a sampler.
     public let engineQueueing: Duration?
+    /// Opening and decoding the recording, which is where an eleven-second
+    /// dictation with a tenth of a second of inference actually went.
+    public let audioDecoding: Duration?
     /// How much audio the take actually carried.
     public let audioDuration: Duration
 
@@ -83,6 +86,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         recognition: Duration,
         engineProcessing: Duration?,
         engineQueueing: Duration? = nil,
+        audioDecoding: Duration? = nil,
         audioDuration: Duration
     ) {
         self.captureFreeze = captureFreeze
@@ -90,6 +94,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         self.recognition = recognition
         self.engineProcessing = engineProcessing
         self.engineQueueing = engineQueueing
+        self.audioDecoding = audioDecoding
         self.audioDuration = audioDuration
     }
 }

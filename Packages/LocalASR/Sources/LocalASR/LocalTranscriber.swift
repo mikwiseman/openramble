@@ -119,6 +119,7 @@ public actor LocalTranscriber {
         // stage timer reporting a queue of zero — because the timer sat after
         // this line rather than before it.
         let reader = reader
+        let decodeStarted = ContinuousClock.now
         let samples: [Float]
         do {
             samples = try await LocalTranscriber.onDisk { try reader.samples(from: fileURL) }
@@ -126,6 +127,7 @@ public actor LocalTranscriber {
             throw ASREngineError.unsupportedAudioFormat(String(describing: failure))
         }
 
+        let decoded = decodeStarted.duration(to: .now)
         try Task.checkCancellation()
         let result = try await transcribe(samples: samples, languageHint: languageHint)
         // Report the whole wait, decode included, rather than only the part
@@ -139,6 +141,8 @@ public actor LocalTranscriber {
             queueingDuration: Double(waited.components.seconds)
                 + Double(waited.components.attoseconds) / 1e18
                 - result.processingDuration,
+            decodingDuration: Double(decoded.components.seconds)
+                + Double(decoded.components.attoseconds) / 1e18,
             phaseTimings: result.phaseTimings
         )
     }

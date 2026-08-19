@@ -78,6 +78,12 @@ public struct ASRResult: Sendable, Equatable {
     /// — was reported nowhere. That interval held every second of the stalls
     /// this app spent months not being able to name. Now it has a number.
     public let queueingDuration: TimeInterval
+    /// How long opening and decoding the recording took.
+    ///
+    /// Split out from the wait because it is the part that turned out to
+    /// matter, and because a lump that says "something before the engine" is
+    /// what let this hide for months.
+    public let decodingDuration: TimeInterval
     /// Benchmark-only phase measurements. Production engines leave this `nil`.
     public let phaseTimings: ASRPhaseTimings?
 
@@ -87,6 +93,7 @@ public struct ASRResult: Sendable, Equatable {
         audioDuration: TimeInterval,
         processingDuration: TimeInterval,
         queueingDuration: TimeInterval = 0,
+        decodingDuration: TimeInterval = 0,
         phaseTimings: ASRPhaseTimings? = nil
     ) {
         self.text = text
@@ -94,6 +101,7 @@ public struct ASRResult: Sendable, Equatable {
         self.audioDuration = audioDuration
         self.processingDuration = processingDuration
         self.queueingDuration = queueingDuration
+        self.decodingDuration = decodingDuration
         self.phaseTimings = phaseTimings
     }
 }
