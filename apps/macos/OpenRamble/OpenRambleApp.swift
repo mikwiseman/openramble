@@ -18,6 +18,8 @@ private final class TerminationObserver: NSObject, NSApplicationDelegate {
 
 @main
 struct OpenRambleApp: App {
+    static let settingsWindowID = "settings"
+
     @StateObject private var state = AppState()
     @NSApplicationDelegateAdaptor(TerminationObserver.self) private var termination
     @AppStorage("onboardingCompleted") private var onboardingCompleted = false
@@ -79,8 +81,25 @@ struct OpenRambleApp: App {
         // a name worth showing — only content.
         .windowStyle(.hiddenTitleBar)
 
-        Settings {
+        // A plain window rather than the `Settings` scene.
+        //
+        // The Settings scene brings its own chrome, and on macOS 26 that chrome
+        // fights a `NavigationSplitView`: the sidebar renders as an inset panel
+        // whose border passes directly under the close button, and the content
+        // scrolls up behind a title bar that reserved no room for it. Both are
+        // visible in a screenshot and neither is anything the view itself asks
+        // for. A `Window` gets the ordinary titlebar every other Mac app has,
+        // which is all the sidebar ever needed.
+        Window("Settings", id: Self.settingsWindowID) {
             SettingsView(state: state)
+        }
+        .windowResizability(.contentSize)
+        .defaultSize(width: 780, height: 580)
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") { openWindow(id: Self.settingsWindowID) }
+                    .keyboardShortcut(",", modifiers: .command)
+            }
         }
     }
 }

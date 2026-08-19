@@ -14,6 +14,14 @@ struct HistoryView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Dictations that never became text, kept as audio so nothing was
+            // lost. They belong here, with the other recordings — they used to
+            // sit under the speech model beside "Delete Model", which is a
+            // section about the recogniser and has nothing to do with them.
+            if state.recoveredRecordingCount > 0 || state.recordingRecoveryStorageFaulted {
+                unfinished
+                Divider()
+            }
             if state.history.isEmpty {
                 empty
             } else {
@@ -58,6 +66,38 @@ struct HistoryView: View {
                 }
             }
         }
+    }
+
+    /// The takes that were interrupted, and the one state where keeping them
+    /// stops working.
+    private var unfinished: some View {
+        HStack(spacing: 10) {
+            Image(systemName: state.recordingRecoveryStorageFaulted
+                ? "exclamationmark.triangle.fill"
+                : "waveform.badge.exclamationmark")
+                .foregroundStyle(StatusColorRole.attention.color)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(state.recordingRecoveryStorageFaulted
+                    ? "Keeping interrupted recordings is switched off"
+                    : "\(state.recoveredRecordingCount) dictation\(state.recoveredRecordingCount == 1 ? "" : "s") didn't finish")
+                    .font(.callout.weight(.medium))
+                Text(state.recordingRecoveryStorageFaulted
+                    ? "The app could not record what is safe to delete, so it stops rather than guess about your voice data."
+                    : "Their audio was kept so nothing was lost. It is deleted within seven days.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            Button("Show in Finder") { state.revealRecoveredRecordings() }
+                .accessibilityHint("Opens the folder holding the kept audio")
+        }
+        .padding(12)
+        .accessibilityElement(children: .contain)
     }
 
     private var footer: some View {

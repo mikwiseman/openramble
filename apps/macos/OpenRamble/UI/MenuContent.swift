@@ -13,7 +13,6 @@ import SwiftUI
 struct MenuContent: View {
     @ObservedObject var state: AppState
     let showOnboarding: () -> Void
-    @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -115,7 +114,7 @@ struct MenuContent: View {
 
         case .settings:
             Button("Settings…") {
-                openSettings()
+                openWindow(id: "settings")
                 // The Settings window is created after this action returns, so
                 // it has to be raised once it exists. See `WindowFronting`.
                 WindowFronting.raiseOpenedWindow()
