@@ -51,3 +51,42 @@ final class FnKeyUsageTests: XCTestCase {
         XCTAssertTrue(warning.contains("external keyboard"))
     }
 }
+
+/// Every dictation key must be its own key.
+@MainActor
+final class DictationHotkeySideBitTests: XCTestCase {
+    /// Two keys sharing a side bit would answer to each other: holding the
+    /// left Command would start dictation bound to the right one, and the
+    /// release of either would stop it. The general `.command` flag cannot
+    /// tell them apart — only these bits can — so a duplicate here is a key
+    /// that silently does someone else's job.
+    func testEverySideBitIsDistinct() {
+        var seen: [UInt: DictationHotkey] = [:]
+        for key in DictationHotkey.allCases {
+            if let clash = seen[key.sideMask] {
+                XCTFail("\(key) and \(clash) share side bit \(String(key.sideMask, radix: 16))")
+            }
+            seen[key.sideMask] = key
+        }
+        XCTAssertEqual(seen.count, DictationHotkey.allCases.count)
+    }
+
+    /// A key held alone starts dictation; the same key inside a chord does not.
+    /// Both halves matter for the newly added left-hand modifiers, which are
+    /// the ones people actually build shortcuts from.
+    func testAChordIsNotAHold() {
+        for key in DictationHotkey.allCases where key != .fn {
+            XCTAssertTrue(
+                key.isExclusivelyPressed(in: key.sideMask | key.kindMaskForTests),
+                "\(key) held alone must count"
+            )
+            // The same key with Shift added is the start of a shortcut.
+            let withShift = key.sideMask | key.kindMaskForTests
+                | NSEvent.ModifierFlags.shift.rawValue
+            XCTAssertFalse(
+                key.isExclusivelyPressed(in: withShift),
+                "\(key) inside a chord must not start dictation"
+            )
+        }
+    }
+}

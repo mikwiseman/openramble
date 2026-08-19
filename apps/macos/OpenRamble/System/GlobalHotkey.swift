@@ -11,6 +11,9 @@ public enum DictationHotkey: String, CaseIterable, Sendable, Codable {
     case rightCommand
     case rightOption
     case leftControl
+    case leftCommand
+    case leftOption
+    case rightControl
 
     public var title: String {
         switch self {
@@ -18,6 +21,9 @@ public enum DictationHotkey: String, CaseIterable, Sendable, Codable {
         case .rightCommand: return "Right Command"
         case .rightOption: return "Right Option"
         case .leftControl: return "Left Control"
+        case .leftCommand: return "Left Command"
+        case .leftOption: return "Left Option"
+        case .rightControl: return "Right Control"
         }
     }
 
@@ -30,6 +36,9 @@ public enum DictationHotkey: String, CaseIterable, Sendable, Codable {
         case .rightCommand: return UInt16(kVK_RightCommand)
         case .rightOption: return UInt16(kVK_RightOption)
         case .leftControl: return UInt16(kVK_Control)
+        case .leftCommand: return UInt16(kVK_Command)
+        case .leftOption: return UInt16(kVK_Option)
+        case .rightControl: return UInt16(kVK_RightControl)
         }
     }
 
@@ -50,6 +59,13 @@ public enum DictationHotkey: String, CaseIterable, Sendable, Codable {
         case .rightCommand: return 0x0000_0010
         case .rightOption: return 0x0000_0040
         case .leftControl: return 0x0000_0001
+        // The left-hand bits, from the same `IOLLEvent.h` table. Left Command
+        // and Left Option are what most people actually rest a thumb on; they
+        // were missing for no better reason than that the first four were
+        // enough to ship.
+        case .leftCommand: return 0x0000_0008
+        case .leftOption: return 0x0000_0020
+        case .rightControl: return 0x0000_2000
         }
     }
 
@@ -66,12 +82,16 @@ public enum DictationHotkey: String, CaseIterable, Sendable, Codable {
         | NSEvent.ModifierFlags.shift.rawValue
         | NSEvent.ModifierFlags.function.rawValue
 
+    /// Exposed so the side-bit tests can build a realistic event mask; the
+    /// real flags always carry the general flag alongside the side bit.
+    var kindMaskForTests: UInt { kindMask }
+
     /// General flag of the type of this modifier (“some Command is pressed”).
     private var kindMask: UInt {
         switch self {
-        case .rightCommand: return NSEvent.ModifierFlags.command.rawValue
-        case .rightOption: return NSEvent.ModifierFlags.option.rawValue
-        case .leftControl: return NSEvent.ModifierFlags.control.rawValue
+        case .rightCommand, .leftCommand: return NSEvent.ModifierFlags.command.rawValue
+        case .rightOption, .leftOption: return NSEvent.ModifierFlags.option.rawValue
+        case .leftControl, .rightControl: return NSEvent.ModifierFlags.control.rawValue
         case .fn: return NSEvent.ModifierFlags.function.rawValue
         }
     }
