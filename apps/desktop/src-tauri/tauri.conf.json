@@ -10,10 +10,14 @@
     "windows": [
       {
         "title": "OpenRamble",
-        "width": 720,
-        "height": 560,
+        "width": 760,
+        "height": 620,
         "resizable": true,
-        "visible": false
+        "visible": true,
+        "transparent": true,
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       }
     ],
     "security": {
@@ -24,7 +28,8 @@
       "iconPath": "icons/tray.png",
       "iconAsTemplate": true
     },
-    "withGlobalTauri": true
+    "withGlobalTauri": true,
+    "macOSPrivateApi": true
   },
   "bundle": {
     "active": true,

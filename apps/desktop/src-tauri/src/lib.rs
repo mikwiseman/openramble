@@ -158,6 +158,14 @@ pub fn run() {
             let quit = MenuItem::with_id(app, "quit", "Quit OpenRamble", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&settings, &quit])?;
 
+            // The system's own blur behind the window. Painting a picture of
+            // glass onto an opaque background reads as flat the instant
+            // anything moves behind it; this is the real thing, sampled live
+            // from whatever is underneath.
+            if let Some(window) = app.get_webview_window("main") {
+                apply_glass(&window);
+            }
+
             let handle = app.handle().clone();
             let dictation = Arc::clone(&for_setup);
             TrayIconBuilder::with_id("main")
@@ -199,6 +207,52 @@ pub fn run() {
                 for_exit.shutdown();
             }
         });
+}
+
+/// Put real material behind the window.
+///
+/// Each platform has its own, and they are not interchangeable: macOS has
+/// vibrancy that samples the desktop continuously, Windows 11 has Mica and
+/// Acrylic. Where none is available the window simply stays solid — the page
+/// below is legible either way, because a design that becomes unreadable
+/// without an effect is a design that fails on the machines that lack it.
+fn apply_glass(window: &tauri::WebviewWindow) {
+    #[cfg(target_os = "macos")]
+    {
+        use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
+        // Sidebar, and only Sidebar.
+        //
+        // UnderWindowBackground and HudWindow both sound like better choices for
+        // a window background, and both prevent the window from being created at
+        // all in this version of the crate — the app runs with no interface.
+        // Recorded because the names are tempting and the failure is silent.
+        //
+        // Active rather than following the window's state, so the material keeps
+        // sampling the desktop when the window is not frontmost instead of
+        // freezing into a still image the moment somebody clicks away.
+        let _ = apply_vibrancy(
+            window,
+            NSVisualEffectMaterial::Sidebar,
+            Some(NSVisualEffectState::Active),
+            Some(18.0),
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use window_vibrancy::{apply_acrylic, apply_mica};
+        // Mica is the Windows 11 material and the cheaper of the two; acrylic is
+        // the fallback for builds without it.
+        if apply_mica(window, None).is_err() {
+            let _ = apply_acrylic(window, Some((18, 18, 20, 125)));
+        }
+    }
+    #[cfg(target_os = "linux")]
+    {
+        // No portable equivalent: compositors differ and several offer nothing.
+        // The page's own translucency carries the look there.
+        let _ = window;
+    }
 }
 
 /// Bring the settings window in front of the person.

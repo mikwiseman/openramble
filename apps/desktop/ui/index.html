@@ -5,83 +5,263 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OpenRamble</title>
     <style>
+      /* Liquid Glass, following Apple's rules rather than an impression of them.
+       *
+       * The window itself carries the material — real vibrancy, sampled live
+       * from the desktop behind it. That is the glass. Everything here sits in
+       * the content layer on top of it, which is what the guidance asks for:
+       * the material belongs to the surface that floats above content, not to
+       * every box inside it.
+       *
+       * Three rules this follows deliberately, having broken all three first:
+       *
+       *   "Always avoid glass on glass."  So sections are not panes. They are
+       *   content, separated by space and a hairline.
+       *
+       *   "Avoid tinting all your elements. When every element is tinted,
+       *   nothing stands out."  Exactly one control is tinted: the primary
+       *   action.
+       *
+       *   Controls on the material use "fills, transparency, and vibrancy ... a
+       *   thin overlay that is part of the material" — not their own blur.
+       *
+       * Colour is almost absent on purpose. Real glass is colourless and takes
+       * its tone from what is behind it, so the fills below are neutral greys at
+       * low alpha and the text is the system's own label hierarchy.
+       */
       :root {
         color-scheme: light dark;
-        --ink: #1a1a1a;
-        --quiet: #6b6b6b;
-        --line: #e0e0e0;
-        --accent: #1f6feb;
-        --bad: #b3261e;
+
+        /* Label hierarchy, the system's own values. */
+        --label: rgba(0, 0, 0, 0.85);
+        --label-2: rgba(0, 0, 0, 0.5);
+        --label-3: rgba(0, 0, 0, 0.28);
+
+        /* Neutral fills. Grey, not blue: a tinted fill on glass reads as plastic. */
+        --fill: rgba(116, 116, 128, 0.10);
+        --fill-strong: rgba(116, 116, 128, 0.16);
+        --hairline: rgba(0, 0, 0, 0.10);
+        --sheen: rgba(255, 255, 255, 0.7);
+
+        --accent: #0a84ff;
+        --bad: #d70015;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --label: rgba(255, 255, 255, 0.92);
+          --label-2: rgba(255, 255, 255, 0.55);
+          --label-3: rgba(255, 255, 255, 0.3);
+          --fill: rgba(118, 118, 128, 0.24);
+          --fill-strong: rgba(118, 118, 128, 0.36);
+          --hairline: rgba(255, 255, 255, 0.12);
+          --sheen: rgba(255, 255, 255, 0.16);
+          --accent: #0a84ff;
+          --bad: #ff453a;
+        }
+      }
+
+      /* "Reduced Transparency makes Liquid Glass frostier and obscures more of
+         the content behind it." Honour it: the page gets its own backing.
+         Same treatment where no material exists at all. */
+      @media (prefers-reduced-transparency: reduce) {
+        body { background: Canvas; }
+      }
+      /* Its own translucent backing plus a blur, which is as close to the
+         material as a page can get without the compositor's help — and still
+         legible on a compositor that offers no blur at all. */
+      :root.no-material body {
+        background: rgba(246, 246, 248, 0.92);
+        -webkit-backdrop-filter: blur(24px) saturate(160%);
+        backdrop-filter: blur(24px) saturate(160%);
       }
       @media (prefers-color-scheme: dark) {
-        :root { --ink: #ededed; --quiet: #a0a0a0; --line: #333; --accent: #6ea8fe; --bad: #f2b8b5; }
+        :root.no-material body { background: rgba(28, 28, 32, 0.92); }
       }
+
       * { box-sizing: border-box; }
+      html, body { height: 100%; }
+
       body {
-        margin: 0; padding: 2rem 2.25rem;
-        font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
-        color: var(--ink);
+        margin: 0;
+        /* Transparent, so the window's own material is what shows. */
+        background: transparent;
+        color: var(--label);
+        font: 13.5px/1.55 -apple-system, "SF Pro Text", "Segoe UI Variable Text",
+              "Segoe UI", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        /* Nothing lands under the drag strip when jumped to by keyboard. */
+        scroll-padding-top: 2.6rem;
+        padding: var(--top-inset) 1.8rem 2rem;
       }
-      h1 { font-size: 1.15rem; margin: 0 0 1.5rem; font-weight: 600; }
-      section { border-top: 1px solid var(--line); padding: 1.25rem 0; }
-      section:first-of-type { border-top: none; padding-top: 0; }
-      h2 { font-size: 0.95rem; margin: 0 0 0.4rem; font-weight: 600; }
-      p { margin: 0.3rem 0; color: var(--quiet); max-width: 34rem; }
-      p.plain { color: var(--ink); }
-      .row { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.85rem; flex-wrap: wrap; }
-      /* An author `display` beats the browser's own rule for [hidden], so
-         everything given `hidden` stayed on screen — the Download button and the
-         progress bar were visible at the same time. */
+
+      /* macOS overlays the traffic lights on the content, so the first line has
+         to clear them. Every other platform draws its own title bar and the
+         same inset would just be a gap. */
+      :root { --top-inset: 1.4rem; }
+      :root.is-macos { --top-inset: 2.6rem; }
+
+      /* A scrollbar that belongs to the material rather than to the browser. */
+      ::-webkit-scrollbar { width: 11px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb {
+        background: var(--fill-strong);
+        border-radius: 999px;
+        border: 3px solid transparent;
+        background-clip: content-box;
+      }
+      ::-webkit-scrollbar-thumb:hover { background: var(--label-3); background-clip: content-box; }
+
+      .drag {
+        position: fixed; inset: 0 0 auto 0; height: 2.1rem;
+        -webkit-app-region: drag; z-index: 10;
+      }
+
+      /* The specular edge. Real glass catches light along its top rim, and this
+         one line is most of what separates "material" from "grey rectangle". */
+      body::before {
+        content: "";
+        position: fixed; inset: 0 0 auto 0; height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.55) 18%,
+          rgba(255, 255, 255, 0.55) 82%,
+          transparent
+        );
+        pointer-events: none; z-index: 20;
+      }
+
+      h1 {
+        font-size: 1.35rem; font-weight: 640; letter-spacing: -0.02em;
+        margin: 0 0 0.15rem;
+      }
+      .tagline { color: var(--label-2); margin: 0 0 1.9rem; }
+
+      /* Content, not glass. Separated by space and one hairline. */
+      section { padding: 1.4rem 0; border-top: 1px solid var(--hairline); }
+      section:first-of-type { border-top: none; padding-top: 0.4rem; }
+
+      h2 {
+        font-size: 0.72rem; font-weight: 620; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--label-2);
+        margin: 0 0 0.7rem;
+      }
+
+      p { margin: 0.3rem 0; max-width: 42rem; color: var(--label-2); }
+      p.plain { color: var(--label); font-size: 0.95rem; }
+
+      .row { display: flex; align-items: center; gap: 0.55rem; margin-top: 0.9rem; flex-wrap: wrap; }
       [hidden] { display: none !important; }
-      .limits { margin: 0.4rem 0 0; padding-left: 1.1rem; }
-      .limits li { color: var(--ink); margin: 0.3rem 0; max-width: 34rem; }
-      .history { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+
+      /* A thin overlay that is part of the material: a fill and a top sheen,
+         no second blur. */
+      button, input {
+        font: inherit;
+        color: var(--label);
+        border: 0.5px solid var(--hairline);
+        border-radius: 9px;
+        background: var(--fill);
+        box-shadow: inset 0 0.5px 0 var(--sheen);
+        transition: background 0.15s ease, transform 0.1s ease;
+      }
+
+      button { padding: 0.38rem 0.9rem; cursor: pointer; }
+      button:hover { background: var(--fill-strong); }
+      button:active { transform: scale(0.97); }
+      button:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+      /* The one tinted element in the interface. */
+      button.primary {
+        background: var(--accent);
+        border-color: transparent;
+        color: #fff;
+        font-weight: 560;
+        box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.4);
+      }
+      button.primary:hover { background: color-mix(in srgb, var(--accent) 88%, white); }
+
+      input { padding: 0.38rem 0.65rem; min-width: 9.5rem; }
+      input::placeholder { color: var(--label-3); }
+      input[type="checkbox"] { min-width: 0; accent-color: var(--accent); }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+      label { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--label); }
+
+      kbd {
+        font: inherit; font-weight: 580; font-size: 0.9em;
+        padding: 0.1rem 0.42rem; border-radius: 6px;
+        background: var(--fill-strong);
+        box-shadow: inset 0 0.5px 0 var(--sheen);
+      }
+
+      progress {
+        width: 100%; max-width: 20rem; height: 0.4rem;
+        border: none; border-radius: 999px; background: var(--fill);
+      }
+      progress::-webkit-progress-bar { background: var(--fill); border-radius: 999px; }
+      progress::-webkit-progress-value { background: var(--accent); border-radius: 999px; }
+
+      .bad { color: var(--bad); }
+      .muted-note { color: var(--label-3); font-size: 0.85rem; }
+
+      .limits { margin: 0.3rem 0 0; padding-left: 1.05rem; }
+      .limits li { color: var(--label); margin: 0.3rem 0; max-width: 38rem; }
+
+      .terms { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+      .terms th {
+        text-align: left; font-size: 0.7rem; font-weight: 620;
+        text-transform: uppercase; letter-spacing: 0.05em;
+        color: var(--label-3); padding-bottom: 0.4rem;
+      }
+      .terms td { border-top: 0.5px solid var(--hairline); padding: 0.45rem 0.5rem 0.45rem 0; }
+      .terms td:last-child { text-align: right; }
+
+      .history { list-style: none; margin: 0.4rem 0 0; padding: 0; }
       .history li {
-        border-top: 1px solid var(--line); padding: 0.7rem 0;
-        display: flex; gap: 0.75rem; align-items: baseline;
+        border-top: 0.5px solid var(--hairline); padding: 0.7rem 0;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 0.85rem; align-items: baseline;
+      }
+      /* Narrow windows stack rather than squeezing the transcript to a column
+         two words wide. */
+      @media (max-width: 560px) {
+        .history li { grid-template-columns: 1fr; gap: 0.35rem; }
+        .history .actions { justify-self: start; }
       }
       .history li:first-child { border-top: none; }
-      .history .when { color: var(--quiet); font-size: 0.85rem; white-space: nowrap; }
-      .history .said { flex: 1; overflow-wrap: anywhere; }
-      .history button { padding: 0.2rem 0.55rem; font-size: 0.85rem; }
-      .muted-note { color: var(--quiet); font-size: 0.85rem; }
-      .terms { width: 100%; border-collapse: collapse; margin-top: 0.6rem; }
-      .terms th {
-        text-align: left; font-size: 0.8rem; font-weight: 500;
-        color: var(--quiet); padding-bottom: 0.3rem;
+      .history .when {
+        color: var(--label-3); font-size: 0.78rem; white-space: nowrap;
+        font-variant-numeric: tabular-nums;
       }
-      .terms td { border-top: 1px solid var(--line); padding: 0.5rem 0.5rem 0.5rem 0; }
-      .terms td:last-child { text-align: right; }
-      label { display: inline-flex; align-items: center; gap: 0.45rem; }
-      input[type="checkbox"] { min-width: 0; }
-      input {
-        font: inherit; padding: 0.4rem 0.6rem; border-radius: 7px;
-        border: 1px solid var(--line); background: transparent; color: var(--ink);
-        min-width: 10rem;
+      .history .said { flex: 1; overflow-wrap: anywhere; color: var(--label); }
+      .history .actions { display: flex; gap: 0.35rem; }
+      .history button { padding: 0.2rem 0.55rem; font-size: 0.82rem; }
+
+      /* An empty state that says what will fill it, rather than a blank area
+         that reads as something failing to load. */
+      .empty { color: var(--label-3); font-style: normal; }
+
+      /* "Reduced Motion decreases the intensity of some effects and disables
+         any elastic properties for the material." */
+      @media (prefers-reduced-motion: reduce) {
+        button, input { transition: none; }
+        button:active { transform: none; }
       }
-      button {
-        font: inherit; padding: 0.45rem 1rem; border-radius: 7px;
-        border: 1px solid var(--line); background: transparent; color: var(--ink);
-        cursor: pointer;
-      }
-      button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-      button:disabled { opacity: 0.5; cursor: default; }
-      kbd {
-        font: inherit; padding: 0.1rem 0.45rem; border: 1px solid var(--line);
-        border-radius: 5px; background: color-mix(in srgb, var(--ink) 7%, transparent);
-      }
-      progress { width: 100%; max-width: 24rem; height: 0.5rem; }
-      .bad { color: var(--bad); }
     </style>
   </head>
   <body>
+    <div class="drag"></div>
     <h1>OpenRamble</h1>
+    <p class="tagline">Local dictation. Nothing you say leaves this machine.</p>
 
     <section>
       <h2>Dictating</h2>
       <p class="plain">Hold <kbd id="hotkey">Right Ctrl</kbd>, speak, and release it.
         The text appears in whatever you were typing in.</p>
-      <p>Recognition runs on this machine. Nothing you say leaves it.</p>
       <div class="row">
         <label><input type="checkbox" id="start-at-login" /> Start when I log in</label>
       </div>
@@ -123,7 +303,7 @@
 
     <section>
       <h2>Recent dictations</h2>
-      <p id="history-empty">Finished dictations appear here.</p>
+      <p id="history-empty" class="empty">Finished dictations appear here, with the audio that produced them.</p>
       <ul id="history" class="history"></ul>
       <div class="row" id="history-actions" hidden>
         <button id="clear-history">Delete all</button>
@@ -136,6 +316,18 @@
       const listen = window.__TAURI__.event.listen;
 
       const el = (id) => document.getElementById(id);
+
+      // macOS overlays its window controls on the content; the others do not.
+      const agent = navigator.userAgent;
+      if (agent.includes("Macintosh")) {
+        document.documentElement.classList.add("is-macos");
+      }
+      // Linux has no portable window material, so the window is transparent with
+      // nothing behind it — text would float on the desktop and be unreadable.
+      // The page paints its own backing there instead.
+      if (agent.includes("Linux") && !agent.includes("Android")) {
+        document.documentElement.classList.add("no-material");
+      }
       const gigabytes = (bytes) => (bytes / 1e9).toFixed(2) + " GB";
 
       async function refresh() {
@@ -267,7 +459,10 @@
       refreshTerms();
           });
 
-          item.append(when, said, copy, remove);
+          const actions = document.createElement("span");
+          actions.className = "actions";
+          actions.append(copy, remove);
+          item.append(when, said, actions);
           el("history").appendChild(item);
         }
       }
