@@ -4,6 +4,37 @@ Code conventions are documented in [CLAUDE.md](CLAUDE.md), and the build and
 release process is documented in [docs/release.md](docs/release.md). This file
 only describes release state that must not be stored in the repository.
 
+## How this project is worked on
+
+Small changes, landed often, released often. That is the whole method, and it
+is a reaction to what happened without it: 0.11.1 was built, version-bumped,
+and never existed for anyone — the release was a build plus four manual steps,
+the steps were never run, and nothing anywhere said so. The feed kept serving
+the previous version and looked healthy doing it.
+
+So:
+
+- **Commit and push as work finishes**, not when a theme is complete. A branch
+  that holds a week of work is a week nobody can use and a week of unmerged
+  risk.
+- **Release often.** `./scripts/ship.sh` is the whole release, one command, and
+  it ends by fetching the live feed and reading the version out of it. If
+  shipping is cheap, shipping frequently is the obvious thing to do; the script
+  exists to keep it cheap.
+- **A release is a feed that serves it, not a build that passed.** Verify by
+  fetching, never by trusting an exit code. Never pipe a release script through
+  `tail` — a pipeline reports its last command's status, so a refusal to build
+  reads as success.
+- **Do not add machinery to work around machinery.** A previous round of
+  well-meant complexity made recognition slower, not faster. When something is
+  wrong, prefer removing to adding, and find the cause before building a guard
+  against the symptom.
+- **Verify by looking.** Tests cannot see a control that renders as a checkbox
+  instead of a switch, a border under the close button, or a window that opens
+  behind the editor. Screenshot the running app and read it.
+- **A test that passes against the broken code is worse than no test.** Before
+  trusting a new test, run it against the unfixed behaviour and watch it fail.
+
 ## Sparkle private key
 
 The Sparkle private key moves between trusted release machines. It belongs to
