@@ -62,3 +62,37 @@ jobs:
           name: ${{ matrix.artifact }}
           path: dist/*
           if-no-files-found: error
+
+  # Building the packages is not releasing them. Without this job the workflow
+  # went green while no release existed for anyone to download — the same way a
+  # macOS version was once built, version-bumped, and never shipped. A tag
+  # means a release; that is what this makes true.
+  publish:
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: incoming
+
+      - name: Collect the packages
+        run: |
+          mkdir -p dist
+          find incoming -type f -exec cp {} dist/ \;
+          ls -la dist
+          # A release with no packages in it is worse than no release: it looks
+          # finished and downloads nothing.
+          [ "$(ls -A dist)" ] || { echo "no packages to publish" >&2; exit 1; }
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#desktop-v}"
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "OpenRamble for Windows and Linux $VERSION" \
+            --notes "Windows and Linux packages built from ${GITHUB_SHA}."
