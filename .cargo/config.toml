@@ -1,0 +1,8 @@
+[env]
+# Resolved relative to this configuration file's parent. The framework itself
+# is prepared from the pinned, checksum-verified release and stays untracked.
+SPARKLE_FRAMEWORK_PATH = { value = "apps/desktop/src-tauri", relative = true }
+# Cargo test binaries live one directory deeper than Tauri's generated rpath.
+# Point dyld at the same generated framework copy; packaged applications use
+# their normal @executable_path/../Frameworks rpath.
+DYLD_FALLBACK_FRAMEWORK_PATH = { value = "target/Frameworks", relative = true }

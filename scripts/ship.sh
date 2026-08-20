@@ -64,8 +64,8 @@ git checkout --quiet main
 git merge --ff-only --quiet origin/main
 
 SHA=$(git rev-parse HEAD)
-VERSION=$(sed -n 's/^ *MARKETING_VERSION: *"\(.*\)"/\1/p' apps/macos/project.yml | head -1)
-[[ -n "$VERSION" ]] || fail "No MARKETING_VERSION in apps/macos/project.yml."
+VERSION=$(jq -er '.version' apps/desktop/src-tauri/tauri.conf.json)
+[[ -n "$VERSION" ]] || fail "No version in the Tauri configuration."
 NOTES="docs/release-notes/$VERSION.md"
 
 # A release nobody can read about is half a release.
@@ -77,7 +77,7 @@ Write them, land them on main, and ship again."
 # different binary to everyone who already has the old one under the same name.
 if git ls-remote --exit-code --tags origin "v$VERSION" >/dev/null 2>&1; then
   fail "v$VERSION is already tagged on the remote.
-Bump MARKETING_VERSION in apps/macos/project.yml, land it, and ship again."
+Bump the Tauri app version, land it, and ship again."
 fi
 
 say "Shipping $VERSION (build from ${SHA:0:7})"
