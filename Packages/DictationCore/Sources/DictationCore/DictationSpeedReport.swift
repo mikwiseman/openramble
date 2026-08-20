@@ -77,6 +77,13 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
     /// Opening and decoding the recording, which is where an eleven-second
     /// dictation with a tenth of a second of inference actually went.
     public let audioDecoding: Duration?
+    /// Waiting for the recording to finish being written and closed.
+    ///
+    /// The last span on the path with no number. It sits between the
+    /// microphone stopping and the engine being called, and it is where the
+    /// time was: the recording has to be drained and sealed before anything
+    /// can read it, and that is disk work.
+    public let recordingReadable: Duration?
     /// How much audio the take actually carried.
     public let audioDuration: Duration
 
@@ -87,6 +94,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         engineProcessing: Duration?,
         engineQueueing: Duration? = nil,
         audioDecoding: Duration? = nil,
+        recordingReadable: Duration? = nil,
         audioDuration: Duration
     ) {
         self.captureFreeze = captureFreeze
@@ -95,6 +103,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         self.engineProcessing = engineProcessing
         self.engineQueueing = engineQueueing
         self.audioDecoding = audioDecoding
+        self.recordingReadable = recordingReadable
         self.audioDuration = audioDuration
     }
 }

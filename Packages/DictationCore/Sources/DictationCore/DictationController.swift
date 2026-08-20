@@ -959,6 +959,9 @@ public final class DictationController {
         // the path that already runs; neither adds a suspension point, a lock,
         // or a reordered call.
         var preparationCompletedAt: ContinuousClock.Instant?
+        // The wait for the recording to be written and closed. Local to the
+        // take, because it describes this take and nothing else.
+        let readableWaitBox = DurationBox()
         do {
             var foregroundEnd = (stopSLORequestedAt ?? .now).advanced(
                 by: captureFreezeDeadline + transcriptionDeadline(recording.duration)
@@ -1012,7 +1015,10 @@ public final class DictationController {
                 if let transcribeSamples, let bufferedSamples, !bufferedSamples.isEmpty {
                     return try await transcribeSamples(bufferedSamples)
                 }
-                return try await transcribe(self.readableURL(for: recording))
+                let readableStart = self.monotonicNow()
+                let url = try await self.readableURL(for: recording)
+                readableWaitBox.value = readableStart.duration(to: self.monotonicNow())
+                return try await transcribe(url)
             }
         } catch let timeout as RecordingFinalizationTimeout where timeout.stage == .readableFile {
             guard shouldContinue(session) else {
@@ -1143,6 +1149,7 @@ public final class DictationController {
                 audioDecoding: recognized.decodingDuration > 0
                     ? .seconds(recognized.decodingDuration)
                     : nil,
+                recordingReadable: readableWaitBox.value,
                 audioDuration: .seconds(recognized.audioDuration)
             )
         }
@@ -1723,4 +1730,12 @@ private enum RecordingFinalizationStage: Sendable, Equatable {
 
 private struct RecordingFinalizationTimeout: Error, Sendable, Equatable {
     let stage: RecordingFinalizationStage
+}
+
+/// Carries one measured duration out of an escaping closure.
+///
+/// The readable wait is taken inside the deadline wrapper, and the report is
+/// built outside it. A reference is the smallest way across that boundary.
+final class DurationBox: @unchecked Sendable {
+    var value: Duration?
 }

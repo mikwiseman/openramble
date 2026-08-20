@@ -1029,6 +1029,7 @@ public final class AppState: ObservableObject {
                     freeze \(report.phases?.captureFreeze.appSeconds ?? -1, format: .fixed(precision: 2))s \
                     prepare \(report.phases?.enginePreparation?.appSeconds ?? -1, format: .fixed(precision: 2))s \
                     recognize \(report.phases?.recognition.appSeconds ?? -1, format: .fixed(precision: 2))s \
+                    readable \(report.phases?.recordingReadable?.appSeconds ?? -1, format: .fixed(precision: 2))s \
                     decode \(report.phases?.audioDecoding?.appSeconds ?? -1, format: .fixed(precision: 2))s \
                     queued \(report.phases?.engineQueueing?.appSeconds ?? -1, format: .fixed(precision: 2))s \
                     engine \(report.phases?.engineProcessing?.appSeconds ?? -1, format: .fixed(precision: 2))s \

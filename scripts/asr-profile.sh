@@ -34,14 +34,17 @@ echo
       # stop→text stop→paste freeze prepare recognize [decode] [queued] engine audio
       NF >= 7 {
         total = $1; freeze = $3; prepare = $4; recognize = $5
-        if (NF >= 9)      { decode = $6; queued = $7; engine = $8; audio = $9 }
-        else if (NF == 8) { decode = -1; queued = $6; engine = $7; audio = $8 }
-        else              { decode = -1; queued = -1; engine = $6; audio = $7 }
+        if (NF >= 10)     { readable = $6; decode = $7; queued = $8; engine = $9; audio = $10 }
+        else if (NF == 9) { readable = -1; decode = $6; queued = $7; engine = $8; audio = $9 }
+        else if (NF == 8) { readable = -1; decode = -1; queued = $6; engine = $7; audio = $8 }
+        else              { readable = -1; decode = -1; queued = -1; engine = $6; audio = $7 }
         add("total", total); add("freeze", freeze); add("prepare", prepare)
+        add("readable", readable)
         add("decode", decode); add("queued", queued); add("engine", engine)
         # Whatever no stage claimed. A large "unaccounted" means the breakdown
         # is still incomplete and there is another stage worth naming.
         rest = recognize
+        if (readable >= 0) rest -= readable
         if (decode >= 0) rest -= decode
         if (queued >= 0) rest -= queued
         if (engine >= 0) rest -= engine
@@ -78,6 +81,7 @@ echo
         printf "  %-13s  %6s  %6s  %6s   %6s\n", "-------------", "------", "------", "------", "------"
         row("freeze",      "freeze")
         row("prepare",     "prepare")
+        row("readable",    "readable")
         row("decode",      "decode")
         row("queued",      "queued")
         row("engine",      "engine")
