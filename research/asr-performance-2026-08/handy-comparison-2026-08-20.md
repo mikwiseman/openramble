@@ -63,3 +63,45 @@ by intuition tends to land where you already believe the problem is not.
 - How it warms the engine, and whether anything runs per dictation.
 - What happens after the text is produced, and whether it can delay the next take.
 - Its streaming path (`finalize_stream`), which we have no equivalent of.
+
+## The cause, measured
+
+Caught under deliberate load on 2026-08-20 with `transport` — the stage added
+in 0.22.0, which measures from dispatching the recognition call to the engine
+starting work.
+
+| total | engine | transport | audio |
+|---|---|---|---|
+| 31.00 s | 1.31 s | **29.66 s** | 16.5 s |
+| 11.32 s | 0.28 s | **11.01 s** | 17.4 s |
+| 8.15 s | 0.12 s | **8.00 s** | 6.9 s |
+| 6.62 s | 0.18 s | **6.40 s** | 10.1 s |
+| 4.92 s | 0.17 s | **4.72 s** | 12.1 s |
+
+The engine is never the problem. The dictation is not working during those
+seconds — it is waiting for a thread. `transcribe_run` is a synchronous C call
+made from inside `TranscribeCppAdapter`, whose executor is Swift's cooperative
+pool: one thread per core, and a thread blocked there is lost rather than
+yielded. Under load the call waits for a slot while the work itself is ready.
+
+Handy has no such queue — `src-tauri/src/actions.rs` hands its engine call to a
+blocking thread.
+
+Reproduces on demand: saturate the cores, dictate, and it appears within a
+minute. That makes any fix testable rather than hopeful.
+
+## Attempted fix, reverted
+
+Moving `transcribe_run` to a dedicated queue via a checked continuation.
+`swift test` caught it: `testScenario002` — the first of two consecutive
+dictations came back with empty text. Reverted; 150/150 green again.
+
+The C session handle and run params are not `Sendable`, and passing them across
+a thread boundary needs more care than a mechanical `nonisolated(unsafe)`.
+Shipping recognition that sometimes returns nothing would be worse than
+shipping recognition that is sometimes slow.
+
+Second time in one day that touching working code on a structural argument
+rather than on evidence caused a regression; the first was moving the WAV seal,
+which deadlocked the capture suite. The measurement is what earns the next
+attempt.

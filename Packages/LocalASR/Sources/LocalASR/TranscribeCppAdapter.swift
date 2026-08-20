@@ -190,7 +190,9 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
         languageHint: String?
     ) async throws -> DictationCore.ASRResult {
         guard let engine else { throw ASREngineError.modelsNotLoaded }
-        let session = engine.session
+        // The session pointer is read on the engine thread, from the `Engine`
+        // held across the hop — not copied out here, where nothing would keep
+        // its owner alive.
         guard !samples.isEmpty else {
             throw ASREngineError.unsupportedAudioFormat("empty buffer")
         }
@@ -221,9 +223,55 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
         // that is thrown away.
         params.timestamps = TRANSCRIBE_TIMESTAMPS_NONE
 
-        let status = Self.withOptionalCString(languageHint) { language in
+        // Run and read together, on a thread of this engine's own.
+        //
+        // `transcribe_run` is a synchronous C call that occupies its thread for
+        // the whole inference. Running it on the actor means running it on
+        // Swift's cooperative pool, where a blocked thread is lost rather than
+        // yielded — measured on a busy Mac: 29.66 s waiting to reach an engine
+        // that then worked for 1.31 s. Handy hands its engine call to a
+        // blocking thread for the same reason.
+        //
+        // The result is read *inside* this block, and that is the whole
+        // correctness of it. The runtime's header says the result pointer is
+        // valid only until the next run on the session, and every run begins by
+        // clearing the previous result. A previous attempt dispatched the run
+        // but left the read on the actor: a second dictation then cleared the
+        // first one's text before its owner read it, and the first came back
+        // empty. `testScenario002` caught that and is the gate for this.
+        //
+        // The `Engine` object is captured, not the raw pointer, so `unload()`
+        // cannot free the session underneath a run in progress. The pointer
+        // carries no ownership of its own.
+        // Params are rebuilt inside the block rather than captured. A C struct
+        // is not `Sendable`, and its `language` member points at a string whose
+        // scope must outlive the call that reads it — building both here keeps
+        // that true without an unsafe promise.
+        let timestamps = params.timestamps
+        let task = params.task
+        let outcome = await Self.runOnEngineThread(engine: engine, hint: languageHint) {
+            session, language in
+            var params = transcribe_run_params()
+            transcribe_run_params_init(&params)
+            params.task = task
+            params.timestamps = timestamps
             params.language = language
-            return transcribe_run(session, samples, Int32(samples.count), &params)
+            let status = transcribe_run(session, samples, Int32(samples.count), &params)
+            guard status == TRANSCRIBE_OK else { return .failure(status) }
+            // Copied before returning: past this block the pointer may be
+            // cleared by the next run.
+            return .success(String(cString: transcribe_full_text(session)))
+        }
+
+        let status: transcribe_status
+        let rawText: String
+        switch outcome {
+        case let .failure(code):
+            status = code
+            rawText = ""
+        case let .success(text):
+            status = TRANSCRIBE_OK
+            rawText = text
         }
 
         switch status {
@@ -235,15 +283,16 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
             throw ASREngineError.inferenceFailed(Self.describe(status))
         }
 
-        // The returned pointer belongs to the session and is valid only until
-        // the next run on it. Copying here, inside the actor, is what keeps
-        // that lifetime from becoming the caller's problem.
-        guard let text = transcribe_full_text(session) else {
-            throw ASREngineError.inferenceFailed("the runtime returned no text")
-        }
+        // Empty is not an error here, however tempting it looks. Silence
+        // legitimately recognises as nothing, and `testSilentRecordingProducesNoInsertion`
+        // says so: an empty result must reach the caller as empty text, not as
+        // a failure. Distinguishing "nobody spoke" from "a result was cleared"
+        // cannot be done from the string, and inventing an error for both makes
+        // the common case wrong to catch the rare one.
+        let trimmed = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         return DictationCore.ASRResult(
-            text: String(cString: text).trimmingCharacters(in: .whitespacesAndNewlines),
+            text: trimmed,
             words: [],
             audioDuration: audioDuration,
             processingDuration: started.duration(to: .now).seconds
@@ -298,6 +347,53 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
     ///
     /// `withCString` has no optional form, and the borrowed pointer must not
     /// outlive the call — which is exactly the mistake this exists to prevent.
+    /// What a run produced, carried back as owned data.
+    ///
+    /// Never a pointer: the session may clear it the moment the next run
+    /// starts, so nothing borrowed may cross this boundary.
+    enum EngineOutcome: Sendable {
+        case success(String)
+        case failure(transcribe_status)
+    }
+
+    /// The one thread inference runs on.
+    ///
+    /// Serial, and this engine's alone. The runtime allows at most one run in
+    /// flight per model across all sessions, which a serial queue gives for
+    /// free; and it must not be shared with disk work, because sharing a queue
+    /// with an `fsync` is what deadlocked the recording seal.
+    private static let engineQueue = DispatchQueue(
+        label: "is.waiwai.dictation.engine-run",
+        // The same priority the dictation itself runs at. `userInitiated` cost
+        // about a tenth of the engine's throughput in the latency benchmark —
+        // the thread was being scheduled behind work the person is not waiting
+        // for, which is the opposite of true here.
+        qos: .userInteractive
+    )
+
+    /// Hand one whole run-and-read to the engine thread.
+    ///
+    /// The `Engine` is captured so its session cannot be freed mid-run; the
+    /// language string is built inside, so it outlives the call that uses it.
+    private static func runOnEngineThread(
+        engine: Engine,
+        hint: String?,
+        _ work: @escaping @Sendable (OpaquePointer, UnsafePointer<CChar>?) -> EngineOutcome
+    ) async -> EngineOutcome {
+        await withCheckedContinuation { continuation in
+            engineQueue.async {
+                let outcome = withOptionalCString(hint) { language in
+                    work(engine.session, language)
+                }
+                // Held to here explicitly: the pointer above carries no
+                // ownership, and ARC could otherwise release the engine as
+                // soon as its last use passed.
+                withExtendedLifetime(engine) {}
+                continuation.resume(returning: outcome)
+            }
+        }
+    }
+
     private static func withOptionalCString<T>(
         _ value: String?,
         _ body: (UnsafePointer<CChar>?) throws -> T

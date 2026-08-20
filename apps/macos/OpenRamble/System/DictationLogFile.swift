@@ -93,3 +93,33 @@ extension Double {
         return (self * factor).rounded() / factor
     }
 }
+
+/// Lets one level update reach the main actor at a time.
+///
+/// The audio callback offers a peak per frame; the main actor consumes them.
+/// Without this the callback queued about twenty hops a second for the whole
+/// dictation, and the recognition path — which is main-actor bound — waited
+/// behind them.
+///
+/// Dropping the ones that arrive while another is in flight costs nothing
+/// visible: the waveform holds 24 samples and a screen cannot show more than
+/// it is given.
+final class LevelUpdateGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var busy = false
+
+    /// `true` if this caller may proceed.
+    func take() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !busy else { return false }
+        busy = true
+        return true
+    }
+
+    func release() {
+        lock.lock()
+        busy = false
+        lock.unlock()
+    }
+}

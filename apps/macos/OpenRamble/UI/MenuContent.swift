@@ -97,12 +97,25 @@ struct MenuContent: View {
                         // copies. Written into the title rather than set as a
                         // real shortcut: this is a held modifier, and
                         // `keyboardShortcut` cannot express one.
-                        if index == 0, let shortcut = state.copyShortcut {
-                            Text("\(dictation.menuTitle)   \(shortcut.displayString)")
-                        } else {
-                            Text(dictation.menuTitle)
-                        }
+                        Text(dictation.menuTitle)
                     }
+                }
+            }
+
+        case .copyLast:
+            // Its own row rather than a label inside the submenu. The menu
+            // shows a shortcut beside Settings and Quit; the copy key was the
+            // one binding with nowhere to be seen, because it lived a level
+            // down next to a dictation rather than next to its own action.
+            Button {
+                state.copyLastDictation()
+            } label: {
+                if let shortcut = state.copyShortcut {
+                    // Written into the title: this can be a bare function key,
+                    // which `keyboardShortcut` cannot express.
+                    Text("Copy Last Dictation   \(shortcut.displayString)")
+                } else {
+                    Text("Copy Last Dictation")
                 }
             }
 

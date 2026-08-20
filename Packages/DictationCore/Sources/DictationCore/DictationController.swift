@@ -965,6 +965,7 @@ public final class DictationController {
         // The instant the recognition call is dispatched. Take-scoped because
         // the report is built outside the block that stamps it.
         let dispatchBox = DurationBox()
+        let pickedUpBox = DurationBox()
         do {
             var foregroundEnd = (stopSLORequestedAt ?? .now).advanced(
                 by: captureFreezeDeadline + transcriptionDeadline(recording.duration)
@@ -1021,6 +1022,12 @@ public final class DictationController {
             let dispatchedAt = monotonicNow()
             recognized = try await withTranscriptionDeadline(inferenceBudget) {
                 [transcribe, transcribeSamples] in
+                // The moment the pool actually picked this up. Everything
+                // before it is the hop off the main actor; everything after is
+                // reaching the engine. `transport` covered both as one number,
+                // and the two need different remedies — so they are separated
+                // before either is attempted.
+                pickedUpBox.value = dispatchedAt.duration(to: ContinuousClock.now)
                 if let transcribeSamples, let bufferedSamples, !bufferedSamples.isEmpty {
                     return try await transcribeSamples(bufferedSamples)
                 }
@@ -1160,8 +1167,11 @@ public final class DictationController {
                     ? .seconds(recognized.decodingDuration)
                     : nil,
                 recordingReadable: readableWaitBox.value,
+
                 // What it cost to reach the engine at all, engine time removed.
                 // A large number here means the work was waiting, not working.
+                // How long the hop off the main actor took on its own.
+                executorHandover: pickedUpBox.value,
                 engineTransport: {
                     guard let whole = dispatchBox.value else { return nil }
                     let inside = recognized.processingDuration

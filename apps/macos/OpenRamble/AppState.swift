@@ -614,6 +614,8 @@ public final class AppState: ObservableObject {
     private let paths: AppPaths
     private let permissions: any PermissionReading
     private let accessibilityManager: any AccessibilityManaging
+    /// Keeps one level update in flight at a time. See `LevelUpdateGate`.
+    private let levelGate = LevelUpdateGate()
     private let hotkeyMonitor: any HotkeyMonitoring
     private let copyShortcutMonitor: (any ShortcutMonitoring)?
     private let inserter: any TextInserting
@@ -871,7 +873,24 @@ public final class AppState: ObservableObject {
                     // The peak is sufficient for the waveform; RMS would hide short
                     // consonant transients that make the live signal feel responsive.
                     let peak = samples.reduce(Float(0)) { max($0, abs($1)) }
-                    Task { @MainActor in self?.registerInputLevel(peak) }
+                    // At most one hop to the main actor in flight at a time.
+                    //
+                    // This fired per audio frame — about twenty times a second
+                    // for the whole dictation — and each one is a hop the main
+                    // actor has to service. The recognition path is main-actor
+                    // bound too, so the meter was competing with the dictation
+                    // it was drawn for. Under load that queue is where seconds
+                    // went.
+                    //
+                    // Dropping intermediate frames costs nothing visible: the
+                    // waveform draws 24 samples and a display refresh cannot
+                    // show more than it is given. The newest peak always wins,
+                    // so the meter still tracks the voice rather than lagging.
+                    guard self?.levelGate.take() == true else { return }
+                    Task { @MainActor in
+                        self?.registerInputLevel(peak)
+                        self?.levelGate.release()
+                    }
                 },
                 { [weak self] session in
                     // Disk spill never gates the microphone. If it remained

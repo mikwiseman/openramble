@@ -91,6 +91,13 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
     /// earlier stamp was placed past it, inside the actor it was waiting to
     /// enter.
     public let engineTransport: Duration?
+    /// The hop off the main actor alone, separated from the rest of transport.
+    ///
+    /// `engineTransport` covers both leaving the main actor and reaching the
+    /// engine. The two have different remedies — one is a main-actor binding,
+    /// the other a blocked pool — so they are measured apart before either is
+    /// acted on.
+    public let executorHandover: Duration?
     /// How much audio the take actually carried.
     public let audioDuration: Duration
 
@@ -102,6 +109,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         engineQueueing: Duration? = nil,
         audioDecoding: Duration? = nil,
         recordingReadable: Duration? = nil,
+        executorHandover: Duration? = nil,
         engineTransport: Duration? = nil,
         audioDuration: Duration
     ) {
@@ -113,6 +121,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         self.audioDecoding = audioDecoding
         self.recordingReadable = recordingReadable
         self.engineTransport = engineTransport
+        self.executorHandover = executorHandover
         self.audioDuration = audioDuration
     }
 }

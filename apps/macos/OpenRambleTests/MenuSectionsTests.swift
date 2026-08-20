@@ -45,7 +45,7 @@ final class MenuSectionsTests: XCTestCase {
             [
                 [.statusLine],
                 [.insertLastDictation],
-                [.recentDictations, .copyLastAsSpoken],
+                [.recentDictations, .copyLast, .copyLastAsSpoken],
                 [.settings, .quit],
             ]
         )
@@ -95,7 +95,7 @@ final class MenuSectionsTests: XCTestCase {
                 [.statusLine],
                 [.setupHints, .finishSetup],
                 [.insertLastDictation],
-                [.recentDictations],
+                [.recentDictations, .copyLast],
                 [.settings, .quit],
             ]
         )
@@ -135,7 +135,7 @@ final class MenuSectionsTests: XCTestCase {
         let allowed: Set<MenuRow> = [
             .statusLine, .stopAndInsert, .cancelDictation, .setupHints, .finishSetup,
             .insertLastDictation, .revealRecoveredRecordings,
-            .recentDictations, .copyLastAsSpoken, .settings, .quit,
+            .recentDictations, .copyLast, .copyLastAsSpoken, .settings, .quit,
         ]
         XCTAssertTrue(everything.isSubset(of: allowed))
     }

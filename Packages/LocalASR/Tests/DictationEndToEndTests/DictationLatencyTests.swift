@@ -80,13 +80,26 @@ final class DictationLatencyTests: EndToEndScenario {
             )
         }
 
-        // A long record must be parsed faster than real time with more
-        // stock: if this ceases to be the case, dictation for three minutes will become
-        // by waiting, not by dictation.
+        // A long recording must still be recognised far faster than real time,
+        // or a three-minute dictation becomes a wait rather than a dictation.
+        //
+        // Lowered from 50x to 30x deliberately, and the reason is worth more
+        // than the number. Inference moved from Swift's cooperative pool to a
+        // thread of its own, which costs roughly a tenth of throughput —
+        // measured on one machine, same conditions: 50x+ before, 44-46x after.
+        // What it buys is the removal of multi-second waits under load, where
+        // the same dictation was measured spending 29.66 s reaching an engine
+        // that then worked for 1.31 s.
+        //
+        // That is the trade: tenths of a second of throughput for tens of
+        // seconds of latency. The floor stays high enough that a genuine
+        // collapse still fails this — 30x on three minutes is six seconds, and
+        // anything slower is a real regression rather than the cost of the
+        // thread.
         let longest = try XCTUnwrap(samples.last)
         XCTAssertGreaterThan(
             longest.speedup,
-            50,
+            30,
             "\u{0422}\u{0440}\u{0451}\u{0445}\u{043C}\u{0438}\u{043D}\u{0443}\u{0442}\u{043D}\u{0430}\u{044F} \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{0440}\u{0430}\u{0437}\u{0431}\u{0438}\u{0440}\u{0430}\u{0435}\u{0442}\u{0441}\u{044F} \u{0432}\u{0441}\u{0435}\u{0433}\u{043E} \u{0432} \(longest.speedup) \u{0440}\u{0430}\u{0437} \u{0431}\u{044B}\u{0441}\u{0442}\u{0440}\u{0435}\u{0435} \u{0440}\u{0435}\u{0430}\u{043B}\u{044C}\u{043D}\u{043E}\u{0433}\u{043E} \u{0432}\u{0440}\u{0435}\u{043C}\u{0435}\u{043D}\u{0438}"
         )
 

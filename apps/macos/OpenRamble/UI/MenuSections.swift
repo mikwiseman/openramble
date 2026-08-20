@@ -11,6 +11,7 @@ enum MenuRow: Equatable {
     case insertLastDictation
     case revealRecoveredRecordings
     case recentDictations
+    case copyLast
     case copyLastAsSpoken
     case settings
     case quit
@@ -60,7 +61,10 @@ enum MenuSections {
                 sections.append([.revealRecoveredRecordings])
             }
             var history: [MenuRow] = []
-            if hasRecents { history.append(.recentDictations) }
+            if hasRecents {
+                history.append(.recentDictations)
+                history.append(.copyLast)
+            }
             if canCopyAsSpoken { history.append(.copyLastAsSpoken) }
             if !history.isEmpty { sections.append(history) }
         }

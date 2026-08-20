@@ -26,6 +26,8 @@ enum DictationSpeedLine {
         parts.append(field("decode", phases?.audioDecoding))
         // Reaching the engine, engine time removed. A large number here means
         // the take was waiting to run rather than running.
+        // Split, because the two halves need different fixes.
+        parts.append(field("handover", phases?.executorHandover))
         parts.append(field("transport", phases?.engineTransport))
         parts.append(field("queued", phases?.engineQueueing))
         parts.append(field("engine", phases?.engineProcessing))

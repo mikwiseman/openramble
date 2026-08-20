@@ -42,7 +42,7 @@ echo
         paths[("path" in f) ? f["path"] : "unrecorded"]++
         add("total", ("total" in f) ? f["total"] : "")
         stage("freeze", f); stage("prepare", f); stage("readable", f)
-        stage("decode", f); stage("transport", f); stage("queued", f); stage("engine", f)
+        stage("decode", f); stage("handover", f); stage("transport", f); stage("queued", f); stage("engine", f)
 
         # What no stage claimed, per take rather than in aggregate, so one bad
         # take cannot be averaged into looking fine.
@@ -91,7 +91,7 @@ echo
         printf "  %-11s  %6s  %6s  %6s   %6s\n", "stage", "p50", "p90", "worst", "share"
         printf "  %-11s  %6s  %6s  %6s   %6s\n", "-----------", "------", "------", "------", "------"
         row("freeze"); row("prepare"); row("readable"); row("decode")
-        row("transport"); row("queued"); row("engine")
+        row("handover"); row("transport"); row("queued"); row("engine")
         printf "  %-11s  %6.2f  %6.2f  %6.2f   %5.1f%%\n", "TOTAL",
           pct("total", 0.50), pct("total", 0.90), pct("total", 1.00), 100
         print ""
