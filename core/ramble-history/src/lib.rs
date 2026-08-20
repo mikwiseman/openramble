@@ -12,6 +12,7 @@
 
 pub use ramble_model::ReferenceDate;
 use serde::{Deserialize, Serialize};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 /// How many takes are kept by default.
@@ -62,16 +63,32 @@ impl HistoryStore {
     /// application down: history is a convenience, and losing it must never cost
     /// someone their ability to dictate.
     pub fn load(&self) -> Vec<HistoryEntry> {
-        let Ok(bytes) = std::fs::read(self.index_path()) else {
-            return Vec::new();
+        self.try_load().unwrap_or_default()
+    }
+
+    /// Read history without hiding disk or decoding failures.
+    ///
+    /// The UI uses this path so a damaged index cannot be mistaken for an empty
+    /// history and then overwritten by the next mutation.
+    pub fn try_load(&self) -> std::io::Result<Vec<HistoryEntry>> {
+        let bytes = match std::fs::read(self.index_path()) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(error) => return Err(error),
         };
-        serde_json::from_slice(&bytes).unwrap_or_default()
+        serde_json::from_slice(&bytes).map_err(std::io::Error::other)
     }
 
     fn write(&self, entries: &[HistoryEntry]) -> std::io::Result<()> {
         std::fs::create_dir_all(&self.directory)?;
         let json = serde_json::to_vec(entries).map_err(std::io::Error::other)?;
-        std::fs::write(self.index_path(), json)
+        let mut temporary = tempfile::NamedTempFile::new_in(&self.directory)?;
+        temporary.write_all(&json)?;
+        temporary.as_file().sync_all()?;
+        temporary
+            .persist(self.index_path())
+            .map_err(|error| error.error)?;
+        Ok(())
     }
 
     /// The audio for an entry, if the file is still there.
@@ -94,9 +111,12 @@ impl HistoryStore {
         id: String,
     ) -> std::io::Result<Vec<HistoryEntry>> {
         if text.trim().is_empty() {
-            return Ok(self.load());
+            return self.try_load();
         }
         std::fs::create_dir_all(&self.directory)?;
+        // Refuse corruption before copying audio, otherwise a failed mutation
+        // leaves an orphan recording on disk.
+        let mut entries = self.try_load()?;
 
         let audio_file_name = match audio {
             Some(source) => {
@@ -107,7 +127,6 @@ impl HistoryStore {
             None => None,
         };
 
-        let mut entries = self.load();
         // Newest first: that is the one someone is looking for.
         entries.insert(
             0,
@@ -115,11 +134,21 @@ impl HistoryStore {
                 id,
                 date: now,
                 text: text.to_string(),
-                audio_file_name,
+                audio_file_name: audio_file_name.clone(),
             },
         );
-        self.trim(&mut entries, limit)?;
-        self.write(&entries)?;
+        let evicted = self.trim(&mut entries, limit);
+        if let Err(error) = self.write(&entries) {
+            if let Some(name) = &audio_file_name {
+                if let Err(cleanup_error) = std::fs::remove_file(self.directory.join(name)) {
+                    eprintln!(
+                        "Could not remove the unindexed history recording after a write failure: {cleanup_error}"
+                    );
+                }
+            }
+            return Err(error);
+        }
+        self.remove_audio_files(evicted)?;
         Ok(entries)
     }
 
@@ -129,9 +158,10 @@ impl HistoryStore {
     /// arrives next — otherwise a person who reduces it keeps everything they
     /// were trying to remove.
     pub fn apply_limit(&self, limit: usize) -> std::io::Result<Vec<HistoryEntry>> {
-        let mut entries = self.load();
-        self.trim(&mut entries, limit)?;
+        let mut entries = self.try_load()?;
+        let evicted = self.trim(&mut entries, limit);
         self.write(&entries)?;
+        self.remove_audio_files(evicted)?;
         Ok(entries)
     }
 
@@ -140,37 +170,50 @@ impl HistoryStore {
     /// Audio is the expensive part. An entry that falls off the end must not
     /// leave its recording behind, or the folder grows without bound while the
     /// list looks correctly short.
-    fn trim(&self, entries: &mut Vec<HistoryEntry>, limit: usize) -> std::io::Result<()> {
+    fn trim(&self, entries: &mut Vec<HistoryEntry>, limit: usize) -> Vec<String> {
         let limit = limit.clamp(1, MAXIMUM_LIMIT);
-        for evicted in entries.iter().skip(limit) {
-            if let Some(name) = &evicted.audio_file_name {
-                let _ = std::fs::remove_file(self.directory.join(name));
+        let evicted = entries
+            .iter()
+            .skip(limit)
+            .filter_map(|entry| entry.audio_file_name.clone())
+            .collect();
+        entries.truncate(limit);
+        evicted
+    }
+
+    fn remove_audio_files(&self, names: Vec<String>) -> std::io::Result<()> {
+        for name in names {
+            match std::fs::remove_file(self.directory.join(name)) {
+                Ok(()) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error),
             }
         }
-        entries.truncate(limit);
         Ok(())
     }
 
     pub fn delete(&self, id: &str) -> std::io::Result<Vec<HistoryEntry>> {
-        let mut entries = self.load();
-        if let Some(position) = entries.iter().position(|entry| entry.id == id) {
+        let mut entries = self.try_load()?;
+        let audio = if let Some(position) = entries.iter().position(|entry| entry.id == id) {
             let removed = entries.remove(position);
-            if let Some(name) = removed.audio_file_name {
-                let _ = std::fs::remove_file(self.directory.join(name));
-            }
-        }
+            removed.audio_file_name.into_iter().collect()
+        } else {
+            Vec::new()
+        };
         self.write(&entries)?;
+        self.remove_audio_files(audio)?;
         Ok(entries)
     }
 
     /// Remove every transcript and every recording.
     pub fn delete_all(&self) -> std::io::Result<()> {
-        for entry in self.load() {
-            if let Some(name) = entry.audio_file_name {
-                let _ = std::fs::remove_file(self.directory.join(name));
-            }
-        }
-        self.write(&[])
+        let audio = self
+            .try_load()?
+            .into_iter()
+            .filter_map(|entry| entry.audio_file_name)
+            .collect();
+        self.write(&[])?;
+        self.remove_audio_files(audio)
     }
 
     /// A stored retention value, made safe.
@@ -348,6 +391,19 @@ mod tests {
         std::fs::create_dir_all(directory.path()).unwrap();
         std::fs::write(directory.path().join("history.json"), b"{ not json").unwrap();
         assert!(store.load().is_empty());
+    }
+
+    #[test]
+    fn a_corrupt_index_cannot_be_silently_overwritten() {
+        let (directory, store) = store();
+        std::fs::create_dir_all(directory.path()).unwrap();
+        let index = directory.path().join("history.json");
+        std::fs::write(&index, b"{ not json").unwrap();
+
+        assert!(store
+            .record("new words", None, 5, at(1.0), "new".into())
+            .is_err());
+        assert_eq!(std::fs::read(index).unwrap(), b"{ not json");
     }
 
     #[test]

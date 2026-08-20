@@ -5,6 +5,7 @@
 
 use crate::adapters::download;
 use crate::adapters::hotkey::Hotkey;
+use crate::adapters::inject;
 use crate::dictation::Dictation;
 use ramble_model::ModelState;
 use serde::Serialize;
@@ -43,22 +44,27 @@ static DOWNLOADING: AtomicBool = AtomicBool::new(false);
 static CANCEL: AtomicBool = AtomicBool::new(false);
 
 #[tauri::command]
-pub fn model_report(dictation: State<'_, Arc<Dictation>>) -> ModelReport {
-    let state = dictation.model_state();
-    ModelReport {
-        ready: state == ModelState::Ready,
-        problem: matches!(state, ModelState::NeedsRepair(_)),
-        detail: match &state {
-            ModelState::Ready => None,
-            ModelState::NotInstalled => Some("The speech model is not installed yet.".into()),
-            // Said plainly, including why, because "needs repair" alone tells a
-            // person nothing about what to do next.
-            ModelState::NeedsRepair(reason) => Some(format!(
-                "The installed model is not usable ({reason}). Downloading it again will fix this."
-            )),
-        },
-        download_bytes: dictation.download_byte_count(),
-    }
+pub async fn model_report(dictation: State<'_, Arc<Dictation>>) -> Result<ModelReport, String> {
+    let dictation = Arc::clone(&dictation);
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = dictation.model_state();
+        ModelReport {
+            ready: state == ModelState::Ready,
+            problem: matches!(state, ModelState::NeedsRepair(_)),
+            detail: match &state {
+                ModelState::Ready => None,
+                ModelState::NotInstalled => Some("The speech model is not installed yet.".into()),
+                // Said plainly, including why, because "needs repair" alone tells a
+                // person nothing about what to do next.
+                ModelState::NeedsRepair(reason) => Some(format!(
+                    "The installed model is not usable ({reason}). Downloading it again will fix this."
+                )),
+            },
+            download_bytes: dictation.download_byte_count(),
+        }
+    })
+    .await
+    .map_err(|error| format!("The model status task failed: {error}"))
 }
 
 /// What this desktop session will not let the app do.
@@ -98,43 +104,75 @@ pub struct HistoryRow {
 }
 
 #[tauri::command]
-pub fn dictation_history(dictation: State<'_, Arc<Dictation>>) -> Vec<HistoryRow> {
-    dictation
-        .history()
-        .load()
-        .into_iter()
-        .map(|entry| HistoryRow {
-            at: entry
-                .date
-                .to_system_time()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|since| since.as_secs_f64())
-                .unwrap_or(0.0),
-            has_audio: dictation.history().audio_path(&entry).is_some(),
-            id: entry.id,
-            text: entry.text,
-        })
-        .collect()
+pub async fn dictation_history(
+    dictation: State<'_, Arc<Dictation>>,
+) -> Result<Vec<HistoryRow>, String> {
+    let dictation = Arc::clone(&dictation);
+    tauri::async_runtime::spawn_blocking(move || -> Result<Vec<HistoryRow>, String> {
+        Ok(dictation
+            .history_entries()
+            .map_err(|error| error.to_string())?
+            .into_iter()
+            .map(|entry| HistoryRow {
+                at: entry
+                    .date
+                    .to_system_time()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|since| since.as_secs_f64())
+                    .unwrap_or(0.0),
+                has_audio: dictation.history_has_audio(&entry),
+                id: entry.id,
+                text: entry.text,
+            })
+            .collect::<Vec<_>>())
+    })
+    .await
+    .map_err(|error| format!("The history task failed: {error}"))?
 }
 
 #[tauri::command]
-pub fn delete_history_entry(
+pub async fn delete_history_entry(
     dictation: State<'_, Arc<Dictation>>,
     id: String,
 ) -> Result<(), String> {
-    dictation
-        .history()
-        .delete(&id)
-        .map(|_| ())
-        .map_err(|error| error.to_string())
+    let dictation = Arc::clone(&dictation);
+    tauri::async_runtime::spawn_blocking(move || {
+        dictation
+            .delete_history_entry(&id)
+            .map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| format!("The history deletion task failed: {error}"))?
 }
 
 #[tauri::command]
-pub fn clear_history(dictation: State<'_, Arc<Dictation>>) -> Result<(), String> {
-    dictation
-        .history()
-        .delete_all()
-        .map_err(|error| error.to_string())
+pub async fn clear_history(dictation: State<'_, Arc<Dictation>>) -> Result<(), String> {
+    let dictation = Arc::clone(&dictation);
+    tauri::async_runtime::spawn_blocking(move || {
+        dictation.clear_history().map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| format!("The history deletion task failed: {error}"))?
+}
+
+/// Copy a stored transcript with the same local-only privacy markers as paste.
+#[tauri::command]
+pub async fn copy_history_text(app: tauri::AppHandle, text: String) -> Result<(), String> {
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    app.run_on_main_thread(move || {
+        let result = inject::copy_private(&text).map_err(|error| error.to_string());
+        if sender.send(result).is_err() {
+            eprintln!("The history copy result could not be returned to the settings window.");
+        }
+    })
+    .map_err(|error| format!("The history copy could not reach the main thread: {error}"))?;
+    tauri::async_runtime::spawn_blocking(move || {
+        receiver
+            .recv()
+            .map_err(|error| format!("The history copy task stopped: {error}"))?
+    })
+    .await
+    .map_err(|error| format!("The history copy task failed: {error}"))?
 }
 
 /// A personal replacement, as the window edits it.
@@ -146,15 +184,23 @@ pub struct DictionaryRow {
 }
 
 #[tauri::command]
-pub fn dictionary(dictation: State<'_, Arc<Dictation>>) -> Vec<DictionaryRow> {
-    dictation
-        .personal_terms()
-        .into_iter()
-        .map(|entry| DictionaryRow {
-            spoken: entry.spoken,
-            written: entry.written,
-        })
-        .collect()
+pub async fn dictionary(
+    dictation: State<'_, Arc<Dictation>>,
+) -> Result<Vec<DictionaryRow>, String> {
+    let dictation = Arc::clone(&dictation);
+    tauri::async_runtime::spawn_blocking(move || -> Result<Vec<DictionaryRow>, String> {
+        Ok(dictation
+            .personal_terms()
+            .map_err(|error| error.to_string())?
+            .into_iter()
+            .map(|entry| DictionaryRow {
+                spoken: entry.spoken,
+                written: entry.written,
+            })
+            .collect())
+    })
+    .await
+    .map_err(|error| format!("The dictionary task failed: {error}"))?
 }
 
 /// Replace the personal dictionary.
@@ -163,25 +209,32 @@ pub fn dictionary(dictation: State<'_, Arc<Dictation>>) -> Vec<DictionaryRow> {
 /// a single write cannot leave the file half-updated the way a sequence of
 /// mutations can.
 #[tauri::command]
-pub fn set_dictionary(
+pub async fn set_dictionary(
     dictation: State<'_, Arc<Dictation>>,
     rows: Vec<DictionaryRow>,
 ) -> Result<(), String> {
-    dictation
-        .set_personal_terms(
-            rows.into_iter()
-                .filter(|row| !row.spoken.trim().is_empty() && !row.written.trim().is_empty())
-                .map(|row| (row.spoken, row.written))
-                .collect(),
-        )
-        .map_err(|error| error.to_string())
+    let dictation = Arc::clone(&dictation);
+    tauri::async_runtime::spawn_blocking(move || {
+        dictation
+            .set_personal_terms(
+                rows.into_iter()
+                    .filter(|row| !row.spoken.trim().is_empty() && !row.written.trim().is_empty())
+                    .map(|row| (row.spoken, row.written))
+                    .collect(),
+            )
+            .map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| format!("The dictionary task failed: {error}"))?
 }
 
 /// Does OpenRamble start with the computer?
 #[tauri::command]
-pub fn start_at_login(app: tauri::AppHandle) -> bool {
+pub fn start_at_login(app: tauri::AppHandle) -> Result<bool, String> {
     use tauri_plugin_autostart::ManagerExt;
-    app.autolaunch().is_enabled().unwrap_or(false)
+    app.autolaunch()
+        .is_enabled()
+        .map_err(|error| error.to_string())
 }
 
 /// Turn starting with the computer on or off.
@@ -205,6 +258,30 @@ pub fn dictation_hotkey() -> String {
     Hotkey::default().title().to_string()
 }
 
+/// Ask the native macOS Sparkle controller to present its update UI.
+///
+/// Existing installations and this Tauri shell share the same appcast and
+/// permanent EdDSA key. Other platforms have separate package releases and do
+/// not pretend this control is available.
+#[tauri::command]
+pub fn check_for_updates(app: tauri::AppHandle) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        use tauri_plugin_sparkle_updater::SparkleUpdaterExt;
+        let updater = app.sparkle_updater().ok_or_else(|| {
+            "Sparkle is unavailable outside the packaged application.".to_string()
+        })?;
+        updater
+            .check_for_updates()
+            .map_err(|error| error.to_string())
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = app;
+        Err("Sparkle updates are available only in the macOS application.".into())
+    }
+}
+
 /// Download and install the model.
 ///
 /// Runs on its own thread: this takes minutes, and a settings window frozen for
@@ -225,7 +302,9 @@ pub fn install_model(
         let result = download::install(
             dictation.store(),
             &move |received, total| {
-                let _ = emit.emit("model-progress", Progress { received, total });
+                if let Err(error) = emit.emit("model-progress", Progress { received, total }) {
+                    eprintln!("Model download progress could not be reported: {error}");
+                }
             },
             &|| CANCEL.load(Ordering::SeqCst),
         );
@@ -237,7 +316,9 @@ pub fn install_model(
         };
         // Success and failure both reported: a download that stops saying
         // anything is the state people mistake for a hang.
-        let _ = app.emit("model-finished", message);
+        if let Err(error) = app.emit("model-finished", message) {
+            eprintln!("The model download result could not be reported: {error}");
+        }
     });
     Ok(())
 }
@@ -250,19 +331,6 @@ pub fn cancel_install() {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// A first run is not a fault. Only a broken install is.
-    #[test]
-    fn only_a_broken_install_counts_as_a_problem() {
-        assert!(!matches!(
-            ModelState::NotInstalled,
-            ModelState::NeedsRepair(_)
-        ));
-        assert!(matches!(
-            ModelState::NeedsRepair("truncated".into()),
-            ModelState::NeedsRepair(_)
-        ));
-    }
 
     #[test]
     fn a_second_download_cannot_start_while_one_is_running() {

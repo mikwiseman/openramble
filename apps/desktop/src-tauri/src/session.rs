@@ -26,19 +26,3 @@ pub enum Outcome {
     /// Something failed, in words a person can act on.
     Failed(String),
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// The outcomes are what the runner reports; the decisions behind them live
-    /// in `ramble_core::session::SessionMachine`, tested there. This file used
-    /// to duplicate those rules, which meant two places to change and one to
-    /// forget.
-    #[test]
-    fn every_outcome_is_distinguishable() {
-        assert_ne!(Outcome::Inserted, Outcome::Truncated);
-        assert_ne!(Outcome::DroppedSilently, Outcome::SilentInput);
-        assert_ne!(Outcome::Failed("a".into()), Outcome::Failed("b".into()));
-    }
-}

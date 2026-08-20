@@ -7,7 +7,9 @@
 //! be exercisable on a developer's laptop with a microphone plugged in.
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use std::sync::{Arc, Mutex};
+use ringbuf::{traits::*, HeapRb};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 /// How long one dictation may run before capture stops on its own.
 ///
@@ -86,6 +88,7 @@ pub enum CaptureError {
     NoDevice,
     Configuration(String),
     Start(String),
+    Interrupted(String),
 }
 
 impl std::fmt::Display for CaptureError {
@@ -104,6 +107,9 @@ impl std::fmt::Display for CaptureError {
             CaptureError::Start(detail) => {
                 write!(f, "The microphone could not be started: {detail}")
             }
+            CaptureError::Interrupted(detail) => {
+                write!(f, "The recording was interrupted: {detail}")
+            }
         }
     }
 }
@@ -116,10 +122,34 @@ impl std::error::Error for CaptureError {}
 /// we are not listening" true by construction rather than by remembering to call
 /// something.
 pub struct Capture {
-    _stream: cpal::Stream,
-    buffer: Arc<Mutex<TakeBuffer>>,
+    stream: Option<cpal::Stream>,
+    stop: Arc<AtomicBool>,
+    overrun: Arc<AtomicBool>,
+    device_failed: Arc<AtomicBool>,
+    collector: Option<std::thread::JoinHandle<TakeBuffer>>,
     sample_rate: u32,
     channels: u16,
+}
+
+/// Convert one device callback to mono directly into a fixed ring.
+///
+/// There is deliberately no temporary `Vec`: this runs on the audio device's
+/// real-time thread. `false` means the collector could not keep up and at least
+/// one frame was lost; the take will be rejected explicitly rather than quietly
+/// transcribing incomplete audio.
+fn push_interleaved(producer: &mut impl Producer<Item = f32>, data: &[f32], channels: u16) -> bool {
+    let channels = channels as usize;
+    if channels == 0 {
+        return false;
+    }
+    let mut complete = true;
+    for frame in data.chunks_exact(channels) {
+        let mono = frame.iter().copied().sum::<f32>() / channels as f32;
+        if producer.try_push(mono).is_err() {
+            complete = false;
+        }
+    }
+    complete
 }
 
 impl Capture {
@@ -132,22 +162,49 @@ impl Capture {
 
         let sample_rate = config.sample_rate();
         let channels = config.channels();
-        let buffer = Arc::new(Mutex::new(TakeBuffer::new(sample_rate)));
+        // Five seconds absorbs ordinary scheduler stalls without reserving a
+        // ten-minute recording up front. The collector moves data into the
+        // bounded take on a normal worker thread.
+        let ring = HeapRb::<f32>::new(sample_rate as usize * 5);
+        let (mut producer, mut consumer) = ring.split();
+        let stop = Arc::new(AtomicBool::new(false));
+        let collector_stop = Arc::clone(&stop);
+        let collector = std::thread::Builder::new()
+            .name("openramble-audio-collector".into())
+            .spawn(move || {
+                let mut take = TakeBuffer::new(sample_rate);
+                let mut chunk = [0.0_f32; 4096];
+                loop {
+                    let count = consumer.pop_slice(&mut chunk);
+                    if count > 0 {
+                        take.push(&chunk[..count]);
+                        continue;
+                    }
+                    if (collector_stop.load(Ordering::Acquire) || !consumer.write_is_held())
+                        && consumer.is_empty()
+                    {
+                        return take;
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(1));
+                }
+            })
+            .map_err(|error| CaptureError::Start(error.to_string()))?;
 
-        let sink = Arc::clone(&buffer);
+        let overrun = Arc::new(AtomicBool::new(false));
+        let callback_overrun = Arc::clone(&overrun);
+        let device_failed = Arc::new(AtomicBool::new(false));
+        let callback_device_failed = Arc::clone(&device_failed);
         let stream_config: cpal::StreamConfig = config.into();
         let stream = device
             .build_input_stream(
                 stream_config,
                 move |data: &[f32], _: &cpal::InputCallbackInfo| {
-                    let mono = ramble_audio::prepare::to_mono(data, channels);
-                    if let Ok(mut buffer) = sink.lock() {
-                        buffer.push(&mono);
+                    if !push_interleaved(&mut producer, data, channels) {
+                        callback_overrun.store(true, Ordering::Release);
                     }
                 },
-                |error| {
-                    // The device died mid-take. Nothing to recover here — the
-                    // session notices the silence and says so.
+                move |error| {
+                    callback_device_failed.store(true, Ordering::Release);
                     eprintln!("microphone error: {error}");
                 },
                 None,
@@ -159,8 +216,11 @@ impl Capture {
             .map_err(|error| CaptureError::Start(error.to_string()))?;
 
         Ok(Capture {
-            _stream: stream,
-            buffer,
+            stream: Some(stream),
+            stop,
+            overrun,
+            device_failed,
+            collector: Some(collector),
             sample_rate,
             channels,
         })
@@ -175,17 +235,64 @@ impl Capture {
     }
 
     /// Stop and hand back what was recorded, at the engine's rate.
-    pub fn finish(self) -> (Vec<f32>, bool) {
-        self.buffer
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    pub fn finish(mut self) -> Result<(Vec<f32>, bool), CaptureError> {
+        // Stop the producer first, then tell the collector to drain what is
+        // left. This is the stop fence: frames already delivered by CPAL cannot
+        // be stranded in the ring.
+        drop(self.stream.take());
+        self.stop.store(true, Ordering::Release);
+        let mut take = self
+            .collector
             .take()
+            .expect("collector exists until finish")
+            .join()
+            .map_err(|_| CaptureError::Interrupted("the audio collector stopped".into()))?;
+
+        if self.device_failed.load(Ordering::Acquire) {
+            return Err(CaptureError::Interrupted(
+                "the microphone disconnected or stopped responding".into(),
+            ));
+        }
+        if self.overrun.load(Ordering::Acquire) {
+            return Err(CaptureError::Interrupted(
+                "the computer could not drain microphone audio in time".into(),
+            ));
+        }
+        Ok(take.take())
+    }
+}
+
+impl Drop for Capture {
+    fn drop(&mut self) {
+        drop(self.stream.take());
+        self.stop.store(true, Ordering::Release);
+        if let Some(collector) = self.collector.take() {
+            let _ = collector.join();
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ringbuf::HeapRb;
+
+    #[test]
+    fn interleaved_input_enters_the_ring_as_mono() {
+        let ring = HeapRb::<f32>::new(4);
+        let (mut producer, mut consumer) = ring.split();
+        assert!(push_interleaved(&mut producer, &[1.0, 3.0, 2.0, 4.0], 2));
+        assert_eq!(consumer.try_pop(), Some(2.0));
+        assert_eq!(consumer.try_pop(), Some(3.0));
+        assert_eq!(consumer.try_pop(), None);
+    }
+
+    #[test]
+    fn a_full_realtime_ring_reports_the_overrun() {
+        let ring = HeapRb::<f32>::new(1);
+        let (mut producer, _consumer) = ring.split();
+        assert!(!push_interleaved(&mut producer, &[1.0, 2.0], 1));
+    }
 
     #[test]
     fn samples_accumulate_in_order() {

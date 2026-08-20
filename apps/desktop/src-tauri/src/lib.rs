@@ -7,12 +7,14 @@
 pub mod adapters;
 pub mod commands;
 pub mod dictation;
+mod lifecycle;
 pub mod session;
 
 use adapters::hotkey::{Hotkey, HotkeyTracker};
 use dictation::Dictation;
+use lifecycle::Gate;
 use ramble_core::hotkey::Action;
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 use std::time::Instant;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
@@ -23,71 +25,173 @@ use tauri::Manager;
 /// rdev's listener never returns, so it owns a thread of its own. Everything it
 /// decides comes from [`HotkeyTracker`]; this closure only turns an action into
 /// a call.
-fn spawn_hotkey_listener(dictation: Arc<Dictation>, hotkey: Hotkey) {
-    std::thread::spawn(move || {
-        let origin = Instant::now();
-        let tracker = Mutex::new(HotkeyTracker::new(hotkey));
-        // When the press happened, so a release can say how long the key was
-        // held — which is what separates "brushed the key" from "held it and the
-        // microphone gave nothing".
-        let pressed_at = Mutex::new(None::<Instant>);
+enum LifecycleCommand {
+    Begin,
+    Finish(std::time::Duration),
+    Cancel,
+}
 
-        let result = rdev::listen(move |event| {
-            let at = origin.elapsed();
-            let action = {
-                let mut tracker = tracker
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner());
-                match event.event_type {
-                    rdev::EventType::KeyPress(key) => tracker.key_down(key, at),
-                    rdev::EventType::KeyRelease(key) => tracker.key_up(key, at),
-                    _ => Action::None,
-                }
-            };
+struct ReopenOnDrop(Arc<Gate>);
 
-            let mut held_since = pressed_at
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner());
+impl Drop for ReopenOnDrop {
+    fn drop(&mut self) {
+        self.0.finish();
+    }
+}
 
-            match action {
-                Action::Press => {
-                    *held_since = Some(Instant::now());
-                    if let Err(error) = dictation.begin() {
-                        eprintln!("{error}");
-                        *held_since = None;
+fn spawn_hotkey_listener(app: tauri::AppHandle, dictation: Arc<Dictation>, hotkey: Hotkey) {
+    let gate = Arc::new(Gate::new());
+    let (commands, work) = mpsc::sync_channel(8);
+
+    let worker_gate = Arc::clone(&gate);
+    std::thread::Builder::new()
+        .name("openramble-lifecycle".into())
+        .spawn(move || {
+            while let Ok(command) = work.recv() {
+                match command {
+                    LifecycleCommand::Begin => {
+                        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            dictation.begin()
+                        })) {
+                            Ok(Ok(())) => {}
+                            Ok(Err(error)) => {
+                                eprintln!("{error}");
+                                worker_gate.finish();
+                            }
+                            Err(_) => {
+                                eprintln!("The dictation start task stopped unexpectedly.");
+                                worker_gate.finish();
+                            }
+                        }
+                    }
+                    LifecycleCommand::Finish(held) => {
+                        let _reopen = ReopenOnDrop(Arc::clone(&worker_gate));
+                        let app = app.clone();
+                        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            dictation.finish_with(held, move |text| {
+                                insert_on_main_thread(&app, text.to_owned())
+                            })
+                        })) {
+                            Ok(outcome) => report(&outcome),
+                            Err(_) => {
+                                eprintln!("The dictation processing task stopped unexpectedly.")
+                            }
+                        }
+                    }
+                    LifecycleCommand::Cancel => {
+                        let _reopen = ReopenOnDrop(Arc::clone(&worker_gate));
+                        if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            dictation.cancel()
+                        }))
+                        .is_err()
+                        {
+                            eprintln!("The dictation cancellation task stopped unexpectedly.");
+                        }
                     }
                 }
-                Action::Release { .. } => {
-                    // `after` is the double-tap window a short tap should wait
-                    // out before committing. Hands-free is not wired yet, so the
-                    // take finishes immediately and the window is unused —
-                    // stated rather than silently dropped, because a release
-                    // that quietly did nothing is the bug this whole gesture
-                    // machine exists to prevent.
-                    let held = held_since.take().map(|at| at.elapsed()).unwrap_or_default();
-                    let outcome = dictation.finish(held);
-                    report(&outcome);
-                }
-                Action::AbortShortcut => {
-                    // The hold turned out to be a shortcut. Drop the recording
-                    // without inserting or announcing anything.
-                    *held_since = None;
-                    dictation.cancel();
-                }
-                Action::DoubleTap | Action::StopHandsFree | Action::None => {}
             }
-        });
+        })
+        .expect("the dictation lifecycle thread could not start");
 
-        if let Err(error) = result {
-            // Almost always a missing permission: Accessibility on macOS, or an
-            // X11 display the process cannot reach. Without this the app looks
-            // installed and simply never responds to the key.
-            eprintln!(
-                "The dictation key cannot be watched ({error:?}). \
+    if let Err(error) = std::thread::Builder::new()
+        .name("openramble-hotkey".into())
+        .spawn(move || {
+            let origin = Instant::now();
+            let tracker = Mutex::new(HotkeyTracker::new(hotkey));
+            // When the press happened, so a release can say how long the key was
+            // held — which is what separates "brushed the key" from "held it and the
+            // microphone gave nothing".
+            let pressed_at = Mutex::new(None::<Instant>);
+
+            let result = rdev::listen(move |event| {
+                let at = origin.elapsed();
+                let action = {
+                    let mut tracker = tracker
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner());
+                    match event.event_type {
+                        rdev::EventType::KeyPress(key) => tracker.key_down(key, at),
+                        rdev::EventType::KeyRelease(key) => tracker.key_up(key, at),
+                        _ => Action::None,
+                    }
+                };
+
+                let mut held_since = pressed_at
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+
+                match action {
+                    Action::Press => {
+                        if gate.admit_press() {
+                            *held_since = Some(Instant::now());
+                            if commands.try_send(LifecycleCommand::Begin).is_err() {
+                                *held_since = None;
+                                gate.finish();
+                                eprintln!("The dictation lifecycle queue is unavailable.");
+                            }
+                        }
+                    }
+                    Action::Release { .. } => {
+                        // `after` is the double-tap window a short tap should wait
+                        // out before committing. Hands-free is not wired yet, so the
+                        // take finishes immediately and the window is unused —
+                        // stated rather than silently dropped, because a release
+                        // that quietly did nothing is the bug this whole gesture
+                        // machine exists to prevent.
+                        let held = held_since.take().map(|at| at.elapsed()).unwrap_or_default();
+                        if gate.admit_release()
+                            && commands.try_send(LifecycleCommand::Finish(held)).is_err()
+                        {
+                            gate.finish();
+                            eprintln!("The dictation lifecycle queue is unavailable.");
+                        }
+                    }
+                    Action::AbortShortcut => {
+                        // The hold turned out to be a shortcut. Drop the recording
+                        // without inserting or announcing anything.
+                        *held_since = None;
+                        if gate.admit_cancel()
+                            && commands.try_send(LifecycleCommand::Cancel).is_err()
+                        {
+                            gate.finish();
+                            eprintln!("The dictation lifecycle queue is unavailable.");
+                        }
+                    }
+                    Action::DoubleTap | Action::StopHandsFree | Action::None => {}
+                }
+            });
+
+            if let Err(error) = result {
+                // Almost always a missing permission: Accessibility on macOS, or an
+                // X11 display the process cannot reach. Without this the app looks
+                // installed and simply never responds to the key.
+                eprintln!(
+                    "The dictation key cannot be watched ({error:?}). \
                  Check that OpenRamble is allowed to monitor input."
-            );
+                );
+            }
+        })
+    {
+        eprintln!("The dictation hotkey listener could not start: {error}");
+    }
+}
+
+/// Clipboard and synthetic keyboard APIs are AppKit work on macOS. Schedule
+/// them on Tauri's main thread and carry the exact result back to the lifecycle
+/// worker; recognition never occupies the UI thread, and paste failures are not
+/// hidden.
+fn insert_on_main_thread(app: &tauri::AppHandle, text: String) -> Result<(), String> {
+    let (result_tx, result_rx) = mpsc::sync_channel(1);
+    app.run_on_main_thread(move || {
+        let result = adapters::inject::insert(&text).map_err(|error| error.to_string());
+        if result_tx.send(result).is_err() {
+            eprintln!("The insertion result receiver stopped before paste completed.");
         }
-    });
+    })
+    .map_err(|error| format!("The text could not be scheduled for insertion: {error}"))?;
+    result_rx
+        .recv()
+        .map_err(|_| "The insertion result was lost before it could be reported.".to_string())?
 }
 
 fn report(outcome: &session::Outcome) {
@@ -106,18 +210,23 @@ fn report(outcome: &session::Outcome) {
 
 /// Start the application.
 pub fn run() {
-    let Some(dictation) = Dictation::new() else {
-        eprintln!("OpenRamble could not find a place to keep its files.");
-        return;
+    let dictation = match Dictation::new() {
+        Ok(dictation) => dictation,
+        Err(error) => {
+            eprintln!("OpenRamble could not start: {error}");
+            return;
+        }
     };
     let dictation = Arc::new(dictation);
-
-    spawn_hotkey_listener(Arc::clone(&dictation), Hotkey::default());
 
     let for_setup = Arc::clone(&dictation);
     let for_exit = Arc::clone(&dictation);
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(target_os = "macos")]
+    let builder = builder.plugin(tauri_plugin_sparkle_updater::init());
+
+    builder
         // First, before anything else registers: a second copy must not get as
         // far as opening a microphone.
         //
@@ -146,14 +255,21 @@ pub fn run() {
             commands::dictation_history,
             commands::delete_history_entry,
             commands::clear_history,
+            commands::copy_history_text,
             commands::dictionary,
             commands::set_dictionary,
             commands::start_at_login,
             commands::set_start_at_login,
             commands::install_model,
             commands::cancel_install,
+            commands::check_for_updates,
         ])
         .setup(move |app| {
+            spawn_hotkey_listener(
+                app.handle().clone(),
+                Arc::clone(&for_setup),
+                Hotkey::default(),
+            );
             let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit OpenRamble", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&settings, &quit])?;
@@ -168,8 +284,12 @@ pub fn run() {
 
             let handle = app.handle().clone();
             let dictation = Arc::clone(&for_setup);
+            let icon = app
+                .default_window_icon()
+                .ok_or("The packaged application icon is missing.")?
+                .clone();
             TrayIconBuilder::with_id("main")
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(icon)
                 .icon_as_template(true)
                 .tooltip(tray_tooltip(&dictation))
                 .menu(&menu)
@@ -197,7 +317,9 @@ pub fn run() {
             // take dictation away with it.
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
-                let _ = window.hide();
+                if let Err(error) = window.hide() {
+                    eprintln!("The settings window could not be hidden: {error}");
+                }
             }
         })
         .build(tauri::generate_context!())
@@ -230,12 +352,14 @@ fn apply_glass(window: &tauri::WebviewWindow) {
         // Active rather than following the window's state, so the material keeps
         // sampling the desktop when the window is not frontmost instead of
         // freezing into a still image the moment somebody clicks away.
-        let _ = apply_vibrancy(
+        if let Err(error) = apply_vibrancy(
             window,
             NSVisualEffectMaterial::Sidebar,
             Some(NSVisualEffectState::Active),
             Some(18.0),
-        );
+        ) {
+            eprintln!("The macOS window material could not be applied: {error}");
+        }
     }
 
     #[cfg(target_os = "windows")]
@@ -244,7 +368,9 @@ fn apply_glass(window: &tauri::WebviewWindow) {
         // Mica is the Windows 11 material and the cheaper of the two; acrylic is
         // the fallback for builds without it.
         if apply_mica(window, None).is_err() {
-            let _ = apply_acrylic(window, Some((18, 18, 20, 125)));
+            if let Err(error) = apply_acrylic(window, Some((18, 18, 20, 125))) {
+                eprintln!("The Windows window material could not be applied: {error}");
+            }
         }
     }
     #[cfg(target_os = "linux")]
