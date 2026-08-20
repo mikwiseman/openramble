@@ -7,22 +7,17 @@ The complete August 2026 ASR performance/reliability state is archived in
 Read that prompt and its linked experiment ledger before starting or repeating
 any model, cache, benchmark, or streaming work.
 
-OpenRamble is local dictation for macOS: hold a key, speak, release it, and
-receive text in the active application.
+OpenRamble is local dictation for macOS, Windows, and Linux: hold a key, speak,
+release it, and receive text in the active application.
 
 ## Network boundary
 
 The shipping app has exactly two network areas:
 
-1. Explicit model downloads through `LocalASR/ModelDownloading.swift`.
-2. Sparkle update checks and downloads through `SparkleUpdater.swift`.
-   Scheduled checks are enabled by default and can be disabled in Settings;
-   downloading and installing an update always requires a click.
-
-The desktop app (Windows, Linux) has one:
-
-3. Explicit model downloads through
+1. Explicit model downloads through
    `apps/desktop/src-tauri/src/adapters/download.rs`.
+2. Native Sparkle update checks and downloads on macOS. Scheduled checks are
+   enabled; downloading and installing an update always requires a click.
 
 No other shipping code may access the network. The complete denied API list is
 maintained in `scripts/check-network-surface.sh` and enforced by CI — by
@@ -31,15 +26,11 @@ the public privacy description in `README.md` if this boundary ever changes.
 
 ## Architecture
 
-- `Packages/DictationCore` contains platform-independent dictation logic and
-  protocols for system boundaries.
-- `Packages/LocalASR` depends on `DictationCore` and owns model installation and
-  recognition. Only `TranscribeCppAdapter.swift` may import the inference
-  runtime.
-- `apps/macos` contains the thin SwiftUI/AppKit application layer.
-
-LocalASR depends on DictationCore. Recognition runs in the application process.
-No package depends on the application layer.
+- `apps/desktop` is the shipping Tauri shell on all three platforms.
+- `core/` owns recognition, audio, session policy, text, model installation,
+  and history. Recognition runs in the application process.
+- `apps/macos` and `Packages/` are the retired Swift implementation retained as
+  migration reference; they are not built into the release artifact.
 
 ### The shared core (cross-platform)
 
@@ -53,29 +44,19 @@ No package depends on the application layer.
   effects leave as values. `SessionMachine` is the whole dictation flow in that
   shape — feed it events, carry out the effects it returns — which is why the
   desktop runner decides nothing itself.
-- `apps/desktop` is the Tauri app for Windows and Linux. Its network use is one
-  module and the gate checks it by filename.
-- `scripts/build-ffi.sh` produces `Packages/RambleCoreFFI`, a Swift package whose
-  implementation is Rust. Its output is generated, never committed.
-- These crates are ports of `Packages/DictationCore`, not a second design. While
-  both exist, the Swift side is the source of truth and the Rust side follows.
-- `core/conformance/` is what keeps them from drifting. The generator runs the
-  shipping Swift pipeline over `corpus-text.json` and records what it produced;
-  `cargo test -p ramble-text --test conformance` replays the same cases against
-  the Rust port. Never edit a fixture by hand to make a test pass — a fixture is
-  a recording, and changing it asserts the Mac behaves in a way it does not.
-- Changing behaviour means changing it in both places and regenerating the
-  fixtures in the same commit.
+- `apps/desktop` owns platform adapters and the Liquid Glass settings UI. Its
+  network use is one named module and the gate checks it by filename.
+- `core/conformance/` remains historical migration evidence. New behavior is
+  specified and tested in Rust; do not add a second Swift implementation.
 
 ## Privacy and safety
 
 - Never log dictated text, individual words, keystrokes, or user file names.
   Dictation history is the one place transcripts and audio are persisted; it is
   bounded by an explicit retention setting and documented in `README.md`.
-- Write to the clipboard only with
-  `prepareForNewContents(with: .currentHostOnly)` and the required transient and
-  concealed markers. A plain `clearContents()` can leak dictation through
-  Universal Clipboard and is prohibited.
+- On macOS write to the clipboard only with `CurrentHostOnly` and the transient,
+  concealed, and auto-generated markers. On Windows set the Cloud Clipboard and
+  history exclusion formats. A plain clipboard write is prohibited.
 - Do not add telemetry, analytics, cloud sync, or third-party reporting SDKs.
 - Surface failures to the user; never silently discard a recording or result.
 
@@ -93,8 +74,7 @@ See [docs/release.md](docs/release.md) and [AGENTS.md](AGENTS.md).
 
 - Prefer a failing test before the implementation.
 - Keep policy decisions in small, pure types rather than view models.
-- Before committing, run `./scripts/check.sh` or at minimum all three Swift
-  package test suites.
-- `./scripts/check.sh` also runs the Rust workspace and the conformance check.
-  For Rust alone: `cargo test`, `cargo clippy --all-targets -- -D warnings`,
+- Before committing, run `./scripts/check.sh`.
+- For a focused Rust change: `cargo test --locked -p <package>`, then
+  `cargo clippy --locked -p <package> --all-targets -- -D warnings` and
   `cargo fmt --all --check`.
