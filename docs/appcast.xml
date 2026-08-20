@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.21.0</title>
-      <pubDate>Thu, 20 Aug 2026 07:08:56 +0300</pubDate>
-      <sparkle:version>45</sparkle:version>
-      <sparkle:shortVersionString>0.21.0</sparkle:shortVersionString>
+      <title>0.21.1</title>
+      <pubDate>Thu, 20 Aug 2026 07:30:44 +0300</pubDate>
+      <sparkle:version>46</sparkle:version>
+      <sparkle:shortVersionString>0.21.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.21.0&lt;/h2&gt;&lt;p&gt;Hands-free dictation can finish itself when you stop talking.&lt;/p&gt;&lt;p&gt;## Stopping on silence&lt;/p&gt;&lt;p&gt;A setting, off by default: in hands-free mode, two seconds of quiet ends the&lt;/p&gt;&lt;p&gt;dictation. No more double-pressing to finish.&lt;/p&gt;&lt;p&gt;It applies only to hands-free, and that is the design rather than a limitation.&lt;/p&gt;&lt;p&gt;While you are holding the key you are saying, with your hand, that you have not&lt;/p&gt;&lt;p&gt;finished — a pause for thought is not an ending, and cutting a sentence off&lt;/p&gt;&lt;p&gt;under a held key is what makes voice input feel hostile.&lt;/p&gt;&lt;p&gt;Two more rules worth knowing, because both exist to avoid a specific&lt;/p&gt;&lt;p&gt;frustration. Silence before you have said anything ends nothing, so starting&lt;/p&gt;&lt;p&gt;hands-free in a quiet room does not stop the recording before you begin. And&lt;/p&gt;&lt;p&gt;the quiet clock restarts on your next word, so pausing between sentences keeps&lt;/p&gt;&lt;p&gt;your recording rather than ending it.&lt;/p&gt;&lt;p&gt;## Everything, everywhere, one number&lt;/p&gt;&lt;p&gt;macOS, Windows and Linux now carry the same version. They are one product and&lt;/p&gt;&lt;p&gt;were being counted separately, which had let the desktop packages drift several&lt;/p&gt;&lt;p&gt;releases behind without it being obvious.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.21.0/OpenRamble-0.21.0.dmg" length="5816360" type="application/octet-stream" sparkle:edSignature="AHaHWnQMNtvG5FmDBPhdL9pKdKsGG8JdxZ3zHTMaAURZgz4T6ZKKDGPNNovXdcjlLdkg91rfLu5CN9yzoroqDQ==" />
+      <description>&lt;h2&gt;OpenRamble 0.21.1&lt;/h2&gt;&lt;p&gt;Timing the last unmeasured step, and one link instead of two.&lt;/p&gt;&lt;p&gt;## The step nothing was watching&lt;/p&gt;&lt;p&gt;Short dictations were still taking several seconds, and the timings said the&lt;/p&gt;&lt;p&gt;recognition itself was fast. Every step had a number except one: the engine is&lt;/p&gt;&lt;p&gt;asked to make itself ready before each dictation, and that request was never&lt;/p&gt;&lt;p&gt;timed.&lt;/p&gt;&lt;p&gt;It is timed now. There was already a &amp;quot;prepare&amp;quot; figure in the record, but it&lt;/p&gt;&lt;p&gt;measured a different call on a different path — so it could read zero while&lt;/p&gt;&lt;p&gt;this one took seconds, which is precisely what was happening. A number that is&lt;/p&gt;&lt;p&gt;true about the wrong thing is worse than no number, and this is the second time&lt;/p&gt;&lt;p&gt;that has misled this investigation.&lt;/p&gt;&lt;p&gt;Nothing about dictation changes here. This release exists to make the next slow&lt;/p&gt;&lt;p&gt;one point at its own cause.&lt;/p&gt;&lt;p&gt;## Also&lt;/p&gt;&lt;p&gt;About showed a link to the source twice.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.21.1/OpenRamble-0.21.1.dmg" length="5815995" type="application/octet-stream" sparkle:edSignature="UvI/fS+TIpOJ02Y46xhPwah5fMCuBksWUhQHyqlogr3xQc8jGzHU1xIFauqZr7pZtOelqkCR1CZIA3xJLvHAAQ==" />
     </item>
   </channel>
 </rss>
