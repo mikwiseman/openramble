@@ -21,9 +21,17 @@ let transcription_time = Instant::now();
 The file write goes to a blocking thread and recognition runs beside it. Handy
 never waits for the recording to be written before recognising it.
 
-OpenRamble serialises the same two things. `DictationController` waits for the
-take to be drained and sealed, then calls the engine. That wait is bounded only
-by a two-second deadline which *fails* the take rather than degrading it.
+**Correction, checked before acting on it.** OpenRamble has such a wait, but
+not on the path it actually takes. `readableURL()` is only awaited in the file
+branch; production goes through `freezeActiveRecording`, which awaits nothing
+but `context.pcm.freeze()` and reports 0.03 s in the field logs. The
+compatibility branch that does wait is not the one the app uses.
+
+So this difference is real in Handy's source and does not describe our bug. It
+is recorded because it was the leading hypothesis and because writing down a
+disproved one is cheaper than rediscovering it. The remaining unexplained span
+is the wait to enter the `LocalTranscriber` actor, which nothing measured until
+now.
 
 Handy also times the handover explicitly:
 
