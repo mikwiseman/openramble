@@ -1,22 +1,19 @@
 #!/bin/bash
-# Where a dictation's time actually goes, stage by stage.
+# Where a dictation's time goes, stage by stage.
 #
-# `asr-latency-report.sh` answers "is it slow?". This answers "slow *where*",
-# which is the question you need before optimising anything. It reads the same
-# per-dictation line and profiles every stage: median, the tail, the worst, and
-# what share of the total each one holds.
+# Parses by NAME, not by position. The previous version split on whitespace and
+# assigned fields by counting them; the moment a non-numeric field joined the
+# log line it read the word "path" as a duration and reported garbage without
+# complaining once. A parser that cannot tell a word from a number will
+# eventually be believed about the wrong thing, and that has already cost this
+# investigation four rounds.
 #
-# The share column is the one to read. A stage with a frightening worst case
-# but a tiny share is a rare event; a stage holding a third of every dictation
-# is where the time is, whether or not it ever looks dramatic.
+# A missing field is reported missing, never as zero. Zero is a measurement,
+# and a stage nobody measured reading 0.00 is exactly how the real cause stayed
+# hidden through three releases.
 #
 #   ./scripts/asr-profile.sh          # last 24 hours
 #   ./scripts/asr-profile.sh 2h
-#
-# Requires a build of 0.19.2 or newer for the full breakdown. Older lines are
-# read too, and the stages they predate are reported as missing rather than
-# silently counted as zero — a stage that reads 0.00 because nobody measured it
-# is exactly how the decode bug hid for months.
 
 set -euo pipefail
 WINDOW="${1:-24h}"
@@ -28,35 +25,38 @@ echo
 
 # Absolute path: zsh ships a `log` builtin that shadows this one.
 /usr/bin/log show --last "$WINDOW" --predicate 'process == "OpenRamble"' --info 2>/dev/null \
-  | grep -F 'dictation stop→text' \
-  | sed -E 's/[a-z→]+ ([0-9.-]+)s/\1 /g; s/.*dictation //' \
+  | grep -F 'dictation total=' \
   | awk '
-      # stop→text stop→paste freeze prepare recognize [decode] [queued] engine audio
-      NF >= 7 {
-        total = $1; freeze = $3; prepare = $4; recognize = $5
-        if (NF >= 10)     { readable = $6; decode = $7; queued = $8; engine = $9; audio = $10 }
-        else if (NF == 9) { readable = -1; decode = $6; queued = $7; engine = $8; audio = $9 }
-        else if (NF == 8) { readable = -1; decode = -1; queued = $6; engine = $7; audio = $8 }
-        else              { readable = -1; decode = -1; queued = -1; engine = $6; audio = $7 }
-        add("total", total); add("freeze", freeze); add("prepare", prepare)
-        add("readable", readable)
-        add("decode", decode); add("queued", queued); add("engine", engine)
-        # Whatever no stage claimed. A large "unaccounted" means the breakdown
-        # is still incomplete and there is another stage worth naming.
-        rest = recognize
-        if (readable >= 0) rest -= readable
-        if (decode >= 0) rest -= decode
-        if (queued >= 0) rest -= queued
-        if (engine >= 0) rest -= engine
-        add("unaccounted", rest < 0 ? 0 : rest)
-        if (audio > 0 && engine > 0) add("rtf", audio / engine)
+      {
+        delete f
+        # Every key=value on the line, in any order and any number. A new field
+        # needs no change here, which is the point.
+        for (i = 1; i <= NF; i++) {
+          if (split($i, kv, "=") == 2) {
+            val = kv[2]; sub(/s$/, "", val)
+            f[kv[1]] = val
+          }
+        }
+        if (!("total" in f)) next
         takes++
+        paths[("path" in f) ? f["path"] : "unrecorded"]++
+        add("total", ("total" in f) ? f["total"] : "")
+        stage("freeze", f); stage("prepare", f); stage("readable", f)
+        stage("decode", f); stage("transport", f); stage("queued", f); stage("engine", f)
+
+        # What no stage claimed, per take rather than in aggregate, so one bad
+        # take cannot be averaged into looking fine.
+        rest = ("recognize" in f) ? f["recognize"] + 0 : 0
+        for (s in named) if ((s in f) && f[s] + 0 >= 0) rest -= f[s] + 0
+        if (rest > 0.05) unexplained++
+        if (rest > worstRest) { worstRest = rest; worstRestTotal = f["total"] + 0 }
       }
+      function stage(name, f) { named[name] = 1; add(name, (name in f) ? f[name] : "") }
       function add(name, value) {
-        if (value < 0) { missing[name] = 1; return }
+        if (value == "" || value + 0 < 0) { absent[name]++; return }
         key = name SUBSEP (++count[name])
-        v[key] = value
-        sum[name] += value
+        v[key] = value + 0
+        sum[name] += value + 0
       }
       function pct(name, q,   i, j, tmp, n, x) {
         n = count[name]
@@ -65,38 +65,42 @@ echo
         i = int(n * q); if (i < 1) i = 1; if (i > n) i = n
         return tmp[i]
       }
-      function row(name, label,   share) {
-        if (missing[name] && count[name] == 0) {
-          printf "  %-13s  %s\n", label, "not recorded by this build"
+      function row(name,   share, spread, note) {
+        if (count[name] == 0) {
+          printf "  %-11s  %s\n", name, "never recorded in this window"
           return
         }
         share = sum["total"] > 0 ? 100 * sum[name] / sum["total"] : 0
-        printf "  %-13s  %6.2f  %6.2f  %6.2f   %5.1f%%\n",
-          label, pct(name, 0.50), pct(name, 0.90), pct(name, 1.00), share
+        spread = pct(name, 1.00) - pct(name, 0.01)
+        note = (absent[name] ? "(" absent[name] " absent) " : "")
+        if (spread == 0 && count[name] > 5) note = note "identical on every take — suspect it is not measured"
+        printf "  %-11s  %6.2f  %6.2f  %6.2f   %5.1f%%  %s\n",
+          name, pct(name, 0.50), pct(name, 0.90), pct(name, 1.00), share, note
       }
       END {
-        if (takes == 0) { print "No dictations in this window. Dictate a few times and run it again."; exit 0 }
-        printf "%d dictations\n\n", takes
-        printf "  %-13s  %6s  %6s  %6s   %6s\n", "stage", "p50", "p90", "worst", "share"
-        printf "  %-13s  %6s  %6s  %6s   %6s\n", "-------------", "------", "------", "------", "------"
-        row("freeze",      "freeze")
-        row("prepare",     "prepare")
-        row("readable",    "readable")
-        row("decode",      "decode")
-        row("queued",      "queued")
-        row("engine",      "engine")
-        row("unaccounted", "unaccounted")
-        printf "  %-13s  %6.2f  %6.2f  %6.2f   %5.1f%%\n", "TOTAL",
+        if (takes == 0) {
+          print "No dictations in this window."
+          print "If you were dictating, this build predates the named-field log line."
+          exit 0
+        }
+        printf "%d dictations", takes
+        sep = "   paths: "
+        for (p in paths) { printf "%s%s=%d", sep, p, paths[p]; sep = ", " }
+        print ""
+        print ""
+        printf "  %-11s  %6s  %6s  %6s   %6s\n", "stage", "p50", "p90", "worst", "share"
+        printf "  %-11s  %6s  %6s  %6s   %6s\n", "-----------", "------", "------", "------", "------"
+        row("freeze"); row("prepare"); row("readable"); row("decode")
+        row("transport"); row("queued"); row("engine")
+        printf "  %-11s  %6.2f  %6.2f  %6.2f   %5.1f%%\n", "TOTAL",
           pct("total", 0.50), pct("total", 0.90), pct("total", 1.00), 100
         print ""
-        if (count["rtf"] > 0)
-          printf "  engine speed   %.0fx real time at the median, %.0fx at its slowest\n",
-            pct("rtf", 0.50), pct("rtf", 0.01)
-        print ""
-        print "  Read the share column first: it says where the time lives."
-        print "  A stage with a big worst case but a small share is a rare event."
-        if (sum["unaccounted"] > 0.05 * sum["total"])
-          print "  UNACCOUNTED is large — some of the path is still unnamed, and that"
-          print "  is where the next investigation starts."
+        if (unexplained > 0) {
+          printf "  %d of %d takes hold time no stage accounts for; worst %.2fs on a %.2fs take.\n",
+            unexplained, takes, worstRest, worstRestTotal
+          print  "  The breakdown is incomplete, and that remainder is where to look next."
+        } else {
+          print "  Every take is fully accounted for by its stages."
+        }
       }
     '

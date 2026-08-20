@@ -84,6 +84,13 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
     /// time was: the recording has to be drained and sealed before anything
     /// can read it, and that is disk work.
     public let recordingReadable: Duration?
+    /// Everything between dispatching the recognition call and the engine
+    /// starting work — executor hops, actor entry, waiting for a thread.
+    ///
+    /// The span that held every slow take. It had no number because every
+    /// earlier stamp was placed past it, inside the actor it was waiting to
+    /// enter.
+    public let engineTransport: Duration?
     /// How much audio the take actually carried.
     public let audioDuration: Duration
 
@@ -95,6 +102,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         engineQueueing: Duration? = nil,
         audioDecoding: Duration? = nil,
         recordingReadable: Duration? = nil,
+        engineTransport: Duration? = nil,
         audioDuration: Duration
     ) {
         self.captureFreeze = captureFreeze
@@ -104,6 +112,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         self.engineQueueing = engineQueueing
         self.audioDecoding = audioDecoding
         self.recordingReadable = recordingReadable
+        self.engineTransport = engineTransport
         self.audioDuration = audioDuration
     }
 }

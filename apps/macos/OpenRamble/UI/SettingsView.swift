@@ -693,11 +693,24 @@ private struct AboutView: View {
     static let sourceURL = URL(string: "https://github.com/mikwiseman/openramble")!
 
     /// Where the system writes this app's logs.
+    /// Open this app's own log folder, with today's file selected when there
+    /// is one.
+    ///
+    /// Not the system-wide `~/Library/Logs`, which is everybody's and helps
+    /// nobody. Someone asked to send their log should land on the file.
     private func revealLogFolder() {
-        let logs = FileManager.default
-            .homeDirectoryForCurrentUser
-            .appending(path: "Library/Logs", directoryHint: .isDirectory)
-        NSWorkspace.shared.activateFileViewerSelecting([logs])
+        let directory = DictationLogFile.directory
+        let manager = FileManager.default
+        try? manager.createDirectory(at: directory, withIntermediateDirectories: true)
+        let files = (try? manager.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil
+        )) ?? []
+        if let newest = files.filter({ $0.pathExtension == "log" }).sorted(by: { $0.path > $1.path }).first {
+            NSWorkspace.shared.activateFileViewerSelecting([newest])
+        } else {
+            NSWorkspace.shared.activateFileViewerSelecting([directory])
+        }
     }
 
     /// Version and build number. The first thing asked in any bug report is
@@ -802,10 +815,10 @@ private struct AboutView: View {
                         .toggleStyle(.switch)
                         .accessibilityLabel("Keep detailed logs")
                         .accessibilityHint(
-                            "Keeps the engine's notes about loading and warming, which macOS otherwise discards. Timing is always recorded either way, and nothing you say is ever written."
+                            "Writes a plain text file you can open and send. Off by default, and nothing is written while it is off. Nothing you say is ever recorded — timings and reasons only."
                         )
                 }
-                Button("Open Log Folder", action: revealLogFolder)
+                Button("Open Logs", action: revealLogFolder)
                     // Logs are what a person can attach to a bug report. They
                     // hold no dictated text — the privacy rules forbid it — so
                     // there is nothing here to warn about before opening.

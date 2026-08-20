@@ -962,6 +962,9 @@ public final class DictationController {
         // The wait for the recording to be written and closed. Local to the
         // take, because it describes this take and nothing else.
         let readableWaitBox = DurationBox()
+        // The instant the recognition call is dispatched. Take-scoped because
+        // the report is built outside the block that stamps it.
+        let dispatchBox = DurationBox()
         do {
             var foregroundEnd = (stopSLORequestedAt ?? .now).advanced(
                 by: captureFreezeDeadline + transcriptionDeadline(recording.duration)
@@ -1010,6 +1013,12 @@ public final class DictationController {
                 until: foregroundEnd,
                 stageMaximum: transcriptionDeadline(recording.duration)
             )
+            // Stamped on this side of the deadline wrapper. Everything between
+            // here and the engine's own clock is transport: hopping executors,
+            // entering an actor, waiting for a thread. That span held the whole
+            // of every slow take and had no number, because every previous
+            // stamp sat past it.
+            let dispatchedAt = monotonicNow()
             recognized = try await withTranscriptionDeadline(inferenceBudget) {
                 [transcribe, transcribeSamples] in
                 if let transcribeSamples, let bufferedSamples, !bufferedSamples.isEmpty {
@@ -1020,6 +1029,7 @@ public final class DictationController {
                 readableWaitBox.value = readableStart.duration(to: self.monotonicNow())
                 return try await transcribe(url)
             }
+            dispatchBox.value = dispatchedAt.duration(to: monotonicNow())
         } catch let timeout as RecordingFinalizationTimeout where timeout.stage == .readableFile {
             guard shouldContinue(session) else {
                 await discard(recording.url, session: session)
@@ -1150,6 +1160,15 @@ public final class DictationController {
                     ? .seconds(recognized.decodingDuration)
                     : nil,
                 recordingReadable: readableWaitBox.value,
+                // What it cost to reach the engine at all, engine time removed.
+                // A large number here means the work was waiting, not working.
+                engineTransport: {
+                    guard let whole = dispatchBox.value else { return nil }
+                    let inside = recognized.processingDuration
+                    let outside = (Double(whole.components.seconds)
+                        + Double(whole.components.attoseconds) / 1e18) - inside
+                    return outside > 0 ? .seconds(outside) : nil
+                }(),
                 audioDuration: .seconds(recognized.audioDuration)
             )
         }

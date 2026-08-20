@@ -512,6 +512,7 @@ public final class AppState: ObservableObject {
             guard oldValue != detailedLogging else { return }
             defaults.set(detailedLogging, forKey: Keys.detailedLogging)
             EngineNotes.isDetailed = detailedLogging
+            DictationLogFile.shared.isEnabled = detailedLogging
         }
     }
 
@@ -1041,21 +1042,10 @@ public final class AppState: ObservableObject {
                 // must survive in the system log long enough to be read, and
                 // `info` rotates within hours on a busy Mac. The stages travel
                 // with it because the total alone cannot name the cause.
-                engineLog.notice(
-                    """
-                    dictation stop→text \(report.toRecognizedText.appSeconds, format: .fixed(precision: 2))s \
-                    stop→paste \(report.toPasteDispatched?.appSeconds ?? -1, format: .fixed(precision: 2))s \
-                    freeze \(report.phases?.captureFreeze.appSeconds ?? -1, format: .fixed(precision: 2))s \
-                    prepare \(report.phases?.enginePreparation?.appSeconds ?? -1, format: .fixed(precision: 2))s \
-                    recognize \(report.phases?.recognition.appSeconds ?? -1, format: .fixed(precision: 2))s \
-                    path \(report.phases?.recordingReadable == nil ? "memory" : "file", privacy: .public) \
-                    readable \(report.phases?.recordingReadable?.appSeconds ?? -1, format: .fixed(precision: 2))s \
-                    decode \(report.phases?.audioDecoding?.appSeconds ?? -1, format: .fixed(precision: 2))s \
-                    queued \(report.phases?.engineQueueing?.appSeconds ?? -1, format: .fixed(precision: 2))s \
-                    engine \(report.phases?.engineProcessing?.appSeconds ?? -1, format: .fixed(precision: 2))s \
-                    audio \(report.phases?.audioDuration.appSeconds ?? -1, format: .fixed(precision: 2))s
-                    """
-                )
+                // `notice`, not `info`: a slow take is exactly the entry that
+                // must survive in the system log long enough to be read.
+                engineLog.notice("\(DictationSpeedLine.text(for: report), privacy: .public)")
+                DictationLogFile.shared.write(DictationSpeedLine.text(for: report))
                 DictationDiagnostics.noteCompleted(
                     report: report,
                     characterCount: self?.lastDictation?.insertedText.count ?? 0

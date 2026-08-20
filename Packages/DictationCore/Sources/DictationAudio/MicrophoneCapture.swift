@@ -2186,10 +2186,13 @@ func finalizeCapturedRecording(
         }
         defer { RecordingDiskWriteGate.shared.release() }
         do {
-            // Rewrites the WAV header under a lock — blocking file work, so it
-            // goes to the disk thread rather than a cooperative-pool one that
-            // recognition is waiting on.
-            return try await onRecordingDisk { try writer.sealForReading() }
+            // Left on this task deliberately. Moving it to the disk queue
+            // deadlocked the capture tests: the seal runs while the disk write
+            // gate is held, and the queue it would hop to is the same one the
+            // pending durability work uses. The measurement in this release is
+            // what says whether this actually costs anything; moving it on
+            // suspicion is what caused a day of failed builds.
+            return try writer.sealForReading()
         } catch {
             // `WAVWriter` releases its FileHandle on a seal fault, but the
             // production lifecycle reservation is separate ownership. Hand it
