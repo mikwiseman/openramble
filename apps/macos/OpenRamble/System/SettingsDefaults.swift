@@ -18,6 +18,7 @@ public enum SettingsDefaults {
     public static let appearance: AppAppearance = .system
     public static let presence: AppPresence = .menuBar
     public static let detailedLogging = false
+    public static let stopsOnSilence = false
 }
 
 /// Which look the app takes, regardless of the rest of the system.

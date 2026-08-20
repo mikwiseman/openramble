@@ -376,7 +376,7 @@ struct OnboardingView: View {
                     .foregroundStyle(StatusColorRole.success.color)
                 // “Done” closes the window, and the app has no Dock icon: say
                 // where it lives, or the person loses it right here.
-                Text("OpenRamble lives in your menu bar at the top of the screen.")
+                Text("OpenRamble lives in your menu bar at the top of the screen. Settings can move it to the Dock instead — never to neither.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {

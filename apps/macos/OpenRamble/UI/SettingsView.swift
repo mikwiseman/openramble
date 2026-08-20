@@ -229,6 +229,19 @@ private struct GeneralSettings: View {
                     .accessibilityElement(children: .combine)
                 }
                 SettingRow(
+                    title: "Finish hands-free dictation on silence",
+                    isChanged: state.stopsOnSilence != SettingsDefaults.stopsOnSilence,
+                    revert: { state.stopsOnSilence = SettingsDefaults.stopsOnSilence }
+                ) {
+                    Toggle("", isOn: $state.stopsOnSilence)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .accessibilityLabel("Finish hands-free dictation on silence")
+                        .accessibilityHint(
+                            "Only in hands-free mode. While you hold the key, a pause is never treated as the end."
+                        )
+                }
+                SettingRow(
                     title: "Show OpenRamble in",
                     isChanged: state.presence != SettingsDefaults.presence,
                     revert: { state.presence = SettingsDefaults.presence }

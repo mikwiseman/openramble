@@ -461,6 +461,22 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// Finish a hands-free dictation when the talking stops.
+    ///
+    /// Hands-free only, and that is the whole design. While the key is held the
+    /// person is holding it — they are saying with their hand that they have
+    /// not finished, and a pause for thought is not an ending. Cutting a
+    /// sentence off under a held key is what makes voice input feel hostile.
+    @Published public var stopsOnSilence: Bool {
+        didSet {
+            guard oldValue != stopsOnSilence else { return }
+            defaults.set(stopsOnSilence, forKey: Keys.stopsOnSilence)
+        }
+    }
+
+    /// Tracks the quiet. Reset per take, never shared between them.
+    private var silence = SilencePolicy()
+
     /// Keep the engine's own notes, not just the per-dictation numbers.
     ///
     /// Off by default, and what it changes is narrow: the engine already
@@ -564,6 +580,7 @@ public final class AppState: ObservableObject {
         static let inputDevice = "inputDeviceUID"
         static let presence = "presence"
         static let detailedLogging = "detailedLogging"
+        static let stopsOnSilence = "stopsOnSilence"
         static let overlayPlacement = "overlayPlacement"
         static let replacements = "replacements"
         /// macOS global setup: what pressing 🌐 does.
@@ -779,6 +796,8 @@ public final class AppState: ObservableObject {
         ) ?? SettingsDefaults.presence
         detailedLogging = environment.defaults.object(forKey: Keys.detailedLogging) as? Bool
             ?? SettingsDefaults.detailedLogging
+        stopsOnSilence = environment.defaults.object(forKey: Keys.stopsOnSilence) as? Bool
+            ?? SettingsDefaults.stopsOnSilence
         overlayPlacement = DictationOverlayPlacement(
             rawValue: environment.defaults.string(forKey: Keys.overlayPlacement) ?? ""
         ) ?? SettingsDefaults.overlayPlacement
@@ -2695,6 +2714,18 @@ public final class AppState: ObservableObject {
     /// final "Nothing was recognized" at the end.
     private func registerInputLevel(_ peak: Float) {
         (overlay as? RecordingFeedbackPresenting)?.updateInputLevel(peak)
+
+        // Only hands-free, and only while actually listening. A held key means
+        // the person has not finished; a state that is not listening has no
+        // recording for silence to end.
+        guard stopsOnSilence, isHandsFreeActive, dictationState == .listening else {
+            silence.reset()
+            return
+        }
+        if silence.observe(peak: peak, at: .now) {
+            silence.reset()
+            stopCurrentRecording()
+        }
     }
 
     /// Registration error visible: silently leave a person without autostart -
