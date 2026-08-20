@@ -810,9 +810,6 @@ private struct AboutView: View {
                     // hold no dictated text — the privacy rules forbid it — so
                     // there is nothing here to warn about before opening.
                     .accessibilityLabel("Open log folder")
-                Link("View Source on GitHub", destination: Self.sourceURL)
-                    .accessibilityLabel("View source on GitHub")
-                    .accessibilityHint("Opens the repository in your browser — the privacy promises here can be read in the code")
                 Button("Reveal Support Folder", action: revealSupportFolder)
                     // The title alone does not survive into the accessibility
                     // tree on this Form layout — VoiceOver would announce an

@@ -224,10 +224,28 @@ public struct AppEnvironment {
             },
             transcribe: { engineDirectory, languageHint in
                 return { url in
+                    // Measured, because this is the last span on the dictation
+                    // path that nothing timed. `prepare` runs before every
+                    // single recognition, and the `prepare` already in the
+                    // speed line is a different call on a different path — so
+                    // this one could take seconds while that one read 0.00.
+                    let readyAt = ContinuousClock.now
                     try await transcriber.prepare(modelDirectory: engineDirectory)
-                    return try await transcriber.transcribe(
+                    let prepared = readyAt.duration(to: .now)
+                    let result = try await transcriber.transcribe(
                         fileURL: url,
                         languageHint: languageHint()
+                    )
+                    return ASRResult(
+                        text: result.text,
+                        words: result.words,
+                        audioDuration: result.audioDuration,
+                        processingDuration: result.processingDuration,
+                        queueingDuration: result.queueingDuration
+                            + Double(prepared.components.seconds)
+                            + Double(prepared.components.attoseconds) / 1e18,
+                        decodingDuration: result.decodingDuration,
+                        phaseTimings: result.phaseTimings
                     )
                 }
             },
