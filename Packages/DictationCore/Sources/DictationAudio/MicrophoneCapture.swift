@@ -2168,6 +2168,12 @@ func finalizeCapturedRecording(
     disposition: RecordingDisposition = RecordingDisposition()
 ) -> CapturedRecording {
     let drain = sink.seal()
+    // The drain issues up to 64 synchronous file writes and the seal rewrites
+    // the WAV header — both blocking work, and this task is what recognition
+    // waits on. `Task.detached` puts it on the cooperative pool, where a
+    // blocked thread is lost rather than yielded. The same defect was fixed
+    // three times already: audio teardown, `fsync`, and the decode. This is the
+    // fourth site and the one directly between the key release and the engine.
     let readable = Task.detached(priority: .utility) {
         await drain.value
         if let failure = disk.recordedFailure {
@@ -2180,7 +2186,10 @@ func finalizeCapturedRecording(
         }
         defer { RecordingDiskWriteGate.shared.release() }
         do {
-            return try writer.sealForReading()
+            // Rewrites the WAV header under a lock — blocking file work, so it
+            // goes to the disk thread rather than a cooperative-pool one that
+            // recognition is waiting on.
+            return try await onRecordingDisk { try writer.sealForReading() }
         } catch {
             // `WAVWriter` releases its FileHandle on a seal fault, but the
             // production lifecycle reservation is separate ownership. Hand it

@@ -915,9 +915,28 @@ public final class AppState: ObservableObject {
             let transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)?
             if let transcriber {
                 transcribeSamples = { samples in
-                    try await transcriber.transcribe(
+                    // Stamped OUTSIDE the actor call, and that is the whole
+                    // point. `LocalTranscriber` is an actor, so the wait to
+                    // enter it is invisible to anything stamped inside — which
+                    // is where the previous three timers were, all reporting
+                    // zero on takes that took seconds. What is measured here is
+                    // everything: getting into the actor, and the work once in.
+                    let handedOver = ContinuousClock.now
+                    let result = try await transcriber.transcribe(
                         samples: samples,
                         languageHint: languageHint()
+                    )
+                    let waited = handedOver.duration(to: .now)
+                    return ASRResult(
+                        text: result.text,
+                        words: result.words,
+                        audioDuration: result.audioDuration,
+                        processingDuration: result.processingDuration,
+                        queueingDuration: Double(waited.components.seconds)
+                            + Double(waited.components.attoseconds) / 1e18
+                            - result.processingDuration,
+                        decodingDuration: result.decodingDuration,
+                        phaseTimings: result.phaseTimings
                     )
                 }
             } else {
@@ -1029,6 +1048,7 @@ public final class AppState: ObservableObject {
                     freeze \(report.phases?.captureFreeze.appSeconds ?? -1, format: .fixed(precision: 2))s \
                     prepare \(report.phases?.enginePreparation?.appSeconds ?? -1, format: .fixed(precision: 2))s \
                     recognize \(report.phases?.recognition.appSeconds ?? -1, format: .fixed(precision: 2))s \
+                    path \(report.phases?.recordingReadable == nil ? "memory" : "file", privacy: .public) \
                     readable \(report.phases?.recordingReadable?.appSeconds ?? -1, format: .fixed(precision: 2))s \
                     decode \(report.phases?.audioDecoding?.appSeconds ?? -1, format: .fixed(precision: 2))s \
                     queued \(report.phases?.engineQueueing?.appSeconds ?? -1, format: .fixed(precision: 2))s \
