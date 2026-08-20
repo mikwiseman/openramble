@@ -71,7 +71,7 @@ jobs:
         with:
           workspaces: ". -> target"
       - run: rustup target add x86_64-apple-darwin
-      - run: cargo install cargo-tauri --version 2.11.4 --locked
+      - run: cargo install tauri-cli --version 2.11.4 --locked
       - run: ./scripts/prepare-tauri-macos.sh
       - name: Build universal Intel and Apple Silicon app
         run: |
@@ -97,7 +97,7 @@ jobs:
         with:
           workspaces: ". -> target"
       - run: rustup target add x86_64-apple-darwin
-      - run: cargo install cargo-tauri --version 2.11.4 --locked
+      - run: cargo install tauri-cli --version 2.11.4 --locked
       - name: Release policy and credential parsers
         run: |
           ./scripts/tests/test-release-policy.sh
