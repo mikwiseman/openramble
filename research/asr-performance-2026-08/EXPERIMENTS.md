@@ -522,7 +522,7 @@ Many corresponding logs remain represented in
 
 ### 7.1 Main-actor return under CPU and disk pressure (2026-08-21)
 
-**Status: Validated local candidate; not released.**
+**Status: Validated release candidate for OpenRamble 0.24.3.**
 
 Unified-log phase timing isolated two old outliers after recognition had
 already finished:
