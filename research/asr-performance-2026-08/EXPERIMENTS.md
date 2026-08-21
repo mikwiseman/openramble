@@ -520,6 +520,69 @@ Many corresponding logs remain represented in
 `manifests/ALL_TEMP_FILE_PATHS.tsv.gz`; the authoritative production code is on
 `main`, not in temp worktrees.
 
+### 7.1 Main-actor return under CPU and disk pressure (2026-08-21)
+
+**Status: Validated local candidate; not released.**
+
+Unified-log phase timing isolated two old outliers after recognition had
+already finished:
+
+| Audio | Total | Engine | Main-actor return |
+|---:|---:|---:|---:|
+| 10.37 s | 2.74 s | 0.19 s | 2.53 s |
+| 23.37 s | 4.85 s | 0.39 s | 4.43 s |
+
+Both used the in-memory pool frame, so disk decoding and worker handover were
+not the missing seconds. Process sampling found that dismissing the AppKit
+panel only ordered its window out: the retained SwiftUI host continued the
+transcribing symbol effect through the Liquid Glass surface. The idle process
+therefore kept driving `RBSymbolAnimator`, RenderBox, Core Animation commits,
+and Metal work. The same animation was active while a completed result waited
+to return to the main actor.
+
+The candidate makes panel visibility published, removes all composited panel
+children while the window is hidden, resets hidden work state to idle, and
+uses a static waveform during the short visible transcribing state. Liquid
+Glass remains. A settled visible transcribing panel and a dismissed panel both
+measured 0.0-0.1% process CPU; samples showed the main run loop asleep and no
+continuous symbol-animation or glass commit stack.
+
+The real-path stress check used the signed archive application, the normal
+Right Command hotkey, speaker output captured through the real microphone,
+local recognition, TextEdit insertion, and the production unified-log timing
+line. Load was 14 bounded `/usr/bin/yes` workers plus repeated 160 MiB writes
+with `fsync` to one temporary file. All created PIDs and temporary files were
+removed after each bounded run.
+
+| Audio | Total | Engine | Main-actor return | Frame |
+|---:|---:|---:|---:|---|
+| 28.00 s | 0.46 s | 0.45 s | 0.00 s | pool |
+| 11.88 s | 0.22 s | 0.21 s | 0.00 s | pool |
+| 19.60 s | 0.49 s | 0.41 s | 0.00 s | pool |
+| 20.39 s | 2.81 s | 2.70 s | 0.00 s | pool |
+| 19.27 s | 1.26 s | 1.22 s | 0.00 s | pool |
+| 37.59 s | 1.00 s | 0.97 s | 0.00 s | pool |
+
+No 2.53-4.43 s main-actor-return tail occurred in this n=6 candidate run.
+There was no matched pre-change control using this exact harness, so six clean
+rows do not estimate the probability of a rare tail by themselves. The 20.39 s
+row is the load-validity check: the saturated machine produced a multi-second
+completion, but 2.70 of its 2.81 seconds were measured inside the ASR engine
+and main-actor return remained below the log's 0.01 s resolution. In these six
+rows, disk transport, pool return, engine dispatch, and main-actor delivery did
+not explain the remaining variance.
+
+One of seven synthetic hotkey attempts never entered the Accessibility
+`recording` state. It is a hotkey-harness reliability observation under
+saturation, not a recognition-delivery sample, and was excluded before any
+speech or recognition occurred. The final sample was admitted only after the
+recording state was observed and was considered complete only after the app
+returned to `ready to dictate`.
+
+The archive was locally signed but intentionally not notarized and did not pass
+the release script's offline distribution gate. These measurements validate a
+development candidate, not a Sparkle release.
+
 ## 8. Current architectural conclusion
 
 The current full-context Parakeet v3 encoder uses full relative-position

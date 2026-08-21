@@ -286,7 +286,7 @@ final class OverlayModel: ObservableObject {
         count: OverlayModel.waveformSampleCount
     )
     /// Whether the panel should be on the screen. Shown by its owner.
-    private(set) var isVisible = false
+    @Published private(set) var isVisible = false
     var onVisibilityChange: ((Bool) -> Void)?
 
     /// Whether the seconds are counting down.
@@ -304,6 +304,13 @@ final class OverlayModel: ObservableObject {
             isWaitingForEngine: isWaitingForEngine
         )
     }
+
+    /// What the panel draws, or `nil` while its window is off screen.
+    ///
+    /// AppKit ordering the panel out does not remove its retained SwiftUI tree.
+    /// Keeping the visibility check here prevents an off-screen view from
+    /// continuing a symbol effect, progress indicator, or glass composition.
+    var visibleContent: OverlayContent? { isVisible ? content : nil }
 
     private let announcer: any AccessibilityAnnouncing
     private let noticeDuration: Duration
@@ -420,6 +427,10 @@ final class OverlayModel: ObservableObject {
         setElapsed(elapsed, ticking: false)
         guard notice == nil else { return }
         cancelAutoHide()
+        // Commit the finished state before the visibility callback enters
+        // AppKit. A hidden hosting view must not keep describing live work.
+        state = .idle
+        isWaitingForEngine = false
         setVisible(false)
         // The next dictation must appear again, even if the state
         // matches the previous one.
@@ -472,12 +483,21 @@ final class OverlayModel: ObservableObject {
 
 private struct OverlayView: View {
     @ObservedObject var model: OverlayModel
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let content = model.content
+        if let content = model.visibleContent {
+            panel(content)
+        } else {
+            // Preserve the panel's initial preferred size for placement while
+            // removing every animated and composited child from the retained
+            // host view. In bottom placement, collapsing the height would put
+            // the first expanded frame below the visible screen.
+            Color.clear.frame(width: preferredWidth, height: 52)
+        }
+    }
 
-        return HStack(spacing: 10) {
+    private func panel(_ content: OverlayContent) -> some View {
+        HStack(spacing: 10) {
             if model.notice != nil {
                 Image(systemName: content.tone.iconName)
                     .foregroundStyle(toneColor(content.tone))
@@ -500,10 +520,11 @@ private struct OverlayView: View {
                     .foregroundStyle(.secondary)
             } else if model.state == .transcribing {
                 // The same blue as the menu bar dot: one color for "working
-                // on speech" everywhere. The symbol animation is system-driven
-                // and lives only in this transient panel — the menu bar keeps
-                // its no-redraw-loop discipline.
-                transcribingSymbol
+                // on speech" everywhere. Keep the symbol static: this panel is
+                // visible while the recognition result waits for the main actor,
+                // and an iterative symbol effect drove a RenderBox/CA commit on
+                // every display refresh through the glass surface.
+                Image(systemName: "waveform")
                     .foregroundStyle(StatusColorRole.processing.color)
                     .font(.body.weight(.semibold))
                     .accessibilityHidden(true)
@@ -529,16 +550,6 @@ private struct OverlayView: View {
         //separately do not mean anything.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(model.accessibilityLabel)
-    }
-
-    @ViewBuilder
-    private var transcribingSymbol: some View {
-        if reduceMotion {
-            Image(systemName: "waveform")
-        } else {
-            Image(systemName: "waveform")
-                .symbolEffect(.variableColor.iterative)
-        }
     }
 
     private var preferredWidth: CGFloat {
