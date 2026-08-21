@@ -286,7 +286,7 @@ final class OverlayModel: ObservableObject {
         count: OverlayModel.waveformSampleCount
     )
     /// Whether the panel should be on the screen. Shown by its owner.
-    private(set) var isVisible = false
+    @Published private(set) var isVisible = false
     var onVisibilityChange: ((Bool) -> Void)?
 
     /// Whether the seconds are counting down.
@@ -305,6 +305,13 @@ final class OverlayModel: ObservableObject {
         )
     }
 
+    /// What the panel draws, or `nil` while its window is off screen.
+    ///
+    /// AppKit ordering the panel out does not remove its retained SwiftUI tree.
+    /// Keeping the visibility check here prevents an off-screen view from
+    /// continuing a symbol effect, progress indicator, or glass composition.
+    var visibleContent: OverlayContent? { isVisible ? content : nil }
+
     private let announcer: any AccessibilityAnnouncing
     private let noticeDuration: Duration
     /// Marked `nonisolated(unsafe)` because the timer removes `deinit`, and it has
@@ -313,6 +320,9 @@ final class OverlayModel: ObservableObject {
     nonisolated(unsafe) private var timer: Timer?
     private var startedAt: Date?
     private var autoHide: Task<Void, Never>?
+    /// A session may finish while a notice owns the panel. Preserve the notice
+    /// long enough to be read, then honor that deferred dismissal.
+    private var dismissAfterNotice = false
     /// What has already been said out loud. The seconds counter ticks twice per second, and without
     /// of this memory, VoiceOver would repeat “recording” until the end of the dictation.
     private var lastAnnouncement: String?
@@ -346,6 +356,7 @@ final class OverlayModel: ObservableObject {
     /// Show dictation status.
     func show(_ state: DictationState, elapsed: TimeInterval) {
         cancelAutoHide()
+        dismissAfterNotice = false
         // A wait belongs to exactly one take. Leaving the flag set would let a
         // finished load narrate the next dictation.
         if state != .transcribing { isWaitingForEngine = false }
@@ -398,6 +409,10 @@ final class OverlayModel: ObservableObject {
             // The same warning in a later session is new information. Keep
             // de-duplication only for repeated updates within one impression.
             self.lastAnnouncement = nil
+            if self.dismissAfterNotice {
+                self.finishHiding()
+                return
+            }
             switch self.state {
             case .preparing, .listening, .transcribing:
                 // An unrelated menu action can show a notice while the microphone
@@ -418,8 +433,20 @@ final class OverlayModel: ObservableObject {
     /// cleanup after the session comes right after it.
     func hide() {
         setElapsed(elapsed, ticking: false)
-        guard notice == nil else { return }
+        guard notice == nil else {
+            dismissAfterNotice = true
+            return
+        }
         cancelAutoHide()
+        finishHiding()
+    }
+
+    private func finishHiding() {
+        // Commit the finished state before the visibility callback enters
+        // AppKit. A hidden hosting view must not keep describing live work.
+        dismissAfterNotice = false
+        state = .idle
+        isWaitingForEngine = false
         setVisible(false)
         // The next dictation must appear again, even if the state
         // matches the previous one.
@@ -472,12 +499,21 @@ final class OverlayModel: ObservableObject {
 
 private struct OverlayView: View {
     @ObservedObject var model: OverlayModel
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let content = model.content
+        if let content = model.visibleContent {
+            panel(content)
+        } else {
+            // Preserve the panel's initial preferred size for placement while
+            // removing every animated and composited child from the retained
+            // host view. In bottom placement, collapsing the height would put
+            // the first expanded frame below the visible screen.
+            Color.clear.frame(width: preferredWidth, height: 52)
+        }
+    }
 
-        return HStack(spacing: 10) {
+    private func panel(_ content: OverlayContent) -> some View {
+        HStack(spacing: 10) {
             if model.notice != nil {
                 Image(systemName: content.tone.iconName)
                     .foregroundStyle(toneColor(content.tone))
@@ -500,10 +536,11 @@ private struct OverlayView: View {
                     .foregroundStyle(.secondary)
             } else if model.state == .transcribing {
                 // The same blue as the menu bar dot: one color for "working
-                // on speech" everywhere. The symbol animation is system-driven
-                // and lives only in this transient panel — the menu bar keeps
-                // its no-redraw-loop discipline.
-                transcribingSymbol
+                // on speech" everywhere. Keep the symbol static: this panel is
+                // visible while the recognition result waits for the main actor,
+                // and an iterative symbol effect drove a RenderBox/CA commit on
+                // every display refresh through the glass surface.
+                Image(systemName: "waveform")
                     .foregroundStyle(StatusColorRole.processing.color)
                     .font(.body.weight(.semibold))
                     .accessibilityHidden(true)
@@ -529,16 +566,6 @@ private struct OverlayView: View {
         //separately do not mean anything.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(model.accessibilityLabel)
-    }
-
-    @ViewBuilder
-    private var transcribingSymbol: some View {
-        if reduceMotion {
-            Image(systemName: "waveform")
-        } else {
-            Image(systemName: "waveform")
-                .symbolEffect(.variableColor.iterative)
-        }
     }
 
     private var preferredWidth: CGFloat {

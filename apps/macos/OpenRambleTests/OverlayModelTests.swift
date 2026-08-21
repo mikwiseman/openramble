@@ -292,4 +292,94 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(model.content.title, "Listening")
         XCTAssertGreaterThan(model.elapsed, 3.4, "notice time must remain part of recording time")
     }
+
+    /// A dismissed panel that stays in `.transcribing` keeps describing live
+    /// animated work even after AppKit orders its window out.
+    func testScenario028() {
+        model.show(.transcribing, elapsed: 3)
+
+        model.hide()
+
+        XCTAssertFalse(model.isVisible)
+        XCTAssertEqual(
+            model.state,
+            .idle,
+            "a dismissed panel must stop describing an active transcription"
+        )
+    }
+
+    func testScenario029() {
+        model.show(.transcribing, elapsed: 3)
+        XCTAssertNotNil(model.visibleContent)
+
+        model.hide()
+
+        XCTAssertNil(
+            model.visibleContent,
+            "an off-screen panel must not drive RenderBox or Liquid Glass"
+        )
+    }
+
+    /// A session dismissal must not erase the live state under a notice. The
+    /// notice owns the panel until its timer decides whether to return to the
+    /// underlying session or hide an idle panel.
+    func testScenario030() {
+        model.show(.listening, elapsed: 3)
+        model.showNotice(DictationNotice(kind: .info, message: "Copied."))
+
+        model.hide()
+
+        XCTAssertEqual(model.state, .listening)
+        XCTAssertTrue(model.isVisible)
+        XCTAssertNotNil(model.notice)
+    }
+
+    func testScenario031() {
+        model.show(.transcribing, elapsed: 3)
+        model.hide()
+        XCTAssertNil(model.visibleContent)
+
+        model.show(.preparing, elapsed: 0)
+
+        XCTAssertTrue(model.isVisible)
+        XCTAssertNotNil(
+            model.visibleContent,
+            "a retained hosting view must rebuild the panel for the next dictation"
+        )
+    }
+
+    /// Cleanup may follow a failure notice immediately. Let the person read
+    /// the notice, then honor that dismissal instead of resurrecting the
+    /// completed transcription underneath it.
+    func testScenario032() async throws {
+        model.show(.transcribing, elapsed: 3)
+        model.setWaitingForEngine(true)
+        model.showNotice(DictationNotice(kind: .failure, message: "Recognition failed."))
+
+        model.hide()
+
+        XCTAssertTrue(model.isVisible)
+        XCTAssertNotNil(model.notice)
+        try await waitForNoticeToHide()
+        XCTAssertEqual(model.state, .idle)
+        XCTAssertFalse(model.isWaitingForEngine)
+        XCTAssertFalse(model.isVisible)
+        XCTAssertNil(model.visibleContent)
+    }
+
+    /// Starting another take supersedes a deferred dismissal from the previous
+    /// notice. A later notice must return to that new live session.
+    func testScenario033() async throws {
+        model.show(.transcribing, elapsed: 3)
+        model.showNotice(DictationNotice(kind: .failure, message: "Recognition failed."))
+        model.hide()
+
+        model.show(.listening, elapsed: 0)
+        model.showNotice(DictationNotice(kind: .info, message: "Copied."))
+
+        try await waitForNoticeToHide()
+        XCTAssertEqual(model.state, .listening)
+        XCTAssertTrue(model.isVisible)
+        XCTAssertTrue(model.isTicking)
+    }
 }
