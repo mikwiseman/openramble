@@ -63,6 +63,30 @@ A future claim requires publishing the consented fixture manifest and complete
 artifacts, independent reproduction, an app-level lane, several Apple Silicon
 generations and a representative frozen quality corpus.
 
+## Decoder thread topology under processor pressure (2026-08-21)
+
+The Parakeet batch decoder is pinned to one host-CPU thread. This is not a
+general claim that serial inference is faster: the Metal encoder, Accelerate
+filterbank, and batch mel front-end retain their own parallelism. The runtime's
+CPU predictor installs a spin/yield barrier for every graph node at two or more
+session threads; under full CPU saturation, removing that barrier mattered far
+more than parallel decoder work.
+
+On one Apple M4 Pro, a warmed 3.98-second fixture measured median 0.068 s with
+eight threads and 0.083 s with one thread at idle. Under 14 competing CPU
+workers, the paired medians were 0.741 s and 0.187 s. Five interleaved pressure
+runs then completely separated the shipping one-thread topology
+(0.119–0.228 s) from an explicit eight-thread control (0.580–1.466 s); the
+same gate failed before the default changed. A paired 183.91-second idle
+fixture measured medians 6.802 s at eight threads and 7.266 s at one (1.068×),
+within the predeclared 1.5× guard. An earlier end-to-end run of that long
+fixture reported 3.618 s at the runtime default; the absolute numbers came
+from different harness and machine states, so only same-session paired ratios
+were used for the decision.
+
+These are local engineering measurements, not public cross-device benchmarks.
+The Vulkan path shares the same decoder barrier but was not measured here.
+
 The runner checkpoints atomically after every observation:
 
 ```bash

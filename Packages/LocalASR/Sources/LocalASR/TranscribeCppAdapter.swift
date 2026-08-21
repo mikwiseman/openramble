@@ -84,8 +84,15 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
         }
     }
 
-    /// `threadCount` of zero asks the runtime for its own default.
-    public init(backend: Backend = .metal, threadCount: Int32 = 0) {
+    /// One decoder thread is deliberate. Parakeet's CPU-side predictor uses a
+    /// spin/yield barrier for every graph node as soon as `n_threads >= 2`.
+    /// Under processor pressure the runtime default of eight made a four-second
+    /// take 4–10× slower; one thread removes the barrier completely while the
+    /// Metal encoder, Accelerate filterbank and mel front-end keep their own
+    /// parallelism. The live pressure and long-audio gates document the trade.
+    /// Re-evaluate before adopting the runtime's streaming API: unlike batch,
+    /// its mel front-end also consumes this session thread count.
+    public init(backend: Backend = .metal, threadCount: Int32 = 1) {
         self.backend = backend
         self.threadCount = threadCount
         Self.silenceRuntimeLogging()
@@ -105,9 +112,15 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
     private static let silenceRuntimeLogging: @Sendable () -> Void = {
         let install: Void = {
             transcribe_log_set({ level, message, _ in
-                guard let message,
-                      level == TRANSCRIBE_LOG_LEVEL_WARN || level == TRANSCRIBE_LOG_LEVEL_ERROR
-                else { return }
+                guard let message else { return }
+                #if OPENRAMBLE_DIAGNOSTICS
+                guard level == TRANSCRIBE_LOG_LEVEL_DEBUG
+                    || level == TRANSCRIBE_LOG_LEVEL_WARN
+                    || level == TRANSCRIBE_LOG_LEVEL_ERROR else { return }
+                #else
+                guard level == TRANSCRIBE_LOG_LEVEL_WARN
+                    || level == TRANSCRIBE_LOG_LEVEL_ERROR else { return }
+                #endif
                 runtimeLog.debug("transcribe.cpp: \(String(cString: message), privacy: .public)")
             }, nil)
         }()
@@ -256,22 +269,27 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
             params.task = task
             params.timestamps = timestamps
             params.language = language
+            let runtimeStarted = ContinuousClock.now
             let status = transcribe_run(session, samples, Int32(samples.count), &params)
-            guard status == TRANSCRIBE_OK else { return .failure(status) }
+            let runtimeDuration = runtimeStarted.duration(to: .now)
+            guard status == TRANSCRIBE_OK else { return .failure(status, runtimeDuration) }
             // Copied before returning: past this block the pointer may be
             // cleared by the next run.
-            return .success(String(cString: transcribe_full_text(session)))
+            return .success(String(cString: transcribe_full_text(session)), runtimeDuration)
         }
 
         let status: transcribe_status
         let rawText: String
+        let runtimeDuration: Duration
         switch outcome {
-        case let .failure(code):
+        case let .failure(code, duration):
             status = code
             rawText = ""
-        case let .success(text):
+            runtimeDuration = duration
+        case let .success(text, duration):
             status = TRANSCRIBE_OK
             rawText = text
+            runtimeDuration = duration
         }
 
         switch status {
@@ -295,7 +313,8 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
             text: trimmed,
             words: [],
             audioDuration: audioDuration,
-            processingDuration: started.duration(to: .now).seconds
+            processingDuration: runtimeDuration.seconds,
+            engineDispatchDuration: max(0, started.duration(to: .now).seconds - runtimeDuration.seconds)
         )
     }
 
@@ -352,8 +371,8 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
     /// Never a pointer: the session may clear it the moment the next run
     /// starts, so nothing borrowed may cross this boundary.
     enum EngineOutcome: Sendable {
-        case success(String)
-        case failure(transcribe_status)
+        case success(String, Duration)
+        case failure(transcribe_status, Duration)
     }
 
     /// The one thread inference runs on.

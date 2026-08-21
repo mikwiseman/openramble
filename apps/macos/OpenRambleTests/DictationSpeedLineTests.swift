@@ -25,9 +25,40 @@ final class DictationSpeedLineTests: XCTestCase {
 
         XCTAssertTrue(line.contains("prepare=absent"), line)
         XCTAssertTrue(line.contains("queued=absent"), line)
+        XCTAssertTrue(line.contains("poolreturn=absent"), line)
+        XCTAssertTrue(line.contains("mainreturn=absent"), line)
+        XCTAssertTrue(line.contains("enginedispatch=absent"), line)
+        XCTAssertTrue(line.contains("frame=absent"), line)
         XCTAssertFalse(line.contains("=0.00s\tprepare"), line)
         XCTAssertTrue(line.contains("total=8.00s"), line)
         XCTAssertTrue(line.contains("engine=0.20s"), line)
+    }
+
+    func testItNamesBothReturnSpansAndTheirExecutorWitness() {
+        let report = DictationSpeedReport(
+            toRecognizedText: .seconds(1),
+            toPasteDispatched: nil,
+            phases: DictationPhaseBreakdown(
+                captureFreeze: .milliseconds(20),
+                enginePreparation: nil,
+                recognition: .milliseconds(980),
+                engineProcessing: .milliseconds(200),
+                executorHandover: .milliseconds(10),
+                poolReturn: .milliseconds(30),
+                mainActorReturn: .milliseconds(740),
+                engineDispatch: .milliseconds(40),
+                returnFrameWasMainThread: false,
+                engineTransport: .milliseconds(780),
+                audioDuration: .seconds(3)
+            )
+        )
+
+        let line = DictationSpeedLine.text(for: report)
+
+        XCTAssertTrue(line.contains("poolreturn=0.03s"), line)
+        XCTAssertTrue(line.contains("mainreturn=0.74s"), line)
+        XCTAssertTrue(line.contains("enginedispatch=0.04s"), line)
+        XCTAssertTrue(line.contains("frame=pool"), line)
     }
 
     /// The branch is named, so a number can never again be silently about code

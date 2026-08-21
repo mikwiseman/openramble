@@ -138,9 +138,14 @@ public actor LocalTranscriber {
             words: result.words,
             audioDuration: result.audioDuration,
             processingDuration: result.processingDuration,
-            queueingDuration: Double(waited.components.seconds)
-                + Double(waited.components.attoseconds) / 1e18
-                - result.processingDuration,
+            engineDispatchDuration: result.engineDispatchDuration,
+            queueingDuration: max(
+                0,
+                Double(waited.components.seconds)
+                    + Double(waited.components.attoseconds) / 1e18
+                    - result.processingDuration
+                    - result.engineDispatchDuration
+            ),
             decodingDuration: Double(decoded.components.seconds)
                 + Double(decoded.components.attoseconds) / 1e18,
             phaseTimings: result.phaseTimings
@@ -195,6 +200,7 @@ public actor LocalTranscriber {
             words: result.words,
             audioDuration: result.audioDuration,
             processingDuration: result.processingDuration,
+            engineDispatchDuration: result.engineDispatchDuration,
             queueingDuration: Double(queued.components.seconds)
                 + Double(queued.components.attoseconds) / 1e18,
             phaseTimings: result.phaseTimings

@@ -19,6 +19,10 @@ final class DictationLatencyTests: EndToEndScenario {
         let inference: TimeInterval
         /// The entire path “take ready → text at insertion”.
         let path: TimeInterval
+        /// Scheduler return spans measured around the real engine path.
+        let poolReturn: TimeInterval
+        let mainActorReturn: TimeInterval
+        let engineDispatch: TimeInterval
 
         /// How many times is the path shorter than the record itself?
         var speedup: Double { path > 0 ? audio / path : 0 }
@@ -26,10 +30,13 @@ final class DictationLatencyTests: EndToEndScenario {
         var line: String {
             let name = label.padding(toLength: 10, withPad: " ", startingAt: 0)
             let numbers = String(
-                format: "%8.2f \u{0441} | %9.3f \u{0441} | %9.3f \u{0441} | %6.0f×",
+                format: "%8.2f \u{0441} | %9.3f \u{0441} | %9.3f \u{0441} | %7.3f \u{0441} | %7.3f \u{0441} | %7.3f \u{0441} | %6.0f×",
                 audio,
                 inference,
                 path,
+                poolReturn,
+                mainActorReturn,
+                engineDispatch,
                 speedup
             )
             return "| \(name) | \(numbers) |"
@@ -55,8 +62,8 @@ final class DictationLatencyTests: EndToEndScenario {
             try await measure("\u{0442}\u{0440}\u{0438} \u{043C}\u{0438}\u{043D}\u{0443}\u{0442}\u{044B}", text: Phrase.veryLong),
         ]
 
-        print("\n| \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C}     |    \u{0430}\u{0443}\u{0434}\u{0438}\u{043E} | \u{0440}\u{0430}\u{0441}\u{043F}\u{043E}\u{0437}\u{043D}\u{0430}\u{0432}. |     \u{0432}\u{0435}\u{0441}\u{044C} \u{043F}\u{0443}\u{0442}\u{044C} | \u{0431}\u{044B}\u{0441}\u{0442}\u{0440}\u{0435}\u{0435} \u{0420}\u{0412} |")
-        print("|------------|----------|------------|---------------|------------|")
+        print("\n| \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C}     |    \u{0430}\u{0443}\u{0434}\u{0438}\u{043E} | \u{0440}\u{0430}\u{0441}\u{043F}\u{043E}\u{0437}\u{043D}\u{0430}\u{0432}. |     \u{0432}\u{0435}\u{0441}\u{044C} \u{043F}\u{0443}\u{0442}\u{044C} | pool return | main return | engine queue | \u{0431}\u{044B}\u{0441}\u{0442}\u{0440}\u{0435}\u{0435} \u{0420}\u{0412} |")
+        print("|------------|----------|------------|---------------|-------------|-------------|--------------|------------|")
         for sample in samples { print(sample.line) }
         print("")
 
@@ -112,6 +119,8 @@ final class DictationLatencyTests: EndToEndScenario {
     private func measure(_ label: String, text: String) async throws -> Sample {
         try await speak(text)
         let controller = makeController()
+        var speedReport: DictationSpeedReport?
+        controller.onSpeed = { speedReport = $0 }
         await dictate(with: controller)
 
         let readyAt = await capture.fileReadyAt
@@ -121,12 +130,17 @@ final class DictationLatencyTests: EndToEndScenario {
         let ready = try XCTUnwrap(readyAt, "\u{0417}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{0442}\u{0430}\u{043A} \u{0438} \u{043D}\u{0435} \u{0431}\u{044B}\u{043B}\u{0430} \u{0437}\u{0430}\u{043A}\u{0440}\u{044B}\u{0442}\u{0430}")
         let insertion = try XCTUnwrap(insertions.last, "\u{0422}\u{0435}\u{043A}\u{0441}\u{0442} \u{043D}\u{0435} \u{0434}\u{043E}\u{0448}\u{0451}\u{043B} \u{0434}\u{043E} \u{0432}\u{0441}\u{0442}\u{0430}\u{0432}\u{043A}\u{0438}")
         let result = try XCTUnwrap(results.last, "\u{041C}\u{043E}\u{0434}\u{0435}\u{043B}\u{044C} \u{043D}\u{0435} \u{043E}\u{0442}\u{0432}\u{0435}\u{0442}\u{0438}\u{043B}\u{0430}")
+        let phases = try XCTUnwrap(speedReport?.phases, "\u{041D}\u{0435}\u{0442} scheduler attribution for the real engine path")
+        XCTAssertEqual(phases.returnFrameWasMainThread, false)
 
         return Sample(
             label: label,
             audio: result.audioDuration,
             inference: result.processingDuration,
-            path: Self.seconds(ready.duration(to: insertion.at))
+            path: Self.seconds(ready.duration(to: insertion.at)),
+            poolReturn: Self.seconds(try XCTUnwrap(phases.poolReturn)),
+            mainActorReturn: Self.seconds(try XCTUnwrap(phases.mainActorReturn)),
+            engineDispatch: Self.seconds(try XCTUnwrap(phases.engineDispatch))
         )
     }
 

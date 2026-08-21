@@ -405,6 +405,62 @@ final class DictationPhaseBreakdownTests: XCTestCase {
         XCTAssertEqual(phases.captureFreeze, .milliseconds(30))
         XCTAssertEqual(phases.recognition, .milliseconds(200))
     }
+
+    /// A finished engine must not hide time spent waiting to return to the
+    /// main actor. The fake returns only after the main actor has synchronously
+    /// entered a bounded hold, so this does not rely on task ordering or sleep
+    /// long enough and hope.
+    func testReturnWaitIsAttributedToMainActorNotTheEngineOrPool() async throws {
+        let capture = FakeCapture()
+        await capture.setBufferedSamples([0.1, 0.2])
+        let engineReached = Gate()
+        let mainHoldStarted = SynchronousSignal()
+        let hold = Duration.milliseconds(500)
+        let reported = expectation(description: "speed reported")
+        var report: DictationSpeedReport?
+
+        Task { @MainActor in
+            await engineReached.pass()
+            mainHoldStarted.signal()
+            usleep(500_000)
+        }
+
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in
+                XCTFail("the in-memory path must not read the recording file")
+                return ASRResult(text: "wrong path", audioDuration: 2, processingDuration: 0)
+            },
+            transcribeSamples: { _ in
+                try? await Task.sleep(for: .milliseconds(200))
+                await engineReached.open()
+                await mainHoldStarted.wait()
+                return ASRResult(text: "words", audioDuration: 2, processingDuration: 0.2)
+            },
+            inserter: FakeInserter(),
+            overlay: FakeOverlay(),
+            sounds: FakeSounds()
+        )
+        controller.onSpeed = {
+            report = $0
+            reported.fulfill()
+        }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await fulfillment(of: [reported], timeout: 10)
+
+        let phases = try XCTUnwrap(try XCTUnwrap(report).phases)
+        XCTAssertNil(phases.recordingReadable, "the test must take the in-memory path")
+        let mainReturn = try XCTUnwrap(phases.mainActorReturn)
+        let poolReturn = try XCTUnwrap(phases.poolReturn)
+        XCTAssertEqual(phases.returnFrameWasMainThread, false)
+        XCTAssertGreaterThanOrEqual(mainReturn, hold / 2)
+        XCTAssertLessThan(poolReturn, hold / 4)
+        XCTAssertLessThan(try XCTUnwrap(phases.executorHandover), hold / 4)
+        XCTAssertEqual(phases.engineProcessing, .milliseconds(200))
+    }
 }
 
 // MARK: - Waiting for the model
@@ -501,4 +557,37 @@ final class EnginePreparationWaitTests: XCTestCase {
 private final class Box<Value>: @unchecked Sendable {
     var value: Value
     init(_ value: Value) { self.value = value }
+}
+
+/// A cross-executor signal whose `signal()` never suspends its caller.
+///
+/// The main-actor attribution test needs the actor to remain continuously
+/// occupied from the signal until the hold ends. An actor-based gate would
+/// yield at `open()` and make the test prove the opposite schedule.
+private final class SynchronousSignal: @unchecked Sendable {
+    private let lock = NSLock()
+    private var fired = false
+    private var waiter: CheckedContinuation<Void, Never>?
+
+    func wait() async {
+        await withCheckedContinuation { continuation in
+            lock.lock()
+            if fired {
+                lock.unlock()
+                continuation.resume()
+            } else {
+                waiter = continuation
+                lock.unlock()
+            }
+        }
+    }
+
+    func signal() {
+        lock.lock()
+        fired = true
+        let waiter = waiter
+        self.waiter = nil
+        lock.unlock()
+        waiter?.resume()
+    }
 }

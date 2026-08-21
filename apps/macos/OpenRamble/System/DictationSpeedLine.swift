@@ -29,6 +29,14 @@ enum DictationSpeedLine {
         // Split, because the two halves need different fixes.
         parts.append(field("handover", phases?.executorHandover))
         parts.append(field("transport", phases?.engineTransport))
+        parts.append(field("poolreturn", phases?.poolReturn))
+        parts.append(field("mainreturn", phases?.mainActorReturn))
+        parts.append(field("enginedispatch", phases?.engineDispatch))
+        if let frameWasMain = phases?.returnFrameWasMainThread {
+            parts.append("frame=" + (frameWasMain ? "main" : "pool"))
+        } else {
+            parts.append("frame=absent")
+        }
         parts.append(field("queued", phases?.engineQueueing))
         parts.append(field("engine", phases?.engineProcessing))
         parts.append(field("audio", phases?.audioDuration))

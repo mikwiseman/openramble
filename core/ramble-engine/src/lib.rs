@@ -21,7 +21,9 @@
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use transcribe_cpp::{Backend, Model, ModelOptions, RunOptions, Session, TimestampKind};
+use transcribe_cpp::{
+    Backend, Model, ModelOptions, RunOptions, Session, SessionOptions, TimestampKind,
+};
 
 mod report;
 pub use report::{BackendReport, Compiled};
@@ -80,8 +82,15 @@ impl Engine {
         let (model, active) = load_with_fallback(&model_path, requested)?;
 
         let report = BackendReport::new(requested, &model, active);
+        // Match the shipping macOS adapter. Parakeet's CPU predictor installs
+        // a spin/yield barrier for every graph node at two or more threads;
+        // one thread removes that pressure-sensitive synchronization while
+        // the Metal/Vulkan encoder keeps its own parallelism.
         let session = model
-            .session()
+            .session_with(&SessionOptions {
+                n_threads: 1,
+                ..SessionOptions::default()
+            })
             .map_err(|error| EngineError::Load(error.to_string()))?;
 
         Ok(Engine {

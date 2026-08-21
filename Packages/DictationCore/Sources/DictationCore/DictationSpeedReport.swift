@@ -98,6 +98,15 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
     /// the other a blocked pool — so they are measured apart before either is
     /// acted on.
     public let executorHandover: Duration?
+    /// Resume work performed by the generic executor after recognition ended.
+    public let poolReturn: Duration?
+    /// The final hop from the generic executor back to the main actor.
+    public let mainActorReturn: Duration?
+    /// Admission to and return from the engine's own serial execution queue.
+    public let engineDispatch: Duration?
+    /// Runtime witness for the frame that stamped `poolReturn`.
+    /// `mainActorReturn` is trustworthy only when this is `false`.
+    public let returnFrameWasMainThread: Bool?
     /// How much audio the take actually carried.
     public let audioDuration: Duration
 
@@ -110,6 +119,10 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         audioDecoding: Duration? = nil,
         recordingReadable: Duration? = nil,
         executorHandover: Duration? = nil,
+        poolReturn: Duration? = nil,
+        mainActorReturn: Duration? = nil,
+        engineDispatch: Duration? = nil,
+        returnFrameWasMainThread: Bool? = nil,
         engineTransport: Duration? = nil,
         audioDuration: Duration
     ) {
@@ -122,6 +135,10 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         self.recordingReadable = recordingReadable
         self.engineTransport = engineTransport
         self.executorHandover = executorHandover
+        self.poolReturn = poolReturn
+        self.mainActorReturn = mainActorReturn
+        self.engineDispatch = engineDispatch
+        self.returnFrameWasMainThread = returnFrameWasMainThread
         self.audioDuration = audioDuration
     }
 }

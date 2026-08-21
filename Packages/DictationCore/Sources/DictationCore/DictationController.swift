@@ -966,6 +966,9 @@ public final class DictationController {
         // the report is built outside the block that stamps it.
         let dispatchBox = DurationBox()
         let pickedUpBox = DurationBox()
+        let workDoneBox = DurationBox()
+        let returnedBox = DurationBox()
+        let returnFrameBox = MeasurementBox<Bool>()
         do {
             var foregroundEnd = (stopSLORequestedAt ?? .now).advanced(
                 by: captureFreezeDeadline + transcriptionDeadline(recording.duration)
@@ -1020,23 +1023,36 @@ public final class DictationController {
             // of every slow take and had no number, because every previous
             // stamp sat past it.
             let dispatchedAt = monotonicNow()
-            recognized = try await withTranscriptionDeadline(inferenceBudget) {
+            let clockNow = monotonicNow
+            // The explicit type is load-bearing. If this closure inherited
+            // MainActor isolation, the return hop would become a plausible zero.
+            let framedRecognition: @Sendable () async throws -> ASRResult = {
                 [transcribe, transcribeSamples] in
-                // The moment the pool actually picked this up. Everything
-                // before it is the hop off the main actor; everything after is
-                // reaching the engine. `transport` covered both as one number,
-                // and the two need different remedies — so they are separated
-                // before either is attempted.
-                pickedUpBox.value = dispatchedAt.duration(to: ContinuousClock.now)
-                if let transcribeSamples, let bufferedSamples, !bufferedSamples.isEmpty {
-                    return try await transcribeSamples(bufferedSamples)
+                pickedUpBox.set(dispatchedAt.duration(to: clockNow()))
+                defer {
+                    returnFrameBox.set(pthread_main_np() != 0)
+                    returnedBox.set(dispatchedAt.duration(to: clockNow()))
                 }
-                let readableStart = self.monotonicNow()
-                let url = try await self.readableURL(for: recording)
-                readableWaitBox.value = readableStart.duration(to: self.monotonicNow())
-                return try await transcribe(url)
+                return try await withTranscriptionDeadline(inferenceBudget) {
+                    // The moment the pool actually picked this up. Everything
+                    // before it is the hop off the main actor; everything after is
+                    // reaching the engine. `transport` covered both as one number,
+                    // and the two need different remedies — so they are separated
+                    // before either is attempted.
+                    // Covers memory, file and error exits. Catch paths return
+                    // without reading this because timed-out work may finish later.
+                    defer { workDoneBox.set(dispatchedAt.duration(to: clockNow())) }
+                    if let transcribeSamples, let bufferedSamples, !bufferedSamples.isEmpty {
+                        return try await transcribeSamples(bufferedSamples)
+                    }
+                    let readableStart = clockNow()
+                    let url = try await self.readableURL(for: recording)
+                    readableWaitBox.set(readableStart.duration(to: clockNow()))
+                    return try await transcribe(url)
+                }
             }
-            dispatchBox.value = dispatchedAt.duration(to: monotonicNow())
+            recognized = try await framedRecognition()
+            dispatchBox.set(dispatchedAt.duration(to: monotonicNow()))
         } catch let timeout as RecordingFinalizationTimeout where timeout.stage == .readableFile {
             guard shouldContinue(session) else {
                 await discard(recording.url, session: session)
@@ -1166,14 +1182,26 @@ public final class DictationController {
                 audioDecoding: recognized.decodingDuration > 0
                     ? .seconds(recognized.decodingDuration)
                     : nil,
-                recordingReadable: readableWaitBox.value,
+                recordingReadable: readableWaitBox.get(),
 
                 // What it cost to reach the engine at all, engine time removed.
                 // A large number here means the work was waiting, not working.
                 // How long the hop off the main actor took on its own.
-                executorHandover: pickedUpBox.value,
+                executorHandover: pickedUpBox.get(),
+                poolReturn: Self.positiveDifference(
+                    later: returnedBox.get(),
+                    earlier: workDoneBox.get()
+                ),
+                mainActorReturn: Self.positiveDifference(
+                    later: dispatchBox.get(),
+                    earlier: returnedBox.get()
+                ),
+                engineDispatch: recognized.engineDispatchDuration > 0
+                    ? .seconds(recognized.engineDispatchDuration)
+                    : nil,
+                returnFrameWasMainThread: returnFrameBox.get(),
                 engineTransport: {
-                    guard let whole = dispatchBox.value else { return nil }
+                    guard let whole = dispatchBox.get() else { return nil }
                     let inside = recognized.processingDuration
                     let outside = (Double(whole.components.seconds)
                         + Double(whole.components.attoseconds) / 1e18) - inside
@@ -1731,6 +1759,15 @@ public final class DictationController {
         RecordingFileDisposer.shared.submit(url)
     }
 
+    private static func positiveDifference(
+        later: Duration?,
+        earlier: Duration?
+    ) -> Duration? {
+        guard let later, let earlier else { return nil }
+        let difference = later - earlier
+        return difference >= .zero ? difference : nil
+    }
+
 }
 
 /// Errors that the user sees.
@@ -1765,6 +1802,21 @@ private struct RecordingFinalizationTimeout: Error, Sendable, Equatable {
 ///
 /// The readable wait is taken inside the deadline wrapper, and the report is
 /// built outside it. A reference is the smallest way across that boundary.
-final class DurationBox: @unchecked Sendable {
-    var value: Duration?
+final class MeasurementBox<Value: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: Value?
+
+    func set(_ value: Value) {
+        lock.lock()
+        self.value = value
+        lock.unlock()
+    }
+
+    func get() -> Value? {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
+    }
 }
+
+typealias DurationBox = MeasurementBox<Duration>

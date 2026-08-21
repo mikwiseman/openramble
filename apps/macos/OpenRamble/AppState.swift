@@ -241,6 +241,7 @@ public struct AppEnvironment {
                         words: result.words,
                         audioDuration: result.audioDuration,
                         processingDuration: result.processingDuration,
+                        engineDispatchDuration: result.engineDispatchDuration,
                         queueingDuration: result.queueingDuration
                             + Double(prepared.components.seconds)
                             + Double(prepared.components.attoseconds) / 1e18,
@@ -935,12 +936,12 @@ public final class AppState: ObservableObject {
             let transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)?
             if let transcriber {
                 transcribeSamples = { samples in
-                    // Stamped OUTSIDE the actor call, and that is the whole
-                    // point. `LocalTranscriber` is an actor, so the wait to
-                    // enter it is invisible to anything stamped inside — which
-                    // is where the previous three timers were, all reporting
-                    // zero on takes that took seconds. What is measured here is
-                    // everything: getting into the actor, and the work once in.
+                    // This boundary timer deliberately surrounds the actor
+                    // call. After subtracting engine work it still contains
+                    // both actor admission and the return to this caller; it is
+                    // useful as a total, but it cannot identify which side
+                    // waited. DictationController records the two outer return
+                    // hops separately before we choose a scheduling fix.
                     let handedOver = ContinuousClock.now
                     let result = try await transcriber.transcribe(
                         samples: samples,
@@ -952,9 +953,14 @@ public final class AppState: ObservableObject {
                         words: result.words,
                         audioDuration: result.audioDuration,
                         processingDuration: result.processingDuration,
-                        queueingDuration: Double(waited.components.seconds)
-                            + Double(waited.components.attoseconds) / 1e18
-                            - result.processingDuration,
+                        engineDispatchDuration: result.engineDispatchDuration,
+                        queueingDuration: max(
+                            0,
+                            Double(waited.components.seconds)
+                                + Double(waited.components.attoseconds) / 1e18
+                                - result.processingDuration
+                                - result.engineDispatchDuration
+                        ),
                         decodingDuration: result.decodingDuration,
                         phaseTimings: result.phaseTimings
                     )

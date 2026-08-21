@@ -36,6 +36,41 @@ final class TranscribeCppLiveTests: XCTestCase {
         return try AudioFileReader().samples(from: URL(fileURLWithPath: path))
     }
 
+    /// Opt-in pressure gate for the shipping default. Run it while
+    /// `asr-load-repro.sh ... cpu` is active; it must fail if the default
+    /// silently returns to the runtime's eight spin-polling threads.
+    func testDefaultThreadCountResistsCPUPressure() async throws {
+        guard ProcessInfo.processInfo.environment["OPENRAMBLE_PRESSURE_GATE"] == "1" else {
+            throw XCTSkip("set OPENRAMBLE_PRESSURE_GATE=1 and apply CPU pressure")
+        }
+        let samples = try audioSamples()
+        let directory = try modelDirectory()
+        let shipping = TranscribeCppAdapter()
+        let eight = TranscribeCppAdapter(threadCount: 8)
+        try await shipping.loadModels(from: directory)
+        try await eight.loadModels(from: directory)
+        try await shipping.warmUpInference()
+        try await eight.warmUpInference()
+
+        var shippingTimes: [Double] = []
+        var eightTimes: [Double] = []
+        for index in 0..<5 {
+            if index.isMultiple(of: 2) {
+                shippingTimes.append(try await shipping.transcribe(samples: samples).processingDuration)
+                eightTimes.append(try await eight.transcribe(samples: samples).processingDuration)
+            } else {
+                eightTimes.append(try await eight.transcribe(samples: samples).processingDuration)
+                shippingTimes.append(try await shipping.transcribe(samples: samples).processingDuration)
+            }
+        }
+        print("[pressure-gate] shipping=\(shippingTimes) eight=\(eightTimes)")
+        XCTAssertLessThan(
+            try XCTUnwrap(shippingTimes.max()),
+            try XCTUnwrap(eightTimes.min()),
+            "the shipping topology must stay completely separated from eight threads under pressure"
+        )
+    }
+
     /// The whole point, in one test: a model loads, runs, and produces words.
     func testItLoadsAndTranscribesRealAudio() async throws {
         let adapter = TranscribeCppAdapter()
@@ -100,6 +135,33 @@ final class TranscribeCppLiveTests: XCTestCase {
         let first = try await adapter.transcribe(samples: samples)
         let second = try await adapter.transcribe(samples: samples)
         XCTAssertEqual(first.text, second.text)
+    }
+
+    /// Queue admission must not masquerade as inference time. Two calls share
+    /// one serial engine queue, so the follower waits, but its C runtime work
+    /// should still measure like the leader's.
+    func testSerialQueueWaitIsSeparateFromEngineProcessing() async throws {
+        let adapter = TranscribeCppAdapter()
+        let samples = try audioSamples()
+        try await adapter.loadModels(from: try modelDirectory())
+        try await adapter.warmUpInference()
+
+        let leader = Task { try await adapter.transcribe(samples: samples) }
+        try await Task.sleep(for: .milliseconds(5))
+        let follower = try await adapter.transcribe(samples: samples)
+        let first = try await leader.value
+
+        XCTAssertGreaterThan(
+            follower.engineDispatchDuration,
+            first.processingDuration / 2,
+            "the follower must expose its wait for the serial engine queue"
+        )
+        XCTAssertEqual(
+            follower.processingDuration,
+            first.processingDuration,
+            accuracy: first.processingDuration * 0.25,
+            "queue wait must not inflate the measured C runtime work"
+        )
     }
 
     /// A take far shorter than a second is ordinary — a corrected word, a

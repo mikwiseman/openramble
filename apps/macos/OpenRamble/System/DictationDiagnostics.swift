@@ -69,6 +69,9 @@ enum DictationDiagnostics {
             enginePreparationSeconds: report.phases?.enginePreparation?.diagnosticSeconds,
             recognitionSeconds: report.phases?.recognition.diagnosticSeconds,
             engineProcessingSeconds: report.phases?.engineProcessing?.diagnosticSeconds,
+            engineDispatchSeconds: report.phases?.engineDispatch?.diagnosticSeconds,
+            poolReturnSeconds: report.phases?.poolReturn?.diagnosticSeconds,
+            mainActorReturnSeconds: report.phases?.mainActorReturn?.diagnosticSeconds,
             machineAtStop: opened.sample,
             machineAtText: closing,
             delta: MachineDelta(from: opened.sample, to: closing)
@@ -301,6 +304,9 @@ enum DictationDiagnostics {
         let enginePreparationSeconds: Double?
         let recognitionSeconds: Double?
         let engineProcessingSeconds: Double?
+        let engineDispatchSeconds: Double?
+        let poolReturnSeconds: Double?
+        let mainActorReturnSeconds: Double?
         let machineAtStop: MachineSample
         let machineAtText: MachineSample
         let delta: MachineDelta

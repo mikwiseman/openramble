@@ -68,15 +68,17 @@ public struct ASRResult: Sendable, Equatable {
     public let words: [Word]
     /// Duration of recognized audio.
     public let audioDuration: TimeInterval
-    /// How long did the recognition itself take - for measurements and for display in diagnostics.
+    /// Wall time spent inside the engine runtime call itself.
     public let processingDuration: TimeInterval
+    /// Time around the runtime call: admission to the engine's execution
+    /// queue plus the continuation's return to its owner.
+    public let engineDispatchDuration: TimeInterval
     /// How long the call waited before the engine began.
     ///
-    /// `processingDuration` starts once the engine actor is entered, so
-    /// everything before that — a queued continuation, another dictation
-    /// holding the actor, a thread the cooperative pool had not handed out yet
-    /// — was reported nowhere. That interval held every second of the stalls
-    /// this app spent months not being able to name. Now it has a number.
+    /// This is the wait outside the engine's own execution queue: actor
+    /// admission, warm-up ownership and another dictation holding the actor.
+    /// `engineDispatchDuration` accounts for the queue immediately around the
+    /// runtime call, so the two must remain separate.
     public let queueingDuration: TimeInterval
     /// How long opening and decoding the recording took.
     ///
@@ -92,6 +94,7 @@ public struct ASRResult: Sendable, Equatable {
         words: [Word] = [],
         audioDuration: TimeInterval,
         processingDuration: TimeInterval,
+        engineDispatchDuration: TimeInterval = 0,
         queueingDuration: TimeInterval = 0,
         decodingDuration: TimeInterval = 0,
         phaseTimings: ASRPhaseTimings? = nil
@@ -100,6 +103,7 @@ public struct ASRResult: Sendable, Equatable {
         self.words = words
         self.audioDuration = audioDuration
         self.processingDuration = processingDuration
+        self.engineDispatchDuration = engineDispatchDuration
         self.queueingDuration = queueingDuration
         self.decodingDuration = decodingDuration
         self.phaseTimings = phaseTimings

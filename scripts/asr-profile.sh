@@ -40,18 +40,40 @@ echo
         if (!("total" in f)) next
         takes++
         paths[("path" in f) ? f["path"] : "unrecorded"]++
+        frames[("frame" in f) ? f["frame"] : "unrecorded"]++
         add("total", ("total" in f) ? f["total"] : "")
-        stage("freeze", f); stage("prepare", f); stage("readable", f)
-        stage("decode", f); stage("handover", f); stage("transport", f); stage("queued", f); stage("engine", f)
+        addField("freeze", f); addField("prepare", f); addField("recognize", f)
+        addField("readable", f); addField("decode", f); addField("handover", f)
+        addField("transport", f); addField("poolreturn", f); addField("mainreturn", f)
+        addField("enginedispatch", f)
+        addField("queued", f); addField("engine", f)
 
-        # What no stage claimed, per take rather than in aggregate, so one bad
-        # take cannot be averaged into looking fine.
-        rest = ("recognize" in f) ? f["recognize"] + 0 : 0
-        for (s in named) if ((s in f) && f[s] + 0 >= 0) rest -= f[s] + 0
-        if (rest > 0.05) unexplained++
-        if (rest > worstRest) { worstRest = rest; worstRestTotal = f["total"] + 0 }
+        # Three containment checks, not one sum. `transport` contains handover,
+        # readable, queued and both return spans; decode is itself inside queued.
+        # Adding every printed row would double-subtract nested intervals and
+        # turn missing time negative — the old parser did exactly that.
+        if (present("total", f) && present("freeze", f) && present("recognize", f)) {
+          top = f["total"] - f["freeze"] - value("prepare", f) - f["recognize"]
+          add("topgap", top > 0 ? top : 0)
+        }
+        if (present("recognize", f) && present("transport", f) && present("engine", f)) {
+          inside = f["recognize"] - f["transport"] - f["engine"]
+          add("insidegap", inside > 0 ? inside : 0)
+        }
+        if (present("transport", f) && present("handover", f) && present("queued", f) \
+            && present("poolreturn", f) && present("mainreturn", f) \
+            && present("enginedispatch", f)) {
+          missing = f["transport"] - value("handover", f) - value("readable", f) \
+            - value("queued", f) - value("poolreturn", f) - value("mainreturn", f) \
+            - value("enginedispatch", f)
+          add("missing", missing > 0 ? missing : 0)
+        } else if (present("transport", f)) {
+          invalidTransport++
+        }
       }
-      function stage(name, f) { named[name] = 1; add(name, (name in f) ? f[name] : "") }
+      function present(name, f) { return (name in f) && f[name] != "absent" && f[name] + 0 >= 0 }
+      function value(name, f) { return present(name, f) ? f[name] + 0 : 0 }
+      function addField(name, f) { add(name, present(name, f) ? f[name] : "") }
       function add(name, value) {
         if (value == "" || value + 0 < 0) { absent[name]++; return }
         key = name SUBSEP (++count[name])
@@ -86,21 +108,26 @@ echo
         printf "%d dictations", takes
         sep = "   paths: "
         for (p in paths) { printf "%s%s=%d", sep, p, paths[p]; sep = ", " }
+        sep = "   frames: "
+        for (p in frames) { printf "%s%s=%d", sep, p, frames[p]; sep = ", " }
         print ""
         print ""
         printf "  %-11s  %6s  %6s  %6s   %6s\n", "stage", "p50", "p90", "worst", "share"
         printf "  %-11s  %6s  %6s  %6s   %6s\n", "-----------", "------", "------", "------", "------"
         row("freeze"); row("prepare"); row("readable"); row("decode")
-        row("handover"); row("transport"); row("queued"); row("engine")
+        row("handover"); row("transport"); row("poolreturn"); row("mainreturn")
+        row("enginedispatch")
+        row("queued"); row("engine")
         printf "  %-11s  %6.2f  %6.2f  %6.2f   %5.1f%%\n", "TOTAL",
           pct("total", 0.50), pct("total", 0.90), pct("total", 1.00), 100
         print ""
-        if (unexplained > 0) {
-          printf "  %d of %d takes hold time no stage accounts for; worst %.2fs on a %.2fs take.\n",
-            unexplained, takes, worstRest, worstRestTotal
-          print  "  The breakdown is incomplete, and that remainder is where to look next."
+        printf "  containment gaps (worst): total %.2fs, recognition %.2fs, transport %.2fs\n",
+          pct("topgap", 1.00), pct("insidegap", 1.00), pct("missing", 1.00)
+        if (invalidTransport > 0 || pct("topgap", 1.00) > 0.05 \
+            || pct("insidegap", 1.00) > 0.05 || pct("missing", 1.00) > 0.05) {
+          print "  The breakdown is incomplete; do not choose a fix from this window."
         } else {
-          print "  Every take is fully accounted for by its stages."
+          print "  Every take is accounted for without double-counting nested spans."
         }
       }
     '
