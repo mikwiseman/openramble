@@ -1184,12 +1184,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dispatch"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd0c93bb4b0c6d9b77f4435b0ae98c24d17f1c45b2ff844c6151a07256ca923b"
-
-[[package]]
 name = "dispatch2"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2902,15 +2896,9 @@ checksum = "d49e936b501e5c5bf01fda3a9452ff86dc3ea98ad5f283e1455153142d97518c"
 dependencies = [
  "bitflags 2.13.1",
  "block2",
- "libc",
  "objc2",
- "objc2-cloud-kit",
- "objc2-core-data",
  "objc2-core-foundation",
  "objc2-core-graphics",
- "objc2-core-image",
- "objc2-core-text",
- "objc2-core-video",
  "objc2-foundation",
  "objc2-quartz-core",
 ]
@@ -2981,7 +2969,6 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b402a653efbb5e82ce4df10683b6b28027616a2715e90009947d50b8dd298fa"
 dependencies = [
- "bitflags 2.13.1",
  "objc2",
  "objc2-foundation",
 ]
@@ -3042,19 +3029,6 @@ dependencies = [
  "objc2",
  "objc2-core-foundation",
  "objc2-core-graphics",
-]
-
-[[package]]
-name = "objc2-core-video"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d425caf1df73233f29fd8a5c3e5edbc30d2d4307870f802d18f00d83dc5141a6"
-dependencies = [
- "bitflags 2.13.1",
- "objc2",
- "objc2-core-foundation",
- "objc2-core-graphics",
- "objc2-io-surface",
 ]
 
 [[package]]
@@ -3172,15 +3146,12 @@ dependencies = [
 
 [[package]]
 name = "openramble-desktop"
-version = "0.24.0"
+version = "0.23.0"
 dependencies = [
  "arboard",
  "clipboard-win",
  "cpal",
  "enigo",
- "objc2",
- "objc2-app-kit",
- "objc2-foundation",
  "ramble-audio",
  "ramble-core",
  "ramble-engine",
@@ -3189,7 +3160,6 @@ dependencies = [
  "ramble-text",
  "rdev",
  "reqwest",
- "ringbuf",
  "serde",
  "serde_json",
  "tauri",
@@ -3197,8 +3167,6 @@ dependencies = [
  "tauri-plugin-autostart",
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
- "tauri-plugin-sparkle-updater",
- "tempfile",
  "window-vibrancy 0.8.0",
 ]
 
@@ -3635,7 +3603,7 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "ramble-audio"
-version = "0.24.0"
+version = "0.23.0"
 dependencies = [
  "hound",
  "rubato",
@@ -3644,7 +3612,7 @@ dependencies = [
 
 [[package]]
 name = "ramble-core"
-version = "0.24.0"
+version = "0.23.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3652,7 +3620,7 @@ dependencies = [
 
 [[package]]
 name = "ramble-engine"
-version = "0.24.0"
+version = "0.23.0"
 dependencies = [
  "ramble-audio",
  "ramble-model",
@@ -3662,7 +3630,7 @@ dependencies = [
 
 [[package]]
 name = "ramble-ffi"
-version = "0.24.0"
+version = "0.23.0"
 dependencies = [
  "ramble-core",
  "ramble-engine",
@@ -3675,7 +3643,7 @@ dependencies = [
 
 [[package]]
 name = "ramble-history"
-version = "0.24.0"
+version = "0.23.0"
 dependencies = [
  "ramble-model",
  "serde",
@@ -3685,7 +3653,7 @@ dependencies = [
 
 [[package]]
 name = "ramble-model"
-version = "0.24.0"
+version = "0.23.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3695,7 +3663,7 @@ dependencies = [
 
 [[package]]
 name = "ramble-text"
-version = "0.24.0"
+version = "0.23.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3894,17 +3862,6 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "ringbuf"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a158e09ede21a14b172ca6cdd6208386c6ae2cb6acef58d774368ef8c450dfa7"
-dependencies = [
- "crossbeam-utils",
- "portable-atomic",
- "portable-atomic-util",
 ]
 
 [[package]]
@@ -4856,25 +4813,6 @@ dependencies = [
  "tracing",
  "windows-sys 0.60.2",
  "zbus",
-]
-
-[[package]]
-name = "tauri-plugin-sparkle-updater"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5402e89cb4f120fb874951c46d9ff1c5f18fe34457025e01eb2325e1b83eab84"
-dependencies = [
- "dispatch",
- "log",
- "objc2",
- "objc2-app-kit",
- "objc2-foundation",
- "serde",
- "serde_json",
- "tauri",
- "tauri-plugin",
- "thiserror 2.0.20",
- "url",
 ]
 
 [[package]]

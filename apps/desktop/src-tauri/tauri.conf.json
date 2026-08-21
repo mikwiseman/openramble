@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "OpenRamble",
-  "version": "0.24.0",
-  "identifier": "is.waiwai.dictation",
+  "version": "0.23.0",
+  "identifier": "is.waiwai.dictation.desktop",
   "build": {
     "frontendDist": "../ui"
   },
@@ -33,21 +33,19 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "msi",
+      "nsis",
+      "appimage",
+      "deb",
+      "rpm"
+    ],
     "icon": [
       "icons/icon.png",
-      "icons/icon.ico",
-      "../../macos/OpenRamble/Resources/AppIcon.icns"
+      "icons/icon.ico"
     ],
     "category": "Productivity",
     "shortDescription": "Local dictation",
-    "longDescription": "Hold a key, speak, release it, and the text appears in whatever you were typing in. Recognition runs on this machine.",
-    "macOS": {
-      "frameworks": ["Sparkle.framework"],
-      "minimumSystemVersion": "14.0",
-      "entitlements": "Entitlements.plist",
-      "infoPlist": "Info.plist",
-      "bundleVersion": "50"
-    }
+    "longDescription": "Hold a key, speak, release it, and the text appears in whatever you were typing in. Recognition runs on this machine."
   }
 }

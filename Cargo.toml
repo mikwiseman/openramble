@@ -1,8 +1,10 @@
 # OpenRamble Rust workspace.
 #
-# The shipping desktop app is Tauri on macOS, Windows, and Linux. The retired
-# Swift implementation remains in Packages/ and apps/macos/ as migration
-# evidence, but release builds come entirely from this workspace.
+# The macOS app (Packages/, apps/macos/) is Swift and is untouched by this
+# manifest — SwiftPM and Cargo ignore each other. This workspace is the shared
+# core that Windows and Linux run on today and that the macOS app migrates onto
+# module by module, so that a behaviour improvement is written once and reaches
+# every platform.
 [workspace]
 resolver = "2"
 members = [
@@ -17,7 +19,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.24.0"
+version = "0.23.0"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT"

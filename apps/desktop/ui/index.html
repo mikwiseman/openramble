@@ -302,15 +302,6 @@
       </div>
     </section>
 
-    <section id="updates-section" hidden>
-      <h2>Updates</h2>
-      <p>Updates are verified with OpenRamble’s permanent signing key before installation.</p>
-      <div class="row">
-        <button id="check-updates">Check for Updates…</button>
-        <span id="update-detail" class="muted-note"></span>
-      </div>
-    </section>
-
     <section>
       <h2>Recent dictations</h2>
       <p id="history-empty" class="empty">Finished dictations appear here, with the audio that produced them.</p>
@@ -331,7 +322,6 @@
       const agent = navigator.userAgent;
       if (agent.includes("Macintosh")) {
         document.documentElement.classList.add("is-macos");
-        el("updates-section").hidden = false;
       }
       // Linux has no portable window material, so the window is transparent with
       // nothing behind it — text would float on the desktop and be unreadable.
@@ -388,25 +378,17 @@
         }
       });
 
-      invoke("dictation_hotkey")
-        .then((name) => { el("hotkey").textContent = name; })
-        .catch(showError);
+      invoke("dictation_hotkey").then((name) => { el("hotkey").textContent = name; });
 
-      invoke("start_at_login")
-        .then((enabled) => { el("start-at-login").checked = enabled; })
-        .catch((error) => showError(`Startup setting could not be read: ${error}`));
+      invoke("start_at_login").then((enabled) => { el("start-at-login").checked = enabled; });
       el("start-at-login").addEventListener("change", async (event) => {
         try {
           await invoke("set_start_at_login", { enabled: event.target.checked });
         } catch (error) {
           // Put the box back to the truth rather than leaving it showing a
           // setting that did not take.
-          showError(`Startup setting could not be changed: ${error}`);
-          try {
-            event.target.checked = await invoke("start_at_login");
-          } catch (readError) {
-            showError(`Startup setting could not be read: ${readError}`);
-          }
+          event.target.checked = await invoke("start_at_login");
+          el("model-detail").textContent = String(error);
         }
       });
 
@@ -426,13 +408,9 @@
           const remove = document.createElement("button");
           remove.textContent = "Remove";
           remove.addEventListener("click", async () => {
-            try {
-              const kept = rows.filter((_, position) => position !== index);
-              await invoke("set_dictionary", { rows: kept });
-              await refreshTerms();
-            } catch (error) {
-              showError(error);
-            }
+            const kept = rows.filter((_, position) => position !== index);
+            await invoke("set_dictionary", { rows: kept });
+            refreshTerms();
           });
           actions.appendChild(remove);
           tr.append(heard, written, actions);
@@ -444,16 +422,12 @@
         const spoken = el("term-spoken").value.trim();
         const written = el("term-written").value.trim();
         if (!spoken || !written) return;
-        try {
-          const rows = await invoke("dictionary");
-          rows.push({ spoken, written });
-          await invoke("set_dictionary", { rows });
-          el("term-spoken").value = "";
-          el("term-written").value = "";
-          await refreshTerms();
-        } catch (error) {
-          showError(error);
-        }
+        const rows = await invoke("dictionary");
+        rows.push({ spoken, written });
+        await invoke("set_dictionary", { rows });
+        el("term-spoken").value = "";
+        el("term-written").value = "";
+        refreshTerms();
       });
 
       async function refreshHistory() {
@@ -476,23 +450,14 @@
 
           const copy = document.createElement("button");
           copy.textContent = "Copy";
-          copy.addEventListener("click", async () => {
-            try {
-              await invoke("copy_history_text", { text: row.text });
-            } catch (error) {
-              showError(error);
-            }
-          });
+          copy.addEventListener("click", () => navigator.clipboard.writeText(row.text));
 
           const remove = document.createElement("button");
           remove.textContent = "Delete";
           remove.addEventListener("click", async () => {
-            try {
-              await invoke("delete_history_entry", { id: row.id });
-              await refreshHistory();
-            } catch (error) {
-              showError(error);
-            }
+            await invoke("delete_history_entry", { id: row.id });
+            refreshHistory();
+      refreshTerms();
           });
 
           const actions = document.createElement("span");
@@ -504,31 +469,9 @@
       }
 
       el("clear-history").addEventListener("click", async () => {
-        try {
-          await invoke("clear_history");
-          await refreshHistory();
-        } catch (error) {
-          showError(error);
-        }
-      });
-
-      function showError(error) {
-        el("model-detail").textContent = String(error);
-        el("model-detail").classList.add("bad");
-      }
-
-      el("check-updates").addEventListener("click", async () => {
-        el("check-updates").disabled = true;
-        el("update-detail").textContent = "Checking…";
-        try {
-          await invoke("check_for_updates");
-          el("update-detail").textContent = "";
-        } catch (error) {
-          el("update-detail").textContent = String(error);
-          el("update-detail").classList.add("bad");
-        } finally {
-          el("check-updates").disabled = false;
-        }
+        await invoke("clear_history");
+        refreshHistory();
+      refreshTerms();
       });
 
       invoke("session_notices").then((notices) => {
@@ -540,10 +483,10 @@
           el("limits").appendChild(item);
         }
         el("limits-section").hidden = false;
-      }).catch(showError);
-      refresh().catch(showError);
-      refreshHistory().catch(showError);
-      refreshTerms().catch(showError);
+      });
+      refresh();
+      refreshHistory();
+      refreshTerms();
     </script>
   </body>
 </html>

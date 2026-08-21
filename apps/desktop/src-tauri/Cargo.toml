@@ -27,15 +27,11 @@ arboard = "3"
 cpal = "0.18"
 enigo = "0.6"
 rdev = "0.5"
-# The microphone callback may not allocate or wait for a mutex. A fixed SPSC
-# ring transfers samples to the collector without either.
-ringbuf = "0.5.1"
 # Declared explicitly rather than borrowed from Tauri's tree: this is the
 # application's single network call site, and the audit should see it named.
 reqwest = { version = "0.13", default-features = false, features = ["blocking", "rustls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tempfile = "3.27.0"
 tauri = { version = "2", features = ["tray-icon", "macos-private-api"] }
 tauri-plugin-autostart = "2"
 tauri-plugin-opener = "2"
@@ -47,14 +43,6 @@ window-vibrancy = "0.8"
 # and clipboard history, and that exclusion is a product promise rather than a
 # nicety.
 clipboard-win = "5"
-
-[target.'cfg(target_os = "macos")'.dependencies]
-# Native Sparkle 2 keeps the permanent appcast and EdDSA trust chain used by
-# every installed Mac copy. This is not Tauri's minisign updater.
-tauri-plugin-sparkle-updater = "=0.2.4"
-objc2 = "0.6.4"
-objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSPasteboard", "NSPasteboardItem"] }
-objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSString"] }
 
 [lints]
 workspace = true

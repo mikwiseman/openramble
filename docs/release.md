@@ -8,6 +8,7 @@ to GitHub Releases, and listed in the GitHub Pages appcast.
 
 - Repository: `mikwiseman/openramble`
 - Bundle identifier: `is.waiwai.dictation`
+- Private ASR worker signature identifier: `is.waiwai.dictation.asr-worker`
 - Sparkle feed: `https://mikwiseman.github.io/openramble/appcast.xml`
 - Download page: `https://waiwai.is/ramble` — the product's main landing. It
   pins the version, the build number and the DMG link, so every release must
@@ -45,11 +46,12 @@ The release script requires:
 
 - a clean `main` branch exactly matching `origin/main`;
 - a successful CI run for the same commit;
-- matching version and bundle build in `apps/desktop/src-tauri/tauri.conf.json`;
+- matching marketing and bundle versions in `apps/macos/project.yml`;
 - English release notes at `docs/release-notes/<version>.md`;
 - an installed recognition model for both offline runtime checks;
   `WAI_MODELS_ROOT` is honoured by them, so keep a release-only copy
-  (`~/.openramble/release-models`) and export it for the release. A machine
+  (`~/.openramble/release-models`, installed with `asr-bench install` and
+  `install-vocab` under that root) and export it for the release. A machine
   wiped for a from-scratch install test can then still cut a release, and the
   release never depends on the tester's own installation;
 - a valid Developer ID identity and App Store Connect notarization key;
@@ -95,10 +97,10 @@ Never pipe it into `tail` or `head` to shorten the output. A pipeline reports
 the exit code of its last command, so a refusal to build reads as a release
 that worked — which is exactly how a release goes missing.
 
-The script runs the full Rust workspace, checks the shipping network and
-clipboard privacy surfaces, performs two in-process offline runtime checks, and
-always creates a fresh universal Intel + Apple Silicon Tauri app and DMG from
-the checked-out SHA. It rechecks that HEAD and tracked inputs stayed unchanged before the
+The script runs package and application tests, checks the shipping network
+surface and the worker control plane, performs two in-process offline runtime
+checks, and always creates a fresh arm64 archive and DMG from the checked-out
+SHA. It rechecks that HEAD and tracked inputs stayed unchanged before the
 archive and again after exact-DMG verification. Reusing an earlier artifact is
 deliberately unsupported.
 
@@ -108,15 +110,22 @@ permanent bundle identifier, Release configuration, archive layout, and DMG
 name. It is structural coverage only; it cannot substitute for Developer ID,
 notarization, Gatekeeper, or the release-time offline-recognition gate.
 
-The build signs nested Sparkle components from the inside out, then the Tauri
-application, submits the DMG for notarization, staples the ticket, and verifies
+The build signs nested Sparkle components and the private ASR worker from the
+inside out, submits the DMG for notarization, staples the ticket, and verifies
 Gatekeeper acceptance. It then mounts that exact read-only DMG and verifies the
 app name, production bundle identifier, version, build, feed URL, permanent
 public key, minimum macOS version, signatures, entitlements, architectures,
-and resources. Finally, the shipping Rust recognizer loads the installed model
-and recognizes a synthetic fixture while an OS sandbox denies all network
-access. Only after those checks does the
+resources, and private worker identifier. Finally, the packaged worker loads
+the installed model, warms inference, and recognizes a synthetic fixture while
+an OS sandbox denies all network access. Only after those checks does the
 script sign the same DMG with Sparkle EdDSA and update `docs/appcast.xml`.
+
+The current worker links the complete `LocalASR` product, so its binary still
+contains CFNetwork/URLSession downloader code even though the private worker
+protocol exposes no download or install request. The smoke test reports that
+fact explicitly. Do not describe this binary as transport-free: the enforced
+release guarantee is successful packaged recognition under the OS network
+deny. Removing the symbols requires splitting a runtime-only LocalASR product.
 
 ## Publish
 
@@ -146,9 +155,10 @@ feed must exactly match the uploaded DMG.
 2. `spctl --assess --type install --verbose=2` accepts the DMG.
 3. The app inside the mounted image has the expected bundle identifier,
    version, build, update URL, and public key.
-4. The Rust recognizer returns the expected fixture with `network*` denied by
-   the OS and the process-attributed tracer observes zero network calls.
+4. `Contents/MacOS/openramble-asr-worker` has its fixed signature identifier
+   and recognizes the synthetic fixture with `network*` denied by the OS; no
+   test fixture or MCP executable is present in the application.
 5. The main landing at `https://waiwai.is/ramble` shows this version and build
    and downloads the same DMG.
 6. An older installed build can discover and install the update through
-   Sparkle; the Tauri build’s native Sparkle UI can read the live feed.
+   Sparkle.

@@ -12,9 +12,8 @@ use ramble_engine::Engine;
 use ramble_history::HistoryStore;
 use ramble_model::{Manifest, ModelState, ModelStore};
 use ramble_text::pipeline::TextPipeline;
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::{mpsc, Arc, Mutex, MutexGuard};
+use std::sync::{Mutex, MutexGuard};
 
 const SHIPPING_MANIFEST: &str =
     include_str!("../../../../Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json");
@@ -99,27 +98,17 @@ pub struct Dictation {
     engine: Mutex<Option<Engine>>,
     pipeline: Mutex<TextPipeline>,
     store: ModelStore,
-    history: Arc<Mutex<HistoryStore>>,
-    history_writer: HistoryWriter,
+    history: HistoryStore,
     dictionary_directory: PathBuf,
 }
 
 impl Dictation {
-    pub fn new() -> Result<Self, String> {
-        let manifest = Manifest::parse(SHIPPING_MANIFEST).map_err(|error| error.to_string())?;
-        let store = ModelStore::new(
-            manifest,
-            models_root()
-                .ok_or_else(|| "OpenRamble could not resolve its model directory.".to_string())?,
-        );
-        let root = support_root()
-            .ok_or_else(|| "OpenRamble could not resolve its support directory.".to_string())?;
-        let history = Arc::new(Mutex::new(HistoryStore::new(root.join("History"))));
+    pub fn new() -> Option<Self> {
+        let manifest = Manifest::parse(SHIPPING_MANIFEST).ok()?;
+        let store = ModelStore::new(manifest, models_root()?);
         // Anything an interrupted install left behind is settled before the
         // person is shown a state.
-        store.recover_interrupted_promotion().map_err(|error| {
-            format!("The interrupted model install could not be recovered: {error}")
-        })?;
+        let _ = store.recover_interrupted_promotion();
         let dictation = Dictation {
             machine: Mutex::new(SessionMachine::new()),
             capture: Mutex::new(None),
@@ -131,28 +120,24 @@ impl Dictation {
                 ramble_text::starter::developer(),
             )),
             store,
-            history: Arc::clone(&history),
-            history_writer: HistoryWriter::new(history),
-            dictionary_directory: root,
+            history: HistoryStore::new(support_root()?.join("History")),
+            dictionary_directory: support_root()?,
         };
         // Their own terms are in effect from the first dictation, not from the
         // first time they open settings.
-        dictation
-            .reload_pipeline()
-            .map_err(|error| format!("The personal dictionary could not be loaded: {error}"))?;
-        Ok(dictation)
+        dictation.reload_pipeline();
+        Some(dictation)
     }
 
     /// Rebuild the pipeline from the supplied terms plus the person's own.
-    fn reload_pipeline(&self) -> std::io::Result<()> {
+    fn reload_pipeline(&self) {
         let mut replacements = ramble_text::starter::developer();
-        replacements.extend(self.personal_terms()?);
+        replacements.extend(self.personal_terms());
         *self
             .pipeline
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner()) =
             TextPipeline::with_replacements(replacements);
-        Ok(())
     }
 
     fn machine(&self) -> MutexGuard<'_, SessionMachine> {
@@ -184,15 +169,11 @@ impl Dictation {
     }
 
     /// The person's own replacements, as stored.
-    pub fn personal_terms(
-        &self,
-    ) -> std::io::Result<Vec<ramble_text::dictionary::DictionaryReplacement>> {
-        let bytes = match std::fs::read(self.dictionary_path()) {
-            Ok(bytes) => bytes,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-            Err(error) => return Err(error),
+    pub fn personal_terms(&self) -> Vec<ramble_text::dictionary::DictionaryReplacement> {
+        let Ok(bytes) = std::fs::read(self.dictionary_path()) else {
+            return Vec::new();
         };
-        parse_personal_terms(&bytes)
+        serde_json::from_slice(&bytes).unwrap_or_default()
     }
 
     /// Store the person's replacements and put them into effect at once.
@@ -217,16 +198,12 @@ impl Dictation {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let json = serde_json::to_vec(&entries).map_err(std::io::Error::other)?;
-        let parent = path
-            .parent()
-            .ok_or_else(|| std::io::Error::other("the dictionary path has no parent directory"))?;
-        let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
-        temporary.write_all(&json)?;
-        temporary.as_file().sync_all()?;
-        temporary.persist(&path).map_err(|error| error.error)?;
+        std::fs::write(
+            &path,
+            serde_json::to_vec(&entries).map_err(std::io::Error::other)?,
+        )?;
 
-        self.reload_pipeline()?;
+        self.reload_pipeline();
         Ok(())
     }
 
@@ -234,34 +211,8 @@ impl Dictation {
         self.dictionary_directory.join("dictionary.json")
     }
 
-    pub fn history_entries(&self) -> std::io::Result<Vec<ramble_history::HistoryEntry>> {
-        self.history
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .try_load()
-    }
-
-    pub fn history_has_audio(&self, entry: &ramble_history::HistoryEntry) -> bool {
-        self.history
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .audio_path(entry)
-            .is_some()
-    }
-
-    pub fn delete_history_entry(&self, id: &str) -> std::io::Result<()> {
-        self.history
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .delete(id)
-            .map(|_| ())
-    }
-
-    pub fn clear_history(&self) -> std::io::Result<()> {
-        self.history
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .delete_all()
+    pub fn history(&self) -> &HistoryStore {
+        &self.history
     }
 
     /// How much a person is being asked to download, so the number can be shown
@@ -287,19 +238,6 @@ impl Dictation {
                     .lock()
                     .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(capture);
                 self.advance(Event::CaptureStarted);
-                // Warm the resident recognizer while speech is arriving. This
-                // runs on the lifecycle worker, never the keyboard callback or
-                // UI thread. Release is already admitted independently and
-                // waits behind this command, so a cold model cannot lose the
-                // end of a short gesture.
-                if let Err(error) = self.prepare_engine() {
-                    *self
-                        .capture
-                        .lock()
-                        .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
-                    self.advance(Event::TranscriptionFailed);
-                    return Err(error);
-                }
                 Ok(())
             }
             Err(error) => {
@@ -310,10 +248,7 @@ impl Dictation {
     }
 
     /// Stop recording and produce the text.
-    pub fn finish_with<F>(&self, held: std::time::Duration, insert: F) -> Outcome
-    where
-        F: FnOnce(&str) -> Result<(), String>,
-    {
+    pub fn finish(&self, held: std::time::Duration) -> Outcome {
         self.advance(Event::Released { held });
 
         let taken = self
@@ -327,10 +262,7 @@ impl Dictation {
         };
 
         let rate = capture.sample_rate();
-        let (samples, truncated) = match capture.finish() {
-            Ok(recording) => recording,
-            Err(error) => return self.failed(error.to_string()),
-        };
+        let (samples, truncated) = capture.finish();
 
         // How much audio there actually is, not how long the key was down. Those
         // differ in exactly the case the silent-input rule exists for: a muted or
@@ -372,16 +304,14 @@ impl Dictation {
             return Outcome::DroppedSilently;
         }
 
-        // Hand persistence its own copy of ownership before insertion, but do
-        // not wait for disk. If paste fails the history worker still has the
-        // words; if the disk is under pressure the words still reach the field.
-        if let Err(error) = self.remember(output.text.clone(), samples) {
-            eprintln!("The dictation could not be queued for history: {error}");
-        }
+        // Recorded before insertion is attempted: if putting the text into the
+        // other application fails, the words are the one thing that must not be
+        // lost, and history is where a person goes to find them.
+        self.remember(&output.text, &samples);
 
-        if let Err(error) = insert(&output.text) {
+        if let Err(error) = inject::insert(&output.text) {
             self.advance(Event::InsertionFailed);
-            return Outcome::Failed(error);
+            return Outcome::Failed(error.to_string());
         }
         self.advance(Event::Inserted);
 
@@ -390,16 +320,6 @@ impl Dictation {
         } else {
             Outcome::Inserted
         }
-    }
-
-    /// Stop recording and insert from the current thread.
-    ///
-    /// Kept for non-GUI callers. The Tauri shell uses [`Self::finish_with`] to
-    /// schedule platform UI work on the main thread.
-    pub fn finish(&self, held: std::time::Duration) -> Outcome {
-        self.finish_with(held, |text| {
-            inject::insert(text).map_err(|error| error.to_string())
-        })
     }
 
     fn failed(&self, detail: String) -> Outcome {
@@ -418,23 +338,35 @@ impl Dictation {
 
     /// Keep the take, with the audio that produced it.
     ///
-    fn remember(&self, text: String, samples: Vec<f32>) -> Result<(), String> {
-        self.history_writer.record(text, samples)
+    /// Failures here are swallowed on purpose. History is a convenience; losing
+    /// it must never cost someone the dictation they just made, and an error
+    /// dialog about a bookkeeping file at the moment their words are about to
+    /// appear would be worse than the missing row.
+    fn remember(&self, text: &str, samples: &[f32]) {
+        let limit = ramble_history::DEFAULT_LIMIT;
+        let id = format!(
+            "{:x}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|since| since.as_nanos())
+                .unwrap_or(0)
+        );
+
+        let audio = std::env::temp_dir().join(format!("openramble-{id}.wav"));
+        let recorded = ramble_audio::write_wav(&audio, samples, ramble_audio::ENGINE_SAMPLE_RATE);
+        let source = recorded.is_ok().then_some(audio.as_path());
+
+        let _ = self.history.record(
+            text,
+            source,
+            limit,
+            ramble_history::ReferenceDate::now(),
+            id,
+        );
+        let _ = std::fs::remove_file(&audio);
     }
 
     fn transcribe(&self, samples: &[f32]) -> Result<String, String> {
-        self.prepare_engine()?;
-        let slot = self
-            .engine
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        slot.as_ref()
-            .expect("prepare_engine returned with a loaded engine")
-            .transcribe(samples)
-            .map_err(|error| error.to_string())
-    }
-
-    fn prepare_engine(&self) -> Result<(), String> {
         let mut slot = self
             .engine
             .lock()
@@ -447,7 +379,10 @@ impl Dictation {
             }
             *slot = Some(engine);
         }
-        Ok(())
+        slot.as_ref()
+            .expect("just loaded")
+            .transcribe(samples)
+            .map_err(|error| error.to_string())
     }
 
     /// Drop the model before the process exits.
@@ -463,148 +398,19 @@ impl Dictation {
         {
             engine.shutdown();
         }
-        self.history_writer.shutdown();
     }
-}
-
-enum HistoryMessage {
-    Record { text: String, samples: Vec<f32> },
-    Shutdown,
-}
-
-/// A single bounded persistence lane.
-///
-/// One writer prevents two quick dictations from racing on `history.json`.
-/// Capacity two is enough for the normal case and finite under a stalled disk;
-/// overload is returned and reported instead of consuming unbounded memory.
-struct HistoryWriter {
-    sender: Mutex<Option<mpsc::SyncSender<HistoryMessage>>>,
-    thread: Mutex<Option<std::thread::JoinHandle<()>>>,
-}
-
-impl HistoryWriter {
-    fn new(history: Arc<Mutex<HistoryStore>>) -> Self {
-        let (sender, receiver) = mpsc::sync_channel(2);
-        let thread = std::thread::Builder::new()
-            .name("openramble-history".into())
-            .spawn(move || {
-                while let Ok(message) = receiver.recv() {
-                    match message {
-                        HistoryMessage::Record { text, samples } => {
-                            if let Err(error) = persist_history(&history, &text, &samples) {
-                                eprintln!("The dictation history could not be saved: {error}");
-                            }
-                        }
-                        HistoryMessage::Shutdown => return,
-                    }
-                }
-            })
-            .expect("the history persistence thread could not start");
-        Self {
-            sender: Mutex::new(Some(sender)),
-            thread: Mutex::new(Some(thread)),
-        }
-    }
-
-    fn record(&self, text: String, samples: Vec<f32>) -> Result<(), String> {
-        let sender = self
-            .sender
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let Some(sender) = sender.as_ref() else {
-            return Err("history persistence is already shut down".into());
-        };
-        sender
-            .try_send(HistoryMessage::Record { text, samples })
-            .map_err(|error| match error {
-                mpsc::TrySendError::Full(_) => {
-                    "the bounded history queue is full because disk writes are delayed".into()
-                }
-                mpsc::TrySendError::Disconnected(_) => {
-                    "the history persistence worker stopped".into()
-                }
-            })
-    }
-
-    fn shutdown(&self) {
-        let sender = self
-            .sender
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .take();
-        let Some(sender) = sender else {
-            return;
-        };
-        // Finish already accepted records before releasing process resources.
-        if sender.send(HistoryMessage::Shutdown).is_err() {
-            eprintln!("The history persistence worker stopped before shutdown completed.");
-        }
-        drop(sender);
-        if let Some(thread) = self
-            .thread
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .take()
-        {
-            if thread.join().is_err() {
-                eprintln!("The history persistence worker stopped unexpectedly during shutdown.");
-            }
-        }
-    }
-}
-
-fn persist_history(
-    history: &Arc<Mutex<HistoryStore>>,
-    text: &str,
-    samples: &[f32],
-) -> std::io::Result<()> {
-    let id = format!(
-        "{:x}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|since| since.as_nanos())
-            .unwrap_or(0)
-    );
-    let audio = std::env::temp_dir().join(format!("openramble-{id}.wav"));
-    ramble_audio::write_wav(&audio, samples, ramble_audio::ENGINE_SAMPLE_RATE)
-        .map_err(std::io::Error::other)?;
-    let result = history
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-        .record(
-            text,
-            Some(&audio),
-            ramble_history::DEFAULT_LIMIT,
-            ramble_history::ReferenceDate::now(),
-            id,
-        )
-        .map(|_| ());
-    let cleanup = std::fs::remove_file(&audio);
-    result.and(cleanup)
-}
-
-fn parse_personal_terms(
-    bytes: &[u8],
-) -> std::io::Result<Vec<ramble_text::dictionary::DictionaryReplacement>> {
-    serde_json::from_slice(bytes).map_err(std::io::Error::other)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn a_corrupt_personal_dictionary_is_reported_instead_of_erased_in_memory() {
-        let error = parse_personal_terms(b"{not json").expect_err("corruption must be visible");
-        assert_eq!(error.kind(), std::io::ErrorKind::Other);
-    }
-
     /// Quitting calls this from the tray menu, and the exit handler calls it
     /// again. Both paths exist on purpose — a person can quit either way — so
     /// the second call must be harmless rather than a double free of a model.
     #[test]
     fn shutdown_is_safe_with_no_engine_and_safe_twice() {
-        let Ok(dictation) = Dictation::new() else {
+        let Some(dictation) = Dictation::new() else {
             eprintln!("no support directory; skipping");
             return;
         };

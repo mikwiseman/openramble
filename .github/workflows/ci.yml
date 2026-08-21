@@ -5,123 +5,385 @@ on:
     branches: [main]
   pull_request:
 
+# The repository is public, and the task has nothing to write here: it only collects
+# and checks. Default rights are wider than necessary.
 permissions:
   contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
+  # Superseded pull-request pushes are worth cancelling; pushes to main are not.
+  # A release waits for the run on the exact commit it is publishing, and
+  # cancelling that run means the release cannot proceed until somebody notices
+  # and starts another — which cost most of an afternoon once.
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  rust-workspace:
-    name: Rust workspace
+  test:
+    name: Package tests
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Swift version
+        run: swift --version
+
+      # Warnings in this project - bugs: Swift 6 strict concurrency
+      # catches here exactly those races that appear in sound once every hundred times
+      # starts and does not play. Tests are collected by the same gate: three
+      # insulation violations were hidden precisely in them, and a test that reads from a different place
+      # where it writes, it goes through green and doesn’t check anything.
+      - name: DictationCore
+        run: |
+          swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors
+          swift test --package-path Packages/DictationCore
+
+      - name: LocalASR
+        run: |
+          swift build --package-path Packages/LocalASR --build-tests -Xswiftc -warnings-as-errors
+          swift test --package-path Packages/LocalASR
+
+      - name: Persistent benchmark protocol
+        run: |
+          python3 -m py_compile scripts/benchmark-local-asr.py scripts/tests/test_benchmark_local_asr.py
+          python3 -m unittest scripts.tests.test_benchmark_local_asr
+
+  app:
+    name: Application build
+    runs-on: macos-26
+    # The application target lives in the menu bar and opens a window on first launch.
+    # Tests are collected without a host for this reason, but if one day the host
+    # will return, the run will hang until the end of the GitHub limit, and will not fall.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
       - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
         with:
           workspaces: ". -> target"
-      - run: ./scripts/prepare-tauri-macos.sh
-      - name: Format, lint and test every shipping Rust target
-        run: |
-          cargo fmt --all --check
-          cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
-          cargo test --locked --workspace --all-targets --all-features
-      - name: Generated design tokens are current
-        run: ./scripts/generate-tokens.py --check
 
-  cross-platform-desktop:
-    name: Cross-platform desktop (${{ matrix.os }})
+      # The project is assembled from project.yml and is not in the repository.
+      - name: Check pinned XcodeGen
+        run: ./scripts/pinned-xcodegen.sh >/dev/null
+
+      # The app runs its text pipeline through the shared core, whose binary is
+      # generated rather than committed. Without this the application does not
+      # link at all.
+      - name: Build the shared core for Swift
+        run: ./scripts/build-ffi.sh
+
+      # Half of the defects of the first day lived precisely in the purpose of the application - in
+      # You can't see them in the packages, because it's not included in them. We run tests, not
+      # assembly only: eleven defects were found there precisely by tests, and not
+      # by the compiler.
+      - name: Collect and run tests
+        run: |
+          cd apps/macos
+          XCODEGEN=$(../../scripts/pinned-xcodegen.sh)
+          "$XCODEGEN" generate
+          xcodebuild -project OpenRamble.xcodeproj -scheme OpenRamble \
+            -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test
+
+  shared-core:
+    name: Shared core
+    # Three runners because the point of this crate is that it behaves the same
+    # everywhere. Building it only on the machine it was written on would test
+    # nothing that matters.
     strategy:
       fail-fast: false
       matrix:
         os: [macos-26, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 50
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
       - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
         with:
           workspaces: ". -> target"
-      - name: Linux WebView and audio dependencies
+
+      - name: Rust version
+        run: |
+          rustc --version
+          cargo --version
+
+      # Warnings are bugs here for the same reason they are in the Swift
+      # packages, and the tests are linted too: a test that quietly stopped
+      # asserting still passes.
+      # Scoped to the core crates on purpose. The desktop app needs GTK and
+      # WebKit on Linux and a WebView on Windows; building it here would turn
+      # "did the shared logic break?" into "is this runner's system library
+      # present?", which is a different question with a different answer.
+      # bash on every runner: the default Windows shell is PowerShell, which
+      # reads a trailing backslash as an operator rather than a continuation.
+      # A matrix whose members parse the command differently is not a matrix.
+      - name: Lint
+        shell: bash
+        run: |
+          cargo fmt --all --check
+          cargo clippy -p ramble-core -p ramble-text -p ramble-model -p ramble-audio -p ramble-history \
+            --all-targets --all-features -- -D warnings
+
+      - name: Test
+        shell: bash
+        run: |
+          cargo test -p ramble-core -p ramble-text -p ramble-model -p ramble-audio -p ramble-history \
+            --all-features
+
+  desktop:
+    name: Desktop app
+    strategy:
+      fail-fast: false
+      # Fail fast is off on purpose: when one platform breaks, the others'
+      # results are exactly what tells you whether it is that platform or the
+      # change itself.
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-26]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          workspaces: ". -> target"
+
+      # Tauri draws with the system WebView, and the inference runtime is
+      # compiled from source by cmake. Neither is on a bare runner.
+      - name: Linux system dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
             libasound2-dev libxdo-dev libxkbcommon-dev
-      - name: Prepare native macOS framework
-        if: matrix.os == 'macos-26'
-        run: ./scripts/prepare-tauri-macos.sh
-      - name: Build, test and lint the desktop shell
+
+      - name: Build
         shell: bash
-        run: |
-          cargo build --locked -p openramble-desktop
-          cargo test --locked -p openramble-desktop
-          cargo clippy --locked -p openramble-desktop --all-targets --all-features -- -D warnings
+        run: cargo build -p openramble-desktop --locked
 
-  tauri-macos:
-    name: Tauri macOS
+      - name: Test
+        shell: bash
+        run: cargo test -p openramble-desktop --locked
+
+      - name: Lint
+        shell: bash
+        run: cargo clippy -p openramble-desktop --all-targets -- -D warnings
+
+  bridge:
+    name: Swift calls the core
     runs-on: macos-26
-    timeout-minutes: 55
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
       - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
         with:
           workspaces: ". -> target"
-      - run: rustup target add x86_64-apple-darwin
-      - run: cargo install tauri-cli --version 2.11.4 --locked
-      - run: ./scripts/prepare-tauri-macos.sh
-      - name: Build universal Intel and Apple Silicon app
-        run: |
-          CARGO="$(rustup which cargo)" cargo tauri build \
-            --runner "$PWD/scripts/cargo-locked.sh" \
-            --config apps/desktop/src-tauri/tauri.conf.json \
-            --target universal-apple-darwin --bundles app --no-sign
-      - name: Verify both architectures and macOS floor
-        run: |
-          binary=target/universal-apple-darwin/release/bundle/macos/OpenRamble.app/Contents/MacOS/openramble-desktop
-          test "$(lipo -archs "$binary")" = "x86_64 arm64"
-          for arch in x86_64 arm64; do
-            vtool -show-build -arch "$arch" "$binary" | grep -q 'minos 14.0'
-          done
 
-  release-topology:
-    name: Release topology
+      # The bridge is the seam the macOS migration crosses. Building it here
+      # means an API change that Swift cannot call fails on the commit that
+      # makes it, rather than months later when the migration is attempted.
+      - name: Build the shared core for Swift
+        run: ./scripts/build-ffi.sh
+
+      - name: Test the boundary
+        run: swift test --package-path Packages/RambleCoreFFI
+
+      # Both platforms' tokens are generated from one file. A hand edit to
+      # either side fails here rather than drifting quietly apart.
+      - name: The visual language matches on both platforms
+        run: ./scripts/generate-tokens.py --check
+
+  conformance:
+    name: Core matches macOS
     runs-on: macos-26
-    timeout-minutes: 60
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
       - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
         with:
           workspaces: ". -> target"
-      - run: rustup target add x86_64-apple-darwin
-      - run: cargo install tauri-cli --version 2.11.4 --locked
-      - name: Release policy and credential parsers
+
+      # The committed fixtures are recordings of what the shipping Swift
+      # pipeline produced. Regenerating them here and finding a diff means one
+      # of the two implementations moved: either the Mac changed behaviour and
+      # the port has not followed, or the fixtures were edited by hand to make
+      # a failing test pass. Both are worth stopping for.
+      - name: Regenerate fixtures from the shipping pipeline
+        run: |
+          swift build --package-path core/conformance/generator
+          ./core/conformance/generator/.build/debug/GenerateFixtures \
+            core/conformance/corpus-text.json \
+            core/conformance/fixtures/text/pipeline.json
+
+      - name: Fixtures must be unchanged
+        run: |
+          if ! git diff --exit-code -- core/conformance/fixtures; then
+            echo ""
+            echo "The macOS pipeline no longer produces the committed fixtures."
+            echo "Either port the change into core/ramble-text and commit the new"
+            echo "fixtures, or this is a regression in DictationCore."
+            exit 1
+          fi
+
+      - name: Rust core must reproduce them
+        run: cargo test -p ramble-text --test conformance
+
+  network-surface:
+    name: Network surface
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          workspaces: ". -> target"
+
+      # The main promise of the product is verified automatically, not by word of mouth.
+      - name: Check that the network is only where it is allowed
+        run: ./scripts/check-network-surface.sh
+
+  arm64-build:
+    name: Apple Silicon only
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          workspaces: ". -> target"
+
+      # Safe beta only supports Apple Silicon.
+      - name: LocalASR arm64
+        run: swift build --package-path Packages/LocalASR --arch arm64
+
+  release-build:
+    name: Release build
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Check pinned XcodeGen
+        run: ./scripts/pinned-xcodegen.sh >/dev/null
+
+      - name: Build the shared core for Swift
+        run: ./scripts/build-ffi.sh
+
+      - name: Check release policy, bootstrap and notary credentials
         run: |
           ./scripts/tests/test-release-policy.sh
           ./scripts/tests/test-notary-credentials.sh
           ./scripts/tests/test-bootstrap-release-secrets.sh
           ./scripts/tests/test-release-keychain.sh
-      - name: Build exact unsigned production topology
+
+      # Exercise the same Release configuration, production product name,
+      # permanent bundle identifier, archive topology and DMG name as publishing.
+      # CI has no Developer ID key, so build-dmg.sh re-signs this one artifact
+      # ad-hoc and refuses this mode outside CI. Notarization remains release-only.
+      - name: Build unsigned production Release topology
         env:
           UNSIGNED_RELEASE_TOPOLOGY: "1"
         run: ./scripts/build-dmg.sh
-      - name: Mount and smoke the exact DMG
+
+      - name: Mount and check the exact packaged DMG
         run: ./scripts/smoke-installed-artifact.sh artifacts/dmg/OpenRamble-*.dmg
 
-  network-surface:
-    name: Network surface
-    runs-on: macos-26
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
-        with:
-          workspaces: ". -> target"
-      - run: ./scripts/check-network-surface.sh
-      - run: ./scripts/check-diagnostics-surface.sh
+      # Values on which the fate of already installed copies depends. Each
+      # of which various things break: identifier - issued universal access,
+      # SUFeedURL - delivery of updates, three keys Sparkle - promise "network
+      # only at your command", version discrepancy - the name of the image and what
+      # seen by a person in the update window.
+      - name: Check Info.plist invariants
+        run: |
+          PLIST="artifacts/build/OpenRamble.xcarchive/Products/Applications/OpenRamble.app/Contents/Info.plist"
+          p() { /usr/libexec/PlistBuddy -c "Print :$1" "$PLIST" 2>/dev/null; }
+          bad=0
+          expect() {
+            local actual; actual=$(p "$1")
+            if [[ "$actual" == "$2" ]]; then
+              printf '  %-28s %s\n' "$1" "$actual"
+            else
+              printf ' %-28s expected "%s", got "%s"\n' "$1" "$2" "$actual"
+              bad=1
+            fi
+          }
+          expect CFBundleIdentifier is.waiwai.dictation
+          expect LSMinimumSystemVersion 14.0
+          expect LSUIElement true
+          expect SUEnableAutomaticChecks true
+          expect SUSendProfileInfo false
+          expect SUAllowsAutomaticUpdates false
+          expect SUFeedURL https://mikwiseman.github.io/openramble/appcast.xml
+          expect SUPublicEDKey 9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI=
+
+          marketing=$(sed -n 's/^ *MARKETING_VERSION: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' apps/macos/project.yml | head -1)
+          short=$(p CFBundleShortVersionString)
+          printf ' %-28s project.yml=%s Info.plist=%s\n' version "$marketing" "$short"
+          [[ "$marketing" == "$short" ]] || bad=1
+
+          current=$(sed -n 's/^ *CURRENT_PROJECT_VERSION: *"\{0,1\}\([0-9]*\)"\{0,1\} *$/\1/p' apps/macos/project.yml | head -1)
+          build=$(p CFBundleVersion)
+          printf ' %-28s project.yml=%s Info.plist=%s\n' build "$current" "$build"
+          [[ "$current" == "$build" ]] || bad=1
+
+          exit $bad
+
+      - name: Check required model and dependency notices
+        run: |
+          RESOURCES="artifacts/build/OpenRamble.xcarchive/Products/Applications/OpenRamble.app/Contents/Resources"
+          for file in \
+            LICENSE NOTICE THIRD_PARTY_LICENSES.md \
+            model-manifest.json Sparkle-LICENSE.txt \
+            transcribe-cpp-MIT.txt ggml-MIT.txt miniz-MIT.txt \
+            Parakeet-CC-BY-4.0.txt
+          do
+            test -s "$RESOURCES/$file" || { echo "No required resource: $file" >&2; exit 1; }
+          done
+
+      - name: Check DMG checksum container
+        run: hdiutil verify artifacts/dmg/OpenRamble-*.dmg
 
   feed:
     name: Update feed
@@ -129,8 +391,19 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - run: xmllint --noout docs/appcast.xml
-      - name: Appcast mutation is monotonic and idempotent
+
+      # docs/appcast.xml is the only file that the application downloads
+      #self. Broken XML here means that updates will not arrive to anyone and
+      # You learn about this not from CI, but from people.
+      - name: The feed is parsed as XML
+        run: xmllint --noout docs/appcast.xml
+
+      # scripts/update-appcast.py - the only code that writes this feed,
+      # and so far not a single line of it has been executed in CI. Checking three
+      # properties on which delivery is based: record appears, number
+      # builds cannot be downsized, re-releasing the same build does not produce more results
+      # take.
+      - name: update-appcast.py does what it promises
         run: |
           T=$(mktemp -d)
           cp docs/appcast.xml "$T/feed.xml"
@@ -138,9 +411,21 @@ jobs:
           common=(APPCAST="$T/feed.xml" NOTES_PATH="$T/notes.md" MIN_OS=14.0
                   FEED_URL=https://example.invalid/appcast.xml
                   DMG_URL=https://example.invalid/a.dmg
-                  LENGTH=1 SIGNATURE=signature APP_NAME=OpenRamble)
+                  LENGTH=1 SIGNATURE=signature APP_NAME="OpenRamble")
+
           env "${common[@]}" VERSION=9.9.9 BUILD=999 python3 scripts/update-appcast.py
           xmllint --noout "$T/feed.xml"
-          if env "${common[@]}" VERSION=9.9.8 BUILD=998 python3 scripts/update-appcast.py; then exit 1; fi
+          grep -q '<title>9.9.9</title>' "$T/feed.xml"
+
+          if env "${common[@]}" VERSION=9.9.8 BUILD=998 python3 scripts/update-appcast.py; then
+            echo "FAIL: tape accepted assembly with lower number" >&2
+            exit 1
+          fi
+
           env "${common[@]}" VERSION=9.9.9 BUILD=999 python3 scripts/update-appcast.py
-          test "$(grep -c '<title>9.9.9</title>' "$T/feed.xml")" = 1
+          count=$(grep -c '<title>9.9.9</title>' "$T/feed.xml")
+          if [[ "$count" != "1" ]]; then
+            echo "FAIL: re-releasing build 999 left $count entries" >&2
+            exit 1
+          fi
+          echo "The tape behaves as agreed."

@@ -102,7 +102,10 @@ ci_is_green() {
 
   # Not the whole matrix: the Windows and Linux desktop builds take half an
   # hour and say nothing about the DMG being signed here.
-  local required=("Rust workspace" "Tauri macOS" "Release topology" "Network surface")
+  local required=(
+    "Package tests" "Application build" "Release build" "Network surface"
+    "Core matches macOS" "Swift calls the core" "Apple Silicon only"
+  )
   local run_id jobs job outcome
   run_id=$(gh_retry run list --branch main --limit 10 \
     --json databaseId,headSha,workflowName \
@@ -149,7 +152,7 @@ If you don't have the key yet:
 
 A new Sparkle key cannot be generated for this product: installed
 copies need exactly the same key. The public half is already in
-apps/desktop/src-tauri/Info.plist as SUPublicEDKey. Recover the permanent key;
+apps/macos/project.yml as SUPublicEDKey. Recover the permanent key;
 never create a replacement."
 fi
 
@@ -160,22 +163,26 @@ fi
 
 # --- Sparkle Tools -----------------------------------------------------
 
-# sign_update comes inside the same pinned Sparkle archive used by Tauri.
+# sign_update comes inside the Sparkle package. Xcode unpacks it to
+# DerivedData during the first build, so there is no need to install anything separately.
 find_sparkle_tool() {
-  local tool="$1"
+  local tool="$1" pattern candidate
   if [[ -n "$SPARKLE_BIN" ]]; then
     [[ -x "$SPARKLE_BIN/$tool" ]] && { printf '%s' "$SPARKLE_BIN/$tool"; return 0; }
     return 1
   fi
-  ./scripts/prepare-tauri-macos.sh >/dev/null
-  [[ -x ".build-tools/sparkle-2.9.4/bin/$tool" ]] || return 1
-  printf '%s' "$PWD/.build-tools/sparkle-2.9.4/bin/$tool"
+  for pattern in "OpenRamble-*" "*"; do
+    for candidate in "$HOME/Library/Developer/Xcode/DerivedData"/$pattern/SourcePackages/artifacts/sparkle/Sparkle/bin/"$tool"; do
+      [[ -x "$candidate" ]] && { printf '%s' "$candidate"; return 0; }
+    done
+  done
+  return 1
 }
 
 SIGN_UPDATE=$(find_sparkle_tool sign_update) || fail "Couldn't find sign_update.
 
-It's inside the verified Sparkle archive prepared by:
-  ./scripts/prepare-tauri-macos.sh
+It's inside the Sparkle package that Xcode unpacks when building:
+  ~/Library/Developer/Xcode/DerivedData/OpenRamble-*/SourcePackages/artifacts/sparkle/Sparkle/bin/
 
 Build the application at least once, or specify the path manually:
   SPARKLE_BIN=/path/to/Sparkle/bin ./scripts/release.sh"
@@ -217,26 +224,45 @@ echo "→ Notarization: $NOTARY_AUTH_SOURCE"
 
 # --- Checks before assembly --------------------------------------------------
 
-# We take the version from the Tauri config before building. Then we check it
-# against the assembled Info.plist, but release notes must exist before
+# We take the version from project.yml before building. Then we’ll check it against the collected
+# Info.plist, but a description of the changes must be requested earlier: assembly with
 # notarization takes minutes, and runs into a missing text file after
 # them - wasted time on each release.
-TAURI_CONFIG="apps/desktop/src-tauri/tauri.conf.json"
-TAURI_INFO="apps/desktop/src-tauri/Info.plist"
-MARKETING_VERSION=$(jq -er '.version' "$TAURI_CONFIG")
-EXPECTED_BUILD=$(jq -er '.bundle.macOS.bundleVersion' "$TAURI_CONFIG")
-PROJECT_MIN_OS=$(jq -er '.bundle.macOS.minimumSystemVersion' "$TAURI_CONFIG")
-PROJECT_FEED_URL=$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$TAURI_INFO")
-PROJECT_PUBLIC_KEY=$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$TAURI_INFO")
+PROJECT_YML="apps/macos/project.yml"
+yml_value() {
+  sed -n "s/^ *$1: *\"\{0,1\}\([^\"]*\)\"\{0,1\} *$/\1/p" "$PROJECT_YML" | head -1
+}
+
+MARKETING_VERSION=$(yml_value MARKETING_VERSION)
+SHORT_VERSION=$(yml_value CFBundleShortVersionString)
+EXPECTED_BUILD=$(yml_value CURRENT_PROJECT_VERSION)
+PROJECT_MIN_OS=$(yml_value MACOSX_DEPLOYMENT_TARGET)
+PROJECT_FEED_URL=$(yml_value SUFeedURL)
+PROJECT_PUBLIC_KEY=$(yml_value SUPublicEDKey)
 
 [[ -n "$MARKETING_VERSION" && -n "$EXPECTED_BUILD" ]] \
-  || fail "The version or bundle build was not found in $TAURI_CONFIG"
+  || fail "MARKETING_VERSION or CURRENT_PROJECT_VERSION was not found in $PROJECT_YML"
 [[ "$PROJECT_MIN_OS" == "$EXPECTED_MIN_OS" ]] \
   || fail "The release minOS must be $EXPECTED_MIN_OS, got ${PROJECT_MIN_OS:-missing}."
 [[ "$PROJECT_FEED_URL" == "$EXPECTED_FEED_URL" ]] \
   || fail "The release feed must remain $EXPECTED_FEED_URL."
 [[ "$PROJECT_PUBLIC_KEY" == "$EXPECTED_PUBLIC_KEY" ]] \
   || fail "SUPublicEDKey does not match the permanent key used by installed copies. Recover the existing key; never generate a replacement."
+
+# Two lines about the same version must match: Sparkle shows the person
+# CFBundleShortVersionString, and the image name is taken from it.
+#
+# A reference to the variable is the better of the two spellings and is accepted
+# as-is: it cannot diverge, which is the whole point of this check. A literal
+# copy can, and did — the two sat at 0.3.4 and 0.3.3 until CI compared them.
+if [[ "$SHORT_VERSION" != "\$(MARKETING_VERSION)" \
+   && "$MARKETING_VERSION" != "$SHORT_VERSION" ]]; then
+  fail "Versions in $PROJECT_YML have diverged:
+  MARKETING_VERSION           = $MARKETING_VERSION
+  CFBundleShortVersionString  = $SHORT_VERSION
+Both strings must be the same, or CFBundleShortVersionString must reference
+\$(MARKETING_VERSION)."
+fi
 
 NOTES_PATH="$NOTES_DIR/$MARKETING_VERSION.md"
 if [[ ! -f "$NOTES_PATH" ]]; then
@@ -258,6 +284,12 @@ Rewrite it in clear English; everyone offered the update will see it.
 Then run the script again. The release stops before the expensive build
 and notarization steps."
 fi
+
+# The application links the shared core, and that binary is generated rather
+# than committed — so a fresh checkout, which is exactly what a release worktree
+# is, does not have it. Built before anything that compiles Swift.
+echo "→ Building the shared core for Swift"
+./scripts/build-ffi.sh >/dev/null
 
 echo "→ Checking the network surface"
 ./scripts/check-network-surface.sh >/dev/null
@@ -282,14 +314,13 @@ run_quietly() {
   rm -f "$output"
 }
 
-PINNED_CARGO=$(rustup which --toolchain 1.97.1 cargo)
-PINNED_RUSTC=$(rustup which --toolchain 1.97.1 rustc)
-export PATH="$(dirname "$PINNED_CARGO"):$PATH"
-run_quietly "Rust formatting" "$PINNED_CARGO" fmt --all --check
-run_quietly "Rust lints" env RUSTC="$PINNED_RUSTC" "$PINNED_CARGO" clippy \
-  --locked --workspace --all-targets --all-features -- -D warnings
-run_quietly "Rust tests" env RUSTC="$PINNED_RUSTC" "$PINNED_CARGO" test \
-  --locked --workspace --all-targets --all-features
+run_quietly "DictationCore tests" swift test --package-path Packages/DictationCore
+run_quietly "LocalASR tests" swift test --package-path Packages/LocalASR
+XCODEGEN=$(./scripts/pinned-xcodegen.sh)
+(cd apps/macos && "$XCODEGEN" generate >/dev/null)
+run_quietly "application tests" xcodebuild -project apps/macos/OpenRamble.xcodeproj \
+  -scheme OpenRamble -destination 'platform=macOS,arch=arm64' \
+  CODE_SIGNING_ALLOWED=NO test
 
 echo "→ Checking runtime without a network"
 ./scripts/test-zero-network.sh >/dev/null

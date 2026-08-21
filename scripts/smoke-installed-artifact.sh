@@ -10,12 +10,16 @@ else
 fi
 cd "$REPOSITORY_ROOT"
 
-TAURI_CONFIG="apps/desktop/src-tauri/tauri.conf.json"
+PROJECT_YML="apps/macos/project.yml"
 OFFICIAL_FEED_URL="https://mikwiseman.github.io/openramble/appcast.xml"
 PERMANENT_PUBLIC_KEY="9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI="
 
-EXPECTED_VERSION="${EXPECTED_VERSION:-$(jq -er '.version' "$TAURI_CONFIG")}"
-EXPECTED_BUILD="${EXPECTED_BUILD:-$(jq -er '.bundle.macOS.bundleVersion' "$TAURI_CONFIG")}"
+project_value() {
+  sed -n "s/^ *$1: *\"\{0,1\}\([^\"]*\)\"\{0,1\} *$/\1/p" "$PROJECT_YML" | head -1
+}
+
+EXPECTED_VERSION="${EXPECTED_VERSION:-$(project_value MARKETING_VERSION)}"
+EXPECTED_BUILD="${EXPECTED_BUILD:-$(project_value CURRENT_PROJECT_VERSION)}"
 EXPECTED_MIN_OS="${EXPECTED_MIN_OS:-14.0}"
 EXPECTED_FEED_URL="${EXPECTED_FEED_URL:-$OFFICIAL_FEED_URL}"
 EXPECTED_PUBLIC_KEY="${EXPECTED_PUBLIC_KEY:-$PERMANENT_PUBLIC_KEY}"
@@ -147,7 +151,7 @@ expect_plist() {
   }
 }
 
-expect_plist CFBundleExecutable openramble-desktop
+expect_plist CFBundleExecutable "$EXPECTED_APP_NAME"
 expect_plist CFBundleIdentifier "$EXPECTED_BUNDLE_ID"
 expect_plist CFBundleShortVersionString "$EXPECTED_VERSION"
 expect_plist CFBundleVersion "$EXPECTED_BUILD"
@@ -159,15 +163,22 @@ expect_plist SUEnableAutomaticChecks true
 expect_plist SUSendProfileInfo false
 expect_plist SUAllowsAutomaticUpdates false
 
-EXECUTABLE="$APP/Contents/MacOS/openramble-desktop"
+EXECUTABLE="$APP/Contents/MacOS/$EXPECTED_APP_NAME"
 [[ -x "$EXECUTABLE" ]] || { echo "No executable: $EXECUTABLE" >&2; exit 1; }
 MCP_HELPER="$APP/Contents/MacOS/openramble-mcp"
 [[ ! -e "$MCP_HELPER" ]] || { echo "Unexpected MCP helper: $MCP_HELPER" >&2; exit 1; }
 RETIRED_WORKER="$APP/Contents/MacOS/openramble-asr-worker"
 [[ ! -e "$RETIRED_WORKER" ]] || { echo "Unexpected retired ASR worker: $RETIRED_WORKER" >&2; exit 1; }
+RUNTIME="$APP/Contents/Frameworks/CTranscribe.framework"
+[[ -d "$RUNTIME" ]] || { echo "No inference runtime: $RUNTIME" >&2; exit 1; }
+RUNTIME_BINARY="$RUNTIME/Versions/A/CTranscribe"
+[[ -f "$RUNTIME_BINARY" ]] || RUNTIME_BINARY="$RUNTIME/CTranscribe"
+[[ -f "$RUNTIME_BINARY" ]] || { echo "No inference runtime binary in $RUNTIME" >&2; exit 1; }
+
 SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
 SPARKLE_VERSION="$SPARKLE/Versions/B"
 NESTED_CODE_COMPONENTS=(
+  "$RUNTIME"
   "$SPARKLE_VERSION/XPCServices/Installer.xpc"
   "$SPARKLE_VERSION/XPCServices/Downloader.xpc"
   "$SPARKLE_VERSION/Autoupdate"
@@ -229,19 +240,54 @@ while IFS= read -r binary; do
   file "$binary" | grep -q 'Mach-O' || continue
   codesign --verify --strict --verbose=2 "$binary"
   archs=$(lipo -archs "$binary")
-  [[ " $archs " == *" arm64 "* && " $archs " == *" x86_64 "* ]] || {
-    echo "Not universal arm64+x86_64: $binary ($archs)" >&2
+  [[ "$archs" == "arm64" ]] || {
+    echo "Not arm64-only: $binary ($archs)" >&2
     exit 1
   }
 done < <(find "$APP" -type f)
 
-for arch in arm64 x86_64; do
-  minos=$(vtool -show-build -arch "$arch" "$EXECUTABLE" | awk '/minos/{print $2; exit}')
-  [[ "$minos" == "$EXPECTED_MIN_OS" ]] || {
-    echo "Invalid $arch executable minOS: expected $EXPECTED_MIN_OS, got $minos." >&2
-    exit 1
-  }
-done
+minos=$(vtool -show-build "$EXECUTABLE" | awk '/minos/{print $2; exit}')
+[[ "$minos" == "$EXPECTED_MIN_OS" ]] || {
+  echo "Invalid executable minOS: expected $EXPECTED_MIN_OS, got $minos." >&2
+  exit 1
+}
+# The runtime is built by its own project, so its floor only has to be at or
+# below ours — equality would fail for a dependency that supports more than we
+# ask of it.
+runtime_minos=$(vtool -show-build "$RUNTIME_BINARY" | awk '/minos/{print $2; exit}')
+runtime_major=${runtime_minos%%.*}
+expected_major=${EXPECTED_MIN_OS%%.*}
+[[ "$runtime_major" -le "$expected_major" ]] || {
+  echo "The inference runtime needs macOS $runtime_minos, above our $EXPECTED_MIN_OS floor." >&2
+  exit 1
+}
+
+# The inference runtime is a third-party binary inside a notarized app. What it
+# links and what it imports is verified here, on the artifact, rather than
+# trusted from its source — which is a stronger check than the engine it
+# replaced ever had.
+RUNTIME_DEPENDENCIES=$(otool -L "$RUNTIME_BINARY") || {
+  echo "Could not inspect the inference runtime's dynamic-library dependencies." >&2
+  exit 1
+}
+if printf '%s\n' "$RUNTIME_DEPENDENCIES" \
+  | grep -Eq '/(Network|NetworkExtension|CFNetwork|Security|WebKit)\.framework/|libcurl'; then
+  echo "The inference runtime links a forbidden network framework." >&2
+  exit 1
+fi
+RUNTIME_UNDEFINED_SYMBOLS=$(nm -u "$RUNTIME_BINARY" 2>/dev/null) || {
+  echo "Could not inspect undefined symbols in the inference runtime." >&2
+  exit 1
+}
+if printf '%s\n' "$RUNTIME_UNDEFINED_SYMBOLS" \
+  | grep -Eq '[[:space:]]_(accept|accept4|bind|connect|connectx|getaddrinfo|gethostbyname|getnameinfo|listen|recv|recvfrom|recvmsg|send|sendmsg|sendto|socket|socketpair)(\$[^[:space:]]+)?$'; then
+  echo "The inference runtime directly imports a socket/DNS primitive." >&2
+  exit 1
+fi
+if printf '%s\n' "$RUNTIME_UNDEFINED_SYMBOLS" | grep -Eq 'NSURLSession|CFNetwork|curl_easy'; then
+  echo "The inference runtime references a networking API." >&2
+  exit 1
+fi
 
 for resource in \
   LICENSE NOTICE THIRD_PARTY_LICENSES.md model-manifest.json \
@@ -320,4 +366,4 @@ sys.exit(4)'
   echo "Recognition succeeded with network access denied by macOS."
 fi
 
-echo "Installed artifact smoke: exact identity/version/build/feed/key/minOS, universal code, mounted DMG layout, Tauri executable, dictation-only contents, entitlement, signature and resources OK."
+echo "Installed artifact smoke: exact identity/version/build/feed/key/minOS, arm64-only code, mounted DMG layout, embedded inference runtime, dictation-only contents, entitlement, signature and resources OK."
