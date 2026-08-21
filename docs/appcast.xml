@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.24.2</title>
-      <pubDate>Fri, 21 Aug 2026 09:26:45 +0300</pubDate>
-      <sparkle:version>52</sparkle:version>
-      <sparkle:shortVersionString>0.24.2</sparkle:shortVersionString>
+      <title>0.24.3</title>
+      <pubDate>Fri, 21 Aug 2026 17:22:55 +0300</pubDate>
+      <sparkle:version>53</sparkle:version>
+      <sparkle:shortVersionString>0.24.3</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.24.2&lt;/h2&gt;&lt;p&gt;This update keeps recognition responsive when the Mac is busy.&lt;/p&gt;&lt;p&gt;## What changed&lt;/p&gt;&lt;ul&gt;&lt;li&gt;The Parakeet decoder no longer creates a group of spin-waiting CPU threads&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;for every dictation. Short and medium dictations remain responsive under&lt;/p&gt;&lt;p&gt;heavy processor pressure, with essentially unchanged idle latency.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Recognition diagnostics now distinguish engine execution, engine-queue&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;admission, Swift executor return, and MainActor return instead of grouping&lt;/p&gt;&lt;p&gt;them into one unexplained interval.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;The load reproduction and log-analysis tools now separate CPU and disk&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;pressure and validate nested timing spans without double-counting them.&lt;/p&gt;&lt;p&gt;Recognition remains fully local and offline. No dictated text or audio is&lt;/p&gt;&lt;p&gt;added to diagnostics.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.24.2/OpenRamble-0.24.2.dmg" length="5830859" type="application/octet-stream" sparkle:edSignature="nL7kWp6cljPzJ7xHSZGuAW/ewfexiC8XSpQ5Gd7CdiTJ87mEZFfYe/yPlkScDnjPldonRyXXc2LMvTpLa7weDw==" />
+      <description>&lt;h2&gt;OpenRamble 0.24.3&lt;/h2&gt;&lt;p&gt;This update makes the final handoff after recognition more responsive on a&lt;/p&gt;&lt;p&gt;busy Mac and fixes a dictation-status edge case after errors.&lt;/p&gt;&lt;p&gt;## What changed&lt;/p&gt;&lt;ul&gt;&lt;li&gt;The transcribing HUD no longer runs a continuous symbol animation through&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;its Liquid Glass surface. Hidden HUD content also stops rendering, removing&lt;/p&gt;&lt;p&gt;unnecessary main-thread work after recognition has finished.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Closing a completed dictation now clears its live HUD state before the panel&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;leaves the screen.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;A failure notice remains visible long enough to read, then closes without&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;bringing back a stale “Transcribing…” panel. Starting another dictation&lt;/p&gt;&lt;p&gt;safely supersedes that pending dismissal.&lt;/p&gt;&lt;p&gt;Recognition remains fully local and offline. No dictated text or audio is&lt;/p&gt;&lt;p&gt;added to diagnostics.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.24.3/OpenRamble-0.24.3.dmg" length="5833376" type="application/octet-stream" sparkle:edSignature="JKLhYZAOBLuzWDUPvTk0FsFWU6a6PW8f1NjLQIfR3ma5bZshfc8s4EgAiZclLeyaS7ZBIpqJKfcrsJyA+ahhDA==" />
     </item>
   </channel>
 </rss>
