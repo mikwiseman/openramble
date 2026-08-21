@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.24.1</title>
-      <pubDate>Fri, 21 Aug 2026 07:23:41 +0300</pubDate>
-      <sparkle:version>51</sparkle:version>
-      <sparkle:shortVersionString>0.24.1</sparkle:shortVersionString>
+      <title>0.24.2</title>
+      <pubDate>Fri, 21 Aug 2026 09:26:45 +0300</pubDate>
+      <sparkle:version>52</sparkle:version>
+      <sparkle:shortVersionString>0.24.2</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.24.1&lt;/h2&gt;&lt;p&gt;This update returns the Mac application to the native macOS implementation&lt;/p&gt;&lt;p&gt;shipped in OpenRamble 0.23.0.&lt;/p&gt;&lt;p&gt;## What changed&lt;/p&gt;&lt;ul&gt;&lt;li&gt;The experimental Tauri-based Mac application introduced in 0.24.0 has been&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;removed from the macOS release.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;The native Swift interface, menu bar controls, recorder, recognition path,&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;history, dictionary, and Sparkle integration are restored.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;The bundle identifier and update-signing identity remain unchanged, so the&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;update installs normally over both 0.23.0 and 0.24.0.&lt;/p&gt;&lt;p&gt;There are no new features in this release. Its purpose is to restore the last&lt;/p&gt;&lt;p&gt;native Mac application while keeping the existing update channel intact.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.24.1/OpenRamble-0.24.1.dmg" length="5832256" type="application/octet-stream" sparkle:edSignature="1n3bk8XqoFhsv2RXHJa3qIQCx7y/m16TEFrJY+TcvzHfyqsy8O6leWBKGh/R8Ymubgq896klmIYQk/u+MhhrCQ==" />
+      <description>&lt;h2&gt;OpenRamble 0.24.2&lt;/h2&gt;&lt;p&gt;This update keeps recognition responsive when the Mac is busy.&lt;/p&gt;&lt;p&gt;## What changed&lt;/p&gt;&lt;ul&gt;&lt;li&gt;The Parakeet decoder no longer creates a group of spin-waiting CPU threads&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;for every dictation. Short and medium dictations remain responsive under&lt;/p&gt;&lt;p&gt;heavy processor pressure, with essentially unchanged idle latency.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Recognition diagnostics now distinguish engine execution, engine-queue&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;admission, Swift executor return, and MainActor return instead of grouping&lt;/p&gt;&lt;p&gt;them into one unexplained interval.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;The load reproduction and log-analysis tools now separate CPU and disk&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;pressure and validate nested timing spans without double-counting them.&lt;/p&gt;&lt;p&gt;Recognition remains fully local and offline. No dictated text or audio is&lt;/p&gt;&lt;p&gt;added to diagnostics.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.24.2/OpenRamble-0.24.2.dmg" length="5830859" type="application/octet-stream" sparkle:edSignature="nL7kWp6cljPzJ7xHSZGuAW/ewfexiC8XSpQ5Gd7CdiTJ87mEZFfYe/yPlkScDnjPldonRyXXc2LMvTpLa7weDw==" />
     </item>
   </channel>
 </rss>
