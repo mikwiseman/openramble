@@ -320,6 +320,9 @@ final class OverlayModel: ObservableObject {
     nonisolated(unsafe) private var timer: Timer?
     private var startedAt: Date?
     private var autoHide: Task<Void, Never>?
+    /// A session may finish while a notice owns the panel. Preserve the notice
+    /// long enough to be read, then honor that deferred dismissal.
+    private var dismissAfterNotice = false
     /// What has already been said out loud. The seconds counter ticks twice per second, and without
     /// of this memory, VoiceOver would repeat “recording” until the end of the dictation.
     private var lastAnnouncement: String?
@@ -353,6 +356,7 @@ final class OverlayModel: ObservableObject {
     /// Show dictation status.
     func show(_ state: DictationState, elapsed: TimeInterval) {
         cancelAutoHide()
+        dismissAfterNotice = false
         // A wait belongs to exactly one take. Leaving the flag set would let a
         // finished load narrate the next dictation.
         if state != .transcribing { isWaitingForEngine = false }
@@ -405,6 +409,10 @@ final class OverlayModel: ObservableObject {
             // The same warning in a later session is new information. Keep
             // de-duplication only for repeated updates within one impression.
             self.lastAnnouncement = nil
+            if self.dismissAfterNotice {
+                self.finishHiding()
+                return
+            }
             switch self.state {
             case .preparing, .listening, .transcribing:
                 // An unrelated menu action can show a notice while the microphone
@@ -425,10 +433,18 @@ final class OverlayModel: ObservableObject {
     /// cleanup after the session comes right after it.
     func hide() {
         setElapsed(elapsed, ticking: false)
-        guard notice == nil else { return }
+        guard notice == nil else {
+            dismissAfterNotice = true
+            return
+        }
         cancelAutoHide()
+        finishHiding()
+    }
+
+    private func finishHiding() {
         // Commit the finished state before the visibility callback enters
         // AppKit. A hidden hosting view must not keep describing live work.
+        dismissAfterNotice = false
         state = .idle
         isWaitingForEngine = false
         setVisible(false)
