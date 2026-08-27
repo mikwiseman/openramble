@@ -3,8 +3,8 @@ import XCTest
 
 /// Mock the engine for pure logic tests.
 ///
-/// The existence of this mock is the meaning of the protocol: not a single test
-/// DictationCore should not pull FluidAudio and load the model.
+/// The existence of this mock is the meaning of the protocol: no test in
+/// DictationCore should have to pull in the inference runtime and load a model.
 actor MockASREngine: ASREngineAdapting {
     private(set) var loadedDirectory: URL?
     private(set) var transcribeCallCount = 0

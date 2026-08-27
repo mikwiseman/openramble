@@ -86,10 +86,6 @@ public actor LocalTranscriber {
         try await task.value
     }
 
-    /// Recognize the recorded file.
-    ///
-    /// `languageHint` - BCP-47 code or `nil` for auto-detection; see
-    /// `ASREngineAdapting.transcribe(samples:languageHint:)`.
     /// The one thread allowed to wait on a recording file.
     ///
     /// Same rule as the audio teardown and the `fsync`: work that blocks on a
@@ -105,7 +101,8 @@ public actor LocalTranscriber {
         }
     }
 
-    public func transcribe(fileURL: URL, languageHint: String? = nil) async throws -> ASRResult {
+    /// Recognize the recorded file.
+    public func transcribe(fileURL: URL) async throws -> ASRResult {
         guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
 
         // Stamped before the read, because the read is where the time went.
@@ -129,7 +126,7 @@ public actor LocalTranscriber {
 
         let decoded = decodeStarted.duration(to: .now)
         try Task.checkCancellation()
-        let result = try await transcribe(samples: samples, languageHint: languageHint)
+        let result = try await transcribe(samples: samples)
         // Report the whole wait, decode included, rather than only the part
         // after it. The previous number was true and useless.
         let waited = arrived.duration(to: .now)
@@ -163,7 +160,7 @@ public actor LocalTranscriber {
     /// on the main scenario (Russian speech with English inserts) lost three times
     /// more words than a properly configured engine. Details and numbers - in
     /// `docs/benchmarks.md`.
-    public func transcribe(samples: [Float], languageHint: String? = nil) async throws -> ASRResult {
+    public func transcribe(samples: [Float]) async throws -> ASRResult {
         guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
         guard !samples.isEmpty else {
             throw ASREngineError.unsupportedAudioFormat("empty recording")
@@ -194,7 +191,7 @@ public actor LocalTranscriber {
             throw CancellationError()
         }
         let queued = arrived.duration(to: .now)
-        let result = try await engine.transcribe(samples: samples, languageHint: languageHint)
+        let result = try await engine.transcribe(samples: samples)
         return ASRResult(
             text: result.text,
             words: result.words,
@@ -227,10 +224,7 @@ public actor LocalTranscriber {
         let warmupEpoch = inferenceWarmupEpoch
         let engine = engine
         let task = Task {
-            _ = try await engine.transcribe(
-                samples: [Float](repeating: 0, count: 16_000),
-                languageHint: nil
-            )
+            _ = try await engine.transcribe(samples: [Float](repeating: 0, count: 16_000))
         }
         inferenceWarmupTask = task
         activeOperations += 1

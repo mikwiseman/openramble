@@ -228,11 +228,11 @@ private actor ScriptedLoadRecognizer: DictationRecognizing {
     }
 
 
-    func transcribe(fileURL: URL, languageHint: String?) async throws -> ASRResult {
+    func transcribe(fileURL: URL) async throws -> ASRResult {
         ASRResult(text: "", audioDuration: 1, processingDuration: 0)
     }
 
-    func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
+    func transcribe(samples: [Float]) async throws -> ASRResult {
         ASRResult(text: "", audioDuration: 1, processingDuration: 0)
     }
 

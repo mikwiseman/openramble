@@ -80,10 +80,9 @@ public struct AppEnvironment {
     /// in the application this is a model on disk, in the test this is a previously known answer. Without
     /// this seam, the entire dictation path in the application could not be checked
     /// at all - the tests only reached the start of recording.
-    /// Recognition factory: engine folder and language hint provider.
-    /// A hint is read for each call - the person could change the language between
-    /// dictations, and fixing it during assembly would mean ignoring the choice.
-    public var transcribe: (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult
+    /// Recognition factory: give it the engine folder, get back the call that
+    /// recognizes one recording.
+    public var transcribe: (URL) -> @Sendable (URL) async throws -> ASRResult
     /// Retry insertion is a system edge too. Keep it injectable so the app
     /// and tests share the same bounded state transition.
     public var recoveryInsertionDeadline: Duration
@@ -147,7 +146,7 @@ public struct AppEnvironment {
             @escaping @Sendable (DictationSessionID) -> Void,
             AudioDeviceID?
         ) -> any AudioCapturing,
-        transcribe: @escaping (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult,
+        transcribe: @escaping (URL) -> @Sendable (URL) async throws -> ASRResult,
         recoveryInsertionDeadline: Duration = .seconds(2),
         engineWarmupRetryDelay: Duration? = nil,
         idleUnloadDelayOverride: Duration? = nil,
@@ -222,7 +221,7 @@ public struct AppEnvironment {
                     preferredInputDeviceID: $4
                 )
             },
-            transcribe: { engineDirectory, languageHint in
+            transcribe: { engineDirectory in
                 return { url in
                     // Measured, because this is the last span on the dictation
                     // path that nothing timed. `prepare` runs before every
@@ -232,10 +231,7 @@ public struct AppEnvironment {
                     let readyAt = ContinuousClock.now
                     try await transcriber.prepare(modelDirectory: engineDirectory)
                     let prepared = readyAt.duration(to: .now)
-                    let result = try await transcriber.transcribe(
-                        fileURL: url,
-                        languageHint: languageHint()
-                    )
+                    let result = try await transcriber.transcribe(fileURL: url)
                     return ASRResult(
                         text: result.text,
                         words: result.words,
@@ -631,7 +627,7 @@ public final class AppState: ObservableObject {
         @escaping @Sendable (DictationSessionID) -> Void,
         AudioDeviceID?
     ) -> any AudioCapturing
-    private let transcribe: (URL, @escaping @Sendable () -> String?) -> @Sendable (URL) async throws -> ASRResult
+    private let transcribe: (URL) -> @Sendable (URL) async throws -> ASRResult
     private let recoveryInsertionDeadline: Duration
     private let engineWarmupRetryDelayOverride: Duration?
     private let recordingRecoveryCompatibilityGrace: TimeInterval
@@ -750,11 +746,6 @@ public final class AppState: ObservableObject {
 
     public init(environment: AppEnvironment) {
         defaults = environment.defaults
-        // The saved code is checked against the engine list. List - property
-        // library and may become narrower when it is updated; without checking each
-        // dictation would fall on “unsupported language hint”, WAV would accumulate
-        // in salvation, and the picker would show an empty line. Unfamiliar code -
-        // this is autodetection, as it was before the selection.
         editWatcher = EditLearningWatcher(reader: environment.focusedFieldReader)
         // No key = disabled: `bool(forKey:)` returns false. This
         // reads someone else's window and therefore requires an explicit opt-in.
@@ -928,11 +919,6 @@ public final class AppState: ObservableObject {
 
             let engineDirectory = layout.engineDirectory
             self.engineDirectory = engineDirectory
-            // The model spans 25 languages with one tokenizer and detects which
-            // is being spoken, including speech that switches between them
-            // mid-sentence. A forced language could only make that worse, so
-            // there is no setting and nothing to read.
-            let languageHint: @Sendable () -> String? = { nil }
             let transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)?
             if let transcriber {
                 transcribeSamples = { samples in
@@ -943,10 +929,7 @@ public final class AppState: ObservableObject {
                     // waited. DictationController records the two outer return
                     // hops separately before we choose a scheduling fix.
                     let handedOver = ContinuousClock.now
-                    let result = try await transcriber.transcribe(
-                        samples: samples,
-                        languageHint: languageHint()
-                    )
+                    let result = try await transcriber.transcribe(samples: samples)
                     let waited = handedOver.duration(to: .now)
                     return ASRResult(
                         text: result.text,
@@ -970,10 +953,7 @@ public final class AppState: ObservableObject {
             }
             let controller = DictationController(
                 capture: capture,
-                transcribe: transcribe(
-                    engineDirectory,
-                    languageHint
-                ),
+                transcribe: transcribe(engineDirectory),
                 transcribeSamples: transcribeSamples,
                 inserter: inserter,
                 targetApplicationSnapshot: targetApplicationSnapshot,
@@ -1400,10 +1380,7 @@ public final class AppState: ObservableObject {
         Task { [weak self] in
             defer { Task { @MainActor in self?.isRetranscribing = false } }
             do {
-                let result = try await transcriber.transcribe(
-                    fileURL: audio,
-                    languageHint: nil
-                )
+                let result = try await transcriber.transcribe(fileURL: audio)
                 let text = self?.makePipeline().run(result.text).output.text ?? result.text
                 await MainActor.run {
                     guard let self, let store = self.historyStore else { return }
