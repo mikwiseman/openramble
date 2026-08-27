@@ -1977,6 +1977,8 @@ private final class RecordingContext: @unchecked Sendable {
     let conversionSequencer: RecordingTapConversionSequencer
     let captureFailure: RecordingCaptureFailureLedger
     let diskAttachment: RecordingDiskAttachment
+    /// Ships finished pieces to the engine while the take is still running.
+    let segmentAttachment: RecordingSegmentAttachment
     let shutdownLease: RecordingEngineShutdownLease
     let freezeRecoveryLease: RecordingFreezeRecoveryLease
     let startedAt: ContinuousClock.Instant
@@ -1990,6 +1992,7 @@ private final class RecordingContext: @unchecked Sendable {
         conversionSequencer: RecordingTapConversionSequencer,
         captureFailure: RecordingCaptureFailureLedger,
         diskAttachment: RecordingDiskAttachment,
+        segmentAttachment: RecordingSegmentAttachment,
         shutdownLease: RecordingEngineShutdownLease,
         freezeRecoveryLease: RecordingFreezeRecoveryLease,
         startedAt: ContinuousClock.Instant
@@ -2002,6 +2005,7 @@ private final class RecordingContext: @unchecked Sendable {
         self.conversionSequencer = conversionSequencer
         self.captureFailure = captureFailure
         self.diskAttachment = diskAttachment
+        self.segmentAttachment = segmentAttachment
         self.shutdownLease = shutdownLease
         self.freezeRecoveryLease = freezeRecoveryLease
         self.startedAt = startedAt
@@ -2165,7 +2169,8 @@ func finalizeCapturedRecording(
     frozen: FrozenPCM,
     sampleRate: Double,
     startupLatency: Duration? = nil,
-    disposition: RecordingDisposition = RecordingDisposition()
+    disposition: RecordingDisposition = RecordingDisposition(),
+    consumedSampleCount: Int = 0
 ) -> CapturedRecording {
     let drain = sink.seal()
     // The drain issues up to 64 synchronous file writes and the seal rewrites
@@ -2245,7 +2250,8 @@ func finalizeCapturedRecording(
         disposition: disposition,
         readableTask: readable,
         durableTask: durable,
-        materializeRecovery: materializeRecovery
+        materializeRecovery: materializeRecovery,
+        consumedSampleCount: consumedSampleCount
     )
 }
 
@@ -2258,7 +2264,8 @@ func finalizeMemoryOnlyCapturedRecording(
     frozen: FrozenPCM,
     sampleRate: Double,
     startupLatency: Duration? = nil,
-    disposition: RecordingDisposition = RecordingDisposition()
+    disposition: RecordingDisposition = RecordingDisposition(),
+    consumedSampleCount: Int = 0
 ) -> CapturedRecording {
     let unavailable = Task.detached(priority: .utility) { () throws -> URL in
         throw AudioCaptureError.writeFailed("the opportunistic recording file is unavailable")
@@ -2285,7 +2292,8 @@ func finalizeMemoryOnlyCapturedRecording(
         disposition: disposition,
         readableTask: unavailable,
         durableTask: unavailable,
-        materializeRecovery: materializeRecovery
+        materializeRecovery: materializeRecovery,
+        consumedSampleCount: consumedSampleCount
     )
 }
 
@@ -2298,6 +2306,10 @@ private func finalizeRecordingContext(
     let startupLatency = frozen.firstFrameAt.map {
         context.startedAt.duration(to: $0)
     }
+    // The barrier. Past this line every frame the segmenter was given has been
+    // processed, so the count is exact: the tail begins where the last segment
+    // ended, with no frame recognized twice and none lost between them.
+    let consumedSampleCount = context.segmentAttachment.drainConsumedSampleCount()
     if let pipeline {
         return finalizeCapturedRecording(
             url: context.url,
@@ -2308,7 +2320,8 @@ private func finalizeRecordingContext(
             frozen: frozen,
             sampleRate: sampleRate,
             startupLatency: startupLatency,
-            disposition: context.disposition
+            disposition: context.disposition,
+            consumedSampleCount: consumedSampleCount
         )
     }
     return finalizeMemoryOnlyCapturedRecording(
@@ -2316,7 +2329,8 @@ private func finalizeRecordingContext(
         frozen: frozen,
         sampleRate: sampleRate,
         startupLatency: startupLatency,
-        disposition: context.disposition
+        disposition: context.disposition,
+        consumedSampleCount: consumedSampleCount
     )
 }
 
@@ -2529,6 +2543,12 @@ public actor MicrophoneCapture: AudioCapturing {
     /// path. The only production call site reduces these samples to a waveform
     /// peak; recognition uses `CapturedRecording.samples` instead.
     private let sampleObserver: CoalescingSampleObserver
+    /// Where finished pieces of a running take go, when anybody wants them.
+    ///
+    /// Absent by default, and absent is the old behaviour exactly: nothing is
+    /// segmented, nothing is decoded early, and the take is recognized whole.
+    /// A capture that is never given a sink does not even compute a peak.
+    private var segmentSink: (@Sendable ([Float]) -> Void)?
     private let converterFactory: ConverterFactory
 
     /// Which microphone to record through, or `nil` for whatever the system
@@ -2603,6 +2623,16 @@ public actor MicrophoneCapture: AudioCapturing {
         let waiting = firstFrameWaiters
         firstFrameWaiters = []
         for waiter in waiting { waiter.resume(returning: arrived) }
+    }
+
+    /// Ask for finished segments as the recording runs.
+    ///
+    /// Set before `startRecording` to cover the whole take; setting it during
+    /// one takes effect from the next committed frame. Passing `nil` stops
+    /// segmentation, and the take falls back to being recognized whole.
+    public func setSegmentSink(_ sink: (@Sendable ([Float]) -> Void)?) {
+        segmentSink = sink
+        activeContext?.segmentAttachment.setSink(sink)
     }
 
     public func startRecording() async throws -> URL {
@@ -2735,6 +2765,10 @@ public actor MicrophoneCapture: AudioCapturing {
         let diskAttachment = RecordingDiskAttachment {
             RecordingWriterOpenCoordinator.shared.cancel(session: session)
         }
+        // One per take: a new recording starts from silence, having heard
+        // nobody, so it must not inherit the previous take's pending audio.
+        let segmentAttachment = RecordingSegmentAttachment()
+        segmentAttachment.setSink(segmentSink)
         let context = RecordingContext(
             id: sessionID,
             session: session,
@@ -2744,6 +2778,7 @@ public actor MicrophoneCapture: AudioCapturing {
             conversionSequencer: conversionSequencer,
             captureFailure: captureFailure,
             diskAttachment: diskAttachment,
+            segmentAttachment: segmentAttachment,
             shutdownLease: shutdownLease,
             freezeRecoveryLease: freezeRecoveryLease,
             startedAt: acceptedAt
@@ -2814,6 +2849,11 @@ public actor MicrophoneCapture: AudioCapturing {
                     // commit atomically chooses either a complete WAV or no
                     // WAV, never an apparently valid file missing its prefix.
                     diskAttachment.submit(samples)
+                    // The same committed frames, to the thing that decides where
+                    // this take can be cut. Inside the sequenced turn because
+                    // order is the whole contract: a segmenter fed out of order
+                    // would place seams in the wrong places.
+                    segmentAttachment.submit(samples)
                     if append.didOverflowMemory,
                        !diskAttachment.memoryDidOverflow() {
                         let failure = AudioCaptureError.writeFailed(
