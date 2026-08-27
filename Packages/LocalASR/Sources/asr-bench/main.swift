@@ -31,7 +31,6 @@ func usage() -> Never {
     Environment:
       WAI_MODELS_ROOT        install root (Application Support by default)
       WAI_ASR_MODEL_DIR      use this engine folder directly, past the store
-      WAI_ASR_LANGUAGE       force a language (ru, en, ...) instead of auto
     """)
     exit(64)
 }
@@ -140,13 +139,6 @@ func prepareTranscriber() async throws -> LocalTranscriber {
     return transcriber
 }
 
-/// A forced language, or `nil` for the model's own multilingual behaviour.
-func languageHint() -> String? {
-    let raw = ProcessInfo.processInfo.environment["WAI_ASR_LANGUAGE"]
-    guard let raw, !raw.isEmpty else { return nil }
-    return raw
-}
-
 let arguments = Array(CommandLine.arguments.dropFirst())
 guard let command = arguments.first else { usage() }
 let operands = Array(arguments.dropFirst())
@@ -187,13 +179,12 @@ case "delete":
 case "transcribe":
     guard !operands.isEmpty else { usage() }
     let transcriber = try await prepareTranscriber()
-    let language = languageHint()
 
     for path in operands {
         let url = URL(fileURLWithPath: path)
         let started = ContinuousClock.now
         do {
-            let result = try await transcriber.transcribe(fileURL: url, languageHint: language)
+            let result = try await transcriber.transcribe(fileURL: url)
             let wall = seconds(started.duration(to: .now))
             print("\n=== \(url.lastPathComponent) ===")
             print(result.text)

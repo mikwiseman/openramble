@@ -188,20 +188,30 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
 
     // MARK: - Recognition
 
-    public func transcribe(samples: [Float]) async throws -> DictationCore.ASRResult {
-        try await transcribe(samples: samples, languageHint: nil)
-    }
-
     /// Recognize one finished take.
     ///
-    /// `languageHint` is a BCP-47 code, or `nil` to let the model decide. The
-    /// product passes `nil`: this model spans 25 languages with one tokenizer
-    /// and handles speech that switches between them mid-sentence, which a
-    /// forced language cannot.
-    public func transcribe(
-        samples: [Float],
-        languageHint: String?
-    ) async throws -> DictationCore.ASRResult {
+    /// There is no language parameter, and this is where that was decided.
+    /// `transcribe_run_params.language` exists in the runtime and, for this
+    /// model family, changes nothing: `en`, `ru` and autodetection produced
+    /// byte-identical transcripts of the same four recordings. An unknown code
+    /// does have an effect — the run fails with
+    /// `TRANSCRIBE_ERR_UNSUPPORTED_LANGUAGE` — so the field could only ever
+    /// lose a dictation, never improve one.
+    ///
+    /// What the model does instead is choose one language for the whole decode
+    /// and impose it on the entire take. Mixed speech is where that shows:
+    /// English inside a Russian-dominant take comes back transliterated into
+    /// Cyrillic, and Russian inside an English-dominant one is dropped without
+    /// a trace. Two seconds of the other language is enough to tip it. The
+    /// remedy is smaller decodes, not a hint.
+    ///
+    /// The engine cannot be asked which language it settled on, either.
+    /// `transcribe_model_get_capabilities` reports `supports_language_detect`
+    /// true and 25 languages for this model, yet `transcribe_detected_language`
+    /// returns an empty string after every run on transcribe.cpp 0.2.0. That
+    /// was measured, not assumed — a diagnostic was written against it and
+    /// deleted. Check again before building anything on that accessor.
+    public func transcribe(samples: [Float]) async throws -> DictationCore.ASRResult {
         guard let engine else { throw ASREngineError.modelsNotLoaded }
         // The session pointer is read on the engine thread, from the `Engine`
         // held across the hop — not copied out here, where nothing would keep
@@ -256,19 +266,15 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
         // The `Engine` object is captured, not the raw pointer, so `unload()`
         // cannot free the session underneath a run in progress. The pointer
         // carries no ownership of its own.
-        // Params are rebuilt inside the block rather than captured. A C struct
-        // is not `Sendable`, and its `language` member points at a string whose
-        // scope must outlive the call that reads it — building both here keeps
-        // that true without an unsafe promise.
+        // Params are rebuilt inside the block rather than captured: a C struct
+        // is not `Sendable`.
         let timestamps = params.timestamps
         let task = params.task
-        let outcome = await Self.runOnEngineThread(engine: engine, hint: languageHint) {
-            session, language in
+        let outcome = await Self.runOnEngineThread(engine: engine) { session in
             var params = transcribe_run_params()
             transcribe_run_params_init(&params)
             params.task = task
             params.timestamps = timestamps
-            params.language = language
             let runtimeStarted = ContinuousClock.now
             let status = transcribe_run(session, samples, Int32(samples.count), &params)
             let runtimeDuration = runtimeStarted.duration(to: .now)
@@ -328,8 +334,7 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
     public func warmUpInference() async throws {
         guard engine != nil else { throw ASREngineError.modelsNotLoaded }
         _ = try await transcribe(
-            samples: [Float](repeating: 0, count: Self.requiredSampleRate / 2),
-            languageHint: nil
+            samples: [Float](repeating: 0, count: Self.requiredSampleRate / 2)
         )
     }
 
@@ -362,10 +367,6 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
         }
     }
 
-    /// Call `body` with a C string for `value`, or with `nil` when it is absent.
-    ///
-    /// `withCString` has no optional form, and the borrowed pointer must not
-    /// outlive the call — which is exactly the mistake this exists to prevent.
     /// What a run produced, carried back as owned data.
     ///
     /// Never a pointer: the session may clear it the moment the next run
@@ -392,18 +393,14 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
 
     /// Hand one whole run-and-read to the engine thread.
     ///
-    /// The `Engine` is captured so its session cannot be freed mid-run; the
-    /// language string is built inside, so it outlives the call that uses it.
+    /// The `Engine` is captured so its session cannot be freed mid-run.
     private static func runOnEngineThread(
         engine: Engine,
-        hint: String?,
-        _ work: @escaping @Sendable (OpaquePointer, UnsafePointer<CChar>?) -> EngineOutcome
+        _ work: @escaping @Sendable (OpaquePointer) -> EngineOutcome
     ) async -> EngineOutcome {
         await withCheckedContinuation { continuation in
             engineQueue.async {
-                let outcome = withOptionalCString(hint) { language in
-                    work(engine.session, language)
-                }
+                let outcome = work(engine.session)
                 // Held to here explicitly: the pointer above carries no
                 // ownership, and ARC could otherwise release the engine as
                 // soon as its last use passed.
@@ -411,14 +408,6 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
                 continuation.resume(returning: outcome)
             }
         }
-    }
-
-    private static func withOptionalCString<T>(
-        _ value: String?,
-        _ body: (UnsafePointer<CChar>?) throws -> T
-    ) rethrows -> T {
-        guard let value else { return try body(nil) }
-        return try value.withCString { try body($0) }
     }
 
     private static func describe(_ status: transcribe_status) -> String {

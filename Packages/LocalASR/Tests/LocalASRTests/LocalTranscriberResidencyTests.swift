@@ -49,10 +49,6 @@ final class LocalTranscriberResidencyTests: XCTestCase {
             return ASRResult(text: "ok", audioDuration: 1, processingDuration: 0.1)
         }
 
-        func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
-            try await transcribe(samples: samples)
-        }
-
         func unload() async {
             unloadCount += 1
             loaded = false

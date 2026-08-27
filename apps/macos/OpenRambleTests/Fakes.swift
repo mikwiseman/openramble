@@ -571,7 +571,7 @@ final class AppHarness {
                 // failure path, across hundreds of tests.
                 makeSounds: { [sounds] _ in sounds },
                 makeCapture: { [capture] _, _, _, _, _ in capture },
-                transcribe: { [transcription] _, _ in
+                transcribe: { [transcription] _ in
                     { _ in
                         if let delay = transcription.delay {
                             try await Task.sleep(for: delay)
@@ -831,11 +831,11 @@ actor ReadinessControlledRecognizer: DictationRecognizing {
 
     func prepare(modelDirectory: URL) async throws { prepares += 1 }
 
-    func transcribe(fileURL: URL, languageHint: String?) async throws -> ASRResult {
+    func transcribe(fileURL: URL) async throws -> ASRResult {
         ASRResult(text: "", audioDuration: 1, processingDuration: 0)
     }
 
-    func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
+    func transcribe(samples: [Float]) async throws -> ASRResult {
         ASRResult(text: "", audioDuration: 1, processingDuration: 0)
     }
 

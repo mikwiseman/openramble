@@ -24,8 +24,8 @@ public protocol DictationRecognizing: Sendable {
     /// without being asked. An in-process recognizer never does.
     func readinessChanges() async -> AsyncStream<Bool>
     func prepare(modelDirectory: URL) async throws
-    func transcribe(fileURL: URL, languageHint: String?) async throws -> ASRResult
-    func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult
+    func transcribe(fileURL: URL) async throws -> ASRResult
+    func transcribe(samples: [Float]) async throws -> ASRResult
     func warmUpInference() async throws
     func unload() async
     func unloadIfIdle() async -> Bool

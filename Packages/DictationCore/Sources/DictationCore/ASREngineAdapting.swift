@@ -128,9 +128,15 @@ public enum ASREngineError: Error, Sendable, Equatable {
 
 /// Recognition engine contract.
 ///
-/// The only implementation in the project is `FluidAudioAdapter` in the LocalASR package,
-/// and this is the only place where FluidAudio is imported. Everything else - including
-/// tests of pure logic - works through this protocol and uses a mock.
+/// The only implementation in the project is `TranscribeCppAdapter` in the
+/// LocalASR package, and that is the only place the inference runtime is
+/// imported. Everything else - including tests of pure logic - works through
+/// this protocol and uses a mock.
+///
+/// There is no language parameter here, and the absence is a measurement
+/// rather than an oversight: the shipping engine decides the language from the
+/// audio and cannot be told otherwise. `TranscribeCppAdapter.transcribe(samples:)`
+/// carries the numbers.
 public protocol ASREngineAdapting: Sendable {
     /// Load the model from the prepared directory. Idempotent.
     func loadModels(from directory: URL) async throws
@@ -138,22 +144,6 @@ public protocol ASREngineAdapting: Sendable {
     /// Recognize the fragment. Mono 16 kHz Float32 is expected - exactly what the capture gives.
     func transcribe(samples: [Float]) async throws -> ASRResult
 
-    /// Recognize with language hint.
-    ///
-    /// `languageHint` - BCP-47 code (“en”, “ru”). `nil` — autodetection by
-    /// sound. The hint narrows the recognition to one language: this is the way out for
-    /// cases when the accent leads the autodetection to the wrong place, but mixed speech
-    /// it breaks - that's why the default is always `nil`.
-    func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult
-
     /// Free up memory under the model.
     func unload() async
-}
-
-extension ASREngineAdapting {
-    /// Hint - an optional ability of the engine: for those who don’t understand it,
-    /// recognizes as usual. This is a hint contract, not a degradation.
-    public func transcribe(samples: [Float], languageHint: String?) async throws -> ASRResult {
-        try await transcribe(samples: samples)
-    }
 }
