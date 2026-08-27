@@ -1267,6 +1267,10 @@ public final class DictationController {
         // hook it owns everything after the freeze. `stopRequestedAt` is set on
         // every path that reaches here, so the freeze stage is never guessed.
         let recognitionStartedAt = preparationCompletedAt ?? freezeCompletedAt
+        // Zero unless the take was actually cut, which is what the log needs to
+        // distinguish "fast because it was short" from "fast because most of it
+        // was already done".
+        let streamedSegmentCount = streamedSegments?.recognizedCount ?? 0
         let phases = stopRequestedAt.map { stopMark in
             DictationPhaseBreakdown(
                 captureFreeze: stopMark.duration(to: freezeCompletedAt),
@@ -1308,7 +1312,8 @@ public final class DictationController {
                         + Double(whole.components.attoseconds) / 1e18) - inside
                     return outside > 0 ? .seconds(outside) : nil
                 }(),
-                audioDuration: .seconds(recognized.audioDuration)
+                audioDuration: .seconds(recognized.audioDuration),
+                streamedSegments: streamedSegmentCount
             )
         }
 

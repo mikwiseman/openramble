@@ -34,6 +34,31 @@ final class DictationSpeedLineTests: XCTestCase {
         XCTAssertTrue(line.contains("engine=0.20s"), line)
     }
 
+    /// A fast take and a streamed take are fast for different reasons, and the
+    /// log has to be able to say which.
+    func testItSaysHowMuchWasRecognizedBeforeTheKeyCameUp() {
+        func line(streamed: Int) -> String {
+            DictationSpeedLine.text(
+                for: DictationSpeedReport(
+                    toRecognizedText: .seconds(1),
+                    phases: DictationPhaseBreakdown(
+                        captureFreeze: .milliseconds(10),
+                        enginePreparation: nil,
+                        recognition: .milliseconds(120),
+                        engineProcessing: .milliseconds(100),
+                        audioDuration: .seconds(90),
+                        streamedSegments: streamed
+                    )
+                )
+            )
+        }
+
+        XCTAssertTrue(line(streamed: 7).contains("streamed=7"), line(streamed: 7))
+        // Zero is an ordinary answer, not a missing measurement: a short take
+        // has nothing to stream.
+        XCTAssertTrue(line(streamed: 0).contains("streamed=0"), line(streamed: 0))
+    }
+
     func testItNamesBothReturnSpansAndTheirExecutorWitness() {
         let report = DictationSpeedReport(
             toRecognizedText: .seconds(1),
