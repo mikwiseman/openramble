@@ -10,6 +10,16 @@ import XCTest
 /// tail the controller decodes starts at that number, so a wrong one either
 /// loses words or says them twice.
 final class RecordingSegmentAttachmentTests: XCTestCase {
+    /// A segmenter with a short segment floor, so a ten-second fixture can earn
+    /// a cut. The shipped floor is far higher and is pinned by
+    /// `SpeechSegmenterTests`; these tests are about the plumbing around it, not
+    /// about the number.
+    private var mechanism: SpeechSegmenter {
+        SpeechSegmenter(
+            parameters: .init(minimumPause: .milliseconds(700), minimumSegment: .seconds(4))
+        )
+    }
+
     /// Frames of the size the real tap delivers.
     private func feed(_ attachment: RecordingSegmentAttachment, _ level: Float, seconds: Double) {
         var remaining = Int(seconds * 16_000)
@@ -32,7 +42,7 @@ final class RecordingSegmentAttachmentTests: XCTestCase {
 
     func testSegmentsCarryTheAudioTheyWereGivenAndTheCountMatches() {
         let collected = Collected()
-        let attachment = RecordingSegmentAttachment()
+        let attachment = RecordingSegmentAttachment(segmenter: mechanism)
         attachment.setSink { collected.append($0) }
 
         // Ten seconds of speech, then a pause long enough to earn a cut.
@@ -56,7 +66,7 @@ final class RecordingSegmentAttachmentTests: XCTestCase {
 
     func testTheReportedCountIsAConsistentPrefixOfTheTake() {
         let collected = Collected()
-        let attachment = RecordingSegmentAttachment()
+        let attachment = RecordingSegmentAttachment(segmenter: mechanism)
         attachment.setSink { collected.append($0) }
 
         for _ in 0..<3 {
@@ -75,7 +85,7 @@ final class RecordingSegmentAttachmentTests: XCTestCase {
 
     func testDrainingIsABarrierSoNothingArrivesAfterTheCount() {
         let collected = Collected()
-        let attachment = RecordingSegmentAttachment()
+        let attachment = RecordingSegmentAttachment(segmenter: mechanism)
         attachment.setSink { collected.append($0) }
 
         feed(attachment, 0.5, seconds: 10)

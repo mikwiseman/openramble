@@ -16,6 +16,17 @@ final class SpeechSegmenterTests: XCTestCase {
 
     private func samples(_ seconds: Double) -> Int { Int(seconds * 16_000) }
 
+    /// Parameters for the tests about the *rule*, with a short segment floor so
+    /// a ten-second fixture can earn a cut.
+    ///
+    /// The shipped floor is deliberately far higher, and
+    /// `testTheShippedDefaultsRefuseToCutAnOrdinaryTake` is what pins it. Tests
+    /// of the mechanism should not have to move every time that number is
+    /// tuned, and tuning it should not be able to pass silently either.
+    private var mechanism: SpeechSegmenter.Parameters {
+        .init(minimumPause: .milliseconds(700), minimumSegment: .seconds(4))
+    }
+
     /// Feed `seconds` of one level, returning every cut offered along the way.
     @discardableResult
     private func feed(
@@ -66,7 +77,7 @@ final class SpeechSegmenterTests: XCTestCase {
     // MARK: - Cutting
 
     func testAQualifyingPauseCutsInTheMiddleOfTheSilence() {
-        var segmenter = SpeechSegmenter()
+        var segmenter = SpeechSegmenter(parameters: mechanism)
         feed(&segmenter, speech, seconds: 10)
         let cuts = feed(&segmenter, quiet, seconds: 1.0)
 
@@ -82,7 +93,7 @@ final class SpeechSegmenterTests: XCTestCase {
     }
 
     func testBothSidesOfTheSeamAreSilent() {
-        var segmenter = SpeechSegmenter()
+        var segmenter = SpeechSegmenter(parameters: mechanism)
         feed(&segmenter, speech, seconds: 10)
         guard let cut = feed(&segmenter, quiet, seconds: 1.0).first else {
             return XCTFail("expected a cut")
@@ -94,7 +105,7 @@ final class SpeechSegmenterTests: XCTestCase {
     }
 
     func testOffsetsAreRelativeToTheSegmentSoTheCallerNeverTracksPosition() {
-        var segmenter = SpeechSegmenter()
+        var segmenter = SpeechSegmenter(parameters: mechanism)
         var cuts: [Int] = []
         // Three sentences, each ten seconds, each followed by a full pause.
         for _ in 0..<3 {
@@ -109,6 +120,24 @@ final class SpeechSegmenterTests: XCTestCase {
                            accuracy: Double(samples(1.2)),
                            "offsets must not accumulate across segments")
         }
+    }
+
+    func testTheShippedDefaultsRefuseToCutAnOrdinaryTake() {
+        // The whole point of the shipped floor. A sixteen-second take with a
+        // clear pause in it is one decode, because cutting it would buy no time
+        // anybody can feel and would spend a draw on a language decision this
+        // engine sometimes gets wrong.
+        var segmenter = SpeechSegmenter()
+        feed(&segmenter, speech, seconds: 10)
+        var cuts = feed(&segmenter, quiet, seconds: 1.5)
+        cuts += feed(&segmenter, speech, seconds: 4.5)
+        XCTAssertEqual(cuts, [], "an ordinary take must reach the engine whole")
+
+        // And a long one still streams, or the feature would not exist.
+        var long = SpeechSegmenter()
+        feed(&long, speech, seconds: 20)
+        XCTAssertEqual(feed(&long, quiet, seconds: 1.5).count, 1,
+                       "past the floor a real pause should still earn a cut")
     }
 
     // MARK: - The floor the decoder actually has
