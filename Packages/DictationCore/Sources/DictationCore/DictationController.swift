@@ -277,6 +277,22 @@ public final class DictationController {
     /// Fast path for captures that already own recognizer-ready PCM. The file
     /// closure remains the compatibility and recovery path.
     private let transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)?
+    /// Recognizes the take in pieces while it is still being spoken.
+    ///
+    /// Present only when there is a sample-path recognizer to give it to and a
+    /// capture willing to segment. Absent means the old behaviour exactly: one
+    /// decode of the whole take once the key comes up.
+    private var streamedSegments: StreamedSegmentRecognizer?
+    /// Sample rate every part of this app agrees on. Named rather than spelled
+    /// out at the three places below that need it.
+    private static let sampleRate = 16_000
+    /// Below this a piece of audio is not handed to the engine on its own.
+    ///
+    /// Measured against the shipping model: under about two seconds its output
+    /// is not merely worse but non-monotonic — the same start offset returned
+    /// text at 0.8 s, nothing at 1.0 s, text again at 1.2 s. A tail shorter than
+    /// this is recognized together with the segment before it instead.
+    private static let minimumTailSamples = 2 * sampleRate
     private let inserter: any TextInserting
     private let overlay: any OverlayPresenting
     private let sounds: any Sounding
@@ -478,7 +494,18 @@ public final class DictationController {
         disposition: RecordingDisposition
     ) {
         let capture = capture
+        // One stream per take. Built here rather than lazily so the sink is in
+        // place before the first frame: a segment cut before anybody was
+        // listening would be audio nobody ever recognizes.
+        let streamed = transcribeSamples.map { StreamedSegmentRecognizer(transcribe: $0) }
+        streamedSegments = streamed
         Task.detached(priority: .userInitiated) { [weak self] in
+            // The sink hops nothing and holds nothing: `submit` is safe from
+            // the capture's own queue and returns at once.
+            let sink: (@Sendable ([Float]) -> Void)? = streamed.map { recognizer in
+                { @Sendable samples in recognizer.submit(samples) }
+            }
+            await capture.setSegmentSink(sink)
             let outcome: CaptureStartOutcome
             do {
                 outcome = .started(
@@ -879,6 +906,59 @@ public final class DictationController {
         }
     }
 
+    /// Put a streamed take together: the pieces already recognized, plus the
+    /// tail nobody has looked at yet.
+    ///
+    /// The tail is the only decode the person actually waits for, which is the
+    /// whole point of the exercise. It is also the one piece that can be too
+    /// short to trust on its own — when the key comes up just after a cut —
+    /// and in that case the segment before it is taken back and the two are
+    /// recognized together rather than shipping a fragment.
+    private static func joinStreamed(
+        texts: [String],
+        segmentSampleCounts: [Int],
+        consumedSamples: Int,
+        samples: [Float],
+        transcribe: @Sendable ([Float]) async throws -> ASRResult
+    ) async throws -> ASRResult {
+        var pieces = texts
+        var tailStart = min(max(0, consumedSamples), samples.count)
+
+        if samples.count - tailStart < minimumTailSamples,
+           pieces.count == segmentSampleCounts.count,
+           let last = segmentSampleCounts.last {
+            pieces.removeLast()
+            tailStart = max(0, tailStart - last)
+        }
+
+        var processing = 0.0
+        var dispatch = 0.0
+        let tail = Array(samples[tailStart...])
+        if !tail.isEmpty {
+            let result = try await transcribe(tail)
+            pieces.append(result.text)
+            processing = result.processingDuration
+            dispatch = result.engineDispatchDuration
+        }
+
+        let text = pieces
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+
+        // The durations describe the tail, and that is deliberate: they are what
+        // the person waited for after letting go of the key. Reporting the sum
+        // of every segment would be arithmetically true and describe a wait
+        // nobody had.
+        return ASRResult(
+            text: text,
+            words: [],
+            audioDuration: Double(samples.count) / Double(sampleRate),
+            processingDuration: processing,
+            engineDispatchDuration: dispatch
+        )
+    }
+
     private func finalize(session: DictationSessionID) async {
         let recording: CapturedRecording
         do {
@@ -1026,8 +1106,10 @@ public final class DictationController {
             let clockNow = monotonicNow
             // The explicit type is load-bearing. If this closure inherited
             // MainActor isolation, the return hop would become a plausible zero.
+            let streamed = streamedSegments
+            let consumedSamples = recording.consumedSampleCount
             let framedRecognition: @Sendable () async throws -> ASRResult = {
-                [transcribe, transcribeSamples] in
+                [transcribe, transcribeSamples, streamed, consumedSamples] in
                 pickedUpBox.set(dispatchedAt.duration(to: clockNow()))
                 defer {
                     returnFrameBox.set(pthread_main_np() != 0)
@@ -1043,6 +1125,25 @@ public final class DictationController {
                     // without reading this because timed-out work may finish later.
                     defer { workDoneBox.set(dispatchedAt.duration(to: clockNow())) }
                     if let transcribeSamples, let bufferedSamples, !bufferedSamples.isEmpty {
+                        // Whatever was recognized while the person was still
+                        // talking. `finish` waits for the segment in flight
+                        // rather than cancelling it: cancelling would save a
+                        // few tens of milliseconds and cost a full re-decode of
+                        // audio whose text is still needed.
+                        let outcome = await streamed?.finish()
+                        if case let .recognized(texts) = outcome, !texts.isEmpty {
+                            return try await Self.joinStreamed(
+                                texts: texts,
+                                segmentSampleCounts: streamed?.submittedSampleCounts ?? [],
+                                consumedSamples: consumedSamples,
+                                samples: bufferedSamples,
+                                transcribe: transcribeSamples
+                            )
+                        }
+                        // No cuts were made, or a segment failed. Either way the
+                        // whole take is recognized here exactly as it always
+                        // was — a stream that could not finish costs latency,
+                        // never words.
                         return try await transcribeSamples(bufferedSamples)
                     }
                     let readableStart = clockNow()
@@ -1166,6 +1267,10 @@ public final class DictationController {
         // hook it owns everything after the freeze. `stopRequestedAt` is set on
         // every path that reaches here, so the freeze stage is never guessed.
         let recognitionStartedAt = preparationCompletedAt ?? freezeCompletedAt
+        // Zero unless the take was actually cut, which is what the log needs to
+        // distinguish "fast because it was short" from "fast because most of it
+        // was already done".
+        let streamedSegmentCount = streamedSegments?.recognizedCount ?? 0
         let phases = stopRequestedAt.map { stopMark in
             DictationPhaseBreakdown(
                 captureFreeze: stopMark.duration(to: freezeCompletedAt),
@@ -1207,7 +1312,8 @@ public final class DictationController {
                         + Double(whole.components.attoseconds) / 1e18) - inside
                     return outside > 0 ? .seconds(outside) : nil
                 }(),
-                audioDuration: .seconds(recognized.audioDuration)
+                audioDuration: .seconds(recognized.audioDuration),
+                streamedSegments: streamedSegmentCount
             )
         }
 

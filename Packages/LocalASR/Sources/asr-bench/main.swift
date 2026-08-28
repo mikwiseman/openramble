@@ -27,6 +27,8 @@ func usage() -> Never {
       import <folder>        take the model from a prepared folder, no network
       delete                 remove the installed model
       transcribe <file>...   recognize audio files
+      stream <file>...       recognize the way the app will: cut at pauses,
+                             decode each piece, and report the tail latency
 
     Environment:
       WAI_MODELS_ROOT        install root (Application Support by default)
@@ -201,6 +203,84 @@ case "transcribe":
             print("Error: \(error)")
             exit(70)
         }
+    }
+    print("\nprocess peak memory: \(formatBytes(peakMemoryBytes()))")
+
+case "stream":
+    // What the shipping path will do, measured on a file so it can be compared
+    // against `transcribe` on the same file. The interesting number is not the
+    // total — it is `tail`, because every segment before the last one is
+    // decoded while the person is still talking and costs them nothing.
+    guard !operands.isEmpty else { usage() }
+    let transcriber = try await prepareTranscriber()
+    let reader = AudioFileReader()
+
+    for path in operands {
+        let url = URL(fileURLWithPath: path)
+        let samples: [Float]
+        do {
+            samples = try reader.samples(from: url)
+        } catch {
+            print("\n=== \(url.lastPathComponent) ===")
+            print("Error reading: \(error)")
+            exit(70)
+        }
+
+        // Exactly the loop the capture layer will run: fixed frames, peak per
+        // frame, cut offsets back.
+        var segmenter = SpeechSegmenter()
+        var ranges: [Range<Int>] = []
+        var segmentStart = 0
+        var cursor = 0
+        let frame = 2048
+        while cursor < samples.count {
+            let end = min(cursor + frame, samples.count)
+            var peak: Float = 0
+            for value in samples[cursor..<end] { peak = max(peak, abs(value)) }
+            if let cut = segmenter.observe(peak: peak, count: end - cursor) {
+                ranges.append(segmentStart..<(segmentStart + cut))
+                segmentStart += cut
+            }
+            cursor = end
+        }
+        // The tail. Merged into the previous segment when it is too short to be
+        // trusted on its own — the decoder is non-monotonic below two seconds.
+        if segmentStart < samples.count {
+            if !segmenter.pendingIsSubmittable, var last = ranges.popLast() {
+                last = last.lowerBound..<samples.count
+                ranges.append(last)
+            } else {
+                ranges.append(segmentStart..<samples.count)
+            }
+        }
+
+        var pieces: [String] = []
+        var totalEngine = 0.0
+        var tailEngine = 0.0
+        for (index, range) in ranges.enumerated() {
+            let started = ContinuousClock.now
+            let result = try await transcriber.transcribe(samples: Array(samples[range]))
+            let wall = seconds(started.duration(to: .now))
+            totalEngine += wall
+            if index == ranges.count - 1 { tailEngine = wall }
+            let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty { pieces.append(text) }
+        }
+
+        let audioDuration = Double(samples.count) / 16_000
+        print("\n=== \(url.lastPathComponent) ===")
+        print(pieces.joined(separator: " "))
+        print(
+            String(
+                format: "audio %.2f s, %d segments (%@), engine total %.2f s, tail %.2f s",
+                audioDuration,
+                ranges.count,
+                ranges.map { String(format: "%.1f", Double($0.count) / 16_000) }
+                    .joined(separator: " "),
+                totalEngine,
+                tailEngine
+            )
+        )
     }
     print("\nprocess peak memory: \(formatBytes(peakMemoryBytes()))")
 

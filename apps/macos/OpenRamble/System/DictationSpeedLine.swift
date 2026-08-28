@@ -40,6 +40,9 @@ enum DictationSpeedLine {
         parts.append(field("queued", phases?.engineQueueing))
         parts.append(field("engine", phases?.engineProcessing))
         parts.append(field("audio", phases?.audioDuration))
+        // How much of the take was already recognized before the key came up.
+        // `0` is an ordinary answer: a short take has nothing to stream.
+        parts.append("streamed=\(phases?.streamedSegments ?? 0)")
         return parts.joined(separator: " ")
     }
 

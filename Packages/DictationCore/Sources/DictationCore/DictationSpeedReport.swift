@@ -109,6 +109,13 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
     public let returnFrameWasMainThread: Bool?
     /// How much audio the take actually carried.
     public let audioDuration: Duration
+    /// How many pieces were recognized while the person was still speaking.
+    ///
+    /// Zero means the take went to the engine whole, which is what a short one
+    /// does and what any take with no pause in it does. Without this number the
+    /// log cannot tell a fast take from a streamed one, and those want
+    /// different explanations.
+    public let streamedSegments: Int
 
     public init(
         captureFreeze: Duration,
@@ -124,7 +131,8 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         engineDispatch: Duration? = nil,
         returnFrameWasMainThread: Bool? = nil,
         engineTransport: Duration? = nil,
-        audioDuration: Duration
+        audioDuration: Duration,
+        streamedSegments: Int = 0
     ) {
         self.captureFreeze = captureFreeze
         self.enginePreparation = enginePreparation
@@ -140,6 +148,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         self.engineDispatch = engineDispatch
         self.returnFrameWasMainThread = returnFrameWasMainThread
         self.audioDuration = audioDuration
+        self.streamedSegments = streamedSegments
     }
 }
 

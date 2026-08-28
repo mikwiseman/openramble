@@ -142,6 +142,13 @@ public struct CapturedRecording: Sendable {
     public let url: URL
     public let duration: TimeInterval
     public let samples: [Float]?
+    /// How much of `samples` was already recognized while the take was running.
+    ///
+    /// Everything before this offset has left in a segment and has a transcript
+    /// already; everything after it is the tail nobody has looked at yet. Zero
+    /// means the take was not segmented and must be recognized whole, which is
+    /// what every capture that does not segment reports.
+    public let consumedSampleCount: Int
     /// Capture-start latency frozen with this exact recording.
     ///
     /// This is diagnostic data only. Keeping it in the artifact prevents a
@@ -161,7 +168,8 @@ public struct CapturedRecording: Sendable {
         duration: TimeInterval,
         samples: [Float]? = nil,
         startupLatency: Duration? = nil,
-        disposition: RecordingDisposition = RecordingDisposition()
+        disposition: RecordingDisposition = RecordingDisposition(),
+        consumedSampleCount: Int = 0
     ) {
         disposition.register([url])
         let ready = Task<URL, Error> { url }
@@ -173,7 +181,8 @@ public struct CapturedRecording: Sendable {
             disposition: disposition,
             readableTask: ready,
             durableTask: ready,
-            materializeRecovery: nil
+            materializeRecovery: nil,
+            consumedSampleCount: consumedSampleCount
         )
     }
 
@@ -190,11 +199,13 @@ public struct CapturedRecording: Sendable {
         disposition: RecordingDisposition = RecordingDisposition(),
         readableTask: Task<URL, Error>,
         durableTask: Task<URL, Error>,
-        materializeRecovery: (@Sendable () async throws -> URL)? = nil
+        materializeRecovery: (@Sendable () async throws -> URL)? = nil,
+        consumedSampleCount: Int = 0
     ) {
         self.url = url
         self.duration = duration
         self.samples = samples
+        self.consumedSampleCount = consumedSampleCount
         self.startupLatency = startupLatency
         self.disposition = disposition
         disposition.register([url])
@@ -224,6 +235,14 @@ public struct CapturedRecording: Sendable {
 
 /// Record from a microphone to a file.
 public protocol AudioCapturing: Sendable {
+    /// Ask for finished pieces of the take as it runs, so the engine can start
+    /// before the person stops talking.
+    ///
+    /// Optional, and its default is the behaviour every existing capture
+    /// already has: no sink, no segments, the take recognized whole at the end.
+    /// A capture that cannot segment does not have to pretend it can.
+    func setSegmentSink(_ sink: (@Sendable ([Float]) -> Void)?) async
+
     /// Start recording. Returns the address of the file it goes to.
     ///
     /// The implementation must begin device startup promptly without blocking
@@ -317,6 +336,13 @@ public protocol AudioCapturing: Sendable {
 }
 
 extension AudioCapturing {
+    /// Not segmenting is a complete implementation of this protocol.
+    ///
+    /// Every test double and every capture that predates streaming gets this,
+    /// and gets exactly the behaviour it had: the controller receives no
+    /// segments and recognizes the take whole.
+    public func setSegmentSink(_ sink: (@Sendable ([Float]) -> Void)?) async {}
+
     /// Compatibility for capture doubles whose calls cannot overlap sessions.
     public func startRecording(session: DictationSessionID) async throws -> URL {
         try await startRecording()
