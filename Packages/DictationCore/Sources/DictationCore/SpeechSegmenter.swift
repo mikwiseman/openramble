@@ -36,8 +36,27 @@ public struct SpeechSegmenter: Sendable, Equatable {
         public var minimumPause: Duration
         /// How much audio must be pending before a pause is worth spending.
         ///
-        /// Every cut costs a decode that restarts the engine's prediction state,
-        /// so cutting at every breath buys latency and pays accuracy.
+        /// Fifteen seconds, and a cut is not free even when it lands in
+        /// silence.
+        ///
+        /// Every cut is a new audio boundary, and this engine chooses the
+        /// language of a decode partly from where its audio stops — so each
+        /// one is another draw from a distribution that is sometimes wrong.
+        /// Measured across varied boundaries in real recordings, about one
+        /// decode in ninety comes back in the wrong script. A cut also costs
+        /// meaning at the seam: the two sides are recognized without each
+        /// other's context, which on measured takes moved about 2% of words
+        /// and once split a spoken year across the join.
+        ///
+        /// So a cut has to buy something. Below this length the whole take
+        /// decodes in a fraction of a second and streaming it saves nothing
+        /// anybody feels; past a minute the whole decode grows superlinearly
+        /// and streaming saves seconds. Fifteen rather than thirty because
+        /// thirty was measured on a fast Mac: on hardware three times slower a
+        /// thirty-second tail is over a second of waiting, which is a certainty,
+        /// against a couple of percentage points of extra risk that only applies
+        /// to takes over half a minute. On ordinary dictation the two are
+        /// identical — a take of sixteen seconds is one segment either way.
         public var minimumSegment: Duration
         /// Never hand the engine less than this.
         ///
@@ -51,9 +70,9 @@ public struct SpeechSegmenter: Sendable, Equatable {
         /// Once the pending audio passes this, accept shorter pauses.
         ///
         /// A person mid-argument may not offer a 700 ms pause for a minute, and
-        /// the superlinear decode cost means waiting is not free. Past this
-        /// point the threshold relaxes to `relaxedPause` — still a real pause,
-        /// never a cut through speech.
+        /// past this length the whole-take decode is expensive enough that
+        /// waiting for a better pause costs more than taking a worse one. Still
+        /// a real pause, never a cut through speech.
         public var relaxAfter: Duration
         /// The shortest pause accepted once `relaxAfter` has passed.
         public var relaxedPause: Duration
@@ -71,9 +90,9 @@ public struct SpeechSegmenter: Sendable, Equatable {
 
         public init(
             minimumPause: Duration = .milliseconds(700),
-            minimumSegment: Duration = .seconds(4),
+            minimumSegment: Duration = .seconds(15),
             minimumSubmission: Duration = .seconds(2),
-            relaxAfter: Duration = .seconds(20),
+            relaxAfter: Duration = .seconds(30),
             relaxedPause: Duration = .milliseconds(350),
             speechPeak: Float = Parameters.defaultSpeechPeak
         ) {

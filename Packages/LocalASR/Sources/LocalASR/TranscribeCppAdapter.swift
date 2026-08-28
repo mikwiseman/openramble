@@ -202,8 +202,25 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
     /// and impose it on the entire take. Mixed speech is where that shows:
     /// English inside a Russian-dominant take comes back transliterated into
     /// Cyrillic, and Russian inside an English-dominant one is dropped without
-    /// a trace. Two seconds of the other language is enough to tip it. The
-    /// remedy is smaller decodes, not a hint.
+    /// a trace.
+    ///
+    /// **Smaller decodes are not the remedy — they are a way to make it more
+    /// likely.** An earlier version of this comment said the opposite, and
+    /// measurement disproved it. The choice is unstable with respect to where
+    /// the audio stops: sweeping 79 end points a tenth of a second apart across
+    /// one English recording, seventeen came back in Cyrillic, clustered rather
+    /// than scattered, while the whole recording decodes correctly. Every extra
+    /// boundary is another draw. That is why the segmenter refuses to cut a
+    /// short take.
+    ///
+    /// It is the model, not this app and not its configuration. Handy ships the
+    /// same GGUF at the same quantization and, given the same clip through its
+    /// own `--transcribe-file`, returns the identical Cyrillic character for
+    /// character. NVIDIA say so upstream too, closing NeMo/Speech #14799:
+    /// "parakeet-v3 model doesn't receive or output language id". Nothing in
+    /// the run parameters, the KV cache type, the thread count, the timestamp
+    /// mode or the backend moves it; all of those were tried against a clip
+    /// that reliably flips.
     ///
     /// The engine cannot be asked which language it settled on, either.
     /// `transcribe_model_get_capabilities` reports `supports_language_detect`
