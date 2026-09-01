@@ -49,7 +49,6 @@ struct SharedCorePipeline: TextProcessing {
                 }
             ),
             provenance: PipelineProvenance(
-                raw: recognized,
                 afterDictionary: result.afterDictionary,
                 finalText: result.text,
                 spans: result.spans.map {
@@ -100,12 +99,11 @@ struct TrailingSpacePipeline: TextProcessing {
             text: run.output.text + " ",
             command: run.output.command
         )
-        // Provenance follows the text it describes, or "copy as spoken" and
-        // the edit watcher would be comparing against something never inserted.
+        // Provenance follows the text it describes, or the edit watcher would
+        // be comparing against something never inserted.
         return TextPipeline.Run(
             output: spaced,
             provenance: PipelineProvenance(
-                raw: run.provenance.raw,
                 afterDictionary: run.provenance.afterDictionary,
                 finalText: spaced.text,
                 spans: run.provenance.spans

@@ -55,7 +55,6 @@ final class DictationProvenanceTests: XCTestCase {
         await settle()
 
         let provenance = try XCTUnwrap(reported)
-        XCTAssertEqual(provenance.raw, "\u{043E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} \u{043F}\u{043E}\u{0443}\u{0441}\u{0442} \u{0433}\u{0435}\u{0440}\u{0437}", "\u{0434}\u{043E}\u{0441}\u{043B}\u{043E}\u{0432}\u{043D}\u{043E}\u{0435} — \u{0442}\u{043E}, \u{0447}\u{0442}\u{043E} \u{0441}\u{043A}\u{0430}\u{0437}\u{0430}\u{043B} \u{0447}\u{0435}\u{043B}\u{043E}\u{0432}\u{0435}\u{043A}")
         XCTAssertEqual(provenance.afterDictionary, "\u{043E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} Postgres")
         XCTAssertEqual(provenance.finalText, "\u{041E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} Postgres")
 

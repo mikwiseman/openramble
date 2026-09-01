@@ -17,16 +17,14 @@ final class MenuSectionsTests: XCTestCase {
         ready: Bool = true,
         recoveredText: Bool = false,
         recoveryFaulted: Bool = false,
-        recents: Bool = false,
-        copyAsSpoken: Bool = false
+        recents: Bool = false
     ) -> [[MenuRow]] {
         MenuSections.sections(
             state: state,
             isDictationReady: ready,
             hasRecoveredText: recoveredText,
             recoveryStorageFaulted: recoveryFaulted,
-            hasRecents: recents,
-            canCopyAsSpoken: copyAsSpoken
+            hasRecents: recents
         )
     }
 
@@ -41,11 +39,11 @@ final class MenuSectionsTests: XCTestCase {
     /// Everything on at once — still at most five top-level row units.
     func testScenario002() {
         XCTAssertEqual(
-            sections(recoveredText: true, recents: true, copyAsSpoken: true),
+            sections(recoveredText: true, recents: true),
             [
                 [.statusLine],
                 [.insertLastDictation],
-                [.recentDictations, .copyLast, .copyLastAsSpoken],
+                [.recentDictations, .copyLast],
                 [.settings, .quit],
             ]
         )
@@ -56,7 +54,7 @@ final class MenuSectionsTests: XCTestCase {
     func testScenario003() {
         for state in [DictationState.preparing, .listening] {
             XCTAssertEqual(
-                sections(state: state, recoveredText: true, recents: true, copyAsSpoken: true),
+                sections(state: state, recoveredText: true, recents: true),
                 [
                     [.statusLine],
                     [.stopAndInsert, .cancelDictation],
@@ -101,22 +99,13 @@ final class MenuSectionsTests: XCTestCase {
         )
     }
 
-    /// "Copy Last as Spoken" appears only when it would not duplicate the
-    /// inserted text — the policy travels through canCopyAsSpoken.
-    func testScenario007() {
-        XCTAssertFalse(sections(recents: true).flatMap(\.self).contains(.copyLastAsSpoken))
-        XCTAssertTrue(
-            sections(recents: true, copyAsSpoken: true).flatMap(\.self).contains(.copyLastAsSpoken)
-        )
-    }
-
     /// Settings and Quit close every menu, in every state.
     func testScenario008() {
         let variants: [[[MenuRow]]] = [
             sections(),
             sections(state: .listening),
             sections(state: .transcribing),
-            sections(ready: false, recoveredText: true, recents: true, copyAsSpoken: true),
+            sections(ready: false, recoveredText: true, recents: true),
         ]
         for variant in variants {
             XCTAssertEqual(variant.last, [.settings, .quit])
@@ -127,7 +116,7 @@ final class MenuSectionsTests: XCTestCase {
     /// or delete item.
     func testScenario009() {
         let everything: Set<MenuRow> = Set(
-            sections(ready: false, recoveredText: true, recents: true, copyAsSpoken: true)
+            sections(ready: false, recoveredText: true, recents: true)
                 .flatMap(\.self)
             + sections(state: .listening, recoveredText: true).flatMap(\.self)
             + sections(state: .transcribing, recoveredText: true).flatMap(\.self)
@@ -135,7 +124,7 @@ final class MenuSectionsTests: XCTestCase {
         let allowed: Set<MenuRow> = [
             .statusLine, .stopAndInsert, .cancelDictation, .setupHints, .finishSetup,
             .insertLastDictation, .revealRecoveredRecordings,
-            .recentDictations, .copyLast, .copyLastAsSpoken, .settings, .quit,
+            .recentDictations, .copyLast, .settings, .quit,
         ]
         XCTAssertTrue(everything.isSubset(of: allowed))
     }

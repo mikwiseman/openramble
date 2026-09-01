@@ -1466,39 +1466,6 @@ public final class AppState: ObservableObject {
         }
     }
 
-    /// Is there anything to copy as spoken.
-    ///
-    /// Only when the raw words actually differ from the inserted text: for
-    /// most dictations the dictionary and cosmetics change nothing, and the
-    /// menu item would be a duplicate of the last recent dictation.
-    public var canCopyRawDictation: Bool {
-        guard let lastDictation else { return false }
-        let raw = lastDictation.provenance.raw
-        guard !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
-        return raw != lastDictation.insertedText
-    }
-
-    /// Put in a buffer what the person said - before the dictionary and before cosmetics.
-    ///
-    /// The promise of “verbatim text is always available” is backed by the recording
-    /// origin in process memory: no reading of foreign fields through
-    /// Accessibility, no disk writing required for this.
-    ///
-    /// The buffer is written host-only with transient/concealed markers, just like the insert:
-    /// naked `clearContents()` would give dictation to Universal Clipboard for everything
-    /// Apple ID devices.
-    public func copyRawDictation() {
-        guard let raw = lastDictation?.provenance.raw,
-              !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else { return }
-        do {
-            try HostOnlyPasteboard().copyHostOnly(raw)
-            notify(DictationNotice(kind: .info, message: "Copied as spoken — to this Mac only."))
-        } catch {
-            notify(DictationNotice(kind: .failure, message: "Couldn't copy the spoken text."))
-        }
-    }
-
     /// Put the last dictation back on the clipboard.
     ///
     /// The text as it was inserted, not the raw words: this is the "I need that
@@ -1545,8 +1512,10 @@ public final class AppState: ObservableObject {
                 // The words already joined Recent Dictations at failure time;
                 // appending again here would duplicate them. The provenance
                 // slot is cleared too: it still holds the PREVIOUS dictation,
-                // and "Copy Last as Spoken" must not offer someone else's raw
-                // text after inserting recovered words.
+                // and after inserting recovered words neither "Copy Last
+                // Dictation" nor correction learning may act on it — one would
+                // hand back someone else's text, the other would protect
+                // someone else's spans.
                 self.successfulDictationCount += 1
                 self.recoveredText = nil
                 self.lastDictation = nil
