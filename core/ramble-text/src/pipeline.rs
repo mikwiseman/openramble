@@ -182,8 +182,6 @@ fn strip_suffix(phrase: &str, text: &str) -> String {
 /// stray interpolation into a log can carry dictated text out.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Provenance {
-    /// Exactly what recognition returned, before every stage.
-    pub raw: String,
     /// The state after the dictionary entirely, before any cosmetics.
     pub after_dictionary: String,
     /// What will be inserted.
@@ -199,8 +197,7 @@ impl std::fmt::Display for Provenance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Provenance(raw: {} chars, afterDictionary: {} chars, final: {} chars, spans: {})",
-            self.raw.chars().count(),
+            "Provenance(afterDictionary: {} chars, final: {} chars, spans: {})",
             self.after_dictionary.chars().count(),
             self.final_text.chars().count(),
             self.spans.len()
@@ -314,7 +311,6 @@ impl TextPipeline {
         let spans = span::detect(&output.text);
         Run {
             provenance: Provenance {
-                raw: recognized.to_string(),
                 after_dictionary,
                 final_text: output.text.clone(),
                 spans,
@@ -479,7 +475,6 @@ mod tests {
             "Sentry",
         )]);
         let run = pipeline.run("  \u{043E}\u{0448}\u{0438}\u{0431}\u{043A}\u{0430} \u{0432} \u{0441}\u{0435}\u{043D}\u{0442}\u{0440}\u{0438}  ");
-        assert_eq!(run.provenance.raw, "  \u{043E}\u{0448}\u{0438}\u{0431}\u{043A}\u{0430} \u{0432} \u{0441}\u{0435}\u{043D}\u{0442}\u{0440}\u{0438}  ");
         assert_eq!(
             run.provenance.after_dictionary,
             "\u{043E}\u{0448}\u{0438}\u{0431}\u{043A}\u{0430} \u{0432} Sentry"

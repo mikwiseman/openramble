@@ -12,7 +12,6 @@ enum MenuRow: Equatable {
     case revealRecoveredRecordings
     case recentDictations
     case copyLast
-    case copyLastAsSpoken
     case settings
     case quit
 }
@@ -40,8 +39,7 @@ enum MenuSections {
         isDictationReady: Bool,
         hasRecoveredText: Bool,
         recoveryStorageFaulted: Bool,
-        hasRecents: Bool,
-        canCopyAsSpoken: Bool
+        hasRecents: Bool
     ) -> [[MenuRow]] {
         var sections: [[MenuRow]] = [[.statusLine]]
 
@@ -60,13 +58,9 @@ enum MenuSections {
             if recoveryStorageFaulted {
                 sections.append([.revealRecoveredRecordings])
             }
-            var history: [MenuRow] = []
             if hasRecents {
-                history.append(.recentDictations)
-                history.append(.copyLast)
+                sections.append([.recentDictations, .copyLast])
             }
-            if canCopyAsSpoken { history.append(.copyLastAsSpoken) }
-            if !history.isEmpty { sections.append(history) }
         }
 
         sections.append([.settings, .quit])

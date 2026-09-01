@@ -210,7 +210,6 @@ public struct TextPipeline: Sendable, TextProcessing {
         return Run(
             output: output,
             provenance: PipelineProvenance(
-                raw: recognized,
                 afterDictionary: afterDictionary,
                 finalText: output.text,
                 spans: ProtectedSpanDetector.detect(in: output.text)

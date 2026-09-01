@@ -1828,9 +1828,8 @@ final class RecoveredFileTests: XCTestCase {
         )
         XCTAssertNil(
             state.lastDictation,
-            "recovered text has no raw provenance — Copy Last as Spoken must not offer the previous dictation's words"
+            "the slot still held the PREVIOUS dictation — after inserting recovered words neither Copy Last nor correction learning may act on it"
         )
-        XCTAssertFalse(state.canCopyRawDictation)
     }
 
     func testScenario056() async throws {

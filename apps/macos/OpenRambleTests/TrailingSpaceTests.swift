@@ -31,6 +31,5 @@ final class TrailingSpaceTests: XCTestCase {
     func testScenario004() {
         let run = pipeline(true).run("hello there")
         XCTAssertEqual(run.provenance.finalText, run.output.text)
-        XCTAssertEqual(run.provenance.raw, "hello there")
     }
 }

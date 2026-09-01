@@ -21,8 +21,7 @@ struct MenuContent: View {
             isDictationReady: state.isDictationReady,
             hasRecoveredText: state.recoveredText != nil,
             recoveryStorageFaulted: state.recordingRecoveryStorageFaulted,
-            hasRecents: !state.recentDictations.isEmpty,
-            canCopyAsSpoken: state.canCopyRawDictation
+            hasRecents: !state.recentDictations.isEmpty
         )
 
         ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
@@ -119,11 +118,6 @@ struct MenuContent: View {
                 }
             }
 
-        case .copyLastAsSpoken:
-            // What the person said before the dictionary and cosmetics.
-            // Appears only when it differs from the inserted text — otherwise
-            // it would be a duplicate of the last recent dictation.
-            Button("Copy Last as Spoken") { state.copyRawDictation() }
 
         case .settings:
             Button("Settings…") {

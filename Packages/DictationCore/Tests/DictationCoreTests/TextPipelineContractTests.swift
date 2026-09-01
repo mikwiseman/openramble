@@ -98,17 +98,15 @@ final class TextPipelineContractTests: XCTestCase {
     func testEmptyInputStaysEmpty() {
         let run = TextPipeline().run("")
         XCTAssertEqual(run.output.text, "")
-        XCTAssertEqual(run.provenance.raw, "")
         XCTAssertEqual(run.provenance.spans, [])
     }
 }
 
 /// Record the origin of the last dictation.
 final class PipelineProvenanceTests: XCTestCase {
-    func testRawIsRecordedBeforeAnyStageTouchesIt() {
+    func testTheDictionaryCheckpointIsRecordedBeforeCosmetics() {
         let terms = [DictionaryReplacement(spoken: "\u{043F}\u{043E}\u{0443}\u{0441}\u{0442} \u{0433}\u{0435}\u{0440}\u{0437}", written: "Postgres", inflects: false)]
         let provenance = TextPipeline(replacements: terms).run("\u{043E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} \u{043F}\u{043E}\u{0443}\u{0441}\u{0442} \u{0433}\u{0435}\u{0440}\u{0437}").provenance
-        XCTAssertEqual(provenance.raw, "\u{043E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} \u{043F}\u{043E}\u{0443}\u{0441}\u{0442} \u{0433}\u{0435}\u{0440}\u{0437}")
         XCTAssertEqual(provenance.afterDictionary, "\u{043E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} Postgres")
         XCTAssertEqual(provenance.finalText, "\u{041E}\u{0442}\u{043A}\u{0440}\u{043E}\u{0439} Postgres")
     }
@@ -134,7 +132,6 @@ final class PipelineProvenanceTests: XCTestCase {
                     phoneticMatching: phonetic
                 )
                 let provenance = pipeline.run("\u{043D}\u{0430}\u{0434}\u{043E} \u{0441}\u{0434}\u{0435}\u{043B}\u{0430}\u{0442}\u{044C} \u{0434}\u{0435}\u{043F}\u{043B}\u{043E}\u{0439}").provenance
-                XCTAssertEqual(provenance.raw, "\u{043D}\u{0430}\u{0434}\u{043E} \u{0441}\u{0434}\u{0435}\u{043B}\u{0430}\u{0442}\u{044C} \u{0434}\u{0435}\u{043F}\u{043B}\u{043E}\u{0439}")
                 XCTAssertFalse(provenance.finalText.isEmpty)
             }
         }
