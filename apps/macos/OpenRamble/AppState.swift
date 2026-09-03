@@ -130,11 +130,26 @@ public struct AppEnvironment {
     public typealias MeetingCaptureFactory = (
         URL,
         AudioDeviceID?,
+        Bool,
         @escaping @Sendable (MeetingCapture.Levels) -> Void,
         @escaping @Sendable (MeetingSegmentRef) -> Void,
         @escaping @Sendable (MeetingCapture.Failure) -> Void
     ) -> any MeetingCapturing
     public var makeMeetingCapture: MeetingCaptureFactory
+    /// Spoken state changes the person cannot see — a meter that stopped.
+    public var announcer: any AccessibilityAnnouncing
+    public var openSystemAudioSettings: @MainActor () -> Void
+    /// The inaudible tone that asks whether the other side can be heard.
+    /// Played again every ten seconds while the answer is no, so a
+    /// permission granted a moment after the first ask is noticed without
+    /// waiting for someone on the call to speak.
+    public var playSystemAudioProbe: @Sendable () -> Void
+
+    /// The other side of the call, where this macOS can record it.
+    public static func makeSystemAudioSource() -> (any MeetingAudioSource)? {
+        if #available(macOS 14.2, *) { return SystemAudioTapSource() }
+        return nil
+    }
     /// Deleting a recording is a move to the Trash. Injectable so a test
     /// removes its fixtures instead of filling the developer's Trash.
     public var trashItem: @Sendable (URL) throws -> Void
@@ -178,16 +193,19 @@ public struct AppEnvironment {
         focusedFieldReader: any FocusedFieldReading = SystemFocusedFieldReader(),
         clipboardRestoreReporter: ClipboardRestoreReporter? = nil,
         cleanupLegacyAgentStaging: @escaping @Sendable () throws -> Void = {},
-        makeMeetingCapture: @escaping MeetingCaptureFactory = { directory, device, onLevels, onSegment, onFailure in
+        makeMeetingCapture: @escaping MeetingCaptureFactory = { directory, device, includeSystemAudio, onLevels, onSegment, onFailure in
             MeetingCapture(
                 directory: directory,
                 microphone: MicrophoneAudioSource(preferredInputDeviceID: device),
-                systemAudio: nil,
+                systemAudio: includeSystemAudio ? AppEnvironment.makeSystemAudioSource() : nil,
                 onLevels: onLevels,
                 onSegment: onSegment,
                 onFailure: onFailure
             )
         },
+        announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
+        openSystemAudioSettings: @escaping @MainActor () -> Void = { Permissions.openSystemAudioSettings() },
+        playSystemAudioProbe: @escaping @Sendable () -> Void = SystemAudioProbe.play,
         trashItem: @escaping @Sendable (URL) throws -> Void = {
             try FileManager.default.trashItem(at: $0, resultingItemURL: nil)
         },
@@ -223,6 +241,9 @@ public struct AppEnvironment {
         self.cleanupLegacyAgentStaging = cleanupLegacyAgentStaging
         self.makeMeetingCapture = makeMeetingCapture
         self.trashItem = trashItem
+        self.announcer = announcer
+        self.openSystemAudioSettings = openSystemAudioSettings
+        self.playSystemAudioProbe = playSystemAudioProbe
     }
 
     /// Real edges are what a working application is built from.
@@ -466,6 +487,33 @@ public final class AppState: ObservableObject {
     private var utteranceAssembler = MeetingUtteranceAssembler()
     private var closedUtterances: [MeetingUtterance] = []
     private var transcriptWriteFailureReported = false
+
+    // MARK: - The other side
+
+    /// Whether the record button captures what the Mac plays.
+    public enum SystemAudioMode: Equatable {
+        case unsupported
+        case declined
+        case enabled
+    }
+    public static let systemAudioDeclinedKey = "systemAudioDeclined"
+    public static let systemAudioIntroShownKey = "systemAudioIntroShown"
+    /// What the last recording found: "working" or "unheard".
+    public static let systemAudioLastResultKey = "systemAudioLastResult"
+
+    public var systemAudioMode: SystemAudioMode {
+        guard SystemAudioAvailability.isSupported else { return .unsupported }
+        return defaults.bool(forKey: Self.systemAudioDeclinedKey) ? .declined : .enabled
+    }
+    /// The one-time explanation before the first recording of the other side.
+    @Published public private(set) var isSystemAudioIntroPresented = false
+    /// Whether the other side is actually arriving, refreshed once a second.
+    @Published private(set) var liveCaptureHealth: CaptureHealth = .notRequested
+    /// For the Settings row: what the app knows, never a guess.
+    @Published private(set) var systemAudioPermission: SystemAudioPermissionMode = .notChecked
+    private var systemAudioStartFailure: String?
+    private var liveRecordingStartedAt: ContinuousClock.Instant?
+    private var lastAnnouncedHealth: String?
 
     /// Finished dictations kept on disk, newest first, with their audio.
     @Published public private(set) var history: [HistoryEntry] = []
@@ -727,6 +775,10 @@ public final class AppState: ObservableObject {
     private let cleanupLegacyAgentStaging: @Sendable () throws -> Void
     private let makeMeetingCapture: AppEnvironment.MeetingCaptureFactory
     private let trashItem: @Sendable (URL) throws -> Void
+    private let announcer: any AccessibilityAnnouncing
+    private let openSystemAudioSettingsPane: @MainActor () -> Void
+    private let playSystemAudioProbe: @Sendable () -> Void
+    private var lastProbeAt: ContinuousClock.Instant?
 
     /// Updates. A separate object with its own subscribers: check mark
     /// autochecks live in Sparkle settings, not in our `defaults`.
@@ -874,6 +926,9 @@ public final class AppState: ObservableObject {
         cleanupLegacyAgentStaging = environment.cleanupLegacyAgentStaging
         makeMeetingCapture = environment.makeMeetingCapture
         trashItem = environment.trashItem
+        announcer = environment.announcer
+        openSystemAudioSettingsPane = environment.openSystemAudioSettings
+        playSystemAudioProbe = environment.playSystemAudioProbe
 
         hotkey = DictationHotkey(rawValue: environment.defaults.string(forKey: Keys.hotkey) ?? "")
             ?? SettingsDefaults.hotkey
@@ -1011,6 +1066,7 @@ public final class AppState: ObservableObject {
             // without a word would read as one the person never made.
             let recovered = meetingStore.recoverIncomplete()
             reloadRecordings()
+            refreshSystemAudioPermission()
             if !recovered.isEmpty {
                 notify(DictationNotice(
                     kind: .info,
@@ -2167,11 +2223,86 @@ public final class AppState: ObservableObject {
 
     // MARK: - Recordings
 
-    /// Start recording — the microphone, for now.
-    ///
-    /// Refuses nothing silently. A missing permission asks for it and says
-    /// so; a full disk says so; a microphone that will not start says why.
+    /// The record button. One button and no mode: it records the microphone
+    /// and, where this Mac can and the person has not said otherwise, what
+    /// the Mac plays. The first time that would happen, it explains itself
+    /// once instead of raising a system prompt out of nowhere.
     public func startRecording() {
+        switch systemAudioMode {
+        case .enabled:
+            guard defaults.bool(forKey: Self.systemAudioIntroShownKey) else {
+                isSystemAudioIntroPresented = true
+                return
+            }
+            startRecording(includingSystemAudio: true)
+        case .declined, .unsupported:
+            startRecording(includingSystemAudio: false)
+        }
+    }
+
+    /// The sheet's answer.
+    public func confirmSystemAudioIntro(includeSystemAudio: Bool) {
+        defaults.set(true, forKey: Self.systemAudioIntroShownKey)
+        if !includeSystemAudio { defaults.set(true, forKey: Self.systemAudioDeclinedKey) }
+        isSystemAudioIntroPresented = false
+        refreshSystemAudioPermission()
+        startRecording(includingSystemAudio: includeSystemAudio)
+    }
+
+    public func dismissSystemAudioIntro() {
+        isSystemAudioIntroPresented = false
+    }
+
+    /// The remembered choice behind the button. Choosing is the explanation,
+    /// so the sheet does not come after it.
+    public func setSystemAudioDeclined(_ declined: Bool) {
+        defaults.set(declined, forKey: Self.systemAudioDeclinedKey)
+        defaults.set(true, forKey: Self.systemAudioIntroShownKey)
+        refreshSystemAudioPermission()
+    }
+
+    public func openSystemAudioSettings() {
+        openSystemAudioSettingsPane()
+    }
+
+    /// A grant made in System Settings reaches a process only when it starts.
+    public func relaunchForSystemAudio() {
+        Task {
+            do {
+                try await accessibilityManager.relaunchApplication()
+            } catch {
+                notify(DictationNotice(kind: .failure, message: "Couldn't relaunch OpenRamble: \(error.localizedDescription)"))
+            }
+        }
+    }
+
+    /// The Settings row's one action, by what it found.
+    public func performSystemAudioAction() {
+        switch systemAudioPermission {
+        case .declined: setSystemAudioDeclined(false)
+        case .unheard: openSystemAudioSettings()
+        case .unsupported, .notChecked, .working: break
+        }
+    }
+
+    func refreshSystemAudioPermission() {
+        switch systemAudioMode {
+        case .unsupported: systemAudioPermission = .unsupported
+        case .declined: systemAudioPermission = .declined
+        case .enabled:
+            switch defaults.string(forKey: Self.systemAudioLastResultKey) {
+            case "working": systemAudioPermission = .working
+            case "unheard": systemAudioPermission = .unheard
+            default: systemAudioPermission = .notChecked
+            }
+        }
+    }
+
+    /// Start recording. Refuses nothing silently: a missing microphone
+    /// permission asks for it and says so; a full disk says so; a microphone
+    /// that will not start says why; a tap that will not start costs the other
+    /// side and says so, never the recording.
+    public func startRecording(includingSystemAudio: Bool) {
         guard meetingState == .idle, let meetingStore else { return }
         guard microphoneGranted else {
             notify(DictationNotice(kind: .warning, message: "Allow the microphone to record."))
@@ -2180,7 +2311,7 @@ public final class AppState: ObservableObject {
         }
         let metadata = MeetingRecordingMetadata(
             startedAt: Date(),
-            systemAudio: SystemAudioSummary(wasRequested: false),
+            systemAudio: SystemAudioSummary(wasRequested: includingSystemAudio),
             transcriptionState: .live
         )
         let directory = meetingStore.incompleteDirectory(for: metadata.id)
@@ -2193,6 +2324,7 @@ public final class AppState: ObservableObject {
         let capture = makeMeetingCapture(
             directory,
             preferredInputDeviceID,
+            includingSystemAudio,
             { [weak self] levels in
                 Task { @MainActor in self?.liveLevels = levels }
             },
@@ -2205,6 +2337,10 @@ public final class AppState: ObservableObject {
         )
         meetingCapture = capture
         meetingState = .starting
+        systemAudioStartFailure = nil
+        lastAnnouncedHealth = nil
+        lastProbeAt = .now
+        liveCaptureHealth = includingSystemAudio ? .verifying : .notRequested
         beginTranscription(for: metadata.id, directory: directory)
         Task { [weak self] in
             do {
@@ -2213,6 +2349,7 @@ public final class AppState: ObservableObject {
                     guard let self else { return }
                     self.liveRecording = metadata
                     self.liveDuration = 0
+                    self.liveRecordingStartedAt = .now
                     self.meetingState = .recording
                     self.startLiveDurationTimer()
                 }
@@ -2273,7 +2410,16 @@ public final class AppState: ObservableObject {
                 self.meetingCapture = nil
                 self.liveRecording = nil
                 self.liveLevels = .silent
+                self.liveRecordingStartedAt = nil
+                self.liveCaptureHealth = .notRequested
                 self.meetingState = .idle
+                if metadata.systemAudio.wasRequested {
+                    self.defaults.set(
+                        metadata.systemAudio.everDeliveredAudio ? "working" : "unheard",
+                        forKey: Self.systemAudioLastResultKey
+                    )
+                    self.refreshSystemAudioPermission()
+                }
                 self.reloadRecordings()
                 self.lastFinishedRecordingID = metadata.id
                 self.finishTranscription(for: metadata.id)
@@ -2538,9 +2684,10 @@ public final class AppState: ObservableObject {
                 message: "The microphone stopped (\(Self.describe(reason))). The recording continues on the default microphone."
             ))
         case let .systemAudio(reason):
+            systemAudioStartFailure = Self.describe(reason)
             notify(DictationNotice(
                 kind: .warning,
-                message: "The other side stopped arriving (\(Self.describe(reason))). Only your microphone is being recorded."
+                message: "The other side isn't being recorded (\(Self.describe(reason))). Only your microphone is."
             ))
         case .notIdle, .notRecording, .cannotCreateDirectory:
             notify(DictationNotice(kind: .failure, message: "Recording failed: \(failure)"))
@@ -2600,10 +2747,42 @@ public final class AppState: ObservableObject {
                 guard let self, let capture = self.meetingCapture else { return }
                 let frames = await capture.frameCount
                 self.liveDuration = Double(frames) / Double(MeetingWriter.sampleRate)
+                await self.refreshCaptureHealth(capture)
             }
         }
         RunLoop.main.add(timer, forMode: .common)
         liveDurationTimer = timer
+    }
+
+    /// Is the other side arriving? Announced when the answer changes — a
+    /// blind person cannot see a meter that stopped moving, and this is the
+    /// one thing about a meeting recorder that must not be discovered
+    /// afterwards.
+    private func refreshCaptureHealth(_ capture: any MeetingCapturing) async {
+        guard let live = liveRecording else { return }
+        let health = await capture.health(of: .system)
+        let elapsed = liveRecordingStartedAt.map { started -> TimeInterval in
+            let duration = started.duration(to: .now)
+            return Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
+        } ?? 0
+        let next = CaptureHealth.make(
+            isSupported: SystemAudioAvailability.isSupported,
+            requested: live.systemAudio.wasRequested,
+            startFailure: systemAudioStartFailure,
+            elapsed: elapsed,
+            health: health,
+            now: .now
+        )
+        if case .unheard = next, lastProbeAt.map({ $0.duration(to: .now) >= .seconds(10) }) ?? true {
+            lastProbeAt = .now
+            playSystemAudioProbe()
+        }
+        guard next != liveCaptureHealth else { return }
+        liveCaptureHealth = next
+        if let announcement = next.announcement, announcement != lastAnnouncedHealth {
+            lastAnnouncedHealth = announcement
+            announcer.announce(announcement, urgent: next.role == .attention)
+        }
     }
 
     private func stopLiveDurationTimer() {

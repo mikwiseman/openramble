@@ -1,6 +1,6 @@
 # OpenRamble
 
-Private, local dictation and voice recording for Apple Silicon Macs.
+Private, local dictation and meeting recording for Apple Silicon Macs.
 
 Hold a hotkey, speak, and release it. OpenRamble transcribes the recording on
 your Mac and inserts the text at the current cursor.
@@ -31,7 +31,12 @@ change, and it is the one thing this app stores that it previously did not.
 Nothing leaves the Mac either way.
 
 **Recordings** you make on purpose — in the Recordings window, ⌘0 — stay until
-you delete them, with a transcript beside the audio. Recordings are transcribed
+you delete them, with a transcript beside the audio. A recording captures your
+microphone and, when you allow it, whatever your Mac is playing — that is how
+the other people in a call get transcribed, labelled Others against your You.
+Recording a meeting captures the other participants as well as you, and
+OpenRamble does not tell them. In many places recording a conversation without
+everyone's consent is illegal; asking is your responsibility. Recordings are transcribed
 on this Mac while you record, by the same model that handles dictation; a
 dictation you start mid-recording always takes the engine first, and the
 transcript catches up after. They are not bounded by a count: a recording is a
@@ -70,6 +75,16 @@ scan of the shipping network surface.
 
 OpenRamble requires Microphone access to record speech and Accessibility
 access to observe the selected global hotkey and insert completed text.
+
+Recording a meeting also needs the permission macOS calls System Audio
+Recording, so OpenRamble can hear the people on the call rather than only
+you. It is requested the first time you record, never at launch, and
+dictation works without it. macOS 14.2 or later; on 14.0 and 14.1 recordings
+capture your microphone only, and the app says so. A quarter second of an
+inaudible 50 Hz tone is played when such a recording starts — it is how the
+app learns, within three seconds, whether the other side is actually being
+captured, because macOS gives no other way to tell a working tap from a
+denied one.
 
 The global event monitor compares key events with the selected hotkey and
 Escape. It does not log, store, or transmit unrelated keystrokes. Input

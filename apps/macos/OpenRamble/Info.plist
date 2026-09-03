@@ -24,6 +24,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>OpenRamble records the audio your Mac plays so the other people in a meeting appear in the transcript. The recording stays on this Mac and is never sent anywhere.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Mik Wiseman. MIT.</string>
 	<key>NSMicrophoneUsageDescription</key>

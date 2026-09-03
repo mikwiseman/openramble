@@ -38,4 +38,16 @@ final class RecordingsPlaceholderTests: XCTestCase {
         XCTAssertEqual(RecordingsPlaceholder.transcript(for: .waitingForModel), .waitingForModel)
         XCTAssertEqual(RecordingsPlaceholder.transcript(for: .none), .notTranscribed)
     }
+
+    func testAOneSidedMeetingCarriesItsNoteAndAVoiceNoteDoesNot() {
+        var meeting = MeetingRecordingMetadata(
+            startedAt: Date(),
+            systemAudio: SystemAudioSummary(wasRequested: true, everDeliveredBuffers: true, everDeliveredAudio: false)
+        )
+        XCTAssertNotNil(RecordingsPlaceholder.degradedNote(for: meeting))
+        meeting.systemAudio.everDeliveredAudio = true
+        XCTAssertNil(RecordingsPlaceholder.degradedNote(for: meeting))
+        let note = MeetingRecordingMetadata(startedAt: Date(), systemAudio: SystemAudioSummary(wasRequested: false))
+        XCTAssertNil(RecordingsPlaceholder.degradedNote(for: note))
+    }
 }

@@ -29,6 +29,12 @@ struct RecordingsWindow: View {
         }
         .frame(minWidth: 860, minHeight: 560)
         .navigationTitle("Recordings")
+        .sheet(isPresented: Binding(
+            get: { state.isSystemAudioIntroPresented },
+            set: { if !$0 { state.dismissSystemAudioIntro() } }
+        )) {
+            SystemAudioIntroSheet(state: state)
+        }
         .onAppear {
             state.reloadRecordings()
             if selection == nil { selection = state.liveRecording?.id ?? state.recordings.first?.id }

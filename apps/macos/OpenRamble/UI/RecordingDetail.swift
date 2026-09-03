@@ -88,6 +88,9 @@ struct RecordingDetail: View {
             RecordingTime.brief(recording.duration),
             recording.isMeeting ? "Meeting" : "Voice note",
         ]
+        if let transport = recording.systemAudio.outputTransport, recording.isMeeting {
+            parts.append("other side via \(transport)")
+        }
         if let bytes = state.recordingBytes(recording.id) {
             parts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
         }
@@ -97,7 +100,8 @@ struct RecordingDetail: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: GlassTokens.Space.stack) {
-            if let note = RecordingsPlaceholder.endNote(for: recording.endReason) {
+            if let note = RecordingsPlaceholder.endNote(for: recording.endReason)
+                ?? RecordingsPlaceholder.degradedNote(for: recording) {
                 HStack(alignment: .firstTextBaseline, spacing: GlassTokens.Space.inline) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(StatusColorRole.attention.color)
@@ -164,16 +168,33 @@ struct LiveRecordingDetail: View {
                     .monospacedDigit()
                     .accessibilityLabel(state.meetingState == .paused ? "Paused" : "Recording")
                     .accessibilityValue(RecordingTime.spoken(state.liveDuration))
-                LiveLevelMeter(levels: state.liveLevels, isPaused: state.meetingState == .paused)
-                    .frame(maxWidth: 240, minHeight: 28, maxHeight: 28)
+                LiveLevelMeters(
+                    levels: state.liveLevels,
+                    isPaused: state.meetingState == .paused,
+                    showsOthers: state.liveRecording?.isMeeting ?? false,
+                    othersDegraded: state.liveCaptureHealth.marksRecordingDegraded
+                )
+                .frame(maxWidth: 300, minHeight: (state.liveRecording?.isMeeting ?? false) ? 52 : 28)
                 Spacer()
-                Text(state.meetingState == .paused ? "Paused" : "Recording your microphone")
+                Text(liveLine)
                     .font(.system(size: GlassTokens.Label.footnote))
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, GlassTokens.Space.page)
             .padding(.top, GlassTokens.Space.section)
             .padding(.bottom, GlassTokens.Space.stack)
+            CaptureHealthStrip(state: state)
+                .padding(.bottom, GlassTokens.Space.stack)
+            if state.liveRecording?.isMeeting ?? false, state.liveCaptureHealth.title == nil {
+                // No processing beats this. On speakers the other side reaches
+                // the microphone and has to be told apart from the person;
+                // on headphones there is nothing to tell apart.
+                Text("On speakers, the Mac's own audio reaches your microphone. Headphones keep the two sides apart.")
+                    .font(.system(size: GlassTokens.Label.footnote))
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, GlassTokens.Space.page)
+                    .padding(.bottom, GlassTokens.Space.stack)
+            }
             Divider()
             if state.liveTranscript.isEmpty {
                 RecordingsPlaceholderView(placeholder: .listening)
@@ -185,5 +206,12 @@ struct LiveRecordingDetail: View {
             TranscriptStatusLine(state: state)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var liveLine: String {
+        if state.meetingState == .paused { return "Paused" }
+        return (state.liveRecording?.isMeeting ?? false)
+            ? "Recording you and the other side"
+            : "Recording your microphone"
     }
 }

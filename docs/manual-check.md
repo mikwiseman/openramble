@@ -59,6 +59,28 @@ for the check.
 12. Trigger Check for Updates and verify that Sparkle offers the latest English
     release from `https://mikwiseman.github.io/openramble/appcast.xml`. Turn
     automatic checks off and confirm scheduled network access stops.
+13. Press Record for the first time on a build that has never asked. Confirm the
+    intro sheet appears once, that macOS then shows OpenRamble's own System Audio
+    Recording prompt with the string from `project.yml`, and that recording
+    starts whichever button is pressed. Confirm the sheet never appears again.
+14. Record a meeting on built-in speakers with something playing. Confirm the
+    other side is transcribed as Others, that the same words do not also appear
+    as You, and that the headphone line is shown. Repeat on headphones and
+    confirm both sides are attributed with nothing suppressed.
+15. Record with the output on AirPods or AirPlay, the case where a tap returns
+    silence. Confirm the orange strip, the menu-bar badge, the flat Others meter,
+    and the VoiceOver announcement after a minute; the recording must continue
+    and file as degraded rather than stop.
+16. Deny System Audio Recording, then grant it in System Settings while the app
+    runs. Confirm the app says a relaunch is needed rather than claiming to
+    capture, and that it captures after relaunching. On macOS 14.0 or 14.1
+    confirm the app says system audio needs 14.2 and records the microphone.
+17. Record for ninety minutes. Confirm memory stays flat, disk grows at about
+    230 MB an hour, the transcript keeps up or says how far behind it is, and
+    that dictating mid-recording wins the engine without stopping the recording.
+18. Force-quit during a recording. Confirm the next launch repairs the file,
+    publishes it as recovered, plays it, and transcribes the untranscribed tail.
+    Repeat with Command-Q and confirm the dialog and a sealed, playable file.
 
 Do not attach recordings or dictated text to bug reports. Record only the app
 version, macOS version, hardware, step number, and observed behavior.

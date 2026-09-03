@@ -52,6 +52,18 @@ public actor MeetingCapture {
         public var lastBlockAt: ContinuousClock.Instant?
         public var lastAudibleAt: ContinuousClock.Instant?
 
+        public init(
+            everDeliveredBuffers: Bool,
+            everDeliveredAudio: Bool,
+            lastBlockAt: ContinuousClock.Instant? = nil,
+            lastAudibleAt: ContinuousClock.Instant? = nil
+        ) {
+            self.everDeliveredBuffers = everDeliveredBuffers
+            self.everDeliveredAudio = everDeliveredAudio
+            self.lastBlockAt = lastBlockAt
+            self.lastAudibleAt = lastAudibleAt
+        }
+
         public static let none = ChannelHealth(everDeliveredBuffers: false, everDeliveredAudio: false)
     }
 
@@ -96,6 +108,8 @@ public actor MeetingCapture {
     private let systemAudio: (any MeetingAudioSource)?
     private let pipeline: MeetingPipeline
     private let onFailure: @Sendable (Failure) -> Void
+    /// Played when the other side starts being captured — see `SystemAudioProbe`.
+    private let probe: @Sendable () -> Void
     private var startedAt: Date?
     private var pauses: [MeetingInterval] = []
     private var pausedAt: Date?
@@ -119,12 +133,14 @@ public actor MeetingCapture {
         onLevels: @escaping @Sendable (Levels) -> Void = { _ in },
         onSegment: @escaping @Sendable (MeetingSegmentRef) -> Void = { _ in },
         onFailure: @escaping @Sendable (Failure) -> Void = { _ in },
-        freeBytes: @escaping @Sendable (URL) -> Int64? = MeetingCapture.freeBytes(at:)
+        freeBytes: @escaping @Sendable (URL) -> Int64? = MeetingCapture.freeBytes(at:),
+        probe: @escaping @Sendable () -> Void = SystemAudioProbe.play
     ) {
         self.directory = directory
         self.microphone = microphone
         self.systemAudio = systemAudio
         self.onFailure = onFailure
+        self.probe = probe
         var active: Set<MeetingChannel> = [.microphone]
         if systemAudio != nil { active.insert(.system) }
         pipeline = MeetingPipeline(
@@ -165,6 +181,7 @@ public actor MeetingCapture {
         }
         pipeline.anchor()
         try startSources()
+        if systemAudio != nil { probe() }
         startedAt = Date()
         state = .recording
     }
@@ -223,7 +240,7 @@ public actor MeetingCapture {
                 wasRequested: systemAudio != nil,
                 everDeliveredBuffers: systemHealth.everDeliveredBuffers,
                 everDeliveredAudio: systemHealth.everDeliveredAudio,
-                outputTransport: nil
+                outputTransport: systemAudio?.deviceName
             ),
             gaps: result.gaps,
             pauses: pauses,
@@ -261,8 +278,12 @@ public actor MeetingCapture {
                 }
             )
         } catch let failure as MeetingSourceFailure {
-            microphone.stop()
-            throw Failure.systemAudio(failure)
+            // The other side could not be started. The microphone is already
+            // recording and stays that way: a permission that was not
+            // granted must never cost the person the recording they pressed
+            // the button for. It costs them a channel, and that is said.
+            pipeline.markDown(.system, reason: .systemAudioStalled)
+            onFailure(.systemAudio(failure))
         }
     }
 
@@ -273,7 +294,12 @@ public actor MeetingCapture {
 
     private func sourceFailed(_ channel: MeetingChannel, _ failure: MeetingSourceFailure) {
         guard state == .recording else { return }
-        pipeline.markDown(channel, reason: channel == .microphone ? .microphoneUnavailable : .systemAudioStalled)
+        pipeline.markDown(
+            channel,
+            reason: channel == .microphone
+                ? .microphoneUnavailable
+                : (failure == .configurationChanged ? .systemAudioRouteChange : .systemAudioStalled)
+        )
         switch (channel, failure) {
         case (.microphone, .configurationChanged):
             // The device moved; start again on whatever is default now. The
@@ -295,6 +321,27 @@ public actor MeetingCapture {
             }
         case (.microphone, _):
             onFailure(.microphone(failure))
+        case (.system, .configurationChanged):
+            // The output moved — AirPods came on, a display was plugged in.
+            // A fresh tap follows the route; the seconds in between are a
+            // gap on that channel, and the probe asks the new route whether
+            // it can be heard at all.
+            guard let systemAudio else { return }
+            systemAudio.stop()
+            do {
+                try systemAudio.start(
+                    onBlock: { [pipeline] in pipeline.ingest(.system, $0) },
+                    onFailure: { [weak self] failure in
+                        guard let self else { return }
+                        Task { await self.sourceFailed(.system, failure) }
+                    }
+                )
+                probe()
+            } catch let error as MeetingSourceFailure {
+                onFailure(.systemAudio(error))
+            } catch {
+                onFailure(.systemAudio(.startFailed(String(describing: error))))
+            }
         case (.system, _):
             onFailure(.systemAudio(failure))
         }
@@ -346,6 +393,9 @@ final class MeetingPipeline: @unchecked Sendable {
     /// One per active channel, fed with what was written — so a segment is a
     /// position in the file, never a position in memory.
     private var policies: [MeetingChannel: MeetingSegmentPolicy] = [:]
+    private var crossTalk = CrossTalkGate()
+    private var heldMicrophone: [(peak: Float, count: Int)] = []
+    private var heldMicrophoneFrames = 0
 
     // Owned by `queue`.
     private var clocks: [MeetingChannel: ChannelClock] = [:]
@@ -414,6 +464,9 @@ final class MeetingPipeline: @unchecked Sendable {
             anchorFrame = writer.frameCount
             for channel in MeetingChannel.allCases { clocks[channel] = ChannelClock() }
             aligner = DualChannelAligner(activeChannels: activeChannels)
+            crossTalk.reset()
+            heldMicrophone = []
+            heldMicrophoneFrames = 0
             // The aligner starts its cursor at zero; the file does not.
             // Anything it emits is offset by where the file already is.
         }
@@ -494,10 +547,19 @@ final class MeetingPipeline: @unchecked Sendable {
         }
         // Only after the append: a segment must never name frames that are
         // not on disk yet.
+        //
+        // With both sides recorded, the speakers leak into the microphone;
+        // a block where the system side is clearly the louder one is not the
+        // person speaking, and the microphone segmenter is told silence for
+        // it. The file keeps the audio either way.
+        let microphoneIsEcho = activeChannels.contains(.system)
+            && crossTalk.classify(microphone: emission.microphone, system: emission.system).isEcho
         for channel in activeChannels {
             let samples = channel == .microphone ? emission.microphone : emission.system
             let peak = samples.reduce(0) { max($0, abs($1)) }
-            if let segment = policies[channel]?.observe(peak: peak, count: samples.count) {
+            if channel == .microphone, activeChannels.contains(.system) {
+                holdMicrophone(peak: peak, count: samples.count, isEcho: microphoneIsEcho)
+            } else if let segment = policies[channel]?.observe(peak: peak, count: samples.count) {
                 onSegment(segment)
             }
         }
@@ -511,8 +573,38 @@ final class MeetingPipeline: @unchecked Sendable {
     }
 
     private func flushSegments() {
+        releaseMicrophone(keeping: 0)
         for channel in activeChannels {
             if let tail = policies[channel]?.flush() { onSegment(tail) }
+        }
+    }
+
+    /// Microphone frames wait a fifth of a second before reaching the
+    /// segmenter. The gate decides over a window and its decision belongs to
+    /// the whole window, but blocks arrive a few milliseconds at a time and
+    /// the first of a remote sentence are judged before there is anything
+    /// to match against. Held back, they are still here to be told silence
+    /// when the match arrives; released too soon, one of them is enough for
+    /// the segmenter to bring the sentence back as a paragraph. Frames reach
+    /// the segmenter in order and in full; only later.
+    static let microphoneLookaheadFrames = 3_200
+
+    private func holdMicrophone(peak: Float, count: Int, isEcho: Bool) {
+        heldMicrophone.append((peak: isEcho ? 0 : peak, count: count))
+        heldMicrophoneFrames += count
+        if isEcho {
+            for index in heldMicrophone.indices { heldMicrophone[index].peak = 0 }
+        }
+        releaseMicrophone(keeping: Self.microphoneLookaheadFrames)
+    }
+
+    private func releaseMicrophone(keeping lookahead: Int) {
+        while let first = heldMicrophone.first, heldMicrophoneFrames - first.count >= lookahead {
+            heldMicrophone.removeFirst()
+            heldMicrophoneFrames -= first.count
+            if let segment = policies[.microphone]?.observe(peak: first.peak, count: first.count) {
+                onSegment(segment)
+            }
         }
     }
 

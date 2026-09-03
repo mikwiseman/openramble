@@ -94,6 +94,12 @@ struct RecordingsPlaceholder: Equatable {
         }
     }
 
+    /// The line a meeting carries forever when the other side never arrived.
+    static func degradedNote(for recording: MeetingRecordingMetadata) -> String? {
+        guard recording.systemAudio.wasRequested, !recording.systemAudio.everDeliveredAudio else { return nil }
+        return "Only your microphone was recorded. The other side of this call was not captured."
+    }
+
     /// The title a recording shows when the person has not given it one.
     static func defaultTitle(for startedAt: Date) -> String {
         startedAt.formatted(date: .abbreviated, time: .shortened)

@@ -12,6 +12,9 @@ final class AppStateRecordingTests: XCTestCase {
     private func makeHarness() throws -> AppHarness {
         let harness = try AppHarness()
         harness.permissions.microphoneGranted = true
+        // These tests are about the microphone path; the other side has its
+        // own suite. Declined, the button records without asking first.
+        harness.defaults.set(true, forKey: AppState.systemAudioDeclinedKey)
         self.harness = harness
         return harness
     }

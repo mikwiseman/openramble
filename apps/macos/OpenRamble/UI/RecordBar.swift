@@ -1,6 +1,9 @@
 import SwiftUI
 
-/// One red button. It records the microphone; there is no mode to choose.
+/// One red button. It records the microphone and, where this Mac can, what
+/// the Mac plays — the other side of a call. There is no mode to choose. A
+/// chevron beside it holds one alternative for one recording; the choice is
+/// never remembered, which is what makes offering it safe.
 ///
 /// While recording, the circle becomes a square: the same button, the
 /// opposite verb. The line beneath is not a control — it says what the
@@ -57,6 +60,21 @@ struct RecordBar: View {
                     // Keeps the red button centred while the pause control is
                     // shown on its left.
                     Color.clear.frame(width: 36, height: 36)
+                } else if let alternative {
+                    Menu {
+                        Button(alternative.title, action: alternative.action)
+                    } label: {
+                        Image(systemName: "chevron.down")
+                            .font(.caption.weight(.semibold))
+                            .frame(width: 36, height: 36)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .frame(width: 36, height: 36)
+                    .disabled(isBusy)
+                    .accessibilityLabel("Other ways to record")
+                } else {
+                    Color.clear.frame(width: 36, height: 36)
                 }
             }
             Text(line)
@@ -68,9 +86,25 @@ struct RecordBar: View {
         .padding(.vertical, GlassTokens.Space.stack)
     }
 
+    /// The one alternative, for this recording only.
+    private var alternative: (title: String, action: () -> Void)? {
+        switch state.systemAudioMode {
+        case .enabled:
+            return ("Record Microphone Only", { state.startRecording(includingSystemAudio: false) })
+        case .declined:
+            return ("Record You and Others", {
+                state.setSystemAudioDeclined(false)
+                state.startRecording()
+            })
+        case .unsupported:
+            return nil
+        }
+    }
+
     private var line: String {
         switch state.meetingState {
-        case .idle: return "Records your microphone"
+        case .idle:
+            return state.systemAudioMode == .enabled ? "Records you and the other side" : "Records your microphone only"
         case .starting: return "Starting…"
         case .recording: return "Recording — \(RecordingTime.clock(state.liveDuration))"
         case .paused: return "Paused — \(RecordingTime.clock(state.liveDuration))"

@@ -26,6 +26,14 @@ final class MenuBarStatusTests: XCTestCase {
         XCTAssertEqual(MenuBarStatus.recordingLine(isPaused: true, duration: 724), "Paused — 12:04")
     }
 
+    /// A meeting whose other side is missing wears orange, not red: red would
+    /// say everything is fine. Dictation's own work still outranks it.
+    func testADegradedRecordingTurnsTheBadgeOrange() {
+        XCTAssertEqual(MenuBarStatus.badge(activity: .recording, recordingIsDegraded: true), .attention)
+        XCTAssertEqual(MenuBarStatus.badge(activity: .recording, recordingIsDegraded: false), .recording)
+        XCTAssertEqual(MenuBarStatus.badge(activity: .working, recordingIsDegraded: true), .working)
+    }
+
     func testScenario003() {
         let states: [DictationState] = [.idle, .preparing, .listening, .transcribing, .inserting]
 

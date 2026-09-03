@@ -50,17 +50,25 @@ enum MenuBarStatus {
 
     /// The menu's line about a running recording. Computed when the menu is
     /// built — no clock lives in the menu bar.
-    static func recordingLine(isPaused: Bool, duration: TimeInterval) -> String {
-        "\(isPaused ? "Paused" : "Recording") — \(RecordingTime.clock(duration))"
+    static func recordingLine(isPaused: Bool, duration: TimeInterval, isDegraded: Bool = false) -> String {
+        let line = "\(isPaused ? "Paused" : "Recording") — \(RecordingTime.clock(duration))"
+        return isDegraded ? line + " — only your microphone" : line
     }
 
     /// Recording and working stay distinguishable without color through the
     /// accessibility label and the menu's first line; the two dots also differ
     /// strongly in luminance for color-blind users.
+    /// `recordingIsDegraded`: a meeting whose other side is not arriving. Orange
+    /// is already the app's word for "something waits for you and your work is
+    /// preserved" — which is exactly this: the audio is safe, half of it is
+    /// missing, and one change can still fix the rest of the meeting. It
+    /// outranks the steady red because the red would say everything is fine.
     static func badge(
         activity: MenuBarActivity,
-        needsAttention: Bool = false
+        needsAttention: Bool = false,
+        recordingIsDegraded: Bool = false
     ) -> MenuBarBadge {
+        if recordingIsDegraded, activity != .working { return .attention }
         switch activity {
         case .recording: return .recording
         case .working: return .working
@@ -101,8 +109,12 @@ enum MenuBarStatus {
         state: DictationState,
         isDictationReady: Bool,
         hasRecoveredWork: Bool = false,
-        isRecordingMeeting: Bool = false
+        isRecordingMeeting: Bool = false,
+        recordingIsDegraded: Bool = false
     ) -> String {
+        if isRecordingMeeting, recordingIsDegraded {
+            return "OpenRamble: recording — the other side isn't being captured"
+        }
         switch state {
         case .listening: return "OpenRamble: recording"
         case .transcribing: return "OpenRamble: transcribing speech"

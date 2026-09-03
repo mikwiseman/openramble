@@ -74,6 +74,9 @@ struct RecordingRow: View {
         case .crashRecovered, .diskFull, .writeFailed:
             return ("exclamationmark.triangle.fill", StatusColorRole.attention.color)
         default:
+            if RecordingsPlaceholder.degradedNote(for: recording) != nil {
+                return ("exclamationmark.triangle.fill", StatusColorRole.attention.color)
+            }
             return recording.isMeeting ? ("person.2.wave.2", .secondary) : ("mic", .secondary)
         }
     }
@@ -85,6 +88,7 @@ struct RecordingRow: View {
             recording.startedAt.formatted(date: .abbreviated, time: .shortened),
         ]
         if let note = RecordingsPlaceholder.endNote(for: recording.endReason) { parts.append(note) }
+        if let note = RecordingsPlaceholder.degradedNote(for: recording) { parts.append(note) }
         return parts.joined(separator: ", ")
     }
 }
@@ -109,8 +113,14 @@ struct LiveRecordingRow: View {
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
-            LiveLevelMeter(levels: state.liveLevels, isPaused: state.meetingState == .paused)
-                .frame(height: 20)
+            LiveLevelMeters(
+                levels: state.liveLevels,
+                isPaused: state.meetingState == .paused,
+                showsOthers: state.liveRecording?.isMeeting ?? false,
+                othersDegraded: state.liveCaptureHealth.marksRecordingDegraded,
+                compact: true
+            )
+            .frame(height: (state.liveRecording?.isMeeting ?? false) ? 30 : 14)
         }
         .padding(.vertical, GlassTokens.Space.tight)
         .accessibilityElement(children: .ignore)
@@ -119,25 +129,54 @@ struct LiveRecordingRow: View {
     }
 }
 
-/// The rolling meter, fed from the recorder's level updates.
+/// The rolling meters, fed from the recorder's level updates: one for the
+/// microphone, and one for the other side when it is being recorded.
 ///
-/// `RecordingWaveform` is reused untouched: it draws silence as a visible
-/// 1 pt line rather than an empty box, which is what makes a dead source
-/// look dead instead of looking like a layout gap.
-struct LiveLevelMeter: View {
+/// This is the answer to a tap that fails by succeeding. A person must never
+/// learn after ninety minutes that only their own voice was captured; the
+/// Others meter that never moves says so in the first ten seconds, and turns
+/// orange once the recorder is sure. `RecordingWaveform` is reused untouched:
+/// it draws silence as a visible 1 pt line rather than an empty box, which
+/// is what makes a dead source look dead instead of like a layout gap.
+struct LiveLevelMeters: View {
     let levels: MeetingCapture.Levels
     let isPaused: Bool
-    @State private var samples: [Float] = Array(repeating: 0, count: 24)
+    let showsOthers: Bool
+    let othersDegraded: Bool
+    var compact = false
+
+    @State private var you: [Float] = Array(repeating: 0, count: 24)
+    @State private var others: [Float] = Array(repeating: 0, count: 24)
 
     var body: some View {
-        RecordingWaveform(
-            samples: samples,
-            color: isPaused ? .secondary : StatusColorRole.recording.color
-        )
+        VStack(alignment: .leading, spacing: compact ? 2 : GlassTokens.Space.tight) {
+            meter("You", samples: you, color: isPaused ? .secondary : StatusColorRole.recording.color)
+            if showsOthers {
+                meter(
+                    "Others",
+                    samples: others,
+                    color: isPaused ? .secondary : (othersDegraded ? StatusColorRole.attention.color : StatusColorRole.recording.color)
+                )
+            }
+        }
         .onChange(of: levels) { _, levels in
-            samples.removeFirst()
-            samples.append(levels.microphone)
+            you.removeFirst()
+            you.append(levels.microphone)
+            others.removeFirst()
+            others.append(levels.system)
         }
         .accessibilityHidden(true)
+    }
+
+    private func meter(_ title: String, samples: [Float], color: Color) -> some View {
+        HStack(spacing: GlassTokens.Space.tight) {
+            if !compact {
+                Text(title)
+                    .font(.system(size: GlassTokens.Label.sectionHeader, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 44, alignment: .leading)
+            }
+            RecordingWaveform(samples: samples, color: color)
+        }
     }
 }

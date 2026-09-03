@@ -305,6 +305,10 @@ private struct GeneralSettings: View {
                     ),
                     action: state.requestMicrophone
                 )
+                PermissionRow(
+                    status: PermissionStatus.systemAudio(mode: state.systemAudioPermission),
+                    action: state.performSystemAudioAction
+                )
             } header: {
                 Text("Permissions")
             } footer: {
@@ -374,7 +378,7 @@ private struct PermissionRow: View {
             if let title = status.actionTitle {
                 Button(title, action: action)
                     .accessibilityLabel(status.actionAccessibilityLabel ?? title)
-            } else {
+            } else if status.granted {
                 Label("Granted", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(StatusColorRole.success.color)
                     .labelStyle(.iconOnly)

@@ -107,6 +107,13 @@ public enum Permissions {
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!
         NSWorkspace.shared.open(url)
     }
+
+    /// The pane macOS calls Screen & System Audio Recording, where the tap's
+    /// permission lives.
+    public static func openSystemAudioSettings() {
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture")!
+        NSWorkspace.shared.open(url)
+    }
 }
 
 /// Read permissions.

@@ -457,6 +457,9 @@ final class AppHarness {
     let overlay = FakeOverlay()
     let capture = FakeCapture()
     let meetingCapture = FakeMeetingCapture()
+    let announcer = FakeAnnouncer()
+    /// How often the Settings pane for system audio was asked for.
+    var systemAudioSettingsOpened = 0
     let inserter = FakeInserter()
     let workspaceNotifications = NotificationCenter()
     let notifications = NotificationCenter()
@@ -609,10 +612,14 @@ final class AppHarness {
                 localTranscriber: recognizer ?? warmUpEngine.map { LocalTranscriber(engine: $0) },
                 focusedFieldReader: focusedField,
                 cleanupLegacyAgentStaging: cleanupLegacyAgentStaging,
-                makeMeetingCapture: { [meetingCapture] directory, _, _, onSegment, _ in
-                    meetingCapture.prepare(directory: directory, onSegment: onSegment)
+                makeMeetingCapture: { [meetingCapture] directory, _, includeSystemAudio, _, onSegment, _ in
+                    meetingCapture.prepare(directory: directory, includeSystemAudio: includeSystemAudio, onSegment: onSegment)
                     return meetingCapture
                 },
+                announcer: announcer,
+                openSystemAudioSettings: { [weak self] in self?.systemAudioSettingsOpened += 1 },
+                // Inaudible in the app; silent in the suite all the same.
+                playSystemAudioProbe: {},
                 // Remove rather than trash: a suite that fills the developer's
                 // Trash with fixtures is a suite nobody wants to run.
                 trashItem: { try FileManager.default.removeItem(at: $0) }
@@ -926,19 +933,27 @@ final class FakeMeetingCapture: MeetingCapturing, @unchecked Sendable {
     private(set) var stopCount = 0
     private(set) var pauseCount = 0
     private(set) var resumeCount = 0
-    /// Where the app asked it to record.
+    /// Where the app asked it to record, and whether it asked for the other side.
     private(set) var directory: URL?
+    private(set) var includeSystemAudio: Bool?
     private var onSegment: (@Sendable (MeetingSegmentRef) -> Void)?
+    /// What `health(of: .system)` reports.
+    var systemHealth = MeetingCapture.ChannelHealth.none
     /// What `stop()` reports.
     var frames = 32_000
     var endReason: MeetingEndReason = .stoppedByUser
     var startError: MeetingCapture.Failure?
 
-    func prepare(directory: URL, onSegment: @escaping @Sendable (MeetingSegmentRef) -> Void) {
+    func prepare(directory: URL, includeSystemAudio: Bool, onSegment: @escaping @Sendable (MeetingSegmentRef) -> Void) {
         lock.withLock {
             self.directory = directory
+            self.includeSystemAudio = includeSystemAudio
             self.onSegment = onSegment
         }
+    }
+
+    func health(of channel: MeetingChannel) async -> MeetingCapture.ChannelHealth {
+        lock.withLock { channel == .system ? systemHealth : .none }
     }
 
     /// Hand the app a stretch of the file, as the real recorder would.
@@ -977,7 +992,12 @@ final class FakeMeetingCapture: MeetingCapturing, @unchecked Sendable {
                 frameCount: frames,
                 duration: Double(frames) / 16_000,
                 microphoneDeviceName: "Fake Microphone",
-                systemAudio: SystemAudioSummary(wasRequested: false),
+                systemAudio: SystemAudioSummary(
+                    wasRequested: includeSystemAudio ?? false,
+                    everDeliveredBuffers: systemHealth.everDeliveredBuffers,
+                    everDeliveredAudio: systemHealth.everDeliveredAudio,
+                    outputTransport: includeSystemAudio == true ? "fake" : nil
+                ),
                 gaps: [],
                 pauses: [],
                 endReason: endReason

@@ -10,6 +10,9 @@ final class ScriptedAudioSource: MeetingAudioSource, @unchecked Sendable {
     private var onFailure: (@Sendable (MeetingSourceFailure) -> Void)?
     private(set) var startCount = 0
     private(set) var stopCount = 0
+    /// Thrown by the next `start`, as a tap without permission would not —
+    /// but a tap on a Mac too old for taps, or one Core Audio refuses, does.
+    var startError: MeetingSourceFailure?
     var deviceName: String? { "Scripted" }
 
     func start(
@@ -18,6 +21,7 @@ final class ScriptedAudioSource: MeetingAudioSource, @unchecked Sendable {
     ) throws {
         lock.lock()
         defer { lock.unlock() }
+        if let startError { throw startError }
         startCount += 1
         self.onBlock = onBlock
         self.onFailure = onFailure
@@ -117,7 +121,7 @@ final class MeetingCaptureTests: XCTestCase {
     func testTwoSourcesLandOnTheirOwnChannels() async throws {
         let microphone = ScriptedAudioSource()
         let system = ScriptedAudioSource()
-        let capture = MeetingCapture(directory: directory, microphone: microphone, systemAudio: system)
+        let capture = MeetingCapture(directory: directory, microphone: microphone, systemAudio: system, probe: {})
         try await capture.start()
         for _ in 0..<4 {
             microphone.deliver(constant(0.5, 800))
@@ -137,7 +141,7 @@ final class MeetingCaptureTests: XCTestCase {
     func testASilentSystemSideIsAliveButNotAudible() async throws {
         let microphone = ScriptedAudioSource()
         let system = ScriptedAudioSource()
-        let capture = MeetingCapture(directory: directory, microphone: microphone, systemAudio: system)
+        let capture = MeetingCapture(directory: directory, microphone: microphone, systemAudio: system, probe: {})
         try await capture.start()
         microphone.deliver(constant(0.3, 1_600))
         system.deliver(constant(0, 1_600))
@@ -152,7 +156,7 @@ final class MeetingCaptureTests: XCTestCase {
     func testHostTimedBlocksFromTwoClocksStayAligned() async throws {
         let microphone = ScriptedAudioSource()
         let system = ScriptedAudioSource()
-        let capture = MeetingCapture(directory: directory, microphone: microphone, systemAudio: system)
+        let capture = MeetingCapture(directory: directory, microphone: microphone, systemAudio: system, probe: {})
         try await capture.start()
         let anchor = UInt64(AVAudioTime.seconds(forHostTime: mach_absolute_time()) * 1_000_000_000)
         let blockNanoseconds: UInt64 = 100_000_000
@@ -173,8 +177,12 @@ final class MeetingCaptureTests: XCTestCase {
         let audio = try readChannels(await capture.audioURL)
         XCTAssertEqual(audio.left[4_000], 0.5, accuracy: 0.001)
         XCTAssertEqual(audio.right[4_000], -0.5, accuracy: 0.001)
+        // Both sides start a little after zero (the anchor was taken before
+        // the sources came up); the system side's first block anchors 30 ms
+        // after the microphone's and stays there.
+        let firstLeft = try XCTUnwrap(audio.left.firstIndex { abs($0) > 0.1 })
         let firstRight = try XCTUnwrap(audio.right.firstIndex { abs($0) > 0.1 })
-        XCTAssertEqual(firstRight, 480, accuracy: 100, "the system side sits where its own clock put it")
+        XCTAssertEqual(firstRight - firstLeft, 480, accuracy: 100, "the system side sits where its own clock put it")
         XCTAssertEqual(summary.gaps, [], "jitter is not a gap")
     }
 
@@ -252,7 +260,10 @@ final class MeetingCaptureTests: XCTestCase {
         // The disk is looked at once a minute of audio; deliver past that plus
         // the jitter window the aligner holds back.
         for _ in 0..<610 { microphone.deliver(constant(0.1, 1_600)) }
-        try await waitUntil { reported.value == .diskFull }
+        // Ten seconds, not two: a minute of audio through the writer, the
+        // segmenters and the gate is real work, and this test is about the
+        // reason kept, not about speed on a loaded machine.
+        try await waitUntil({ reported.value == .diskFull }, timeout: .seconds(10))
         let summary = try await capture.stop()
         XCTAssertEqual(summary.endReason, .diskFull)
         XCTAssertGreaterThan(summary.frameCount, 0, "what reached disk before the stop is kept")
@@ -310,7 +321,8 @@ extension MeetingCaptureTests {
                 speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2)),
                 hardCap: .seconds(20)
             ),
-            onSegment: { segments.value.append($0) }
+            onSegment: { segments.value.append($0) },
+            probe: {}
         )
         try await capture.start()
         // Three seconds of speech on the microphone, a one-second pause,
@@ -353,5 +365,161 @@ extension MeetingCaptureTests {
         for _ in 0..<5 { microphone.deliver(constant(0, 1_600)) }
         _ = try await capture.stop()
         XCTAssertEqual(segments.value.count, 1, "silence after the pause is not a segment")
+    }
+}
+
+extension MeetingCaptureTests {
+    func testTheProbePlaysWhenTheOtherSideIsCapturedAndNotForAVoiceNote() async throws {
+        let probes = UncheckedBox(0)
+        let note = MeetingCapture(
+            directory: directory, microphone: ScriptedAudioSource(), systemAudio: nil, probe: { probes.value += 1 }
+        )
+        try await note.start()
+        _ = try await note.stop()
+        XCTAssertEqual(probes.value, 0, "nothing to prove for a microphone-only recording")
+
+        let meeting = MeetingCapture(
+            directory: directory.appending(path: "b"),
+            microphone: ScriptedAudioSource(),
+            systemAudio: ScriptedAudioSource(),
+            probe: { probes.value += 1 }
+        )
+        try await meeting.start()
+        _ = try await meeting.stop()
+        XCTAssertEqual(probes.value, 1)
+    }
+
+    func testAnOutputRouteChangeRestartsTheTapProbesAgainAndRecordsTheGap() async throws {
+        let microphone = ScriptedAudioSource()
+        let system = ScriptedAudioSource()
+        let probes = UncheckedBox(0)
+        let capture = MeetingCapture(
+            directory: directory, microphone: microphone, systemAudio: system, probe: { probes.value += 1 }
+        )
+        try await capture.start()
+        microphone.deliver(constant(0.5, 1_600))
+        system.deliver(constant(-0.5, 1_600))
+        system.fail(.configurationChanged)
+        try await waitUntil { system.startCount == 2 }
+        XCTAssertEqual(probes.value, 2, "the new route is asked whether it can be heard")
+        microphone.deliver(constant(0.5, 1_600))
+        system.deliver(constant(-0.5, 1_600))
+        let summary = try await capture.stop()
+        XCTAssertEqual(summary.gaps.map(\.reason), [.systemAudioRouteChange])
+        XCTAssertEqual(summary.gaps.first?.channel, .system)
+        XCTAssertEqual(summary.systemAudio.outputTransport, "Scripted", "the route's transport travels with the file")
+    }
+}
+
+extension MeetingCaptureTests {
+    /// A tap that will not start costs the other side, never the recording.
+    func testATapThatCannotStartLeavesTheMicrophoneRecordingAndSaysSo() async throws {
+        let microphone = ScriptedAudioSource()
+        let system = ScriptedAudioSource()
+        system.startError = .startFailed("the audio tap could not be created (-1)")
+        let failures = UncheckedBox<[MeetingCapture.Failure]>([])
+        let capture = MeetingCapture(
+            directory: directory,
+            microphone: microphone,
+            systemAudio: system,
+            onFailure: { failures.value.append($0) },
+            probe: {}
+        )
+        try await capture.start()
+        let started = await capture.state
+        XCTAssertEqual(started, .recording, "the microphone records regardless")
+        XCTAssertEqual(failures.value, [.systemAudio(.startFailed("the audio tap could not be created (-1)"))])
+        microphone.deliver(constant(0.5, 1_600))
+        let summary = try await capture.stop()
+        XCTAssertEqual(summary.frameCount, 1_600)
+        XCTAssertTrue(summary.systemAudio.wasRequested)
+        XCTAssertFalse(summary.systemAudio.everDeliveredBuffers)
+        XCTAssertEqual(summary.gaps.map(\.channel), [.system], "the missing side is a gap for the whole recording")
+    }
+}
+
+extension MeetingCaptureTests {
+    /// The speakers leaking into the microphone are not the person speaking:
+    /// the other side's sentence is one segment on its own channel, not two.
+    func testTheOtherSideLeakingIntoTheMicrophoneIsNotSegmentedAsYou() async throws {
+        let microphone = ScriptedAudioSource()
+        let system = ScriptedAudioSource()
+        let segments = UncheckedBox<[MeetingSegmentRef]>([])
+        let capture = MeetingCapture(
+            directory: directory,
+            microphone: microphone,
+            systemAudio: system,
+            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2))),
+            onSegment: { segments.value.append($0) },
+            probe: {}
+        )
+        try await capture.start()
+        // Three seconds of the other side, leaking into the microphone at
+        // half the level and 30 ms late — well above the speech floor on its
+        // own, and a copy of the other side rather than a voice of its own.
+        var state: UInt64 = 42
+        let speech: [Float] = (0..<48_000).map { _ in
+            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return (Float(state >> 40) / Float(1 << 24) * 2 - 1) * 0.3
+        }
+        let echo: [Float] = (0..<48_000).map { $0 < 480 ? 0 : speech[$0 - 480] * 0.5 }
+        for block in 0..<30 {
+            let range = (block * 1_600)..<((block + 1) * 1_600)
+            microphone.deliver(Array(echo[range]))
+            system.deliver(Array(speech[range]))
+        }
+        for _ in 0..<10 {
+            microphone.deliver(constant(0, 1_600))
+            system.deliver(constant(0, 1_600))
+        }
+        _ = try await capture.stop()
+        XCTAssertEqual(segments.value.map(\.channel), [.system], "the leak did not become a You paragraph")
+    }
+
+    /// Every remote sentence starts after silence, and the gate can only
+    /// match once some of it has been heard: the frames before that must
+    /// still be told silence, or the sentence comes back as a paragraph.
+    func testAnEchoThatStartsAfterSilenceIsNotSegmentedAsYouEither() async throws {
+        let microphone = ScriptedAudioSource()
+        let system = ScriptedAudioSource()
+        let segments = UncheckedBox<[MeetingSegmentRef]>([])
+        let capture = MeetingCapture(
+            directory: directory,
+            microphone: microphone,
+            systemAudio: system,
+            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2))),
+            onSegment: { segments.value.append($0) },
+            probe: {}
+        )
+        try await capture.start()
+        // Three seconds of the other side, leaking into the microphone at
+        // half the level and 30 ms late — well above the speech floor on its
+        // own, and a copy of the other side rather than a voice of its own.
+        var state: UInt64 = 42
+        let speech: [Float] = (0..<48_000).map { _ in
+            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return (Float(state >> 40) / Float(1 << 24) * 2 - 1) * 0.3
+        }
+        let echo: [Float] = (0..<48_000).map { $0 < 480 ? 0 : speech[$0 - 480] * 0.5 }
+        // A second of nothing first, then the leak in the small blocks real
+        // sources deliver: the first of them arrive before there is anything
+        // to match against, and used to slip through.
+        for _ in 0..<10 {
+            microphone.deliver(constant(0, 1_600))
+            system.deliver(constant(0, 1_600))
+        }
+        var start = 0
+        while start < 48_000 {
+            let range = start..<min(start + 512, 48_000)
+            microphone.deliver(Array(echo[range]))
+            system.deliver(Array(speech[range]))
+            start = range.upperBound
+        }
+        for _ in 0..<10 {
+            microphone.deliver(constant(0, 1_600))
+            system.deliver(constant(0, 1_600))
+        }
+        _ = try await capture.stop()
+        XCTAssertEqual(segments.value.map(\.channel), [.system], "the leak did not become a You paragraph")
     }
 }
