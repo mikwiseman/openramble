@@ -294,3 +294,64 @@ private func XCTAssertThrowsErrorAsync<T>(
         handler(error)
     }
 }
+
+extension MeetingCaptureTests {
+    /// Segments name frames that are on disk, per channel, cut inside silence
+    /// — and the tail at stop comes out too.
+    func testSpeechIsHandedOutAsSegmentsThatIndexTheFile() async throws {
+        let microphone = ScriptedAudioSource()
+        let system = ScriptedAudioSource()
+        let segments = UncheckedBox<[MeetingSegmentRef]>([])
+        let capture = MeetingCapture(
+            directory: directory,
+            microphone: microphone,
+            systemAudio: system,
+            segmentParameters: .init(
+                speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2)),
+                hardCap: .seconds(20)
+            ),
+            onSegment: { segments.value.append($0) }
+        )
+        try await capture.start()
+        // Three seconds of speech on the microphone, a one-second pause,
+        // two more seconds; the other side stays silent throughout.
+        for _ in 0..<30 { microphone.deliver(constant(0.5, 1_600)); system.deliver(constant(0, 1_600)) }
+        for _ in 0..<10 { microphone.deliver(constant(0, 1_600)); system.deliver(constant(0, 1_600)) }
+        for _ in 0..<20 { microphone.deliver(constant(0.5, 1_600)); system.deliver(constant(0, 1_600)) }
+        let summary = try await capture.stop()
+
+        let all = segments.value
+        XCTAssertEqual(all.map(\.channel), [.microphone, .microphone], "the silent side costs nothing")
+        XCTAssertEqual(all[0].startFrame, 0)
+        XCTAssertGreaterThan(all[0].frameCount, 48_000, "the cut is inside the pause, after the speech")
+        XCTAssertLessThan(all[0].frameCount, 64_000)
+        XCTAssertEqual(all[1].startFrame, all[0].endFrame, "segments abut")
+        XCTAssertEqual(all[1].endFrame, summary.frameCount, "the tail runs to the end of the file")
+
+        // And the frames a segment names are readable from the file, as the
+        // audio that was delivered.
+        let reader = MeetingPCMWindowReader(url: await capture.audioURL)
+        let tail = try reader.read(all[1])
+        XCTAssertEqual(tail.last ?? 0, 0.5, accuracy: 0.001)
+    }
+
+    func testAPauseFlushesTheTailAsASegment() async throws {
+        let microphone = ScriptedAudioSource()
+        let segments = UncheckedBox<[MeetingSegmentRef]>([])
+        let capture = MeetingCapture(
+            directory: directory,
+            microphone: microphone,
+            systemAudio: nil,
+            onSegment: { segments.value.append($0) }
+        )
+        try await capture.start()
+        for _ in 0..<20 { microphone.deliver(constant(0.5, 1_600)) }
+        try await capture.pause()
+        XCTAssertEqual(segments.value.count, 1)
+        XCTAssertEqual(segments.value[0].frameCount, 32_000)
+        try await capture.resume()
+        for _ in 0..<5 { microphone.deliver(constant(0, 1_600)) }
+        _ = try await capture.stop()
+        XCTAssertEqual(segments.value.count, 1, "silence after the pause is not a segment")
+    }
+}

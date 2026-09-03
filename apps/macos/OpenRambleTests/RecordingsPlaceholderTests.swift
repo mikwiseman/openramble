@@ -18,6 +18,7 @@ final class RecordingsPlaceholderTests: XCTestCase {
     func testPlaceholdersNeverUseRedLanguageOrBlame() {
         for placeholder in [
             RecordingsPlaceholder.emptyLibrary, .nothingSelected, .notTranscribed, .audioMissing, .recovered,
+            .listening, .stillTranscribing, .noSpeech, .transcriptionDidNotFinish, .waitingForModel,
         ] {
             XCTAssertFalse(placeholder.title.isEmpty)
             XCTAssertFalse(placeholder.detail.isEmpty)
@@ -28,5 +29,13 @@ final class RecordingsPlaceholderTests: XCTestCase {
     func testTheDefaultTitleIsTheDate() {
         let date = Date(timeIntervalSince1970: 1_756_900_000)
         XCTAssertEqual(RecordingsPlaceholder.defaultTitle(for: date), date.formatted(date: .abbreviated, time: .shortened))
+    }
+
+    func testEveryTranscriptStateHasAPlaceholder() {
+        XCTAssertEqual(RecordingsPlaceholder.transcript(for: .live), .stillTranscribing)
+        XCTAssertEqual(RecordingsPlaceholder.transcript(for: .complete), .noSpeech)
+        XCTAssertEqual(RecordingsPlaceholder.transcript(for: .partial), .transcriptionDidNotFinish)
+        XCTAssertEqual(RecordingsPlaceholder.transcript(for: .waitingForModel), .waitingForModel)
+        XCTAssertEqual(RecordingsPlaceholder.transcript(for: .none), .notTranscribed)
     }
 }

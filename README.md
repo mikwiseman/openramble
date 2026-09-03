@@ -31,9 +31,12 @@ change, and it is the one thing this app stores that it previously did not.
 Nothing leaves the Mac either way.
 
 **Recordings** you make on purpose — in the Recordings window, ⌘0 — stay until
-you delete them. They are not bounded by a count: a recording is a document,
-and the app does not throw documents away. About 230 MB per hour; the window
-shows the total. Deleting a recording moves it to the Trash. Recordings are
+you delete them, with a transcript beside the audio. Recordings are transcribed
+on this Mac while you record, by the same model that handles dictation; a
+dictation you start mid-recording always takes the engine first, and the
+transcript catches up after. They are not bounded by a count: a recording is a
+document, and the app does not throw documents away. About 230 MB per hour;
+the window shows the total. Deleting a recording moves it to the Trash. Recordings are
 included in your Mac's own backups, like any document you make; the folders
 that hold transient dictation audio are not.
 

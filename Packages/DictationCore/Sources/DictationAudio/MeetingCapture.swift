@@ -108,11 +108,16 @@ public actor MeetingCapture {
     ///   - onLevels: meter updates, about ten a second, from a background queue.
     ///   - onFailure: the recording stopped itself, or one side did. Never
     ///     called for something the caller asked for.
+    ///   - onSegment: a stretch of one channel that is on disk and worth a
+    ///     decode. Delivered from a background queue, in file order per
+    ///     channel, including the tails at pause and stop.
     public init(
         directory: URL,
         microphone: any MeetingAudioSource,
         systemAudio: (any MeetingAudioSource)?,
+        segmentParameters: MeetingSegmentPolicy.Parameters = .meeting,
         onLevels: @escaping @Sendable (Levels) -> Void = { _ in },
+        onSegment: @escaping @Sendable (MeetingSegmentRef) -> Void = { _ in },
         onFailure: @escaping @Sendable (Failure) -> Void = { _ in },
         freeBytes: @escaping @Sendable (URL) -> Int64? = MeetingCapture.freeBytes(at:)
     ) {
@@ -125,7 +130,9 @@ public actor MeetingCapture {
         pipeline = MeetingPipeline(
             writer: MeetingWriter(directory: directory),
             activeChannels: active,
+            segmentParameters: segmentParameters,
             onLevels: onLevels,
+            onSegment: onSegment,
             freeBytes: { freeBytes(directory) }
         )
     }
@@ -332,8 +339,13 @@ final class MeetingPipeline: @unchecked Sendable {
     private let writer: MeetingWriter
     private let activeChannels: Set<MeetingChannel>
     private let onLevels: @Sendable (MeetingCapture.Levels) -> Void
+    private let onSegment: @Sendable (MeetingSegmentRef) -> Void
+    private let segmentParameters: MeetingSegmentPolicy.Parameters
     private let freeBytesQuery: @Sendable () -> Int64?
     var onDiskOrWriteFailure: (@Sendable (Failure) -> Void)?
+    /// One per active channel, fed with what was written — so a segment is a
+    /// position in the file, never a position in memory.
+    private var policies: [MeetingChannel: MeetingSegmentPolicy] = [:]
 
     // Owned by `queue`.
     private var clocks: [MeetingChannel: ChannelClock] = [:]
@@ -355,14 +367,21 @@ final class MeetingPipeline: @unchecked Sendable {
     init(
         writer: MeetingWriter,
         activeChannels: Set<MeetingChannel>,
+        segmentParameters: MeetingSegmentPolicy.Parameters,
         onLevels: @escaping @Sendable (MeetingCapture.Levels) -> Void,
+        onSegment: @escaping @Sendable (MeetingSegmentRef) -> Void,
         freeBytes: @escaping @Sendable () -> Int64?
     ) {
         self.writer = writer
         self.activeChannels = activeChannels
+        self.segmentParameters = segmentParameters
         self.onLevels = onLevels
+        self.onSegment = onSegment
         freeBytesQuery = freeBytes
         aligner = DualChannelAligner(activeChannels: activeChannels)
+        for channel in activeChannels {
+            policies[channel] = MeetingSegmentPolicy(channel: channel, parameters: segmentParameters)
+        }
     }
 
     var audioURL: URL { writer.audioURL }
@@ -405,6 +424,7 @@ final class MeetingPipeline: @unchecked Sendable {
     func settle() {
         queue.sync {
             if let emission = aligner.flush() { write(emission) }
+            flushSegments()
         }
     }
 
@@ -440,6 +460,7 @@ final class MeetingPipeline: @unchecked Sendable {
             // A writer that already failed is not written to again: the
             // flush would only re-raise the same failure.
             if !failed, let emission = aligner.flush() { write(emission) }
+            flushSegments()
             for (channel, down) in downSince {
                 gaps.append(MeetingGap(
                     channel: channel,
@@ -471,12 +492,27 @@ final class MeetingPipeline: @unchecked Sendable {
             onDiskOrWriteFailure?(.write(String(describing: error)))
             return
         }
+        // Only after the append: a segment must never name frames that are
+        // not on disk yet.
+        for channel in activeChannels {
+            let samples = channel == .microphone ? emission.microphone : emission.system
+            let peak = samples.reduce(0) { max($0, abs($1)) }
+            if let segment = policies[channel]?.observe(peak: peak, count: samples.count) {
+                onSegment(segment)
+            }
+        }
         if writer.frameCount >= nextDiskCheckFrame {
             nextDiskCheckFrame = writer.frameCount + MeetingDiskPolicy.checkEveryFrames
             if let free = freeBytesQuery(), MeetingDiskPolicy.mustStop(freeBytes: free) {
                 failed = true
                 onDiskOrWriteFailure?(.diskFull)
             }
+        }
+    }
+
+    private func flushSegments() {
+        for channel in activeChannels {
+            if let tail = policies[channel]?.flush() { onSegment(tail) }
         }
     }
 

@@ -131,6 +131,7 @@ public struct AppEnvironment {
         URL,
         AudioDeviceID?,
         @escaping @Sendable (MeetingCapture.Levels) -> Void,
+        @escaping @Sendable (MeetingSegmentRef) -> Void,
         @escaping @Sendable (MeetingCapture.Failure) -> Void
     ) -> any MeetingCapturing
     public var makeMeetingCapture: MeetingCaptureFactory
@@ -177,12 +178,13 @@ public struct AppEnvironment {
         focusedFieldReader: any FocusedFieldReading = SystemFocusedFieldReader(),
         clipboardRestoreReporter: ClipboardRestoreReporter? = nil,
         cleanupLegacyAgentStaging: @escaping @Sendable () throws -> Void = {},
-        makeMeetingCapture: @escaping MeetingCaptureFactory = { directory, device, onLevels, onFailure in
+        makeMeetingCapture: @escaping MeetingCaptureFactory = { directory, device, onLevels, onSegment, onFailure in
             MeetingCapture(
                 directory: directory,
                 microphone: MicrophoneAudioSource(preferredInputDeviceID: device),
                 systemAudio: nil,
                 onLevels: onLevels,
+                onSegment: onSegment,
                 onFailure: onFailure
             )
         },
@@ -334,7 +336,12 @@ public final class AppState: ObservableObject {
     /// Is the preparation countdown in progress? Needed for tests: “the application is silent at rest.”
     public var isCountingEnginePreparation: Bool { preparationTimer != nil }
     @Published public private(set) var isEngineReady = false {
-        didSet { if isEngineReady { hasEngineBeenReady = true } }
+        didSet {
+            if isEngineReady { hasEngineBeenReady = true }
+            let arbiter = engineArbiter
+            let ready = isEngineReady
+            Task { await arbiter.setEngineReady(ready) }
+        }
     }
     /// Whether the engine has ever been ready in this process.
     ///
@@ -440,6 +447,25 @@ public final class AppState: ObservableObject {
     private var liveDurationTimer: Timer?
     /// ⌘Q is waiting for the recording to end before the app may quit.
     private var terminationPending = false
+
+    /// The transcript of the recording being made — or of the one that just
+    /// ended and is still being decoded — with the paragraph in progress last.
+    @Published public private(set) var liveTranscript: [MeetingUtterance] = []
+    /// Seconds of speech waiting for the engine. Measured from what was
+    /// submitted and what came back, never modelled.
+    @Published public private(set) var transcriptBacklogSeconds: TimeInterval = 0
+    /// The queue stopped itself after repeated failures. The audio is safe.
+    @Published public private(set) var isTranscriptionPaused = false
+    /// Transcripts read from disk for the detail pane, by recording.
+    @Published public private(set) var loadedTranscripts: [UUID: [MeetingUtterance]] = [:]
+    /// Which recording `liveTranscript` belongs to.
+    @Published public private(set) var transcribingRecordingID: UUID?
+    /// Dictation always wins the engine; meeting decodes wait their turn.
+    private let engineArbiter = EngineArbiter()
+    private var transcriptionQueue: MeetingTranscriptionQueue?
+    private var utteranceAssembler = MeetingUtteranceAssembler()
+    private var closedUtterances: [MeetingUtterance] = []
+    private var transcriptWriteFailureReported = false
 
     /// Finished dictations kept on disk, newest first, with their audio.
     @Published public private(set) var history: [HistoryEntry] = []
@@ -1047,6 +1073,11 @@ public final class AppState: ObservableObject {
             controller.onStateChange = { [weak self] state in
                 self?.dictationState = state
                 self?.flushNoticeAfterSession(state)
+                // A session that has started owns the engine until it ends;
+                // a meeting decode that has not started yet waits.
+                if let arbiter = self?.engineArbiter {
+                    Task { await arbiter.setDictationActive(state != .idle) }
+                }
                 // The person just pressed the key and is about to speak for
                 // seconds. Refresh accelerator residency now, under their
                 // voice, instead of trusting a device-specific idle timer and
@@ -1809,6 +1840,11 @@ public final class AppState: ObservableObject {
         idleUnloadTask?.cancel()
         idleUnloadTask = nil
         guard dictationState == .idle,
+              // A recording is not idleness either, and neither is a queue
+              // still decoding one that just ended: unloading here would
+              // reload 0.3 s later for the next segment, forever.
+              meetingState == .idle,
+              transcriptionQueue == nil,
               isEngineReady,
               // Setup is not idleness: the person is granting permissions, not
               // resting from dictation, and the try-out is a minute away. The
@@ -1835,6 +1871,8 @@ public final class AppState: ObservableObject {
     private func performIdleUnload() async {
         idleUnloadTask = nil
         guard dictationState == .idle,
+              meetingState == .idle,
+              transcriptionQueue == nil,
               !isRecoveryOperationActive,
               !isRecyclingEngine,
               !isPreparingEngine,
@@ -2142,7 +2180,8 @@ public final class AppState: ObservableObject {
         }
         let metadata = MeetingRecordingMetadata(
             startedAt: Date(),
-            systemAudio: SystemAudioSummary(wasRequested: false)
+            systemAudio: SystemAudioSummary(wasRequested: false),
+            transcriptionState: .live
         )
         let directory = meetingStore.incompleteDirectory(for: metadata.id)
         do {
@@ -2157,12 +2196,16 @@ public final class AppState: ObservableObject {
             { [weak self] levels in
                 Task { @MainActor in self?.liveLevels = levels }
             },
+            { [weak self] segment in
+                Task { @MainActor in self?.segmentReady(segment) }
+            },
             { [weak self] failure in
                 Task { @MainActor in self?.recordingFailed(failure) }
             }
         )
         meetingCapture = capture
         meetingState = .starting
+        beginTranscription(for: metadata.id, directory: directory)
         Task { [weak self] in
             do {
                 try await capture.start()
@@ -2178,6 +2221,7 @@ public final class AppState: ObservableObject {
                     guard let self else { return }
                     self.meetingCapture = nil
                     self.meetingState = .idle
+                    self.abandonTranscription()
                     // Nothing was recorded: the directory prepared for it is
                     // not a recording anyone wants back.
                     try? FileManager.default.removeItem(at: directory)
@@ -2202,6 +2246,8 @@ public final class AppState: ObservableObject {
         stopLiveDurationTimer()
         Task { [weak self] in
             var metadata = live
+            let engineReady = await MainActor.run { self?.isEngineReady ?? false }
+            metadata.transcriptionState = engineReady ? .live : .waitingForModel
             do {
                 let summary = try await capture.stop()
                 metadata.duration = summary.duration
@@ -2230,6 +2276,7 @@ public final class AppState: ObservableObject {
                 self.meetingState = .idle
                 self.reloadRecordings()
                 self.lastFinishedRecordingID = metadata.id
+                self.finishTranscription(for: metadata.id)
                 if let notice = Self.endNotice(for: metadata.endReason) { self.notify(notice) }
                 if self.terminationPending {
                     self.terminationPending = false
@@ -2324,6 +2371,158 @@ public final class AppState: ObservableObject {
         guard let meetingStore else { return }
         let target = meetingStore.audioURL(for: id) ?? meetingStore.directory(for: id)
         NSWorkspace.shared.activateFileViewerSelecting([target])
+    }
+
+    // MARK: - Live transcript
+
+    /// The transcript for a recording — live while it is being made or
+    /// drained, from disk otherwise (see `loadTranscript`).
+    public func transcript(for id: UUID) -> [MeetingUtterance] {
+        id == transcribingRecordingID ? liveTranscript : (loadedTranscripts[id] ?? [])
+    }
+
+    public func loadTranscript(_ id: UUID) {
+        guard id != transcribingRecordingID, let meetingStore else { return }
+        loadedTranscripts[id] = meetingStore.transcript(for: id)?.utterances ?? []
+    }
+
+    /// Host-only and concealed, like every copy this app makes: a meeting
+    /// transcript is precisely what Universal Clipboard must never carry off.
+    public func copyTranscript(_ id: UUID) {
+        let utterances = transcript(for: id)
+        guard !utterances.isEmpty else { return }
+        do {
+            try HostOnlyPasteboard().copyHostOnly(MeetingTranscriptFormatter.plainText(utterances))
+        } catch {
+            notify(DictationNotice(kind: .failure, message: "Couldn't copy the transcript."))
+        }
+    }
+
+    /// Take the held segments up again after failures paused the queue.
+    public func resumeTranscription() {
+        guard let queue = transcriptionQueue else { return }
+        isTranscriptionPaused = false
+        Task { await queue.resume() }
+    }
+
+    private func beginTranscription(for id: UUID, directory: URL) {
+        guard let meetingStore else { return }
+        closedUtterances = []
+        utteranceAssembler = MeetingUtteranceAssembler()
+        liveTranscript = []
+        transcriptBacklogSeconds = 0
+        isTranscriptionPaused = false
+        transcriptWriteFailureReported = false
+        transcribingRecordingID = id
+        let incompleteAudio = directory.appending(path: MeetingWriter.audioFileName, directoryHint: .notDirectory)
+        let transcriber = self.transcriber
+        let pipeline = makePipeline()
+        let arbiter = engineArbiter
+        transcriptionQueue = MeetingTranscriptionQueue(
+            read: { segment in
+                // The file moves out of .incomplete/ when the recording ends;
+                // resolve where it is now, every time.
+                let url = meetingStore.audioURL(for: id) ?? incompleteAudio
+                return try MeetingPCMWindowReader(url: url).read(segment)
+            },
+            decode: { samples in
+                guard let transcriber else { throw ASREngineError.modelsNotLoaded }
+                let result = try await transcriber.transcribe(samples: samples)
+                // The same dictionary and typography as dictation; the
+                // trailing command a dictation may end with is not a thing a
+                // meeting says.
+                return pipeline.run(result.text).output.text
+            },
+            awaitTurn: { await arbiter.awaitMeetingTurn() },
+            emit: { [weak self] segment, outcome in
+                await MainActor.run { self?.segmentDecoded(segment, outcome) }
+            }
+        )
+        // The engine is wanted now and stays until this is done.
+        shouldStayUnloadedUntilUse = false
+        prepareEngineIfIdleAndCold()
+        rescheduleIdleUnload()
+    }
+
+    private func abandonTranscription() {
+        transcriptionQueue = nil
+        transcribingRecordingID = nil
+        liveTranscript = []
+        transcriptBacklogSeconds = 0
+        isTranscriptionPaused = false
+        rescheduleIdleUnload()
+    }
+
+    private func segmentReady(_ segment: MeetingSegmentRef) {
+        guard let queue = transcriptionQueue else { return }
+        transcriptBacklogSeconds += Double(segment.frameCount) / Double(MeetingWriter.sampleRate)
+        Task { await queue.submit(segment) }
+    }
+
+    private func segmentDecoded(_ segment: MeetingSegmentRef, _ outcome: MeetingTranscriptionQueue.Outcome) {
+        let rate = Double(MeetingWriter.sampleRate)
+        transcriptBacklogSeconds = max(0, transcriptBacklogSeconds - Double(segment.frameCount) / rate)
+        let start = Double(segment.startFrame) / rate
+        let end = Double(segment.endFrame) / rate
+        let piece: MeetingUtteranceAssembler.Segment
+        switch outcome {
+        case let .decoded(text):
+            piece = .init(channel: segment.channel, start: start, end: end, text: text)
+        case .failed:
+            piece = .init(channel: segment.channel, start: start, end: end, text: "", isFailed: true)
+        }
+        closedUtterances += utteranceAssembler.append(piece)
+        publishLiveTranscript()
+        if let queue = transcriptionQueue {
+            Task { [weak self] in
+                let paused = await queue.isPaused
+                await MainActor.run { self?.isTranscriptionPaused = paused }
+            }
+        }
+    }
+
+    private func publishLiveTranscript() {
+        liveTranscript = closedUtterances + (utteranceAssembler.pending.map { [$0] } ?? [])
+        guard let id = transcribingRecordingID, let meetingStore else { return }
+        loadedTranscripts[id] = liveTranscript
+        do {
+            try meetingStore.write(
+                MeetingTranscript(utterances: liveTranscript),
+                for: id,
+                incomplete: !meetingStore.isPublished(id)
+            )
+        } catch {
+            // Text that cannot be written is text that would be lost at quit.
+            // Said once; the audio is still being recorded regardless.
+            guard !transcriptWriteFailureReported else { return }
+            transcriptWriteFailureReported = true
+            notify(DictationNotice(kind: .warning, message: "The transcript can't be saved. The recording continues."))
+        }
+    }
+
+    /// After the recording is filed: let the backlog drain, close the last
+    /// paragraph, and say on disk how it went.
+    private func finishTranscription(for id: UUID) {
+        guard let queue = transcriptionQueue, let meetingStore else { return }
+        Task { [weak self] in
+            await queue.drain()
+            let paused = await queue.isPaused
+            await MainActor.run {
+                guard let self, self.transcribingRecordingID == id else { return }
+                self.closedUtterances += self.utteranceAssembler.flush()
+                self.publishLiveTranscript()
+                if var metadata = meetingStore.metadata(for: id) {
+                    metadata.transcriptionState = paused ? .partial : .complete
+                    try? meetingStore.write(metadata)
+                }
+                self.transcriptionQueue = nil
+                self.transcribingRecordingID = nil
+                self.isTranscriptionPaused = false
+                self.transcriptBacklogSeconds = 0
+                self.reloadRecordings()
+                self.rescheduleIdleUnload()
+            }
+        }
     }
 
     private func recordingFailed(_ failure: MeetingCapture.Failure) {

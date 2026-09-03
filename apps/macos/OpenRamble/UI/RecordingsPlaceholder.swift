@@ -23,11 +23,52 @@ struct RecordingsPlaceholder: Equatable {
         detail: "Its audio and transcript appear here."
     )
 
+    static let listening = RecordingsPlaceholder(
+        symbol: "text.alignleft",
+        title: "Transcribing as you speak",
+        detail: "Paragraphs appear here a few seconds after they are said."
+    )
+
+    static let stillTranscribing = RecordingsPlaceholder(
+        symbol: "text.alignleft",
+        title: "Still transcribing",
+        detail: "The rest of this recording is being transcribed. The audio is complete."
+    )
+
+    static let noSpeech = RecordingsPlaceholder(
+        symbol: "text.alignleft",
+        title: "Nothing to transcribe",
+        detail: "No speech was heard in this recording."
+    )
+
+    static let transcriptionDidNotFinish = RecordingsPlaceholder(
+        symbol: "text.alignleft",
+        title: "Transcription didn't finish",
+        detail: "The audio is complete; the transcript is not."
+    )
+
+    static let waitingForModel = RecordingsPlaceholder(
+        symbol: "clock",
+        title: "Waiting for the speech model",
+        detail: "Transcription starts once the model is downloaded and ready."
+    )
+
     static let notTranscribed = RecordingsPlaceholder(
         symbol: "text.alignleft",
-        title: "Not transcribed yet",
-        detail: "Transcription for recordings is coming in a later version. The audio is complete and plays back."
+        title: "Not transcribed",
+        detail: "This recording was interrupted before it could be transcribed."
     )
+
+    /// What to show in place of an empty transcript, given how far it got.
+    static func transcript(for state: MeetingTranscriptionState) -> RecordingsPlaceholder {
+        switch state {
+        case .none: return .notTranscribed
+        case .live: return .stillTranscribing
+        case .complete: return .noSpeech
+        case .partial, .failed: return .transcriptionDidNotFinish
+        case .waitingForModel: return .waitingForModel
+        }
+    }
 
     static let audioMissing = RecordingsPlaceholder(
         symbol: "waveform.slash",

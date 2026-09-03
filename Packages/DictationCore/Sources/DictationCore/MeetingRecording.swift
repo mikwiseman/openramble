@@ -188,6 +188,23 @@ public struct MeetingRecordingMetadata: Codable, Sendable, Equatable, Identifiab
     public var isMeeting: Bool { systemAudio.wasRequested }
 }
 
+/// A stretch of one channel, by position in the file — never a copy of the
+/// audio. Twenty-four bytes, however long the stretch: the frames are already
+/// on disk, and whoever decodes this reads them back when its turn comes.
+public struct MeetingSegmentRef: Sendable, Equatable, Hashable, Codable {
+    public let channel: MeetingChannel
+    public let startFrame: Int
+    public let frameCount: Int
+
+    public init(channel: MeetingChannel, startFrame: Int, frameCount: Int) {
+        self.channel = channel
+        self.startFrame = startFrame
+        self.frameCount = frameCount
+    }
+
+    public var endFrame: Int { startFrame + frameCount }
+}
+
 /// One paragraph of transcript, attributed by channel.
 ///
 /// Start and end come from where the audio was cut, on the recording's own

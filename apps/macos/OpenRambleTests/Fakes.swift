@@ -609,8 +609,8 @@ final class AppHarness {
                 localTranscriber: recognizer ?? warmUpEngine.map { LocalTranscriber(engine: $0) },
                 focusedFieldReader: focusedField,
                 cleanupLegacyAgentStaging: cleanupLegacyAgentStaging,
-                makeMeetingCapture: { [meetingCapture] directory, _, _, _ in
-                    meetingCapture.prepare(directory: directory)
+                makeMeetingCapture: { [meetingCapture] directory, _, _, onSegment, _ in
+                    meetingCapture.prepare(directory: directory, onSegment: onSegment)
                     return meetingCapture
                 },
                 // Remove rather than trash: a suite that fills the developer's
@@ -843,8 +843,18 @@ actor ReadinessControlledRecognizer: DictationRecognizing {
         ASRResult(text: "", audioDuration: 1, processingDuration: 0)
     }
 
+    /// What a sample-based decode answers, and whether it fails instead.
+    private var samplesText = ""
+    private var samplesError: (any Error)?
+    private(set) var sampleDecodes = 0
+
+    func setSamplesText(_ text: String) { samplesText = text }
+    func setSamplesError(_ error: (any Error)?) { samplesError = error }
+
     func transcribe(samples: [Float]) async throws -> ASRResult {
-        ASRResult(text: "", audioDuration: 1, processingDuration: 0)
+        sampleDecodes += 1
+        if let samplesError { throw samplesError }
+        return ASRResult(text: samplesText, audioDuration: 1, processingDuration: 0)
     }
 
     func warmUpInference() async throws {
@@ -918,13 +928,23 @@ final class FakeMeetingCapture: MeetingCapturing, @unchecked Sendable {
     private(set) var resumeCount = 0
     /// Where the app asked it to record.
     private(set) var directory: URL?
+    private var onSegment: (@Sendable (MeetingSegmentRef) -> Void)?
     /// What `stop()` reports.
     var frames = 32_000
     var endReason: MeetingEndReason = .stoppedByUser
     var startError: MeetingCapture.Failure?
 
-    func prepare(directory: URL) {
-        lock.withLock { self.directory = directory }
+    func prepare(directory: URL, onSegment: @escaping @Sendable (MeetingSegmentRef) -> Void) {
+        lock.withLock {
+            self.directory = directory
+            self.onSegment = onSegment
+        }
+    }
+
+    /// Hand the app a stretch of the file, as the real recorder would.
+    func emitSegment(_ segment: MeetingSegmentRef) {
+        let handler = lock.withLock { onSegment }
+        handler?(segment)
     }
 
     func start() async throws {

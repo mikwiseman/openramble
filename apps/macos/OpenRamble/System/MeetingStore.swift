@@ -93,6 +93,11 @@ public struct MeetingStore: Sendable {
             .sorted { $0.startedAt > $1.startedAt }
     }
 
+    /// Whether the recording has ended and moved into the list.
+    public func isPublished(_ id: UUID) -> Bool {
+        fileManager.fileExists(atPath: directory(for: id).path)
+    }
+
     public func metadata(for id: UUID) -> MeetingRecordingMetadata? {
         read(MeetingRecordingMetadata.self, at: directory(for: id).appending(path: Self.metadataFileName))
     }

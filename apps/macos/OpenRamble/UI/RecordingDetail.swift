@@ -40,6 +40,13 @@ struct RecordingDetail: View {
         .toolbar {
             ToolbarItemGroup {
                 Button {
+                    state.copyTranscript(recording.id)
+                } label: {
+                    Label("Copy Transcript", systemImage: "doc.on.doc")
+                }
+                .help("Copy the transcript")
+                .disabled(state.transcript(for: recording.id).isEmpty)
+                Button {
                     state.revealRecording(recording.id)
                 } label: {
                     Label("Show in Finder", systemImage: "folder")
@@ -104,14 +111,34 @@ struct RecordingDetail: View {
                 .padding(.horizontal, GlassTokens.Space.page)
                 .padding(.top, GlassTokens.Space.section)
             }
-            RecordingsPlaceholderView(
-                placeholder: player.failedToLoad ? .audioMissing : .notTranscribed
-            )
+            let utterances = state.transcript(for: recording.id)
+            if !utterances.isEmpty {
+                TranscriptView(
+                    utterances: utterances,
+                    currentTime: player.isPlaying || player.currentTime > 0 ? player.currentTime : nil,
+                    onSeek: { time in
+                        player.seek(to: time)
+                        if !player.isPlaying { player.toggle() }
+                    }
+                )
+            } else if player.failedToLoad {
+                RecordingsPlaceholderView(placeholder: .audioMissing)
+            } else {
+                RecordingsPlaceholderView(
+                    placeholder: state.transcribingRecordingID == recording.id
+                        ? .stillTranscribing
+                        : .transcript(for: recording.transcriptionState)
+                )
+            }
+            if state.transcribingRecordingID == recording.id {
+                TranscriptStatusLine(state: state)
+            }
         }
     }
 
     private func load() {
         title = recording.title ?? ""
+        state.loadTranscript(recording.id)
         player.load(id: recording.id, url: state.recordingAudioURL(recording.id))
     }
 
@@ -130,22 +157,32 @@ struct LiveRecordingDetail: View {
     @ObservedObject var state: AppState
 
     var body: some View {
-        VStack(spacing: GlassTokens.Space.section) {
-            Spacer()
-            Text(RecordingTime.clock(state.liveDuration))
-                .font(.system(size: 56, weight: .light, design: .rounded))
-                .monospacedDigit()
-                .accessibilityLabel(state.meetingState == .paused ? "Paused" : "Recording")
-                .accessibilityValue(RecordingTime.spoken(state.liveDuration))
-            LiveLevelMeter(levels: state.liveLevels, isPaused: state.meetingState == .paused)
-                .frame(maxWidth: 420, minHeight: 44, maxHeight: 44)
-                .padding(.horizontal, GlassTokens.Space.page)
-            Text(state.meetingState == .paused
-                ? "Paused. Nothing is being captured."
-                : "Recording your microphone. Everything stays on this Mac.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            Spacer()
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: GlassTokens.Space.section) {
+                Text(RecordingTime.clock(state.liveDuration))
+                    .font(.system(size: 34, weight: .light, design: .rounded))
+                    .monospacedDigit()
+                    .accessibilityLabel(state.meetingState == .paused ? "Paused" : "Recording")
+                    .accessibilityValue(RecordingTime.spoken(state.liveDuration))
+                LiveLevelMeter(levels: state.liveLevels, isPaused: state.meetingState == .paused)
+                    .frame(maxWidth: 240, minHeight: 28, maxHeight: 28)
+                Spacer()
+                Text(state.meetingState == .paused ? "Paused" : "Recording your microphone")
+                    .font(.system(size: GlassTokens.Label.footnote))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, GlassTokens.Space.page)
+            .padding(.top, GlassTokens.Space.section)
+            .padding(.bottom, GlassTokens.Space.stack)
+            Divider()
+            if state.liveTranscript.isEmpty {
+                RecordingsPlaceholderView(placeholder: .listening)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                TranscriptView(utterances: state.liveTranscript)
+            }
+            Divider()
+            TranscriptStatusLine(state: state)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
