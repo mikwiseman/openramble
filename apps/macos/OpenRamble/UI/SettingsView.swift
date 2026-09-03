@@ -27,7 +27,7 @@ struct SettingsView: View {
             switch self {
             case .general: return "General"
             case .recognition: return "Recognition"
-            case .history: return "History"
+            case .history: return "Dictation History"
             case .dictionary: return "Dictionary"
             case .about: return "About"
             }

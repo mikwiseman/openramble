@@ -33,16 +33,25 @@ enum MenuBarStatus {
     /// state without replacing the app identity.
     static let brandIconName = "BrandIconMenuBar"
 
-    static func activity(state: DictationState) -> MenuBarActivity {
+    /// `isRecordingMeeting`: a meeting or voice note is being recorded. That
+    /// is the microphone capturing, so it wears the same red as dictation;
+    /// dictation's own work outranks it for the seconds it lasts.
+    static func activity(state: DictationState, isRecordingMeeting: Bool = false) -> MenuBarActivity {
         switch state {
         // No dot until audio is actually being captured: the red dot must
         // never lie about the microphone, and the overlay already answers the
         // key press instantly.
-        case .preparing: return .hidden
+        case .preparing: return isRecordingMeeting ? .recording : .hidden
         case .listening: return .recording
         case .transcribing, .inserting: return .working
-        case .idle: return .hidden
+        case .idle: return isRecordingMeeting ? .recording : .hidden
         }
+    }
+
+    /// The menu's line about a running recording. Computed when the menu is
+    /// built — no clock lives in the menu bar.
+    static func recordingLine(isPaused: Bool, duration: TimeInterval) -> String {
+        "\(isPaused ? "Paused" : "Recording") — \(RecordingTime.clock(duration))"
     }
 
     /// Recording and working stay distinguishable without color through the
@@ -91,7 +100,8 @@ enum MenuBarStatus {
     static func accessibilityLabel(
         state: DictationState,
         isDictationReady: Bool,
-        hasRecoveredWork: Bool = false
+        hasRecoveredWork: Bool = false,
+        isRecordingMeeting: Bool = false
     ) -> String {
         switch state {
         case .listening: return "OpenRamble: recording"
@@ -99,6 +109,9 @@ enum MenuBarStatus {
         case .inserting: return "OpenRamble: inserting text"
         case .preparing: return "OpenRamble: turning on the microphone"
         case .idle:
+            if isRecordingMeeting {
+                return "OpenRamble: recording"
+            }
             // The dot on the icon must also sound for VoiceOver: a picture
             // without words does not exist for the blind.
             if hasRecoveredWork {

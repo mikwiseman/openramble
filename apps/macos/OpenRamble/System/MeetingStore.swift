@@ -124,6 +124,17 @@ public struct MeetingStore: Sendable {
         return total
     }
 
+    /// What one recording occupies.
+    public func bytes(for id: UUID) -> Int64 {
+        guard let entries = try? fileManager.contentsOfDirectory(
+            at: directory(for: id),
+            includingPropertiesForKeys: [.fileSizeKey]
+        ) else { return 0 }
+        return entries.reduce(0) { total, url in
+            total + Int64((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+        }
+    }
+
     // MARK: - Writing
 
     public func write(_ metadata: MeetingRecordingMetadata, incomplete: Bool = false) throws {

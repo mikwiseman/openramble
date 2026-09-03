@@ -456,6 +456,7 @@ final class AppHarness {
     let copyMonitor = FakeShortcutMonitor()
     let overlay = FakeOverlay()
     let capture = FakeCapture()
+    let meetingCapture = FakeMeetingCapture()
     let inserter = FakeInserter()
     let workspaceNotifications = NotificationCenter()
     let notifications = NotificationCenter()
@@ -607,7 +608,14 @@ final class AppHarness {
                 notifications: notifications,
                 localTranscriber: recognizer ?? warmUpEngine.map { LocalTranscriber(engine: $0) },
                 focusedFieldReader: focusedField,
-                cleanupLegacyAgentStaging: cleanupLegacyAgentStaging
+                cleanupLegacyAgentStaging: cleanupLegacyAgentStaging,
+                makeMeetingCapture: { [meetingCapture] directory, _, _, _ in
+                    meetingCapture.prepare(directory: directory)
+                    return meetingCapture
+                },
+                // Remove rather than trash: a suite that fills the developer's
+                // Trash with fixtures is a suite nobody wants to run.
+                trashItem: { try FileManager.default.removeItem(at: $0) }
             )
         )
     }
@@ -895,4 +903,73 @@ final class FakeShortcutMonitor: ShortcutMonitoring {
 
     func start() { if shortcut != nil { isRunning = true } }
     func stop() { isRunning = false }
+}
+
+// MARK: - Recording edges
+
+/// Records nothing and answers instantly, so the recording flow — start, the
+/// live timer, stop, filing — can be checked without a microphone.
+final class FakeMeetingCapture: MeetingCapturing, @unchecked Sendable {
+    private let lock = NSLock()
+    private var current: MeetingCapture.State = .idle
+    private(set) var startCount = 0
+    private(set) var stopCount = 0
+    private(set) var pauseCount = 0
+    private(set) var resumeCount = 0
+    /// Where the app asked it to record.
+    private(set) var directory: URL?
+    /// What `stop()` reports.
+    var frames = 32_000
+    var endReason: MeetingEndReason = .stoppedByUser
+    var startError: MeetingCapture.Failure?
+
+    func prepare(directory: URL) {
+        lock.withLock { self.directory = directory }
+    }
+
+    func start() async throws {
+        try lock.withLock {
+            if let startError { throw startError }
+            startCount += 1
+            current = .recording
+        }
+    }
+
+    func pause() async throws {
+        lock.withLock {
+            pauseCount += 1
+            current = .paused
+        }
+    }
+
+    func resume() async throws {
+        lock.withLock {
+            resumeCount += 1
+            current = .recording
+        }
+    }
+
+    func stop() async throws -> MeetingCapture.Summary {
+        lock.withLock {
+            stopCount += 1
+            current = .stopped
+            return MeetingCapture.Summary(
+                frameCount: frames,
+                duration: Double(frames) / 16_000,
+                microphoneDeviceName: "Fake Microphone",
+                systemAudio: SystemAudioSummary(wasRequested: false),
+                gaps: [],
+                pauses: [],
+                endReason: endReason
+            )
+        }
+    }
+
+    var frameCount: Int {
+        get async { lock.withLock { frames } }
+    }
+
+    var state: MeetingCapture.State {
+        get async { lock.withLock { current } }
+    }
 }

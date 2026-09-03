@@ -10,6 +10,22 @@ import XCTest
 /// VoiceOver must still describe the current state even though the branded
 /// picture stays stable.
 final class MenuBarStatusTests: XCTestCase {
+    /// A meeting being recorded is the microphone capturing — the same red as
+    /// dictation, because the colour means one thing. Dictation's own work
+    /// outranks it while it lasts.
+    func testAMeetingRecordingShowsTheRecordingDotAndSaysSo() {
+        XCTAssertEqual(MenuBarStatus.activity(state: .idle, isRecordingMeeting: true), .recording)
+        XCTAssertEqual(MenuBarStatus.activity(state: .preparing, isRecordingMeeting: true), .recording)
+        XCTAssertEqual(MenuBarStatus.activity(state: .transcribing, isRecordingMeeting: true), .working)
+        XCTAssertEqual(MenuBarStatus.activity(state: .idle, isRecordingMeeting: false), .hidden)
+        XCTAssertEqual(
+            MenuBarStatus.accessibilityLabel(state: .idle, isDictationReady: true, isRecordingMeeting: true),
+            "OpenRamble: recording"
+        )
+        XCTAssertEqual(MenuBarStatus.recordingLine(isPaused: false, duration: 724), "Recording — 12:04")
+        XCTAssertEqual(MenuBarStatus.recordingLine(isPaused: true, duration: 724), "Paused — 12:04")
+    }
+
     func testScenario003() {
         let states: [DictationState] = [.idle, .preparing, .listening, .transcribing, .inserting]
 

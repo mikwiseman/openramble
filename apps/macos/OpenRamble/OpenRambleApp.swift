@@ -11,6 +11,21 @@ import SwiftUI
 private final class TerminationObserver: NSObject, NSApplicationDelegate {
     weak var state: AppState?
 
+    /// Quitting mid-recording is the one place a dialog is right: it is the
+    /// only irreversible act in the feature. The recording is filed before
+    /// AppKit gets its reply.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let state, state.isRecordingInProgress else { return .terminateNow }
+        let alert = NSAlert()
+        alert.messageText = "Stop recording and quit?"
+        alert.informativeText = "Everything recorded so far will be kept."
+        alert.addButton(withTitle: "Stop and Quit")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return .terminateCancel }
+        state.stopRecordingBeforeTermination()
+        return .terminateLater
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         state?.releaseEngineBeforeTermination()
     }
@@ -63,7 +78,8 @@ struct OpenRambleApp: App {
                     accessibilityState: state.accessibilityState,
                     microphoneGranted: state.microphoneGranted,
                     modelState: state.modelState
-                )
+                ),
+                isRecordingMeeting: state.meetingState == .recording
             )
             .task {
                 // The first launch must show the setup itself. Without this
@@ -100,6 +116,24 @@ struct OpenRambleApp: App {
         // visible in a screenshot and neither is anything the view itself asks
         // for. A `Window` gets the ordinary titlebar every other Mac app has,
         // which is all the sidebar ever needed.
+        // The library. A `Window` for the same reason Settings is one, sized
+        // for content that is unbounded: a person decides how much of a
+        // transcript to look at, not the window.
+        Window("Recordings", id: RecordingsWindow.windowID) {
+            RecordingsWindow(state: state)
+        }
+        .defaultSize(width: 1080, height: 720)
+        .windowResizability(.contentMinSize)
+        .commands {
+            CommandGroup(after: .appSettings) {
+                Button("Recordings…") {
+                    openWindow(id: RecordingsWindow.windowID)
+                    WindowFronting.raiseOpenedWindow()
+                }
+                .keyboardShortcut("0", modifiers: .command)
+            }
+        }
+
         Window("Settings", id: Self.settingsWindowID) {
             SettingsView(state: state)
         }

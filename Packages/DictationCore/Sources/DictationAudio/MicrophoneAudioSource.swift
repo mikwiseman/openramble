@@ -149,6 +149,12 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
         }
     }
 
+    /// The name of the microphone actually in use.
+    ///
+    /// For the default input the engine reports its own private aggregate
+    /// ("CADefaultDeviceAggregate-…"), which names nothing a person owns;
+    /// the system default input device behind it is what they would call
+    /// the microphone.
     private static func currentDeviceName(of input: AVAudioInputNode) -> String? {
         guard let unit = input.audioUnit else { return nil }
         var deviceID = AudioDeviceID(0)
@@ -157,6 +163,24 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
             unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &deviceID, &size
         )
         guard status == noErr, deviceID != 0 else { return nil }
+        if let name = name(of: deviceID), !name.hasPrefix("CADefaultDeviceAggregate") {
+            return name
+        }
+        var defaultInput = AudioDeviceID(0)
+        var defaultSize = UInt32(MemoryLayout<AudioDeviceID>.size)
+        var defaultAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let defaultStatus = AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject), &defaultAddress, 0, nil, &defaultSize, &defaultInput
+        )
+        guard defaultStatus == noErr, defaultInput != 0 else { return nil }
+        return name(of: defaultInput)
+    }
+
+    private static func name(of deviceID: AudioDeviceID) -> String? {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioObjectPropertyName,
             mScope: kAudioObjectPropertyScopeGlobal,
@@ -164,10 +188,10 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
         )
         var name: CFString? = nil
         var nameSize = UInt32(MemoryLayout<CFString?>.size)
-        let nameStatus = withUnsafeMutablePointer(to: &name) {
+        let status = withUnsafeMutablePointer(to: &name) {
             AudioObjectGetPropertyData(deviceID, &address, 0, nil, &nameSize, $0)
         }
-        guard nameStatus == noErr else { return nil }
+        guard status == noErr else { return nil }
         return name as String?
     }
 }

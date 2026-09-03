@@ -1,6 +1,6 @@
 # OpenRamble
 
-Private, local dictation for Apple Silicon Macs.
+Private, local dictation and voice recording for Apple Silicon Macs.
 
 Hold a hotkey, speak, and release it. OpenRamble transcribes the recording on
 your Mac and inserts the text at the current cursor.
@@ -29,6 +29,13 @@ default, adjustable in Settings ▸ History, deletable individually or all at
 once. Earlier versions kept transcripts in memory only; this is a deliberate
 change, and it is the one thing this app stores that it previously did not.
 Nothing leaves the Mac either way.
+
+**Recordings** you make on purpose — in the Recordings window, ⌘0 — stay until
+you delete them. They are not bounded by a count: a recording is a document,
+and the app does not throw documents away. About 230 MB per hour; the window
+shows the total. Deleting a recording moves it to the Trash. Recordings are
+included in your Mac's own backups, like any document you make; the folders
+that hold transient dictation audio are not.
 
 Recognition never uses the network. The following maintenance actions can:
 
@@ -80,6 +87,7 @@ Application data is stored under
 | Current recording | Queued for local deletion after success or explicit cancellation |
 | Recovery audio after a technical failure | Up to 10 WAV files, seven days, and 1 GiB |
 | Dictation history: transcripts and their audio | The last 5 by default (5–50 in Settings ▸ History); older entries and their recordings are deleted when they fall off |
+| Recordings: two-channel audio and their metadata | Until you delete them. Not bounded by count or age. About 230 MB per hour; the total is shown in the Recordings window |
 | Settings and replacement dictionary | Stored in macOS defaults |
 | Text that could not be inserted | Memory only, until the next dictation or app exit |
 
@@ -107,7 +115,8 @@ Application Support directory automatically. The bundle identifier remains
 - Use “Copy Last as Spoken” to copy the raw recognition result before
   dictionary replacements and typography cleanup. The item appears when that
   raw text differs from what was inserted.
-- A single dictation can run for up to five minutes. At the limit OpenRamble
+- A single dictation can run for up to five minutes; a recording made in the
+  Recordings window has no such limit. At the limit OpenRamble
   stops cleanly and transcribes the complete captured audio instead of risking
   an incomplete take when disk storage is unavailable.
 - Choose whether the compact dictation panel appears at the top or bottom of

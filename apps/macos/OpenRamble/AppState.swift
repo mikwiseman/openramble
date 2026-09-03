@@ -124,6 +124,19 @@ public struct AppEnvironment {
     /// helper. Test environments default to a no-op and never touch the real
     /// user's Darwin temporary directory.
     public var cleanupLegacyAgentStaging: @Sendable () throws -> Void
+    /// How to record a long take — a meeting or a voice note — into a
+    /// directory: given the directory, the preferred microphone, a level
+    /// callback for the meters and a failure callback.
+    public typealias MeetingCaptureFactory = (
+        URL,
+        AudioDeviceID?,
+        @escaping @Sendable (MeetingCapture.Levels) -> Void,
+        @escaping @Sendable (MeetingCapture.Failure) -> Void
+    ) -> any MeetingCapturing
+    public var makeMeetingCapture: MeetingCaptureFactory
+    /// Deleting a recording is a move to the Trash. Injectable so a test
+    /// removes its fixtures instead of filling the developer's Trash.
+    public var trashItem: @Sendable (URL) throws -> Void
     /// Shared with the worker supervisor so its off-main recovery loop can
     /// read the pressure tier without hopping through AppState.
 
@@ -164,6 +177,18 @@ public struct AppEnvironment {
         focusedFieldReader: any FocusedFieldReading = SystemFocusedFieldReader(),
         clipboardRestoreReporter: ClipboardRestoreReporter? = nil,
         cleanupLegacyAgentStaging: @escaping @Sendable () throws -> Void = {},
+        makeMeetingCapture: @escaping MeetingCaptureFactory = { directory, device, onLevels, onFailure in
+            MeetingCapture(
+                directory: directory,
+                microphone: MicrophoneAudioSource(preferredInputDeviceID: device),
+                systemAudio: nil,
+                onLevels: onLevels,
+                onFailure: onFailure
+            )
+        },
+        trashItem: @escaping @Sendable (URL) throws -> Void = {
+            try FileManager.default.trashItem(at: $0, resultingItemURL: nil)
+        },
     ) {
         self.defaults = defaults
         self.paths = paths
@@ -194,6 +219,8 @@ public struct AppEnvironment {
         self.focusedFieldReader = focusedFieldReader
         self.clipboardRestoreReporter = clipboardRestoreReporter
         self.cleanupLegacyAgentStaging = cleanupLegacyAgentStaging
+        self.makeMeetingCapture = makeMeetingCapture
+        self.trashItem = trashItem
     }
 
     /// Real edges are what a working application is built from.
@@ -383,6 +410,36 @@ public final class AppState: ObservableObject {
         }
     }
     @Published public private(set) var recentDictations: [RecentDictation] = []
+
+    // MARK: - Recordings
+
+    /// What the recorder is doing. Orthogonal to `dictationState`: a person
+    /// can dictate into Slack while a meeting records, and both are true.
+    public enum MeetingState: Equatable {
+        case idle
+        case starting
+        case recording
+        case paused
+        case stopping
+    }
+    @Published public private(set) var meetingState: MeetingState = .idle
+    /// Every finished recording, newest first.
+    @Published public private(set) var recordings: [MeetingRecordingMetadata] = []
+    /// The recording in progress, once it has actually started.
+    @Published public private(set) var liveRecording: MeetingRecordingMetadata?
+    /// Seconds on disk so far, refreshed once a second while recording.
+    @Published public private(set) var liveDuration: TimeInterval = 0
+    /// The loudest sample per channel over the last stretch, for the meters.
+    @Published public private(set) var liveLevels = MeetingCapture.Levels.silent
+    /// What the recordings occupy on disk.
+    @Published public private(set) var recordingsBytes: Int64 = 0
+    /// The recording that most recently ended — the window selects it.
+    @Published public private(set) var lastFinishedRecordingID: UUID?
+    private var meetingStore: MeetingStore?
+    private var meetingCapture: (any MeetingCapturing)?
+    private var liveDurationTimer: Timer?
+    /// ⌘Q is waiting for the recording to end before the app may quit.
+    private var terminationPending = false
 
     /// Finished dictations kept on disk, newest first, with their audio.
     @Published public private(set) var history: [HistoryEntry] = []
@@ -642,6 +699,8 @@ public final class AppState: ObservableObject {
     private let notifications: NotificationCenter
     private let replacementsStore: ReplacementsStore
     private let cleanupLegacyAgentStaging: @Sendable () throws -> Void
+    private let makeMeetingCapture: AppEnvironment.MeetingCaptureFactory
+    private let trashItem: @Sendable (URL) throws -> Void
 
     /// Updates. A separate object with its own subscribers: check mark
     /// autochecks live in Sparkle settings, not in our `defaults`.
@@ -787,6 +846,8 @@ public final class AppState: ObservableObject {
             key: Keys.replacements
         )
         cleanupLegacyAgentStaging = environment.cleanupLegacyAgentStaging
+        makeMeetingCapture = environment.makeMeetingCapture
+        trashItem = environment.trashItem
 
         hotkey = DictationHotkey(rawValue: environment.defaults.string(forKey: Keys.hotkey) ?? "")
             ?? SettingsDefaults.hotkey
@@ -916,6 +977,22 @@ public final class AppState: ObservableObject {
             )
             self.historyStore = historyStore
             history = historyStore.load()
+
+            let meetingStore = MeetingStore(root: try paths.recordings(), trasher: trashItem)
+            self.meetingStore = meetingStore
+            // Whatever a crash left is repaired and listed before anything
+            // else is shown, and disclosed once — a recording that reappears
+            // without a word would read as one the person never made.
+            let recovered = meetingStore.recoverIncomplete()
+            reloadRecordings()
+            if !recovered.isEmpty {
+                notify(DictationNotice(
+                    kind: .info,
+                    message: recovered.count == 1
+                        ? "A recording was recovered after an interruption."
+                        : "\(recovered.count) recordings were recovered after an interruption."
+                ))
+            }
 
             let engineDirectory = layout.engineDirectory
             self.engineDirectory = engineDirectory
@@ -2048,6 +2125,291 @@ public final class AppState: ObservableObject {
     private func notify(_ notice: DictationNotice) {
         lastNotice = notice
         Task { await overlay.presentNotice(notice) }
+    }
+
+    // MARK: - Recordings
+
+    /// Start recording — the microphone, for now.
+    ///
+    /// Refuses nothing silently. A missing permission asks for it and says
+    /// so; a full disk says so; a microphone that will not start says why.
+    public func startRecording() {
+        guard meetingState == .idle, let meetingStore else { return }
+        guard microphoneGranted else {
+            notify(DictationNotice(kind: .warning, message: "Allow the microphone to record."))
+            requestMicrophone()
+            return
+        }
+        let metadata = MeetingRecordingMetadata(
+            startedAt: Date(),
+            systemAudio: SystemAudioSummary(wasRequested: false)
+        )
+        let directory = meetingStore.incompleteDirectory(for: metadata.id)
+        do {
+            try meetingStore.write(metadata, incomplete: true)
+        } catch {
+            notify(DictationNotice(kind: .failure, message: "Couldn't start recording: \(error.localizedDescription)"))
+            return
+        }
+        let capture = makeMeetingCapture(
+            directory,
+            preferredInputDeviceID,
+            { [weak self] levels in
+                Task { @MainActor in self?.liveLevels = levels }
+            },
+            { [weak self] failure in
+                Task { @MainActor in self?.recordingFailed(failure) }
+            }
+        )
+        meetingCapture = capture
+        meetingState = .starting
+        Task { [weak self] in
+            do {
+                try await capture.start()
+                await MainActor.run {
+                    guard let self else { return }
+                    self.liveRecording = metadata
+                    self.liveDuration = 0
+                    self.meetingState = .recording
+                    self.startLiveDurationTimer()
+                }
+            } catch {
+                await MainActor.run {
+                    guard let self else { return }
+                    self.meetingCapture = nil
+                    self.meetingState = .idle
+                    // Nothing was recorded: the directory prepared for it is
+                    // not a recording anyone wants back.
+                    try? FileManager.default.removeItem(at: directory)
+                    self.notify(DictationNotice(kind: .failure, message: Self.recordingStartFailureMessage(error)))
+                }
+            }
+        }
+    }
+
+    /// End the recording and file it.
+    ///
+    /// The metadata is written and the directory moved into the list in one
+    /// go, so the list never holds a half-written entry. Whatever the recorder
+    /// reports — a clean stop, a full disk, a writer that failed — the audio
+    /// that reached disk is kept and the reason travels with it.
+    public func stopRecording() {
+        guard meetingState == .recording || meetingState == .paused,
+              let capture = meetingCapture,
+              let live = liveRecording,
+              let meetingStore else { return }
+        meetingState = .stopping
+        stopLiveDurationTimer()
+        Task { [weak self] in
+            var metadata = live
+            do {
+                let summary = try await capture.stop()
+                metadata.duration = summary.duration
+                metadata.microphoneDeviceName = summary.microphoneDeviceName
+                metadata.systemAudio = summary.systemAudio
+                metadata.gaps = summary.gaps
+                metadata.pauses = summary.pauses
+                metadata.endReason = summary.endReason
+            } catch {
+                metadata.endReason = .writeFailed
+            }
+            await MainActor.run {
+                guard let self else { return }
+                do {
+                    try meetingStore.write(metadata, incomplete: true)
+                    try meetingStore.publish(metadata.id)
+                } catch {
+                    self.notify(DictationNotice(
+                        kind: .failure,
+                        message: "The recording ended but couldn't be filed: \(error.localizedDescription)"
+                    ))
+                }
+                self.meetingCapture = nil
+                self.liveRecording = nil
+                self.liveLevels = .silent
+                self.meetingState = .idle
+                self.reloadRecordings()
+                self.lastFinishedRecordingID = metadata.id
+                if let notice = Self.endNotice(for: metadata.endReason) { self.notify(notice) }
+                if self.terminationPending {
+                    self.terminationPending = false
+                    NSApplication.shared.reply(toApplicationShouldTerminate: true)
+                }
+            }
+        }
+    }
+
+    public func pauseRecording() {
+        guard meetingState == .recording, let capture = meetingCapture else { return }
+        Task { [weak self] in
+            do {
+                try await capture.pause()
+                await MainActor.run { self?.meetingState = .paused }
+            } catch {
+                await MainActor.run {
+                    self?.notify(DictationNotice(kind: .failure, message: "Couldn't pause the recording."))
+                }
+            }
+        }
+    }
+
+    public func resumeRecording() {
+        guard meetingState == .paused, let capture = meetingCapture else { return }
+        Task { [weak self] in
+            do {
+                try await capture.resume()
+                await MainActor.run { self?.meetingState = .recording }
+            } catch {
+                await MainActor.run {
+                    self?.notify(DictationNotice(kind: .failure, message: Self.recordingStartFailureMessage(error)))
+                }
+            }
+        }
+    }
+
+    /// Whether ⌘Q has to wait. A recording that is only starting or only
+    /// stopping is left to the launch-time recovery: the file is on disk
+    /// either way.
+    public var isRecordingInProgress: Bool {
+        meetingState == .recording || meetingState == .paused
+    }
+
+    /// Called by the app delegate after the person chose to stop and quit;
+    /// the reply to AppKit is sent when the recording has been filed.
+    public func stopRecordingBeforeTermination() {
+        terminationPending = true
+        stopRecording()
+    }
+
+    public func reloadRecordings() {
+        guard let meetingStore else { return }
+        recordings = meetingStore.list()
+        recordingsBytes = meetingStore.totalBytes()
+    }
+
+    public func recordingAudioURL(_ id: UUID) -> URL? {
+        meetingStore?.audioURL(for: id)
+    }
+
+    public func recordingPeaksURL(_ id: UUID) -> URL? {
+        meetingStore?.peaksURL(for: id)
+    }
+
+    public func recordingBytes(_ id: UUID) -> Int64? {
+        meetingStore?.bytes(for: id)
+    }
+
+    public func renameRecording(_ id: UUID, title: String?) {
+        guard let meetingStore else { return }
+        do {
+            try meetingStore.rename(id, title: title)
+            reloadRecordings()
+        } catch {
+            notify(DictationNotice(kind: .failure, message: "Couldn't rename the recording."))
+        }
+    }
+
+    /// To the Trash — the person's own, where it can come back from.
+    public func trashRecording(_ id: UUID) {
+        guard let meetingStore else { return }
+        do {
+            try meetingStore.trash(id)
+            reloadRecordings()
+        } catch {
+            notify(DictationNotice(kind: .failure, message: "Couldn't move the recording to the Trash."))
+        }
+    }
+
+    public func revealRecording(_ id: UUID) {
+        guard let meetingStore else { return }
+        let target = meetingStore.audioURL(for: id) ?? meetingStore.directory(for: id)
+        NSWorkspace.shared.activateFileViewerSelecting([target])
+    }
+
+    private func recordingFailed(_ failure: MeetingCapture.Failure) {
+        switch failure {
+        case .diskFull, .writeFailed:
+            // The recorder has already stopped writing on its own. End the
+            // recording so what reached disk is filed and listed; the notice
+            // that follows says why.
+            stopRecording()
+        case let .microphone(reason):
+            notify(DictationNotice(
+                kind: .warning,
+                message: "The microphone stopped (\(Self.describe(reason))). The recording continues on the default microphone."
+            ))
+        case let .systemAudio(reason):
+            notify(DictationNotice(
+                kind: .warning,
+                message: "The other side stopped arriving (\(Self.describe(reason))). Only your microphone is being recorded."
+            ))
+        case .notIdle, .notRecording, .cannotCreateDirectory:
+            notify(DictationNotice(kind: .failure, message: "Recording failed: \(failure)"))
+        }
+    }
+
+    private static func describe(_ reason: MeetingSourceFailure) -> String {
+        switch reason {
+        case let .unavailable(message), let .startFailed(message), let .conversionFailed(message):
+            return message
+        case .configurationChanged:
+            return "the device changed"
+        }
+    }
+
+    private static func recordingStartFailureMessage(_ error: Error) -> String {
+        guard let failure = error as? MeetingCapture.Failure else {
+            return "Couldn't start recording: \(error.localizedDescription)"
+        }
+        switch failure {
+        case .diskFull:
+            return "Not enough free space to record. Free up at least 500 MB and try again."
+        case let .microphone(reason):
+            return "Couldn't start the microphone: \(describe(reason))."
+        case let .systemAudio(reason):
+            return "Couldn't record the other side: \(describe(reason))."
+        case let .cannotCreateDirectory(message), let .writeFailed(message):
+            return "Couldn't start recording: \(message)"
+        case .notIdle:
+            return "A recording is already running."
+        case .notRecording:
+            return "No recording is running."
+        }
+    }
+
+    private static func endNotice(for reason: MeetingEndReason?) -> DictationNotice? {
+        switch reason {
+        case .diskFull:
+            return DictationNotice(
+                kind: .warning,
+                message: "Recording stopped: this Mac ran out of space. Everything up to that moment was kept."
+            )
+        case .writeFailed:
+            return DictationNotice(
+                kind: .warning,
+                message: "Recording stopped: it could no longer be written. Everything up to that moment was kept."
+            )
+        default:
+            return nil
+        }
+    }
+
+    private func startLiveDurationTimer() {
+        stopLiveDurationTimer()
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, let capture = self.meetingCapture else { return }
+                let frames = await capture.frameCount
+                self.liveDuration = Double(frames) / Double(MeetingWriter.sampleRate)
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        liveDurationTimer = timer
+    }
+
+    private func stopLiveDurationTimer() {
+        liveDurationTimer?.invalidate()
+        liveDurationTimer = nil
     }
 
     // MARK: - Permissions

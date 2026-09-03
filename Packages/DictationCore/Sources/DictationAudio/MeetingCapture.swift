@@ -64,6 +64,24 @@ public actor MeetingCapture {
         public let gaps: [MeetingGap]
         public let pauses: [MeetingInterval]
         public let endReason: MeetingEndReason
+
+        public init(
+            frameCount: Int,
+            duration: TimeInterval,
+            microphoneDeviceName: String?,
+            systemAudio: SystemAudioSummary,
+            gaps: [MeetingGap],
+            pauses: [MeetingInterval],
+            endReason: MeetingEndReason
+        ) {
+            self.frameCount = frameCount
+            self.duration = duration
+            self.microphoneDeviceName = microphoneDeviceName
+            self.systemAudio = systemAudio
+            self.gaps = gaps
+            self.pauses = pauses
+            self.endReason = endReason
+        }
     }
 
     /// Anything above this counts as audio rather than line noise. Well
@@ -184,8 +202,11 @@ public actor MeetingCapture {
             ))
         }
         state = .stopped
-        let reason = endReason ?? .stoppedByUser
         let result = pipeline.finish()
+        // A sealing failure is still a recording: whatever reached disk is
+        // kept, and the reason travels in the summary rather than as a thrown
+        // error that would lose the rest of it.
+        let reason = endReason ?? (result.error == nil ? .stoppedByUser : .writeFailed)
         let systemHealth = pipeline.health(of: .system)
         let summary = Summary(
             frameCount: result.frameCount,
@@ -201,9 +222,6 @@ public actor MeetingCapture {
             pauses: pauses,
             endReason: reason
         )
-        if let error = result.error {
-            throw Failure.writeFailed(String(describing: error))
-        }
         return summary
     }
 

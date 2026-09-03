@@ -21,7 +21,8 @@ struct MenuContent: View {
             isDictationReady: state.isDictationReady,
             hasRecoveredText: state.recoveredText != nil,
             recoveryStorageFaulted: state.recordingRecoveryStorageFaulted,
-            hasRecents: !state.recentDictations.isEmpty
+            hasRecents: !state.recentDictations.isEmpty,
+            isRecording: state.meetingState == .recording || state.meetingState == .paused
         )
 
         ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
@@ -118,6 +119,23 @@ struct MenuContent: View {
                 }
             }
 
+
+        case .recordingLine:
+            Text(MenuBarStatus.recordingLine(
+                isPaused: state.meetingState == .paused,
+                duration: state.liveDuration
+            ))
+
+        case .stopRecording:
+            Button("Stop Recording") { state.stopRecording() }
+                .accessibilityHint("Ends the recording and keeps it")
+
+        case .openRecordings:
+            Button("Recordings…") {
+                openWindow(id: RecordingsWindow.windowID)
+                WindowFronting.raiseOpenedWindow()
+            }
+            .keyboardShortcut("0", modifiers: .command)
 
         case .settings:
             Button("Settings…") {
