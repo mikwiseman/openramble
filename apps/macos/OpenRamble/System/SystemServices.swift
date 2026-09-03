@@ -373,6 +373,20 @@ public struct AppPaths: Sendable {
         return directory
     }
 
+    /// Recordings the person made on purpose, kept until they delete them.
+    ///
+    /// Deliberately *not* excluded from backup, unlike the folders above.
+    /// Those hold transient voice — a take exists for the seconds between
+    /// speaking and inserting — and backing them up is pure downside. A
+    /// recording is a document, the only copy of an hour of someone's day,
+    /// and a disk failure silently destroying it is the worse outcome. The
+    /// dictation history beside it is not excluded either.
+    public func recordings() throws -> URL {
+        let directory = try support().appending(path: "Recordings", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+
 
     /// Recordings and recovered texts are not something worth storing in backup
     /// copies: this is the content of the user's speech.
