@@ -28,7 +28,9 @@ SHIPPING_PATHS=(
 # Symbols that can go online.
 FORBIDDEN='URLSession|NWConnection|NWBrowser|CFNetwork|CFStream|WKWebView|NSNetService|NSURLConnection'
 # Silent download methods: These initializers take a URL and silently go to the network.
-FORBIDDEN+='|Data\(contentsOf:|String\(contentsOf:|NSAttributedString\(url:|NSImage\(contentsOf:|AVAsset\(url:'
+# `AVURLAsset(` is the other spelling of the same silent fetch; without it the
+# line above reads as complete while an export path walks straight past it.
+FORBIDDEN+='|Data\(contentsOf:|String\(contentsOf:|NSAttributedString\(url:|NSImage\(contentsOf:|AVAsset\(url:|AVURLAsset\('
 # Sending speech to Apple servers is directly contrary to the purpose of the product.
 FORBIDDEN+='|SFSpeechRecognizer'
 # Synchronization between devices: data should not get here either.
@@ -125,6 +127,21 @@ while IFS= read -r hit; do
   echo "  $hit"
 done < <(grep -rnE 'log(ger)?\.(info|debug|error|warning|notice)\(.*(transcript|dictatedText|recognizedText)' \
   "${SHIPPING_PATHS[@]}" 2>/dev/null || true)
+
+# Third-party reporting SDKs. CLAUDE.md bans telemetry, analytics and crash
+# reporting, and nothing enforced it: the symbol scan above only sees an SDK once
+# it is called. A port from a sibling project arrived carrying `import Sentry`,
+# which is the moment to catch — before the first breadcrumb, not after.
+echo "Checking third-party SDK imports..."
+FORBIDDEN_IMPORTS='^[[:space:]]*import[[:space:]]+(Sentry[A-Za-z]*|Firebase[A-Za-z]*|Crashlytics|Amplitude|Mixpanel|PostHog|Bugsnag|Datadog[A-Za-z]*|Segment|AppCenter[A-Za-z]*)'
+while IFS= read -r hit; do
+  if [[ $status -eq 0 ]]; then
+    echo ""
+    echo "VIOLATION: a third-party reporting SDK is imported."
+    status=1
+  fi
+  echo "  $hit"
+done < <(grep -rnE "$FORBIDDEN_IMPORTS" "${SHIPPING_PATHS[@]}" 2>/dev/null || true)
 
 # The inference runtime is a prebuilt third-party binary, so reading its source
 # proves nothing about what ships. Audit the Mach-O we actually link: a library
