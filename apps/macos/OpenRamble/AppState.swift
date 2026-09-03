@@ -124,6 +124,35 @@ public struct AppEnvironment {
     /// helper. Test environments default to a no-op and never touch the real
     /// user's Darwin temporary directory.
     public var cleanupLegacyAgentStaging: @Sendable () throws -> Void
+    /// How to record a long take — a meeting or a voice note — into a
+    /// directory: given the directory, the preferred microphone, a level
+    /// callback for the meters and a failure callback.
+    public typealias MeetingCaptureFactory = (
+        URL,
+        AudioDeviceID?,
+        Bool,
+        @escaping @Sendable (MeetingCapture.Levels) -> Void,
+        @escaping @Sendable (MeetingSegmentRef) -> Void,
+        @escaping @Sendable (MeetingCapture.Failure) -> Void
+    ) -> any MeetingCapturing
+    public var makeMeetingCapture: MeetingCaptureFactory
+    /// Spoken state changes the person cannot see — a meter that stopped.
+    public var announcer: any AccessibilityAnnouncing
+    public var openSystemAudioSettings: @MainActor () -> Void
+    /// The inaudible tone that asks whether the other side can be heard.
+    /// Played again every ten seconds while the answer is no, so a
+    /// permission granted a moment after the first ask is noticed without
+    /// waiting for someone on the call to speak.
+    public var playSystemAudioProbe: @Sendable () -> Void
+
+    /// The other side of the call, where this macOS can record it.
+    public static func makeSystemAudioSource() -> (any MeetingAudioSource)? {
+        if #available(macOS 14.2, *) { return SystemAudioTapSource() }
+        return nil
+    }
+    /// Deleting a recording is a move to the Trash. Injectable so a test
+    /// removes its fixtures instead of filling the developer's Trash.
+    public var trashItem: @Sendable (URL) throws -> Void
     /// Shared with the worker supervisor so its off-main recovery loop can
     /// read the pressure tier without hopping through AppState.
 
@@ -164,6 +193,22 @@ public struct AppEnvironment {
         focusedFieldReader: any FocusedFieldReading = SystemFocusedFieldReader(),
         clipboardRestoreReporter: ClipboardRestoreReporter? = nil,
         cleanupLegacyAgentStaging: @escaping @Sendable () throws -> Void = {},
+        makeMeetingCapture: @escaping MeetingCaptureFactory = { directory, device, includeSystemAudio, onLevels, onSegment, onFailure in
+            MeetingCapture(
+                directory: directory,
+                microphone: MicrophoneAudioSource(preferredInputDeviceID: device),
+                systemAudio: includeSystemAudio ? AppEnvironment.makeSystemAudioSource() : nil,
+                onLevels: onLevels,
+                onSegment: onSegment,
+                onFailure: onFailure
+            )
+        },
+        announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
+        openSystemAudioSettings: @escaping @MainActor () -> Void = { Permissions.openSystemAudioSettings() },
+        playSystemAudioProbe: @escaping @Sendable () -> Void = SystemAudioProbe.play,
+        trashItem: @escaping @Sendable (URL) throws -> Void = {
+            try FileManager.default.trashItem(at: $0, resultingItemURL: nil)
+        },
     ) {
         self.defaults = defaults
         self.paths = paths
@@ -194,6 +239,11 @@ public struct AppEnvironment {
         self.focusedFieldReader = focusedFieldReader
         self.clipboardRestoreReporter = clipboardRestoreReporter
         self.cleanupLegacyAgentStaging = cleanupLegacyAgentStaging
+        self.makeMeetingCapture = makeMeetingCapture
+        self.trashItem = trashItem
+        self.announcer = announcer
+        self.openSystemAudioSettings = openSystemAudioSettings
+        self.playSystemAudioProbe = playSystemAudioProbe
     }
 
     /// Real edges are what a working application is built from.
@@ -307,7 +357,12 @@ public final class AppState: ObservableObject {
     /// Is the preparation countdown in progress? Needed for tests: “the application is silent at rest.”
     public var isCountingEnginePreparation: Bool { preparationTimer != nil }
     @Published public private(set) var isEngineReady = false {
-        didSet { if isEngineReady { hasEngineBeenReady = true } }
+        didSet {
+            if isEngineReady { hasEngineBeenReady = true }
+            let arbiter = engineArbiter
+            let ready = isEngineReady
+            Task { await arbiter.setEngineReady(ready) }
+        }
     }
     /// Whether the engine has ever been ready in this process.
     ///
@@ -383,6 +438,86 @@ public final class AppState: ObservableObject {
         }
     }
     @Published public private(set) var recentDictations: [RecentDictation] = []
+
+    // MARK: - Recordings
+
+    /// What the recorder is doing. Orthogonal to `dictationState`: a person
+    /// can dictate into Slack while a meeting records, and both are true.
+    public enum MeetingState: Equatable {
+        case idle
+        case starting
+        case recording
+        case paused
+        case stopping
+    }
+    @Published public private(set) var meetingState: MeetingState = .idle
+    /// Every finished recording, newest first.
+    @Published public private(set) var recordings: [MeetingRecordingMetadata] = []
+    /// The recording in progress, once it has actually started.
+    @Published public private(set) var liveRecording: MeetingRecordingMetadata?
+    /// Seconds on disk so far, refreshed once a second while recording.
+    @Published public private(set) var liveDuration: TimeInterval = 0
+    /// The loudest sample per channel over the last stretch, for the meters.
+    @Published public private(set) var liveLevels = MeetingCapture.Levels.silent
+    /// What the recordings occupy on disk.
+    @Published public private(set) var recordingsBytes: Int64 = 0
+    /// The recording that most recently ended — the window selects it.
+    @Published public private(set) var lastFinishedRecordingID: UUID?
+    private var meetingStore: MeetingStore?
+    private var meetingCapture: (any MeetingCapturing)?
+    private var liveDurationTimer: Timer?
+    /// ⌘Q is waiting for the recording to end before the app may quit.
+    private var terminationPending = false
+
+    /// The transcript of the recording being made — or of the one that just
+    /// ended and is still being decoded — with the paragraph in progress last.
+    @Published public private(set) var liveTranscript: [MeetingUtterance] = []
+    /// How far an m4a export has got, or nothing when none is running.
+    /// One at a time: the encoder is the slow part and two would race.
+    @Published public private(set) var audioExportProgress: Double?
+    private let audioExportCancelled = UncheckedBox<Bool>(false)
+    /// Seconds of speech waiting for the engine. Measured from what was
+    /// submitted and what came back, never modelled.
+    @Published public private(set) var transcriptBacklogSeconds: TimeInterval = 0
+    /// The queue stopped itself after repeated failures. The audio is safe.
+    @Published public private(set) var isTranscriptionPaused = false
+    /// Transcripts read from disk for the detail pane, by recording.
+    @Published public private(set) var loadedTranscripts: [UUID: [MeetingUtterance]] = [:]
+    /// Which recording `liveTranscript` belongs to.
+    @Published public private(set) var transcribingRecordingID: UUID?
+    /// Dictation always wins the engine; meeting decodes wait their turn.
+    private let engineArbiter = EngineArbiter()
+    private var transcriptionQueue: MeetingTranscriptionQueue?
+    private var utteranceAssembler = MeetingUtteranceAssembler()
+    private var closedUtterances: [MeetingUtterance] = []
+    private var transcriptWriteFailureReported = false
+
+    // MARK: - The other side
+
+    /// Whether the record button captures what the Mac plays.
+    public enum SystemAudioMode: Equatable {
+        case unsupported
+        case declined
+        case enabled
+    }
+    public static let systemAudioDeclinedKey = "systemAudioDeclined"
+    public static let systemAudioIntroShownKey = "systemAudioIntroShown"
+    /// What the last recording found: "working" or "unheard".
+    public static let systemAudioLastResultKey = "systemAudioLastResult"
+
+    public var systemAudioMode: SystemAudioMode {
+        guard SystemAudioAvailability.isSupported else { return .unsupported }
+        return defaults.bool(forKey: Self.systemAudioDeclinedKey) ? .declined : .enabled
+    }
+    /// The one-time explanation before the first recording of the other side.
+    @Published public private(set) var isSystemAudioIntroPresented = false
+    /// Whether the other side is actually arriving, refreshed once a second.
+    @Published private(set) var liveCaptureHealth: CaptureHealth = .notRequested
+    /// For the Settings row: what the app knows, never a guess.
+    @Published private(set) var systemAudioPermission: SystemAudioPermissionMode = .notChecked
+    private var systemAudioStartFailure: String?
+    private var liveRecordingStartedAt: ContinuousClock.Instant?
+    private var lastAnnouncedHealth: String?
 
     /// Finished dictations kept on disk, newest first, with their audio.
     @Published public private(set) var history: [HistoryEntry] = []
@@ -642,6 +777,12 @@ public final class AppState: ObservableObject {
     private let notifications: NotificationCenter
     private let replacementsStore: ReplacementsStore
     private let cleanupLegacyAgentStaging: @Sendable () throws -> Void
+    private let makeMeetingCapture: AppEnvironment.MeetingCaptureFactory
+    private let trashItem: @Sendable (URL) throws -> Void
+    private let announcer: any AccessibilityAnnouncing
+    private let openSystemAudioSettingsPane: @MainActor () -> Void
+    private let playSystemAudioProbe: @Sendable () -> Void
+    private var lastProbeAt: ContinuousClock.Instant?
 
     /// Updates. A separate object with its own subscribers: check mark
     /// autochecks live in Sparkle settings, not in our `defaults`.
@@ -787,6 +928,11 @@ public final class AppState: ObservableObject {
             key: Keys.replacements
         )
         cleanupLegacyAgentStaging = environment.cleanupLegacyAgentStaging
+        makeMeetingCapture = environment.makeMeetingCapture
+        trashItem = environment.trashItem
+        announcer = environment.announcer
+        openSystemAudioSettingsPane = environment.openSystemAudioSettings
+        playSystemAudioProbe = environment.playSystemAudioProbe
 
         hotkey = DictationHotkey(rawValue: environment.defaults.string(forKey: Keys.hotkey) ?? "")
             ?? SettingsDefaults.hotkey
@@ -917,6 +1063,23 @@ public final class AppState: ObservableObject {
             self.historyStore = historyStore
             history = historyStore.load()
 
+            let meetingStore = MeetingStore(root: try paths.recordings(), trasher: trashItem)
+            self.meetingStore = meetingStore
+            // Whatever a crash left is repaired and listed before anything
+            // else is shown, and disclosed once — a recording that reappears
+            // without a word would read as one the person never made.
+            let recovered = meetingStore.recoverIncomplete()
+            reloadRecordings()
+            refreshSystemAudioPermission()
+            if !recovered.isEmpty {
+                notify(DictationNotice(
+                    kind: .info,
+                    message: recovered.count == 1
+                        ? "A recording was recovered after an interruption."
+                        : "\(recovered.count) recordings were recovered after an interruption."
+                ))
+            }
+
             let engineDirectory = layout.engineDirectory
             self.engineDirectory = engineDirectory
             let transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)?
@@ -970,6 +1133,11 @@ public final class AppState: ObservableObject {
             controller.onStateChange = { [weak self] state in
                 self?.dictationState = state
                 self?.flushNoticeAfterSession(state)
+                // A session that has started owns the engine until it ends;
+                // a meeting decode that has not started yet waits.
+                if let arbiter = self?.engineArbiter {
+                    Task { await arbiter.setDictationActive(state != .idle) }
+                }
                 // The person just pressed the key and is about to speak for
                 // seconds. Refresh accelerator residency now, under their
                 // voice, instead of trusting a device-specific idle timer and
@@ -1732,6 +1900,11 @@ public final class AppState: ObservableObject {
         idleUnloadTask?.cancel()
         idleUnloadTask = nil
         guard dictationState == .idle,
+              // A recording is not idleness either, and neither is a queue
+              // still decoding one that just ended: unloading here would
+              // reload 0.3 s later for the next segment, forever.
+              meetingState == .idle,
+              transcriptionQueue == nil,
               isEngineReady,
               // Setup is not idleness: the person is granting permissions, not
               // resting from dictation, and the try-out is a minute away. The
@@ -1758,6 +1931,8 @@ public final class AppState: ObservableObject {
     private func performIdleUnload() async {
         idleUnloadTask = nil
         guard dictationState == .idle,
+              meetingState == .idle,
+              transcriptionQueue == nil,
               !isRecoveryOperationActive,
               !isRecyclingEngine,
               !isPreparingEngine,
@@ -2048,6 +2223,696 @@ public final class AppState: ObservableObject {
     private func notify(_ notice: DictationNotice) {
         lastNotice = notice
         Task { await overlay.presentNotice(notice) }
+    }
+
+    // MARK: - Recordings
+
+    /// The record button. One button and no mode: it records the microphone
+    /// and, where this Mac can and the person has not said otherwise, what
+    /// the Mac plays. The first time that would happen, it explains itself
+    /// once instead of raising a system prompt out of nowhere.
+    public func startRecording() {
+        switch systemAudioMode {
+        case .enabled:
+            guard defaults.bool(forKey: Self.systemAudioIntroShownKey) else {
+                isSystemAudioIntroPresented = true
+                return
+            }
+            startRecording(includingSystemAudio: true)
+        case .declined, .unsupported:
+            startRecording(includingSystemAudio: false)
+        }
+    }
+
+    /// The sheet's answer.
+    public func confirmSystemAudioIntro(includeSystemAudio: Bool) {
+        defaults.set(true, forKey: Self.systemAudioIntroShownKey)
+        if !includeSystemAudio { defaults.set(true, forKey: Self.systemAudioDeclinedKey) }
+        isSystemAudioIntroPresented = false
+        refreshSystemAudioPermission()
+        startRecording(includingSystemAudio: includeSystemAudio)
+    }
+
+    public func dismissSystemAudioIntro() {
+        isSystemAudioIntroPresented = false
+    }
+
+    /// The remembered choice behind the button. Choosing is the explanation,
+    /// so the sheet does not come after it.
+    public func setSystemAudioDeclined(_ declined: Bool) {
+        defaults.set(declined, forKey: Self.systemAudioDeclinedKey)
+        defaults.set(true, forKey: Self.systemAudioIntroShownKey)
+        refreshSystemAudioPermission()
+    }
+
+    public func openSystemAudioSettings() {
+        openSystemAudioSettingsPane()
+    }
+
+    /// A grant made in System Settings reaches a process only when it starts.
+    public func relaunchForSystemAudio() {
+        Task {
+            do {
+                try await accessibilityManager.relaunchApplication()
+            } catch {
+                notify(DictationNotice(kind: .failure, message: "Couldn't relaunch OpenRamble: \(error.localizedDescription)"))
+            }
+        }
+    }
+
+    /// The Settings row's one action, by what it found.
+    public func performSystemAudioAction() {
+        switch systemAudioPermission {
+        case .declined: setSystemAudioDeclined(false)
+        case .unheard: openSystemAudioSettings()
+        case .unsupported, .notChecked, .working: break
+        }
+    }
+
+    func refreshSystemAudioPermission() {
+        switch systemAudioMode {
+        case .unsupported: systemAudioPermission = .unsupported
+        case .declined: systemAudioPermission = .declined
+        case .enabled:
+            switch defaults.string(forKey: Self.systemAudioLastResultKey) {
+            case "working": systemAudioPermission = .working
+            case "unheard": systemAudioPermission = .unheard
+            default: systemAudioPermission = .notChecked
+            }
+        }
+    }
+
+    /// Start recording. Refuses nothing silently: a missing microphone
+    /// permission asks for it and says so; a full disk says so; a microphone
+    /// that will not start says why; a tap that will not start costs the other
+    /// side and says so, never the recording.
+    public func startRecording(includingSystemAudio: Bool) {
+        guard meetingState == .idle, let meetingStore else { return }
+        guard microphoneGranted else {
+            notify(DictationNotice(kind: .warning, message: "Allow the microphone to record."))
+            requestMicrophone()
+            return
+        }
+        let metadata = MeetingRecordingMetadata(
+            startedAt: Date(),
+            systemAudio: SystemAudioSummary(wasRequested: includingSystemAudio),
+            transcriptionState: .live
+        )
+        let directory = meetingStore.incompleteDirectory(for: metadata.id)
+        do {
+            try meetingStore.write(metadata, incomplete: true)
+        } catch {
+            notify(DictationNotice(kind: .failure, message: "Couldn't start recording: \(error.localizedDescription)"))
+            return
+        }
+        let capture = makeMeetingCapture(
+            directory,
+            preferredInputDeviceID,
+            includingSystemAudio,
+            { [weak self] levels in
+                Task { @MainActor in self?.liveLevels = levels }
+            },
+            { [weak self] segment in
+                Task { @MainActor in self?.segmentReady(segment) }
+            },
+            { [weak self] failure in
+                Task { @MainActor in self?.recordingFailed(failure) }
+            }
+        )
+        meetingCapture = capture
+        meetingState = .starting
+        systemAudioStartFailure = nil
+        lastAnnouncedHealth = nil
+        lastProbeAt = .now
+        liveCaptureHealth = includingSystemAudio ? .verifying : .notRequested
+        beginTranscription(for: metadata.id, directory: directory)
+        Task { [weak self] in
+            do {
+                try await capture.start()
+                await MainActor.run {
+                    guard let self else { return }
+                    self.liveRecording = metadata
+                    self.liveDuration = 0
+                    self.liveRecordingStartedAt = .now
+                    self.meetingState = .recording
+                    self.startLiveDurationTimer()
+                }
+            } catch {
+                await MainActor.run {
+                    guard let self else { return }
+                    self.meetingCapture = nil
+                    self.meetingState = .idle
+                    self.abandonTranscription()
+                    // Nothing was recorded: the directory prepared for it is
+                    // not a recording anyone wants back.
+                    try? FileManager.default.removeItem(at: directory)
+                    self.notify(DictationNotice(kind: .failure, message: Self.recordingStartFailureMessage(error)))
+                }
+            }
+        }
+    }
+
+    /// End the recording and file it.
+    ///
+    /// The metadata is written and the directory moved into the list in one
+    /// go, so the list never holds a half-written entry. Whatever the recorder
+    /// reports — a clean stop, a full disk, a writer that failed — the audio
+    /// that reached disk is kept and the reason travels with it.
+    public func stopRecording() {
+        guard meetingState == .recording || meetingState == .paused,
+              let capture = meetingCapture,
+              let live = liveRecording,
+              let meetingStore else { return }
+        meetingState = .stopping
+        stopLiveDurationTimer()
+        Task { [weak self] in
+            var metadata = live
+            let engineReady = await MainActor.run { self?.isEngineReady ?? false }
+            metadata.transcriptionState = engineReady ? .live : .waitingForModel
+            do {
+                let summary = try await capture.stop()
+                metadata.duration = summary.duration
+                metadata.microphoneDeviceName = summary.microphoneDeviceName
+                metadata.systemAudio = summary.systemAudio
+                metadata.gaps = summary.gaps
+                metadata.pauses = summary.pauses
+                metadata.endReason = summary.endReason
+            } catch {
+                metadata.endReason = .writeFailed
+            }
+            await MainActor.run {
+                guard let self else { return }
+                do {
+                    try meetingStore.write(metadata, incomplete: true)
+                    try meetingStore.publish(metadata.id)
+                } catch {
+                    self.notify(DictationNotice(
+                        kind: .failure,
+                        message: "The recording ended but couldn't be filed: \(error.localizedDescription)"
+                    ))
+                }
+                self.meetingCapture = nil
+                self.liveRecording = nil
+                self.liveLevels = .silent
+                self.liveRecordingStartedAt = nil
+                self.liveCaptureHealth = .notRequested
+                self.meetingState = .idle
+                if metadata.systemAudio.wasRequested {
+                    self.defaults.set(
+                        metadata.systemAudio.everDeliveredAudio ? "working" : "unheard",
+                        forKey: Self.systemAudioLastResultKey
+                    )
+                    self.refreshSystemAudioPermission()
+                }
+                self.reloadRecordings()
+                self.lastFinishedRecordingID = metadata.id
+                self.finishTranscription(for: metadata.id)
+                if let notice = Self.endNotice(for: metadata.endReason) { self.notify(notice) }
+                if self.terminationPending {
+                    self.terminationPending = false
+                    NSApplication.shared.reply(toApplicationShouldTerminate: true)
+                }
+            }
+        }
+    }
+
+    public func pauseRecording() {
+        guard meetingState == .recording, let capture = meetingCapture else { return }
+        Task { [weak self] in
+            do {
+                try await capture.pause()
+                await MainActor.run { self?.meetingState = .paused }
+            } catch {
+                await MainActor.run {
+                    self?.notify(DictationNotice(kind: .failure, message: "Couldn't pause the recording."))
+                }
+            }
+        }
+    }
+
+    public func resumeRecording() {
+        guard meetingState == .paused, let capture = meetingCapture else { return }
+        Task { [weak self] in
+            do {
+                try await capture.resume()
+                await MainActor.run { self?.meetingState = .recording }
+            } catch {
+                await MainActor.run {
+                    self?.notify(DictationNotice(kind: .failure, message: Self.recordingStartFailureMessage(error)))
+                }
+            }
+        }
+    }
+
+    /// Whether ⌘Q has to wait. A recording that is only starting or only
+    /// stopping is left to the launch-time recovery: the file is on disk
+    /// either way.
+    public var isRecordingInProgress: Bool {
+        meetingState == .recording || meetingState == .paused
+    }
+
+    /// Called by the app delegate after the person chose to stop and quit;
+    /// the reply to AppKit is sent when the recording has been filed.
+    public func stopRecordingBeforeTermination() {
+        terminationPending = true
+        stopRecording()
+    }
+
+    public func reloadRecordings() {
+        guard let meetingStore else { return }
+        recordings = meetingStore.list()
+        recordingsBytes = meetingStore.totalBytes()
+    }
+
+    public func recordingAudioURL(_ id: UUID) -> URL? {
+        meetingStore?.audioURL(for: id)
+    }
+
+    public func recordingPeaksURL(_ id: UUID) -> URL? {
+        meetingStore?.peaksURL(for: id)
+    }
+
+    public func recordingBytes(_ id: UUID) -> Int64? {
+        meetingStore?.bytes(for: id)
+    }
+
+    public func renameRecording(_ id: UUID, title: String?) {
+        guard let meetingStore else { return }
+        do {
+            try meetingStore.rename(id, title: title)
+            reloadRecordings()
+        } catch {
+            notify(DictationNotice(kind: .failure, message: "Couldn't rename the recording."))
+        }
+    }
+
+    /// To the Trash — the person's own, where it can come back from.
+    public func trashRecording(_ id: UUID) {
+        guard let meetingStore else { return }
+        do {
+            try meetingStore.trash(id)
+            reloadRecordings()
+        } catch {
+            notify(DictationNotice(kind: .failure, message: "Couldn't move the recording to the Trash."))
+        }
+    }
+
+    public func revealRecording(_ id: UUID) {
+        guard let meetingStore else { return }
+        let target = meetingStore.audioURL(for: id) ?? meetingStore.directory(for: id)
+        NSWorkspace.shared.activateFileViewerSelecting([target])
+    }
+
+    // MARK: - Live transcript
+
+    /// The transcript for a recording — live while it is being made or
+    /// drained, from disk otherwise (see `loadTranscript`).
+    public func transcript(for id: UUID) -> [MeetingUtterance] {
+        id == transcribingRecordingID ? liveTranscript : (loadedTranscripts[id] ?? [])
+    }
+
+    public func loadTranscript(_ id: UUID) {
+        guard id != transcribingRecordingID, let meetingStore else { return }
+        loadedTranscripts[id] = meetingStore.transcript(for: id)?.utterances ?? []
+    }
+
+    /// Host-only and concealed, like every copy this app makes: a meeting
+    /// transcript is precisely what Universal Clipboard must never carry off.
+    public func copyTranscript(_ id: UUID) {
+        let utterances = transcript(for: id)
+        guard !utterances.isEmpty else { return }
+        do {
+            try HostOnlyPasteboard().copyHostOnly(MeetingTranscriptFormatter.plainText(utterances))
+        } catch {
+            notify(DictationNotice(kind: .failure, message: "Couldn't copy the transcript."))
+        }
+    }
+
+    // MARK: - Leaving the Mac
+
+    /// The name a file takes when it leaves: the person's own title, or the
+    /// date they would recognise it by.
+    public func exportName(_ id: UUID) -> String {
+        let recording = recordings.first { $0.id == id } ?? liveRecording
+        return MeetingExportNaming.fileName(
+            recording?.title ?? "",
+            fallback: RecordingsPlaceholder.defaultTitle(for: recording?.startedAt ?? Date())
+        )
+    }
+
+    /// The transcript as Markdown, with the one line that must survive being
+    /// pasted somewhere else: that the other side was never captured.
+    public func transcriptMarkdown(_ id: UUID) -> String? {
+        let utterances = transcript(for: id)
+        guard !utterances.isEmpty, let recording = recordings.first(where: { $0.id == id }) else { return nil }
+        let subtitle = [
+            recording.startedAt.formatted(date: .long, time: .shortened),
+            RecordingTime.brief(recording.duration),
+            recording.isMeeting ? "Meeting" : "Voice note",
+        ].joined(separator: " · ")
+        return MeetingTranscriptFormatter.markdown(
+            utterances,
+            title: recording.title ?? RecordingsPlaceholder.defaultTitle(for: recording.startedAt),
+            subtitle: subtitle,
+            note: RecordingsPlaceholder.degradedNote(for: recording)
+        )
+    }
+
+    public func exportTranscript(_ id: UUID, to url: URL) {
+        guard let markdown = transcriptMarkdown(id) else { return }
+        do {
+            try markdown.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            notify(DictationNotice(kind: .failure, message: "Couldn't save the transcript."))
+        }
+    }
+
+    /// Encode the recording to m4a at `url`. Long enough on a two-hour
+    /// meeting to need a progress figure and a way out of it.
+    public func exportAudio(_ id: UUID, to url: URL) {
+        guard let source = recordingAudioURL(id), audioExportProgress == nil else { return }
+        audioExportProgress = 0
+        audioExportCancelled.value = false
+        let cancelled = audioExportCancelled
+        Task { [weak self] in
+            do {
+                try await Self.encode(from: source, to: url, cancelled: cancelled) { progress in
+                    Task { @MainActor in self?.audioExportProgress = progress }
+                }
+                await MainActor.run { self?.audioExportProgress = nil }
+            } catch MeetingAudioExporter.Failure.cancelled {
+                await MainActor.run { self?.audioExportProgress = nil }
+            } catch {
+                await MainActor.run {
+                    self?.audioExportProgress = nil
+                    self?.notify(DictationNotice(kind: .failure, message: "Couldn't save the audio."))
+                }
+            }
+        }
+    }
+
+    public func cancelAudioExport() {
+        audioExportCancelled.value = true
+    }
+
+    /// Both files in one folder, ready to hand to whichever app the person
+    /// picks. The transcript alone when there is no audio to send.
+    public func prepareShareItems(_ id: UUID) async -> [URL] {
+        guard audioExportProgress == nil else { return [] }
+        let name = exportName(id)
+        let folder = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appending(path: "OpenRamble-\(id.uuidString)", directoryHint: .isDirectory)
+        var items: [URL] = []
+        do {
+            try? FileManager.default.removeItem(at: folder)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            if let markdown = transcriptMarkdown(id) {
+                let url = folder.appending(path: "\(name).md")
+                try markdown.write(to: url, atomically: true, encoding: .utf8)
+                items.append(url)
+            }
+            if let source = recordingAudioURL(id) {
+                let url = folder.appending(path: "\(name).m4a")
+                audioExportProgress = 0
+                audioExportCancelled.value = false
+                let cancelled = audioExportCancelled
+                try await Self.encode(from: source, to: url, cancelled: cancelled) { progress in
+                    Task { @MainActor in self.audioExportProgress = progress }
+                }
+                audioExportProgress = nil
+                items.append(url)
+            }
+        } catch MeetingAudioExporter.Failure.cancelled {
+            audioExportProgress = nil
+            return []
+        } catch {
+            audioExportProgress = nil
+            notify(DictationNotice(kind: .failure, message: "Couldn't prepare this recording to share."))
+            return []
+        }
+        return items
+    }
+
+    private static func encode(
+        from source: URL,
+        to destination: URL,
+        cancelled: UncheckedBox<Bool>,
+        progress: @escaping @Sendable (Double) -> Void
+    ) async throws {
+        try await Task.detached(priority: .userInitiated) {
+            try MeetingAudioExporter.export(
+                from: source,
+                to: destination,
+                isCancelled: { cancelled.value },
+                progress: progress
+            )
+        }.value
+    }
+
+    /// Take the held segments up again after failures paused the queue.
+    public func resumeTranscription() {
+        guard let queue = transcriptionQueue else { return }
+        isTranscriptionPaused = false
+        Task { await queue.resume() }
+    }
+
+    private func beginTranscription(for id: UUID, directory: URL) {
+        guard let meetingStore else { return }
+        closedUtterances = []
+        utteranceAssembler = MeetingUtteranceAssembler()
+        liveTranscript = []
+        transcriptBacklogSeconds = 0
+        isTranscriptionPaused = false
+        transcriptWriteFailureReported = false
+        transcribingRecordingID = id
+        let incompleteAudio = directory.appending(path: MeetingWriter.audioFileName, directoryHint: .notDirectory)
+        let transcriber = self.transcriber
+        let pipeline = makePipeline()
+        let arbiter = engineArbiter
+        transcriptionQueue = MeetingTranscriptionQueue(
+            read: { segment in
+                // The file moves out of .incomplete/ when the recording ends;
+                // resolve where it is now, every time.
+                let url = meetingStore.audioURL(for: id) ?? incompleteAudio
+                return try MeetingPCMWindowReader(url: url).read(segment)
+            },
+            decode: { samples in
+                guard let transcriber else { throw ASREngineError.modelsNotLoaded }
+                let result = try await transcriber.transcribe(samples: samples)
+                // The same dictionary and typography as dictation; the
+                // trailing command a dictation may end with is not a thing a
+                // meeting says.
+                return pipeline.run(result.text).output.text
+            },
+            awaitTurn: { await arbiter.awaitMeetingTurn() },
+            emit: { [weak self] segment, outcome in
+                await MainActor.run { self?.segmentDecoded(segment, outcome) }
+            }
+        )
+        // The engine is wanted now and stays until this is done.
+        shouldStayUnloadedUntilUse = false
+        prepareEngineIfIdleAndCold()
+        rescheduleIdleUnload()
+    }
+
+    private func abandonTranscription() {
+        transcriptionQueue = nil
+        transcribingRecordingID = nil
+        liveTranscript = []
+        transcriptBacklogSeconds = 0
+        isTranscriptionPaused = false
+        rescheduleIdleUnload()
+    }
+
+    private func segmentReady(_ segment: MeetingSegmentRef) {
+        guard let queue = transcriptionQueue else { return }
+        transcriptBacklogSeconds += Double(segment.frameCount) / Double(MeetingWriter.sampleRate)
+        Task { await queue.submit(segment) }
+    }
+
+    private func segmentDecoded(_ segment: MeetingSegmentRef, _ outcome: MeetingTranscriptionQueue.Outcome) {
+        let rate = Double(MeetingWriter.sampleRate)
+        transcriptBacklogSeconds = max(0, transcriptBacklogSeconds - Double(segment.frameCount) / rate)
+        let start = Double(segment.startFrame) / rate
+        let end = Double(segment.endFrame) / rate
+        let piece: MeetingUtteranceAssembler.Segment
+        switch outcome {
+        case let .decoded(text):
+            piece = .init(channel: segment.channel, start: start, end: end, text: text)
+        case .failed:
+            piece = .init(channel: segment.channel, start: start, end: end, text: "", isFailed: true)
+        }
+        closedUtterances += utteranceAssembler.append(piece)
+        publishLiveTranscript()
+        if let queue = transcriptionQueue {
+            Task { [weak self] in
+                let paused = await queue.isPaused
+                await MainActor.run { self?.isTranscriptionPaused = paused }
+            }
+        }
+    }
+
+    private func publishLiveTranscript() {
+        liveTranscript = closedUtterances + (utteranceAssembler.pending.map { [$0] } ?? [])
+        guard let id = transcribingRecordingID, let meetingStore else { return }
+        loadedTranscripts[id] = liveTranscript
+        do {
+            try meetingStore.write(
+                MeetingTranscript(utterances: liveTranscript),
+                for: id,
+                incomplete: !meetingStore.isPublished(id)
+            )
+        } catch {
+            // Text that cannot be written is text that would be lost at quit.
+            // Said once; the audio is still being recorded regardless.
+            guard !transcriptWriteFailureReported else { return }
+            transcriptWriteFailureReported = true
+            notify(DictationNotice(kind: .warning, message: "The transcript can't be saved. The recording continues."))
+        }
+    }
+
+    /// After the recording is filed: let the backlog drain, close the last
+    /// paragraph, and say on disk how it went.
+    private func finishTranscription(for id: UUID) {
+        guard let queue = transcriptionQueue, let meetingStore else { return }
+        Task { [weak self] in
+            await queue.drain()
+            let paused = await queue.isPaused
+            await MainActor.run {
+                guard let self, self.transcribingRecordingID == id else { return }
+                self.closedUtterances += self.utteranceAssembler.flush()
+                self.publishLiveTranscript()
+                if var metadata = meetingStore.metadata(for: id) {
+                    metadata.transcriptionState = paused ? .partial : .complete
+                    try? meetingStore.write(metadata)
+                }
+                self.transcriptionQueue = nil
+                self.transcribingRecordingID = nil
+                self.isTranscriptionPaused = false
+                self.transcriptBacklogSeconds = 0
+                self.reloadRecordings()
+                self.rescheduleIdleUnload()
+            }
+        }
+    }
+
+    private func recordingFailed(_ failure: MeetingCapture.Failure) {
+        switch failure {
+        case .diskFull, .writeFailed:
+            // The recorder has already stopped writing on its own. End the
+            // recording so what reached disk is filed and listed; the notice
+            // that follows says why.
+            stopRecording()
+        case let .microphone(reason):
+            notify(DictationNotice(
+                kind: .warning,
+                message: "The microphone stopped (\(Self.describe(reason))). The recording continues on the default microphone."
+            ))
+        case let .systemAudio(reason):
+            systemAudioStartFailure = Self.describe(reason)
+            notify(DictationNotice(
+                kind: .warning,
+                message: "The other side isn't being recorded (\(Self.describe(reason))). Only your microphone is."
+            ))
+        case .notIdle, .notRecording, .cannotCreateDirectory:
+            notify(DictationNotice(kind: .failure, message: "Recording failed: \(failure)"))
+        }
+    }
+
+    private static func describe(_ reason: MeetingSourceFailure) -> String {
+        switch reason {
+        case let .unavailable(message), let .startFailed(message), let .conversionFailed(message):
+            return message
+        case .configurationChanged:
+            return "the device changed"
+        }
+    }
+
+    private static func recordingStartFailureMessage(_ error: Error) -> String {
+        guard let failure = error as? MeetingCapture.Failure else {
+            return "Couldn't start recording: \(error.localizedDescription)"
+        }
+        switch failure {
+        case .diskFull:
+            return "Not enough free space to record. Free up at least 500 MB and try again."
+        case let .microphone(reason):
+            return "Couldn't start the microphone: \(describe(reason))."
+        case let .systemAudio(reason):
+            return "Couldn't record the other side: \(describe(reason))."
+        case let .cannotCreateDirectory(message), let .writeFailed(message):
+            return "Couldn't start recording: \(message)"
+        case .notIdle:
+            return "A recording is already running."
+        case .notRecording:
+            return "No recording is running."
+        }
+    }
+
+    private static func endNotice(for reason: MeetingEndReason?) -> DictationNotice? {
+        switch reason {
+        case .diskFull:
+            return DictationNotice(
+                kind: .warning,
+                message: "Recording stopped: this Mac ran out of space. Everything up to that moment was kept."
+            )
+        case .writeFailed:
+            return DictationNotice(
+                kind: .warning,
+                message: "Recording stopped: it could no longer be written. Everything up to that moment was kept."
+            )
+        default:
+            return nil
+        }
+    }
+
+    private func startLiveDurationTimer() {
+        stopLiveDurationTimer()
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, let capture = self.meetingCapture else { return }
+                let frames = await capture.frameCount
+                self.liveDuration = Double(frames) / Double(MeetingWriter.sampleRate)
+                await self.refreshCaptureHealth(capture)
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        liveDurationTimer = timer
+    }
+
+    /// Is the other side arriving? Announced when the answer changes — a
+    /// blind person cannot see a meter that stopped moving, and this is the
+    /// one thing about a meeting recorder that must not be discovered
+    /// afterwards.
+    private func refreshCaptureHealth(_ capture: any MeetingCapturing) async {
+        guard let live = liveRecording else { return }
+        let health = await capture.health(of: .system)
+        let elapsed = liveRecordingStartedAt.map { started -> TimeInterval in
+            let duration = started.duration(to: .now)
+            return Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
+        } ?? 0
+        let next = CaptureHealth.make(
+            isSupported: SystemAudioAvailability.isSupported,
+            requested: live.systemAudio.wasRequested,
+            startFailure: systemAudioStartFailure,
+            elapsed: elapsed,
+            health: health,
+            now: .now
+        )
+        if case .unheard = next, lastProbeAt.map({ $0.duration(to: .now) >= .seconds(10) }) ?? true {
+            lastProbeAt = .now
+            playSystemAudioProbe()
+        }
+        guard next != liveCaptureHealth else { return }
+        liveCaptureHealth = next
+        if let announcement = next.announcement, announcement != lastAnnouncedHealth {
+            lastAnnouncedHealth = announcement
+            announcer.announce(announcement, urgent: next.role == .attention)
+        }
+    }
+
+    private func stopLiveDurationTimer() {
+        liveDurationTimer?.invalidate()
+        liveDurationTimer = nil
     }
 
     // MARK: - Permissions

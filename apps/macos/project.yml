@@ -42,8 +42,8 @@ settings:
     OPENRAMBLE_DIAGNOSTICS_CONDITION: ""
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
-    MARKETING_VERSION: "0.25.2"
-    CURRENT_PROJECT_VERSION: "57"
+    MARKETING_VERSION: "0.26.0"
+    CURRENT_PROJECT_VERSION: "58"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     # The sandbox is turned off intentionally: dictation must insert text into other people's
@@ -128,6 +128,12 @@ targets:
         NSMicrophoneUsageDescription: >-
           OpenRamble needs the microphone to record your speech. The
           recording is processed on this Mac and is never sent anywhere.
+        # The other side of a call. Asked the first time a recording of it
+        # starts, never at launch; the same rule about language applies.
+        NSAudioCaptureUsageDescription: >-
+          OpenRamble records the audio your Mac plays so the other people in
+          a meeting appear in the transcript. The recording stays on this Mac
+          and is never sent anywhere.
         NSHumanReadableCopyright: "© 2026 Mik Wiseman. MIT."
 
         # --- Updates (Sparkle) ---

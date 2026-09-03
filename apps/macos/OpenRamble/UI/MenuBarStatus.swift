@@ -33,25 +33,42 @@ enum MenuBarStatus {
     /// state without replacing the app identity.
     static let brandIconName = "BrandIconMenuBar"
 
-    static func activity(state: DictationState) -> MenuBarActivity {
+    /// `isRecordingMeeting`: a meeting or voice note is being recorded. That
+    /// is the microphone capturing, so it wears the same red as dictation;
+    /// dictation's own work outranks it for the seconds it lasts.
+    static func activity(state: DictationState, isRecordingMeeting: Bool = false) -> MenuBarActivity {
         switch state {
         // No dot until audio is actually being captured: the red dot must
         // never lie about the microphone, and the overlay already answers the
         // key press instantly.
-        case .preparing: return .hidden
+        case .preparing: return isRecordingMeeting ? .recording : .hidden
         case .listening: return .recording
         case .transcribing, .inserting: return .working
-        case .idle: return .hidden
+        case .idle: return isRecordingMeeting ? .recording : .hidden
         }
+    }
+
+    /// The menu's line about a running recording. Computed when the menu is
+    /// built — no clock lives in the menu bar.
+    static func recordingLine(isPaused: Bool, duration: TimeInterval, isDegraded: Bool = false) -> String {
+        let line = "\(isPaused ? "Paused" : "Recording") — \(RecordingTime.clock(duration))"
+        return isDegraded ? line + " — only your microphone" : line
     }
 
     /// Recording and working stay distinguishable without color through the
     /// accessibility label and the menu's first line; the two dots also differ
     /// strongly in luminance for color-blind users.
+    /// `recordingIsDegraded`: a meeting whose other side is not arriving. Orange
+    /// is already the app's word for "something waits for you and your work is
+    /// preserved" — which is exactly this: the audio is safe, half of it is
+    /// missing, and one change can still fix the rest of the meeting. It
+    /// outranks the steady red because the red would say everything is fine.
     static func badge(
         activity: MenuBarActivity,
-        needsAttention: Bool = false
+        needsAttention: Bool = false,
+        recordingIsDegraded: Bool = false
     ) -> MenuBarBadge {
+        if recordingIsDegraded, activity != .working { return .attention }
         switch activity {
         case .recording: return .recording
         case .working: return .working
@@ -91,14 +108,22 @@ enum MenuBarStatus {
     static func accessibilityLabel(
         state: DictationState,
         isDictationReady: Bool,
-        hasRecoveredWork: Bool = false
+        hasRecoveredWork: Bool = false,
+        isRecordingMeeting: Bool = false,
+        recordingIsDegraded: Bool = false
     ) -> String {
+        if isRecordingMeeting, recordingIsDegraded {
+            return "OpenRamble: recording — the other side isn't being captured"
+        }
         switch state {
         case .listening: return "OpenRamble: recording"
         case .transcribing: return "OpenRamble: transcribing speech"
         case .inserting: return "OpenRamble: inserting text"
         case .preparing: return "OpenRamble: turning on the microphone"
         case .idle:
+            if isRecordingMeeting {
+                return "OpenRamble: recording"
+            }
             // The dot on the icon must also sound for VoiceOver: a picture
             // without words does not exist for the blind.
             if hasRecoveredWork {

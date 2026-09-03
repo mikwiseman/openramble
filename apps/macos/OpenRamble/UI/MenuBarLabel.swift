@@ -12,11 +12,14 @@ struct MenuBarLabel: View {
     let isDictationReady: Bool
     let hasRecoveredWork: Bool
     let setupNeedsAttention: Bool
+    var isRecordingMeeting = false
+    var recordingIsDegraded = false
 
     var body: some View {
         let badge = MenuBarStatus.badge(
-            activity: MenuBarStatus.activity(state: state),
-            needsAttention: hasRecoveredWork || setupNeedsAttention
+            activity: MenuBarStatus.activity(state: state, isRecordingMeeting: isRecordingMeeting),
+            needsAttention: hasRecoveredWork || setupNeedsAttention,
+            recordingIsDegraded: recordingIsDegraded
         )
 
         label(badge: badge)
@@ -25,7 +28,9 @@ struct MenuBarLabel: View {
                 MenuBarStatus.accessibilityLabel(
                     state: state,
                     isDictationReady: isDictationReady,
-                    hasRecoveredWork: hasRecoveredWork
+                    hasRecoveredWork: hasRecoveredWork,
+                    isRecordingMeeting: isRecordingMeeting,
+                    recordingIsDegraded: recordingIsDegraded
                 )
             )
     }

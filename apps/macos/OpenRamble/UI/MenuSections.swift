@@ -12,6 +12,9 @@ enum MenuRow: Equatable {
     case revealRecoveredRecordings
     case recentDictations
     case copyLast
+    case recordingLine
+    case stopRecording
+    case openRecordings
     case settings
     case quit
 }
@@ -39,9 +42,18 @@ enum MenuSections {
         isDictationReady: Bool,
         hasRecoveredText: Bool,
         recoveryStorageFaulted: Bool,
-        hasRecents: Bool
+        hasRecents: Bool,
+        isRecording: Bool = false
     ) -> [[MenuRow]] {
         var sections: [[MenuRow]] = [[.statusLine]]
+
+        // A recording is orthogonal to a dictation — both can be true — so
+        // its section comes first and stays whatever the session does. The
+        // stop row is here because the window may be closed and the HUD
+        // hidden; the menu is the one place that is always reachable.
+        if isRecording {
+            sections.append([.recordingLine, .stopRecording])
+        }
 
         switch state {
         case .preparing, .listening:
@@ -63,7 +75,7 @@ enum MenuSections {
             }
         }
 
-        sections.append([.settings, .quit])
+        sections.append([.openRecordings, .settings, .quit])
         return sections
     }
 }

@@ -96,6 +96,50 @@ struct PermissionStatus: Equatable {
         }
     }
 
+    /// The permission macOS calls System Audio Recording, for the other side
+    /// of a call. There is no API to ask whether it was granted; the app
+    /// learns by trying, so the value here is what the last recording found,
+    /// never a guess.
+    static func systemAudio(mode: SystemAudioPermissionMode) -> PermissionStatus {
+        let detail = "Lets OpenRamble record the other people in a call. Used only while you are recording."
+        switch mode {
+        case .unsupported:
+            return .init(
+                title: "System Audio",
+                detail: "Recording what you hear needs macOS 14.2 or later. Dictation and voice notes are unaffected.",
+                granted: false,
+                value: "Not available on this macOS",
+                actionTitle: nil
+            )
+        case .declined:
+            return .init(
+                title: "System Audio",
+                detail: "You chose to record your microphone only. Recordings will not include the other side of a call.",
+                granted: false,
+                value: "Turned off",
+                actionTitle: "Turn On"
+            )
+        case .notChecked:
+            return .init(
+                title: "System Audio",
+                detail: detail + " macOS asks the first time you record.",
+                granted: false,
+                value: "Not checked yet",
+                actionTitle: nil
+            )
+        case .working:
+            return .init(title: "System Audio", detail: detail, granted: true, value: "Working", actionTitle: nil)
+        case .unheard:
+            return .init(
+                title: "System Audio",
+                detail: "The last recording heard nothing from what this Mac plays. Allow OpenRamble under Screen & System Audio Recording, then relaunch the app.",
+                granted: false,
+                value: "No sound arrived last time",
+                actionTitle: "Open System Settings"
+            )
+        }
+    }
+
     /// The title and explanation are about the same thing and are read together.
     var accessibilityLabel: String { "\(title). \(detail)" }
 
@@ -112,4 +156,13 @@ struct PermissionStatus: Equatable {
             action == "Grant" ? "Grant access: \(title)" : "\(action): \(title)"
         }
     }
+}
+
+/// What the app knows about the System Audio Recording permission.
+enum SystemAudioPermissionMode: Equatable {
+    case unsupported
+    case declined
+    case notChecked
+    case working
+    case unheard
 }

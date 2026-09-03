@@ -37,6 +37,11 @@ the public privacy description in `README.md` if this boundary ever changes.
   recognition. Only `TranscribeCppAdapter.swift` may import the inference
   runtime.
 - `apps/macos` contains the thin SwiftUI/AppKit application layer.
+- The recorder (`MeetingCapture`, `MeetingStore`, the Recordings window) is
+  macOS-only and deliberately absent from `core/`. It rests on Core Audio
+  process taps, which have no Windows or Linux counterpart, so there is nothing
+  for the Rust port to conform to and no fixture to record. Do not create a
+  `ramble-meetings` crate.
 
 LocalASR depends on DictationCore. Recognition runs in the application process.
 No package depends on the application layer.
@@ -70,8 +75,10 @@ No package depends on the application layer.
 ## Privacy and safety
 
 - Never log dictated text, individual words, keystrokes, or user file names.
-  Dictation history is the one place transcripts and audio are persisted; it is
-  bounded by an explicit retention setting and documented in `README.md`.
+  Two stores persist audio and transcripts, and both are documented in
+  `README.md`: dictation history, bounded by an explicit retention setting, and
+  recordings, bounded by nothing except the person deleting them. Anything that
+  persists a third thing writes its own README paragraph before it lands.
 - Write to the clipboard only with
   `prepareForNewContents(with: .currentHostOnly)` and the required transient and
   concealed markers. A plain `clearContents()` can leak dictation through

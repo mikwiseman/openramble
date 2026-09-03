@@ -456,6 +456,10 @@ final class AppHarness {
     let copyMonitor = FakeShortcutMonitor()
     let overlay = FakeOverlay()
     let capture = FakeCapture()
+    let meetingCapture = FakeMeetingCapture()
+    let announcer = FakeAnnouncer()
+    /// How often the Settings pane for system audio was asked for.
+    var systemAudioSettingsOpened = 0
     let inserter = FakeInserter()
     let workspaceNotifications = NotificationCenter()
     let notifications = NotificationCenter()
@@ -607,7 +611,18 @@ final class AppHarness {
                 notifications: notifications,
                 localTranscriber: recognizer ?? warmUpEngine.map { LocalTranscriber(engine: $0) },
                 focusedFieldReader: focusedField,
-                cleanupLegacyAgentStaging: cleanupLegacyAgentStaging
+                cleanupLegacyAgentStaging: cleanupLegacyAgentStaging,
+                makeMeetingCapture: { [meetingCapture] directory, _, includeSystemAudio, _, onSegment, _ in
+                    meetingCapture.prepare(directory: directory, includeSystemAudio: includeSystemAudio, onSegment: onSegment)
+                    return meetingCapture
+                },
+                announcer: announcer,
+                openSystemAudioSettings: { [weak self] in self?.systemAudioSettingsOpened += 1 },
+                // Inaudible in the app; silent in the suite all the same.
+                playSystemAudioProbe: {},
+                // Remove rather than trash: a suite that fills the developer's
+                // Trash with fixtures is a suite nobody wants to run.
+                trashItem: { try FileManager.default.removeItem(at: $0) }
             )
         )
     }
@@ -835,8 +850,18 @@ actor ReadinessControlledRecognizer: DictationRecognizing {
         ASRResult(text: "", audioDuration: 1, processingDuration: 0)
     }
 
+    /// What a sample-based decode answers, and whether it fails instead.
+    private var samplesText = ""
+    private var samplesError: (any Error)?
+    private(set) var sampleDecodes = 0
+
+    func setSamplesText(_ text: String) { samplesText = text }
+    func setSamplesError(_ error: (any Error)?) { samplesError = error }
+
     func transcribe(samples: [Float]) async throws -> ASRResult {
-        ASRResult(text: "", audioDuration: 1, processingDuration: 0)
+        sampleDecodes += 1
+        if let samplesError { throw samplesError }
+        return ASRResult(text: samplesText, audioDuration: 1, processingDuration: 0)
     }
 
     func warmUpInference() async throws {
@@ -895,4 +920,96 @@ final class FakeShortcutMonitor: ShortcutMonitoring {
 
     func start() { if shortcut != nil { isRunning = true } }
     func stop() { isRunning = false }
+}
+
+// MARK: - Recording edges
+
+/// Records nothing and answers instantly, so the recording flow — start, the
+/// live timer, stop, filing — can be checked without a microphone.
+final class FakeMeetingCapture: MeetingCapturing, @unchecked Sendable {
+    private let lock = NSLock()
+    private var current: MeetingCapture.State = .idle
+    private(set) var startCount = 0
+    private(set) var stopCount = 0
+    private(set) var pauseCount = 0
+    private(set) var resumeCount = 0
+    /// Where the app asked it to record, and whether it asked for the other side.
+    private(set) var directory: URL?
+    private(set) var includeSystemAudio: Bool?
+    private var onSegment: (@Sendable (MeetingSegmentRef) -> Void)?
+    /// What `health(of: .system)` reports.
+    var systemHealth = MeetingCapture.ChannelHealth.none
+    /// What `stop()` reports.
+    var frames = 32_000
+    var endReason: MeetingEndReason = .stoppedByUser
+    var startError: MeetingCapture.Failure?
+
+    func prepare(directory: URL, includeSystemAudio: Bool, onSegment: @escaping @Sendable (MeetingSegmentRef) -> Void) {
+        lock.withLock {
+            self.directory = directory
+            self.includeSystemAudio = includeSystemAudio
+            self.onSegment = onSegment
+        }
+    }
+
+    func health(of channel: MeetingChannel) async -> MeetingCapture.ChannelHealth {
+        lock.withLock { channel == .system ? systemHealth : .none }
+    }
+
+    /// Hand the app a stretch of the file, as the real recorder would.
+    func emitSegment(_ segment: MeetingSegmentRef) {
+        let handler = lock.withLock { onSegment }
+        handler?(segment)
+    }
+
+    func start() async throws {
+        try lock.withLock {
+            if let startError { throw startError }
+            startCount += 1
+            current = .recording
+        }
+    }
+
+    func pause() async throws {
+        lock.withLock {
+            pauseCount += 1
+            current = .paused
+        }
+    }
+
+    func resume() async throws {
+        lock.withLock {
+            resumeCount += 1
+            current = .recording
+        }
+    }
+
+    func stop() async throws -> MeetingCapture.Summary {
+        lock.withLock {
+            stopCount += 1
+            current = .stopped
+            return MeetingCapture.Summary(
+                frameCount: frames,
+                duration: Double(frames) / 16_000,
+                microphoneDeviceName: "Fake Microphone",
+                systemAudio: SystemAudioSummary(
+                    wasRequested: includeSystemAudio ?? false,
+                    everDeliveredBuffers: systemHealth.everDeliveredBuffers,
+                    everDeliveredAudio: systemHealth.everDeliveredAudio,
+                    outputTransport: includeSystemAudio == true ? "fake" : nil
+                ),
+                gaps: [],
+                pauses: [],
+                endReason: endReason
+            )
+        }
+    }
+
+    var frameCount: Int {
+        get async { lock.withLock { frames } }
+    }
+
+    var state: MeetingCapture.State {
+        get async { lock.withLock { current } }
+    }
 }

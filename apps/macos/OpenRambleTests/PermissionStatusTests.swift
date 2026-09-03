@@ -86,4 +86,17 @@ final class PermissionStatusTests: XCTestCase {
         XCTAssertNil(status.actionTitle)
         XCTAssertEqual(status.accessibilityValue, "Repairing the permission")
     }
+
+    /// The value is what the last recording found, never a guess: there is
+    /// no API to ask whether the tap is permitted.
+    func testSystemAudioRowSaysWhatWasFoundAndOffersTheOneUsefulAction() {
+        XCTAssertEqual(PermissionStatus.systemAudio(mode: .working).accessibilityValue, "Working")
+        XCTAssertNil(PermissionStatus.systemAudio(mode: .working).actionTitle)
+        XCTAssertEqual(PermissionStatus.systemAudio(mode: .notChecked).accessibilityValue, "Not checked yet")
+        XCTAssertEqual(PermissionStatus.systemAudio(mode: .unheard).actionTitle, "Open System Settings")
+        XCTAssertTrue(PermissionStatus.systemAudio(mode: .unheard).detail.contains("relaunch"))
+        XCTAssertEqual(PermissionStatus.systemAudio(mode: .declined).actionTitle, "Turn On")
+        XCTAssertNil(PermissionStatus.systemAudio(mode: .unsupported).actionTitle)
+        XCTAssertEqual(PermissionStatus.systemAudio(mode: .unsupported).accessibilityValue, "Not available on this macOS")
+    }
 }

@@ -104,24 +104,35 @@ struct HistoryView: View {
     }
 
     private var footer: some View {
-        HStack {
-            Picker("Keep", selection: $state.historyLimit) {
-                ForEach([5, 10, 20, 50], id: \.self) { count in
-                    Text("Last \(count)").tag(count)
+        VStack(alignment: .leading, spacing: 10) {
+            // Two stores, two promises. This one is bounded and about
+            // dictation; the other keeps what the person recorded on purpose.
+            // Said here so they never read as the same thing.
+            Text("Meetings and voice notes you record on purpose live in their own window: Recordings, ⌘0.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Picker("Keep", selection: $state.historyLimit) {
+                    ForEach([5, 10, 20, 50], id: \.self) { count in
+                        Text("Last \(count)").tag(count)
+                    }
                 }
+                .pickerStyle(.menu)
+                .frame(maxWidth: 160)
+                .accessibilityHint("How many dictations to keep, with their audio")
+
+                Spacer()
+
+                // "Show in Finder", no longer "Show Recordings": that word now
+                // names the window next door.
+                Button("Show in Finder") { state.revealHistoryAudio() }
+                    .disabled(state.history.isEmpty)
+                    .accessibilityHint("Opens the folder holding the audio kept with these dictations")
+
+                Button("Delete All", role: .destructive) { showClearConfirmation = true }
+                    .disabled(state.history.isEmpty)
             }
-            .pickerStyle(.menu)
-            .frame(maxWidth: 160)
-            .accessibilityHint("How many dictations to keep, with their audio")
-
-            Spacer()
-
-            Button("Show Recordings") { state.revealHistoryAudio() }
-                .disabled(state.history.isEmpty)
-                .accessibilityHint("Opens the folder holding the audio kept with these dictations")
-
-            Button("Delete All", role: .destructive) { showClearConfirmation = true }
-                .disabled(state.history.isEmpty)
         }
         .padding(12)
         .confirmationDialog(

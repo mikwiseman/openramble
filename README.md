@@ -1,6 +1,6 @@
 # OpenRamble
 
-Private, local dictation for Apple Silicon Macs.
+Private, local dictation and meeting recording for Apple Silicon Macs.
 
 Hold a hotkey, speak, and release it. OpenRamble transcribes the recording on
 your Mac and inserts the text at the current cursor.
@@ -29,6 +29,29 @@ default, adjustable in Settings ▸ History, deletable individually or all at
 once. Earlier versions kept transcripts in memory only; this is a deliberate
 change, and it is the one thing this app stores that it previously did not.
 Nothing leaves the Mac either way.
+
+**Recordings** you make on purpose — in the Recordings window, ⌘0 — stay until
+you delete them, with a transcript beside the audio. A recording captures your
+microphone and, when you allow it, whatever your Mac is playing — that is how
+the other people in a call get transcribed, labelled Others against your You.
+Recording a meeting captures the other participants as well as you, and
+OpenRamble does not tell them. In many places recording a conversation without
+everyone's consent is illegal; asking is your responsibility. Recordings are transcribed
+on this Mac while you record, by the same model that handles dictation; a
+dictation you start mid-recording always takes the engine first, and the
+transcript catches up after. They are not bounded by a count: a recording is a
+document, and the app does not throw documents away. About 230 MB per hour;
+the window shows the total. Deleting a recording moves it to the Trash. Recordings are
+included in your Mac's own backups, like any document you make; the folders
+that hold transient dictation audio are not.
+
+Nothing leaves this Mac on its own. Copy, Save and Share hand a transcript or a
+recording to somewhere you chose: Save writes a Markdown transcript or an m4a of
+the audio wherever you point it, and Share passes both to whichever app you pick
+in the system menu. What happens to a file after that is that app's business.
+The exported audio is AAC rather than the stored recording, which is about
+230 MB an hour and too large to send; it keeps the two sides on separate
+channels, so you still hear yourself on one and the other side on the other.
 
 Recognition never uses the network. The following maintenance actions can:
 
@@ -61,6 +84,16 @@ scan of the shipping network surface.
 OpenRamble requires Microphone access to record speech and Accessibility
 access to observe the selected global hotkey and insert completed text.
 
+Recording a meeting also needs the permission macOS calls System Audio
+Recording, so OpenRamble can hear the people on the call rather than only
+you. It is requested the first time you record, never at launch, and
+dictation works without it. macOS 14.2 or later; on 14.0 and 14.1 recordings
+capture your microphone only, and the app says so. A quarter second of an
+inaudible 50 Hz tone is played when such a recording starts — it is how the
+app learns, within three seconds, whether the other side is actually being
+captured, because macOS gives no other way to tell a working tap from a
+denied one.
+
 The global event monitor compares key events with the selected hotkey and
 Escape. It does not log, store, or transmit unrelated keystrokes. Input
 Monitoring permission is not required.
@@ -80,6 +113,7 @@ Application data is stored under
 | Current recording | Queued for local deletion after success or explicit cancellation |
 | Recovery audio after a technical failure | Up to 10 WAV files, seven days, and 1 GiB |
 | Dictation history: transcripts and their audio | The last 5 by default (5–50 in Settings ▸ History); older entries and their recordings are deleted when they fall off |
+| Recordings: two-channel audio and their metadata | Until you delete them. Not bounded by count or age. About 230 MB per hour; the total is shown in the Recordings window |
 | Settings and replacement dictionary | Stored in macOS defaults |
 | Text that could not be inserted | Memory only, until the next dictation or app exit |
 
@@ -107,7 +141,8 @@ Application Support directory automatically. The bundle identifier remains
 - Use “Copy Last as Spoken” to copy the raw recognition result before
   dictionary replacements and typography cleanup. The item appears when that
   raw text differs from what was inserted.
-- A single dictation can run for up to five minutes. At the limit OpenRamble
+- A single dictation can run for up to five minutes; a recording made in the
+  Recordings window has no such limit. At the limit OpenRamble
   stops cleanly and transcribes the complete captured audio instead of risking
   an incomplete take when disk storage is unavailable.
 - Choose whether the compact dictation panel appears at the top or bottom of
