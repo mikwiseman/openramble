@@ -1,6 +1,7 @@
 import DictationAudio
 import DictationCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// One finished recording: its name, what it is, and its audio.
 ///
@@ -14,6 +15,9 @@ struct RecordingDetail: View {
 
     @State private var title = ""
     @FocusState private var isEditingTitle: Bool
+    /// The toolbar view the system share menu points at. AppKit wants a real
+    /// view to hang the popover from, and a menu item is not one.
+    @State private var shareAnchor = ShareAnchor.Box()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -46,6 +50,23 @@ struct RecordingDetail: View {
                 }
                 .help("Copy the transcript")
                 .disabled(state.transcript(for: recording.id).isEmpty)
+                Menu {
+                    Button("Save Transcript…") { saveTranscript() }
+                        .disabled(state.transcript(for: recording.id).isEmpty)
+                    Button("Save Audio…") { saveAudio() }
+                        .disabled(state.recordingAudioURL(recording.id) == nil)
+                    Divider()
+                    // The meeting, not one half of it: the transcript to read
+                    // and the audio to hear, handed to whichever app is picked.
+                    Button("Share…") { share() }
+                } label: {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
+                .help("Save or share this recording")
+                .disabled(state.audioExportProgress != nil)
+                ShareAnchor(box: shareAnchor)
+                    .frame(width: 1, height: 1)
+                    .accessibilityHidden(true)
                 Button {
                     state.revealRecording(recording.id)
                 } label: {
@@ -100,6 +121,25 @@ struct RecordingDetail: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: GlassTokens.Space.stack) {
+            if let progress = state.audioExportProgress {
+                HStack(spacing: GlassTokens.Space.inline) {
+                    ProgressView(value: progress)
+                        .progressViewStyle(.linear)
+                        .frame(maxWidth: 220)
+                    Text("Preparing the audio…")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: GlassTokens.Space.inline)
+                    Button("Cancel") { state.cancelAudioExport() }
+                }
+                .padding(GlassTokens.Space.stack)
+                .contentSurface(RoundedRectangle(cornerRadius: GlassTokens.Radius.control, style: .continuous))
+                .padding(.horizontal, GlassTokens.Space.page)
+                .padding(.top, GlassTokens.Space.section)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Preparing the audio")
+                .accessibilityValue("\(Int(progress * 100)) percent")
+            }
             if let note = RecordingsPlaceholder.endNote(for: recording.endReason)
                 ?? RecordingsPlaceholder.degradedNote(for: recording) {
                 HStack(alignment: .firstTextBaseline, spacing: GlassTokens.Space.inline) {
@@ -144,6 +184,34 @@ struct RecordingDetail: View {
         title = recording.title ?? ""
         state.loadTranscript(recording.id)
         player.load(id: recording.id, url: state.recordingAudioURL(recording.id))
+    }
+
+    private func saveTranscript() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
+        panel.nameFieldStringValue = "\(state.exportName(recording.id)).md"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        state.exportTranscript(recording.id, to: url)
+    }
+
+    private func saveAudio() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.mpeg4Audio]
+        panel.nameFieldStringValue = "\(state.exportName(recording.id)).m4a"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        state.exportAudio(recording.id, to: url)
+    }
+
+    private func share() {
+        Task {
+            let items = await state.prepareShareItems(recording.id)
+            guard !items.isEmpty, let view = shareAnchor.view else { return }
+            NSSharingServicePicker(items: items).show(
+                relativeTo: view.bounds,
+                of: view,
+                preferredEdge: .minY
+            )
+        }
     }
 
     private func commitTitle() {
@@ -213,5 +281,29 @@ struct LiveRecordingDetail: View {
         return (state.liveRecording?.isMeeting ?? false)
             ? "Recording you and the other side"
             : "Recording your microphone"
+    }
+}
+
+/// A one-pixel handle into AppKit.
+///
+/// `NSSharingServicePicker` points its popover at a view, and a SwiftUI menu
+/// item is not one. This sits beside the menu in the toolbar and lends the
+/// picker somewhere to appear, which is why it is invisible rather than
+/// merely small.
+struct ShareAnchor: NSViewRepresentable {
+    @MainActor final class Box {
+        weak var view: NSView?
+    }
+
+    let box: Box
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        box.view = view
+        return view
+    }
+
+    func updateNSView(_ view: NSView, context: Context) {
+        box.view = view
     }
 }

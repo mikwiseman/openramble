@@ -472,6 +472,10 @@ public final class AppState: ObservableObject {
     /// The transcript of the recording being made — or of the one that just
     /// ended and is still being decoded — with the paragraph in progress last.
     @Published public private(set) var liveTranscript: [MeetingUtterance] = []
+    /// How far an m4a export has got, or nothing when none is running.
+    /// One at a time: the encoder is the slow part and two would race.
+    @Published public private(set) var audioExportProgress: Double?
+    private let audioExportCancelled = UncheckedBox<Bool>(false)
     /// Seconds of speech waiting for the engine. Measured from what was
     /// submitted and what came back, never modelled.
     @Published public private(set) var transcriptBacklogSeconds: TimeInterval = 0
@@ -2542,6 +2546,127 @@ public final class AppState: ObservableObject {
         } catch {
             notify(DictationNotice(kind: .failure, message: "Couldn't copy the transcript."))
         }
+    }
+
+    // MARK: - Leaving the Mac
+
+    /// The name a file takes when it leaves: the person's own title, or the
+    /// date they would recognise it by.
+    public func exportName(_ id: UUID) -> String {
+        let recording = recordings.first { $0.id == id } ?? liveRecording
+        return MeetingExportNaming.fileName(
+            recording?.title ?? "",
+            fallback: RecordingsPlaceholder.defaultTitle(for: recording?.startedAt ?? Date())
+        )
+    }
+
+    /// The transcript as Markdown, with the one line that must survive being
+    /// pasted somewhere else: that the other side was never captured.
+    public func transcriptMarkdown(_ id: UUID) -> String? {
+        let utterances = transcript(for: id)
+        guard !utterances.isEmpty, let recording = recordings.first(where: { $0.id == id }) else { return nil }
+        let subtitle = [
+            recording.startedAt.formatted(date: .long, time: .shortened),
+            RecordingTime.brief(recording.duration),
+            recording.isMeeting ? "Meeting" : "Voice note",
+        ].joined(separator: " · ")
+        return MeetingTranscriptFormatter.markdown(
+            utterances,
+            title: recording.title ?? RecordingsPlaceholder.defaultTitle(for: recording.startedAt),
+            subtitle: subtitle,
+            note: RecordingsPlaceholder.degradedNote(for: recording)
+        )
+    }
+
+    public func exportTranscript(_ id: UUID, to url: URL) {
+        guard let markdown = transcriptMarkdown(id) else { return }
+        do {
+            try markdown.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            notify(DictationNotice(kind: .failure, message: "Couldn't save the transcript."))
+        }
+    }
+
+    /// Encode the recording to m4a at `url`. Long enough on a two-hour
+    /// meeting to need a progress figure and a way out of it.
+    public func exportAudio(_ id: UUID, to url: URL) {
+        guard let source = recordingAudioURL(id), audioExportProgress == nil else { return }
+        audioExportProgress = 0
+        audioExportCancelled.value = false
+        let cancelled = audioExportCancelled
+        Task { [weak self] in
+            do {
+                try await Self.encode(from: source, to: url, cancelled: cancelled) { progress in
+                    Task { @MainActor in self?.audioExportProgress = progress }
+                }
+                await MainActor.run { self?.audioExportProgress = nil }
+            } catch MeetingAudioExporter.Failure.cancelled {
+                await MainActor.run { self?.audioExportProgress = nil }
+            } catch {
+                await MainActor.run {
+                    self?.audioExportProgress = nil
+                    self?.notify(DictationNotice(kind: .failure, message: "Couldn't save the audio."))
+                }
+            }
+        }
+    }
+
+    public func cancelAudioExport() {
+        audioExportCancelled.value = true
+    }
+
+    /// Both files in one folder, ready to hand to whichever app the person
+    /// picks. The transcript alone when there is no audio to send.
+    public func prepareShareItems(_ id: UUID) async -> [URL] {
+        guard audioExportProgress == nil else { return [] }
+        let name = exportName(id)
+        let folder = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appending(path: "OpenRamble-\(id.uuidString)", directoryHint: .isDirectory)
+        var items: [URL] = []
+        do {
+            try? FileManager.default.removeItem(at: folder)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            if let markdown = transcriptMarkdown(id) {
+                let url = folder.appending(path: "\(name).md")
+                try markdown.write(to: url, atomically: true, encoding: .utf8)
+                items.append(url)
+            }
+            if let source = recordingAudioURL(id) {
+                let url = folder.appending(path: "\(name).m4a")
+                audioExportProgress = 0
+                audioExportCancelled.value = false
+                let cancelled = audioExportCancelled
+                try await Self.encode(from: source, to: url, cancelled: cancelled) { progress in
+                    Task { @MainActor in self.audioExportProgress = progress }
+                }
+                audioExportProgress = nil
+                items.append(url)
+            }
+        } catch MeetingAudioExporter.Failure.cancelled {
+            audioExportProgress = nil
+            return []
+        } catch {
+            audioExportProgress = nil
+            notify(DictationNotice(kind: .failure, message: "Couldn't prepare this recording to share."))
+            return []
+        }
+        return items
+    }
+
+    private static func encode(
+        from source: URL,
+        to destination: URL,
+        cancelled: UncheckedBox<Bool>,
+        progress: @escaping @Sendable (Double) -> Void
+    ) async throws {
+        try await Task.detached(priority: .userInitiated) {
+            try MeetingAudioExporter.export(
+                from: source,
+                to: destination,
+                isCancelled: { cancelled.value },
+                progress: progress
+            )
+        }.value
     }
 
     /// Take the held segments up again after failures paused the queue.

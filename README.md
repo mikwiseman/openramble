@@ -45,6 +45,14 @@ the window shows the total. Deleting a recording moves it to the Trash. Recordin
 included in your Mac's own backups, like any document you make; the folders
 that hold transient dictation audio are not.
 
+Nothing leaves this Mac on its own. Copy, Save and Share hand a transcript or a
+recording to somewhere you chose: Save writes a Markdown transcript or an m4a of
+the audio wherever you point it, and Share passes both to whichever app you pick
+in the system menu. What happens to a file after that is that app's business.
+The exported audio is AAC rather than the stored recording, which is about
+230 MB an hour and too large to send; it keeps the two sides on separate
+channels, so you still hear yourself on one and the other side on the other.
+
 Recognition never uses the network. The following maintenance actions can:
 
 | Action | Destination | Data visible to the service |
