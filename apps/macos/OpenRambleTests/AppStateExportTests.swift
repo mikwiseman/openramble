@@ -4,7 +4,7 @@ import DictationCore
 import XCTest
 
 /// Getting a meeting out of the app: the transcript as Markdown, the audio
-/// as something small enough to send, and both together for Share.
+/// as something small enough to send.
 @MainActor
 final class AppStateExportTests: XCTestCase {
     private var harness: AppHarness!
@@ -139,27 +139,6 @@ final class AppStateExportTests: XCTestCase {
         let sourceBytes = try FileManager.default.attributesOfItem(atPath: source.path)[.size] as? Int ?? 0
         let exportedBytes = try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int ?? 0
         XCTAssertLessThan(exportedBytes * 4, sourceBytes)
-    }
-
-    func testShareHandsOverTheTranscriptAndTheAudioTogether() async throws {
-        let harness = try makeHarness()
-        defer { harness.tearDown() }
-        let scratch = try makeScratch()
-        defer { try? FileManager.default.removeItem(at: scratch) }
-        let state = try await makeReadyState()
-        let recording = try await record(into: state)
-
-        let items = await state.prepareShareItems(recording.id)
-        XCTAssertEqual(items.map(\.pathExtension), ["md", "m4a"])
-        XCTAssertTrue(items.allSatisfy { FileManager.default.fileExists(atPath: $0.path) })
-        XCTAssertNil(state.audioExportProgress, "the progress figure is put away when it finishes")
-        for item in items {
-            XCTAssertEqual(
-                item.deletingPathExtension().lastPathComponent,
-                state.exportName(recording.id),
-                "both files carry the recording's own name"
-            )
-        }
     }
 
     /// The name is the person's title, and it never becomes a path.

@@ -30,7 +30,7 @@ once. Earlier versions kept transcripts in memory only; this is a deliberate
 change, and it is the one thing this app stores that it previously did not.
 Nothing leaves the Mac either way.
 
-**Recordings** you make on purpose — in the Recordings window, ⌘0 — stay until
+**Recordings** you make on purpose — in the Recordings window, ⌘0, or with ⇧⌘R — stay until
 you delete them, with a transcript beside the audio. A recording captures your
 microphone and, when you allow it, whatever your Mac is playing — that is how
 the other people in a call get transcribed, labelled Others against your You.
@@ -45,10 +45,10 @@ the window shows the total. Deleting a recording moves it to the Trash. Recordin
 included in your Mac's own backups, like any document you make; the folders
 that hold transient dictation audio are not.
 
-Nothing leaves this Mac on its own. Copy, Save and Share hand a transcript or a
-recording to somewhere you chose: Save writes a Markdown transcript or an m4a of
-the audio wherever you point it, and Share passes both to whichever app you pick
-in the system menu. What happens to a file after that is that app's business.
+Nothing leaves this Mac on its own. Copy and Save hand a transcript or a
+recording to somewhere you chose: Copy puts the transcript on this Mac's
+clipboard, and Save writes a Markdown transcript or an m4a of the audio wherever
+you point it. What happens to a file after that is that app's business.
 The exported audio is AAC rather than the stored recording, which is about
 230 MB an hour and too large to send; it keeps the two sides on separate
 channels, so you still hear yourself on one and the other side on the other.

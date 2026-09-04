@@ -54,7 +54,6 @@ struct RecordBar: View {
                 .disabled(isBusy)
                 .accessibilityLabel(isRecording ? "Stop recording" : "Record")
                 .accessibilityHint(isRecording ? "Ends the recording and keeps it" : "Records your microphone until you stop")
-                .keyboardShortcut("r", modifiers: .command)
 
                 if isRecording {
                     // Keeps the red button centred while the pause control is

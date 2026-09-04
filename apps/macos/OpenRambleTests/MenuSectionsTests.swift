@@ -38,6 +38,10 @@ final class MenuSectionsTests: XCTestCase {
             sections(recording: true),
             [[.statusLine], [.recordingLine, .stopRecording], [.openRecordings, .settings, .quit]]
         )
+        XCTAssertFalse(
+            sections(recording: true).flatMap(\.self).contains(.startRecording),
+            "stop replaces start; both at once would toggle twice"
+        )
         XCTAssertEqual(
             sections(state: .listening, recording: true),
             [
@@ -49,11 +53,12 @@ final class MenuSectionsTests: XCTestCase {
         )
     }
 
-    /// The common case: a ready, quiet app shows three rows in two sections.
+    /// The common case: a ready, quiet app shows start-recording as its own
+    /// section, so the shortcut has a row the way Copy Last Dictation does.
     func testScenario001() {
         XCTAssertEqual(
             sections(),
-            [[.statusLine], [.openRecordings, .settings, .quit]]
+            [[.statusLine], [.startRecording], [.openRecordings, .settings, .quit]]
         )
     }
 
@@ -65,6 +70,7 @@ final class MenuSectionsTests: XCTestCase {
                 [.statusLine],
                 [.insertLastDictation],
                 [.recentDictations, .copyLast],
+                [.startRecording],
                 [.openRecordings, .settings, .quit],
             ]
         )
@@ -102,7 +108,7 @@ final class MenuSectionsTests: XCTestCase {
     func testScenario005() {
         XCTAssertEqual(
             sections(ready: false),
-            [[.statusLine], [.setupHints, .finishSetup], [.openRecordings, .settings, .quit]]
+            [[.statusLine], [.setupHints, .finishSetup], [.startRecording], [.openRecordings, .settings, .quit]]
         )
     }
 
@@ -115,6 +121,7 @@ final class MenuSectionsTests: XCTestCase {
                 [.setupHints, .finishSetup],
                 [.insertLastDictation],
                 [.recentDictations, .copyLast],
+                [.startRecording],
                 [.openRecordings, .settings, .quit],
             ]
         )
@@ -145,7 +152,7 @@ final class MenuSectionsTests: XCTestCase {
         let allowed: Set<MenuRow> = [
             .statusLine, .stopAndInsert, .cancelDictation, .setupHints, .finishSetup,
             .insertLastDictation, .revealRecoveredRecordings,
-            .recentDictations, .copyLast, .openRecordings, .settings, .quit,
+            .recentDictations, .copyLast, .startRecording, .openRecordings, .settings, .quit,
         ]
         XCTAssertTrue(everything.isSubset(of: allowed))
     }
@@ -158,12 +165,12 @@ final class MenuSectionsTests: XCTestCase {
     func testRecoveredAudioStaysOutOfTheMenuUnlessRecoveryFaulted() {
         XCTAssertEqual(
             sections(),
-            [[.statusLine], [.openRecordings, .settings, .quit]],
+            [[.statusLine], [.startRecording], [.openRecordings, .settings, .quit]],
             "ordinary retained recordings are a Settings affair, not menu debris"
         )
         XCTAssertEqual(
             sections(recoveryFaulted: true),
-            [[.statusLine], [.revealRecoveredRecordings], [.openRecordings, .settings, .quit]]
+            [[.statusLine], [.revealRecoveredRecordings], [.startRecording], [.openRecordings, .settings, .quit]]
         )
         XCTAssertFalse(
             sections(state: .listening, recoveryFaulted: true)

@@ -93,34 +93,25 @@ struct RecordingRow: View {
     }
 }
 
-/// The recording in progress: red dot, elapsed time, and a level meter that
-/// keeps moving as long as the microphone is heard.
+/// The recording in progress: red dot and elapsed time. The meters live in
+/// the detail header, where they have room and labels; a 280-point row
+/// crushed them into a dashed line.
 struct LiveRecordingRow: View {
     @ObservedObject var state: AppState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(alignment: .firstTextBaseline, spacing: GlassTokens.Space.tight) {
-                Circle()
-                    .fill(state.meetingState == .paused ? Color.secondary : StatusColorRole.recording.color)
-                    .frame(width: 8, height: 8)
-                    .accessibilityHidden(true)
-                Text(state.meetingState == .paused ? "Paused" : "Recording")
-                    .font(.body.weight(.medium))
-                Spacer(minLength: GlassTokens.Space.inline)
-                Text(RecordingTime.clock(state.liveDuration))
-                    .font(.system(size: GlassTokens.Label.footnote))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-            }
-            LiveLevelMeters(
-                levels: state.liveLevels,
-                isPaused: state.meetingState == .paused,
-                showsOthers: state.liveRecording?.isMeeting ?? false,
-                othersDegraded: state.liveCaptureHealth.marksRecordingDegraded,
-                compact: true
-            )
-            .frame(height: (state.liveRecording?.isMeeting ?? false) ? 30 : 14)
+        HStack(alignment: .firstTextBaseline, spacing: GlassTokens.Space.tight) {
+            Circle()
+                .fill(state.meetingState == .paused ? Color.secondary : StatusColorRole.recording.color)
+                .frame(width: 8, height: 8)
+                .accessibilityHidden(true)
+            Text(state.meetingState == .paused ? "Paused" : "Recording")
+                .font(.body.weight(.medium))
+            Spacer(minLength: GlassTokens.Space.inline)
+            Text(RecordingTime.clock(state.liveDuration))
+                .font(.system(size: GlassTokens.Label.footnote))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
         }
         .padding(.vertical, GlassTokens.Space.tight)
         .accessibilityElement(children: .ignore)
@@ -143,13 +134,11 @@ struct LiveLevelMeters: View {
     let isPaused: Bool
     let showsOthers: Bool
     let othersDegraded: Bool
-    var compact = false
-
     @State private var you: [Float] = Array(repeating: 0, count: 24)
     @State private var others: [Float] = Array(repeating: 0, count: 24)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: compact ? 2 : GlassTokens.Space.tight) {
+        VStack(alignment: .leading, spacing: GlassTokens.Space.tight) {
             meter("You", samples: you, color: isPaused ? .secondary : StatusColorRole.recording.color)
             if showsOthers {
                 meter(
@@ -170,12 +159,10 @@ struct LiveLevelMeters: View {
 
     private func meter(_ title: String, samples: [Float], color: Color) -> some View {
         HStack(spacing: GlassTokens.Space.tight) {
-            if !compact {
-                Text(title)
-                    .font(.system(size: GlassTokens.Label.sectionHeader, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 44, alignment: .leading)
-            }
+            Text(title)
+                .font(.system(size: GlassTokens.Label.sectionHeader, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, alignment: .leading)
             RecordingWaveform(samples: samples, color: color)
         }
     }

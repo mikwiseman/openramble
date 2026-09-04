@@ -454,6 +454,7 @@ final class AppHarness {
     let accessibilityManager = FakeAccessibilityManager()
     let monitor = FakeHotkeyMonitor()
     let copyMonitor = FakeShortcutMonitor()
+    let recordingMonitor = FakeShortcutMonitor()
     let overlay = FakeOverlay()
     let capture = FakeCapture()
     let meetingCapture = FakeMeetingCapture()
@@ -564,6 +565,7 @@ final class AppHarness {
                 accessibilityManager: accessibilityManager,
                 hotkeyMonitor: monitor,
                 copyShortcutMonitor: copyMonitor,
+                recordingShortcutMonitor: recordingMonitor,
                 inserter: inserter,
                 targetApplicationSnapshot: { [inserter] in
                     inserter.frontmostApplication()

@@ -100,6 +100,14 @@ struct TranscriptTurnView: View {
     }
 }
 
+/// How far behind a live decode may get before the line is worth saying.
+///
+/// Ten seconds hid the first wait entirely: a segment is only queued after
+/// a pause, so the backlog sat at zero until the first paragraph landed.
+enum TranscriptStatusPolicy {
+    static let backlogVisibleAfter: TimeInterval = 3
+}
+
 /// One honest line under the live transcript about how far behind it is —
 /// and nothing at all when it is not worth saying.
 ///
@@ -140,7 +148,7 @@ struct TranscriptStatusLine: View {
         if state.dictationState != .idle {
             return ("waveform", .processing, "Paused for dictation. The recording is still running.")
         }
-        if state.transcriptBacklogSeconds >= 10 {
+        if state.transcriptBacklogSeconds >= TranscriptStatusPolicy.backlogVisibleAfter {
             return ("waveform", .processing, "Transcribing — about \(Int(state.transcriptBacklogSeconds.rounded())) seconds behind.")
         }
         return nil

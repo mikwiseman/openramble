@@ -13,6 +13,7 @@ enum MenuRow: Equatable {
     case recentDictations
     case copyLast
     case recordingLine
+    case startRecording
     case stopRecording
     case openRecordings
     case settings
@@ -72,6 +73,9 @@ enum MenuSections {
             }
             if hasRecents {
                 sections.append([.recentDictations, .copyLast])
+            }
+            if !isRecording {
+                sections.append([.startRecording])
             }
         }
 

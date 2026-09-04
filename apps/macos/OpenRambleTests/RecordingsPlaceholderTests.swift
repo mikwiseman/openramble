@@ -15,6 +15,12 @@ final class RecordingsPlaceholderTests: XCTestCase {
         XCTAssertNotNil(RecordingsPlaceholder.endNote(for: .applicationQuit))
     }
 
+    func testListeningSaysTheTextWaitsForAPause() {
+        XCTAssertEqual(RecordingsPlaceholder.listening.title, "Listening")
+        XCTAssertTrue(RecordingsPlaceholder.listening.detail.lowercased().contains("pause"))
+        XCTAssertEqual(TranscriptStatusPolicy.backlogVisibleAfter, 3)
+    }
+
     func testPlaceholdersNeverUseRedLanguageOrBlame() {
         for placeholder in [
             RecordingsPlaceholder.emptyLibrary, .nothingSelected, .notTranscribed, .audioMissing, .recovered,

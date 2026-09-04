@@ -15,9 +15,6 @@ struct RecordingDetail: View {
 
     @State private var title = ""
     @FocusState private var isEditingTitle: Bool
-    /// The toolbar view the system share menu points at. AppKit wants a real
-    /// view to hang the popover from, and a menu item is not one.
-    @State private var shareAnchor = ShareAnchor.Box()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -55,18 +52,11 @@ struct RecordingDetail: View {
                         .disabled(state.transcript(for: recording.id).isEmpty)
                     Button("Save Audio…") { saveAudio() }
                         .disabled(state.recordingAudioURL(recording.id) == nil)
-                    Divider()
-                    // The meeting, not one half of it: the transcript to read
-                    // and the audio to hear, handed to whichever app is picked.
-                    Button("Share…") { share() }
                 } label: {
-                    Label("Share", systemImage: "square.and.arrow.up")
+                    Label("Save", systemImage: "square.and.arrow.down")
                 }
-                .help("Save or share this recording")
+                .help("Save the transcript or the audio")
                 .disabled(state.audioExportProgress != nil)
-                ShareAnchor(box: shareAnchor)
-                    .frame(width: 1, height: 1)
-                    .accessibilityHidden(true)
                 Button {
                     state.revealRecording(recording.id)
                 } label: {
@@ -202,18 +192,6 @@ struct RecordingDetail: View {
         state.exportAudio(recording.id, to: url)
     }
 
-    private func share() {
-        Task {
-            let items = await state.prepareShareItems(recording.id)
-            guard !items.isEmpty, let view = shareAnchor.view else { return }
-            NSSharingServicePicker(items: items).show(
-                relativeTo: view.bounds,
-                of: view,
-                preferredEdge: .minY
-            )
-        }
-    }
-
     private func commitTitle() {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed != (recording.title ?? "") else { return }
@@ -265,8 +243,14 @@ struct LiveRecordingDetail: View {
             }
             Divider()
             if state.liveTranscript.isEmpty {
-                RecordingsPlaceholderView(placeholder: .listening)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Text(RecordingsPlaceholder.listening.detail)
+                    .font(.callout)
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, GlassTokens.Space.page)
+                    .padding(.top, GlassTokens.Space.section)
+                    .accessibilityLabel(RecordingsPlaceholder.listening.title)
+                    .accessibilityValue(RecordingsPlaceholder.listening.detail)
+                Spacer(minLength: 0)
             } else {
                 TranscriptView(utterances: state.liveTranscript)
             }
@@ -281,29 +265,5 @@ struct LiveRecordingDetail: View {
         return (state.liveRecording?.isMeeting ?? false)
             ? "Recording you and the other side"
             : "Recording your microphone"
-    }
-}
-
-/// A one-pixel handle into AppKit.
-///
-/// `NSSharingServicePicker` points its popover at a view, and a SwiftUI menu
-/// item is not one. This sits beside the menu in the toolbar and lends the
-/// picker somewhere to appear, which is why it is invisible rather than
-/// merely small.
-struct ShareAnchor: NSViewRepresentable {
-    @MainActor final class Box {
-        weak var view: NSView?
-    }
-
-    let box: Box
-
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        box.view = view
-        return view
-    }
-
-    func updateNSView(_ view: NSView, context: Context) {
-        box.view = view
     }
 }

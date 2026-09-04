@@ -93,6 +93,14 @@ struct OpenRambleApp: App {
                 openWindow(id: "onboarding")
                 WindowFronting.raiseOpenedWindow()
             }
+            .onChange(of: state.isSystemAudioIntroPresented) { _, presented in
+                // The intro sheet lives on the Recordings window. The label
+                // is the one view that exists while the menu is closed, so a
+                // global shortcut that needs the sheet can open it from here.
+                guard presented else { return }
+                openWindow(id: RecordingsWindow.windowID)
+                WindowFronting.raiseOpenedWindow()
+            }
         }
 
         // The content here is unconditional. While it was hiding behind

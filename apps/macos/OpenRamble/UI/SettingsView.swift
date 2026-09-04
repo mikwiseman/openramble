@@ -137,13 +137,27 @@ private struct GeneralSettings: View {
                     isChanged: state.copyShortcut != SettingsDefaults.copyShortcut,
                     revert: { state.copyShortcut = SettingsDefaults.copyShortcut }
                 ) {
-                    ShortcutRecorder(shortcut: $state.copyShortcut)
+                    ShortcutRecorder(
+                        shortcut: $state.copyShortcut,
+                        reserved: state.recordingShortcut.map { [$0: "Record"] } ?? [:]
+                    )
                 }
                 .accessibilityHint("Press this shortcut to put the last dictation back on the clipboard")
+                SettingRow(
+                    title: "Record",
+                    isChanged: state.recordingShortcut != SettingsDefaults.recordingShortcut,
+                    revert: { state.recordingShortcut = SettingsDefaults.recordingShortcut }
+                ) {
+                    ShortcutRecorder(
+                        shortcut: $state.recordingShortcut,
+                        reserved: state.copyShortcut.map { [$0: "Copy last dictation"] } ?? [:]
+                    )
+                }
+                .accessibilityHint("Press this shortcut to start or stop a recording")
             } header: {
                 Text("Shortcut")
             } footer: {
-                Text("Hold to talk, or double-press for hands-free dictation. Press once more to finish.")
+                Text("Hold to talk, or double-press for hands-free dictation. Press once more to finish. ⇧⌘R starts and stops a recording; the same keys still reach the app in front, so a browser will also reload from origin.")
             }
 
             Section("Behavior") {

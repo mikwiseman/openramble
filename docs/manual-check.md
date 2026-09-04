@@ -78,11 +78,12 @@ for the check.
 17. Record for ninety minutes. Confirm memory stays flat, disk grows at about
     230 MB an hour, the transcript keeps up or says how far behind it is, and
     that dictating mid-recording wins the engine without stopping the recording.
-18. Save a transcript and an audio file from a finished recording, and Share
-    both to Mail and to AirDrop. Confirm the names come from the recording's
-    title, that the m4a plays in QuickTime with you on the left and the other
-    side on the right, that a degraded recording says so inside the Markdown,
-    and that cancelling a long export leaves no file behind.
+18. Save a transcript and an audio file from a finished recording. Confirm the
+    names come from the recording's title, that the m4a plays in QuickTime with
+    you on the left and the other side on the right, that a degraded recording
+    says so inside the Markdown, and that cancelling a long export leaves no
+    file behind. There is no Share — copy and save are the ways a recording
+    leaves the app.
 19. Force-quit during a recording. Confirm the next launch repairs the file,
     publishes it as recovered, plays it, and transcribes the untranscribed tail.
     Repeat with Command-Q and confirm the dialog and a sealed, playable file.

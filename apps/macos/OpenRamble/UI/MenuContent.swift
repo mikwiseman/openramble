@@ -110,13 +110,9 @@ struct MenuContent: View {
             Button {
                 state.copyLastDictation()
             } label: {
-                if let shortcut = state.copyShortcut {
-                    // Written into the title: this can be a bare function key,
-                    // which `keyboardShortcut` cannot express.
-                    Text("Copy Last Dictation   \(shortcut.displayString)")
-                } else {
-                    Text("Copy Last Dictation")
-                }
+                // Written into the title: this can be a bare function key,
+                // which `keyboardShortcut` cannot express.
+                Text(titled("Copy Last Dictation", shortcut: state.copyShortcut))
             }
 
 
@@ -127,9 +123,21 @@ struct MenuContent: View {
                 isDegraded: state.liveCaptureHealth.marksRecordingDegraded
             ))
 
+        case .startRecording:
+            Button {
+                state.startRecording()
+            } label: {
+                Text(titled("Start Recording", shortcut: state.recordingShortcut))
+            }
+            .accessibilityHint("Records your microphone until you stop")
+
         case .stopRecording:
-            Button("Stop Recording") { state.stopRecording() }
-                .accessibilityHint("Ends the recording and keeps it")
+            Button {
+                state.stopRecording()
+            } label: {
+                Text(titled("Stop Recording", shortcut: state.recordingShortcut))
+            }
+            .accessibilityHint("Ends the recording and keeps it")
 
         case .openRecordings:
             Button("Recordings…") {
@@ -151,6 +159,13 @@ struct MenuContent: View {
             Button("Quit OpenRamble") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q", modifiers: .command)
         }
+    }
+
+    /// A held modifier cannot be a `keyboardShortcut`, and a function key
+    /// cannot either. The title is the one place every binding can be seen.
+    private func titled(_ name: String, shortcut: KeyCombination?) -> String {
+        guard let shortcut else { return name }
+        return "\(name)   \(shortcut.displayString)"
     }
 
     @ViewBuilder

@@ -52,6 +52,8 @@ public struct AppEnvironment {
     /// watches a bare modifier being held, this one watches a chord being
     /// pressed. Different events, different machinery.
     public var copyShortcutMonitor: (any ShortcutMonitoring)?
+    /// A third watcher, for the shortcut that starts and stops a recording.
+    public var recordingShortcutMonitor: (any ShortcutMonitoring)?
     public var inserter: any TextInserting
     /// Lock-only destination snapshot maintained ahead of the hotkey. The
     /// shipping path never asks AppKit/WindowServer synchronously after the
@@ -163,6 +165,7 @@ public struct AppEnvironment {
         accessibilityManager: any AccessibilityManaging,
         hotkeyMonitor: any HotkeyMonitoring,
         copyShortcutMonitor: (any ShortcutMonitoring)? = nil,
+        recordingShortcutMonitor: (any ShortcutMonitoring)? = nil,
         inserter: any TextInserting,
         targetApplicationSnapshot: @escaping @Sendable () -> TargetApplication? = { nil },
         overlay: any OverlayPresenting,
@@ -216,6 +219,7 @@ public struct AppEnvironment {
         self.accessibilityManager = accessibilityManager
         self.hotkeyMonitor = hotkeyMonitor
         self.copyShortcutMonitor = copyShortcutMonitor
+        self.recordingShortcutMonitor = recordingShortcutMonitor
         self.inserter = inserter
         self.targetApplicationSnapshot = targetApplicationSnapshot
         self.overlay = overlay
@@ -258,6 +262,7 @@ public struct AppEnvironment {
             accessibilityManager: SystemAccessibilityManager(),
             hotkeyMonitor: GlobalHotkeyMonitor(),
             copyShortcutMonitor: GlobalShortcutMonitor(),
+            recordingShortcutMonitor: GlobalShortcutMonitor(),
             inserter: TextInserter(restoreReporter: restoreReporter),
             targetApplicationSnapshot: { activeApplication.current() },
             overlay: DictationOverlay(),
@@ -696,16 +701,39 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// The shortcut that starts and stops a recording, or nothing.
+    ///
+    /// Default is ⇧⌘R. Clearing it is Off — an empty defaults value, not a
+    /// missing one, so the first launch and a deliberate clear stay different.
+    @Published public var recordingShortcut: KeyCombination? {
+        didSet {
+            guard oldValue != recordingShortcut else { return }
+            defaults.set(recordingShortcut?.rawValue ?? "", forKey: Keys.recordingShortcut)
+            applyRecordingShortcut()
+        }
+    }
+
     /// Point the second watcher at the chosen shortcut, or take it off the
     /// keyboard.
     private func applyCopyShortcut() {
-        guard let copyShortcutMonitor else { return }
-        copyShortcutMonitor.setShortcut(copyShortcut)
-        guard copyShortcut != nil else { return }
+        applyShortcutMonitor(copyShortcutMonitor, shortcut: copyShortcut)
+    }
+
+    private func applyRecordingShortcut() {
+        applyShortcutMonitor(recordingShortcutMonitor, shortcut: recordingShortcut)
+    }
+
+    private func applyShortcutMonitor(
+        _ monitor: (any ShortcutMonitoring)?,
+        shortcut: KeyCombination?
+    ) {
+        guard let monitor else { return }
+        monitor.setShortcut(shortcut)
+        guard shortcut != nil else { return }
         // Only once dictation itself is running: before that the app has no
         // Accessibility permission and starting would fail silently.
-        if hotkeyMonitor.isRunning, !copyShortcutMonitor.isRunning {
-            copyShortcutMonitor.start()
+        if hotkeyMonitor.isRunning, !monitor.isRunning {
+            monitor.start()
         }
     }
 
@@ -726,6 +754,7 @@ public final class AppState: ObservableObject {
         static let sounds = "soundsEnabled"
         static let copyToClipboard = "copyToClipboard"
         static let copyShortcut = "copyShortcut"
+        static let recordingShortcut = "recordingShortcut"
         static let trailingSpace = "appendsTrailingSpace"
         static let appearance = "appearance"
         static let inputDevice = "inputDeviceUID"
@@ -750,6 +779,7 @@ public final class AppState: ObservableObject {
     private let levelGate = LevelUpdateGate()
     private let hotkeyMonitor: any HotkeyMonitoring
     private let copyShortcutMonitor: (any ShortcutMonitoring)?
+    private let recordingShortcutMonitor: (any ShortcutMonitoring)?
     private let inserter: any TextInserting
     private let targetApplicationSnapshot: @Sendable () -> TargetApplication?
     private let clipboardRestoreReporter: ClipboardRestoreReporter?
@@ -898,6 +928,7 @@ public final class AppState: ObservableObject {
         accessibilityManager = environment.accessibilityManager
         hotkeyMonitor = environment.hotkeyMonitor
         copyShortcutMonitor = environment.copyShortcutMonitor
+        recordingShortcutMonitor = environment.recordingShortcutMonitor
         inserter = environment.inserter
         targetApplicationSnapshot = environment.targetApplicationSnapshot
         clipboardRestoreReporter = environment.clipboardRestoreReporter
@@ -943,6 +974,12 @@ public final class AppState: ObservableObject {
             ?? SettingsDefaults.copiesToClipboard
         copyShortcut = (environment.defaults.string(forKey: Keys.copyShortcut))
             .flatMap(KeyCombination.init(rawValue:))
+        if environment.defaults.object(forKey: Keys.recordingShortcut) == nil {
+            recordingShortcut = SettingsDefaults.recordingShortcut
+        } else {
+            recordingShortcut = (environment.defaults.string(forKey: Keys.recordingShortcut))
+                .flatMap(KeyCombination.init(rawValue:))
+        }
         appendsTrailingSpace = environment.defaults.object(forKey: Keys.trailingSpace) as? Bool
             ?? SettingsDefaults.appendsTrailingSpace
         appearance = AppAppearance(
@@ -1780,6 +1817,7 @@ public final class AppState: ObservableObject {
     private func handleWake() {
         hotkeyMonitor.stop()
         copyShortcutMonitor?.stop()
+        recordingShortcutMonitor?.stop()
         refreshPermissions()
         revalidateEngineAfterWake()
     }
@@ -2135,6 +2173,9 @@ public final class AppState: ObservableObject {
         copyShortcutMonitor?.onPress = { [weak self] in
             self?.copyLastDictation()
         }
+        recordingShortcutMonitor?.onPress = { [weak self] in
+            self?.handleRecordingShortcut()
+        }
         hotkeyMonitor.onPress = { [weak self] in
             guard let self else { return }
             // Before any guard can swallow the press: the reload must start
@@ -2226,6 +2267,20 @@ public final class AppState: ObservableObject {
     }
 
     // MARK: - Recordings
+
+    /// The global recording shortcut: start if idle, stop if running.
+    /// Pause stays a window control — a shortcut that paused would need a
+    /// third press to finish, and nobody would remember which state they were in.
+    private func handleRecordingShortcut() {
+        switch meetingState {
+        case .idle:
+            startRecording()
+        case .recording, .paused:
+            stopRecording()
+        case .starting, .stopping:
+            break
+        }
+    }
 
     /// The record button. One button and no mode: it records the microphone
     /// and, where this Mac can and the person has not said otherwise, what
@@ -2613,44 +2668,6 @@ public final class AppState: ObservableObject {
 
     public func cancelAudioExport() {
         audioExportCancelled.value = true
-    }
-
-    /// Both files in one folder, ready to hand to whichever app the person
-    /// picks. The transcript alone when there is no audio to send.
-    public func prepareShareItems(_ id: UUID) async -> [URL] {
-        guard audioExportProgress == nil else { return [] }
-        let name = exportName(id)
-        let folder = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appending(path: "OpenRamble-\(id.uuidString)", directoryHint: .isDirectory)
-        var items: [URL] = []
-        do {
-            try? FileManager.default.removeItem(at: folder)
-            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            if let markdown = transcriptMarkdown(id) {
-                let url = folder.appending(path: "\(name).md")
-                try markdown.write(to: url, atomically: true, encoding: .utf8)
-                items.append(url)
-            }
-            if let source = recordingAudioURL(id) {
-                let url = folder.appending(path: "\(name).m4a")
-                audioExportProgress = 0
-                audioExportCancelled.value = false
-                let cancelled = audioExportCancelled
-                try await Self.encode(from: source, to: url, cancelled: cancelled) { progress in
-                    Task { @MainActor in self.audioExportProgress = progress }
-                }
-                audioExportProgress = nil
-                items.append(url)
-            }
-        } catch MeetingAudioExporter.Failure.cancelled {
-            audioExportProgress = nil
-            return []
-        } catch {
-            audioExportProgress = nil
-            notify(DictationNotice(kind: .failure, message: "Couldn't prepare this recording to share."))
-            return []
-        }
-        return items
     }
 
     private static func encode(
@@ -3041,9 +3058,11 @@ public final class AppState: ObservableObject {
         if accessibility {
             hotkeyMonitor.start()
             applyCopyShortcut()
+            applyRecordingShortcut()
         } else {
             hotkeyMonitor.stop()
             copyShortcutMonitor?.stop()
+            recordingShortcutMonitor?.stop()
         }
 
         reschedulePermissionPolling()

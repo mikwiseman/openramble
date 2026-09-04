@@ -10,6 +10,7 @@ import Foundation
 public enum SettingsDefaults {
     public static let hotkey: DictationHotkey = .rightCommand
     public static let copyShortcut: KeyCombination? = nil
+    public static let recordingShortcut: KeyCombination? = .shiftCommandR
     public static let soundsEnabled = true
     public static let copiesToClipboard = false
     public static let appendsTrailingSpace = false
