@@ -490,6 +490,7 @@ public final class AppState: ObservableObject {
     @Published public private(set) var transcribingRecordingID: UUID?
     /// Dictation always wins the engine; meeting decodes wait their turn.
     private let engineArbiter = EngineArbiter()
+    private let dictationPriority = Result { try DictationPriority() }
     private var transcriptionQueue: MeetingTranscriptionQueue?
     private var utteranceAssembler = MeetingUtteranceAssembler()
     private var closedUtterances: [MeetingUtterance] = []
@@ -1174,6 +1175,14 @@ public final class AppState: ObservableObject {
             controller.onStateChange = { [weak self] state in
                 self?.dictationState = state
                 self?.flushNoticeAfterSession(state)
+                do {
+                    try self?.dictationPriority.get().setActive(state != .idle)
+                } catch {
+                    if state == .preparing {
+                        self?.notify(DictationNotice(kind: .warning,
+                            message: "Couldn't pause background CLI transcription for dictation."))
+                    }
+                }
                 // A session that has started owns the engine until it ends;
                 // a meeting decode that has not started yet waits.
                 if let arbiter = self?.engineArbiter {

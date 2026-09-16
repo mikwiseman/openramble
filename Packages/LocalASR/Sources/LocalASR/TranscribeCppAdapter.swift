@@ -20,10 +20,11 @@ private let runtimeLog = Logger(subsystem: "is.waiwai.dictation", category: "asr
 /// exactly when the machine was already struggling, and a 2.4 GB resident set
 /// made that struggle more likely. This runtime compiles nothing at load: the
 /// weights are data, the backend is Metal, and a reload is a file read.
-public actor TranscribeCppAdapter: ASREngineAdapting {
+public actor TranscribeCppAdapter: BatchASREngineAdapting {
     /// Sample rate the runtime requires. The recorder already produces this, so
     /// nothing resamples on the way in.
     public static let requiredSampleRate = 16_000
+    public static var runtimeVersion: String { String(cString: transcribe_version()) }
 
     /// The shortest clip the mel front-end will accept without producing NaNs:
     /// 1.25 seconds, the same constant as `MINIMUM_ENGINE_SAMPLES` in
@@ -49,6 +50,9 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
     private final class Engine: @unchecked Sendable {
         let model: OpaquePointer
         let session: OpaquePointer
+        // Sessions sharing a model must serialize. Independently loaded models
+        // have their own queues, which also lets the benchmark compare them.
+        let queue = DispatchQueue(label: "is.waiwai.dictation.engine-run", qos: .userInteractive)
 
         init(model: OpaquePointer, session: OpaquePointer) {
             self.model = model
@@ -229,6 +233,11 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
     /// was measured, not assumed — a diagnostic was written against it and
     /// deleted. Check again before building anything on that accessor.
     public func transcribe(samples: [Float]) async throws -> DictationCore.ASRResult {
+        try await transcribe(samples: samples, timestamps: false)
+    }
+
+    public func transcribe(samples: [Float], timestamps: Bool) async throws -> DictationCore.ASRResult {
+        try Task.checkCancellation()
         guard let engine else { throw ASREngineError.modelsNotLoaded }
         // The session pointer is read on the engine thread, from the `Engine`
         // held across the hop — not copied out here, where nothing would keep
@@ -258,10 +267,9 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
         var params = transcribe_run_params()
         transcribe_run_params_init(&params)
         params.task = TRANSCRIBE_TASK_TRANSCRIBE
-        // Nothing in the product reads word or token timings — only the
-        // benchmark tool ever did. Asking for them would buy alignment work
-        // that is thrown away.
-        params.timestamps = TRANSCRIBE_TIMESTAMPS_NONE
+        // Dictation requests text only. File transcription opts into native
+        // word times for overlap alignment and subtitle exports.
+        params.timestamps = timestamps ? TRANSCRIBE_TIMESTAMPS_TOKEN : TRANSCRIBE_TIMESTAMPS_NONE
 
         // Run and read together, on a thread of this engine's own.
         //
@@ -285,33 +293,49 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
         // carries no ownership of its own.
         // Params are rebuilt inside the block rather than captured: a C struct
         // is not `Sendable`.
-        let timestamps = params.timestamps
+        let timestampKind = params.timestamps
         let task = params.task
-        let outcome = await Self.runOnEngineThread(engine: engine) { session in
-            var params = transcribe_run_params()
-            transcribe_run_params_init(&params)
-            params.task = task
-            params.timestamps = timestamps
-            let runtimeStarted = ContinuousClock.now
-            let status = transcribe_run(session, samples, Int32(samples.count), &params)
-            let runtimeDuration = runtimeStarted.duration(to: .now)
-            guard status == TRANSCRIBE_OK else { return .failure(status, runtimeDuration) }
-            // Copied before returning: past this block the pointer may be
-            // cleared by the next run.
-            return .success(String(cString: transcribe_full_text(session)), runtimeDuration)
+        let cancellation = NativeCancellation()
+        let outcome: EngineOutcome = await withTaskCancellationHandler {
+            await Self.runOnEngineThread(engine: engine) { session in
+                guard !cancellation.shouldAbort else { return .failure(TRANSCRIBE_ERR_ABORTED, .zero) }
+                Self.installCancellation(cancellation, on: session)
+                defer {
+                    transcribe_set_abort_callback(session, nil, nil)
+                    withExtendedLifetime(cancellation) {}
+                }
+                var params = transcribe_run_params()
+                transcribe_run_params_init(&params)
+                params.task = task
+                params.timestamps = timestampKind
+                let runtimeStarted = ContinuousClock.now
+                let status = transcribe_run(session, samples, Int32(samples.count), &params)
+                let runtimeDuration = runtimeStarted.duration(to: .now)
+                guard status == TRANSCRIBE_OK else { return .failure(status, runtimeDuration) }
+                // Copied before returning: past this block the pointer may be
+                // cleared by the next run.
+                return .success(String(cString: transcribe_full_text(session)),
+                                Self.readWords(session, index: 0, duration: audioDuration), runtimeDuration)
+            }
+        } onCancel: {
+            cancellation.cancel()
         }
+        try Task.checkCancellation()
 
         let status: transcribe_status
         let rawText: String
+        let words: [ASRResult.Word]
         let runtimeDuration: Duration
         switch outcome {
         case let .failure(code, duration):
             status = code
             rawText = ""
+            words = []
             runtimeDuration = duration
-        case let .success(text, duration):
+        case let .success(text, timing, duration):
             status = TRANSCRIBE_OK
             rawText = text
+            words = timing
             runtimeDuration = duration
         }
 
@@ -334,11 +358,96 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
 
         return DictationCore.ASRResult(
             text: trimmed,
-            words: [],
+            words: words,
             audioDuration: audioDuration,
             processingDuration: runtimeDuration.seconds,
             engineDispatchDuration: max(0, started.duration(to: .now).seconds - runtimeDuration.seconds)
         )
+    }
+
+    /// The native encoder sees the batch once; results are copied while the
+    /// session is still exclusively owned. Dictation never waits for a batch.
+    public func transcribe(
+        batch: [[Float]],
+        timestamps: Bool = false,
+        shouldYield: @escaping @Sendable () -> Bool = { false }
+    ) async throws -> [Result<ASRResult, ASREngineError>] {
+        try Task.checkCancellation()
+        guard let engine else { throw ASREngineError.modelsNotLoaded }
+        guard !batch.isEmpty, batch.count <= 8,
+              batch.allSatisfy({ !$0.isEmpty && $0.count <= Int(Int32.max) }) else {
+            throw ASREngineError.unsupportedAudioFormat("expected 1–8 nonempty audio buffers")
+        }
+        let durations = batch.map { Double($0.count) / Double(Self.requiredSampleRate) }
+        let padded = batch.map { samples in
+            samples.count >= Self.minimumEngineSamples ? samples :
+                samples + [Float](repeating: 0, count: Self.minimumEngineSamples - samples.count)
+        }
+        let cancellation = NativeCancellation(shouldYield: shouldYield)
+        let started = ContinuousClock.now
+        let results: [Result<ASRResult, ASREngineError>] = await withTaskCancellationHandler {
+            await Self.runOnEngineThread(engine: engine) { session in
+                if cancellation.shouldAbort { return batch.map { _ in .failure(.cancelled) } }
+                Self.installCancellation(cancellation, on: session)
+                defer {
+                    transcribe_set_abort_callback(session, nil, nil)
+                    withExtendedLifetime(cancellation) {}
+                }
+                var params = transcribe_run_params()
+                transcribe_run_params_init(&params)
+                params.timestamps = timestamps ? TRANSCRIBE_TIMESTAMPS_TOKEN : TRANSCRIBE_TIMESTAMPS_NONE
+                let runtimeStarted = ContinuousClock.now
+                let status = Self.withBuffers(padded) { pointers in
+                    transcribe_run_batch(session, pointers, padded.map { Int32($0.count) }, Int32(padded.count), &params)
+                }
+                let elapsed = runtimeStarted.duration(to: .now).seconds
+                guard status == TRANSCRIBE_OK || status == TRANSCRIBE_ERR_ABORTED else {
+                    return batch.map { _ in .failure(.inferenceFailed(Self.describe(status))) }
+                }
+                return batch.indices.map { index in
+                    let code = transcribe_batch_status(session, Int32(index))
+                    guard code == TRANSCRIBE_OK else {
+                        return .failure(code == TRANSCRIBE_ERR_ABORTED ? .cancelled : .inferenceFailed(Self.describe(code)))
+                    }
+                    return .success(ASRResult(
+                        text: String(cString: transcribe_batch_full_text(session, Int32(index)))
+                            .trimmingCharacters(in: .whitespacesAndNewlines),
+                        words: Self.readWords(session, index: Int32(index), duration: durations[index]),
+                        audioDuration: durations[index],
+                        // Shared batch latency, not independently summable work.
+                        processingDuration: elapsed,
+                        engineDispatchDuration: max(0, started.duration(to: .now).seconds - elapsed)
+                    ))
+                }
+            }
+        } onCancel: {
+            cancellation.cancel()
+        }
+        try Task.checkCancellation()
+        return results
+    }
+
+    private static func withBuffers<T>(
+        _ buffers: [[Float]], index: Int = 0,
+        pointers: [UnsafePointer<Float>?] = [],
+        _ work: ([UnsafePointer<Float>?]) -> T
+    ) -> T {
+        if index == buffers.count { return work(pointers) }
+        return buffers[index].withUnsafeBufferPointer { buffer in
+            withBuffers(buffers, index: index + 1, pointers: pointers + [buffer.baseAddress], work)
+        }
+    }
+
+    private static func readWords(_ session: OpaquePointer, index: Int32, duration: Double) -> [ASRResult.Word] {
+        (0..<transcribe_batch_n_words(session, index)).compactMap { wordIndex in
+            var word = transcribe_word()
+            transcribe_word_init(&word)
+            guard transcribe_batch_get_word(session, index, wordIndex, &word) == TRANSCRIBE_OK,
+                  let text = word.text else { return nil }
+            let start = min(duration, max(0, Double(word.t0_ms) / 1000))
+            return ASRResult.Word(text: String(cString: text), start: start,
+                                  end: min(duration, max(start, Double(word.t1_ms) / 1000)))
+        }
     }
 
     /// Run one tiny inference so the first real dictation is not the one that
@@ -356,6 +465,28 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
     }
 
     // MARK: - Helpers
+
+    /// The C callback reads only this synchronized state. Its address remains
+    /// alive until run-and-read finishes and the callback has been cleared.
+    private final class NativeCancellation: @unchecked Sendable {
+        private let lock = NSLock()
+        private var cancelled = false
+        private let shouldYield: @Sendable () -> Bool
+
+        init(shouldYield: @escaping @Sendable () -> Bool = { false }) {
+            self.shouldYield = shouldYield
+        }
+
+        var shouldAbort: Bool { lock.withLock { cancelled } || shouldYield() }
+        func cancel() { lock.withLock { cancelled = true } }
+    }
+
+    private static func installCancellation(_ cancellation: NativeCancellation, on session: OpaquePointer) {
+        transcribe_set_abort_callback(session, { context in
+            guard let context else { return false }
+            return Unmanaged<NativeCancellation>.fromOpaque(context).takeUnretainedValue().shouldAbort
+        }, Unmanaged.passUnretained(cancellation).toOpaque())
+    }
 
     /// The single GGUF in a prepared revision directory.
     ///
@@ -389,7 +520,7 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
     /// Never a pointer: the session may clear it the moment the next run
     /// starts, so nothing borrowed may cross this boundary.
     enum EngineOutcome: Sendable {
-        case success(String, Duration)
+        case success(String, [ASRResult.Word], Duration)
         case failure(transcribe_status, Duration)
     }
 
@@ -399,24 +530,15 @@ public actor TranscribeCppAdapter: ASREngineAdapting {
     /// flight per model across all sessions, which a serial queue gives for
     /// free; and it must not be shared with disk work, because sharing a queue
     /// with an `fsync` is what deadlocked the recording seal.
-    private static let engineQueue = DispatchQueue(
-        label: "is.waiwai.dictation.engine-run",
-        // The same priority the dictation itself runs at. `userInitiated` cost
-        // about a tenth of the engine's throughput in the latency benchmark —
-        // the thread was being scheduled behind work the person is not waiting
-        // for, which is the opposite of true here.
-        qos: .userInteractive
-    )
-
     /// Hand one whole run-and-read to the engine thread.
     ///
     /// The `Engine` is captured so its session cannot be freed mid-run.
-    private static func runOnEngineThread(
+    private static func runOnEngineThread<T: Sendable>(
         engine: Engine,
-        _ work: @escaping @Sendable (OpaquePointer) -> EngineOutcome
-    ) async -> EngineOutcome {
+        _ work: @escaping @Sendable (OpaquePointer) -> T
+    ) async -> T {
         await withCheckedContinuation { continuation in
-            engineQueue.async {
+            engine.queue.async {
                 let outcome = work(engine.session)
                 // Held to here explicitly: the pointer above carries no
                 // ownership, and ARC could otherwise release the engine as

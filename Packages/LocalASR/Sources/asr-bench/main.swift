@@ -15,7 +15,7 @@ import LocalASR
 // benchmark protocol. All of it measured a Core ML engine that no longer
 // exists, and the measurements it produced are archived under
 // research/asr-performance-2026-08/. What remains is what the product gates
-// use.
+// use, plus explicit opt-in measurements of the current runtime.
 
 func usage() -> Never {
     print("""
@@ -29,6 +29,10 @@ func usage() -> Never {
       transcribe <file>...   recognize audio files
       stream <file>...       recognize the way the app will: cut at pauses,
                              decode each piece, and report the tail latency
+      latency-benchmark <file>...  measure repeated short inferences
+      file-benchmark <15|30|60> <file>...  measure the one-model file pipeline
+      batch-benchmark <15|30|60> <1|2|4|8> <1|2 models> <file>
+                             experimental batching and independent models
 
     Environment:
       WAI_MODELS_ROOT        install root (Application Support by default)
@@ -125,7 +129,7 @@ func resolveEngineDirectory() async throws -> URL {
         return directory
     }
     let (store, layout, _) = try makeStore()
-    guard await store.refreshState().isReady else {
+    guard await store.inspectInstalledState().isReady else {
         print("Model is not installed. Run: asr-bench install")
         exit(69)
     }
@@ -146,9 +150,19 @@ guard let command = arguments.first else { usage() }
 let operands = Array(arguments.dropFirst())
 
 switch command {
+case "batch-benchmark":
+    try await benchmarkBatch(operands, directory: resolveEngineDirectory())
+
+case "file-benchmark":
+    try await benchmarkFiles(operands, directory: resolveEngineDirectory())
+
+case "latency-benchmark":
+    guard !operands.isEmpty else { usage() }
+    try await benchmarkLatency(operands, directory: resolveEngineDirectory())
+
 case "status":
     let (store, layout, manifest) = try makeStore()
-    printState(await store.refreshState(), layout: layout, manifest: manifest)
+    printState(await store.inspectInstalledState(), layout: layout, manifest: manifest)
 
 case "install":
     let (store, layout, manifest) = try makeStore()

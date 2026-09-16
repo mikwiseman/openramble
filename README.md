@@ -198,18 +198,49 @@ to your shell startup file and open a new terminal. To uninstall, remove the
 link. If you move the app, install again from Settings.
 
 ```bash
-openramble audio.m4a
-openramble audio.wav > transcript.txt
-openramble first.wav second.mp3
-openramble --model-dir /path/to/gguf-folder audio.wav
+openramble recording.m4a > transcript.txt
+openramble recording.m4a --format srt > subtitles.srt
+openramble *.m4a --format json --output-dir transcripts
+openramble --check-model
 ```
 
-The CLI uses the model installed by the app without downloading or modifying
-it, so install the model in the GUI first; the GUI does not need to be running.
-It returns the model's text without the GUI's dictionary replacements or
-typography cleanup, and without speaker labels or timestamps. Each input is
-read into memory, so long recordings require more RAM. Run `openramble --help`
-for formats and options.
+The CLI reads the model already installed by the app without downloading or
+modifying it. The GUI can be closed. Missing and damaged installations have
+separate diagnostics. `--model-dir` also accepts a prepared GGUF folder.
+
+TXT, JSON, SRT and VTT are supported. JSON includes word timestamps in seconds
+relative to the original audio; subtitles use the same model timings. Results
+contain the model's text, without the GUI's dictionary replacements, typography
+cleanup or speaker labels. Stereo inputs mix both channels.
+
+Long recordings are read in bounded chunks with overlapping context. CPU audio
+preparation overlaps inference, with one fragment prepared ahead. The CLI loads
+one model and reuses it for every input file. The GUI and CLI share the weights
+on disk but each has its own model in memory. Dictation starts immediately.
+The CLI yields between inference chunks while the app is dictating, then
+resumes unfinished work. A process-owned lock releases automatically on exit.
+
+Use `--output-dir` for multiple inputs. Each input gets its own output file;
+a failed input does not stop other files, and any failure makes the command
+exit nonzero. Results go to stdout or the chosen folder, progress and errors
+to stderr. Output files are published only after a complete transcript is
+ready, with owner-only permissions; existing files are never overwritten.
+Ctrl-C stops safely and keeps completed files. Shell redirection itself can
+replace a file, so use `--output-dir` when overwrite protection is needed.
+
+These exports are stored only where requested and have no automatic retention.
+The empty `Application Support/OpenRamble/dictation-priority.lock` file stores
+no audio or text. Run `openramble --help` for details.
+
+### Codex and Claude Code
+
+The shared skill is [`skills/openramble-transcribe/SKILL.md`](skills/openramble-transcribe/SKILL.md).
+Install the same folder in `~/.agents/skills/openramble-transcribe` for Codex
+and `~/.claude/skills/openramble-transcribe` for Claude Code (a symlink to this
+checkout works). Ask the agent to use `openramble-transcribe` for a local file.
+It checks the installed CLI and model, waits for completion, and returns files
+and relevant timestamps. Long transcripts stay in files instead of filling
+the agent's context.
 
 ## Build from source
 

@@ -1,18 +1,10 @@
-import DictationCore
 import AVFoundation
 import Foundation
 
-/// Reading an audio file into the format that awaits recognition:
-/// mono, 16 kHz, Float32.
-///
-/// Capture can hand ordinary takes to recognition as ready PCM. This reader is
-/// the durable fallback for long recordings, recovery files, and external WAVs:
-/// an hour-long dictation is hundreds of megabytes as Float32, while the file
-/// also survives a failure and permits retry.
+/// Converts file audio to mono 16 kHz Float32. The cursor retains converter
+/// state across reads, including the resampler's final buffered samples.
 public struct AudioFileReader: Sendable {
-    /// The frequency at which Parakeet operates.
     public static let targetSampleRate: Double = 16_000
-
     public init() {}
 
     public enum Failure: Error, Sendable, Equatable {
@@ -22,143 +14,120 @@ public struct AudioFileReader: Sendable {
         case conversionFailed(String)
     }
 
-    /// Read the entire file, resulting in 16 kHz mono.
-    public func samples(
-        from url: URL,
-        maximumDuration: TimeInterval? = nil
-    ) throws -> [Float] {
+    public func samples(from url: URL, maximumDuration: TimeInterval? = nil) throws -> [Float] {
         try Task.checkCancellation()
-        let file: AVAudioFile
-        do {
-            file = try AVAudioFile(forReading: url)
-        } catch {
-            throw Failure.unreadable(error.localizedDescription)
+        let cursor = try Cursor(url: url, maximumDuration: maximumDuration)
+        var result: [Float] = []
+        while true {
+            try Task.checkCancellation()
+            let chunk = try cursor.read(frames: 16_384)
+            if chunk.isEmpty { return result }
+            result.append(contentsOf: chunk)
         }
-        try Task.checkCancellation()
-
-        guard file.length > 0 else { throw Failure.emptyFile }
-
-        let sourceFormat = file.processingFormat
-        guard sourceFormat.sampleRate > 0 else {
-            throw Failure.conversionFailed("the source sample rate is invalid")
-        }
-        let duration = Double(file.length) / sourceFormat.sampleRate
-        if let maximumDuration, duration > maximumDuration {
-            throw Failure.durationExceeded(actual: duration, maximum: maximumDuration)
-        }
-        guard let targetFormat = AVAudioFormat(
-            commonFormat: .pcmFormatFloat32,
-            sampleRate: Self.targetSampleRate,
-            channels: 1,
-            interleaved: false
-        ) else {
-            throw Failure.conversionFailed("couldn't create the target format")
-        }
-
-        // If the file is already in the required format, no conversion is needed.
-        if sourceFormat.sampleRate == Self.targetSampleRate,
-           sourceFormat.channelCount == 1,
-           sourceFormat.commonFormat == .pcmFormatFloat32 {
-            return try readDirect(file: file, format: sourceFormat)
-        }
-
-        return try readConverted(file: file, from: sourceFormat, to: targetFormat)
     }
 
-    private func readDirect(file: AVAudioFile, format: AVAudioFormat) throws -> [Float] {
-        try Task.checkCancellation()
-        guard let buffer = AVAudioPCMBuffer(
-            pcmFormat: format,
-            frameCapacity: AVAudioFrameCount(file.length)
-        ) else {
-            throw Failure.conversionFailed("couldn't allocate the read buffer")
+    /// Either local to one synchronous call or owned by AudioFileStream and
+    /// accessed exclusively on LocalTranscriber's serial disk queue.
+    final class Cursor: @unchecked Sendable {
+        let duration: TimeInterval
+        private let file: AVAudioFile
+        private let outputFormat: AVAudioFormat
+        private let converter: AVAudioConverter?
+        private let input: AVAudioPCMBuffer
+        private var ended = false
+        private var readError: Error?
+
+        init(url: URL, maximumDuration: TimeInterval? = nil) throws {
+            do { file = try AVAudioFile(forReading: url) }
+            catch { throw Failure.unreadable(error.localizedDescription) }
+            guard file.length > 0 else { throw Failure.emptyFile }
+            let source = file.processingFormat
+            guard source.sampleRate > 0 else { throw Failure.conversionFailed("invalid sample rate") }
+            duration = Double(file.length) / source.sampleRate
+            if let maximumDuration, duration > maximumDuration {
+                throw Failure.durationExceeded(actual: duration, maximum: maximumDuration)
+            }
+            guard let target = AVAudioFormat(commonFormat: .pcmFormatFloat32,
+                sampleRate: targetSampleRate, channels: 1, interleaved: false),
+                  let input = AVAudioPCMBuffer(pcmFormat: source, frameCapacity: 16_384) else {
+                throw Failure.conversionFailed("couldn't allocate conversion buffers")
+            }
+            self.input = input
+            outputFormat = target
+            if source == target {
+                converter = nil
+            } else {
+                guard let converter = AVAudioConverter(from: source, to: target) else {
+                    throw Failure.conversionFailed("couldn't create an audio converter")
+                }
+                // The default remaps channel zero; it does not mix stereo.
+                // Meeting files can carry the other speaker only on the right.
+                converter.downmix = true
+                self.converter = converter
+            }
         }
-        do {
-            try file.read(into: buffer)
-        } catch {
-            throw Failure.unreadable(error.localizedDescription)
+
+        func read(frames: Int) throws -> [Float] {
+            guard frames > 0, frames <= Int(UInt32.max) else {
+                throw Failure.conversionFailed("invalid read size")
+            }
+            if ended { return [] }
+            guard let output = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: AVAudioFrameCount(frames)) else {
+                throw Failure.conversionFailed("couldn't allocate the read buffer")
+            }
+            if let converter {
+                var error: NSError?
+                let status = converter.convert(to: output, error: &error) { [self] requested, state in
+                    guard file.framePosition < file.length else {
+                        state.pointee = .endOfStream
+                        return nil
+                    }
+                    do {
+                        let count = min(AVAudioFrameCount(requested), input.frameCapacity,
+                                        AVAudioFrameCount(min(file.length - file.framePosition, Int64(UInt32.max))))
+                        try file.read(into: input, frameCount: count)
+                        state.pointee = input.frameLength == 0 ? .endOfStream : .haveData
+                        return input.frameLength == 0 ? nil : input
+                    } catch {
+                        readError = error
+                        state.pointee = .endOfStream
+                        return nil
+                    }
+                }
+                if let readError { throw Failure.unreadable(readError.localizedDescription) }
+                if let error { throw Failure.conversionFailed(error.localizedDescription) }
+                guard status != .error else { throw Failure.conversionFailed("audio conversion failed") }
+                ended = status == .endOfStream
+            } else {
+                if file.framePosition >= file.length { ended = true; return [] }
+                do { try file.read(into: output, frameCount: AVAudioFrameCount(min(Int64(frames), file.length - file.framePosition))) }
+                catch { throw Failure.unreadable(error.localizedDescription) }
+            }
+            guard let channel = output.floatChannelData?[0] else {
+                throw Failure.conversionFailed("no channel data")
+            }
+            return Array(UnsafeBufferPointer(start: channel, count: Int(output.frameLength)))
         }
-        try Task.checkCancellation()
-        guard let channel = buffer.floatChannelData?[0] else {
-            throw Failure.conversionFailed("no channel data")
-        }
-        return Array(UnsafeBufferPointer(start: channel, count: Int(buffer.frameLength)))
+    }
+}
+
+/// Bounded reads on a disk queue, independently of the inference queue. One
+/// pending read can prepare the next batch while the current batch computes.
+public final class AudioFileStream: Sendable {
+    public let duration: TimeInterval
+    private let cursor: AudioFileReader.Cursor
+
+    public init(url: URL) async throws {
+        let cursor = try await LocalTranscriber.onDisk { try AudioFileReader.Cursor(url: url) }
+        self.cursor = cursor
+        duration = cursor.duration
     }
 
-    private func readConverted(
-        file: AVAudioFile,
-        from sourceFormat: AVAudioFormat,
-        to targetFormat: AVAudioFormat
-    ) throws -> [Float] {
-        guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
-            throw Failure.conversionFailed("couldn't create a converter \(sourceFormat) → \(targetFormat)")
-        }
-
-        var output: [Float] = []
-        let ratio = targetFormat.sampleRate / sourceFormat.sampleRate
-        output.reserveCapacity(Int(Double(file.length) * ratio) + 1024)
-
-        let chunkFrames: AVAudioFrameCount = 16_384
-        guard let inputBuffer = AVAudioPCMBuffer(pcmFormat: sourceFormat, frameCapacity: chunkFrames) else {
-            throw Failure.conversionFailed("couldn't allocate the input buffer")
-        }
-        let outputCapacity = AVAudioFrameCount(Double(chunkFrames) * ratio) + 1024
-        guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: outputCapacity) else {
-            throw Failure.conversionFailed("couldn't allocate the output buffer")
-        }
-
-        var reachedEnd = false
-        while !reachedEnd {
-            try Task.checkCancellation()
-            inputBuffer.frameLength = 0
-            // You can only read as long as there is something to read: beyond the end of the file
-            // AVAudioFile throws an error rather than returning zero frames.
-            if file.framePosition < file.length {
-                do {
-                    try file.read(into: inputBuffer, frameCount: chunkFrames)
-                } catch {
-                    throw Failure.unreadable(error.localizedDescription)
-                }
-            }
-            if inputBuffer.frameLength == 0 { reachedEnd = true }
-
-            // Closure is marked as parallel, but is called synchronously
-            // here - the boxes are needed only to explain this to the compiler.
-            let supplied = UncheckedBox(false)
-            let input = UncheckedBox(inputBuffer)
-            let atEnd = reachedEnd
-            var conversionError: NSError?
-            outputBuffer.frameLength = 0
-
-            let status = converter.convert(to: outputBuffer, error: &conversionError) { _, statusPointer in
-                // The converter asks for data in chunks; We give away each input buffer
-                // exactly once, otherwise it will loop on it.
-                if supplied.value || input.value.frameLength == 0 {
-                    statusPointer.pointee = atEnd ? .endOfStream : .noDataNow
-                    return nil
-                }
-                supplied.value = true
-                statusPointer.pointee = .haveData
-                return input.value
-            }
-
-            if let conversionError {
-                throw Failure.conversionFailed(conversionError.localizedDescription)
-            }
-            if status == .error {
-                throw Failure.conversionFailed("the converter returned an error")
-            }
-            try Task.checkCancellation()
-
-            if outputBuffer.frameLength > 0, let channel = outputBuffer.floatChannelData?[0] {
-                output.append(
-                    contentsOf: UnsafeBufferPointer(start: channel, count: Int(outputBuffer.frameLength))
-                )
-            }
-            if status == .endOfStream { break }
-        }
-
-        guard !output.isEmpty else { throw Failure.emptyFile }
-        return output
+    public func read(frames: Int = 16_384) async throws -> [Float] {
+        try Task.checkCancellation()
+        let cursor = cursor
+        let result = try await LocalTranscriber.onDisk { try cursor.read(frames: frames) }
+        try Task.checkCancellation()
+        return result
     }
 }

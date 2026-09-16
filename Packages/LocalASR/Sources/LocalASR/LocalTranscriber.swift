@@ -50,6 +50,27 @@ public actor LocalTranscriber {
     /// Is a recognition or load running right now?
     public var isBusy: Bool { activeOperations > 0 || loadTask != nil }
 
+    public func transcribe(
+        batch: [[Float]], timestamps: Bool = false,
+        shouldYield: @escaping @Sendable () -> Bool = { false }
+    ) async throws -> [Result<ASRResult, ASREngineError>] {
+        guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
+        guard let batchEngine = engine as? any BatchASREngineAdapting else {
+            throw ASREngineError.inferenceFailed("this engine does not support native batches")
+        }
+        activeOperations += 1
+        defer { activeOperations -= 1 }
+        let expectedGeneration = generation
+        try Task.checkCancellation()
+        if let inferenceWarmupTask { try await inferenceWarmupTask.value }
+        try Task.checkCancellation()
+        guard generation == expectedGeneration, loadedDirectory != nil else { throw CancellationError() }
+        let result = try await batchEngine.transcribe(batch: batch, timestamps: timestamps, shouldYield: shouldYield)
+        try Task.checkCancellation()
+        guard generation == expectedGeneration, loadedDirectory != nil else { throw CancellationError() }
+        return result
+    }
+
     /// Load the model in advance. Single-flight: concurrent calls ride one
     /// load. The first call after installation compiles the model for the
     /// neuromodule and is noticeably longer than subsequent ones — this
@@ -192,6 +213,10 @@ public actor LocalTranscriber {
         }
         let queued = arrived.duration(to: .now)
         let result = try await engine.transcribe(samples: samples)
+        try Task.checkCancellation()
+        guard generation == expectedGeneration, loadedDirectory != nil else {
+            throw CancellationError()
+        }
         return ASRResult(
             text: result.text,
             words: result.words,

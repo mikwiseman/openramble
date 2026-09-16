@@ -57,7 +57,7 @@ actor EndToEndModel {
         }
 
         let store = ModelStore(manifest: manifest, layout: layout)
-        guard await store.refreshState().isReady else {
+        guard await store.inspectInstalledState().isReady else {
             return .unavailable(
                 """
                 The Parakeet model is not installed at \(layout.installedDirectory.path). \
