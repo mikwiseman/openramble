@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.27.5</title>
-      <pubDate>Mon, 14 Sep 2026 17:28:49 +0300</pubDate>
-      <sparkle:version>64</sparkle:version>
-      <sparkle:shortVersionString>0.27.5</sparkle:shortVersionString>
+      <title>0.28.0</title>
+      <pubDate>Wed, 16 Sep 2026 20:57:09 +0300</pubDate>
+      <sparkle:version>65</sparkle:version>
+      <sparkle:shortVersionString>0.28.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.27.5&lt;/h2&gt;&lt;p&gt;Opening Dictation History no longer makes the Settings sidebar disappear.&lt;/p&gt;&lt;p&gt;The history stays inside the window, with its controls visible and its text&lt;/p&gt;&lt;p&gt;below the title bar. Switching sections and resizing the window work with&lt;/p&gt;&lt;p&gt;both an empty history and a long list of dictations.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.27.5/OpenRamble-0.27.5.dmg" length="6214961" type="application/octet-stream" sparkle:edSignature="HqdgNs7n9E9GxEZo41V6sbVMQq+3nhCww7ic7GUJ6YCBio5Qf8ZF87MXeA3JpwA1Avs3GaTmeKtHm7Fqo+SCCQ==" />
+      <description>&lt;h2&gt;OpenRamble 0.28.0&lt;/h2&gt;&lt;p&gt;Transcribe local audio from the command line with the Parakeet model you&lt;/p&gt;&lt;p&gt;already downloaded. Install `openramble` from Settings, then run&lt;/p&gt;&lt;p&gt;`openramble recording.m4a`. The app can stay closed and no connection is needed.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Export plain text, JSON with word timestamps, SRT or VTT subtitles. Process&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;multiple files with `--output-dir`; failed inputs do not stop the others,&lt;/p&gt;&lt;p&gt;and existing output files are protected.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Long recordings are read in small overlapping pieces, using one model and&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;bounded audio buffers. Background CLI jobs pause for dictation and resume&lt;/p&gt;&lt;p&gt;their unfinished work. Ctrl-C keeps completed output files.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Recognition uses transcribe.cpp 0.2.3, which was faster and used less memory&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;in our paired tests. Dictation still starts immediately with one decoder&lt;/p&gt;&lt;p&gt;thread. The model weights are unchanged.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Stereo imports include both channels, quiet passages are preserved, and&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;resampling keeps the final audio samples.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Cancelled recognition cannot insert an outdated result. Read-only CLI model&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;checks no longer interfere with an installation in the app.&lt;/p&gt;&lt;p&gt;A shared `openramble-transcribe` skill is available in the repository for&lt;/p&gt;&lt;p&gt;Codex and Claude Code. It uses the installed CLI, keeps long transcripts in&lt;/p&gt;&lt;p&gt;files, and returns timestamps for the passages you need.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.28.0/OpenRamble-0.28.0.dmg" length="6859934" type="application/octet-stream" sparkle:edSignature="x8tRk/tXMglstHF6CHe7juxEMxjMP3iOwvgljnVoRVJBphlItFUJTCZq/7prOS8dsRHSeibdsqihfus3aRPXCA==" />
     </item>
   </channel>
 </rss>
