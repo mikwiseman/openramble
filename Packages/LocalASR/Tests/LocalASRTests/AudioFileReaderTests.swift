@@ -78,6 +78,23 @@ final class AudioFileReaderTests: XCTestCase {
         XCTAssertTrue(samples.contains { $0 != 0 }, "\u{041F}\u{0440}\u{043E}\u{0447}\u{0438}\u{0442}\u{0430}\u{043D}\u{0430} \u{0442}\u{0438}\u{0448}\u{0438}\u{043D}\u{0430} \u{0432}\u{043C}\u{0435}\u{0441}\u{0442}\u{043E} \u{0441}\u{0438}\u{043D}\u{0443}\u{0441}\u{043E}\u{0438}\u{0434}\u{044B}")
     }
 
+    func testBoundedStereoReadsPreserveTheResampledTail() async throws {
+        let url = try writeWAV(seconds: 4.013, sampleRate: 48_000, channels: 2)
+        let whole = try AudioFileReader().samples(from: url)
+        let stream = try await AudioFileStream(url: url)
+        var pieces: [Float] = []
+        while true {
+            let piece = try await stream.read(frames: 997)
+            if piece.isEmpty { break }
+            XCTAssertLessThanOrEqual(piece.count, 997)
+            pieces.append(contentsOf: piece)
+        }
+        XCTAssertEqual(pieces.count, whole.count)
+        XCTAssertEqual(Double(pieces.count) / 16_000, 4.013, accuracy: 0.002)
+        XCTAssertGreaterThan(pieces.suffix(100).map { abs($0) }.max() ?? 0, 0.1)
+        XCTAssertLessThan(zip(pieces, whole).map { abs($0 - $1) }.max() ?? 1, 0.0001)
+    }
+
     func testUpsamplesNarrowbandHeadset() throws {
         // The Bluetooth headset gives 8 kHz in talk mode. Without casting
         // recognition would get twice as short a record.
@@ -107,6 +124,26 @@ final class AudioFileReaderTests: XCTestCase {
     }
 
     // MARK: - Channels
+
+    func testRightOnlyStereoSpeechSurvivesMonoConversion() throws {
+        let url = directory.appending(path: "right-only.wav")
+        let format = try XCTUnwrap(AVAudioFormat(commonFormat: .pcmFormatFloat32,
+            sampleRate: 48_000, channels: 2, interleaved: false))
+        try autoreleasepool {
+            let file = try AVAudioFile(forWriting: url, settings: format.settings)
+            let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 48_000))
+            buffer.frameLength = 48_000
+            for i in 0..<48_000 {
+                buffer.floatChannelData![0][i] = 0
+                buffer.floatChannelData![1][i] = sin(Float(i) * 0.03) * 0.4
+            }
+            try file.write(from: buffer)
+        }
+        let samples = try reader.samples(from: url)
+        XCTAssertEqual(samples.count, 16_000)
+        XCTAssertGreaterThan(samples.map { abs($0) }.max() ?? 0, 0.1,
+                             "default AVAudioConverter mapping must not discard the other speaker")
+    }
 
     func testMixesStereoDownToMono() throws {
         // USB cameras and most interfaces provide two channels. The engine is waiting

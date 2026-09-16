@@ -22,6 +22,9 @@ public struct MeetingSegmentPolicy: Sendable {
         public var hardCap: Duration
         /// How far back to look for the quietest frame when forcing a cut.
         public var forcedCutWindow: Duration
+        /// Imported files can be much quieter than a live microphone. Use the
+        /// same pause/cut policy without dropping sub-threshold audio.
+        public var preserveQuietAudio: Bool
 
         /// Shorter segments than dictation's, deliberately. Text appears
         /// sooner, and the worst wait a dictation can inherit from a decode
@@ -35,11 +38,13 @@ public struct MeetingSegmentPolicy: Sendable {
         public init(
             speech: SpeechSegmenter.Parameters = SpeechSegmenter.Parameters(),
             hardCap: Duration = .seconds(20),
-            forcedCutWindow: Duration = .seconds(1)
+            forcedCutWindow: Duration = .seconds(1),
+            preserveQuietAudio: Bool = false
         ) {
             self.speech = speech
             self.hardCap = hardCap
             self.forcedCutWindow = forcedCutWindow
+            self.preserveQuietAudio = preserveQuietAudio
         }
     }
 
@@ -96,7 +101,7 @@ public struct MeetingSegmentPolicy: Sendable {
 
         // Silence before the first word is not part of any segment. Let the
         // start slide forward so a quiet channel never accumulates.
-        if !heardSpeech, pendingFrames > frames(Self.leadingSilence) {
+        if !heardSpeech, !parameters.preserveQuietAudio, pendingFrames > frames(Self.leadingSilence) {
             segmentStart = end - frames(Self.leadingSilence)
             segmenter.reset()
             return nil
@@ -113,7 +118,8 @@ public struct MeetingSegmentPolicy: Sendable {
             return segment
         }
 
-        guard heardSpeech, pendingFrames >= frames(parameters.hardCap), !recent.isEmpty else { return nil }
+        guard heardSpeech || parameters.preserveQuietAudio,
+              pendingFrames >= frames(parameters.hardCap), !recent.isEmpty else { return nil }
         return forceCut()
     }
 
@@ -127,7 +133,7 @@ public struct MeetingSegmentPolicy: Sendable {
             recent = []
             recentFrames = 0
         }
-        guard heardSpeech, end > segmentStart else { return nil }
+        guard heardSpeech || parameters.preserveQuietAudio, end > segmentStart else { return nil }
         return MeetingSegmentRef(channel: channel, startFrame: segmentStart, frameCount: end - segmentStart)
     }
 

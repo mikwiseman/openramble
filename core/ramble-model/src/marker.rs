@@ -82,9 +82,8 @@ impl ReadyMarker {
 
     /// Does this marker describe the install we are looking for?
     ///
-    /// A marker left by a different revision or a different runtime is not a
-    /// claim about this install, and trusting it would load a model the engine
-    /// cannot read.
+    /// A changed revision needs different weights. A changed runtime alone
+    /// requires verifying the existing weights against the current manifest.
     pub fn describes(&self, revision: &str, runtime_version: &str) -> bool {
         self.revision == revision && self.runtime_version == runtime_version
     }
@@ -168,7 +167,7 @@ mod tests {
         };
         assert!(marker.describes("r1", "transcribe.cpp 0.2.0"));
         assert!(!marker.describes("r2", "transcribe.cpp 0.2.0"));
-        // A model built for a runtime we no longer run is not loadable.
+        // A runtime change invalidates the verification stamp, not the weights.
         assert!(!marker.describes("r1", "transcribe.cpp 0.3.0"));
     }
 

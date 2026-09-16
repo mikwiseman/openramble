@@ -15,7 +15,7 @@ final class BundledManifestTests: XCTestCase {
         XCTAssertEqual(manifest.modelID, "parakeet-tdt-0.6b-v3-gguf")
         XCTAssertEqual(manifest.repository, "handy-computer/parakeet-tdt-0.6b-v3-gguf")
         XCTAssertEqual(manifest.revision, "85ac09ea12fc4b1112fa76810059364bc6adc9de")
-        XCTAssertEqual(manifest.runtimeVersion, "transcribe.cpp 0.2.0")
+        XCTAssertEqual(manifest.runtimeVersion, "transcribe.cpp 0.2.3")
         XCTAssertEqual(manifest.quantization, "Q8_0")
         // The weights are NVIDIA's Parakeet TDT 0.6B v3, and attribution is a
         // licence condition rather than a courtesy.

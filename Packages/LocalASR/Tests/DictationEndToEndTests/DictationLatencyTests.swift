@@ -1,5 +1,6 @@
 import DictationCore
 import Foundation
+import LocalASR
 import XCTest
 
 /// Measurement of the promise “text appears in less than a second.”
@@ -11,6 +12,39 @@ import XCTest
 /// independently.
 @MainActor
 final class DictationLatencyTests: EndToEndScenario {
+    /// Opt-in distribution for the complete controller stop-to-insertion path.
+    /// Audio capture and the destination app are fixtures, the model is real.
+    /// Can run beside the packaged CLI to exercise the cross-process signal.
+    func testStopToInsertionDistribution() async throws {
+        guard ProcessInfo.processInfo.environment["OPENRAMBLE_LATENCY_DISTRIBUTION"] == "1" else {
+            throw XCTSkip("opt-in paired latency benchmark")
+        }
+        let priority = try DictationPriority()
+        var samples: [Double] = []
+        for round in 0..<21 {
+            try await speak(Phrase.short)
+            let controller = makeController()
+            try priority.setActive(true)
+            controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+            await waitUntil("listening") { controller.state == .listening }
+            // A real speaker holds the lock while talking, before key-up.
+            try await Task.sleep(for: .seconds(1))
+            let released = ContinuousClock.now
+            controller.stop()
+            await waitUntil("inserted") { controller.state == .idle }
+            let insertions = await inserter.insertions
+            let insertion = try XCTUnwrap(insertions.last)
+            try priority.setActive(false)
+            if round > 0 { samples.append(Self.seconds(released.duration(to: insertion.at))) }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        samples.sort()
+        print("[stop-to-insertion] runtime=\(TranscribeCppAdapter.runtimeVersion) n=\(samples.count) p50=\(samples[10]) p95=\(samples[18]) max=\(samples[19])")
+        XCTAssertLessThan(samples[18], 1)
+        await assertNoRecordingsLeft()
+        await assertNoFailureNotices()
+    }
+
     private struct Sample {
         let label: String
         /// Recording duration according to the engine data.
@@ -144,44 +178,28 @@ final class DictationLatencyTests: EndToEndScenario {
         )
     }
 
-    /// Cancel must release the engine immediately, not after it
-    /// finishes the entire recording.
-    ///
-    /// The `LocalTranscriber` comment earlier promised that it would keep the queue
-    /// actor. This is false—actors are reentrant—and the real question is different:
-    /// does the cancellation reach inside inference. Reached: TDT library decoder
-    /// checks `Task.checkCancellation()` in a window loop, so Escape on
-    /// a long recording does not force the next dictation to wait for the tail of the previous one.
-    /// The test guards this property: without it, cancellation would be worth a complete analysis.
-    func testScenario001() async throws {
+    /// Parakeet checks its abort callback between requests, not during one
+    /// encoder graph. Long-file jobs bound that wait with short chunks.
+    func testLongFileCancellationStopsAtNextChunkAndDoesNotComplete() async throws {
         let transcriber = try await requireEndToEndTranscriber()
         let recording = try await SpeechFixtures.shared.speech(Phrase.veryLong)
-
-        // Warm-up: the first work with the model in the process is always more expensive.
-        _ = try await transcriber.transcribe(fileURL: recording)
-
         let started = ContinuousClock.now
-        let work = Task { try await transcriber.transcribe(fileURL: recording) }
-        // Enough for the parsing to actually begin, and noticeably less
-        // what it occupies entirely.
+        let work = Task {
+            try await FileTranscriber(transcriber: transcriber).transcribe(files: [recording]) { _, _ in
+                XCTFail("an interrupted file must not publish a complete transcript")
+            }
+        }
         try await Task.sleep(for: .milliseconds(20))
         work.cancel()
-
         do {
-            _ = try await work.value
-            // The recording is short, the analysis could have ended before cancellation - this is not
-            // failed, but then the test did not check anything.
-            throw XCTSkip("\u{0440}\u{0430}\u{0437}\u{0431}\u{043E}\u{0440} \u{0437}\u{0430}\u{043A}\u{043E}\u{043D}\u{0447}\u{0438}\u{043B}\u{0441}\u{044F} \u{0431}\u{044B}\u{0441}\u{0442}\u{0440}\u{0435}\u{0435} \u{043E}\u{0442}\u{043C}\u{0435}\u{043D}\u{044B} — \u{043D}\u{0430} \u{044D}\u{0442}\u{043E}\u{0439} \u{043C}\u{0430}\u{0448}\u{0438}\u{043D}\u{0435} \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{0441}\u{043B}\u{0438}\u{0448}\u{043A}\u{043E}\u{043C} \u{043A}\u{043E}\u{0440}\u{043E}\u{0442}\u{043A}\u{0430}\u{044F}")
+            try await work.value
+            XCTFail("cancelled job returned success")
+        } catch is CancellationError {
         } catch let error as ASREngineError {
-            XCTAssertEqual(error, .cancelled, "\u{041E}\u{0442}\u{043C}\u{0435}\u{043D}\u{0451}\u{043D}\u{043D}\u{044B}\u{0439} \u{0440}\u{0430}\u{0437}\u{0431}\u{043E}\u{0440} \u{043E}\u{0431}\u{044F}\u{0437}\u{0430}\u{043D} \u{0441}\u{043A}\u{0430}\u{0437}\u{0430}\u{0442}\u{044C}, \u{0447}\u{0442}\u{043E} \u{043E}\u{043D} \u{043E}\u{0442}\u{043C}\u{0435}\u{043D}\u{0451}\u{043D}")
+            XCTAssertEqual(error, .cancelled)
         }
-
-        let elapsed = Self.seconds(started.duration(to: .now))
-        XCTAssertLessThan(
-            elapsed,
-            1.0,
-            "\u{041E}\u{0442}\u{043C}\u{0435}\u{043D}\u{0430} \u{0437}\u{0430}\u{043D}\u{044F}\u{043B}\u{0430} \(elapsed) \u{0441} — \u{0434}\u{0432}\u{0438}\u{0436}\u{043E}\u{043A} \u{0434}\u{043E}\u{043C}\u{0430}\u{043B}\u{044B}\u{0432}\u{0430}\u{043B} \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{0432}\u{043C}\u{0435}\u{0441}\u{0442}\u{043E} \u{0442}\u{043E}\u{0433}\u{043E}, \u{0447}\u{0442}\u{043E}\u{0431}\u{044B} \u{0431}\u{0440}\u{043E}\u{0441}\u{0438}\u{0442}\u{044C} \u{0435}\u{0451}"
-        )
+        XCTAssertLessThan(Self.seconds(started.duration(to: .now)), 1.0,
+                          "cancellation must not decode the rest of the long file")
     }
 
     /// Two recognitions at once do not spoil each other’s results.

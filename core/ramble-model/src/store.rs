@@ -96,7 +96,8 @@ impl ModelStore {
 
     /// What is on disk, decided cheaply.
     ///
-    /// Sizes are checked, digests are not. Hashing 739 MB on every launch would
+    /// Sizes are checked; a changed runtime also rechecks digests. Hashing
+    /// 739 MB on every launch would
     /// add seconds to a cold start to catch something that a size check already
     /// catches in nearly every real case: a truncated download, a half-copied
     /// tree, a file the person deleted. `verify` exists for when the answer has
@@ -109,10 +110,21 @@ impl ModelStore {
         let Ok(marker) = ReadyMarker::parse(&json) else {
             return ModelState::NeedsRepair("the ready marker could not be read".into());
         };
+        if marker.revision != self.manifest.revision
+            || marker.file_count as usize != self.manifest.files.len()
+            || marker.total_byte_count != self.manifest.total_byte_count()
+        {
+            return ModelState::NeedsRepair("the install describes different model files".into());
+        }
+
+        // Match Swift's describesSameFiles / matches split: a runtime update
+        // does not change the weights. Revalidate them without downloading or
+        // rewriting another process's ready marker.
         if !marker.describes(&self.manifest.revision, &self.manifest.runtime_version) {
-            return ModelState::NeedsRepair(
-                "the install was made by a different revision or runtime".into(),
-            );
+            return match self.verify(&self.layout.installed_directory()) {
+                Ok(_) => ModelState::Ready,
+                Err(error) => ModelState::NeedsRepair(error.to_string()),
+            };
         }
 
         for file in &self.manifest.files {
@@ -418,15 +430,49 @@ mod tests {
     }
 
     #[test]
-    fn a_marker_from_another_runtime_needs_repair() {
+    fn a_runtime_update_reuses_verified_weights_without_rewriting_the_marker() {
         let root = tempfile::tempdir().unwrap();
         let store = ModelStore::new(manifest_for(FILES), root.path());
         store.promote(&stage(&store, "a", FILES)).unwrap();
+        let original_marker = fs::read(store.layout.ready_marker()).unwrap();
+
+        let mut manifest = manifest_for(FILES);
+        manifest.runtime_version = "transcribe.cpp 0.3.0".into();
+        let newer = ModelStore::new(manifest, root.path());
+        assert_eq!(newer.state(), ModelState::Ready);
+        assert_eq!(
+            fs::read(store.layout.ready_marker()).unwrap(),
+            original_marker
+        );
+    }
+
+    #[test]
+    fn a_runtime_update_verifies_contents_even_when_file_sizes_still_match() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ModelStore::new(manifest_for(FILES), root.path());
+        store.promote(&stage(&store, "a", FILES)).unwrap();
+        fs::write(
+            store.layout.engine_directory().join("model.gguf"),
+            b"damaged",
+        )
+        .unwrap();
 
         let mut manifest = manifest_for(FILES);
         manifest.runtime_version = "transcribe.cpp 0.3.0".into();
         let newer = ModelStore::new(manifest, root.path());
         assert!(matches!(newer.state(), ModelState::NeedsRepair(_)));
+    }
+
+    #[test]
+    fn a_marker_with_a_different_inventory_needs_repair() {
+        let root = tempfile::tempdir().unwrap();
+        let store = ModelStore::new(manifest_for(FILES), root.path());
+        store.promote(&stage(&store, "a", FILES)).unwrap();
+        let mut marker =
+            ReadyMarker::parse(&fs::read_to_string(store.layout.ready_marker()).unwrap()).unwrap();
+        marker.file_count += 1;
+        fs::write(store.layout.ready_marker(), marker.to_json().unwrap()).unwrap();
+        assert!(matches!(store.state(), ModelState::NeedsRepair(_)));
     }
 
     /// Replacing an install must leave the person with a working one either way.

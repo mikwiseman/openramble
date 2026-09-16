@@ -78,6 +78,22 @@ private actor WarmupGateEngine: ASREngineAdapting {
 
 
 final class LocalTranscriberTests: XCTestCase {
+    func testCancellationDiscardsAResultFromAnEngineThatFinishesAnyway() async throws {
+        let engine = WarmupGateEngine()
+        let transcriber = LocalTranscriber(engine: engine)
+        try await transcriber.prepare(modelDirectory: URL(fileURLWithPath: "/unused"))
+        let work = Task { try await transcriber.transcribe(samples: [0.1]) }
+        while await engine.callCount == 0 { await Task.yield() }
+        work.cancel()
+        await engine.openFirstCall()
+        do {
+            _ = try await work.value
+            XCTFail("cancelled request returned a stale transcript")
+        } catch is CancellationError {
+        } catch ASREngineError.cancelled {
+        }
+    }
+
     private var directory: URL!
 
     override func setUpWithError() throws {

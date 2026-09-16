@@ -367,6 +367,8 @@ sys.exit(4)'
     exit 1
   fi
   echo "Recognition succeeded with network access denied by macOS."
+  WAI_MODELS_ROOT="$MODELS_ROOT" sandbox-exec -f "$PROFILE" /usr/bin/python3 \
+    scripts/tests/test-cli-transcription.py --cli "$CLI" --audio "$FIXTURE"
 fi
 
 echo "Installed artifact smoke: exact identity/version/build/feed/key/minOS, arm64-only code, mounted DMG layout, embedded inference runtime and CLI, entitlement, signature and resources OK."

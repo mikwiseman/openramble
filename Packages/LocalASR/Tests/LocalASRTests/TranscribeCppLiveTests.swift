@@ -18,6 +18,31 @@ import XCTest
 /// runtime loads, runs on Metal, and returns words; everything else in the
 /// suite proves the code around it.
 final class TranscribeCppLiveTests: XCTestCase {
+    func testCancellationDiscardsNativeResultAndNextRequestStillWorks() async throws {
+        let samples = try audioSamples()
+        guard samples.count >= 60 * 16_000 else {
+            throw XCTSkip("use at least a minute of speech for cancellation")
+        }
+        let adapter = TranscribeCppAdapter()
+        try await adapter.loadModels(from: try modelDirectory())
+        try await adapter.warmUpInference()
+        let started = ContinuousClock.now
+        let work = Task { try await adapter.transcribe(samples: samples) }
+        try await Task.sleep(for: .milliseconds(100))
+        work.cancel()
+        do {
+            _ = try await work.value
+            XCTFail("cancelled native work returned a stale transcript")
+        } catch ASREngineError.cancelled {
+        } catch is CancellationError {
+        }
+        let elapsed = started.duration(to: .now)
+        print("[cancellation] elapsed=\(elapsed)")
+        let next = try await adapter.transcribe(samples: Array(samples.prefix(10 * 16_000)))
+        XCTAssertFalse(next.text.isEmpty, "cancellation poisoned the next request")
+        await adapter.unload()
+    }
+
     private func modelDirectory() throws -> URL {
         guard let path = ProcessInfo.processInfo.environment["OPENRAMBLE_TEST_MODEL_DIR"],
               !path.isEmpty
