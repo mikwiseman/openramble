@@ -33,13 +33,15 @@ final class DictationLatencyTests: EndToEndScenario {
             controller.stop()
             await waitUntil("inserted") { controller.state == .idle }
             let insertions = await inserter.insertions
+            XCTAssertEqual(insertions.count, round + 1, "every measured dictation must insert a new result")
             let insertion = try XCTUnwrap(insertions.last)
             try priority.setActive(false)
             if round > 0 { samples.append(Self.seconds(released.duration(to: insertion.at))) }
             try await Task.sleep(for: .milliseconds(100))
         }
         samples.sort()
-        print("[stop-to-insertion] runtime=\(TranscribeCppAdapter.runtimeVersion) n=\(samples.count) p50=\(samples[10]) p95=\(samples[18]) max=\(samples[19])")
+        let median = (samples[9] + samples[10]) / 2
+        print("[stop-to-insertion] runtime=\(TranscribeCppAdapter.runtimeVersion) n=\(samples.count) p50=\(median) p95=\(samples[18]) max=\(samples[19])")
         XCTAssertLessThan(samples[18], 1)
         await assertNoRecordingsLeft()
         await assertNoFailureNotices()

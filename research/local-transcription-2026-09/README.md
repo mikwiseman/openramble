@@ -77,6 +77,28 @@ This is not a distinct three-hour human conversation or a human WER reference.
 System swap was already in use before these tests (about 15 GiB early in the
 session, 5.7 GiB after); it decreased during this session, not a zero-swap claim.
 
+The final, simplified one-model Release pipeline is recorded separately in
+`final-one-model.jsonl`: 64.90 s process wall time for the 79-minute recording
+and 173.83 s for the repeated three-hour endurance file, with peak RSS of
+904 / 944 MiB. Both preserve exactly the normalized hashes from the earlier
+experiments, including the final word. These were later acceptance runs, not
+an interleaved comparison against the earlier parallel implementation; their
+improvement over earlier one-model timings is not attributed to a code change.
+They used an explicit installed-model path, so they include process startup and
+model load but not the model store's checksum validation. The GUI was closed.
+After the endurance run, system swap was 6751 MiB and memory pressure reported
+warning level 2; process RSS is not a claim about all system or GPU memory.
+
+**Concurrent dictation keeps its latency.** In the final, consecutive runs
+without concurrent builds, 20 warm controller dictations had p50/p95 of
+100.84/118.75 ms alone and 105.12/118.14 ms while the packaged CLI processed
+the real long recording. See `controller-latency.csv`. Every round asserts a
+fresh insertion. The CLI yielded during speech, then continued; interrupting
+it retained completed work and published no unfinished transcript. This times
+controller stop through insertion using a real model, fixture capture and a
+fixture destination, not a physical microphone or paste into another app.
+An earlier trial overlapped a compiler build and is not used for comparison.
+
 **Do not enable multi-item native batches in production yet.** `batch-matrix.csv`
 covers 15/30/60 s × 1/2/4/8 and independent-model candidates, three alternating
 paired rounds per profile. Fixed-clip parity passed, but a complete variable
@@ -113,6 +135,11 @@ channel routing remain; meetings benefit from the runtime upgrade.
   outputs preserved and no partial output published.
 - A fractional-millisecond subtitle fixture reproduced an end timestamp past
   the source duration. Millisecond quantization now rounds down.
+- The runtime update exposed a Rust-store mismatch: an intact install with
+  an older runtime stamp was rejected. The adoption and inventory regression
+  tests failed before the fix. The store now revalidates unchanged weights,
+  rejects same-size corruption, and leaves the existing marker untouched;
+  the real installation adoption test passes without a download.
 - `scripts/tests/test-cli-transcription.py` passes under OS network denial:
   TXT/JSON/SRT/VTT, paths with spaces, original word times, right-only stereo,
   corrupt input beside valid files, duplicate stems, no overwrite, priority
