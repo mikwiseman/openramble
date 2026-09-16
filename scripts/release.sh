@@ -323,7 +323,8 @@ run_quietly "application tests" xcodebuild -project apps/macos/OpenRamble.xcodep
   CODE_SIGNING_ALLOWED=NO test
 
 echo "→ Checking runtime without a network"
-./scripts/test-zero-network.sh >/dev/null
+# The sandboxed recognition proof runs on the packaged CLI in
+# smoke-installed-artifact.sh below; only the syscall trace is separate.
 ./scripts/test-zero-network-trace.sh >/dev/null
 assert_release_source_unchanged "before the fresh archive build"
 

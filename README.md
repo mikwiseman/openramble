@@ -187,6 +187,30 @@ Recent Dictations — instead.
 Model files are downloaded from pinned revisions and verified against committed
 SHA-256 checksums before installation.
 
+## Command-line transcription on macOS
+
+The app includes an `openramble` command-line executable. After moving the app
+to Applications, open Settings → General → Install command-line tool. This
+creates `~/.local/bin/openramble` as a link to the executable inside the app,
+needs no administrator access, and does not change shell startup files. If
+`~/.local/bin` is not on your PATH, add `export PATH="$HOME/.local/bin:$PATH"`
+to your shell startup file and open a new terminal. To uninstall, remove the
+link. If you move the app, install again from Settings.
+
+```bash
+openramble audio.m4a
+openramble audio.wav > transcript.txt
+openramble first.wav second.mp3
+openramble --model-dir /path/to/gguf-folder audio.wav
+```
+
+The CLI uses the model installed by the app without downloading or modifying
+it, so install the model in the GUI first; the GUI does not need to be running.
+It returns the model's text without the GUI's dictionary replacements or
+typography cleanup, and without speaker labels or timestamps. Each input is
+read into memory, so long recordings require more RAM. Run `openramble --help`
+for formats and options.
+
 ## Build from source
 
 Xcode with the Swift 6 toolchain is required. XcodeGen is downloaded at a pinned

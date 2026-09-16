@@ -165,6 +165,9 @@ expect_plist SUAllowsAutomaticUpdates false
 
 EXECUTABLE="$APP/Contents/MacOS/$EXPECTED_APP_NAME"
 [[ -x "$EXECUTABLE" ]] || { echo "No executable: $EXECUTABLE" >&2; exit 1; }
+CLI="$APP/Contents/MacOS/openramble-cli"
+[[ -x "$CLI" ]] || { echo "No CLI executable: $CLI" >&2; exit 1; }
+"$CLI" --help >/dev/null
 MCP_HELPER="$APP/Contents/MacOS/openramble-mcp"
 [[ ! -e "$MCP_HELPER" ]] || { echo "Unexpected MCP helper: $MCP_HELPER" >&2; exit 1; }
 RETIRED_WORKER="$APP/Contents/MacOS/openramble-asr-worker"
@@ -178,6 +181,7 @@ RUNTIME_BINARY="$RUNTIME/Versions/A/CTranscribe"
 SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
 SPARKLE_VERSION="$SPARKLE/Versions/B"
 NESTED_CODE_COMPONENTS=(
+  "$CLI"
   "$RUNTIME"
   "$SPARKLE_VERSION/XPCServices/Installer.xpc"
   "$SPARKLE_VERSION/XPCServices/Downloader.xpc"
@@ -199,6 +203,12 @@ app_signature_identifier=$(codesign -dvv "$APP" 2>&1 \
   | sed -n 's/^Identifier=//p' | head -1)
 [[ "$app_signature_identifier" == "$EXPECTED_BUNDLE_ID" ]] || {
   echo "Invalid application signature identifier: $app_signature_identifier" >&2
+  exit 1
+}
+cli_signature_identifier=$(codesign -dvv "$CLI" 2>&1 \
+  | sed -n 's/^Identifier=//p' | head -1)
+[[ "$cli_signature_identifier" == "$EXPECTED_BUNDLE_ID.cli" ]] || {
+  echo "Invalid CLI signature identifier: $cli_signature_identifier" >&2
   exit 1
 }
 
@@ -246,11 +256,13 @@ while IFS= read -r binary; do
   }
 done < <(find "$APP" -type f)
 
-minos=$(vtool -show-build "$EXECUTABLE" | awk '/minos/{print $2; exit}')
-[[ "$minos" == "$EXPECTED_MIN_OS" ]] || {
-  echo "Invalid executable minOS: expected $EXPECTED_MIN_OS, got $minos." >&2
-  exit 1
-}
+for binary in "$EXECUTABLE" "$CLI"; do
+  minos=$(vtool -show-build "$binary" | awk '/minos/{print $2; exit}')
+  [[ "$minos" == "$EXPECTED_MIN_OS" ]] || {
+    echo "Invalid minOS for $binary: expected $EXPECTED_MIN_OS, got $minos." >&2
+    exit 1
+  }
+done
 # The runtime is built by its own project, so its floor only has to be at or
 # below ours — equality would fail for a dependency that supports more than we
 # ask of it.
@@ -301,29 +313,9 @@ do
 done
 
 if [[ "$REQUIRE_OFFLINE_RECOGNITION" == "1" ]]; then
-  MODEL_DIRECTORY="${WAI_PACKAGED_WORKER_MODEL_DIRECTORY:-}"
-  if [[ -z "$MODEL_DIRECTORY" ]]; then
-    MODELS_ROOT="${WAI_MODELS_ROOT:-$HOME/Library/Application Support/OpenRamble/Models}"
-    MODEL_DIRECTORY=$(/usr/bin/python3 - \
-      "$APP/Contents/Resources/model-manifest.json" "$MODELS_ROOT" <<'PY'
-import json
-import os
-import sys
-
-with open(sys.argv[1], encoding="utf-8") as handle:
-    manifest = json.load(handle)
-folder = manifest["repository"].rsplit("/", 1)[-1]
-if folder.endswith("-coreml"):
-    folder = folder[:-7]
-print(os.path.join(sys.argv[2], manifest["modelID"], manifest["revision"], folder))
-PY
-    )
-  fi
-  [[ -d "$MODEL_DIRECTORY" ]] || {
-    echo "The installed model required for the offline proof is missing:" >&2
-    echo "  $MODEL_DIRECTORY" >&2
-    exit 69
-  }
+  # The CLI resolves the engine folder from this root exactly as a user's run
+  # would, so the packaged manifest and store path are exercised, not bypassed.
+  MODELS_ROOT="${WAI_MODELS_ROOT:-$HOME/Library/Application Support/OpenRamble/Models}"
 
   TEMP_DIRECTORY=$(mktemp -d -t openramble-offline-smoke)
   FIXTURE="${WAI_PACKAGED_WORKER_FIXTURE:-}"
@@ -359,11 +351,22 @@ except OSError:
 sys.exit(4)'
   echo "Deny-network sandbox positive control passed (connect returned EPERM)."
 
-  # Recognition now runs inside the application itself, so the offline proof
-  # exercises the same LocalASR path and the same embedded runtime through
-  # scripts/test-zero-network.sh rather than a separate worker executable.
-  WAI_EXPECTED_TEXT="$EXPECTED_TEXT" ./scripts/test-zero-network.sh "$FIXTURE"
+  # Exercise the CLI from this artifact, including its embedded runtime.
+  # Building a separate benchmark here would miss broken packaging.
+  CLI_STATUS=0
+  WAI_MODELS_ROOT="$MODELS_ROOT" sandbox-exec -f "$PROFILE" "$CLI" "$FIXTURE" \
+    > "$TEMP_DIRECTORY/transcript.txt" 2> "$TEMP_DIRECTORY/diagnostics.txt" || CLI_STATUS=$?
+  if [[ "$CLI_STATUS" != "0" ]]; then
+    echo "The packaged CLI failed with network access denied (code $CLI_STATUS):" >&2
+    sed 's/^/  /' "$TEMP_DIRECTORY/diagnostics.txt" >&2
+    exit "$CLI_STATUS"
+  fi
+  if ! grep -Fqi "$EXPECTED_TEXT" "$TEMP_DIRECTORY/transcript.txt"; then
+    echo "The packaged CLI did not recognize the expected phrase. Recognized:" >&2
+    sed 's/^/  /' "$TEMP_DIRECTORY/transcript.txt" >&2
+    exit 1
+  fi
   echo "Recognition succeeded with network access denied by macOS."
 fi
 
-echo "Installed artifact smoke: exact identity/version/build/feed/key/minOS, arm64-only code, mounted DMG layout, embedded inference runtime, dictation-only contents, entitlement, signature and resources OK."
+echo "Installed artifact smoke: exact identity/version/build/feed/key/minOS, arm64-only code, mounted DMG layout, embedded inference runtime and CLI, entitlement, signature and resources OK."

@@ -331,6 +331,7 @@ private struct GeneralSettings: View {
             } footer: {
                 Text("Finished text is pasted through the clipboard; its previous contents are restored shortly afterward.")
             }
+            CommandLineToolSettings()
         }
         .formStyle(.grouped)
         // Permissions are granted in system settings, and returned here

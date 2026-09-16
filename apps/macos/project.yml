@@ -81,6 +81,11 @@ targets:
       - path: OpenRamble/Resources/AppIcon.icns
         buildPhase: resources
     dependencies:
+      - target: OpenRambleCLI
+        embed: true
+        link: false
+        copy:
+          destination: executables
       - package: DictationCore
         product: DictationCore
       - package: DictationCore
@@ -157,6 +162,26 @@ targets:
         # matching private key is missing, recover it through AGENTS.md; never
         # generate a replacement. scripts/release.sh verifies the exact pair.
         SUPublicEDKey: "9ATQM2BrR8XItn19YR1bHKzPn32SZ2oiyJb3dbqaJOI="
+
+  OpenRambleCLI:
+    type: tool
+    platform: macOS
+    sources:
+      - path: OpenRambleCLI
+    dependencies:
+      - package: LocalASR
+        product: LocalASR
+    settings:
+      base:
+        # OpenRamble and openramble collide on case-insensitive volumes.
+        PRODUCT_NAME: openramble-cli
+        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.cli
+        SKIP_INSTALL: YES
+        SWIFT_STRICT_CONCURRENCY: complete
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
 
   # Application target tests.
   #

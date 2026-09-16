@@ -22,7 +22,6 @@ fi
 
 for required_gate in \
   'check-network-surface.sh' \
-  'test-zero-network.sh' \
   'test-zero-network-trace.sh' \
   'smoke-installed-artifact.sh' \
   '--verify --ed-key-file' \
@@ -90,8 +89,8 @@ for mounted_artifact_gate in \
   'The inference runtime links a forbidden network framework.' \
   'The inference runtime references a networking API.' \
   'getnameinfo' \
-  'sandbox-exec -f "$PROFILE"' \
-  './scripts/test-zero-network.sh'
+  'sandbox-exec -f "$PROFILE" "$CLI"' \
+  'cli_signature_identifier'
 do
   grep -Fq -- "$mounted_artifact_gate" "$SMOKE_SCRIPT" \
     || fail_test "mounted artifact/offline gate disappeared: $mounted_artifact_gate"

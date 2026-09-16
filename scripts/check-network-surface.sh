@@ -23,6 +23,7 @@ SHIPPING_PATHS=(
   Packages/DictationCore/Sources
   Packages/LocalASR/Sources
   apps/macos/OpenRamble
+  apps/macos/OpenRambleCLI
 )
 
 # Symbols that can go online.

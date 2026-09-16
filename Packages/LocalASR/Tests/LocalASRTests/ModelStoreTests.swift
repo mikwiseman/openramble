@@ -144,6 +144,50 @@ final class ModelStoreTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: encoder), fileA)
     }
 
+    func testInspectionDoesNotTouchAnotherProcessesInstallation() async throws {
+        let manifest = makeManifest()
+        let (gui, layout) = makeStore(manifest: manifest, downloader: FakeDownloader(
+            contents: ["weight.bin": fileA, "vocab.json": fileB]
+        ))
+        await gui.install()
+        let staging = layout.modelDirectory.appending(path: ".staging-active/partial")
+        try FileManager.default.createDirectory(at: staging.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try fileA.write(to: staging)
+        try FileManager.default.copyItem(at: layout.installedDirectory, to: layout.backupDirectory)
+        let finderFile = layout.engineDirectory.appending(path: ".DS_Store")
+        try fileB.write(to: finderFile)
+        let marker = try Data(contentsOf: layout.readyMarker)
+
+        let cli = ModelStore(manifest: manifest, layout: layout)
+        let state = await cli.inspectInstalledState()
+
+        XCTAssertTrue(state.isReady)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: staging.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: layout.backupDirectory.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: finderFile.path))
+        XCTAssertEqual(try Data(contentsOf: layout.readyMarker), marker)
+    }
+
+    func testInspectionDoesNotPromoteBackupDuringAnotherProcessesUpdate() async throws {
+        let manifest = makeManifest()
+        let (gui, layout) = makeStore(manifest: manifest, downloader: FakeDownloader(
+            contents: ["weight.bin": fileA, "vocab.json": fileB]
+        ))
+        await gui.install()
+        try FileManager.default.moveItem(at: layout.installedDirectory, to: layout.backupDirectory)
+        try FileManager.default.createDirectory(at: layout.engineDirectory, withIntermediateDirectories: true)
+        let partial = layout.engineDirectory.appending(path: "partial")
+        try fileA.write(to: partial)
+
+        let cli = ModelStore(manifest: manifest, layout: layout)
+        let state = await cli.inspectInstalledState()
+
+        XCTAssertTrue(state.requiresRepair)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: layout.backupDirectory.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: partial.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: layout.readyMarker.path))
+    }
+
     func testCorruptedFileLeavesNothingInstalled() async throws {
         // The sum of the second file in the manifest will certainly not add up.
         let manifest = makeManifest(corruptChecksumForB: true)

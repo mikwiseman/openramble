@@ -213,6 +213,9 @@ if [[ ! -d "$APP_PATH" ]]; then
   echo "The build did not produce the application" >&2
   exit 1
 fi
+CLI="$APP_PATH/Contents/MacOS/openramble-cli"
+CLI_IDENTIFIER="$BUNDLE_ID.cli"
+[[ -x "$CLI" ]] || { echo "The build did not embed the openramble CLI" >&2; exit 1; }
 if [[ -e "$APP_PATH/Contents/MacOS/openramble-mcp" ]]; then
   echo "The dictation-only build unexpectedly embedded openramble-mcp" >&2
   exit 1
@@ -409,6 +412,28 @@ ACTUAL_PUBLIC_KEY=$(/usr/libexec/PlistBuddy -c "Print :SUPublicEDKey" "$APP_PATH
   exit 1
 }
 
+# Every nested code object that must carry the release signature, in signing
+# order. If Sparkle moves to a different version letter or removes a component,
+# you can't skip it silently: the embedded code would keep the assembly signature.
+SPARKLE="$APP_PATH/Contents/Frameworks/Sparkle.framework"
+SPARKLE_VERSION="$SPARKLE/Versions/B"
+NESTED_CODE_COMPONENTS=(
+  "$CLI"
+  "$SPARKLE_VERSION/XPCServices/Installer.xpc"
+  "$SPARKLE_VERSION/XPCServices/Downloader.xpc"
+  "$SPARKLE_VERSION/Autoupdate"
+  "$SPARKLE_VERSION/Updater.app"
+  "$SPARKLE"
+)
+for component in "${NESTED_CODE_COMPONENTS[@]}"; do
+  if [[ ! -e "$component" ]]; then
+    echo "Can't find required nested code component: $component" >&2
+    echo "The framework layout has changed - update the list, otherwise part of the code" >&2
+    echo "will be released with an ad-hoc signature." >&2
+    exit 1
+  fi
+done
+
 if [[ -n "$DEVELOPER_ID" ]]; then
   echo "→ I sign"
 
@@ -425,9 +450,6 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   # nested object even though Sparkle's components are signed differently.
   # Downloader.xpc must preserve its own entitlements, while the other binaries
   # must not inherit them.
-  SPARKLE="$APP_PATH/Contents/Frameworks/Sparkle.framework"
-  SPARKLE_VERSION="$SPARKLE/Versions/B"
-
   sign() {
     codesign "${CODESIGN_ARGS[@]}" \
       --options runtime --timestamp --sign "$DEVELOPER_ID" "$@"
@@ -437,23 +459,9 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   # whatever signature it arrived with. Same inside-out rule as Sparkle: sign it
   # before the app that contains it.
   sign "$APP_PATH/Contents/Frameworks/CTranscribe.framework"
-
-  # If Sparkle moves to a different version letter or removes a component, silently
-  # you can't skip it: the embedded code will remain with the ad-hoc assembly signature.
-  for component in \
-    "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
-    "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
-    "$SPARKLE_VERSION/Autoupdate" \
-    "$SPARKLE_VERSION/Updater.app" \
-    "$SPARKLE"
-  do
-    if [[ ! -e "$component" ]]; then
-      echo "Can't find required nested code component: $component" >&2
-      echo "The framework layout has changed - update the list, otherwise part of the code" >&2
-      echo "will be released with an ad-hoc signature." >&2
-      exit 1
-    fi
-  done
+  # A bare executable has no Info.plist, so without an explicit identifier
+  # codesign derives one from the file name.
+  sign --identifier "$CLI_IDENTIFIER" "$CLI"
 
   sign "$SPARKLE_VERSION/XPCServices/Installer.xpc"
   # The only component that Sparkle specifically tells to save
@@ -481,13 +489,7 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   # application identity.
   APP_AUTHORITY=$(codesign -dvv "$APP_PATH" 2>&1 | sed -n 's/^Authority=//p' | head -1)
   echo "credentials: ${APP_AUTHORITY:-ad-hoc}"
-  for component in \
-    "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
-    "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
-    "$SPARKLE_VERSION/Autoupdate" \
-    "$SPARKLE_VERSION/Updater.app" \
-    "$SPARKLE"
-  do
+  for component in "${NESTED_CODE_COMPONENTS[@]}"; do
     codesign --verify --strict --verbose=2 "$component"
     authority=$(codesign -dvv "$component" 2>&1 | sed -n 's/^Authority=//p' | head -1)
     if [[ "$authority" != "$APP_AUTHORITY" ]]; then
@@ -509,22 +511,8 @@ else
   else
     echo "→ Applying verifiable ad-hoc signatures to the Debug probe"
   fi
-  SPARKLE="$APP_PATH/Contents/Frameworks/Sparkle.framework"
-  SPARKLE_VERSION="$SPARKLE/Versions/B"
   codesign --force --sign - "$APP_PATH/Contents/Frameworks/CTranscribe.framework" >/dev/null 2>&1 || true
-  for component in \
-    "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
-    "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
-    "$SPARKLE_VERSION/Autoupdate" \
-    "$SPARKLE_VERSION/Updater.app" \
-    "$SPARKLE"
-  do
-    [[ -e "$component" ]] || {
-      echo "Can't find nested Sparkle component: $component" >&2
-      exit 1
-    }
-  done
-
+  codesign --force --sign - --identifier "$CLI_IDENTIFIER" "$CLI"
   codesign --force --sign - "$SPARKLE_VERSION/XPCServices/Installer.xpc"
   codesign --force --sign - --preserve-metadata=entitlements \
     "$SPARKLE_VERSION/XPCServices/Downloader.xpc"
@@ -534,13 +522,7 @@ else
   codesign --force --sign - --identifier "$BUNDLE_ID" \
     --entitlements "$APP_ENTITLEMENTS" "$APP_PATH"
   codesign --verify --strict --verbose=2 "$APP_PATH"
-  for component in \
-    "$SPARKLE_VERSION/XPCServices/Installer.xpc" \
-    "$SPARKLE_VERSION/XPCServices/Downloader.xpc" \
-    "$SPARKLE_VERSION/Autoupdate" \
-    "$SPARKLE_VERSION/Updater.app" \
-    "$SPARKLE"
-  do
+  for component in "${NESTED_CODE_COMPONENTS[@]}"; do
     codesign --verify --strict --verbose=2 "$component"
   done
 fi

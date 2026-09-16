@@ -177,6 +177,18 @@ public actor ModelStore {
         }
         sweepStaleStaging()
 
+        return inspectInstalledState(maintenance: true)
+    }
+
+    /// Read-only inspection for other processes (including the CLI). Never
+    /// recovers a promotion, sweeps staging, removes files or rewrites markers:
+    /// another process may currently be installing the model.
+    public func inspectInstalledState() -> ModelState {
+        inspectInstalledState(maintenance: false)
+    }
+
+    private func inspectInstalledState(maintenance: Bool) -> ModelState {
+
         guard fileManager.fileExists(atPath: layout.readyMarker.path) else {
             if fileManager.fileExists(atPath: layout.installedDirectory.path) {
                 setState(.repairRequired("the model's ready marker is missing"))
@@ -217,8 +229,8 @@ public actor ModelStore {
             )
 
         do {
-            let metadata = try validateInstalledFiles(marker: verifiedMarker)
-            if marker.installedFiles != metadata || !marker.matches(manifest) {
+            let metadata = try validateInstalledFiles(marker: verifiedMarker, maintenance: maintenance)
+            if maintenance && (marker.installedFiles != metadata || !marker.matches(manifest)) {
                 try writeReadyMarker(installedFiles: metadata)
             }
         } catch let error as ModelStoreError {
@@ -244,7 +256,8 @@ public actor ModelStore {
     /// Check the exact inventory and dimensions. If the metadata has changed either this
     /// marker of the old format, SHA-256 is confirmed before Ready.
     private func validateInstalledFiles(
-        marker: ModelReadyMarker
+        marker: ModelReadyMarker,
+        maintenance: Bool
     ) throws -> [ModelReadyMarker.InstalledFile] {
         let expectedPaths = Set(manifest.files.map(\.path))
         let engine = layout.engineDirectory
@@ -277,7 +290,7 @@ public actor ModelStore {
             // garbage, not a model file: remove and continue because repair
             // here would mean transferring hundreds of megabytes due to an open window.
             if url.lastPathComponent == ".DS_Store" {
-                try fileManager.removeItem(at: url)
+                if maintenance { try fileManager.removeItem(at: url) }
                 continue
             }
 

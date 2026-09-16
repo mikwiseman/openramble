@@ -213,6 +213,8 @@ run_app() {
   fi
   [[ ! -e "$app/Contents/MacOS/openramble-asr-worker" ]] \
     || fail "The application still embeds the retired ASR worker."
+  [[ -x "$app/Contents/MacOS/openramble-cli" ]] \
+    || fail "The application does not embed the openramble CLI."
   local framework="$app/Contents/Frameworks/CTranscribe.framework"
   [[ -d "$framework" ]] || fail "The inference runtime is missing from the application."
 }
