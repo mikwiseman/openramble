@@ -15,9 +15,33 @@ import XCTest
 /// ```
 ///
 /// A skipped test is not a passing one. This is the only check that proves the
-/// runtime loads, runs on Metal, and returns words; everything else in the
+/// runtime loads, uses the platform's backend, and returns words; everything else in the
 /// suite proves the code around it.
 final class TranscribeCppLiveTests: XCTestCase {
+    /// Intel runs the encoder on the CPU too. Check the text before changing
+    /// its thread count; these timings under Rosetta are not Intel benchmarks.
+    func testCPUThreadCountsPreserveRecognition() async throws {
+        let samples = try audioSamples()
+        let directory = try modelDirectory()
+        var reference: String?
+        for threads: Int32 in [1, 4] {
+            let adapter = TranscribeCppAdapter(backend: .cpu, threadCount: threads)
+            try await adapter.loadModels(from: directory)
+            try await adapter.warmUpInference()
+            for _ in 0..<3 {
+                let result = try await adapter.transcribe(samples: samples)
+                XCTAssertFalse(result.text.isEmpty)
+                if let reference {
+                    XCTAssertEqual(result.text, reference)
+                } else {
+                    reference = result.text
+                }
+                print("[cpu] threads=\(threads) duration=\(result.processingDuration)")
+            }
+            await adapter.unload()
+        }
+    }
+
     func testCancellationDiscardsNativeResultAndNextRequestStillWorks() async throws {
         let samples = try audioSamples()
         guard samples.count >= 60 * 16_000 else {
@@ -105,15 +129,17 @@ final class TranscribeCppLiveTests: XCTestCase {
         let loaded = await adapter.isLoaded
         XCTAssertTrue(loaded)
 
-        // Pinned, not requested-and-hoped-for. A silent fall back to CPU would
-        // be the kind of difference that only shows up as "sometimes it's
-        // slow". The runtime names the device rather than the backend family —
-        // "MTL0" for the first Metal device — so this checks the family.
+        // The upstream Intel slice is CPU-only. Apple Silicon must keep Metal;
+        // a successful load on the wrong backend is not a passing test.
         let backend = await adapter.activeBackend
+        #if arch(x86_64)
+        XCTAssertEqual(backend?.lowercased(), "cpu")
+        #else
         XCTAssertTrue(
             backend?.lowercased().hasPrefix("mtl") == true,
             "the engine must run on Metal, got \(backend ?? "nothing")"
         )
+        #endif
 
         try await adapter.warmUpInference()
 

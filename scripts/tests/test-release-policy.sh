@@ -89,7 +89,7 @@ for mounted_artifact_gate in \
   'The inference runtime links a forbidden network framework.' \
   'The inference runtime references a networking API.' \
   'getnameinfo' \
-  'sandbox-exec -f "$PROFILE" "$CLI"' \
+  'sandbox-exec -f "$PROFILE" /usr/bin/arch -"$architecture" "$CLI"' \
   'cli_signature_identifier'
 do
   grep -Fq -- "$mounted_artifact_gate" "$SMOKE_SCRIPT" \

@@ -202,13 +202,14 @@ class EndToEndScenario: XCTestCase {
     /// Conduct one entire dictation: press, talk, release.
     func dictate(
         with controller: DictationController,
+        timeout: Duration = .seconds(60),
         file: StaticString = #filePath,
         line: UInt = #line
     ) async {
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await waitUntil("\u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{043F}\u{043E}\u{0448}\u{043B}\u{0430}", file: file, line: line) { controller.state == .listening }
         controller.stop()
-        await waitUntil("\u{0441}\u{0435}\u{0441}\u{0441}\u{0438}\u{044F} \u{0437}\u{0430}\u{043A}\u{0440}\u{044B}\u{043B}\u{0430}\u{0441}\u{044C}", file: file, line: line) { controller.state == .idle }
+        await waitUntil("\u{0441}\u{0435}\u{0441}\u{0441}\u{0438}\u{044F} \u{0437}\u{0430}\u{043A}\u{0440}\u{044B}\u{043B}\u{0430}\u{0441}\u{044C}", timeout: timeout, file: file, line: line) { controller.state == .idle }
     }
 
     // MARK: - Checks

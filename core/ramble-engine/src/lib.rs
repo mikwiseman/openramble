@@ -86,9 +86,14 @@ impl Engine {
         // a spin/yield barrier for every graph node at two or more threads;
         // one thread removes that pressure-sensitive synchronization while
         // the Metal/Vulkan encoder keeps its own parallelism.
+        // Intel macOS also runs the encoder on the CPU, so it uses four threads.
         let session = model
             .session_with(&SessionOptions {
-                n_threads: 1,
+                n_threads: if cfg!(all(target_os = "macos", target_arch = "x86_64")) {
+                    4
+                } else {
+                    1
+                },
                 ..SessionOptions::default()
             })
             .map_err(|error| EngineError::Load(error.to_string()))?;
@@ -174,7 +179,7 @@ fn install_logging_policy() {
 /// here, and so a machine that cannot honour it produces a report instead of a
 /// quiet demotion.
 fn preferred_backend() -> Backend {
-    if cfg!(target_os = "macos") {
+    if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
         Backend::Metal
     } else {
         // The CPU, until a build with Vulkan compiled in exists. Asking for an
@@ -262,7 +267,7 @@ mod tests {
 
     #[test]
     fn each_platform_asks_for_what_its_build_can_actually_provide() {
-        if cfg!(target_os = "macos") {
+        if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
             assert_eq!(preferred_backend(), Backend::Metal);
         } else {
             // Asking for an accelerator this build has no support for would

@@ -27,8 +27,17 @@ PACKAGE="Packages/RambleCoreFFI"
 BUILD=".build-ffi"
 LIB="libramble_ffi.a"
 
-echo "→ Building the core for Apple Silicon"
-cargo build -p ramble-ffi --release --target aarch64-apple-darwin
+# Match the application's OS floor and Xcode SDK on both architectures.
+# CMake otherwise may select a newer Command Line Tools SDK or host-only ISA.
+export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
+export MACOSX_DEPLOYMENT_TARGET=14.0
+export TRANSCRIBE_CMAKE_ARGS="-DGGML_NATIVE=OFF -DCMAKE_OSX_SYSROOT=\"$SDKROOT\" -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET"
+
+echo "→ Building the core for Apple Silicon and Intel"
+rustup target add aarch64-apple-darwin x86_64-apple-darwin
+for target in aarch64-apple-darwin x86_64-apple-darwin; do
+  cargo build -p ramble-ffi --lib --release --target "$target"
+done
 
 echo "→ Generating Swift"
 rm -rf "$BUILD/swift"
@@ -46,8 +55,12 @@ mkdir -p "$BUILD/headers"
 cp "$BUILD"/swift/*.h "$BUILD/headers/" 2>/dev/null || true
 cat "$BUILD"/swift/*.modulemap > "$BUILD/headers/module.modulemap"
 
+lipo -create \
+  "target/aarch64-apple-darwin/release/$LIB" \
+  "target/x86_64-apple-darwin/release/$LIB" \
+  -output "$BUILD/$LIB"
 xcodebuild -create-xcframework \
-  -library "target/aarch64-apple-darwin/release/$LIB" \
+  -library "$BUILD/$LIB" \
   -headers "$BUILD/headers" \
   -output "$PACKAGE/RambleCoreFFI.xcframework" > /dev/null
 

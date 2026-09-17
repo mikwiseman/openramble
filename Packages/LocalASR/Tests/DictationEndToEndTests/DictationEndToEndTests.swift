@@ -158,7 +158,9 @@ final class DictationEndToEndTests: EndToEndScenario {
         try await speak(Phrase.veryLong)
         let controller = makeController()
 
-        await dictate(with: controller)
+        // This checks complete text on CPU as well as Metal. The separate
+        // Apple Silicon latency gate retains its strict time budget.
+        await dictate(with: controller, timeout: .seconds(360))
 
         let texts = await inserter.texts
         let text = try XCTUnwrap(texts.first)

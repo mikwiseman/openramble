@@ -16,6 +16,9 @@ final class DictationLatencyTests: EndToEndScenario {
     /// Audio capture and the destination app are fixtures, the model is real.
     /// Can run beside the packaged CLI to exercise the cross-process signal.
     func testStopToInsertionDistribution() async throws {
+        #if arch(x86_64)
+        throw XCTSkip("Apple Silicon latency budget; Intel CPU performance is experimental")
+        #else
         guard ProcessInfo.processInfo.environment["OPENRAMBLE_LATENCY_DISTRIBUTION"] == "1" else {
             throw XCTSkip("opt-in paired latency benchmark")
         }
@@ -45,6 +48,7 @@ final class DictationLatencyTests: EndToEndScenario {
         XCTAssertLessThan(samples[18], 1)
         await assertNoRecordingsLeft()
         await assertNoFailureNotices()
+        #endif
     }
 
     private struct Sample {
@@ -86,6 +90,9 @@ final class DictationLatencyTests: EndToEndScenario {
     /// product. Three minutes is a rare case, and the reserve taken there is twice as large,
     /// so that the test does not blink on a machine weaker than the one on which it is written.
     func testPathFromReadyFileToInsertedTextStaysUnderASecond() async throws {
+        #if arch(x86_64)
+        throw XCTSkip("Apple Silicon latency budget; Intel CPU performance is experimental")
+        #else
         // Warm-up: the first work with the model in the process is always more expensive than the rest,
         // and to measure it would mean to measure the wrong thing.
         _ = try await measure("\u{043F}\u{0440}\u{043E}\u{0433}\u{0440}\u{0435}\u{0432}", text: Phrase.short)
@@ -148,6 +155,7 @@ final class DictationLatencyTests: EndToEndScenario {
 
         await assertNoRecordingsLeft()
         await assertNoFailureNotices()
+        #endif
     }
 
     // MARK: - One measurement

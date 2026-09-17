@@ -19,7 +19,8 @@ private let runtimeLog = Logger(subsystem: "is.waiwai.dictation", category: "asr
 /// is short. Rebuilding it cost 13.5–16 s, so the engine was at its slowest
 /// exactly when the machine was already struggling, and a 2.4 GB resident set
 /// made that struggle more likely. This runtime compiles nothing at load: the
-/// weights are data, the backend is Metal, and a reload is a file read.
+/// weights are data, and a reload is a file read. Apple Silicon uses Metal;
+/// the upstream Intel runtime is CPU-only.
 public actor TranscribeCppAdapter: BatchASREngineAdapting {
     /// Sample rate the runtime requires. The recorder already produces this, so
     /// nothing resamples on the way in.
@@ -88,7 +89,7 @@ public actor TranscribeCppAdapter: BatchASREngineAdapting {
         }
     }
 
-    /// One decoder thread is deliberate. Parakeet's CPU-side predictor uses a
+    /// On Apple Silicon one decoder thread is deliberate. Parakeet's CPU-side predictor uses a
     /// spin/yield barrier for every graph node as soon as `n_threads >= 2`.
     /// Under processor pressure the runtime default of eight made a four-second
     /// take 4–10× slower; one thread removes the barrier completely while the
@@ -96,9 +97,16 @@ public actor TranscribeCppAdapter: BatchASREngineAdapting {
     /// parallelism. The live pressure and long-audio gates document the trade.
     /// Re-evaluate before adopting the runtime's streaming API: unlike batch,
     /// its mel front-end also consumes this session thread count.
-    public init(backend: Backend = .metal, threadCount: Int32 = 1) {
-        self.backend = backend
-        self.threadCount = threadCount
+    /// Intel also runs the encoder on the CPU. Four threads preserve the text
+    /// and avoid serializing that work onto the single thread chosen for Metal.
+    public init(backend: Backend? = nil, threadCount: Int32? = nil) {
+        #if arch(arm64)
+        self.backend = backend ?? .metal
+        self.threadCount = threadCount ?? 1
+        #else
+        self.backend = backend ?? .cpu
+        self.threadCount = threadCount ?? 4
+        #endif
         Self.silenceRuntimeLogging()
     }
 

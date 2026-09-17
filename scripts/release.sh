@@ -104,7 +104,7 @@ ci_is_green() {
   # hour and say nothing about the DMG being signed here.
   local required=(
     "Package tests" "Application build" "Release build" "Network surface"
-    "Core matches macOS" "Swift calls the core" "Apple Silicon only"
+    "Core matches macOS" "Swift calls the core" "Apple Silicon and Intel"
   )
   local run_id jobs job outcome
   run_id=$(gh_retry run list --branch main --limit 10 \

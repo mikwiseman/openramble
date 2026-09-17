@@ -167,7 +167,9 @@ EXECUTABLE="$APP/Contents/MacOS/$EXPECTED_APP_NAME"
 [[ -x "$EXECUTABLE" ]] || { echo "No executable: $EXECUTABLE" >&2; exit 1; }
 CLI="$APP/Contents/MacOS/openramble-cli"
 [[ -x "$CLI" ]] || { echo "No CLI executable: $CLI" >&2; exit 1; }
-"$CLI" --help >/dev/null
+for architecture in arm64 x86_64; do
+  /usr/bin/arch -"$architecture" "$CLI" --help >/dev/null
+done
 MCP_HELPER="$APP/Contents/MacOS/openramble-mcp"
 [[ ! -e "$MCP_HELPER" ]] || { echo "Unexpected MCP helper: $MCP_HELPER" >&2; exit 1; }
 RETIRED_WORKER="$APP/Contents/MacOS/openramble-asr-worker"
@@ -250,29 +252,29 @@ while IFS= read -r binary; do
   file "$binary" | grep -q 'Mach-O' || continue
   codesign --verify --strict --verbose=2 "$binary"
   archs=$(lipo -archs "$binary")
-  [[ "$archs" == "arm64" ]] || {
-    echo "Not arm64-only: $binary ($archs)" >&2
+  [[ "$archs" == "arm64 x86_64" || "$archs" == "x86_64 arm64" ]] || {
+    echo "Not universal arm64/x86_64: $binary ($archs)" >&2
     exit 1
   }
 done < <(find "$APP" -type f)
 
-for binary in "$EXECUTABLE" "$CLI"; do
-  minos=$(vtool -show-build "$binary" | awk '/minos/{print $2; exit}')
-  [[ "$minos" == "$EXPECTED_MIN_OS" ]] || {
-    echo "Invalid minOS for $binary: expected $EXPECTED_MIN_OS, got $minos." >&2
+for architecture in arm64 x86_64; do
+  for binary in "$EXECUTABLE" "$CLI"; do
+    minos=$(vtool -arch "$architecture" -show-build "$binary" | awk '/minos/{print $2; exit}')
+    [[ "$minos" == "$EXPECTED_MIN_OS" ]] || {
+      echo "Invalid $architecture minOS for $binary: expected $EXPECTED_MIN_OS, got $minos." >&2
+      exit 1
+    }
+  done
+  # A dependency's OS floor may be lower than the application's.
+  runtime_minos=$(vtool -arch "$architecture" -show-build "$RUNTIME_BINARY" | awk '/minos/{print $2; exit}')
+  runtime_major=${runtime_minos%%.*}
+  expected_major=${EXPECTED_MIN_OS%%.*}
+  [[ -n "$runtime_minos" && "$runtime_major" -le "$expected_major" ]] || {
+    echo "The $architecture inference runtime needs macOS $runtime_minos, above our $EXPECTED_MIN_OS floor." >&2
     exit 1
   }
 done
-# The runtime is built by its own project, so its floor only has to be at or
-# below ours — equality would fail for a dependency that supports more than we
-# ask of it.
-runtime_minos=$(vtool -show-build "$RUNTIME_BINARY" | awk '/minos/{print $2; exit}')
-runtime_major=${runtime_minos%%.*}
-expected_major=${EXPECTED_MIN_OS%%.*}
-[[ "$runtime_major" -le "$expected_major" ]] || {
-  echo "The inference runtime needs macOS $runtime_minos, above our $EXPECTED_MIN_OS floor." >&2
-  exit 1
-}
 
 # The inference runtime is a third-party binary inside a notarized app. What it
 # links and what it imports is verified here, on the artifact, rather than
@@ -353,22 +355,24 @@ sys.exit(4)'
 
   # Exercise the CLI from this artifact, including its embedded runtime.
   # Building a separate benchmark here would miss broken packaging.
-  CLI_STATUS=0
-  WAI_MODELS_ROOT="$MODELS_ROOT" sandbox-exec -f "$PROFILE" "$CLI" "$FIXTURE" \
-    > "$TEMP_DIRECTORY/transcript.txt" 2> "$TEMP_DIRECTORY/diagnostics.txt" || CLI_STATUS=$?
-  if [[ "$CLI_STATUS" != "0" ]]; then
-    echo "The packaged CLI failed with network access denied (code $CLI_STATUS):" >&2
-    sed 's/^/  /' "$TEMP_DIRECTORY/diagnostics.txt" >&2
-    exit "$CLI_STATUS"
-  fi
-  if ! grep -Fqi "$EXPECTED_TEXT" "$TEMP_DIRECTORY/transcript.txt"; then
-    echo "The packaged CLI did not recognize the expected phrase. Recognized:" >&2
-    sed 's/^/  /' "$TEMP_DIRECTORY/transcript.txt" >&2
-    exit 1
-  fi
-  echo "Recognition succeeded with network access denied by macOS."
+  for architecture in arm64 x86_64; do
+    CLI_STATUS=0
+    WAI_MODELS_ROOT="$MODELS_ROOT" sandbox-exec -f "$PROFILE" /usr/bin/arch -"$architecture" "$CLI" "$FIXTURE" \
+      > "$TEMP_DIRECTORY/transcript-$architecture.txt" 2> "$TEMP_DIRECTORY/diagnostics.txt" || CLI_STATUS=$?
+    if [[ "$CLI_STATUS" != "0" ]]; then
+      echo "The packaged $architecture CLI failed with network access denied (code $CLI_STATUS):" >&2
+      sed 's/^/  /' "$TEMP_DIRECTORY/diagnostics.txt" >&2
+      exit "$CLI_STATUS"
+    fi
+    if ! grep -Fqi "$EXPECTED_TEXT" "$TEMP_DIRECTORY/transcript-$architecture.txt"; then
+      echo "The packaged $architecture CLI did not recognize the expected phrase. Recognized:" >&2
+      sed 's/^/  /' "$TEMP_DIRECTORY/transcript-$architecture.txt" >&2
+      exit 1
+    fi
+    echo "$architecture recognition succeeded with network access denied by macOS."
+  done
   WAI_MODELS_ROOT="$MODELS_ROOT" sandbox-exec -f "$PROFILE" /usr/bin/python3 \
     scripts/tests/test-cli-transcription.py --cli "$CLI" --audio "$FIXTURE"
 fi
 
-echo "Installed artifact smoke: exact identity/version/build/feed/key/minOS, arm64-only code, mounted DMG layout, embedded inference runtime and CLI, entitlement, signature and resources OK."
+echo "Installed artifact smoke: exact identity/version/build/feed/key/minOS, universal arm64/x86_64 code, mounted DMG layout, embedded inference runtime and CLI, entitlement, signature and resources OK."
