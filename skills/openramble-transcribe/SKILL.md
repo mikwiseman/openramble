@@ -1,6 +1,6 @@
 ---
 name: openramble-transcribe
-description: Transcribe local audio files offline with OpenRamble on an Apple Silicon Mac, using its already installed Parakeet model. Produce transcripts or timed subtitles without uploading recordings.
+description: Transcribe local audio files offline with OpenRamble on a Mac, using its already installed Parakeet model. Produce transcripts or timed subtitles without uploading recordings.
 ---
 
 # Local transcription

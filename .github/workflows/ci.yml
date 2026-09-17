@@ -271,8 +271,8 @@ jobs:
       - name: Check that the network is only where it is allowed
         run: ./scripts/check-network-surface.sh
 
-  arm64-build:
-    name: Apple Silicon only
+  universal-build:
+    name: Apple Silicon and Intel
     runs-on: macos-26
     timeout-minutes: 20
     steps:
@@ -286,9 +286,8 @@ jobs:
         with:
           workspaces: ". -> target"
 
-      # Safe beta only supports Apple Silicon.
-      - name: LocalASR arm64
-        run: swift build --package-path Packages/LocalASR --arch arm64
+      - name: LocalASR universal
+        run: swift build --package-path Packages/LocalASR --arch arm64 --arch x86_64
 
   release-build:
     name: Release build

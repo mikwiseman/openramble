@@ -248,7 +248,7 @@ fi
 # directory. codesign cannot classify the result — "bundle format is ambiguous
 # (could be app or framework)" — and refuses to verify the app that contains it.
 # Restore the layout Apple's framework format actually specifies before anything
-# thins or signs it.
+# signs it.
 echo "→ Restoring the inference runtime's framework layout"
 /usr/bin/python3 - "$APP_PATH/Contents/Frameworks/CTranscribe.framework" <<'NORMALIZE'
 import os, shutil, sys
@@ -274,25 +274,6 @@ for item in os.listdir(os.path.join(versions, "A")):
         os.remove(top)
     os.symlink(os.path.join("Versions", "Current", item), top)
 NORMALIZE
-
-# Binary targets dependencies can arrive universal, even when our target
-# builds arm64. We remove someone else's x86_64 before the signature; lack of arm64 - hard
-# failure, not a reason to leave a mixed artifact.
-echo "→ Removing non-arm64 slices from bundled binary targets"
-while IFS= read -r binary; do
-  file "$binary" | grep -q 'Mach-O' || continue
-  archs=$(lipo -archs "$binary")
-  [[ " $archs " == *" arm64 "* ]] || {
-    echo "Mach-O doesn't have arm64 slice: $binary ($archs)" >&2
-    exit 1
-  }
-  if [[ "$archs" != "arm64" ]]; then
-    thinned="$binary.arm64-thinned"
-    rm -f "$thinned"
-    lipo "$binary" -thin arm64 -output "$thinned"
-    mv "$thinned" "$binary"
-  fi
-done < <(find "$APP_PATH" -type f)
 
 # The full texts of the licenses should be in the artifact itself, and not just
 # links in README. Sources are taken from the same immutable package revisions,
@@ -340,35 +321,36 @@ if [[ "$CC_SHA" != "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab42
 fi
 cp "$CC_SOURCE" "$RESOURCES/Parakeet-CC-BY-4.0.txt"
 
-# Every Mach-O in the artifact must be arm64-only: including Sparkle helpers.
-echo "→ Checking arm64-only"
+# Every executable must support both Macs, including the CLI and Sparkle helpers.
+echo "→ Checking universal code"
 while IFS= read -r binary; do
   if ! file "$binary" | grep -q 'Mach-O'; then
     continue
   fi
   ARCHS=$(lipo -archs "$binary")
   echo "  ${binary#$APP_PATH/}: $ARCHS"
-  if [[ "$ARCHS" != "arm64" ]]; then
+  if [[ "$ARCHS" != "arm64 x86_64" && "$ARCHS" != "x86_64 arm64" ]]; then
     echo "Invalid slices in $binary: $ARCHS" >&2
     exit 1
   fi
 done < <(find "$APP_PATH" -type f)
 
 echo "→ Checking the minimum system version"
-MIN_OS=$(vtool -show-build "$APP_PATH/Contents/MacOS/$APP_NAME" 2>/dev/null | grep -m1 "minos" | awk '{print $2}')
-echo "  minos $MIN_OS"
-if [[ "$MIN_OS" != "14.0" ]]; then
-  echo "Expected minOS 14.0, got $MIN_OS" >&2
-  exit 1
-fi
-# The runtime is built by another project; its floor only has to sit at or
-# below ours, so equality would fail on a dependency that supports more.
-RUNTIME_MIN_OS=$(vtool -show-build "$RUNTIME_BINARY" 2>/dev/null | grep -m1 "minos" | awk '{print $2}')
-echo "  inference runtime minos $RUNTIME_MIN_OS"
-if [[ "${RUNTIME_MIN_OS%%.*}" -gt "${EXPECTED_MIN_OS%%.*}" ]]; then
-  echo "The inference runtime needs macOS $RUNTIME_MIN_OS, above our $EXPECTED_MIN_OS floor" >&2
-  exit 1
-fi
+for architecture in arm64 x86_64; do
+  MIN_OS=$(vtool -arch "$architecture" -show-build "$APP_PATH/Contents/MacOS/$APP_NAME" 2>/dev/null | awk '/minos/{print $2; exit}')
+  echo "  $architecture minos $MIN_OS"
+  if [[ "$MIN_OS" != "$EXPECTED_MIN_OS" ]]; then
+    echo "Expected minOS $EXPECTED_MIN_OS, got $MIN_OS" >&2
+    exit 1
+  fi
+  # A dependency's OS floor may be lower than the application's.
+  RUNTIME_MIN_OS=$(vtool -arch "$architecture" -show-build "$RUNTIME_BINARY" 2>/dev/null | awk '/minos/{print $2; exit}')
+  echo "  $architecture inference runtime minos $RUNTIME_MIN_OS"
+  if [[ -z "$RUNTIME_MIN_OS" || "${RUNTIME_MIN_OS%%.*}" -gt "${EXPECTED_MIN_OS%%.*}" ]]; then
+    echo "The inference runtime needs macOS $RUNTIME_MIN_OS, above our $EXPECTED_MIN_OS floor" >&2
+    exit 1
+  fi
+done
 
 # The release identifier must remain unchanged forever: it is based on
 # user-issued universal access. Debug-probe intentionally uses

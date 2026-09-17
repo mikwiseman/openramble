@@ -25,6 +25,11 @@ requires the matching private key. Recover the permanent key described in
 
 ## Release-machine setup
 
+Use an Apple Silicon Mac with Rosetta installed. The universal artifact check
+launches both CLI architectures and requires offline recognition from each.
+Rosetta verifies Intel executable compatibility, not native Intel performance
+or microphone behavior. Intel support remains experimental pending those checks.
+
 Run once on a trusted Mac:
 
 ```bash
@@ -99,7 +104,7 @@ that worked — which is exactly how a release goes missing.
 
 The script runs package and application tests, checks the shipping network
 surface and the worker control plane, performs two in-process offline runtime
-checks, and always creates a fresh arm64 archive and DMG from the checked-out
+checks, and always creates a fresh universal arm64/x86_64 archive and DMG from the checked-out
 SHA. It rechecks that HEAD and tracked inputs stayed unchanged before the
 archive and again after exact-DMG verification. Reusing an earlier artifact is
 deliberately unsupported.

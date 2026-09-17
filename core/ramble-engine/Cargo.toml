@@ -11,10 +11,10 @@ ramble-audio = { path = "../ramble-audio" }
 
 # Default features are off so each platform states its accelerator explicitly.
 # `metal` is the crate's default and would silently follow us onto Windows.
-[target.'cfg(target_os = "macos")'.dependencies]
+[target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dependencies]
 transcribe-cpp = { version = "0.2", default-features = false, features = ["metal"] }
 
-# No accelerator feature on Windows and Linux yet, deliberately.
+# Intel macOS, Windows and Linux use the CPU backend.
 #
 # The crate's `vulkan` feature needs the Vulkan SDK present at *build* time and
 # fails the build without it — so requiring it would mean the app could only be
@@ -22,7 +22,7 @@ transcribe-cpp = { version = "0.2", default-features = false, features = ["metal
 # stock CI runner. The CPU path works everywhere and is what a first release
 # should be judged on. Turning Vulkan on is its own piece of work: the SDK in
 # the build image, and a runtime report saying which one a person actually got.
-[target.'cfg(not(target_os = "macos"))'.dependencies]
+[target.'cfg(not(all(target_os = "macos", target_arch = "aarch64")))'.dependencies]
 transcribe-cpp = { version = "0.2", default-features = false }
 
 [dev-dependencies]

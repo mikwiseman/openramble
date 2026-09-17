@@ -1,6 +1,6 @@
 # OpenRamble
 
-Private, local dictation and meeting recording for Apple Silicon Macs.
+Private, local dictation and meeting recording for Macs.
 
 Hold a hotkey, speak, and release it. OpenRamble transcribes the recording on
 your Mac and inserts the text at the current cursor.
@@ -171,7 +171,7 @@ Recent Dictations — instead.
 **macOS**
 
 - macOS 14 or later
-- Apple Silicon; Intel Macs are not supported
+- Apple Silicon, or Intel (experimental CPU support; performance varies by Mac)
 
 **Windows and Linux**
 
@@ -254,9 +254,10 @@ cd openramble
 swift test --package-path Packages/DictationCore
 swift test --package-path Packages/LocalASR
 
+./scripts/build-ffi.sh
 "$(./scripts/pinned-xcodegen.sh)" generate --spec apps/macos/project.yml
 xcodebuild -project apps/macos/OpenRamble.xcodeproj -scheme OpenRamble \
-  -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO build
+  -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO build
 ```
 
 Build a development DMG with `./scripts/build-dmg.sh`. Development builds use
