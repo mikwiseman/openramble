@@ -197,6 +197,7 @@ xcodebuild archive \
   -configuration "$BUILD_CONFIGURATION" \
   -archivePath "$BUILD_DIR/$SCHEME.xcarchive" \
   -destination 'generic/platform=macOS' \
+  ONLY_ACTIVE_ARCH=NO \
   -clonedSourcePackagesDirPath "$PACKAGE_CACHE" \
   "${SIGN_ARGS[@]}" ${BUILD_OVERRIDES[@]+"${BUILD_OVERRIDES[@]}"} 2>&1 \
   | tee "$ARCHIVE_LOG" \

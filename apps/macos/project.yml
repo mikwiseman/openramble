@@ -59,6 +59,8 @@ settings:
     # the generator's default would silently drop `#if DEBUG` the moment the
     # diagnostics condition was appended to it.
     Debug:
+      # Match SwiftPM's architecture when running tests on a specific Mac.
+      ONLY_ACTIVE_ARCH: YES
       SWIFT_ACTIVE_COMPILATION_CONDITIONS: "DEBUG $(OPENRAMBLE_DIAGNOSTICS_CONDITION)"
     Release:
       SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(OPENRAMBLE_DIAGNOSTICS_CONDITION)"
