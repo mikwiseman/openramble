@@ -1023,6 +1023,7 @@ public final class AppState: ObservableObject {
         permissionTimer?.invalidate()
         engineWarmupTask?.cancel()
         engineWarmupRetryTask?.cancel()
+        idleUnloadTask?.cancel()
         recordingRecoveryMaintenanceTask?.cancel()
         engineReadinessTask?.cancel()
         for observer in systemObservers {
@@ -1947,9 +1948,17 @@ public final class AppState: ObservableObject {
     /// it through the state-change hook.
     private var idleUnloadTask: Task<Void, Never>?
 
-    private func rescheduleIdleUnload() {
+    /// Stop the countdown as soon as work is requested. Starting a recording
+    /// does a small amount of filesystem setup before it can publish
+    /// `meetingState = .starting`; that setup must not leave a short test (or a
+    /// real wake-up) window in which the engine can be reclaimed underneath it.
+    private func cancelIdleUnload() {
         idleUnloadTask?.cancel()
         idleUnloadTask = nil
+    }
+
+    private func rescheduleIdleUnload() {
+        cancelIdleUnload()
         guard dictationState == .idle,
               // A recording is not idleness either, and neither is a queue
               // still decoding one that just ended: unloading here would
@@ -2383,6 +2392,11 @@ public final class AppState: ObservableObject {
             requestMicrophone()
             return
         }
+        // Writing the initial metadata and creating the capture can take long
+        // enough to cross the test or wake-up idle deadline. Cancel before any
+        // of that synchronous setup, not only after the meeting enters
+        // `.starting`.
+        cancelIdleUnload()
         let metadata = MeetingRecordingMetadata(
             startedAt: Date(),
             systemAudio: SystemAudioSummary(wasRequested: includingSystemAudio),
@@ -2392,6 +2406,7 @@ public final class AppState: ObservableObject {
         do {
             try meetingStore.write(metadata, incomplete: true)
         } catch {
+            rescheduleIdleUnload()
             notify(DictationNotice(kind: .failure, message: "Couldn't start recording: \(error.localizedDescription)"))
             return
         }
