@@ -48,6 +48,24 @@ final class MeetingAudioExporterTests: XCTestCase {
         XCTAssertEqual(lastProgress, 1)
     }
 
+    func testArchiveKeepsBothChannelsAndShrinksTheCompletedRecording() throws {
+        let source = try writeRecording(seconds: 8)
+        let destination = directory.appending(path: "audio.m4a.incomplete")
+
+        try MeetingAudioExporter.archive(from: source, to: destination)
+
+        let archived = try AVAudioFile(forReading: destination)
+        XCTAssertEqual(archived.processingFormat.channelCount, 2)
+        XCTAssertEqual(
+            Double(archived.length) / archived.processingFormat.sampleRate,
+            8,
+            accuracy: 0.2
+        )
+        let sourceBytes = try FileManager.default.attributesOfItem(atPath: source.path)[.size] as? Int ?? 0
+        let archivedBytes = try FileManager.default.attributesOfItem(atPath: destination.path)[.size] as? Int ?? 0
+        XCTAssertLessThan(archivedBytes * 3, sourceBytes, "the completed archive should not retain raw PCM size")
+    }
+
     func testEitherSourceAndBothTogetherAreAudibleInTheExport() throws {
         let writer = MeetingWriter(directory: directory)
         try writer.open()

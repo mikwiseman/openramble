@@ -145,7 +145,10 @@ private final class CameraBubbleView: NSView {
         previewLayer.videoGravity = .resizeAspectFill
         if let connection = previewLayer.connection, connection.isVideoMirroringSupported {
             connection.automaticallyAdjustsVideoMirroring = false
-            connection.isVideoMirrored = false
+            // A self-view is mirrored while recording and in the saved movie,
+            // matching the spatial cue people already know from Zoom and
+            // FaceTime. Text on the screen remains unaffected.
+            connection.isVideoMirrored = true
         }
         layer?.addSublayer(previewLayer)
         setAccessibilityElement(true)

@@ -1,4 +1,5 @@
 import AVFoundation
+import AppKit
 import Foundation
 
 /// Streams the original recording through a mono mixer. The file separates
@@ -12,6 +13,7 @@ final class RecordingPlayer: ObservableObject {
     @Published private(set) var failedToLoad = false
     @Published private(set) var videoFailedToLoad = false
     @Published private(set) var videoPlayer: AVPlayer?
+    @Published private(set) var videoPreviewImage: NSImage?
 
     private let engine: AVAudioEngine
     private let player = AVAudioPlayerNode()
@@ -64,6 +66,7 @@ final class RecordingPlayer: ObservableObject {
         videoTimeObserver = nil
         videoPlayer?.pause()
         videoPlayer = nil
+        videoPreviewImage = nil
         file = nil
         loadedID = nil
         isPlaying = false
@@ -203,11 +206,30 @@ final class RecordingPlayer: ObservableObject {
                 self.engine.stop()
                 self.currentTime = 0
                 self.videoPlayer = video
+                // AVPlayerLayer intentionally stays black until it has a
+                // decoded frame. Prime the item at the first frame so opening
+                // a saved recording never looks like a failed black movie.
+                video.pause()
+                await video.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
+                let preview = await Self.makePreviewImage(from: url)
+                guard self.loadedID == id else { return }
+                self.videoPreviewImage = preview
             } else {
                 self.videoFailedToLoad = true
                 self.videoPlayer = nil
             }
         }
+    }
+
+    private static func makePreviewImage(from url: URL) async -> NSImage? {
+        let image = await Task.detached(priority: .utility) {
+            let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = CGSize(width: 1_280, height: 1_280)
+            return try? generator.copyCGImage(at: .zero, actualTime: nil)
+        }.value
+        guard let image else { return nil }
+        return NSImage(cgImage: image, size: .zero)
     }
 
     private func schedule(from time: TimeInterval) {

@@ -60,6 +60,18 @@ final class MeetingStoreTests: XCTestCase {
         XCTAssertEqual(store.list().map(\.id), [newer.id, older.id])
     }
 
+    func testCompressedAudioIsUsedAfterTheRawSourceIsCompacted() throws {
+        let recording = metadata()
+        try store.write(recording)
+        let directory = store.directory(for: recording.id)
+        let compressed = directory.appending(path: MeetingStore.compressedAudioFileName)
+        try Data([0, 1, 2]).write(to: compressed)
+
+        XCTAssertEqual(store.audioURL(for: recording.id), compressed)
+        XCTAssertEqual(store.compressedAudioURL(for: recording.id), compressed)
+        XCTAssertNil(store.rawAudioURL(for: recording.id))
+    }
+
     func testAnIncompleteRecordingIsNotListedUntilPublished() throws {
         let recording = metadata()
         try store.write(recording, incomplete: true)

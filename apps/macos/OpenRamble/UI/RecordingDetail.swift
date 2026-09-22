@@ -1,3 +1,4 @@
+import AppKit
 import DictationAudio
 import DictationCore
 import SwiftUI
@@ -55,9 +56,7 @@ struct RecordingDetail: View {
                     Button("Move to Trash", role: .destructive) { state.trashRecording(recording.id) }
                 }
                 label: {
-                    Label("More", systemImage: "ellipsis.circle")
-                        .labelStyle(.iconOnly)
-                        .imageScale(.medium)
+                    Image(systemName: "ellipsis")
                         .frame(width: 28, height: 28)
                 }
                 .menuStyle(.borderlessButton)
@@ -121,7 +120,21 @@ struct RecordingDetail: View {
         VStack(alignment: .leading, spacing: GlassTokens.Space.stack) {
             if recording.captureKind == .screen {
                 if let videoPlayer = player.videoPlayer {
-                    LocalRecordingVideo(player: videoPlayer)
+                    ZStack {
+                        LocalRecordingVideo(player: videoPlayer)
+                        if !player.isPlaying, player.currentTime < 0.05 {
+                            if let preview = player.videoPreviewImage {
+                                Image(nsImage: preview)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .transition(.opacity)
+                            } else {
+                                Rectangle()
+                                    .fill(Color(nsColor: .windowBackgroundColor))
+                                    .overlay { ProgressView() }
+                            }
+                        }
+                    }
                         .frame(maxWidth: .infinity)
                         .aspectRatio(16 / 9, contentMode: .fit)
                         .clipShape(RoundedRectangle(cornerRadius: GlassTokens.Radius.surface, style: .continuous))

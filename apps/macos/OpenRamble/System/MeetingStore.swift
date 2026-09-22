@@ -8,6 +8,7 @@ import Foundation
 /// Recordings/
 ///   <uuid>/            published
 ///     audio.wav        stereo 16 kHz; L = microphone, R = system audio
+///     audio.m4a        compact AAC archive after transcription completes
 ///     meta.json
 ///     transcript.json
 ///     peaks.bin
@@ -30,6 +31,7 @@ public struct MeetingStore: Sendable {
     public static let metadataFileName = "meta.json"
     public static let transcriptFileName = "transcript.json"
     public static let videoFileName = "video.mp4"
+    public static let compressedAudioFileName = "audio.m4a"
 
     public typealias Trasher = @Sendable (URL) throws -> Void
 
@@ -66,7 +68,17 @@ public struct MeetingStore: Sendable {
     }
 
     public func audioURL(for id: UUID) -> URL? {
+        rawAudioURL(for: id) ?? compressedAudioURL(for: id)
+    }
+
+    /// The PCM source is kept while transcription is live and until the
+    /// compact archive has been written. Older recordings always have this.
+    public func rawAudioURL(for id: UUID) -> URL? {
         existing(directory(for: id).appending(path: MeetingWriter.audioFileName, directoryHint: .notDirectory))
+    }
+
+    public func compressedAudioURL(for id: UUID) -> URL? {
+        existing(directory(for: id).appending(path: Self.compressedAudioFileName, directoryHint: .notDirectory))
     }
 
     /// The optional local movie beside the original WAV. Audio-only recordings
