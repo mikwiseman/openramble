@@ -223,7 +223,8 @@ final class RecordingPlayer: ObservableObject {
 
     private static func makePreviewImage(from url: URL) async -> NSImage? {
         let image = await Task.detached(priority: .utility) {
-            let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+            guard let asset = try? LocalRecordingAsset.make(url: url) else { return nil }
+            let generator = AVAssetImageGenerator(asset: asset)
             generator.appliesPreferredTrackTransform = true
             generator.maximumSize = CGSize(width: 1_280, height: 1_280)
             return try? generator.copyCGImage(at: .zero, actualTime: nil)
