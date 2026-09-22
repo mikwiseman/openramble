@@ -16,6 +16,15 @@ public struct MeetingAudioBlock: Sendable {
     }
 }
 
+/// Receives the same aligned PCM that has just been appended to the meeting
+/// WAV. `startFrame` is the first frame in that file stretch, so another
+/// writer (for example an AAC track in a screen recording) can share exactly
+/// the recording clock without touching either source's device timestamps.
+public protocol MeetingAudioBlockSink: Sendable {
+    func receive(microphone: [Float], system: [Float], startFrame: Int)
+    func anchor(hostNanoseconds: UInt64, frame: Int)
+}
+
 public enum MeetingSourceFailure: Error, Sendable, Equatable {
     case unavailable(String)
     case startFailed(String)

@@ -13,6 +13,66 @@ public enum MeetingChannel: String, Codable, Sendable, CaseIterable, Hashable {
     case system
 }
 
+/// The media captured by a recording. Audio is the historical OpenRamble
+/// recording format; screen adds a local video alongside the same WAV.
+public enum RecordingCaptureKind: String, Codable, Sendable, Equatable {
+    case audio
+    case screen
+}
+
+/// A point expressed as a fraction of the captured display (0...1 after
+/// clamping by the UI). Keeping the value independent of pixels means a
+/// camera bubble can be restored on a Retina display or a different scale.
+public struct NormalizedPoint: Codable, Sendable, Equatable {
+    public var x: Double
+    public var y: Double
+
+    public init(x: Double, y: Double) {
+        self.x = x
+        self.y = y
+    }
+}
+
+/// Settings captured with a screen recording. These are recording metadata,
+/// rather than a persistent account or cloud setting.
+public struct ScreenRecordingOptions: Codable, Sendable, Equatable {
+    public var displayID: UInt32?
+    public var cameraEnabled: Bool
+    public var microphoneEnabled: Bool
+    public var systemAudioEnabled: Bool
+    public var bubbleScale: Double
+    public var bubblePosition: NormalizedPoint
+
+    public init(
+        displayID: UInt32? = nil,
+        cameraEnabled: Bool = false,
+        microphoneEnabled: Bool = true,
+        systemAudioEnabled: Bool = false,
+        bubbleScale: Double = 0.20,
+        bubblePosition: NormalizedPoint = NormalizedPoint(x: 0.15, y: 0.82)
+    ) {
+        self.displayID = displayID
+        self.cameraEnabled = cameraEnabled
+        self.microphoneEnabled = microphoneEnabled
+        self.systemAudioEnabled = systemAudioEnabled
+        self.bubbleScale = bubbleScale
+        self.bubblePosition = bubblePosition
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            displayID: try c.decodeIfPresent(UInt32.self, forKey: .displayID),
+            cameraEnabled: try c.decodeIfPresent(Bool.self, forKey: .cameraEnabled) ?? false,
+            microphoneEnabled: try c.decodeIfPresent(Bool.self, forKey: .microphoneEnabled) ?? true,
+            systemAudioEnabled: try c.decodeIfPresent(Bool.self, forKey: .systemAudioEnabled) ?? false,
+            bubbleScale: try c.decodeIfPresent(Double.self, forKey: .bubbleScale) ?? 0.20,
+            bubblePosition: try c.decodeIfPresent(NormalizedPoint.self, forKey: .bubblePosition)
+                ?? NormalizedPoint(x: 0.15, y: 0.82)
+        )
+    }
+}
+
 /// A span on the recording's own timeline, in seconds.
 public struct MeetingInterval: Codable, Sendable, Equatable {
     public var start: TimeInterval
@@ -111,7 +171,7 @@ public struct SystemAudioSummary: Codable, Sendable, Equatable {
 /// added, and a store that refuses its own older files loses exactly the
 /// recordings it exists to keep.
 public struct MeetingRecordingMetadata: Codable, Sendable, Equatable, Identifiable {
-    public static let currentSchemaVersion = 1
+    public static let currentSchemaVersion = 2
 
     public var schemaVersion: Int
     public var id: UUID
@@ -135,6 +195,11 @@ public struct MeetingRecordingMetadata: Codable, Sendable, Equatable, Identifiab
     /// `nil` while the recording is still running.
     public var endReason: MeetingEndReason?
     public var transcriptionState: MeetingTranscriptionState
+    /// Absent from old files, which are audio recordings.
+    public var captureKind: RecordingCaptureKind
+    public var videoFileName: String?
+    public var screenOptions: ScreenRecordingOptions?
+    public var displayName: String?
 
     public init(
         id: UUID = UUID(),
@@ -149,7 +214,11 @@ public struct MeetingRecordingMetadata: Codable, Sendable, Equatable, Identifiab
         pauses: [MeetingInterval] = [],
         gaps: [MeetingGap] = [],
         endReason: MeetingEndReason? = nil,
-        transcriptionState: MeetingTranscriptionState = .none
+        transcriptionState: MeetingTranscriptionState = .none,
+        captureKind: RecordingCaptureKind = .audio,
+        videoFileName: String? = nil,
+        screenOptions: ScreenRecordingOptions? = nil,
+        displayName: String? = nil
     ) {
         schemaVersion = Self.currentSchemaVersion
         self.id = id
@@ -165,6 +234,10 @@ public struct MeetingRecordingMetadata: Codable, Sendable, Equatable, Identifiab
         self.gaps = gaps
         self.endReason = endReason
         self.transcriptionState = transcriptionState
+        self.captureKind = captureKind
+        self.videoFileName = videoFileName
+        self.screenOptions = screenOptions
+        self.displayName = displayName
     }
 
     public init(from decoder: any Decoder) throws {
@@ -186,6 +259,10 @@ public struct MeetingRecordingMetadata: Codable, Sendable, Equatable, Identifiab
         endReason = try c.decodeIfPresent(MeetingEndReason.self, forKey: .endReason)
         transcriptionState = try c.decodeIfPresent(MeetingTranscriptionState.self, forKey: .transcriptionState)
             ?? .none
+        captureKind = try c.decodeIfPresent(RecordingCaptureKind.self, forKey: .captureKind) ?? .audio
+        videoFileName = try c.decodeIfPresent(String.self, forKey: .videoFileName)
+        screenOptions = try c.decodeIfPresent(ScreenRecordingOptions.self, forKey: .screenOptions)
+        displayName = try c.decodeIfPresent(String.self, forKey: .displayName)
     }
 
     /// Whether the other side was ever listened to. A voice note has one

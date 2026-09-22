@@ -59,6 +59,17 @@ public struct DualChannelAligner: Sendable {
         self.jitterFrames = jitterFrames
     }
 
+    /// Start a new recording-time segment at an existing file frame. Pauses
+    /// do not create a hole in the WAV, so the next aligner must continue at
+    /// the writer's current frame rather than starting from zero again.
+    public mutating func reset(toFrame frame: Int) {
+        pending = [:]
+        emittedFrames = max(0, frame)
+        newestFrameSeen = max(0, frame)
+        gapFrames = [:]
+        droppedLateFrames = [:]
+    }
+
     public mutating func ingest(channel: MeetingChannel, startFrame: Int, samples: [Float]) {
         var block = Block(start: startFrame, samples: samples)
         if block.start < emittedFrames {

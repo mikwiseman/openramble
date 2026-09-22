@@ -62,6 +62,30 @@ final class ScriptedAudioSource: MeetingAudioSource, @unchecked Sendable {
     }
 }
 
+final class AlignedAudioSink: MeetingAudioBlockSink, @unchecked Sendable {
+    struct Block: Equatable {
+        let microphone: [Float]
+        let system: [Float]
+        let startFrame: Int
+    }
+
+    private let lock = NSLock()
+    private(set) var anchors: [(hostNanoseconds: UInt64, frame: Int)] = []
+    private(set) var blocks: [Block] = []
+
+    func receive(microphone: [Float], system: [Float], startFrame: Int) {
+        lock.lock()
+        blocks.append(Block(microphone: microphone, system: system, startFrame: startFrame))
+        lock.unlock()
+    }
+
+    func anchor(hostNanoseconds: UInt64, frame: Int) {
+        lock.lock()
+        anchors.append((hostNanoseconds, frame))
+        lock.unlock()
+    }
+}
+
 final class MeetingCaptureTests: XCTestCase {
     private var directory: URL!
 
@@ -123,6 +147,50 @@ final class MeetingCaptureTests: XCTestCase {
         XCTAssertEqual(audio.left[100], 0.5, accuracy: 0.001)
         XCTAssertEqual(audio.right[100], 0, accuracy: 0.001)
         XCTAssertTrue(FileManager.default.fileExists(atPath: directory.appending(path: "peaks.bin").path))
+    }
+
+    func testAlignedAudioSinkUsesTheWAVClockAfterAppend() async throws {
+        let microphone = ScriptedAudioSource()
+        let system = ScriptedAudioSource()
+        let sink = AlignedAudioSink()
+        let capture = MeetingCapture(
+            directory: directory,
+            microphone: microphone,
+            systemAudio: system,
+            probe: {},
+            audioSink: sink
+        )
+        try await capture.start()
+        microphone.deliver(constant(0.25, 1_600))
+        system.deliver(constant(-0.5, 1_600))
+        _ = try await capture.stop()
+
+        XCTAssertEqual(sink.anchors.count, 1)
+        XCTAssertEqual(sink.anchors.first?.frame, 0)
+        XCTAssertEqual(sink.blocks.map(\.startFrame), [0])
+        XCTAssertEqual(sink.blocks.first?.microphone.count, 1_600)
+        XCTAssertEqual(try XCTUnwrap(sink.blocks.first?.system.first), -0.5, accuracy: 0.001)
+    }
+
+    func testScreenOnlyCaptureAdvancesASilentTimelineWithoutHardware() async throws {
+        let sink = AlignedAudioSink()
+        let capture = MeetingCapture(
+            directory: directory,
+            microphone: nil,
+            systemAudio: nil,
+            probe: {},
+            audioSink: sink
+        )
+        try await capture.start()
+        try await Task.sleep(for: .milliseconds(230))
+        let summary = try await capture.stop()
+
+        XCTAssertGreaterThanOrEqual(summary.frameCount, 1_600)
+        XCTAssertFalse(summary.microphoneEverDeliveredBuffers)
+        XCTAssertFalse(sink.blocks.isEmpty)
+        XCTAssertTrue(sink.blocks.allSatisfy { block in
+            block.microphone.allSatisfy { $0 == 0 } && block.system.allSatisfy { $0 == 0 }
+        })
     }
 
     func testTwoSourcesLandOnTheirOwnChannels() async throws {
@@ -497,6 +565,20 @@ extension MeetingCaptureTests {
         await XCTAssertThrowsErrorAsync(try await capture.start()) { error in
             XCTAssertEqual(error as? MeetingCapture.Failure, .microphone(.startFailed("unavailable")))
         }
+    }
+
+    func testFailedStartClosesTheSourcesAndFinishesTheWriter() async throws {
+        let microphone = ScriptedAudioSource()
+        microphone.startError = .startFailed("unavailable")
+        let capture = MeetingCapture(directory: directory, microphone: microphone, systemAudio: nil)
+
+        await XCTAssertThrowsErrorAsync(try await capture.start())
+
+        let state = await capture.state
+        XCTAssertEqual(state, .idle, "a failed start remains retryable after closing resources")
+        XCTAssertGreaterThan(microphone.stopCount, 0, "even a partly started source is closed")
+        let file = try AVAudioFile(forReading: await capture.audioURL)
+        XCTAssertEqual(file.length, 0)
     }
 
     func testRecoveringTheMicrophoneRestartsItOnceOnTheDefaultDevice() async throws {

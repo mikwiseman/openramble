@@ -63,6 +63,10 @@ struct RecordingRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: GlassTokens.Space.inline) {
+                Image(systemName: recording.captureKind == .screen ? "rectangle.inset.filled" : "waveform")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(recording.captureKind == .screen ? Color.accentColor : Color.secondary)
+                    .accessibilityHidden(true)
                 Text(recording.title ?? startTime)
                     .font(.body)
                     .lineLimit(1)
@@ -94,7 +98,9 @@ struct RecordingRow: View {
 
     private var accessibilityValue: String {
         var parts = [
-            recording.isMeeting ? "Meeting" : "Voice note",
+            recording.captureKind == .screen
+                ? "Screen recording"
+                : (recording.isMeeting ? "Meeting" : "Voice note"),
             RecordingTime.spoken(recording.duration),
             recording.startedAt.formatted(date: .abbreviated, time: .shortened),
         ]

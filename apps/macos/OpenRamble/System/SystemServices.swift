@@ -114,6 +114,20 @@ public enum Permissions {
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture")!
         NSWorkspace.shared.open(url)
     }
+
+    public static func requestCamera() async -> Bool {
+        await AVCaptureDevice.requestAccess(for: .video)
+    }
+
+    public static func openCameraSettings() {
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera")!
+        NSWorkspace.shared.open(url)
+    }
+
+    public static func openScreenRecordingSettings() {
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!
+        NSWorkspace.shared.open(url)
+    }
 }
 
 /// Read permissions.

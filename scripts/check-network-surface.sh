@@ -14,7 +14,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # Files that are allowed by the network.
-ALLOWED='^(Packages/LocalASR/Sources/LocalASR/ModelDownloading\.swift|apps/macos/OpenRamble/System/SparkleUpdater\.swift)$'
+ALLOWED='^(Packages/LocalASR/Sources/LocalASR/ModelDownloading\.swift|apps/macos/OpenRamble/System/SparkleUpdater\.swift|apps/macos/OpenRamble/System/LocalRecordingAsset\.swift)$'
 
 # We only check the shipping code. The tests intentionally create a URLSession, read
 # local fixture files via Data(contentsOf:) and raise control-connect;

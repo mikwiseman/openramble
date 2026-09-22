@@ -29,6 +29,7 @@ public struct MeetingStore: Sendable {
     public static let incompleteDirectoryName = ".incomplete"
     public static let metadataFileName = "meta.json"
     public static let transcriptFileName = "transcript.json"
+    public static let videoFileName = "video.mp4"
 
     public typealias Trasher = @Sendable (URL) throws -> Void
 
@@ -66,6 +67,12 @@ public struct MeetingStore: Sendable {
 
     public func audioURL(for id: UUID) -> URL? {
         existing(directory(for: id).appending(path: MeetingWriter.audioFileName, directoryHint: .notDirectory))
+    }
+
+    /// The optional local movie beside the original WAV. Audio-only recordings
+    /// deliberately have no movie file.
+    public func videoURL(for id: UUID) -> URL? {
+        existing(directory(for: id).appending(path: Self.videoFileName, directoryHint: .notDirectory))
     }
 
     public func peaksURL(for id: UUID) -> URL? {
@@ -185,6 +192,17 @@ public struct MeetingStore: Sendable {
             }
             guard !RecordingFileLease.isActivelyHeld(at: audio) else { continue }
             guard let frames = try? MeetingWriter.repairHeader(at: audio) else { continue }
+            // The movie writer uses the same incomplete-directory protocol as
+            // the WAV writer. A crash can therefore leave a playable
+            // fragmented MP4 with its temporary suffix; publish it alongside
+            // the repaired audio so the recording remains visible as a
+            // screen take after relaunch.
+            let incompleteVideo = entry.appending(path: "\(Self.videoFileName).incomplete", directoryHint: .notDirectory)
+            let video = entry.appending(path: Self.videoFileName, directoryHint: .notDirectory)
+            if fileManager.fileExists(atPath: incompleteVideo.path),
+               !fileManager.fileExists(atPath: video.path) {
+                try? fileManager.moveItem(at: incompleteVideo, to: video)
+            }
             var metadata = read(MeetingRecordingMetadata.self, at: entry.appending(path: Self.metadataFileName))
                 ?? MeetingRecordingMetadata(
                     id: id,
