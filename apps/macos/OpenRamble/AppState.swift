@@ -560,6 +560,7 @@ public final class AppState: ObservableObject {
     private var screenRecordingDirectory: URL?
     private var screenRecordingHUD: ScreenRecordingHUD?
     private var liveDurationTimer: Timer?
+    private var audioCompactionInFlight = Set<UUID>()
     /// ⌘Q is waiting for the recording to end before the app may quit.
     private var terminationPending = false
 
@@ -2672,6 +2673,19 @@ public final class AppState: ObservableObject {
         screenRecordingCapture?.updateBubblePosition(position)
     }
 
+    /// The setup preview is the natural moment to ask for camera access: the
+    /// person has just turned on the camera switch and expects to see themself.
+    /// The actual recording still performs its own preflight after the sheet
+    /// closes, so a preview can never grant access by accident and then leave
+    /// the recorder with stale permission state.
+    public func requestScreenCameraAccessForPreview() {
+        guard screenCameraPermission == .notDetermined else { return }
+        Task { @MainActor [weak self] in
+            _ = await Permissions.requestCamera()
+            self?.refreshScreenRecordingPermissions()
+        }
+    }
+
     public func openScreenRecordingSettings() {
         screenRecordingSettingsOpened = true
         Permissions.openScreenRecordingSettings()
@@ -3120,9 +3134,17 @@ public final class AppState: ObservableObject {
 
     /// To the Trash — the person's own, where it can come back from.
     public func trashRecording(_ id: UUID) {
-        guard let meetingStore else { return }
+        trashRecordings([id])
+    }
+
+    /// Move a selection as one library operation. Reloading once matters: a
+    /// multi-selection must not collapse and rebuild the list after every row.
+    public func trashRecordings(_ ids: Set<UUID>) {
+        guard let meetingStore, !ids.isEmpty else { return }
         do {
-            try meetingStore.trash(id)
+            for id in ids {
+                try meetingStore.trash(id)
+            }
             reloadRecordings()
         } catch {
             notify(DictationNotice(kind: .failure, message: "Couldn't move the recording to the Trash."))
@@ -3369,21 +3391,52 @@ public final class AppState: ObservableObject {
         Task { [weak self] in
             await queue.drain()
             let paused = await queue.isPaused
-            await MainActor.run {
-                guard let self, self.transcribingRecordingID == id else { return }
-                self.closedUtterances += self.utteranceAssembler.flush()
-                self.publishLiveTranscript()
-                if var metadata = meetingStore.metadata(for: id) {
-                    metadata.transcriptionState = paused ? .partial : .complete
-                    try? meetingStore.write(metadata)
-                }
-                self.transcriptionQueue = nil
-                self.transcribingRecordingID = nil
-                self.isTranscriptionPaused = false
-                self.transcriptBacklogSeconds = 0
-                self.reloadRecordings()
-                self.rescheduleIdleUnload()
+            guard let self, self.transcribingRecordingID == id else { return }
+            self.closedUtterances += self.utteranceAssembler.flush()
+            self.publishLiveTranscript()
+            if var metadata = meetingStore.metadata(for: id) {
+                metadata.transcriptionState = paused ? .partial : .complete
+                try? meetingStore.write(metadata)
             }
+            self.transcriptionQueue = nil
+            self.transcribingRecordingID = nil
+            self.isTranscriptionPaused = false
+            self.transcriptBacklogSeconds = 0
+            self.reloadRecordings()
+            if !paused {
+                await self.compactAudioIfPossible(for: id, store: meetingStore)
+                self.reloadRecordings()
+            }
+            self.rescheduleIdleUnload()
+        }
+    }
+
+    /// Once the transcript is complete, the PCM source has done its job. A
+    /// compact AAC archive keeps the same channels for playback and export,
+    /// while avoiding hundreds of megabytes of raw 16-bit samples on long
+    /// recordings. The source is removed only after the archive closes and is
+    /// moved into place successfully.
+    private func compactAudioIfPossible(for id: UUID, store: MeetingStore) async {
+        guard !audioCompactionInFlight.contains(id),
+              let source = store.rawAudioURL(for: id),
+              source.isFileURL else { return }
+        audioCompactionInFlight.insert(id)
+        defer { audioCompactionInFlight.remove(id) }
+
+        let destination = store.directory(for: id)
+            .appending(path: "\(MeetingStore.compressedAudioFileName).incomplete", directoryHint: .notDirectory)
+        let archive = store.directory(for: id)
+            .appending(path: MeetingStore.compressedAudioFileName, directoryHint: .notDirectory)
+        do {
+            try? FileManager.default.removeItem(at: destination)
+            try await Task.detached(priority: .utility) {
+                try MeetingAudioExporter.archive(from: source, to: destination)
+            }.value
+            try? FileManager.default.removeItem(at: archive)
+            try FileManager.default.moveItem(at: destination, to: archive)
+            try FileManager.default.removeItem(at: source)
+        } catch {
+            try? FileManager.default.removeItem(at: destination)
         }
     }
 

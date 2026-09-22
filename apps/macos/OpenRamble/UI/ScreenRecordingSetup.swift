@@ -32,7 +32,7 @@ struct ScreenRecordingSetup: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 14)
         }
-        .frame(width: 520, height: 460)
+        .frame(width: 520, height: 640)
         .glassWindowBackground()
         .task {
             state.refreshScreenRecordingPermissions()
@@ -122,7 +122,7 @@ struct ScreenRecordingSetup: View {
                     title: "Camera",
                     subtitle: cameraSubtitle,
                     symbol: "video.fill",
-                    isOn: $state.screenRecordingOptions.cameraEnabled,
+                    isOn: cameraBinding,
                     isDisabled: false
                 ) {
                     state.refreshScreenRecordingPermissions()
@@ -147,18 +147,23 @@ struct ScreenRecordingSetup: View {
             .background(.quaternary.opacity(0.24), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             if state.screenRecordingOptions.cameraEnabled {
+                ScreenCameraPreview(
+                    cameraAvailable: state.screenCameraPermission == .granted,
+                    bubbleScale: state.screenRecordingOptions.bubbleScale,
+                    bubblePosition: state.screenRecordingOptions.bubblePosition
+                )
+                .frame(height: 190)
+                .padding(.top, 2)
+
                 HStack(spacing: 10) {
-                    Image(systemName: "circle.dashed")
-                        .foregroundStyle(Color.accentColor)
-                        .accessibilityHidden(true)
-                    Text("Bubble size")
-                        .font(.caption.weight(.medium))
+                    Text("Smaller")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     Slider(value: $state.screenRecordingOptions.bubbleScale, in: 0.12...0.34)
                         .accessibilityLabel("Camera bubble size")
-                    Text(sizeLabel)
-                        .font(.caption.monospacedDigit())
+                    Text("Larger")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
-                        .frame(width: 34, alignment: .trailing)
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -205,10 +210,6 @@ struct ScreenRecordingSetup: View {
         state.screenDisplays.first(where: { $0.id == state.screenRecordingOptions.displayID })?.name
             ?? state.screenDisplays.first?.name
             ?? "Choose a display"
-    }
-
-    private var sizeLabel: String {
-        "\(Int(state.screenRecordingOptions.bubbleScale * 100))%"
     }
 
     private var cameraSubtitle: String {
@@ -307,6 +308,17 @@ struct ScreenRecordingSetup: View {
         case .microphonePermission: state.openMicrophoneSettings()
         case .noDisplay, .captureFailed: break
         }
+    }
+
+    private var cameraBinding: Binding<Bool> {
+        Binding(
+            get: { state.screenRecordingOptions.cameraEnabled },
+            set: { enabled in
+                state.screenRecordingOptions.cameraEnabled = enabled
+                if enabled { state.requestScreenCameraAccessForPreview() }
+                state.refreshScreenRecordingPermissions()
+            }
+        )
     }
 }
 

@@ -32,7 +32,7 @@ final class ScreenFrameCompositor {
         var image = Self.fitted(CIImage(cvPixelBuffer: screen), to: canvas)
         if let camera {
             let bubble = ScreenBubbleGeometry.rect(in: canvas.size, scale: scale, position: position)
-            let source = CIImage(cvPixelBuffer: camera)
+            let source = Self.mirrored(CIImage(cvPixelBuffer: camera))
             if source.extent.width > 0, source.extent.height > 0 {
                 let cover = max(bubble.width / source.extent.width, bubble.height / source.extent.height)
                 let scaled = source.transformed(by: CGAffineTransform(scaleX: cover, y: cover))
@@ -74,5 +74,10 @@ final class ScreenFrameCompositor {
             translationX: canvas.midX - scaled.extent.midX,
             y: canvas.midY - scaled.extent.midY
         )).composited(over: CIImage(color: .black).cropped(to: canvas)).cropped(to: canvas)
+    }
+
+    private static func mirrored(_ image: CIImage) -> CIImage {
+        let width = image.extent.width
+        return image.transformed(by: CGAffineTransform(scaleX: -1, y: 1).translatedBy(x: -width, y: 0))
     }
 }

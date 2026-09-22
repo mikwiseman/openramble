@@ -15,6 +15,7 @@ struct LocalRecordingVideo: NSViewRepresentable {
 
     func updateNSView(_ view: PlayerLayerView, context: Context) {
         view.player = player
+        view.primeFirstFrame()
     }
 }
 
@@ -34,7 +35,25 @@ final class PlayerLayerView: NSView {
     var player: AVPlayer? {
         didSet {
             guard oldValue !== player else { return }
+            didPrimeFirstFrame = false
             playerLayer.player = player
+        }
+    }
+
+    private var didPrimeFirstFrame = false
+
+    /// AVPlayerLayer stays black until it receives a decoded sample. The
+    /// player is often loaded just before SwiftUI attaches this view, so the
+    /// controller's initial seek can happen too early. Repeat that harmless
+    /// zero-time seek after the layer has a real output attached.
+    func primeFirstFrame() {
+        guard !didPrimeFirstFrame, let player else { return }
+        didPrimeFirstFrame = true
+        DispatchQueue.main.async {
+            Task { @MainActor in
+                player.pause()
+                _ = await player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
+            }
         }
     }
 

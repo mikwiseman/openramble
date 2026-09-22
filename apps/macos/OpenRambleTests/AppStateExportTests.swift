@@ -135,10 +135,11 @@ final class AppStateExportTests: XCTestCase {
         let exported = try AVAudioFile(forReading: url)
         XCTAssertEqual(exported.processingFormat.channelCount, 1, "both voices play in both ears")
         XCTAssertEqual(Double(exported.length) / exported.processingFormat.sampleRate, 4, accuracy: 0.2)
-        let source = try XCTUnwrap(state.recordingAudioURL(recording.id))
-        let sourceBytes = try FileManager.default.attributesOfItem(atPath: source.path)[.size] as? Int ?? 0
         let exportedBytes = try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int ?? 0
-        XCTAssertLessThan(exportedBytes * 4, sourceBytes)
+        // Completed recordings are compacted to AAC before they reach the
+        // library. Keep the export bounded by its speech bitrate instead of
+        // comparing it with that already-compacted source.
+        XCTAssertLessThan(exportedBytes, 300_000)
     }
 
     /// The name is the person's title, and it never becomes a path.

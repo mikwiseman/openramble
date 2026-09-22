@@ -329,6 +329,7 @@ private final class ScreenMediaState: @unchecked Sendable {
     private var anchorFrame = 0
     private var firstHost: UInt64?
     private var fallbackFrame = 0
+    private var firstVideoFrameWritten = false
     private var finished: URL?
 
     var finishedURL: URL? { queue.sync { finished } }
@@ -344,6 +345,7 @@ private final class ScreenMediaState: @unchecked Sendable {
             // aligned PCM immediately; `setAccepting` gates only video.
             self.accepting = true
             self.fallbackFrame = 0
+            self.firstVideoFrameWritten = false
             self.firstHost = nil
             self.finished = nil
         }
@@ -409,7 +411,13 @@ private final class ScreenMediaState: @unchecked Sendable {
                                             camera: cameraEnabled ? cameraBuffer : nil,
                                             scale: scale,
                                             position: position) else { return }
-        _ = writer.appendVideo(output, at: frameTime)
+        // ScreenCaptureKit may deliver its first frame a few hundred
+        // milliseconds after the audio clock starts. Present that real first
+        // frame at t=0 instead of leaving an artificial black opening in the
+        // movie; later frames keep their aligned timestamps.
+        let presentationTime = firstVideoFrameWritten ? frameTime : .zero
+        firstVideoFrameWritten = true
+        _ = writer.appendVideo(output, at: presentationTime)
     }
 
     func detachWriter() -> ScreenMovieWriter? {

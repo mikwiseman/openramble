@@ -16,7 +16,7 @@ struct RecordingsWindow: View {
 
     @ObservedObject var state: AppState
     @StateObject private var player = RecordingPlayer()
-    @State private var selection: UUID?
+    @State private var selection = Set<UUID>()
     @State private var recordingToRename: MeetingRecordingMetadata?
     @State private var renamedTitle = ""
     @State private var showsRename = false
@@ -24,7 +24,12 @@ struct RecordingsWindow: View {
     var body: some View {
         VStack(spacing: 0) {
             NavigationSplitView {
-                RecordingsList(state: state, selection: $selection, onRename: beginRenaming)
+                RecordingsList(
+                    state: state,
+                    selection: $selection,
+                    onRename: beginRenaming,
+                    onDelete: deleteRecordings
+                )
                     .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 360)
                     .toolbarBackground(.visible, for: .windowToolbar)
             } detail: {
@@ -47,19 +52,32 @@ struct RecordingsWindow: View {
         .navigationTitle("Recordings")
         .glassWindowBackground()
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
                 Button {
-                    if let selection { state.copyTranscript(selection) }
+                    if let id = primarySelection { state.copyTranscript(id) }
                 } label: {
-                    Label("Copy Transcript", systemImage: "doc.on.doc")
+                    Image(systemName: "doc.on.doc")
+                        .frame(width: 28, height: 28)
                 }
                 .help("Copy all text transcribed so far")
+                .accessibilityLabel("Copy Transcript")
                 .accessibilityIdentifier("copy-transcript")
-                .disabled(selection.map { state.transcript(for: $0).isEmpty } ?? true)
+                .buttonStyle(.borderless)
+                .disabled(primarySelection.map { state.transcript(for: $0).isEmpty } ?? true)
+
+                if !selection.isEmpty {
+                    Button(role: .destructive, action: deleteSelectedRecordings) {
+                        Image(systemName: "trash")
+                            .frame(width: 28, height: 28)
+                    }
+                    .help(selection.count == 1 ? "Move recording to Trash" : "Move selected recordings to Trash")
+                    .accessibilityLabel(selection.count == 1 ? "Move recording to Trash" : "Move selected recordings to Trash")
+                    .buttonStyle(.borderless)
+                }
             }
         }
         .onChange(of: selection) { _, id in
-            if id != player.loadedID { player.pause() }
+            if id.count != 1 || id.first != player.loadedID { player.pause() }
         }
         .alert("Rename Recording", isPresented: $showsRename, presenting: recordingToRename) { recording in
             TextField(
@@ -86,31 +104,37 @@ struct RecordingsWindow: View {
         }
         .onAppear {
             state.reloadRecordings()
-            if selection == nil { selection = state.liveRecording?.id ?? state.recordings.first?.id }
+            if selection.isEmpty, let id = state.liveRecording?.id ?? state.recordings.first?.id {
+                selection = [id]
+            }
         }
         // A recording that just started or just finished is what the person
         // came to see.
         .onChange(of: state.liveRecording?.id) { _, id in
-            if let id { selection = id }
+            if let id { selection = [id] }
         }
         .onChange(of: state.lastFinishedRecordingID) { _, id in
-            if let id { selection = id }
+            if let id { selection = [id] }
         }
         .onChange(of: state.recordings) { _, recordings in
-            if let selection, !recordings.contains(where: { $0.id == selection }),
-               selection != state.liveRecording?.id {
+            let available = Set(recordings.map(\.id)).union(state.liveRecording.map { [$0.id] } ?? [])
+            if !selection.isSubset(of: available) {
                 player.unload()
-                self.selection = recordings.first?.id
+                self.selection = selection.intersection(available)
+            }
+            if selection.isEmpty, let id = recordings.first?.id {
+                self.selection = [id]
             }
         }
     }
 
     @ViewBuilder
     private var detail: some View {
-        if let live = state.liveRecording, selection == live.id {
+        if let live = state.liveRecording, primarySelection == live.id {
             LiveRecordingDetail(state: state)
                 .id(live.id)
-        } else if let selection, let recording = state.recordings.first(where: { $0.id == selection }) {
+        } else if let selection = primarySelection,
+                  let recording = state.recordings.first(where: { $0.id == selection }) {
             RecordingDetail(state: state, recording: recording, player: player) {
                 beginRenaming(recording)
             }
@@ -125,10 +149,27 @@ struct RecordingsWindow: View {
     }
 
     private func beginRenaming(_ recording: MeetingRecordingMetadata) {
-        selection = recording.id
+        selection = [recording.id]
         recordingToRename = recording
         renamedTitle = recording.title ?? ""
         showsRename = true
+    }
+
+    private var primarySelection: UUID? {
+        guard selection.count == 1 else { return nil }
+        return selection.first
+    }
+
+    private func deleteSelectedRecordings() {
+        deleteRecordings(selection)
+    }
+
+    private func deleteRecordings(_ ids: Set<UUID>) {
+        let deletable = ids.filter { id in
+            state.liveRecording?.id != id && state.recordings.contains { $0.id == id }
+        }
+        guard !deletable.isEmpty else { return }
+        state.trashRecordings(deletable)
     }
 }
 

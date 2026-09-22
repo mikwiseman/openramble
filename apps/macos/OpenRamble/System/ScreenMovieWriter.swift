@@ -66,6 +66,8 @@ final class ScreenMovieWriter: @unchecked Sendable {
                 AVVideoAverageBitRateKey: min(max(width * height * 4, 4_000_000), 24_000_000),
                 AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
                 AVVideoExpectedSourceFrameRateKey: 30,
+                AVVideoAllowFrameReorderingKey: false,
+                AVVideoMaxKeyFrameIntervalDurationKey: 2,
             ],
         ]
         let video = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)

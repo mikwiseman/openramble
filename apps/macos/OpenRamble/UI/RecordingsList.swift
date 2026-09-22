@@ -5,8 +5,9 @@ import SwiftUI
 /// Newest first, grouped by local day. The recording in progress stays pinned above the archive.
 struct RecordingsList: View {
     @ObservedObject var state: AppState
-    @Binding var selection: UUID?
+    @Binding var selection: Set<UUID>
     let onRename: (MeetingRecordingMetadata) -> Void
+    let onDelete: (Set<UUID>) -> Void
 
     var body: some View {
         List(selection: $selection) {
@@ -21,8 +22,12 @@ struct RecordingsList: View {
                         RecordingRow(recording: recording, showsSeconds: group.needsSeconds(for: recording))
                             .tag(recording.id)
                             .listRowSeparator(.hidden)
+                            .contentShape(Rectangle())
+                            .onTapGesture(count: 2) { onRename(recording) }
                             .contextMenu {
                                 Button("Rename…") { onRename(recording) }
+                                Divider()
+                                Button("Move to Trash", role: .destructive) { onDelete([recording.id]) }
                             }
                     }
                 } header: {
@@ -35,13 +40,14 @@ struct RecordingsList: View {
         }
         .listStyle(.sidebar)
         .onKeyPress(.return) {
-            guard let recording = state.recordings.first(where: { $0.id == selection }) else { return .ignored }
+            guard selection.count == 1,
+                  let id = selection.first,
+                  let recording = state.recordings.first(where: { $0.id == id }) else { return .ignored }
             onRename(recording)
             return .handled
         }
         .onDeleteCommand {
-            guard let selection, state.recordings.contains(where: { $0.id == selection }) else { return }
-            state.trashRecording(selection)
+            onDelete(selection)
         }
     }
 }

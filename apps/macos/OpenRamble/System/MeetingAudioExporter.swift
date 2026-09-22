@@ -30,6 +30,10 @@ enum MeetingAudioExporter {
     }
 
     static let bitRate = 32_000
+    /// The on-disk archive keeps both channels but uses AAC instead of raw
+    /// PCM. At 96 kbps it is roughly one sixth the size of the WAV while
+    /// remaining transparent for speech and meeting playback.
+    static let archiveBitRate = 96_000
     /// A quarter second at a time: small enough to notice a cancellation,
     /// large enough that the encoder is never the thing waiting.
     static let chunkFrames: AVAudioFrameCount = 4_096
@@ -94,6 +98,63 @@ enum MeetingAudioExporter {
                     samples[frame] = sum * gain
                 }
                 try output.write(from: mixed)
+                progress(Double(input.framePosition) / Double(total))
+            }
+        } catch let failure as Failure {
+            try? FileManager.default.removeItem(at: destination)
+            throw failure
+        } catch {
+            try? FileManager.default.removeItem(at: destination)
+            throw Failure.unwritable(String(describing: error))
+        }
+        progress(1)
+    }
+
+    /// Compact a completed local recording without touching the WAV until the
+    /// new file has closed successfully. The original remains available while
+    /// transcription is live; this is only an archive operation after the
+    /// transcript is safely on disk.
+    static func archive(
+        from source: URL,
+        to destination: URL,
+        isCancelled: () -> Bool = { false },
+        progress: (Double) -> Void = { _ in }
+    ) throws {
+        let input: AVAudioFile
+        do {
+            input = try AVAudioFile(forReading: source, commonFormat: .pcmFormatFloat32, interleaved: false)
+        } catch {
+            throw Failure.unreadable(String(describing: error))
+        }
+        let format = input.processingFormat
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames) else {
+            throw Failure.formatMismatch
+        }
+        let settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: format.sampleRate,
+            AVNumberOfChannelsKey: format.channelCount,
+            AVEncoderBitRateKey: archiveBitRate,
+        ]
+        let output: AVAudioFile
+        do {
+            output = try AVAudioFile(forWriting: destination, settings: settings)
+        } catch {
+            throw Failure.unwritable(String(describing: error))
+        }
+        guard output.processingFormat.sampleRate == format.sampleRate,
+              output.processingFormat.channelCount == format.channelCount else {
+            try? FileManager.default.removeItem(at: destination)
+            throw Failure.formatMismatch
+        }
+
+        let total = max(input.length, 1)
+        do {
+            while input.framePosition < input.length {
+                if isCancelled() { throw Failure.cancelled }
+                try input.read(into: buffer)
+                guard buffer.frameLength > 0 else { break }
+                try output.write(from: buffer)
                 progress(Double(input.framePosition) / Double(total))
             }
         } catch let failure as Failure {
