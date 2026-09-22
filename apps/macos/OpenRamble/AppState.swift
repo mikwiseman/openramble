@@ -2064,10 +2064,19 @@ public final class AppState: ObservableObject {
         )
         guard await transcriber.unloadIfIdle() else { return }
         isEngineReady = false
-        shouldStayUnloadedUntilUse = true
+        // Unloading crosses an actor boundary. Record may have been pressed
+        // while it was in flight, when beginTranscription still saw a warm
+        // engine. Recheck the work now so that request cannot be stranded.
+        let workBeganWhileUnloading = dictationState != .idle
+            || meetingState != .idle
+            || transcriptionQueue != nil
+        shouldStayUnloadedUntilUse = !workBeganWhileUnloading
         enginePreparation = .make(phase: .idle, elapsed: 0)
-        // Deliberately no proactive rewarm: the comeback is the next key
-        // press, riding under the voice.
+        if workBeganWhileUnloading {
+            Task { [weak self] in _ = await self?.warmUpEngine() }
+        } else {
+            prepareEngineIfIdleAndCold()
+        }
     }
 
     /// Test-only idle-unload countdown override (see AppEnvironment).
