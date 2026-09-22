@@ -838,6 +838,17 @@ actor ReadinessControlledRecognizer: DictationRecognizing {
     /// observable on its own.
     private(set) var prepares = 0
     private var observer: AsyncStream<Bool>.Continuation?
+    private var holdsNextIdleUnload = false
+    private var idleUnloadHold: CheckedContinuation<Void, Never>?
+
+    var isIdleUnloadWaiting: Bool { idleUnloadHold != nil }
+
+    func holdNextIdleUnload() { holdsNextIdleUnload = true }
+
+    func finishIdleUnload() {
+        idleUnloadHold?.resume()
+        idleUnloadHold = nil
+    }
 
     var isPrepared: Bool { prepared }
     var isBusy: Bool { false }
@@ -879,6 +890,10 @@ actor ReadinessControlledRecognizer: DictationRecognizing {
     }
 
     func unloadIfIdle() async -> Bool {
+        if holdsNextIdleUnload {
+            holdsNextIdleUnload = false
+            await withCheckedContinuation { idleUnloadHold = $0 }
+        }
         setReady(false)
         return true
     }

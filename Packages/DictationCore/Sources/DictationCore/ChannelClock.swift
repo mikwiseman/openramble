@@ -37,10 +37,15 @@ public struct ChannelClock: Sendable, Equatable {
     public static let defaultResyncThresholdFrames = 800
 
     public let resyncThresholdFrames: Int
+    private let baseFrame: Int
     private var expectedNext: Int?
 
-    public init(resyncThresholdFrames: Int = ChannelClock.defaultResyncThresholdFrames) {
+    public init(
+        resyncThresholdFrames: Int = ChannelClock.defaultResyncThresholdFrames,
+        startFrame: Int = 0
+    ) {
         self.resyncThresholdFrames = resyncThresholdFrames
+        self.baseFrame = max(0, startFrame)
     }
 
     /// Place a block. `hostFrame` is where the host clock says it starts, or
@@ -49,11 +54,11 @@ public struct ChannelClock: Sendable, Equatable {
         let placement: Placement
         switch (hostFrame, expectedNext) {
         case (nil, nil):
-            placement = .contiguous(startFrame: 0)
+            placement = .contiguous(startFrame: baseFrame)
         case (nil, let expected?):
             placement = .contiguous(startFrame: expected)
         case (let host?, nil):
-            placement = .contiguous(startFrame: max(0, host))
+            placement = .contiguous(startFrame: max(baseFrame, host))
         case (let host?, let expected?):
             let skew = host - expected
             if abs(skew) > resyncThresholdFrames {

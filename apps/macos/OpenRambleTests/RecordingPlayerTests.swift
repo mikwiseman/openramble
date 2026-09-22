@@ -197,4 +197,19 @@ final class RecordingPlayerTests: XCTestCase {
         XCTAssertFalse(player.failedToLoad)
         XCTAssertNil(player.loadedID)
     }
+
+    func testMissingVideoKeepsTheLocalAudioFallback() throws {
+        player.load(
+            id: UUID(),
+            url: try recording(),
+            videoURL: directory.appending(path: "missing.mp4")
+        )
+        XCTAssertTrue(player.videoFailedToLoad)
+        XCTAssertFalse(player.failedToLoad)
+        XCTAssertEqual(player.duration, 3, accuracy: 0.001)
+
+        player.toggle()
+        assertCentered(try render(seconds: 0.25))
+        player.pause()
+    }
 }

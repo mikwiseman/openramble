@@ -1,3 +1,4 @@
+import DictationCore
 import SwiftUI
 
 /// A single floating transport. It records the microphone and, where this Mac can, what
@@ -17,6 +18,10 @@ struct RecordBar: View {
 
     private var isBusy: Bool {
         state.meetingState == .starting || state.meetingState == .stopping
+    }
+
+    private var isScreenMode: Bool {
+        state.recordingCaptureKind == .screen
     }
 
     var body: some View {
@@ -45,9 +50,21 @@ struct RecordBar: View {
                     .accessibilityLabel(state.meetingState == .paused ? "Paused" : "Recording")
                     .accessibilityValue(RecordingTime.spoken(state.liveDuration))
                 } else {
-                    Text(line)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: GlassTokens.Space.tight) {
+                        if !isRecording {
+                            Picker("Recording type", selection: $state.recordingCaptureKind) {
+                                Label("Audio", systemImage: "waveform").tag(RecordingCaptureKind.audio)
+                                Label("Screen", systemImage: "rectangle.inset.filled").tag(RecordingCaptureKind.screen)
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                            .frame(width: 142)
+                            .accessibilityLabel("Recording type")
+                        }
+                        Text(line)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             Spacer(minLength: GlassTokens.Space.inline)
@@ -74,9 +91,18 @@ struct RecordBar: View {
             }
             HStack(spacing: 0) {
                 Button {
-                    if isRecording { state.stopRecording() } else { state.startRecording() }
+                    if isRecording {
+                        state.stopRecording()
+                    } else if isScreenMode {
+                        state.prepareScreenRecording()
+                    } else {
+                        state.startRecording()
+                    }
                 } label: {
-                    Label(isRecording ? "Stop" : "Record", systemImage: isRecording ? "stop.fill" : "record.circle")
+                    Label(
+                        isRecording ? "Stop" : "Record",
+                        systemImage: isRecording ? "stop.fill" : "record.circle"
+                    )
                         .font(.callout.weight(.semibold))
                         .padding(.horizontal, GlassTokens.Space.stack)
                         .frame(height: 40)
@@ -114,6 +140,7 @@ struct RecordBar: View {
 
     /// The one alternative, for this recording only.
     private var alternative: (title: String, action: () -> Void)? {
+        guard !isScreenMode else { return nil }
         switch state.systemAudioMode {
         case .enabled:
             return ("Record Microphone Only", { state.startRecording(includingSystemAudio: false) })
@@ -130,6 +157,7 @@ struct RecordBar: View {
     private var line: String {
         switch state.meetingState {
         case .idle:
+            if isScreenMode { return "Records this display" }
             return state.systemAudioMode == .enabled ? "Records you and the other side" : "Records your microphone only"
         case .starting: return "Starting…"
         case .recording: return "Recording — \(RecordingTime.clock(state.liveDuration))"

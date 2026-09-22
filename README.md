@@ -45,6 +45,14 @@ More ▸ Recording Details shows a recording's size. Deleting a recording moves 
 included in your Mac's own backups, like any document you make; the folders
 that hold transient dictation audio are not.
 
+Screen recordings are a local extension of the same document. Choose a display
+in the Record panel, optionally include the microphone, Mac audio and a camera
+bubble, then move or resize the bubble while recording. OpenRamble writes an
+H.264/AAC `video.mp4` beside the WAV and transcript, and the library plays and
+exports that file with **Save Video…**. There is no upload, share server,
+YouTube, or cloud media store in this workflow; sharing happens only after you
+choose an export destination yourself.
+
 Use Rename beside a recording's title, or right-click it in the list, to give
 it a name. Return in the list also opens Rename; Enter saves and Escape cancels.
 An empty name restores the date. The menu bar can start, pause, resume and stop a recording.
@@ -103,6 +111,11 @@ denied one. The microphone is judged the same way: if it starts and delivers
 silence, the recording says your voice was not captured, rather than looking
 finished and healthy.
 
+Screen recording also uses macOS Screen Recording permission for the selected
+display. Camera permission is requested only when you turn on the camera
+bubble. Refusing either permission leaves the rest of OpenRamble available and
+does not create a network fallback.
+
 The global event monitor compares key events with the selected hotkey and
 Escape. It does not log, store, or transmit unrelated keystrokes. Input
 Monitoring permission is not required.
@@ -122,7 +135,7 @@ Application data is stored under
 | Current recording | Queued for local deletion after success or explicit cancellation |
 | Recovery audio after a technical failure | Up to 10 WAV files, seven days, and 1 GiB |
 | Dictation history: transcripts and their audio | The last 5 by default (5–50 in Settings ▸ History); older entries and their recordings are deleted when they fall off |
-| Recordings: two-channel audio and their metadata | Until you delete them. Not bounded by count or age. About 230 MB per hour; each recording's size is under More ▸ Recording Details |
+| Recordings: two-channel audio, optional screen video, transcript and metadata | Until you delete them. Not bounded by count or age. Audio is about 230 MB per hour; screen video size depends on display and activity. Each recording's size is under More ▸ Recording Details |
 | Settings and replacement dictionary | Stored in macOS defaults |
 | Text that could not be inserted | Memory only, until the next dictation or app exit |
 

@@ -17,10 +17,12 @@ The following are considered vulnerabilities:
   requested dictation flow.
 
 Current recordings live under
-`~/Library/Application Support/OpenRamble/Takes` and are deleted after
-recognition. Recovery audio after a technical failure may remain under
-`RecoveredAudio` within the limits documented in the README. Recognized text is
-never written to disk. These directories are excluded from backups.
+`~/Library/Application Support/OpenRamble/Takes` and remain there until the
+person moves them to the Trash. A screen recording stores its local
+`video.mp4` beside the WAV, transcript and metadata. Recovery audio after a
+technical failure may remain under `RecoveredAudio` within the limits
+documented in the README. Recognized text is never written to logs or sent to
+a service. These directories follow the Mac's normal backup rules.
 
 The app is intentionally not sandboxed because inserting text into other apps
 requires Accessibility access. The presence of the global hotkey monitor and

@@ -117,6 +117,27 @@ final class MeetingStoreTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: store.incompleteDirectory(for: recording.id).path))
     }
 
+    func testACrashedScreenRecordingPublishesItsIncompleteMovieBesideTheRepairedAudio() throws {
+        var recording = metadata()
+        recording.captureKind = .screen
+        recording.videoFileName = MeetingStore.videoFileName
+        recording.screenOptions = ScreenRecordingOptions(cameraEnabled: true)
+        recording.duration = 0
+        recording.endReason = nil
+        try store.write(recording, incomplete: true)
+        try writeAudio(for: recording.id, frames: 16_000, sealed: false)
+        let incompleteMovie = store.incompleteDirectory(for: recording.id)
+            .appending(path: "\(MeetingStore.videoFileName).incomplete")
+        try Data([0, 1, 2, 3]).write(to: incompleteMovie)
+
+        let recovered = store.recoverIncomplete()
+
+        XCTAssertEqual(recovered.map(\.id), [recording.id])
+        XCTAssertEqual(recovered.first?.captureKind, .screen)
+        XCTAssertEqual(store.videoURL(for: recording.id)?.lastPathComponent, MeetingStore.videoFileName)
+        XCTAssertEqual(try Data(contentsOf: XCTUnwrap(store.videoURL(for: recording.id))), Data([0, 1, 2, 3]))
+    }
+
     func testACrashedRecordingWithoutMetadataStillComesBack() throws {
         let id = UUID()
         try writeAudio(for: id, frames: 16_000, sealed: false)

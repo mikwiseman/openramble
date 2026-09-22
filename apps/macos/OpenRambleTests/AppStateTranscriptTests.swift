@@ -22,13 +22,13 @@ final class AppStateTranscriptTests: XCTestCase {
     }
 
     private func waitUntil(
-        _ condition: @escaping @MainActor () -> Bool,
+        _ condition: @escaping @MainActor () async -> Bool,
         timeout: Duration = .seconds(3),
         file: StaticString = #filePath,
         line: UInt = #line
     ) async throws {
         let deadline = ContinuousClock.now + timeout
-        while !condition() {
+        while !(await condition()) {
             if ContinuousClock.now > deadline {
                 XCTFail("timed out waiting", file: file, line: line)
                 return
@@ -109,13 +109,41 @@ final class AppStateTranscriptTests: XCTestCase {
         harness.recognizer = ReadinessControlledRecognizer()
         harness.idleUnloadDelayOverride = .milliseconds(40)
         let state = harness.makeState()
+        state.modelUnloadTimeout = .never
         try await waitUntil { state.isEngineReady }
 
+        state.modelUnloadTimeout = .afterFiveMinutes
         state.startRecording()
         try await waitUntil { state.meetingState == .recording }
         try await Task.sleep(for: .milliseconds(200))
         XCTAssertTrue(state.isEngineReady, "the countdown does not run under a recording")
 
+        state.stopRecording()
+        try await waitUntil { state.meetingState == .idle && state.transcribingRecordingID == nil }
+        try await waitUntil { !state.isEngineReady }
+    }
+
+    func testRecordingStartedDuringIdleUnloadWarmsTheEngineAgain() async throws {
+        let harness = try makeHarness()
+        defer { harness.tearDown() }
+        let recognizer = ReadinessControlledRecognizer()
+        await recognizer.holdNextIdleUnload()
+        harness.recognizer = recognizer
+        harness.idleUnloadDelayOverride = .milliseconds(40)
+        let state = harness.makeState()
+        state.modelUnloadTimeout = .never
+        try await waitUntil { state.isEngineReady }
+
+        state.modelUnloadTimeout = .afterFiveMinutes
+        try await waitUntil { await recognizer.isIdleUnloadWaiting }
+        state.startRecording()
+        try await waitUntil { state.meetingState == .recording }
+        await recognizer.finishIdleUnload()
+
+        try await waitUntil {
+            let warmUps = await recognizer.warmUps
+            return state.isEngineReady && warmUps == 2
+        }
         state.stopRecording()
         try await waitUntil { state.meetingState == .idle && state.transcribingRecordingID == nil }
         try await waitUntil { !state.isEngineReady }

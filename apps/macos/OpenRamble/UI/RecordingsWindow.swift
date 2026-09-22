@@ -74,6 +74,12 @@ struct RecordingsWindow: View {
         )) {
             SystemAudioIntroSheet(state: state)
         }
+        .sheet(isPresented: Binding(
+            get: { state.isScreenRecordingSetupPresented },
+            set: { if !$0 { state.dismissScreenRecordingSetup() } }
+        )) {
+            ScreenRecordingSetup(state: state)
+        }
         .onAppear {
             state.reloadRecordings()
             if selection == nil { selection = state.liveRecording?.id ?? state.recordings.first?.id }

@@ -110,7 +110,7 @@ public actor MeetingCapture {
     public let directory: URL
     public private(set) var state: State = .idle
 
-    private let microphone: any MeetingAudioSource
+    private let microphone: (any MeetingAudioSource)?
     private let systemAudio: (any MeetingAudioSource)?
     private let pipeline: MeetingPipeline
     private let onFailure: @Sendable (Failure) -> Void
@@ -121,6 +121,7 @@ public actor MeetingCapture {
     private var pausedAt: Date?
     private var endReason: MeetingEndReason?
     private var microphoneRecoveryAttempted = false
+    private var silentClockTask: Task<Void, Never>?
 
     /// - Parameters:
     ///   - directory: where `audio.wav` and `peaks.bin` go; created if needed.
@@ -134,21 +135,23 @@ public actor MeetingCapture {
     ///     channel, including the tails at pause and stop.
     public init(
         directory: URL,
-        microphone: any MeetingAudioSource,
+        microphone: (any MeetingAudioSource)?,
         systemAudio: (any MeetingAudioSource)?,
         segmentParameters: MeetingSegmentPolicy.Parameters = .meeting,
         onLevels: @escaping @Sendable (Levels) -> Void = { _ in },
         onSegment: @escaping @Sendable (MeetingSegmentRef) -> Void = { _ in },
         onFailure: @escaping @Sendable (Failure) -> Void = { _ in },
         freeBytes: @escaping @Sendable (URL) -> Int64? = MeetingCapture.freeBytes(at:),
-        probe: @escaping @Sendable () -> Void = SystemAudioProbe.play
+        probe: @escaping @Sendable () -> Void = SystemAudioProbe.play,
+        audioSink: (any MeetingAudioBlockSink)? = nil
     ) {
         self.directory = directory
         self.microphone = microphone
         self.systemAudio = systemAudio
         self.onFailure = onFailure
         self.probe = probe
-        var active: Set<MeetingChannel> = [.microphone]
+        var active: Set<MeetingChannel> = []
+        if microphone != nil { active.insert(.microphone) }
         if systemAudio != nil { active.insert(.system) }
         pipeline = MeetingPipeline(
             writer: MeetingWriter(directory: directory),
@@ -156,7 +159,8 @@ public actor MeetingCapture {
             segmentParameters: segmentParameters,
             onLevels: onLevels,
             onSegment: onSegment,
-            freeBytes: { freeBytes(directory) }
+            freeBytes: { freeBytes(directory) },
+            audioSink: audioSink
         )
     }
 
@@ -184,10 +188,20 @@ public actor MeetingCapture {
         do {
             try pipeline.open()
         } catch {
+            pipeline.abandon()
             throw Failure.writeFailed(String(describing: error))
         }
         pipeline.anchor()
-        try startSources()
+        do {
+            try startSources()
+        } catch {
+            // The writer is already open when a source reports a permission
+            // or device error. Close every resource before propagating it so
+            // a retry never inherits an open descriptor or partial state.
+            stopSources()
+            _ = pipeline.finish()
+            throw error
+        }
         if systemAudio != nil { probe() }
         startedAt = Date()
         state = .recording
@@ -243,7 +257,7 @@ public actor MeetingCapture {
         let summary = Summary(
             frameCount: result.frameCount,
             duration: Double(result.frameCount) / Double(MeetingWriter.sampleRate),
-            microphoneDeviceName: microphone.deviceName,
+            microphoneDeviceName: microphone?.deviceName,
             microphoneEverDeliveredBuffers: microphoneHealth.everDeliveredBuffers,
             microphoneEverDeliveredAudio: microphoneHealth.everDeliveredAudio,
             systemAudio: SystemAudioSummary(
@@ -267,24 +281,28 @@ public actor MeetingCapture {
             guard let self else { return }
             Task { await self.pipelineFailed(failure) }
         }
-        do {
-            try microphone.start(
-                onBlock: { pipeline.ingest(.microphone, $0) },
-                onFailure: { [weak self] failure in
-                    guard let self else { return }
-                    Task { await self.sourceFailed(.microphone, failure) }
-                }
-            )
-        } catch let failure as MeetingSourceFailure {
-            // A meeting still has the other side. Aborting would throw away
-            // everyone else because our microphone would not start — which is
-            // exactly the case where keeping the recording matters. A voice
-            // note has no other side, so the microphone is the recording.
-            if systemAudio == nil { throw Failure.microphone(failure) }
-            pipeline.markDown(.microphone, reason: .microphoneUnavailable)
-            onFailure(.microphone(failure))
+        if let microphone {
+            do {
+                try microphone.start(
+                    onBlock: { pipeline.ingest(.microphone, $0) },
+                    onFailure: { [weak self] failure in
+                        guard let self else { return }
+                        Task { await self.sourceFailed(.microphone, failure) }
+                    }
+                )
+            } catch let failure as MeetingSourceFailure {
+                // A meeting still has the other side. Aborting would throw
+                // away everyone else because our microphone would not start.
+                // A voice note has no other side, so it remains a hard error.
+                if systemAudio == nil { throw Failure.microphone(failure) }
+                pipeline.markDown(.microphone, reason: .microphoneUnavailable)
+                onFailure(.microphone(failure))
+            }
         }
-        guard let systemAudio else { return }
+        guard let systemAudio else {
+            if microphone == nil { startSilentClock() }
+            return
+        }
         do {
             try systemAudio.start(
                 onBlock: { pipeline.ingest(.system, $0) },
@@ -304,8 +322,32 @@ public actor MeetingCapture {
     }
 
     private func stopSources() {
-        microphone.stop()
+        silentClockTask?.cancel()
+        silentClockTask = nil
+        microphone?.stop()
         systemAudio?.stop()
+    }
+
+    /// A screen recording can intentionally have no microphone and no system
+    /// audio. Keep a quiet 16 kHz timeline in that case so the video writer
+    /// still receives aligned PCM and produces a valid audio track.
+    private func startSilentClock() {
+        guard silentClockTask == nil else { return }
+        silentClockTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(100))
+                guard !Task.isCancelled else { return }
+                await self?.emitSilentClockBlock()
+            }
+        }
+    }
+
+    private func emitSilentClockBlock() {
+        guard state == .recording else { return }
+        pipeline.ingest(
+            .microphone,
+            MeetingAudioBlock(hostNanoseconds: nil, samples: [Float](repeating: 0, count: MeetingWriter.sampleRate / 10))
+        )
     }
 
     /// The microphone has been delivering silence while the rest of the
@@ -315,6 +357,7 @@ public actor MeetingCapture {
     public func recoverMicrophone() {
         guard state == .recording else { return }
         guard !microphoneRecoveryAttempted else { return }
+        guard let microphone else { return }
         microphoneRecoveryAttempted = true
         microphone.stop()
         pipeline.markDown(.microphone, reason: .microphoneUnavailable)
@@ -347,6 +390,7 @@ public actor MeetingCapture {
             // The device moved; start again on whatever is default now. The
             // aligner fills the seconds in between with silence and the gap
             // is recorded, so the recording continues rather than ending.
+            guard let microphone else { return }
             microphone.stop()
             do {
                 try microphone.start(
@@ -431,6 +475,7 @@ final class MeetingPipeline: @unchecked Sendable {
     private let onSegment: @Sendable (MeetingSegmentRef) -> Void
     private let segmentParameters: MeetingSegmentPolicy.Parameters
     private let freeBytesQuery: @Sendable () -> Int64?
+    private let audioSink: (any MeetingAudioBlockSink)?
     var onDiskOrWriteFailure: (@Sendable (Failure) -> Void)?
     /// One per active channel, fed with what was written — so a segment is a
     /// position in the file, never a position in memory.
@@ -462,7 +507,8 @@ final class MeetingPipeline: @unchecked Sendable {
         segmentParameters: MeetingSegmentPolicy.Parameters,
         onLevels: @escaping @Sendable (MeetingCapture.Levels) -> Void,
         onSegment: @escaping @Sendable (MeetingSegmentRef) -> Void,
-        freeBytes: @escaping @Sendable () -> Int64?
+        freeBytes: @escaping @Sendable () -> Int64?,
+        audioSink: (any MeetingAudioBlockSink)?
     ) {
         self.writer = writer
         self.activeChannels = activeChannels
@@ -470,6 +516,7 @@ final class MeetingPipeline: @unchecked Sendable {
         self.onLevels = onLevels
         self.onSegment = onSegment
         freeBytesQuery = freeBytes
+        self.audioSink = audioSink
         aligner = DualChannelAligner(activeChannels: activeChannels)
         for channel in activeChannels {
             policies[channel] = MeetingSegmentPolicy(channel: channel, parameters: segmentParameters)
@@ -497,6 +544,12 @@ final class MeetingPipeline: @unchecked Sendable {
         try writer.open()
     }
 
+    /// Close descriptors after an open failure without attempting to publish
+    /// an incomplete recording.
+    func abandon() {
+        queue.sync { writer.abandon() }
+    }
+
     /// Set "now" to be the frame after the last one written. Called at start
     /// and at every resume, so the timeline is recording time.
     func anchor() {
@@ -504,13 +557,14 @@ final class MeetingPipeline: @unchecked Sendable {
         queue.sync {
             anchorNanoseconds = now
             anchorFrame = writer.frameCount
-            for channel in MeetingChannel.allCases { clocks[channel] = ChannelClock() }
-            aligner = DualChannelAligner(activeChannels: activeChannels)
+            for channel in MeetingChannel.allCases {
+                clocks[channel] = ChannelClock(startFrame: writer.frameCount)
+            }
+            aligner.reset(toFrame: writer.frameCount)
             crossTalk.reset()
             heldMicrophone = []
             heldMicrophoneFrames = 0
-            // The aligner starts its cursor at zero; the file does not.
-            // Anything it emits is offset by where the file already is.
+            audioSink?.anchor(hostNanoseconds: now, frame: writer.frameCount)
         }
     }
 
@@ -527,10 +581,15 @@ final class MeetingPipeline: @unchecked Sendable {
         queue.async { [self] in
             guard !failed else { return }
             let peak = block.samples.reduce(0) { max($0, abs($1)) }
-            noteHealth(channel, peak: peak)
+            // The silent clock used for a video-only take is a timeline
+            // source, not a microphone buffer. Do not report synthetic
+            // silence as hardware health evidence.
+            if activeChannels.contains(channel) {
+                noteHealth(channel, peak: peak)
+            }
             let hostFrame: Int? = block.hostNanoseconds.map { ns in
                 let elapsed = Double(Int64(bitPattern: ns &- anchorNanoseconds)) / 1_000_000_000
-                return Int((elapsed * Double(MeetingWriter.sampleRate)).rounded())
+                return anchorFrame + Int((elapsed * Double(MeetingWriter.sampleRate)).rounded())
             }
             // The defaulting subscript mutates in place, so this is one
             // placement, on the stored clock.
@@ -580,6 +639,7 @@ final class MeetingPipeline: @unchecked Sendable {
     // MARK: - On the queue
 
     private func write(_ emission: DualChannelAligner.Emission) {
+        let startFrame = writer.frameCount
         do {
             try writer.append(microphone: emission.microphone, system: emission.system)
         } catch {
@@ -587,6 +647,11 @@ final class MeetingPipeline: @unchecked Sendable {
             onDiskOrWriteFailure?(.write(String(describing: error)))
             return
         }
+        audioSink?.receive(
+            microphone: emission.microphone,
+            system: emission.system,
+            startFrame: startFrame
+        )
         // Only after the append: a segment must never name frames that are
         // not on disk yet.
         //

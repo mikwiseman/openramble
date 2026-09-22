@@ -131,13 +131,23 @@ struct MenuContent: View {
 
         case .startRecording:
             Button {
-                state.startRecording()
+                if state.recordingCaptureKind == .screen {
+                    openWindow(id: RecordingsWindow.windowID)
+                    WindowFronting.raiseOpenedWindow(id: RecordingsWindow.windowID)
+                    state.prepareScreenRecording()
+                } else {
+                    state.startRecording()
+                }
             } label: {
                 Text(titled("Start Recording", shortcut: state.recordingShortcut))
             }
-            .accessibilityHint(state.systemAudioMode == .enabled
-                ? "Records you and the other side until you stop"
-                : "Records your microphone until you stop")
+            .accessibilityHint(
+                state.recordingCaptureKind == .screen
+                    ? "Opens screen recording choices"
+                    : (state.systemAudioMode == .enabled
+                        ? "Records you and the other side until you stop"
+                        : "Records your microphone until you stop")
+            )
 
         case .pauseRecording:
             Button("Pause Recording") { state.pauseRecording() }

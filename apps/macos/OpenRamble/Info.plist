@@ -26,10 +26,14 @@
 	<true/>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>OpenRamble records the audio your Mac plays so the other people in a meeting appear in the transcript. The recording stays on this Mac and is never sent anywhere.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>OpenRamble uses the camera only when you turn on the camera bubble for a screen recording. The video stays on this Mac.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Mik Wiseman. MIT.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>OpenRamble needs the microphone to record your speech. The recording is processed on this Mac and is never sent anywhere.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>OpenRamble records the display you choose when you start a screen recording. The video stays on this Mac.</string>
 	<key>OpenRambleDiagnostics</key>
 	<string>$(OPENRAMBLE_DIAGNOSTICS_CONDITION)</string>
 	<key>SUAllowsAutomaticUpdates</key>

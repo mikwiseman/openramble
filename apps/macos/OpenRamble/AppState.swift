@@ -138,6 +138,28 @@ public struct AppEnvironment {
         @escaping @Sendable (MeetingCapture.Failure) -> Void
     ) -> any MeetingCapturing
     public var makeMeetingCapture: MeetingCaptureFactory
+    /// Screen recordings use the same meeting capture pipeline, with its
+    /// aligned PCM also fed into the movie's AAC track. Kept as a separate
+    /// factory so existing audio-only test seams and callers remain stable.
+    public typealias ScreenMeetingCaptureFactory = (
+        URL,
+        AudioDeviceID?,
+        Bool,
+        Bool,
+        (any MeetingAudioBlockSink)?,
+        @escaping @Sendable (MeetingCapture.Levels) -> Void,
+        @escaping @Sendable (MeetingSegmentRef) -> Void,
+        @escaping @Sendable (MeetingCapture.Failure) -> Void
+    ) -> any MeetingCapturing
+    public var makeScreenMeetingCapture: ScreenMeetingCaptureFactory
+    /// Builds the ScreenCaptureKit side of a screen recording.
+    public typealias ScreenRecordingFactory = (
+        URL,
+        ScreenRecordingOptions,
+        @escaping @Sendable (String) -> Void,
+        @escaping @MainActor (ScreenRecordingOptions) -> Void
+    ) -> any ScreenRecordingCapturing
+    public var makeScreenRecordingCapture: ScreenRecordingFactory
     /// Spoken state changes the person cannot see — a meter that stopped.
     public var announcer: any AccessibilityAnnouncing
     public var openSystemAudioSettings: @MainActor () -> Void
@@ -206,6 +228,25 @@ public struct AppEnvironment {
                 onFailure: onFailure
             )
         },
+        makeScreenMeetingCapture: @escaping ScreenMeetingCaptureFactory = { directory, device, includeMicrophone, includeSystemAudio, audioSink, onLevels, onSegment, onFailure in
+            MeetingCapture(
+                directory: directory,
+                microphone: includeMicrophone ? MicrophoneAudioSource(preferredInputDeviceID: device) : nil,
+                systemAudio: includeSystemAudio ? AppEnvironment.makeSystemAudioSource() : nil,
+                onLevels: onLevels,
+                onSegment: onSegment,
+                onFailure: onFailure,
+                audioSink: audioSink
+            )
+        },
+        makeScreenRecordingCapture: @escaping ScreenRecordingFactory = { directory, options, onFailure, onBubbleChange in
+            ScreenRecordingCapture(
+                directory: directory,
+                options: options,
+                onFailure: onFailure,
+                onBubbleChange: onBubbleChange
+            )
+        },
         announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
         openSystemAudioSettings: @escaping @MainActor () -> Void = { Permissions.openSystemAudioSettings() },
         playSystemAudioProbe: @escaping @Sendable () -> Void = SystemAudioProbe.play,
@@ -244,6 +285,8 @@ public struct AppEnvironment {
         self.clipboardRestoreReporter = clipboardRestoreReporter
         self.cleanupLegacyAgentStaging = cleanupLegacyAgentStaging
         self.makeMeetingCapture = makeMeetingCapture
+        self.makeScreenMeetingCapture = makeScreenMeetingCapture
+        self.makeScreenRecordingCapture = makeScreenRecordingCapture
         self.trashItem = trashItem
         self.announcer = announcer
         self.openSystemAudioSettings = openSystemAudioSettings
@@ -466,8 +509,21 @@ public final class AppState: ObservableObject {
     @Published public private(set) var liveLevels = MeetingCapture.Levels.silent
     /// The recording that most recently ended — the window selects it.
     @Published public private(set) var lastFinishedRecordingID: UUID?
+    /// The compact selector beside the Record button. Audio remains the
+    /// default so the existing meeting shortcut never unexpectedly captures a
+    /// display.
+    @Published public var recordingCaptureKind: RecordingCaptureKind = .audio
+    @Published public var screenRecordingOptions = ScreenRecordingOptions()
+    @Published public private(set) var isScreenRecordingSetupPresented = false
+    @Published public private(set) var screenDisplays: [ScreenDisplayOption] = []
+    @Published public private(set) var isLoadingScreenDisplays = false
+    @Published public private(set) var screenSetupError: String?
+    @Published public private(set) var isCameraChanging = false
     private var meetingStore: MeetingStore?
     private var meetingCapture: (any MeetingCapturing)?
+    private var screenRecordingCapture: (any ScreenRecordingCapturing)?
+    private var screenRecordingDirectory: URL?
+    private var screenRecordingHUD: ScreenRecordingHUD?
     private var liveDurationTimer: Timer?
     /// ⌘Q is waiting for the recording to end before the app may quit.
     private var terminationPending = false
@@ -813,6 +869,8 @@ public final class AppState: ObservableObject {
     private let replacementsStore: ReplacementsStore
     private let cleanupLegacyAgentStaging: @Sendable () throws -> Void
     private let makeMeetingCapture: AppEnvironment.MeetingCaptureFactory
+    private let makeScreenMeetingCapture: AppEnvironment.ScreenMeetingCaptureFactory
+    private let makeScreenRecordingCapture: AppEnvironment.ScreenRecordingFactory
     private let trashItem: @Sendable (URL) throws -> Void
     private let announcer: any AccessibilityAnnouncing
     private let openSystemAudioSettingsPane: @MainActor () -> Void
@@ -965,6 +1023,8 @@ public final class AppState: ObservableObject {
         )
         cleanupLegacyAgentStaging = environment.cleanupLegacyAgentStaging
         makeMeetingCapture = environment.makeMeetingCapture
+        makeScreenMeetingCapture = environment.makeScreenMeetingCapture
+        makeScreenRecordingCapture = environment.makeScreenRecordingCapture
         trashItem = environment.trashItem
         announcer = environment.announcer
         openSystemAudioSettingsPane = environment.openSystemAudioSettings
@@ -2004,10 +2064,19 @@ public final class AppState: ObservableObject {
         )
         guard await transcriber.unloadIfIdle() else { return }
         isEngineReady = false
-        shouldStayUnloadedUntilUse = true
+        // Unloading crosses an actor boundary. Record may have been pressed
+        // while it was in flight, when beginTranscription still saw a warm
+        // engine. Recheck the work now so that request cannot be stranded.
+        let workBeganWhileUnloading = dictationState != .idle
+            || meetingState != .idle
+            || transcriptionQueue != nil
+        shouldStayUnloadedUntilUse = !workBeganWhileUnloading
         enginePreparation = .make(phase: .idle, elapsed: 0)
-        // Deliberately no proactive rewarm: the comeback is the next key
-        // press, riding under the voice.
+        if workBeganWhileUnloading {
+            Task { [weak self] in _ = await self?.warmUpEngine() }
+        } else {
+            prepareEngineIfIdleAndCold()
+        }
     }
 
     /// Test-only idle-unload countdown override (see AppEnvironment).
@@ -2304,6 +2373,205 @@ public final class AppState: ObservableObject {
         }
     }
 
+    // MARK: - Screen recording
+
+    /// Open the per-take screen recorder panel and refresh the display list.
+    /// The panel is intentionally not a Settings page: screen and camera are
+    /// privacy choices that should be visible at the moment Record is pressed.
+    public func prepareScreenRecording() {
+        guard meetingState == .idle else { return }
+        screenSetupError = nil
+        isScreenRecordingSetupPresented = true
+        if screenRecordingOptions.systemAudioEnabled == false {
+            // The screen flow follows the current meeting-audio choice on its
+            // first presentation; the person can still turn Mac audio off in
+            // the panel for this take.
+            screenRecordingOptions.systemAudioEnabled = systemAudioMode == .enabled
+        }
+        Task { await refreshScreenDisplays() }
+    }
+
+    public func dismissScreenRecordingSetup() {
+        guard meetingState == .idle else { return }
+        isScreenRecordingSetupPresented = false
+    }
+
+    public func refreshScreenDisplays() async {
+        guard !isLoadingScreenDisplays else { return }
+        isLoadingScreenDisplays = true
+        screenSetupError = nil
+        do {
+            let displays = try await ScreenRecordingCapture.displays()
+            screenDisplays = displays
+            if screenRecordingOptions.displayID == nil || !displays.contains(where: { $0.id == screenRecordingOptions.displayID }) {
+                screenRecordingOptions.displayID = displays.first?.id
+            }
+        } catch {
+            screenDisplays = []
+            screenSetupError = error.localizedDescription
+        }
+        isLoadingScreenDisplays = false
+    }
+
+    /// Start a complete screen take. ScreenCaptureKit is prepared first so
+    /// its AAC sink exists before the existing meeting capture is started;
+    /// then both writers share the same aligned audio timeline.
+    public func startScreenRecording() {
+        guard meetingState == .idle, let meetingStore else { return }
+        guard !screenDisplays.isEmpty, let displayID = screenRecordingOptions.displayID else {
+            screenSetupError = "Choose a display before recording."
+            return
+        }
+        if screenRecordingOptions.microphoneEnabled && !microphoneGranted {
+            isScreenRecordingSetupPresented = false
+            notify(DictationNotice(kind: .warning, message: "Allow the microphone to record your voice."))
+            requestMicrophone()
+            return
+        }
+
+        cancelIdleUnload()
+        var options = screenRecordingOptions
+        options.displayID = displayID
+        let metadata = MeetingRecordingMetadata(
+            startedAt: Date(),
+            systemAudio: SystemAudioSummary(wasRequested: options.systemAudioEnabled),
+            transcriptionState: .live,
+            captureKind: .screen,
+            videoFileName: MeetingStore.videoFileName,
+            screenOptions: options,
+            displayName: screenDisplays.first(where: { $0.id == displayID })?.name
+        )
+        let directory = meetingStore.incompleteDirectory(for: metadata.id)
+        do {
+            try meetingStore.write(metadata, incomplete: true)
+        } catch {
+            rescheduleIdleUnload()
+            notify(DictationNotice(kind: .failure, message: "Couldn't start screen recording: \(error.localizedDescription)"))
+            return
+        }
+
+        let screen = makeScreenRecordingCapture(
+            directory,
+            options,
+            { [weak self] message in
+                Task { @MainActor [weak self] in self?.screenRecordingFailed(message) }
+            },
+            { [weak self] updated in
+                guard let self else { return }
+                self.screenRecordingOptions = updated
+                self.liveRecording?.screenOptions = updated
+            }
+        )
+        screenRecordingCapture = screen
+        screenRecordingDirectory = directory
+        meetingState = .starting
+        isScreenRecordingSetupPresented = false
+        systemAudioStartFailure = nil
+        microphoneStartFailure = nil
+        lastAnnouncedHealth = nil
+        lastAnnouncedMicrophoneHealth = nil
+        lastProbeAt = .now
+        liveCaptureHealth = options.systemAudioEnabled ? .verifying : .notRequested
+        liveMicrophoneHealth = options.microphoneEnabled ? .verifying : .idle
+        beginTranscription(for: metadata.id, directory: directory)
+
+        Task { [weak self] in
+            do {
+                try await screen.prepare()
+                guard let self else { return }
+                let capture = self.makeScreenMeetingCapture(
+                    directory,
+                    options.microphoneEnabled ? self.preferredInputDeviceID : nil,
+                    options.microphoneEnabled,
+                    options.systemAudioEnabled,
+                    screen.audioSink,
+                    { [weak self] levels in Task { @MainActor in self?.liveLevels = levels } },
+                    { [weak self] segment in Task { @MainActor in self?.segmentReady(segment) } },
+                    { [weak self] failure in Task { @MainActor in self?.recordingFailed(failure) } }
+                )
+                self.meetingCapture = capture
+                try await screen.start()
+                try await capture.start()
+                await MainActor.run {
+                    self.liveRecording = metadata
+                    self.liveRecording?.screenOptions = options
+                    self.liveRecording?.displayName = screen.displayName
+                    self.liveDuration = 0
+                    self.liveRecordingStartedAt = .now
+                    self.meetingState = .recording
+                    let hud = self.screenRecordingHUD ?? ScreenRecordingHUD()
+                    self.screenRecordingHUD = hud
+                    hud.show(state: self, displayID: options.displayID)
+                    self.startLiveDurationTimer()
+                }
+            } catch {
+                // The screen stream may already be live when the aligned
+                // audio source fails to start. Close it before dropping the
+                // reference, otherwise the camera panel and writer can outlive
+                // the failed attempt until the next launch.
+                try? await screen.stop()
+                await MainActor.run {
+                    guard let self else { return }
+                    self.meetingCapture = nil
+                    self.screenRecordingCapture = nil
+                    self.screenRecordingDirectory = nil
+                    self.screenRecordingHUD?.close()
+                    self.screenRecordingHUD = nil
+                    self.meetingState = .idle
+                    self.liveCaptureHealth = .notRequested
+                    self.liveMicrophoneHealth = .idle
+                    self.abandonTranscription()
+                    try? FileManager.default.removeItem(at: directory)
+                    self.notify(DictationNotice(kind: .failure, message: "Couldn't start screen recording: \(error.localizedDescription)"))
+                }
+            }
+        }
+    }
+
+    public func setRecordingCameraEnabled(_ enabled: Bool) {
+        screenRecordingOptions.cameraEnabled = enabled
+        guard meetingState == .recording || meetingState == .paused, let screen = screenRecordingCapture else { return }
+        isCameraChanging = true
+        Task { [weak self] in
+            do {
+                try await screen.updateCameraEnabled(enabled)
+            } catch {
+                await MainActor.run {
+                    guard let self else { return }
+                    self.screenRecordingOptions.cameraEnabled = !enabled
+                    self.notify(DictationNotice(kind: .warning, message: "Couldn't change the camera during this recording."))
+                    self.isCameraChanging = false
+                }
+                return
+            }
+            await MainActor.run { self?.isCameraChanging = false }
+        }
+    }
+
+    public func setRecordingBubbleScale(_ scale: Double) {
+        screenRecordingOptions.bubbleScale = ScreenBubbleGeometry.clampedScale(scale)
+        screenRecordingCapture?.updateBubbleScale(screenRecordingOptions.bubbleScale)
+    }
+
+    public func setRecordingBubblePosition(_ position: NormalizedPoint) {
+        screenRecordingOptions.bubblePosition = position
+        screenRecordingCapture?.updateBubblePosition(position)
+    }
+
+    public func openScreenRecordingSettings() {
+        Permissions.openScreenRecordingSettings()
+    }
+
+    public func openCameraSettings() {
+        Permissions.openCameraSettings()
+    }
+
+    private func screenRecordingFailed(_ message: String) {
+        guard meetingState == .recording || meetingState == .paused else { return }
+        notify(DictationNotice(kind: .warning, message: "Screen recording stopped: \(message)"))
+        stopRecording()
+    }
+
     /// The record button. One button and no mode: it records the microphone
     /// and, where this Mac can and the person has not said otherwise, what
     /// the Mac plays. The first time that would happen, it explains itself
@@ -2469,6 +2737,10 @@ public final class AppState: ObservableObject {
     /// reports — a clean stop, a full disk, a writer that failed — the audio
     /// that reached disk is kept and the reason travels with it.
     public func stopRecording() {
+        if liveRecording?.captureKind == .screen {
+            stopScreenRecording()
+            return
+        }
         guard meetingState == .recording || meetingState == .paused,
               let capture = meetingCapture,
               let live = liveRecording,
@@ -2528,11 +2800,89 @@ public final class AppState: ObservableObject {
         }
     }
 
+    private func stopScreenRecording() {
+        guard meetingState == .recording || meetingState == .paused,
+              let capture = meetingCapture,
+              let screen = screenRecordingCapture,
+              let live = liveRecording,
+              let meetingStore else { return }
+        meetingState = .stopping
+        stopLiveDurationTimer()
+        Task { [weak self] in
+            var metadata = live
+            let engineReady = await MainActor.run { self?.isEngineReady ?? false }
+            metadata.transcriptionState = engineReady ? .live : .waitingForModel
+            do {
+                // Stop the aligned audio first. It flushes the final PCM
+                // block into the movie sink before the movie writer seals.
+                let summary = try await capture.stop()
+                metadata.duration = summary.duration
+                metadata.microphoneDeviceName = summary.microphoneDeviceName
+                metadata.microphoneEverDeliveredAudio = summary.microphoneEverDeliveredAudio
+                metadata.systemAudio = summary.systemAudio
+                metadata.gaps = summary.gaps
+                metadata.pauses = summary.pauses
+                metadata.endReason = summary.endReason
+                try await screen.stop()
+                metadata.videoFileName = MeetingStore.videoFileName
+                metadata.displayName = screen.displayName
+                metadata.screenOptions = await MainActor.run { self?.screenRecordingOptions }
+            } catch {
+                metadata.endReason = .writeFailed
+                // A failed movie must not erase the WAV. Keep the local audio
+                // recording and show the reason in the library.
+                try? await screen.stop()
+            }
+            await MainActor.run {
+                guard let self else { return }
+                do {
+                    try meetingStore.write(metadata, incomplete: true)
+                    try meetingStore.publish(metadata.id)
+                } catch {
+                    self.notify(DictationNotice(
+                        kind: .failure,
+                        message: "The recording ended but couldn't be filed: \(error.localizedDescription)"
+                    ))
+                }
+                self.meetingCapture = nil
+                self.screenRecordingCapture = nil
+                self.screenRecordingDirectory = nil
+                self.screenRecordingHUD?.close()
+                self.screenRecordingHUD = nil
+                self.liveRecording = nil
+                self.liveLevels = .silent
+                self.liveRecordingStartedAt = nil
+                self.liveCaptureHealth = .notRequested
+                self.liveMicrophoneHealth = .idle
+                self.isCameraChanging = false
+                self.meetingState = .idle
+                if metadata.systemAudio.wasRequested {
+                    self.defaults.set(
+                        metadata.systemAudio.everDeliveredAudio ? "working" : "unheard",
+                        forKey: Self.systemAudioLastResultKey
+                    )
+                    self.refreshSystemAudioPermission()
+                }
+                self.reloadRecordings()
+                self.lastFinishedRecordingID = metadata.id
+                self.finishTranscription(for: metadata.id)
+                if let notice = Self.endNotice(for: metadata.endReason) { self.notify(notice) }
+                if self.terminationPending {
+                    self.terminationPending = false
+                    NSApplication.shared.reply(toApplicationShouldTerminate: true)
+                }
+            }
+        }
+    }
+
     public func pauseRecording() {
         guard meetingState == .recording, let capture = meetingCapture else { return }
         let id = liveRecording?.id
         Task { [weak self] in
             do {
+                if self?.liveRecording?.captureKind == .screen, let screen = self?.screenRecordingCapture {
+                    try await screen.pause()
+                }
                 try await capture.pause()
                 let frames = await capture.frameCount
                 await MainActor.run {
@@ -2556,6 +2906,9 @@ public final class AppState: ObservableObject {
         Task { [weak self] in
             do {
                 try await capture.resume()
+                if self?.liveRecording?.captureKind == .screen, let screen = self?.screenRecordingCapture {
+                    try await screen.resume()
+                }
                 await MainActor.run {
                     guard let self, self.meetingState == .paused, self.liveRecording?.id == id else { return }
                     self.meetingState = .recording
@@ -2591,6 +2944,10 @@ public final class AppState: ObservableObject {
 
     public func recordingAudioURL(_ id: UUID) -> URL? {
         meetingStore?.audioURL(for: id)
+    }
+
+    public func recordingVideoURL(_ id: UUID) -> URL? {
+        meetingStore?.videoURL(for: id)
     }
 
     public func recordingPeaksURL(_ id: UUID) -> URL? {
@@ -2718,6 +3075,23 @@ public final class AppState: ObservableObject {
 
     public func cancelAudioExport() {
         audioExportCancelled.value = true
+    }
+
+    /// Copy a finished local movie through the Save panel's destination. The
+    /// source is never opened as a remote asset and a failed copy leaves no
+    /// partial export behind.
+    public func exportVideo(_ id: UUID, to destination: URL) {
+        guard let source = recordingVideoURL(id), source.isFileURL else { return }
+        Task { [weak self] in
+            do {
+                try await Task.detached(priority: .userInitiated) {
+                    try? FileManager.default.removeItem(at: destination)
+                    try FileManager.default.copyItem(at: source, to: destination)
+                }.value
+            } catch {
+                self?.notify(DictationNotice(kind: .failure, message: "Couldn't save the video."))
+            }
+        }
     }
 
     private static func encode(

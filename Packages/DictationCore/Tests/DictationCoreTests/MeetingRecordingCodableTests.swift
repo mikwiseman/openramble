@@ -21,7 +21,18 @@ final class MeetingRecordingCodableTests: XCTestCase {
             pauses: [MeetingInterval(start: 10, end: 20)],
             gaps: [MeetingGap(channel: .system, start: 30, end: 31, reason: .systemAudioRouteChange)],
             endReason: .stoppedByUser,
-            transcriptionState: .complete
+            transcriptionState: .complete,
+            captureKind: .screen,
+            videoFileName: "video.mp4",
+            screenOptions: ScreenRecordingOptions(
+                displayID: 42,
+                cameraEnabled: true,
+                microphoneEnabled: true,
+                systemAudioEnabled: true,
+                bubbleScale: 0.24,
+                bubblePosition: NormalizedPoint(x: 0.8, y: 0.1)
+            ),
+            displayName: "Built-in Retina Display"
         )
     }
 
@@ -50,6 +61,10 @@ final class MeetingRecordingCodableTests: XCTestCase {
         XCTAssertEqual(decoded.channelLayout, [.microphone, .system])
         XCTAssertFalse(decoded.systemAudio.wasRequested)
         XCTAssertNil(decoded.microphoneEverDeliveredAudio)
+        XCTAssertEqual(decoded.captureKind, .audio)
+        XCTAssertNil(decoded.videoFileName)
+        XCTAssertNil(decoded.screenOptions)
+        XCTAssertNil(decoded.displayName)
         XCTAssertEqual(decoded.pauses, [])
         XCTAssertEqual(decoded.gaps, [])
         XCTAssertNil(decoded.endReason)

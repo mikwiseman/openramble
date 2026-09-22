@@ -44,6 +44,10 @@ struct RecordingDetail: View {
                         .disabled(state.transcript(for: recording.id).isEmpty)
                     Button("Save Audio…") { saveAudio() }
                         .disabled(state.recordingAudioURL(recording.id) == nil || state.audioExportProgress != nil)
+                    if recording.captureKind == .screen {
+                        Button("Save Video…") { saveVideo() }
+                            .disabled(state.recordingVideoURL(recording.id) == nil)
+                    }
                     Divider()
                     Button("Show in Finder") { state.revealRecording(recording.id) }
                     Button("Recording Details…") { showsInfo = true }
@@ -90,7 +94,9 @@ struct RecordingDetail: View {
         var parts = [
             recording.startedAt.formatted(date: .long, time: .shortened),
             RecordingTime.brief(recording.duration),
-            recording.isMeeting ? "Meeting" : "Voice note",
+            recording.captureKind == .screen
+                ? "Screen recording"
+                : (recording.isMeeting ? "Meeting" : "Voice note"),
         ]
         if let transport = recording.systemAudio.outputTransport, recording.isMeeting {
             parts.append("other side via \(transport)")
@@ -104,6 +110,24 @@ struct RecordingDetail: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: GlassTokens.Space.stack) {
+            if recording.captureKind == .screen {
+                if let videoPlayer = player.videoPlayer {
+                    LocalRecordingVideo(player: videoPlayer)
+                        .frame(maxWidth: .infinity)
+                        .aspectRatio(16 / 9, contentMode: .fit)
+                        .clipShape(RoundedRectangle(cornerRadius: GlassTokens.Radius.surface, style: .continuous))
+                        .padding(.horizontal, GlassTokens.Space.page)
+                        .padding(.top, GlassTokens.Space.section)
+                        .accessibilityLabel("Screen recording video")
+                } else if player.videoFailedToLoad {
+                    LocalRecordingVideoPlaceholder(
+                        title: "Video unavailable",
+                        detail: "The audio and transcript are still available."
+                    )
+                    .padding(.horizontal, GlassTokens.Space.page)
+                    .padding(.top, GlassTokens.Space.section)
+                }
+            }
             if let progress = state.audioExportProgress {
                 HStack(spacing: GlassTokens.Space.inline) {
                     ProgressView(value: progress)
@@ -148,7 +172,7 @@ struct RecordingDetail: View {
                         if !player.isPlaying { player.toggle() }
                     }
                 )
-            } else if player.failedToLoad {
+            } else if player.failedToLoad && player.videoPlayer == nil {
                 RecordingsPlaceholderView(placeholder: .audioMissing)
             } else {
                 RecordingsPlaceholderView(
@@ -165,7 +189,11 @@ struct RecordingDetail: View {
 
     private func load() {
         state.loadTranscript(recording.id)
-        player.load(id: recording.id, url: state.recordingAudioURL(recording.id))
+        player.load(
+            id: recording.id,
+            url: state.recordingAudioURL(recording.id),
+            videoURL: recording.captureKind == .screen ? state.recordingVideoURL(recording.id) : nil
+        )
     }
 
     private func saveTranscript() {
@@ -182,6 +210,14 @@ struct RecordingDetail: View {
         panel.nameFieldStringValue = "\(state.exportName(recording.id)).m4a"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         state.exportAudio(recording.id, to: url)
+    }
+
+    private func saveVideo() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.mpeg4Movie]
+        panel.nameFieldStringValue = "\(state.exportName(recording.id)).mp4"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        state.exportVideo(recording.id, to: url)
     }
 }
 

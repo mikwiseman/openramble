@@ -43,6 +43,12 @@ the public privacy description in `README.md` if this boundary ever changes.
   for the Rust port to conform to and no fixture to record. Do not create a
   `ramble-meetings` crate.
 
+Screen recordings stay in this same macOS layer. ScreenCaptureKit supplies the
+selected display, the existing aligned audio pipeline supplies WAV and AAC,
+and an optional camera bubble is composited into a local H.264 MP4. This path
+does not add a media server, cloud storage, YouTube integration, or another
+network exception.
+
 LocalASR depends on DictationCore. Recognition runs in the application process.
 No package depends on the application layer.
 
