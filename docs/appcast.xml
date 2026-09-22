@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.29.0</title>
-      <pubDate>Fri, 18 Sep 2026 00:12:36 +0300</pubDate>
-      <sparkle:version>66</sparkle:version>
-      <sparkle:shortVersionString>0.29.0</sparkle:shortVersionString>
+      <title>0.30.0</title>
+      <pubDate>Tue, 22 Sep 2026 20:10:10 +0300</pubDate>
+      <sparkle:version>67</sparkle:version>
+      <sparkle:shortVersionString>0.30.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.29.0&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;One universal installer now runs on Apple Silicon and Intel Macs with macOS 14 or later.&lt;/li&gt;&lt;li&gt;Intel support is experimental and uses the CPU for local recognition. Apple Silicon keeps Metal acceleration. Both use the same model, without a second download.&lt;/li&gt;&lt;li&gt;Dictation, recordings and the bundled CLI use the matching architecture automatically.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;The Intel executable is checked under Rosetta, including offline recognition from the signed installer. Performance and microphone capture still need testing on physical Intel Macs; Apple Silicon timings do not describe Intel performance.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.29.0/OpenRamble-0.29.0.dmg" length="12239970" type="application/octet-stream" sparkle:edSignature="YZVKwZP3+mVV1CkTtxBPnD0GWjnD7PE9de8NBkgIIS7tVkhDjD3LkpomBDwggIWfLKTulG7dbP7No3Neyyq8Bw==" />
+      <description>&lt;h2&gt;OpenRamble 0.30.0&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Record the selected Mac display locally from the same OpenRamble menu-bar app.&lt;/li&gt;&lt;li&gt;Include microphone audio, Mac audio and an optional camera bubble in the recording.&lt;/li&gt;&lt;li&gt;Move and resize the bubble while recording, pause and resume without adding a gap, then play or export the local MP4 beside its transcript.&lt;/li&gt;&lt;li&gt;Keep screen recordings on this Mac. There is no media upload, cloud store, YouTube integration or share server.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Camera and Screen Recording permissions are requested only when their capture options are enabled.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.30.0/OpenRamble-0.30.0.dmg" length="13071939" type="application/octet-stream" sparkle:edSignature="Kf3zJR/ePIXybtSoQajIOVQNzPb7QHaSMXATQTbFnreDty9/8g5zRS0uheUiaeK0eA9sWYhDmvB6CI62JbvGAg==" />
     </item>
   </channel>
 </rss>
