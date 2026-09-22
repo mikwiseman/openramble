@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.30.1</title>
-      <pubDate>Tue, 22 Sep 2026 23:54:43 +0300</pubDate>
-      <sparkle:version>68</sparkle:version>
-      <sparkle:shortVersionString>0.30.1</sparkle:shortVersionString>
+      <title>0.30.2</title>
+      <pubDate>Wed, 23 Sep 2026 01:45:30 +0300</pubDate>
+      <sparkle:version>69</sparkle:version>
+      <sparkle:shortVersionString>0.30.2</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.30.1&lt;/h2&gt;&lt;p&gt;## Screen recording recovery and a calmer recording window&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Camera, microphone and Screen Recording permissions now have separate states and recovery actions.&lt;/li&gt;&lt;li&gt;The screen flow is a compact preflight: choose a display, switch on the sources you need, and press Record. Bubble sizing appears only when the camera is enabled.&lt;/li&gt;&lt;li&gt;Returning from System Settings refreshes the screen recorder in the same process. If macOS keeps a stale Screen Recording session, OpenRamble explains why and offers one explicit restart.&lt;/li&gt;&lt;li&gt;A missing display is reported as a missing display, rather than as a generic permission failure.&lt;/li&gt;&lt;li&gt;The recording panel and library toolbar use explicit icons, aligned controls and a compact layout that remains readable in both themes.&lt;/li&gt;&lt;li&gt;The camera entitlement is checked in the release artifact, so enabling the bubble matches the permission the app actually requests.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;All recordings remain local to this Mac. No cloud, YouTube or remote media path was added.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.30.1/OpenRamble-0.30.1.dmg" length="12598651" type="application/octet-stream" sparkle:edSignature="4F0R2+Z59/R9/AN1bxhQQiqw/+VNUzlHhL6E7G/bsDk582E1r0Xbek679A8XvxaFuEouiyEucVgWdhF9YYRiDg==" />
+      <description>&lt;h2&gt;OpenRamble 0.30.2&lt;/h2&gt;&lt;p&gt;## A cleaner recordings library and a more reliable first frame&lt;/p&gt;&lt;ul&gt;&lt;li&gt;The recordings list supports Shift/Command multi-selection, Move to Trash from the toolbar or context menu, Backspace/Delete, and double-click or Return to rename.&lt;/li&gt;&lt;li&gt;Screen recordings show their first decoded frame immediately when opened instead of an empty black player while AVPlayer warms up.&lt;/li&gt;&lt;li&gt;The screen setup panel now includes a live camera preview with simple Smaller/Larger controls. The self-view is mirrored like Zoom, and the bubble remains inside the frame.&lt;/li&gt;&lt;li&gt;Completed recordings compact their transcription source to a stereo AAC archive after transcription finishes. The raw WAV remains in place if compaction cannot complete.&lt;/li&gt;&lt;li&gt;H.264 screen files use predictable keyframes so the beginning and seeking stay responsive.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;All recordings remain local to this Mac. No cloud, YouTube or remote media path was added.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.30.2/OpenRamble-0.30.2.dmg" length="13301057" type="application/octet-stream" sparkle:edSignature="/XM9mfNZAyYsr9KqnMq8ybzlh2M/7U/DrrfY311eiSNMH7Vfjg55HQnwKttDkDlUcAPWHKP/u9LM2uK1UW6xDQ==" />
     </item>
   </channel>
 </rss>
