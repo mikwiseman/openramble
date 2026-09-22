@@ -459,6 +459,7 @@ final class AppHarness {
     let overlay = FakeOverlay()
     let capture: FakeCapture
     let meetingCapture = FakeMeetingCapture()
+    let screenCapture = FakeScreenRecordingCapture()
     let announcer = FakeAnnouncer()
     /// How often the Settings pane for system audio was asked for.
     var systemAudioSettingsOpened = 0
@@ -477,6 +478,9 @@ final class AppHarness {
     var recordingRecoveryMaintenanceRetryDelay: TimeInterval = 0.01
     var recordingRecoveryIdleScanInterval: TimeInterval = 60
     var cleanupLegacyAgentStaging: @Sendable () throws -> Void = {}
+    var screenCameraPermission: Permissions.CaptureState = .granted
+    var screenMicrophonePermission: Permissions.CaptureState = .granted
+    var screenDisplays = [ScreenDisplayOption(id: 1, name: "Built-in Retina Display")]
 
     init() throws {
         root = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -621,6 +625,21 @@ final class AppHarness {
                     meetingCapture.prepare(directory: directory, includeSystemAudio: includeSystemAudio, onSegment: onSegment)
                     return meetingCapture
                 },
+                makeScreenMeetingCapture: { [meetingCapture] directory, _, _, includeSystemAudio, _, _, onSegment, _ in
+                    meetingCapture.prepare(directory: directory, includeSystemAudio: includeSystemAudio, onSegment: onSegment)
+                    return meetingCapture
+                },
+                makeScreenRecordingCapture: { [screenCapture] directory, options, _, onBubbleChange in
+                    screenCapture.configure(directory: directory, options: options, onBubbleChange: onBubbleChange)
+                    return screenCapture
+                },
+                readScreenCapturePermissionState: { [weak self] in
+                    (
+                        self?.screenCameraPermission ?? .granted,
+                        self?.screenMicrophonePermission ?? .granted
+                    )
+                },
+                listScreenDisplays: { [weak self] in self?.screenDisplays ?? [] },
                 announcer: announcer,
                 openSystemAudioSettings: { [weak self] in self?.systemAudioSettingsOpened += 1 },
                 // Inaudible in the app; silent in the suite all the same.
@@ -1047,5 +1066,80 @@ final class FakeMeetingCapture: MeetingCapturing, @unchecked Sendable {
 
     var state: MeetingCapture.State {
         get async { lock.withLock { current } }
+    }
+}
+
+private final class FakeScreenAudioSink: MeetingAudioBlockSink, @unchecked Sendable {
+    func receive(microphone: [Float], system: [Float], startFrame: Int) {}
+    func anchor(hostNanoseconds: UInt64, frame: Int) {}
+}
+
+@MainActor
+final class FakeScreenRecordingCapture: ScreenRecordingCapturing {
+    let audioSink: any MeetingAudioBlockSink = FakeScreenAudioSink()
+    private(set) var outputURL: URL?
+    private(set) var displayName: String? = "Built-in Retina Display"
+    private(set) var preparedCount = 0
+    private(set) var startCount = 0
+    private(set) var pauseCount = 0
+    private(set) var resumeCount = 0
+    private(set) var stopCount = 0
+    private(set) var cameraUpdates: [Bool] = []
+    private(set) var bubbleScaleUpdates: [Double] = []
+    var prepareError: Error?
+    var startError: Error?
+    var stopError: Error?
+    private var directory: URL?
+    private var options = ScreenRecordingOptions()
+    private var onBubbleChange: (@MainActor (ScreenRecordingOptions) -> Void)?
+
+    func configure(
+        directory: URL,
+        options: ScreenRecordingOptions,
+        onBubbleChange: @escaping @MainActor (ScreenRecordingOptions) -> Void
+    ) {
+        self.directory = directory
+        self.options = options
+        self.onBubbleChange = onBubbleChange
+    }
+
+    func prepare() async throws {
+        preparedCount += 1
+        if let prepareError { throw prepareError }
+    }
+
+    func start() async throws {
+        startCount += 1
+        if let startError { throw startError }
+    }
+
+    func pause() async throws { pauseCount += 1 }
+    func resume() async throws { resumeCount += 1 }
+
+    func stop() async throws {
+        stopCount += 1
+        if let stopError { throw stopError }
+        guard let directory else { return }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appending(path: MeetingStore.videoFileName)
+        _ = FileManager.default.createFile(atPath: url.path, contents: Data([0, 0, 0, 1]))
+        outputURL = url
+    }
+
+    func updateCameraEnabled(_ enabled: Bool) async throws {
+        cameraUpdates.append(enabled)
+        options.cameraEnabled = enabled
+        onBubbleChange?(options)
+    }
+
+    func updateBubbleScale(_ scale: Double) {
+        bubbleScaleUpdates.append(scale)
+        options.bubbleScale = scale
+        onBubbleChange?(options)
+    }
+
+    func updateBubblePosition(_ position: NormalizedPoint) {
+        options.bubblePosition = position
+        onBubbleChange?(options)
     }
 }

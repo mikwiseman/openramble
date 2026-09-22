@@ -9,6 +9,7 @@ enum ScreenRecordingError: LocalizedError, Sendable {
     case alreadyRecording
     case notRecording
     case permissionDenied(String)
+    case cameraRestricted
     case cameraUnavailable
     case writerUnavailable
     case writerFailed(String)
@@ -20,6 +21,7 @@ enum ScreenRecordingError: LocalizedError, Sendable {
         case .alreadyRecording: return "Запись уже идёт"
         case .notRecording: return "Запись не запущена"
         case let .permissionDenied(name): return "Нет доступа: \(name)"
+        case .cameraRestricted: return "Camera access is restricted on this Mac."
         case .cameraUnavailable: return "Камера недоступна"
         case .writerUnavailable: return "Не удалось подготовить файл записи"
         case let .writerFailed(message): return message

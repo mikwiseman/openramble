@@ -68,6 +68,19 @@ final class ActiveApplicationSnapshot: @unchecked Sendable {
 /// Permissions, without which dictation does not work.
 @MainActor
 public enum Permissions {
+    /// The four states macOS reports for a protected media device. Keeping
+    /// `notDetermined` separate from `denied` lets the recorder ask once at
+    /// the right moment instead of sending people straight to Settings.
+    public enum CaptureState: Sendable, Equatable {
+        case notDetermined
+        case granted
+        case denied
+        case restricted
+
+        public var isGranted: Bool { self == .granted }
+        public var needsSettings: Bool { self == .denied || self == .restricted }
+    }
+
     public enum Status: Sendable, Equatable {
         case granted
         case denied
@@ -92,6 +105,10 @@ public enum Permissions {
 
     public nonisolated static var microphone: Status {
         AVCaptureDevice.authorizationStatus(for: .audio) == .authorized ? .granted : .denied
+    }
+
+    public nonisolated static var microphoneCaptureState: CaptureState {
+        captureState(for: .audio)
     }
 
     public static func requestMicrophone() async -> Bool {
@@ -119,6 +136,10 @@ public enum Permissions {
         await AVCaptureDevice.requestAccess(for: .video)
     }
 
+    public nonisolated static var cameraCaptureState: CaptureState {
+        captureState(for: .video)
+    }
+
     public static func openCameraSettings() {
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera")!
         NSWorkspace.shared.open(url)
@@ -127,6 +148,16 @@ public enum Permissions {
     public static func openScreenRecordingSettings() {
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!
         NSWorkspace.shared.open(url)
+    }
+
+    private nonisolated static func captureState(for mediaType: AVMediaType) -> CaptureState {
+        switch AVCaptureDevice.authorizationStatus(for: mediaType) {
+        case .notDetermined: return .notDetermined
+        case .authorized: return .granted
+        case .restricted: return .restricted
+        case .denied: return .denied
+        @unknown default: return .denied
+        }
     }
 }
 

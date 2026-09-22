@@ -224,6 +224,16 @@ audio_input_entitlement=$(
   exit 1
 }
 
+camera_entitlement=$(
+  codesign -d --entitlements :- "$APP" 2>/dev/null \
+    | /usr/bin/plutil -extract 'com\.apple\.security\.device\.camera' raw -o - - 2>/dev/null \
+    || true
+)
+[[ "$camera_entitlement" == "true" ]] || {
+  echo "The signature does not contain com.apple.security.device.camera=true." >&2
+  exit 1
+}
+
 if [[ "$REQUIRE_DEVELOPER_ID" == "1" ]]; then
   APP_AUTHORITY=$(codesign -dvv "$APP" 2>&1 | sed -n 's/^Authority=//p' | head -1)
   [[ "$APP_AUTHORITY" == Developer\ ID\ Application:* ]] || {

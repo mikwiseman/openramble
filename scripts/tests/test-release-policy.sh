@@ -10,11 +10,18 @@ SMOKE_SCRIPT="$REPOSITORY_ROOT/scripts/smoke-installed-artifact.sh"
 NETWORK_SCRIPT="$REPOSITORY_ROOT/scripts/check-network-surface.sh"
 RELEASE_DOC="$REPOSITORY_ROOT/docs/release.md"
 CI_WORKFLOW="$REPOSITORY_ROOT/.github/workflows/ci.yml"
+APP_ENTITLEMENTS="$REPOSITORY_ROOT/apps/macos/OpenRamble/OpenRamble.entitlements"
 
 fail_test() {
   printf 'FAIL: %s\n' "$1" >&2
   exit 1
 }
+
+camera_entitlement=$(/usr/bin/plutil -extract 'com\.apple\.security\.device\.camera' raw -o - "$APP_ENTITLEMENTS" 2>/dev/null || true)
+[[ "$camera_entitlement" == "true" ]] \
+  || fail_test "camera capture ships without its hardened-runtime entitlement"
+grep -Fq 'com.apple.security.device.camera=true' "$SMOKE_SCRIPT" \
+  || fail_test "the mounted artifact does not check its signed camera entitlement"
 
 if grep -Eq 'LIVE_BENCHMARK_REPORT|validate-live-benchmark|RELEASE_EVIDENCE|validate-release-evidence' "$RELEASE_SCRIPT"; then
   fail_test "a human quality report still blocks or participates in release.sh"
