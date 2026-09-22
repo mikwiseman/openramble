@@ -33,12 +33,14 @@ struct RecordingsWindow: View {
                     .background(.background)
                     .clipped()
             }
-            VStack(spacing: GlassTokens.Space.inline) {
-                if state.meetingState == .recording { CaptureHealthStrip(state: state) }
+            VStack(spacing: 0) {
+                Divider()
+                if state.meetingState == .recording || state.meetingState == .paused {
+                    CaptureHealthStrip(state: state)
+                }
                 RecordBar(state: state)
-                    .padding(.horizontal, GlassTokens.Space.stack)
-                    .padding(.bottom, GlassTokens.Space.stack)
-                    .padding(.top, GlassTokens.Space.inline)
+                    .padding(.horizontal, GlassTokens.Space.page)
+                    .padding(.vertical, GlassTokens.Space.inline)
             }
         }
         .frame(minWidth: 860, minHeight: 560)
@@ -46,8 +48,10 @@ struct RecordingsWindow: View {
         .glassWindowBackground()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("Copy Transcript") {
+                Button {
                     if let selection { state.copyTranscript(selection) }
+                } label: {
+                    Label("Copy Transcript", systemImage: "doc.on.doc")
                 }
                 .help("Copy all text transcribed so far")
                 .accessibilityIdentifier("copy-transcript")

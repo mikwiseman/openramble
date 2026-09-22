@@ -160,6 +160,15 @@ public struct AppEnvironment {
         @escaping @MainActor (ScreenRecordingOptions) -> Void
     ) -> any ScreenRecordingCapturing
     public var makeScreenRecordingCapture: ScreenRecordingFactory
+    /// Privacy status and display discovery are injected so the screen flow
+    /// can be tested without asking the test runner for TCC access or taking
+    /// a real display snapshot.
+    public typealias ScreenCapturePermissionStateReader = @MainActor () -> (
+        camera: Permissions.CaptureState,
+        microphone: Permissions.CaptureState
+    )
+    public var readScreenCapturePermissionState: ScreenCapturePermissionStateReader
+    public var listScreenDisplays: @MainActor () async throws -> [ScreenDisplayOption]
     /// Spoken state changes the person cannot see — a meter that stopped.
     public var announcer: any AccessibilityAnnouncing
     public var openSystemAudioSettings: @MainActor () -> Void
@@ -247,6 +256,12 @@ public struct AppEnvironment {
                 onBubbleChange: onBubbleChange
             )
         },
+        readScreenCapturePermissionState: @escaping ScreenCapturePermissionStateReader = {
+            (Permissions.cameraCaptureState, Permissions.microphoneCaptureState)
+        },
+        listScreenDisplays: @escaping @MainActor () async throws -> [ScreenDisplayOption] = {
+            try await ScreenRecordingCapture.displays()
+        },
         announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
         openSystemAudioSettings: @escaping @MainActor () -> Void = { Permissions.openSystemAudioSettings() },
         playSystemAudioProbe: @escaping @Sendable () -> Void = SystemAudioProbe.play,
@@ -287,6 +302,8 @@ public struct AppEnvironment {
         self.makeMeetingCapture = makeMeetingCapture
         self.makeScreenMeetingCapture = makeScreenMeetingCapture
         self.makeScreenRecordingCapture = makeScreenRecordingCapture
+        self.readScreenCapturePermissionState = readScreenCapturePermissionState
+        self.listScreenDisplays = listScreenDisplays
         self.trashItem = trashItem
         self.announcer = announcer
         self.openSystemAudioSettings = openSystemAudioSettings
@@ -513,12 +530,30 @@ public final class AppState: ObservableObject {
     /// default so the existing meeting shortcut never unexpectedly captures a
     /// display.
     @Published public var recordingCaptureKind: RecordingCaptureKind = .audio
-    @Published public var screenRecordingOptions = ScreenRecordingOptions()
+    public static let screenRecordingOptionsKey = "screenRecordingOptions"
+    @Published public var screenRecordingOptions: ScreenRecordingOptions {
+        didSet {
+            guard oldValue != screenRecordingOptions,
+                  let data = try? JSONEncoder().encode(screenRecordingOptions)
+            else { return }
+            defaults.set(data, forKey: Self.screenRecordingOptionsKey)
+        }
+    }
     @Published public private(set) var isScreenRecordingSetupPresented = false
     @Published public private(set) var screenDisplays: [ScreenDisplayOption] = []
     @Published public private(set) var isLoadingScreenDisplays = false
-    @Published public private(set) var screenSetupError: String?
+    @Published public private(set) var screenSetupIssue: ScreenRecordingSetupIssue?
+    /// Camera permission is read again whenever the screen panel becomes
+    /// active. Settings changes are external to the process, so a value that
+    /// was captured when the panel opened must never be treated as permanent.
+    @Published public private(set) var screenCameraPermission: Permissions.CaptureState = .notDetermined
+    @Published public private(set) var screenMicrophonePermission: Permissions.CaptureState = .notDetermined
+    /// Screen Recording is the one TCC grant that can remain stale in the
+    /// current process after Settings accepts it. This flag is only set after
+    /// the person has visited that pane and the next preflight still fails.
+    @Published public private(set) var screenRecordingRestartRequired = false
     @Published public private(set) var isCameraChanging = false
+    private var screenRecordingSettingsOpened = false
     private var meetingStore: MeetingStore?
     private var meetingCapture: (any MeetingCapturing)?
     private var screenRecordingCapture: (any ScreenRecordingCapturing)?
@@ -862,7 +897,7 @@ public final class AppState: ObservableObject {
     private let permissionPollInterval: TimeInterval
     private let modelDownloader: any ModelDownloading
     private let requestMicrophoneAccess: () async -> Bool
-    private let openMicrophoneSettings: () -> Void
+    private let openMicrophoneSettingsPane: () -> Void
     private let activateApplication: () -> Void
     private let workspaceNotifications: NotificationCenter
     private let notifications: NotificationCenter
@@ -871,6 +906,8 @@ public final class AppState: ObservableObject {
     private let makeMeetingCapture: AppEnvironment.MeetingCaptureFactory
     private let makeScreenMeetingCapture: AppEnvironment.ScreenMeetingCaptureFactory
     private let makeScreenRecordingCapture: AppEnvironment.ScreenRecordingFactory
+    private let readScreenCapturePermissionState: AppEnvironment.ScreenCapturePermissionStateReader
+    private let listScreenDisplays: @MainActor () async throws -> [ScreenDisplayOption]
     private let trashItem: @Sendable (URL) throws -> Void
     private let announcer: any AccessibilityAnnouncing
     private let openSystemAudioSettingsPane: @MainActor () -> Void
@@ -984,6 +1021,12 @@ public final class AppState: ObservableObject {
         // No key = disabled: `bool(forKey:)` returns false. This
         // reads someone else's window and therefore requires an explicit opt-in.
         historyLimit = DictationHistoryStore.storedLimit(in: environment.defaults)
+        if let data = environment.defaults.data(forKey: Self.screenRecordingOptionsKey),
+           let stored = try? JSONDecoder().decode(ScreenRecordingOptions.self, from: data) {
+            screenRecordingOptions = stored
+        } else {
+            screenRecordingOptions = ScreenRecordingOptions()
+        }
         learnFromEdits = environment.defaults.bool(forKey: Self.learnFromEditsKey)
         launchAtLogin = SMAppService.mainApp.status == .enabled
         paths = environment.paths
@@ -1009,7 +1052,7 @@ public final class AppState: ObservableObject {
         permissionPollInterval = environment.permissionPollInterval
         modelDownloader = environment.modelDownloader
         requestMicrophoneAccess = environment.requestMicrophoneAccess
-        openMicrophoneSettings = environment.openMicrophoneSettings
+        openMicrophoneSettingsPane = environment.openMicrophoneSettings
         activateApplication = environment.activateApplication
         workspaceNotifications = environment.workspaceNotifications
         notifications = environment.notifications
@@ -1025,6 +1068,8 @@ public final class AppState: ObservableObject {
         makeMeetingCapture = environment.makeMeetingCapture
         makeScreenMeetingCapture = environment.makeScreenMeetingCapture
         makeScreenRecordingCapture = environment.makeScreenRecordingCapture
+        readScreenCapturePermissionState = environment.readScreenCapturePermissionState
+        listScreenDisplays = environment.listScreenDisplays
         trashItem = environment.trashItem
         announcer = environment.announcer
         openSystemAudioSettingsPane = environment.openSystemAudioSettings
@@ -1839,6 +1884,13 @@ public final class AppState: ObservableObject {
            accessibilityState != .repairRequired {
             accessibilityState = .restartRequired
         }
+        if isScreenRecordingSetupPresented {
+            // Returning from Privacy & Security is the only reliable signal
+            // that the person may have changed a capture grant. Re-read the
+            // live states once, then let the panel's retry keep the flow
+            // explicit instead of starting a recording behind their back.
+            retryScreenRecordingSetup()
+        }
         // Coming back to the app is a cheap hint that dictation is near.
         rewarmEngineIfCold(trigger: .appActivation)
     }
@@ -2380,12 +2432,15 @@ public final class AppState: ObservableObject {
     /// privacy choices that should be visible at the moment Record is pressed.
     public func prepareScreenRecording() {
         guard meetingState == .idle else { return }
-        screenSetupError = nil
+        screenSetupIssue = nil
+        screenRecordingRestartRequired = false
+        screenRecordingSettingsOpened = false
+        refreshScreenRecordingPermissions()
         isScreenRecordingSetupPresented = true
-        if screenRecordingOptions.systemAudioEnabled == false {
+        if defaults.data(forKey: Self.screenRecordingOptionsKey) == nil {
             // The screen flow follows the current meeting-audio choice on its
-            // first presentation; the person can still turn Mac audio off in
-            // the panel for this take.
+            // first presentation. Once the person changes it, preserve that
+            // choice instead of silently turning Mac audio back on.
             screenRecordingOptions.systemAudioEnabled = systemAudioMode == .enabled
         }
         Task { await refreshScreenDisplays() }
@@ -2396,19 +2451,53 @@ public final class AppState: ObservableObject {
         isScreenRecordingSetupPresented = false
     }
 
+    /// Re-read TCC state after returning from System Settings. This is kept
+    /// separate from the regular dictation permission poll because the screen
+    /// flow is only alive while its panel is open.
+    @discardableResult
+    public func refreshScreenRecordingPermissions() -> Permissions.CaptureState {
+        let status = readScreenCapturePermissionState()
+        let camera = status.camera
+        if screenCameraPermission != camera { screenCameraPermission = camera }
+        if screenMicrophonePermission != status.microphone {
+            screenMicrophonePermission = status.microphone
+        }
+        return camera
+    }
+
+    /// Retry the complete preflight in the same process. A grant made in
+    /// System Settings should update the panel and enable Record without a
+    /// quit/relaunch dance.
+    public func retryScreenRecordingSetup() {
+        screenSetupIssue = nil
+        refreshScreenRecordingPermissions()
+        Task { await refreshScreenDisplays() }
+    }
+
     public func refreshScreenDisplays() async {
         guard !isLoadingScreenDisplays else { return }
         isLoadingScreenDisplays = true
-        screenSetupError = nil
+        screenSetupIssue = nil
+        refreshScreenRecordingPermissions()
         do {
-            let displays = try await ScreenRecordingCapture.displays()
+            let displays = try await listScreenDisplays()
             screenDisplays = displays
+            screenRecordingRestartRequired = false
+            screenRecordingSettingsOpened = false
+            if displays.isEmpty {
+                screenSetupIssue = .noDisplay
+            }
             if screenRecordingOptions.displayID == nil || !displays.contains(where: { $0.id == screenRecordingOptions.displayID }) {
                 screenRecordingOptions.displayID = displays.first?.id
             }
         } catch {
             screenDisplays = []
-            screenSetupError = error.localizedDescription
+            let issue = ScreenRecordingSetupIssue.from(error)
+            screenSetupIssue = issue
+            if issue == .screenPermission,
+               screenRecordingSettingsOpened {
+                screenRecordingRestartRequired = true
+            }
         }
         isLoadingScreenDisplays = false
     }
@@ -2419,12 +2508,20 @@ public final class AppState: ObservableObject {
     public func startScreenRecording() {
         guard meetingState == .idle, let meetingStore else { return }
         guard !screenDisplays.isEmpty, let displayID = screenRecordingOptions.displayID else {
-            screenSetupError = "Choose a display before recording."
+            screenSetupIssue = .noDisplay
             return
         }
-        if screenRecordingOptions.microphoneEnabled && !microphoneGranted {
-            isScreenRecordingSetupPresented = false
-            notify(DictationNotice(kind: .warning, message: "Allow the microphone to record your voice."))
+        let cameraPermission = refreshScreenRecordingPermissions()
+        if screenRecordingOptions.cameraEnabled && cameraPermission.needsSettings {
+            screenSetupIssue = cameraPermission == .restricted ? .cameraRestricted : .cameraPermission
+            return
+        }
+        if screenRecordingOptions.microphoneEnabled && screenMicrophonePermission != .granted {
+            screenSetupIssue = .microphonePermission
+            let message = screenMicrophonePermission == .notDetermined
+                ? "OpenRamble needs microphone access for your voice."
+                : ScreenRecordingSetupIssue.microphonePermission.message
+            notify(DictationNotice(kind: .warning, message: message))
             requestMicrophone()
             return
         }
@@ -2522,15 +2619,28 @@ public final class AppState: ObservableObject {
                     self.liveMicrophoneHealth = .idle
                     self.abandonTranscription()
                     try? FileManager.default.removeItem(at: directory)
-                    self.notify(DictationNotice(kind: .failure, message: "Couldn't start screen recording: \(error.localizedDescription)"))
+                    if let permissionMessage = self.screenPermissionMessage(for: error) {
+                        let issue = ScreenRecordingSetupIssue.from(error)
+                        self.screenSetupIssue = issue
+                        if issue == .screenPermission,
+                           self.screenRecordingSettingsOpened {
+                            self.screenRecordingRestartRequired = true
+                        }
+                        self.isScreenRecordingSetupPresented = true
+                        self.refreshScreenRecordingPermissions()
+                        self.notify(DictationNotice(kind: .warning, message: permissionMessage))
+                    } else {
+                        self.notify(DictationNotice(kind: .failure, message: "Couldn't start screen recording: \(error.localizedDescription)"))
+                    }
                 }
             }
         }
     }
 
     public func setRecordingCameraEnabled(_ enabled: Bool) {
-        screenRecordingOptions.cameraEnabled = enabled
         guard meetingState == .recording || meetingState == .paused, let screen = screenRecordingCapture else { return }
+        guard !isCameraChanging, screenRecordingOptions.cameraEnabled != enabled else { return }
+        let previous = screenRecordingOptions.cameraEnabled
         isCameraChanging = true
         Task { [weak self] in
             do {
@@ -2538,13 +2648,17 @@ public final class AppState: ObservableObject {
             } catch {
                 await MainActor.run {
                     guard let self else { return }
-                    self.screenRecordingOptions.cameraEnabled = !enabled
+                    self.screenRecordingOptions.cameraEnabled = previous
                     self.notify(DictationNotice(kind: .warning, message: "Couldn't change the camera during this recording."))
                     self.isCameraChanging = false
                 }
                 return
             }
-            await MainActor.run { self?.isCameraChanging = false }
+            await MainActor.run {
+                guard let self else { return }
+                self.screenRecordingOptions.cameraEnabled = enabled
+                self.isCameraChanging = false
+            }
         }
     }
 
@@ -2559,11 +2673,47 @@ public final class AppState: ObservableObject {
     }
 
     public func openScreenRecordingSettings() {
+        screenRecordingSettingsOpened = true
         Permissions.openScreenRecordingSettings()
     }
 
     public func openCameraSettings() {
         Permissions.openCameraSettings()
+    }
+
+    public func openMicrophoneSettings() {
+        openMicrophoneSettingsPane()
+    }
+
+    /// Relaunch only after Screen Recording has been granted and the next
+    /// preflight confirms that this process still has a stale TCC session.
+    /// Camera and microphone grants use the live retry path and never need
+    /// this escape hatch.
+    public func relaunchForScreenRecording() {
+        guard meetingState == .idle, screenRecordingRestartRequired else { return }
+        screenRecordingRestartRequired = false
+        Task {
+            do {
+                try await accessibilityManager.relaunchApplication()
+            } catch {
+                notify(
+                    DictationNotice(
+                        kind: .failure,
+                        message: "Couldn't relaunch OpenRamble: \(error.localizedDescription)"
+                    )
+                )
+            }
+        }
+    }
+
+    private func screenPermissionMessage(for error: Error) -> String? {
+        let issue = ScreenRecordingSetupIssue.from(error)
+        switch issue {
+        case .screenPermission, .cameraPermission, .cameraRestricted, .microphonePermission, .noDisplay:
+            return issue.message
+        case .captureFailed:
+            return nil
+        }
     }
 
     private func screenRecordingFailed(_ message: String) {
@@ -3614,7 +3764,7 @@ public final class AppState: ObservableObject {
                 // grant so onboarding continues where the user left it.
                 activateApplication()
             } else {
-                openMicrophoneSettings()
+                openMicrophoneSettingsPane()
             }
             refreshPermissions()
         }

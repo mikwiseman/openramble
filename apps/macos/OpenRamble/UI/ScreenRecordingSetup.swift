@@ -1,79 +1,86 @@
+import AppKit
 import SwiftUI
 
-/// The small, focused preflight for a screen take.
+/// The short, in-context preflight for a screen recording.
 ///
-/// The screen is the hero. Capture choices are secondary tiles beneath it, so
-/// the panel reads like a calm recorder rather than a settings form. The
-/// controls are deliberately custom shaped: native switches are excellent in
-/// Settings, but three identical switches inside a transient glass panel make
-/// the most important choice hard to scan.
+/// Privacy controls live here because this is the moment the person decided
+/// to capture a display. The panel stays a single calm surface: one display row,
+/// one source list, and one action. Settings changes never start a recording
+/// implicitly; returning to this panel only refreshes the facts.
 struct ScreenRecordingSetup: View {
     @ObservedObject var state: AppState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 0) {
-            header
+            ScrollView(.vertical) {
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+                        .padding(.bottom, 18)
+                    displaySelection
+                        .padding(.bottom, 20)
+                    captureControls
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 22)
                 .padding(.bottom, 18)
-            preview
-                .padding(.bottom, 18)
-            captureControls
+            }
+
+            Divider()
+
             footer
-                .padding(.top, 20)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 22)
-        .padding(.bottom, 18)
-        .frame(width: 560, height: 610)
+        .frame(width: 520, height: 460)
         .glassWindowBackground()
         .task {
-            if state.screenDisplays.isEmpty { await state.refreshScreenDisplays() }
+            state.refreshScreenRecordingPermissions()
+            await state.refreshScreenDisplays()
         }
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.accentColor, Color.accentColor.opacity(0.62)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.16))
                 Image(systemName: "rectangle.inset.filled")
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
             }
-            .frame(width: 44, height: 44)
-            .shadow(color: Color.accentColor.opacity(0.25), radius: 10, y: 4)
+            .frame(width: 40, height: 40)
             .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Capture your screen")
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Screen recording")
                     .font(.title3.weight(.semibold))
-                Text("Choose what to include. You can move the camera bubble while recording.")
+                Text("Choose what to include.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: 8)
-            Text("LOCAL")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .tracking(0.8)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(.quaternary.opacity(0.55), in: Capsule())
-                .overlay(Capsule().stroke(.primary.opacity(0.10), lineWidth: 0.5))
-                .accessibilityLabel("Stored locally")
+
         }
     }
 
-    private var preview: some View {
-        ZStack(alignment: .topLeading) {
-            previewCanvas
+    private var displaySelection: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "display")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 30, height: 30)
+                .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Display")
+                    .font(.body.weight(.medium))
+                Text(selectedDisplayName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
 
             if state.screenDisplays.count > 1 {
                 Menu {
@@ -89,231 +96,109 @@ struct ScreenRecordingSetup: View {
                         }
                     }
                 } label: {
-                    displayBadge
+                    Label("Change", systemImage: "chevron.up.chevron.down")
+                        .labelStyle(.titleAndIcon)
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
-                .padding(12)
-            } else {
-                displayBadge
-                    .padding(12)
-            }
-
-            if state.screenDisplays.isEmpty {
-                permissionNotice
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                    .padding(12)
-            }
-
-            if state.screenRecordingOptions.cameraEnabled {
-                previewBubble
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .padding(16)
-                    .transition(.scale(scale: 0.7).combined(with: .opacity))
+                .controlSize(.small)
             }
         }
-        .frame(height: 238)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(.white.opacity(0.18), lineWidth: 0.75)
-        }
-        .shadow(color: .black.opacity(0.18), radius: 14, y: 8)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(state.screenDisplays.isEmpty ? "Screen preview unavailable" : "Preview of \(selectedDisplayName)")
-    }
-
-    private var previewCanvas: some View {
-        GeometryReader { proxy in
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.05, green: 0.07, blue: 0.14),
-                        Color(red: 0.12, green: 0.17, blue: 0.31),
-                        Color(red: 0.07, green: 0.10, blue: 0.22),
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-
-                Circle()
-                    .fill(Color.cyan.opacity(0.16))
-                    .frame(width: proxy.size.width * 0.70)
-                    .blur(radius: 24)
-                    .offset(x: proxy.size.width * 0.30, y: -proxy.size.height * 0.30)
-                Circle()
-                    .fill(Color.purple.opacity(0.17))
-                    .frame(width: proxy.size.width * 0.62)
-                    .blur(radius: 30)
-                    .offset(x: -proxy.size.width * 0.32, y: proxy.size.height * 0.35)
-
-                VStack(spacing: 14) {
-                    Image(systemName: "rectangle.inset.filled")
-                        .font(.system(size: 28, weight: .light))
-                        .foregroundStyle(.white.opacity(0.72))
-                    Text(state.screenDisplays.isEmpty ? "Screen preview" : "Ready to record")
-                        .font(.callout.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.75))
-                }
-
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(.white.opacity(0.08))
-                    .frame(width: proxy.size.width * 0.58, height: 72)
-                    .offset(x: proxy.size.width * 0.12, y: -proxy.size.height * 0.18)
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(.black.opacity(0.16))
-                    .frame(width: proxy.size.width * 0.42, height: 50)
-                    .offset(x: -proxy.size.width * 0.18, y: proxy.size.height * 0.22)
-            }
-        }
-    }
-
-    private var displayBadge: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "display")
-                .font(.caption.weight(.semibold))
-            Text(selectedDisplayName)
-                .font(.caption.weight(.medium))
-                .lineLimit(1)
-            if state.screenDisplays.count > 1 {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 9, weight: .bold))
-                    .opacity(0.7)
-            }
-        }
-        .foregroundStyle(.white.opacity(0.88))
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(.black.opacity(0.34), in: Capsule())
-    }
-
-    private var previewBubble: some View {
-        ZStack {
-            Circle()
-                .fill(.white.opacity(0.92))
-            Circle()
-                .stroke(.white, lineWidth: 2)
-            Image(systemName: "person.fill")
-                .font(.system(size: 19, weight: .medium))
-                .foregroundStyle(Color.indigo.opacity(0.72))
-        }
-        .frame(width: previewBubbleSize, height: previewBubbleSize)
-        .shadow(color: .black.opacity(0.32), radius: 9, y: 4)
-        .accessibilityHidden(true)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .contentSurface(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Display: \(selectedDisplayName)")
     }
 
     private var captureControls: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Include")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(includeSummary)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Include")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
 
-            HStack(spacing: 8) {
-                CaptureOptionTile(
+            VStack(spacing: 0) {
+                CaptureOptionRow(
                     title: "Camera",
-                    subtitle: "Bubble",
+                    subtitle: cameraSubtitle,
                     symbol: "video.fill",
-                    isOn: state.screenRecordingOptions.cameraEnabled
+                    isOn: $state.screenRecordingOptions.cameraEnabled,
+                    isDisabled: false
                 ) {
-                    state.screenRecordingOptions.cameraEnabled.toggle()
+                    state.refreshScreenRecordingPermissions()
                 }
-                CaptureOptionTile(
+                CaptureOptionRow(
                     title: "Microphone",
-                    subtitle: "Your voice",
+                    subtitle: microphoneSubtitle,
                     symbol: "mic.fill",
-                    isOn: state.screenRecordingOptions.microphoneEnabled
+                    isOn: $state.screenRecordingOptions.microphoneEnabled,
+                    isDisabled: false
                 ) {
-                    state.screenRecordingOptions.microphoneEnabled.toggle()
+                    state.refreshScreenRecordingPermissions()
                 }
-                CaptureOptionTile(
+                CaptureOptionRow(
                     title: "Mac audio",
-                    subtitle: "System sound",
+                    subtitle: state.systemAudioMode == .unsupported ? "Unavailable on this Mac" : "System sound",
                     symbol: "speaker.wave.2.fill",
-                    isOn: state.screenRecordingOptions.systemAudioEnabled,
+                    isOn: $state.screenRecordingOptions.systemAudioEnabled,
                     isDisabled: state.systemAudioMode == .unsupported
-                ) {
-                    state.screenRecordingOptions.systemAudioEnabled.toggle()
+                )
+            }
+            .background(.quaternary.opacity(0.24), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            if state.screenRecordingOptions.cameraEnabled {
+                HStack(spacing: 10) {
+                    Image(systemName: "circle.dashed")
+                        .foregroundStyle(Color.accentColor)
+                        .accessibilityHidden(true)
+                    Text("Bubble size")
+                        .font(.caption.weight(.medium))
+                    Slider(value: $state.screenRecordingOptions.bubbleScale, in: 0.12...0.34)
+                        .accessibilityLabel("Camera bubble size")
+                    Text(sizeLabel)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 34, alignment: .trailing)
                 }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
-            HStack(spacing: 12) {
-                if state.screenRecordingOptions.cameraEnabled {
-                    HStack(spacing: 9) {
-                        Image(systemName: "circle.dashed")
-                            .foregroundStyle(Color.accentColor)
-                        Text("Bubble size")
-                            .font(.caption.weight(.medium))
-                        Slider(value: $state.screenRecordingOptions.bubbleScale, in: 0.12...0.34)
-                            .frame(maxWidth: .infinity)
-                            .accessibilityLabel("Camera bubble size")
-                        Text(sizeLabel)
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                            .frame(width: 32, alignment: .trailing)
-                    }
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                } else {
-                    Label("Camera bubble is off", systemImage: "video.slash")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-                Spacer(minLength: 0)
+            if let issue = permissionIssue {
+                permissionRow(issue)
             }
-            .frame(height: 24)
-            .animation(reduceMotion ? nil : .easeOut(duration: GlassTokens.Motion.surfaceChange), value: state.screenRecordingOptions.cameraEnabled)
         }
+        .animation(reduceMotion ? nil : .easeOut(duration: GlassTokens.Motion.surfaceChange), value: state.screenRecordingOptions.cameraEnabled)
     }
 
     private var footer: some View {
-        HStack {
+        HStack(spacing: 12) {
             Button("Cancel") { state.dismissScreenRecordingSetup() }
                 .keyboardShortcut(.cancelAction)
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
+
             Spacer()
+
             Button {
                 state.startScreenRecording()
             } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "record.circle.fill")
-                    Text("Start recording")
-                }
-                .font(.body.weight(.semibold))
-                .padding(.horizontal, 18)
-                .frame(height: 38)
+                Label("Record", systemImage: "record.circle.fill")
+                    .font(.body.weight(.semibold))
+                    .padding(.horizontal, 16)
+                    .frame(height: 36)
             }
             .buttonStyle(.borderedProminent)
             .tint(StatusColorRole.recording.color)
-            .disabled(state.screenDisplays.isEmpty || state.isLoadingScreenDisplays)
+            .disabled(!canStart)
             .keyboardShortcut(.defaultAction)
         }
     }
 
-    private var permissionNotice: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "lock.shield")
-                .foregroundStyle(.orange)
-            Text(permissionMessage)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.white.opacity(0.88))
-                .lineLimit(2)
-            Spacer(minLength: 4)
-            Button("Settings") { state.openScreenRecordingSettings() }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-            Button("Retry") { Task { await state.refreshScreenDisplays() } }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+    private func permissionMessage(for issue: ScreenRecordingSetupIssue) -> String {
+        if issue == .screenPermission && state.screenRecordingRestartRequired {
+            return "If access is enabled in Settings and Retry still fails, quit and reopen OpenRamble once."
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(.black.opacity(0.48), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+        return issue.message
     }
 
     private var selectedDisplayName: String {
@@ -322,77 +207,146 @@ struct ScreenRecordingSetup: View {
             ?? "Choose a display"
     }
 
-    private var includeSummary: String {
-        let count = [
-            state.screenRecordingOptions.cameraEnabled,
-            state.screenRecordingOptions.microphoneEnabled,
-            state.screenRecordingOptions.systemAudioEnabled,
-        ].filter { $0 }.count
-        return "\(count) of 3 selected"
-    }
-
-    private var previewBubbleSize: CGFloat {
-        CGFloat(max(34, min(78, state.screenRecordingOptions.bubbleScale * 260)))
-    }
-
     private var sizeLabel: String {
         "\(Int(state.screenRecordingOptions.bubbleScale * 100))%"
     }
 
-    private var permissionMessage: String {
-        let raw = state.screenSetupError?.lowercased() ?? ""
-        if raw.contains("tcc") || raw.contains("declined") || raw.contains("permission") {
-            return "Allow Screen Recording in System Settings"
+    private var cameraSubtitle: String {
+        guard state.screenRecordingOptions.cameraEnabled else { return "Bubble off" }
+        switch state.screenCameraPermission {
+        case .granted: return "Bubble on"
+        case .notDetermined: return "Ask on start"
+        case .denied: return "Allow in Settings"
+        case .restricted: return "Restricted"
         }
-        return state.screenSetupError ?? "No display is available"
+    }
+
+    private var microphoneSubtitle: String {
+        guard state.screenRecordingOptions.microphoneEnabled else { return "Voice off" }
+        switch state.screenMicrophonePermission {
+        case .granted: return "Your voice"
+        case .notDetermined: return "Ask on start"
+        case .denied: return "Allow in Settings"
+        case .restricted: return "Restricted"
+        }
+    }
+
+    private var permissionIssue: ScreenRecordingSetupIssue? {
+        guard !state.isLoadingScreenDisplays else { return nil }
+        if state.screenDisplays.isEmpty {
+            return state.screenSetupIssue ?? .noDisplay
+        }
+        if state.screenRecordingOptions.cameraEnabled {
+            switch state.screenCameraPermission {
+            case .denied: return .cameraPermission
+            case .restricted: return .cameraRestricted
+            case .granted, .notDetermined: break
+            }
+        }
+        if state.screenRecordingOptions.microphoneEnabled {
+            switch state.screenMicrophonePermission {
+            case .denied, .restricted: return .microphonePermission
+            case .granted, .notDetermined: break
+            }
+        }
+        return nil
+    }
+
+    private var canStart: Bool {
+        guard !state.isLoadingScreenDisplays, !state.screenDisplays.isEmpty else { return false }
+        if state.screenRecordingOptions.cameraEnabled,
+           state.screenCameraPermission == .denied || state.screenCameraPermission == .restricted {
+            return false
+        }
+        if state.screenRecordingOptions.microphoneEnabled,
+           state.screenMicrophonePermission == .denied || state.screenMicrophonePermission == .restricted {
+            return false
+        }
+        return true
+    }
+
+    private func permissionRow(_ issue: ScreenRecordingSetupIssue) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: GlassTokens.Space.inline) {
+                Image(systemName: issue.symbol)
+                    .foregroundStyle(.orange)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(issue.title)
+                        .font(.caption.weight(.semibold))
+                    Text(permissionMessage(for: issue))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: GlassTokens.Space.inline)
+            }
+            HStack(spacing: 8) {
+                if issue.settingsTitle != nil {
+                    Button("Settings") { openSettings(for: issue) }
+                        .controlSize(.small)
+                }
+                if issue == .screenPermission && state.screenRecordingRestartRequired {
+                    Button("Restart") { state.relaunchForScreenRecording() }
+                        .controlSize(.small)
+                }
+                Button("Retry") { state.retryScreenRecordingSetup() }
+                    .controlSize(.small)
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(12)
+        .contentSurface(RoundedRectangle(cornerRadius: GlassTokens.Radius.control, style: .continuous))
+        .accessibilityElement(children: .contain)
+    }
+
+    private func openSettings(for issue: ScreenRecordingSetupIssue) {
+        switch issue {
+        case .screenPermission: state.openScreenRecordingSettings()
+        case .cameraPermission, .cameraRestricted: state.openCameraSettings()
+        case .microphonePermission: state.openMicrophoneSettings()
+        case .noDisplay, .captureFailed: break
+        }
     }
 }
 
-private struct CaptureOptionTile: View {
+private struct CaptureOptionRow: View {
     let title: String
     let subtitle: String
     let symbol: String
-    let isOn: Bool
+    @Binding var isOn: Bool
     var isDisabled = false
-    let action: () -> Void
+    var onChange: (() -> Void)?
 
     var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 7) {
-                HStack(alignment: .top) {
-                    Image(systemName: symbol)
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(isOn ? Color.accentColor : .secondary)
-                    Spacer(minLength: 4)
-                    Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(isOn ? Color.accentColor : .secondary.opacity(0.65))
-                }
+        HStack(spacing: 12) {
+            Image(systemName: symbol)
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(isOn ? Color.accentColor : .secondary)
+                .frame(width: 22)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.primary)
+                    .font(.body)
                 Text(subtitle)
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 11)
-            .padding(.vertical, 10)
-            .background(
-                isOn ? Color.accentColor.opacity(0.12) : Color.primary.opacity(0.045),
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(isOn ? Color.accentColor.opacity(0.42) : Color.primary.opacity(0.10), lineWidth: isOn ? 1 : 0.5)
-            }
+            Spacer(minLength: 8)
+            Toggle("", isOn: $isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .onChange(of: isOn) { _, _ in onChange?() }
+                .disabled(isDisabled)
         }
-        .buttonStyle(.plain)
-        .disabled(isDisabled)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
         .opacity(isDisabled ? 0.48 : 1)
-        .accessibilityLabel("\(title), \(subtitle)")
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
         .accessibilityValue(isDisabled ? "Unavailable" : (isOn ? "On" : "Off"))
-        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
 

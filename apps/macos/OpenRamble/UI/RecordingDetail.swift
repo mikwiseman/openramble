@@ -37,8 +37,8 @@ struct RecordingDetail: View {
             return .handled
         }
         .toolbar {
-            ToolbarItemGroup {
-                Menu("More") {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
                     Button("Rename…", action: onRename)
                     Button("Save Transcript…") { saveTranscript() }
                         .disabled(state.transcript(for: recording.id).isEmpty)
@@ -54,7 +54,16 @@ struct RecordingDetail: View {
                     Divider()
                     Button("Move to Trash", role: .destructive) { state.trashRecording(recording.id) }
                 }
+                label: {
+                    Label("More", systemImage: "ellipsis.circle")
+                        .labelStyle(.iconOnly)
+                        .imageScale(.medium)
+                        .frame(width: 28, height: 28)
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
                 .help("Recording details and actions")
+                .accessibilityLabel("More recording actions")
                 .popover(isPresented: $showsInfo) {
                     VStack(alignment: .leading, spacing: GlassTokens.Space.inline) {
                         Text("Recording Details").font(.headline)

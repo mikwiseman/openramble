@@ -25,15 +25,16 @@ struct RecordBar: View {
     }
 
     var body: some View {
-        HStack(spacing: GlassTokens.Space.stack) {
+        HStack(alignment: .center, spacing: GlassTokens.Space.inline) {
             HStack(spacing: GlassTokens.Space.inline) {
                 if isBusy {
                     ProgressView().controlSize(.small)
                 } else {
-                    Circle()
-                        .fill(isRecording && state.meetingState != .paused
-                            ? StatusColorRole.recording.color : Color.secondary)
-                        .frame(width: 8, height: 8)
+                    Image(systemName: isScreenMode ? "rectangle.inset.filled" : "waveform")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(isRecording ? StatusColorRole.recording.color : .secondary)
+                        .frame(width: 24, height: 24)
+                        .background(.quaternary.opacity(0.55), in: Circle())
                         .accessibilityHidden(true)
                 }
                 if isRecording {
@@ -45,7 +46,7 @@ struct RecordBar: View {
                             .font(.system(size: 19, weight: .medium, design: .rounded))
                             .monospacedDigit()
                     }
-                    .frame(minWidth: 90, alignment: .leading)
+                    .frame(minWidth: 84, alignment: .leading)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(state.meetingState == .paused ? "Paused" : "Recording")
                     .accessibilityValue(RecordingTime.spoken(state.liveDuration))
@@ -58,16 +59,16 @@ struct RecordBar: View {
                             }
                             .pickerStyle(.segmented)
                             .labelsHidden()
-                            .frame(width: 142)
+                            .frame(width: 132)
                             .accessibilityLabel("Recording type")
                         }
                         Text(line)
-                            .font(.callout)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
             }
-            Spacer(minLength: GlassTokens.Space.inline)
+            Spacer(minLength: GlassTokens.Space.tight)
             if isRecording {
                 LiveLevelMeters(
                     levels: state.liveLevels,
@@ -76,7 +77,7 @@ struct RecordBar: View {
                     othersDegraded: state.liveCaptureHealth.marksRecordingDegraded,
                     youDegraded: state.liveMicrophoneHealth.marksRecordingDegraded
                 )
-                Spacer(minLength: GlassTokens.Space.inline)
+                Spacer(minLength: GlassTokens.Space.tight)
                 Button {
                     if state.meetingState == .paused { state.resumeRecording() } else { state.pauseRecording() }
                 } label: {
@@ -130,10 +131,9 @@ struct RecordBar: View {
             .background(StatusColorRole.recording.color, in: Capsule())
             .disabled(isBusy)
         }
-        .padding(.leading, GlassTokens.Space.section)
-        .padding(.trailing, GlassTokens.Space.inline)
-        .padding(.vertical, GlassTokens.Space.inline)
-        .frame(maxWidth: 920)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: 760, minHeight: 58)
         .glassSurface(Capsule())
         .animation(reduceMotion ? nil : .easeOut(duration: GlassTokens.Motion.surfaceChange), value: isRecording)
     }

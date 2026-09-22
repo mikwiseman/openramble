@@ -47,7 +47,7 @@ public final class ScreenRecordingCapture: NSObject, ScreenRecordingCapturing, S
 
     /// The static list used by the preflight panel. Names are intentionally
     /// display names only; no window titles or file names leave this layer.
-    static func displays() async throws -> [ScreenDisplayOption] {
+    public static func displays() async throws -> [ScreenDisplayOption] {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         return content.displays.map { display in
             let name = NSScreen.screens.first(where: {
@@ -62,7 +62,7 @@ public final class ScreenRecordingCapture: NSObject, ScreenRecordingCapturing, S
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         let selectedID = options.displayID ?? mainDisplayID() ?? content.displays.first?.displayID
         guard let selectedID,
-              let selected = content.displays.first(where: { $0.displayID == selectedID }) ?? content.displays.first else {
+              let selected = content.displays.first(where: { $0.displayID == selectedID }) else {
             throw ScreenRecordingError.noDisplay
         }
         display = selected
@@ -87,7 +87,8 @@ public final class ScreenRecordingCapture: NSObject, ScreenRecordingCapturing, S
         try? FileManager.default.removeItem(at: temporaryURL)
         let writer = try ScreenMovieWriter(url: temporaryURL, width: size.width, height: size.height)
         media.configure(writer: writer, width: size.width, height: size.height,
-                        scale: options.bubbleScale, position: options.bubblePosition)
+                        scale: options.bubbleScale, position: options.bubblePosition,
+                        cameraEnabled: options.cameraEnabled)
         media.setInitialAnchorIfNeeded()
 
         do {
@@ -132,11 +133,16 @@ public final class ScreenRecordingCapture: NSObject, ScreenRecordingCapturing, S
         guard !recording, let stream else { throw ScreenRecordingError.notRecording }
         media.setAccepting(true)
         try await stream.startCapture()
+        if options.cameraEnabled, overlay == nil {
+            try await showOverlay()
+        }
         recording = true
     }
 
     public func stop() async throws {
-        guard (recording || stream != nil), !stopping else { throw ScreenRecordingError.notRecording }
+        guard (recording || stream != nil || prepared || cameraSession != nil), !stopping else {
+            throw ScreenRecordingError.notRecording
+        }
         stopping = true
         defer { stopping = false }
         recording = false
@@ -147,15 +153,20 @@ public final class ScreenRecordingCapture: NSObject, ScreenRecordingCapturing, S
         self.stream = nil
         hideOverlay()
         stopCamera()
-        guard let writer = media.detachWriter() else { throw ScreenRecordingError.notRecording }
+        guard let writer = media.detachWriter() else {
+            prepared = false
+            return
+        }
         do {
             try await writer.finish()
             let finalURL = directory.appendingPathComponent("video.mp4", isDirectory: false)
             try? FileManager.default.removeItem(at: finalURL)
             try FileManager.default.moveItem(at: writer.outputURL, to: finalURL)
             media.setFinishedURL(finalURL)
+            prepared = false
         } catch {
             media.cancelWriter()
+            prepared = false
             throw error
         }
     }
@@ -163,10 +174,15 @@ public final class ScreenRecordingCapture: NSObject, ScreenRecordingCapturing, S
     public func updateCameraEnabled(_ enabled: Bool) async throws {
         guard options.cameraEnabled != enabled else { return }
         if enabled {
-            try await prepareCamera()
-            options.cameraEnabled = true
-            media.setCameraEnabled(true)
-            if recording { try await showOverlay() }
+            do {
+                try await prepareCamera()
+                options.cameraEnabled = true
+                media.setCameraEnabled(true)
+                if recording || stream != nil || prepared { try await showOverlay() }
+            } catch {
+                stopCamera()
+                throw error
+            }
         } else {
             options.cameraEnabled = false
             media.setCameraEnabled(false)
@@ -217,11 +233,18 @@ public final class ScreenRecordingCapture: NSObject, ScreenRecordingCapturing, S
     }
 
     private func prepareCamera() async throws {
-        guard AVCaptureDevice.authorizationStatus(for: .video) != .denied else {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            break
+        case .notDetermined:
+            guard await AVCaptureDevice.requestAccess(for: .video) else {
+                throw ScreenRecordingError.permissionDenied("Камера")
+            }
+        case .restricted:
+            throw ScreenRecordingError.cameraRestricted
+        case .denied:
             throw ScreenRecordingError.permissionDenied("Камера")
-        }
-        if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined,
-           !(await AVCaptureDevice.requestAccess(for: .video)) {
+        @unknown default:
             throw ScreenRecordingError.permissionDenied("Камера")
         }
         if cameraSession != nil { return }
@@ -310,12 +333,13 @@ private final class ScreenMediaState: @unchecked Sendable {
 
     var finishedURL: URL? { queue.sync { finished } }
 
-    func configure(writer: ScreenMovieWriter, width: Int, height: Int, scale: Double, position: NormalizedPoint) {
+    func configure(writer: ScreenMovieWriter, width: Int, height: Int, scale: Double, position: NormalizedPoint, cameraEnabled: Bool) {
         queue.sync {
             self.writer = writer
             self.compositor = try? ScreenFrameCompositor(width: width, height: height)
             self.scale = ScreenBubbleGeometry.clampedScale(scale)
             self.position = position
+            self.cameraEnabled = cameraEnabled
             // Audio may begin before ScreenCaptureKit starts. Keep accepting
             // aligned PCM immediately; `setAccepting` gates only video.
             self.accepting = true
@@ -399,7 +423,7 @@ private final class ScreenMediaState: @unchecked Sendable {
     }
 
     func cancelWriter() { queue.sync { writer?.cancel(); writer = nil; compositor = nil } }
-    func setFinishedURL(_ url: URL) { queue.async { self.finished = url } }
+    func setFinishedURL(_ url: URL) { queue.sync { self.finished = url } }
 
     private static func hostNanoseconds(_ time: CMTime? = nil) -> UInt64? {
         if time == nil {
