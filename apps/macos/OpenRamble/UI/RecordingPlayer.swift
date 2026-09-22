@@ -222,7 +222,7 @@ final class RecordingPlayer: ObservableObject {
     }
 
     private static func makePreviewImage(from url: URL) async -> NSImage? {
-        let image = await Task.detached(priority: .utility) {
+        let image: CGImage? = await Task.detached(priority: .utility) { () -> CGImage? in
             guard let asset = try? LocalRecordingAsset.make(url: url) else { return nil }
             let generator = AVAssetImageGenerator(asset: asset)
             generator.appliesPreferredTrackTransform = true
