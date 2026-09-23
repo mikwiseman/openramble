@@ -13,9 +13,11 @@ struct RecordingDetail: View {
     @ObservedObject var state: AppState
     let recording: MeetingRecordingMetadata
     @ObservedObject var player: RecordingPlayer
-    let onRename: () -> Void
 
     @State private var showsInfo = false
+    @State private var isRenaming = false
+    @State private var draftTitle = ""
+    @FocusState private var titleIsFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -34,13 +36,18 @@ struct RecordingDetail: View {
         .onAppear(perform: load)
         .onChange(of: recording.id) { _, _ in load() }
         .onKeyPress(.space) {
+            guard !isRenaming, !titleIsFocused else { return .ignored }
             player.toggle()
             return .handled
+        }
+        .onChange(of: titleIsFocused) { _, focused in
+            guard !focused, isRenaming else { return }
+            commitRename()
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    Button("Rename…", action: onRename)
+                    Button("Rename…", action: beginRenaming)
                     Button("Save Transcript…") { saveTranscript() }
                         .disabled(state.transcript(for: recording.id).isEmpty)
                     Button("Save Audio…") { saveAudio() }
@@ -77,15 +84,26 @@ struct RecordingDetail: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: GlassTokens.Space.tight) {
-            HStack(alignment: .firstTextBaseline, spacing: GlassTokens.Space.inline) {
+            if isRenaming {
+                TextField(
+                    "Recording name",
+                    text: $draftTitle,
+                    prompt: Text(RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
+                )
+                .textFieldStyle(.plain)
+                .font(.title2.weight(.semibold))
+                .focused($titleIsFocused)
+                .onSubmit(commitRename)
+                .onExitCommand(perform: cancelRename)
+                .accessibilityLabel("Recording name")
+                .task { titleIsFocused = true }
+            } else {
                 Text(recording.title ?? RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
                     .font(.title2.weight(.semibold))
                     .lineLimit(2)
-                Button("Rename", systemImage: "pencil", action: onRename)
-                    .buttonStyle(.borderless)
-                    .font(.callout)
-                    .fixedSize()
-                    .help("Rename this recording")
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2, perform: beginRenaming)
+                    .help("Double-click to rename")
                     .accessibilityIdentifier("rename-recording")
             }
 
@@ -216,6 +234,23 @@ struct RecordingDetail: View {
             url: state.recordingAudioURL(recording.id),
             videoURL: recording.captureKind == .screen ? state.recordingVideoURL(recording.id) : nil
         )
+    }
+
+    private func beginRenaming() {
+        draftTitle = recording.title ?? ""
+        isRenaming = true
+        titleIsFocused = true
+    }
+
+    private func commitRename() {
+        state.renameRecording(recording.id, title: draftTitle)
+        isRenaming = false
+        titleIsFocused = false
+    }
+
+    private func cancelRename() {
+        isRenaming = false
+        titleIsFocused = false
     }
 
     private func saveTranscript() {

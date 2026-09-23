@@ -88,9 +88,9 @@ struct SystemAudioIntroSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: GlassTokens.Space.stack) {
-            Text("Record the other side too?")
+            Text("Ready to record")
                 .font(.title2.weight(.semibold))
-            Text("OpenRamble can record what you hear — the other people in a call, or anything playing on this Mac — alongside your microphone. macOS will ask for permission the first time.")
+            Text("OpenRamble records your voice and, when available, what this Mac plays — the other people in a call or anything playing on the Mac. macOS will ask for permission the first time.")
                 .fixedSize(horizontal: false, vertical: true)
             Text("Everything stays on this Mac. Nothing is uploaded, and no other app is told you are recording. In many places recording a conversation without everyone's consent is illegal; asking is your responsibility.")
                 .font(.callout)
@@ -104,8 +104,7 @@ struct SystemAudioIntroSheet: View {
                 Button("Cancel") { state.dismissSystemAudioIntro() }
                     .keyboardShortcut(.cancelAction)
                 Spacer()
-                Button("Record My Voice Only") { state.confirmSystemAudioIntro(includeSystemAudio: false) }
-                Button("Record You and Others") { state.confirmSystemAudioIntro(includeSystemAudio: true) }
+                Button("Continue") { state.confirmSystemAudioIntro(includeSystemAudio: true) }
                     .keyboardShortcut(.defaultAction)
             }
             .padding(.top, GlassTokens.Space.tight)

@@ -3153,7 +3153,9 @@ public final class AppState: ObservableObject {
 
     public func revealRecording(_ id: UUID) {
         guard let meetingStore else { return }
-        let target = meetingStore.audioURL(for: id) ?? meetingStore.directory(for: id)
+        let target = meetingStore.videoURL(for: id)
+            ?? meetingStore.audioURL(for: id)
+            ?? meetingStore.directory(for: id)
         NSWorkspace.shared.activateFileViewerSelecting([target])
     }
 
