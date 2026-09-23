@@ -2,9 +2,8 @@ import DictationCore
 import SwiftUI
 
 /// A single floating transport. It records the microphone and, where this Mac can, what
-/// the Mac plays — the other side of a call. There is no mode to choose. A
-/// chevron beside it holds one alternative for one recording; the choice is
-/// never remembered, which is what makes offering it safe.
+/// the Mac plays — the other side of a call. There is one recording action;
+/// there is no secondary "microphone only" mode to explain or accidentally pick.
 ///
 /// State, both sources, and controls share one glass surface. The primary
 /// action stays in the same place as it changes from Record to Stop.
@@ -112,20 +111,6 @@ struct RecordBar: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(isRecording ? "Stop recording" : "Record")
                 .accessibilityHint(isRecording ? "Ends the recording and keeps it" : line)
-                if !isRecording, let alternative {
-                    Menu {
-                        Button(alternative.title, action: alternative.action)
-                    } label: {
-                        Image(systemName: "chevron.down")
-                            .font(.caption.weight(.semibold))
-                            .frame(width: 28, height: 40)
-                    }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .fixedSize()
-                    .padding(.trailing, 4)
-                    .accessibilityLabel("Other ways to record")
-                }
             }
             .foregroundStyle(.white)
             .background(StatusColorRole.recording.color, in: Capsule())
@@ -138,27 +123,11 @@ struct RecordBar: View {
         .animation(reduceMotion ? nil : .easeOut(duration: GlassTokens.Motion.surfaceChange), value: isRecording)
     }
 
-    /// The one alternative, for this recording only.
-    private var alternative: (title: String, action: () -> Void)? {
-        guard !isScreenMode else { return nil }
-        switch state.systemAudioMode {
-        case .enabled:
-            return ("Record Microphone Only", { state.startRecording(includingSystemAudio: false) })
-        case .declined:
-            return ("Record You and Others", {
-                state.setSystemAudioDeclined(false)
-                state.startRecording()
-            })
-        case .unsupported:
-            return nil
-        }
-    }
-
     private var line: String {
         switch state.meetingState {
         case .idle:
             if isScreenMode { return "Records this display" }
-            return state.systemAudioMode == .enabled ? "Records you and the other side" : "Records your microphone only"
+            return state.systemAudioMode == .enabled ? "Records you and the other side" : "Records your voice"
         case .starting: return "Starting…"
         case .recording: return "Recording — \(RecordingTime.clock(state.liveDuration))"
         case .paused: return "Paused — \(RecordingTime.clock(state.liveDuration))"

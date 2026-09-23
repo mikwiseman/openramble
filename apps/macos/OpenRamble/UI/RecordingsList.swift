@@ -6,8 +6,11 @@ import SwiftUI
 struct RecordingsList: View {
     @ObservedObject var state: AppState
     @Binding var selection: Set<UUID>
-    let onRename: (MeetingRecordingMetadata) -> Void
+    let onRename: (UUID, String?) -> Void
     let onDelete: (Set<UUID>) -> Void
+    @State private var editingID: UUID?
+    @State private var draftTitle = ""
+    @FocusState private var focusedEditingID: UUID?
 
     var body: some View {
         List(selection: $selection) {
@@ -19,13 +22,25 @@ struct RecordingsList: View {
             ForEach(RecordingDayGroup.make(state.recordings)) { group in
                 Section {
                     ForEach(group.recordings) { recording in
-                        RecordingRow(recording: recording, showsSeconds: group.needsSeconds(for: recording))
+                        RecordingRow(
+                            recording: recording,
+                            showsSeconds: group.needsSeconds(for: recording),
+                            isEditing: editingID == recording.id,
+                            editingTitle: $draftTitle,
+                            focusedEditingID: $focusedEditingID,
+                            onCommit: { commitRenaming(recording) },
+                            onCancel: cancelRenaming
+                        )
                             .tag(recording.id)
                             .listRowSeparator(.hidden)
                             .contentShape(Rectangle())
-                            .onTapGesture(count: 2) { onRename(recording) }
+                            .onTapGesture(count: 2) {
+                                guard editingID == nil else { return }
+                                beginRenaming(recording)
+                            }
+                            .accessibilityAction(named: "Rename") { beginRenaming(recording) }
                             .contextMenu {
-                                Button("Rename…") { onRename(recording) }
+                                Button("Rename…") { beginRenaming(recording) }
                                 Divider()
                                 Button("Move to Trash", role: .destructive) { onDelete([recording.id]) }
                             }
@@ -40,21 +55,63 @@ struct RecordingsList: View {
         }
         .listStyle(.sidebar)
         .onKeyPress(.return) {
+            guard editingID == nil else { return .ignored }
             guard selection.count == 1,
                   let id = selection.first,
                   let recording = state.recordings.first(where: { $0.id == id }) else { return .ignored }
-            onRename(recording)
+            beginRenaming(recording)
             return .handled
         }
         .onDeleteCommand {
+            guard editingID == nil else { return }
             onDelete(selection)
         }
+        .onChange(of: focusedEditingID) { oldValue, newValue in
+            guard let oldValue, newValue == nil, editingID == oldValue else { return }
+            guard let recording = state.recordings.first(where: { $0.id == oldValue }) else {
+                cancelRenaming()
+                return
+            }
+            commitRenaming(recording)
+        }
+        .onChange(of: selection) { _, newSelection in
+            guard let editingID, newSelection != [editingID],
+                  let recording = state.recordings.first(where: { $0.id == editingID }) else { return }
+            commitRenaming(recording)
+        }
+    }
+
+    private func beginRenaming(_ recording: MeetingRecordingMetadata) {
+        if let editingID, editingID != recording.id,
+           let previous = state.recordings.first(where: { $0.id == editingID }) {
+            commitRenaming(previous)
+        }
+        selection = [recording.id]
+        draftTitle = recording.title ?? ""
+        editingID = recording.id
+        focusedEditingID = recording.id
+    }
+
+    private func commitRenaming(_ recording: MeetingRecordingMetadata) {
+        onRename(recording.id, draftTitle)
+        editingID = nil
+        focusedEditingID = nil
+    }
+
+    private func cancelRenaming() {
+        editingID = nil
+        focusedEditingID = nil
     }
 }
 
 struct RecordingRow: View {
     let recording: MeetingRecordingMetadata
     var showsSeconds = false
+    var isEditing = false
+    var editingTitle: Binding<String>? = nil
+    var focusedEditingID: FocusState<UUID?>.Binding? = nil
+    var onCommit: (() -> Void)? = nil
+    var onCancel: (() -> Void)? = nil
 
     private var startTime: String {
         let format = Date.FormatStyle.dateTime.hour().minute()
@@ -73,9 +130,23 @@ struct RecordingRow: View {
                     .font(.caption.weight(.medium))
                     .foregroundStyle(recording.captureKind == .screen ? Color.accentColor : Color.secondary)
                     .accessibilityHidden(true)
-                Text(recording.title ?? startTime)
+                if isEditing, let editingTitle, let focusedEditingID {
+                    TextField(
+                        "Recording name",
+                        text: editingTitle,
+                        prompt: Text(RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
+                    )
+                    .textFieldStyle(.plain)
                     .font(.body)
-                    .lineLimit(1)
+                    .focused(focusedEditingID, equals: recording.id)
+                    .onSubmit { onCommit?() }
+                    .onExitCommand { onCancel?() }
+                    .accessibilityLabel("Recording name")
+                } else {
+                    Text(recording.title ?? startTime)
+                        .font(.body)
+                        .lineLimit(1)
+                }
                 Spacer(minLength: GlassTokens.Space.tight)
                 Text(RecordingTime.clock(recording.duration))
                     .font(.caption)
@@ -97,7 +168,7 @@ struct RecordingRow: View {
         }
         .padding(.vertical, GlassTokens.Space.tight)
         .help(recording.startedAt.formatted(date: .complete, time: .standard))
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: isEditing ? .contain : .ignore)
         .accessibilityLabel(recording.title ?? RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
         .accessibilityValue(accessibilityValue)
     }

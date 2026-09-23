@@ -150,8 +150,10 @@ struct ScreenRecordingSetup: View {
                 ScreenCameraPreview(
                     cameraAvailable: state.screenCameraPermission == .granted,
                     bubbleScale: state.screenRecordingOptions.bubbleScale,
-                    bubblePosition: state.screenRecordingOptions.bubblePosition
+                    bubblePosition: state.screenRecordingOptions.bubblePosition,
+                    onPositionChanged: state.setRecordingBubblePosition
                 )
+                .frame(maxWidth: .infinity)
                 .frame(height: 190)
                 .padding(.top, 2)
 

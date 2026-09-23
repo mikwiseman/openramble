@@ -114,7 +114,7 @@ struct PermissionStatus: Equatable {
         case .declined:
             return .init(
                 title: "System Audio",
-                detail: "You chose to record your microphone only. Recordings will not include the other side of a call.",
+                detail: "System audio is off. Recordings include your voice only until you turn it on.",
                 granted: false,
                 value: "Turned off",
                 actionTitle: "Turn On"

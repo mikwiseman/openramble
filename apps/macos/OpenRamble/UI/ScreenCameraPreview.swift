@@ -9,13 +9,16 @@ struct ScreenCameraPreview: View {
     let cameraAvailable: Bool
     let bubbleScale: Double
     let bubblePosition: NormalizedPoint
+    let onPositionChanged: (NormalizedPoint) -> Void
+    @State private var dragStartPosition: NormalizedPoint?
 
     var body: some View {
         GeometryReader { proxy in
             let size = proxy.size
             let diameter = min(size.width, size.height) * ScreenBubbleGeometry.clampedScale(bubbleScale)
-            let x = min(max(bubblePosition.x * size.width, diameter / 2), size.width - diameter / 2)
-            let y = min(max(bubblePosition.y * size.height, diameter / 2), size.height - diameter / 2)
+            let position = ScreenBubbleGeometry.clampedPosition(bubblePosition, scale: bubbleScale, in: size)
+            let x = position.x * size.width
+            let y = position.y * size.height
 
             ZStack {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -31,29 +34,50 @@ struct ScreenCameraPreview: View {
                         }
                     }
 
-                if cameraAvailable {
-                    CameraPreviewSurface()
-                        .frame(width: diameter, height: diameter)
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(.white.opacity(0.82), lineWidth: 1.5))
-                        .shadow(color: .black.opacity(0.35), radius: 8, y: 3)
-                        .position(x: x, y: y)
-                        .animation(.easeOut(duration: 0.12), value: diameter)
-                } else {
-                    Circle()
-                        .fill(Color.white.opacity(0.12))
-                        .overlay {
-                            Image(systemName: "video.slash")
-                                .foregroundStyle(.white.opacity(0.66))
-                        }
-                        .frame(width: diameter, height: diameter)
-                        .position(x: x, y: y)
+                Group {
+                    if cameraAvailable {
+                        CameraPreviewSurface()
+                            .clipShape(Circle())
+                    } else {
+                        Circle()
+                            .fill(Color.white.opacity(0.12))
+                            .overlay {
+                                Image(systemName: "video.slash")
+                                    .foregroundStyle(.white.opacity(0.66))
+                            }
+                    }
                 }
+                .frame(width: diameter, height: diameter)
+                .overlay(Circle().stroke(.white.opacity(0.82), lineWidth: 1.5))
+                .shadow(color: .black.opacity(0.35), radius: 8, y: 3)
+                .contentShape(Circle())
+                .gesture(
+                    DragGesture(minimumDistance: 0, coordinateSpace: .named("screen-preview"))
+                        .onChanged { value in
+                            let start = dragStartPosition ?? position
+                            if dragStartPosition == nil { dragStartPosition = start }
+                            let next = ScreenBubbleGeometry.clampedPosition(
+                                NormalizedPoint(
+                                    x: start.x + value.translation.width / max(size.width, 1),
+                                    y: start.y + value.translation.height / max(size.height, 1)
+                                ),
+                                scale: bubbleScale,
+                                in: size
+                            )
+                            onPositionChanged(next)
+                        }
+                        .onEnded { _ in dragStartPosition = nil }
+                )
+                .position(x: x, y: y)
+                .animation(.easeOut(duration: 0.12), value: diameter)
             }
         }
-        .aspectRatio(16 / 9, contentMode: .fit)
+        .frame(maxWidth: .infinity)
+        .frame(height: 190)
+        .coordinateSpace(name: "screen-preview")
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(cameraAvailable ? "Live camera bubble preview" : "Camera preview unavailable")
+        .accessibilityHint("Drag to move the camera bubble")
     }
 }
 
