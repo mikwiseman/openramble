@@ -641,8 +641,9 @@ public final class DictationController {
 
     /// Token-scoped form used by the asynchronously delivered capture limit
     /// observer. A late N callback can never stop N+1.
-    public func stopAtCaptureMemoryLimit(session: DictationSessionID) {
-        guard isCurrent(session) else { return }
+    @discardableResult
+    public func stopAtCaptureMemoryLimit(session: DictationSessionID) -> Bool {
+        guard isCurrent(session) else { return false }
         switch state {
         case .listening:
             markStopRequested()
@@ -652,8 +653,9 @@ public final class DictationController {
             deferredStopRequested = true
             if let session = currentSession { schedulePreparingStopWatchdog(session: session) }
         case .idle, .transcribing, .inserting:
-            break
+            return false
         }
+        return true
     }
 
     /// Switch the ongoing session to non-holding mode.

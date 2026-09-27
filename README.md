@@ -163,10 +163,9 @@ Application Support directory automatically. The bundle identifier remains
 - Use “Copy Last as Spoken” to copy the raw recognition result before
   dictionary replacements and typography cleanup. The item appears when that
   raw text differs from what was inserted.
-- A single dictation can run for up to five minutes; a recording made in the
-  Recordings window has no such limit. At the limit OpenRamble
-  stops cleanly and transcribes the complete captured audio instead of risking
-  an incomplete take when disk storage is unavailable.
+- Dictation continues beyond five minutes, using a local audio file to keep
+  memory bounded. If disk storage is unavailable, OpenRamble preserves and
+  transcribes the audio still held in memory and explains why recording stopped.
 - Choose whether the compact dictation panel appears at the top or bottom of
   the active display in Settings → General.
 

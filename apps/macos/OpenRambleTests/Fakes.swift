@@ -256,6 +256,7 @@ final class FakePasteboard: DictationPasteboard, @unchecked Sendable {
 // MARK: - Dictation edges
 
 actor FakeCapture: AudioCapturing {
+    private(set) var session: DictationSessionID?
     private(set) var startCount = 0
     private(set) var stopCount = 0
     private(set) var abortCount = 0
@@ -275,6 +276,11 @@ actor FakeCapture: AudioCapturing {
     init(file: URL) { self.file = file }
 
     func setDuration(_ value: TimeInterval) { duration = value }
+
+    func startRecording(session: DictationSessionID, disposition: RecordingDisposition) async throws -> URL {
+        self.session = session
+        return try await startRecording()
+    }
 
     func startRecording() async throws -> URL {
         startCount += 1
@@ -458,6 +464,7 @@ final class AppHarness {
     let recordingMonitor = FakeShortcutMonitor()
     let overlay = FakeOverlay()
     let capture: FakeCapture
+    var captureMemoryLimit: (@Sendable (DictationSessionID) -> Void)?
     let meetingCapture = FakeMeetingCapture()
     let screenCapture = FakeScreenRecordingCapture()
     let announcer = FakeAnnouncer()
@@ -583,7 +590,10 @@ final class AppHarness {
                 // through the speakers of whoever runs the suite — once per
                 // failure path, across hundreds of tests.
                 makeSounds: { [sounds] _ in sounds },
-                makeCapture: { [capture] _, _, _, _, _ in capture },
+                makeCapture: { [weak self, capture] _, _, _, memoryLimit, _ in
+                    self?.captureMemoryLimit = memoryLimit
+                    return capture
+                },
                 transcribe: { [transcription] _ in
                     { _ in
                         if let delay = transcription.delay {

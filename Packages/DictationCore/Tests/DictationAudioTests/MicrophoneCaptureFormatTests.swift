@@ -1630,7 +1630,7 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
         )
     }
 
-    func testFirstPCMCommitAndWriterAttachHaveOneUnambiguousWinner() async throws {
+    func testOpeningBacklogIsBoundedAndRejectsWriterMissingItsPrefix() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appending(path: "disk-attach-race-\(UUID().uuidString)", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -1638,7 +1638,7 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
 
         let cancellations = LockedCount()
         let memoryOnly = RecordingDiskAttachment { cancellations.increment() }
-        memoryOnly.submit([0.1])
+        for _ in 0...FrameSink.defaultCapacity { memoryOnly.submit([0.1]) }
         XCTAssertEqual(cancellations.value, 1)
 
         let lateWriter = WAVWriter(url: directory.appending(path: "late.wav"))
@@ -1680,6 +1680,184 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
         completeWriter.abandonForRecovery()
     }
 
+    func testDelayedWriterKeepsOpeningAudioAndContinuesPastPCMCap() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "opening-audio-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cancelled = LockedCount()
+        let attachment = RecordingDiskAttachment { cancelled.increment() }
+        let pcm = RecordingPCMBuffer(maximumSamples: 2)
+        let first = try XCTUnwrap(pcm.beginFrame())
+        _ = attachment.append([0.1, 0.2], frame: first, at: .now, to: pcm)
+        pcm.endFrame()
+
+        let writer = WAVWriter(url: directory.appending(path: "delayed.wav"))
+        try writer.open()
+        defer { writer.abandonForRecovery() }
+        let disk = RecordingDiskState(writer: writer) { _ in }
+        let sink = FrameSink()
+        defer { sink.cancel() }
+        let enqueue = sink.start { disk.append($0) }
+        let attached = attachment.attach(RecordingDiskPipeline(
+            writer: writer, disk: disk, sink: sink, enqueue: enqueue
+        ))
+        XCTAssertTrue(attached, "a short writer-open delay must not impose a duration limit")
+        guard attached else { return }
+        XCTAssertEqual(cancelled.value, 0)
+        let next = try XCTUnwrap(pcm.beginFrame())
+        let result = attachment.append([0.3], frame: next, at: .now, to: pcm)
+        pcm.endFrame()
+        XCTAssertFalse(result.didReachHardLimit)
+        let frozen = await pcm.freeze()
+        let pipeline = try XCTUnwrap(attachment.takePipeline())
+        let recording = finalizeCapturedRecording(
+            url: writer.fileURL, writer: writer, disk: disk, sink: pipeline.sink,
+            frozen: frozen, sampleRate: 16_000
+        )
+        let url = try await recording.durableURL()
+        let audio = try AVAudioFile(forReading: url)
+        XCTAssertEqual(audio.length, 3)
+        let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: audio.processingFormat, frameCapacity: 3))
+        try audio.read(into: buffer)
+        let samples = try XCTUnwrap(buffer.floatChannelData?[0])
+        for (index, expected) in [Float(0.1), 0.2, 0.3].enumerated() {
+            XCTAssertEqual(samples[index], expected, accuracy: 0.0001)
+        }
+    }
+
+    func testDiskBackedDictationContinuesPastFiveMinutesWithCompleteAudio() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "long-dictation-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let sampleRate = 16_000
+        let seconds = 310
+        let writer = WAVWriter(url: directory.appending(path: "long.wav"))
+        try writer.open()
+        defer { writer.abandonForRecovery() }
+        let failures = LockedCount()
+        let disk = RecordingDiskState(writer: writer) { _ in failures.increment() }
+        let sink = FrameSink()
+        defer { sink.cancel() }
+        let written = DispatchSemaphore(value: 0)
+        let enqueue = sink.start {
+            disk.append($0)
+            written.signal()
+        }
+        let attachment = RecordingDiskAttachment {}
+        XCTAssertTrue(attachment.attach(RecordingDiskPipeline(
+            writer: writer, disk: disk, sink: sink, enqueue: enqueue
+        )))
+        let pcm = RecordingPCMBuffer(maximumSamples: 5 * 60 * sampleRate)
+
+        for second in 0..<seconds {
+            let frame = try XCTUnwrap(pcm.beginFrame())
+            let samples = [Float](repeating: Float(second + 1) / 1_000, count: sampleRate)
+            let result = attachment.append(samples, frame: frame, at: .now, to: pcm)
+            pcm.endFrame()
+            XCTAssertFalse(result.didReachHardLimit, "healthy recording stopped at second \(second)")
+            guard !result.didReachHardLimit else { return }
+            XCTAssertEqual(written.wait(timeout: .now() + 1), .success)
+        }
+
+        let frozen = await pcm.freeze()
+        XCTAssertNil(frozen.samples, "long dictation must use disk instead of growing the PCM buffer")
+        XCTAssertEqual(frozen.totalSamples, seconds * sampleRate)
+        XCTAssertEqual(failures.value, 0)
+        let pipeline = try XCTUnwrap(attachment.takePipeline())
+        let recording = finalizeCapturedRecording(
+            url: writer.fileURL, writer: writer, disk: disk, sink: pipeline.sink,
+            frozen: frozen, sampleRate: Double(sampleRate)
+        )
+        let url = try await recording.durableURL()
+        let audio = try AVAudioFile(forReading: url)
+        XCTAssertEqual(audio.length, AVAudioFramePosition(seconds * sampleRate))
+        let buffer = try XCTUnwrap(AVAudioPCMBuffer(
+            pcmFormat: audio.processingFormat, frameCapacity: AVAudioFrameCount(sampleRate)
+        ))
+        for second in 0..<seconds {
+            try audio.read(into: buffer, frameCount: AVAudioFrameCount(sampleRate))
+            XCTAssertEqual(buffer.frameLength, AVAudioFrameCount(sampleRate))
+            let data = try XCTUnwrap(buffer.floatChannelData?[0])
+            let expected = Float(second + 1) / 1_000
+            XCTAssertEqual(data[0], expected, accuracy: 0.0001)
+            XCTAssertEqual(data[sampleRate - 1], expected, accuracy: 0.0001)
+        }
+    }
+
+    func testDiskFailureAfterPCMOverflowReportsOnceAndRecoversWrittenAudio() async throws {
+        enum InjectedFailure: Error { case write }
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "long-dictation-failure-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let writes = LockedCount()
+        let failures = LockedCount()
+        let written = DispatchSemaphore(value: 0)
+        let blocked = DispatchSemaphore(value: 0)
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let writer = WAVWriter(
+            url: directory.appending(path: "take-delayed-failure.wav"),
+            dataWriter: { handle, data in
+                writes.increment()
+                if writes.value == 2 {
+                    blocked.signal()
+                    release.wait()
+                    throw InjectedFailure.write
+                }
+                try handle.write(contentsOf: data)
+            }
+        )
+        try writer.open()
+        defer { writer.abandonForRecovery() }
+        let disk = RecordingDiskState(writer: writer) { _ in failures.increment() }
+        let sink = FrameSink()
+        let enqueue = sink.start {
+            disk.append($0)
+            written.signal()
+        }
+        let attachment = RecordingDiskAttachment {}
+        XCTAssertTrue(attachment.attach(RecordingDiskPipeline(
+            writer: writer, disk: disk, sink: sink, enqueue: enqueue
+        )))
+        let pcm = RecordingPCMBuffer(maximumSamples: 16_000)
+        let first = try XCTUnwrap(pcm.beginFrame())
+        _ = attachment.append([Float](repeating: 0.1, count: 16_000), frame: first, at: .now, to: pcm)
+        pcm.endFrame()
+        XCTAssertEqual(written.wait(timeout: .now() + 1), .success)
+        let next = try XCTUnwrap(pcm.beginFrame())
+        let result = attachment.append([Float](repeating: 0.2, count: 16_000), frame: next, at: .now, to: pcm)
+        pcm.endFrame()
+        XCTAssertTrue(result.didOverflowMemory)
+        XCTAssertFalse(result.didReachHardLimit)
+        XCTAssertEqual(blocked.wait(timeout: .now() + 1), .success)
+        XCTAssertEqual(failures.value, 0)
+        release.signal()
+        XCTAssertEqual(written.wait(timeout: .now() + 1), .success)
+        disk.queueOverflowed()
+        XCTAssertEqual(failures.value, 1, "late disk failure must interrupt capture exactly once")
+
+        let frozen = await pcm.freeze()
+        let pipeline = try XCTUnwrap(attachment.takePipeline())
+        let recording = finalizeCapturedRecording(
+            url: writer.fileURL, writer: writer, disk: disk, sink: pipeline.sink,
+            frozen: frozen, sampleRate: 16_000
+        )
+        await XCTAssertThrowsErrorAsync(try await recording.readableURL())
+        await XCTAssertThrowsErrorAsync(try await recording.durableURL())
+        writer.abandonForRecovery()
+        let recovery = RecordingRecoveryStore(
+            directory: directory.appending(path: "RecoveredAudio"), compatibilityGrace: 0
+        )
+        let imported = try await recovery.importAbandoned(from: directory)
+        XCTAssertEqual(imported.newlyImportedCount, 1)
+        let recovered = try XCTUnwrap(imported.recordings.first)
+        XCTAssertEqual(try AVAudioFile(forReading: recovered).length, 16_000)
+    }
+
     func testFailedAttachedDiskUsesGracefulPCMCapInsteadOfDroppingTake() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appending(path: "failed-attached-cap-\(UUID().uuidString)", directoryHint: .isDirectory)
@@ -1707,14 +1885,14 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
 
         let pcm = RecordingPCMBuffer(maximumSamples: 2)
         let first = try XCTUnwrap(pcm.beginFrame())
-        _ = pcm.append([0.1, 0.2], frame: first, at: .now)
+        _ = attachment.append([0.1, 0.2], frame: first, at: .now, to: pcm)
         pcm.endFrame()
         let overflowing = try XCTUnwrap(pcm.beginFrame())
-        let limit = pcm.append(
+        let limit = attachment.append(
             [0.3],
             frame: overflowing,
             at: .now,
-            preserveAtLimit: true
+            to: pcm
         )
         pcm.endFrame()
         if limit.didReachHardLimit { attachment.closeForMemoryLimit() }

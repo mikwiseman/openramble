@@ -1225,10 +1225,9 @@ final class RecordingDiskPipeline: @unchecked Sendable {
     }
 }
 
-/// The disk copy is opportunistic. If the first lossless PCM commit wins the
-/// race against `WAVWriter.open()`, the whole take remains memory-only rather
-/// than publishing a WAV with a missing prefix. This state transition and
-/// writer attachment share one short lock, so there is no ambiguous winner.
+/// Keep a bounded opening backlog so a short `WAVWriter.open()` delay does
+/// not turn an otherwise healthy recording into a memory-only take. A writer
+/// that outlives this backlog cannot attach with a missing prefix.
 final class RecordingDiskAttachment: @unchecked Sendable {
     private enum State {
         case opening
@@ -1239,17 +1238,20 @@ final class RecordingDiskAttachment: @unchecked Sendable {
     private let lock = NSLock()
     private let cancelOpen: @Sendable () -> Void
     private var state: State = .opening
+    private var openingFrames: [[Float]] = []
 
     init(cancelOpen: @escaping @Sendable () -> Void) {
         self.cancelOpen = cancelOpen
     }
 
-    /// Transfers ownership of an opened writer only if no PCM frame has yet
-    /// committed. The caller disposes a rejected pipeline off the capture actor.
+    /// Replay the opening prefix before a newer frame can reach this writer.
+    /// Enqueueing is bounded and performs no disk I/O while holding the lock.
     func attach(_ pipeline: RecordingDiskPipeline) -> Bool {
         lock.withLock {
             guard case .opening = state else { return false }
             state = .attached(pipeline)
+            for samples in openingFrames { pipeline.enqueue(samples) }
+            openingFrames.removeAll()
             return true
         }
     }
@@ -1258,20 +1260,49 @@ final class RecordingDiskAttachment: @unchecked Sendable {
         lock.withLock {
             guard case .opening = state else { return }
             state = .unavailable
+            openingFrames.removeAll()
         }
     }
 
-    /// Called inside the sequenced lossless commit. The first frame either
-    /// reaches an already attached sink or permanently selects memory-only;
-    /// a late writer can therefore never masquerade as a complete take.
+    /// Commit one converted frame to the bounded PCM fast path and its disk
+    /// copy in the same order. Only a missing/failed disk needs a capacity stop;
+    /// a healthy disk lets the recording outlive the in-memory fast path.
+    func append(
+        _ samples: [Float],
+        frame: RecordingPCMFrame,
+        at instant: ContinuousClock.Instant,
+        to pcm: RecordingPCMBuffer
+    ) -> RecordingPCMBuffer.AppendResult {
+        let canContinueOnDisk = lock.withLock {
+            guard case let .attached(pipeline) = state else { return false }
+            return pipeline.disk.recordedFailure == nil
+        }
+        let result = pcm.append(
+            samples, frame: frame, at: instant, preserveAtLimit: !canContinueOnDisk
+        )
+        // A queued write can fail after the health snapshot above. Transfer
+        // failure reporting before enqueueing this frame: a late error stops
+        // capture visibly and leaves the raw WAV for launch-time recovery.
+        if result.didOverflowMemory { _ = memoryDidOverflow() }
+        if let committed = result.committedSamples { submit(committed) }
+        return result
+    }
+
+    /// Called inside the sequenced lossless commit. Opening frames share their
+    /// sample storage with PCM; their count never exceeds the disk queue bound.
     func submit(_ samples: [Float]) {
         var enqueue: (@Sendable ([Float]) -> Void)?
         var shouldCancelOpen = false
         lock.withLock {
             switch state {
             case .opening:
-                state = .unavailable
-                shouldCancelOpen = true
+                if openingFrames.count < FrameSink.defaultCapacity {
+                    openingFrames.append(samples)
+                } else {
+                    state = .unavailable
+                    openingFrames.removeAll()
+                    shouldCancelOpen = true
+                }
             case let .attached(pipeline):
                 enqueue = pipeline.enqueue
             case .unavailable:
@@ -1290,13 +1321,15 @@ final class RecordingDiskAttachment: @unchecked Sendable {
         lock.withLock {
             if case .opening = state {
                 state = .unavailable
+                openingFrames.removeAll()
                 shouldCancelOpen = true
             }
         }
         if shouldCancelOpen { cancelOpen() }
     }
 
-    /// Returns whether a complete disk copy exists beyond the bounded PCM cap.
+    /// Transfers failure reporting to the disk once PCM no longer covers the
+    /// whole take. The file becomes readable only after finalization drains it.
     func memoryDidOverflow() -> Bool {
         let disk: RecordingDiskState? = lock.withLock {
             guard case let .attached(pipeline) = state else { return nil }
@@ -1322,6 +1355,7 @@ final class RecordingDiskAttachment: @unchecked Sendable {
                 break
             }
             state = .unavailable
+            openingFrames.removeAll()
         }
         if shouldCancelOpen { cancelOpen() }
         return pipeline
@@ -2806,15 +2840,11 @@ public actor MicrophoneCapture: AudioCapturing {
                     )
                     guard !samples.isEmpty else { return samples }
                     let at = ContinuousClock.now
-                    let append = pcm.append(
+                    let append = diskAttachment.append(
                         samples,
                         frame: frame,
                         at: at,
-                        // A queued/unsealed WAV can fail after any health
-                        // snapshot. The five-minute boundary therefore always
-                        // retains PCM and gracefully stops; only stop+drain may
-                        // establish a complete disk artifact.
-                        preserveAtLimit: true
+                        to: pcm
                     )
                     guard !append.wasRejected else {
                         // Cancelled-freeze recovery already sealed this old
@@ -2828,9 +2858,6 @@ public actor MicrophoneCapture: AudioCapturing {
                         }
                     }
                     if append.didReachHardLimit {
-                        if let committed = append.committedSamples {
-                            diskAttachment.submit(committed)
-                        }
                         // Preserve the complete bounded prefix and prevent
                         // already-overlapped callbacks from committing behind
                         // it. This is a graceful controller stop, never a fatal
@@ -2845,31 +2872,11 @@ public actor MicrophoneCapture: AudioCapturing {
                         }
                         return []
                     }
-                    // Disk is best-effort and may still be opening. The first
-                    // commit atomically chooses either a complete WAV or no
-                    // WAV, never an apparently valid file missing its prefix.
-                    diskAttachment.submit(samples)
                     // The same committed frames, to the thing that decides where
                     // this take can be cut. Inside the sequenced turn because
                     // order is the whole contract: a segmenter fed out of order
                     // would place seams in the wrong places.
                     segmentAttachment.submit(samples)
-                    if append.didOverflowMemory,
-                       !diskAttachment.memoryDidOverflow() {
-                        let failure = AudioCaptureError.writeFailed(
-                            "the in-memory recording limit was reached without a complete disk copy"
-                        )
-                        conversionSequencer.cancelPending()
-                        if captureFailure.record(failure) {
-                            Task { [weak self] in
-                                await self?.reportLiveFailure(
-                                    failure,
-                                    sessionID: sessionID,
-                                    url: url
-                                )
-                            }
-                        }
-                    }
                     // The turn covers the full lossless commit, not just the
                     // stateful converter. Otherwise overlapped callbacks could
                     // reorder the WAV after the five-minute PCM fallback.

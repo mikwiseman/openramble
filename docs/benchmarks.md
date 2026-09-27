@@ -297,10 +297,11 @@ The actionable differences were elsewhere:
   WAV concurrently. OpenRamble used to close an Int16 WAV, reopen it, and
   convert it to Float32. The shipping capture now hands the same in-memory PCM
   to ASR while retaining the WAV as the durable recovery copy. The lossless
-  fast-path buffer is capped at five minutes (about 19 MB). At that boundary
-  capture stops gracefully and transcribes the complete retained take; it does
-  not trust an unsealed asynchronous WAV and does not grow resident memory
-  without bound.
+  fast-path buffer is capped at five minutes (about 19 MB). Longer dictation
+  continues in the WAV; recognition waits for its disk queue to drain and the
+  header to be sealed. Only an unavailable or failed disk forces a capacity
+  stop with the retained PCM. Late disk failures are reported and leave the
+  written audio for recovery instead of returning a partial take as success.
 - FluidAudio pads every Parakeet v3 batch window to the model's fixed 15-second
   input. This explains the short-utterance latency floor. Its true-streaming
   managers use different model families; the v3 sliding-window API also lacks
