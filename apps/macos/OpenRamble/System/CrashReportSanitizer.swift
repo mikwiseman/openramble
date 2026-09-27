@@ -4,19 +4,25 @@ import Foundation
 /// messages, ASI, queues, thread names, device IDs and unknown fields can carry
 /// user content. Never copy them, even when Apple adds fields in a later OS.
 enum CrashReportSanitizer {
-    private static let bundles = ["is.waiwai.dictation", "is.waiwai.dictation.dev"]
+    private static let cliIdentifiers = ["is.waiwai.dictation.cli", "is.waiwai.dictation.dev.cli"]
+    private static let bundles = ["is.waiwai.dictation", "is.waiwai.dictation.dev"] + cliIdentifiers
     private static let processNames = ["OpenRamble", "OpenRambleDev", "openramble-cli"]
 
     static func sanitize(_ data: Data) throws -> Data? {
         guard let newline = data.firstIndex(of: 10) else { throw CocoaError(.fileReadCorruptFile) }
         guard let header = try JSONSerialization.jsonObject(with: data[..<newline]) as? [String: Any],
               let body = try JSONSerialization.jsonObject(with: data[(newline + 1)...]) as? [String: Any],
-              let bundle = body["bundleInfo"] as? [String: Any],
-              let identifier = bundle["CFBundleIdentifier"] as? String,
-              bundles.contains(identifier),
               let process = body["procName"] as? String, processNames.contains(process),
               (header["bug_type"] as? String) == "309",
               body["threads"] is [Any], body["usedImages"] is [Any] else { return nil }
+        let bundle = body["bundleInfo"] as? [String: Any] ?? [:]
+        // Command-line executables have no bundleInfo. Their fixed signing
+        // identifier is the app-owned identity; the filename alone is not.
+        let signedCLI = process == "openramble-cli"
+            ? (body["codeSigningID"] as? String).flatMap { cliIdentifiers.contains($0) ? $0 : nil }
+            : nil
+        guard let identifier = bundle["CFBundleIdentifier"] as? String ?? signedCLI,
+              bundles.contains(identifier) else { return nil }
         if let headerBundle = header["bundleID"] as? String, headerBundle != identifier { return nil }
 
         var safeHeader: [String: Any] = ["app_name": process, "bundleID": identifier]

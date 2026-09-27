@@ -4,12 +4,12 @@ import XCTest
 final class CrashReportSanitizerTests: XCTestCase {
     static let binaryUUID = "24F3E555-3FAC-3158-95C2-A7609FC7F3C8"
 
-    static func report(bundleID: String = "is.waiwai.dictation") throws -> Data {
-        let header: [String: Any] = ["app_name": "OpenRamble", "bundleID": bundleID,
+    static func report(bundleID: String = "is.waiwai.dictation", processName: String = "OpenRamble") throws -> Data {
+        let header: [String: Any] = ["app_name": processName, "bundleID": bundleID,
             "app_version": "0.30.3", "build_version": "70", "bug_type": "309",
             "incident_id": "PRIVATE_CANARY", "timestamp": "2026-09-27 18:54:45.00 +0300"]
         let body: [String: Any] = [
-            "procName": "OpenRamble", "procPath": "/Users/PRIVATE_CANARY/Downloads/OpenRamble.app/Contents/MacOS/OpenRamble",
+            "procName": processName, "procPath": "/Users/PRIVATE_CANARY/Downloads/OpenRamble.app/Contents/MacOS/OpenRamble",
             "bundleInfo": ["CFBundleIdentifier": bundleID, "CFBundleVersion": "70", "CFBundleShortVersionString": "0.30.3"],
             "crashReporterKey": "PRIVATE_CANARY", "bootSessionUUID": "PRIVATE_CANARY", "userID": 501,
             "captureTime": "2026-09-27 18:53:20.7999 +0300", "cpuType": "ARM-64", "translated": false,
@@ -56,6 +56,25 @@ final class CrashReportSanitizerTests: XCTestCase {
 
     func testRejectsOtherAppsEvenIfFileIsNamedOpenRamble() throws {
         XCTAssertNil(try CrashReportSanitizer.sanitize(Self.report(bundleID: "another.app")))
+    }
+
+    func testSignedCLIReportWithoutBundleInfoIsAccepted() throws {
+        let data = try Self.report(bundleID: "is.waiwai.dictation.cli", processName: "openramble-cli")
+        let newline = try XCTUnwrap(data.firstIndex(of: 10))
+        var header = try XCTUnwrap(JSONSerialization.jsonObject(with: data[..<newline]) as? [String: Any])
+        var body = try XCTUnwrap(JSONSerialization.jsonObject(with: data[(newline + 1)...]) as? [String: Any])
+        header.removeValue(forKey: "bundleID")
+        body.removeValue(forKey: "bundleInfo")
+        body["codeSigningID"] = "is.waiwai.dictation.cli"
+        var input = try JSONSerialization.data(withJSONObject: header)
+        input.append(10)
+        input.append(try JSONSerialization.data(withJSONObject: body))
+        XCTAssertNotNil(try CrashReportSanitizer.sanitize(input))
+        body["codeSigningID"] = "unrelated.cli"
+        input = try JSONSerialization.data(withJSONObject: header)
+        input.append(10)
+        input.append(try JSONSerialization.data(withJSONObject: body))
+        XCTAssertNil(try CrashReportSanitizer.sanitize(input))
     }
 
     func testMalformedAndFutureReportsAreNotCopiedRaw() {

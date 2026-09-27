@@ -450,8 +450,8 @@ cat <<TEXT
 Done. All that remains is to put it in its place:
 
   1. Check the feed: git diff $APPCAST
-  2. Create a release and upload the image:
-       gh release create v$VERSION "$DMG_PATH" --title "$VERSION" --notes-file "$NOTES_PATH"
+  2. Create a release and upload the image and symbols:
+       gh release create v$VERSION "$DMG_PATH" "$HOME/.openramble/release-symbols/OpenRamble-$VERSION-symbols.zip" --title "$VERSION" --notes-file "$NOTES_PATH"
      The link in the feed is waiting for the image exactly here:
        $DMG_URL
   3. Commit the feed and description - GitHub Pages distributes them from docs/:

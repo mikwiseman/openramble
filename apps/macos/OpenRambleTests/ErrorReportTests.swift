@@ -30,6 +30,15 @@ final class ErrorReportTests: XCTestCase {
         XCTAssertEqual(permissions, 0o600)
     }
 
+    func testLowercaseCLIReportIsCollected() throws {
+        let report = root.appending(path: "openramble-cli-test.ips")
+        try CrashReportSanitizerTests.report(bundleID: "is.waiwai.dictation.cli", processName: "openramble-cli").write(to: report)
+        let zip = root.appending(path: "report.zip")
+        try ErrorReport.save(to: zip, journal: DictationLogFile(directory: root.appending(path: "Logs"), enabled: true), directories: [root])
+        let folder = try extract(zip)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: folder.appending(path: "crash-1.ips").path))
+    }
+
     func testNoCrashAndDisabledJournalStillProduceAnHonestReport() throws {
         let log = DictationLogFile(directory: root.appending(path: "Logs"), enabled: false)
         let zip = root.appending(path: "report.zip")

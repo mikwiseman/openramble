@@ -13,7 +13,8 @@ No free-text logging API is exposed.
 
 The ZIP contains `system.json`, `events.jsonl`, `README.txt`, and at most five
 redacted Apple `.ips` crash reports (each source limited to 5 MB, last seven days).
-Only reports with OpenRamble's bundle identifier and process name are accepted.
+Only reports with OpenRamble's bundle identifier and process name are accepted;
+the bundled CLI is also identified by its fixed code-signing identifier.
 The collector checks the user's and system DiagnosticReports folders, including
 Retired. Inaccessible, malformed or unsupported reports are counted, never copied
 raw. Native stack frames, offsets and image UUIDs remain usable for symbolication.

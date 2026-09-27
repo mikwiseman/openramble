@@ -52,7 +52,7 @@ enum ErrorReport {
             do {
                 for url in try manager.contentsOfDirectory(at: directory,
                     includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey, .contentModificationDateKey, .fileSizeKey]) {
-                    guard url.lastPathComponent.hasPrefix("OpenRamble"), url.pathExtension == "ips" else { continue }
+                    guard url.lastPathComponent.lowercased().hasPrefix("openramble"), url.pathExtension == "ips" else { continue }
                     let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .contentModificationDateKey, .fileSizeKey])
                     guard values.isRegularFile == true, values.isSymbolicLink != true,
                           let date = values.contentModificationDate, date >= cutoff, date <= now else { continue }

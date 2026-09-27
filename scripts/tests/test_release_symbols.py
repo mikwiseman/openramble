@@ -15,6 +15,10 @@ class ReleaseSymbolsTests(unittest.TestCase):
         self.assertIn('archive-release-symbols.py', (ROOT / 'scripts/release.sh').read_text())
         self.assertIn('"$SYMBOLS"', (ROOT / 'scripts/ship.sh').read_text())
 
+    def test_manual_publish_instructions_include_symbols(self):
+        instructions = (ROOT / 'scripts/release.sh').read_text().split('cat <<TEXT')[-1]
+        self.assertIn('"$HOME/.openramble/release-symbols/OpenRamble-$VERSION-symbols.zip"', instructions)
+
     def test_exact_binary_and_symbols_survive_build_cleanup(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
