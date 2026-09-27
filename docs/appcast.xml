@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.30.4</title>
-      <pubDate>Sun, 27 Sep 2026 18:23:24 +0300</pubDate>
-      <sparkle:version>71</sparkle:version>
-      <sparkle:shortVersionString>0.30.4</sparkle:shortVersionString>
+      <title>0.31.0</title>
+      <pubDate>Sun, 27 Sep 2026 22:36:29 +0300</pubDate>
+      <sparkle:version>72</sparkle:version>
+      <sparkle:shortVersionString>0.31.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;Long dictation keeps listening&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Dictation continues beyond five minutes while audio is saved to disk. The in-memory buffer stays bounded.&lt;/li&gt;&lt;li&gt;A short delay opening the audio file no longer leaves the entire dictation without a disk copy.&lt;/li&gt;&lt;li&gt;If storage is unavailable, the retained audio is transcribed and a visible message explains why recording stopped.&lt;/li&gt;&lt;/ul&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.30.4/OpenRamble-0.30.4.dmg" length="13068692" type="application/octet-stream" sparkle:edSignature="7tuZO6cAZf/W/ZkBfoTll8zSKyIwc0h5igOXjl2N0Rveq+62CDRs6NYCZAieGwQKc8SqqZceZX3r+srKl94KCQ==" />
+      <description>&lt;h2&gt;OpenRamble 0.31.0&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Save an error report from Settings → About. One ZIP includes local technical events, app and macOS versions, and available crash details.&lt;/li&gt;&lt;li&gt;A small local journal is enabled by default and limited to seven days and 5 MB. Existing logging opt-outs are respected; turning it off clears the journal.&lt;/li&gt;&lt;li&gt;Reports exclude audio, transcripts, clipboard and document contents, personal paths and identifiers. Nothing is sent automatically.&lt;/li&gt;&lt;li&gt;Release symbols are preserved with every release so crash addresses can be traced back to the exact build.&lt;/li&gt;&lt;/ul&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.31.0/OpenRamble-0.31.0.dmg" length="12669671" type="application/octet-stream" sparkle:edSignature="E4WiMhXGad0rP6v9aTGrIus9NWFRX0DQwqS6EVIs5yxjIFwMBO02JhkHhS54IHZlf6DI5sTKpQnQCKJTCNouBw==" />
     </item>
   </channel>
 </rss>
