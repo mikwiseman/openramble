@@ -139,7 +139,9 @@ grep -qF "<title>$VERSION</title>" docs/appcast.xml \
 # The image goes up before the feed that points at it: for the minute in
 # between, an update that does not exist yet is better than one that 404s.
 say "Creating release v$VERSION and uploading the image"
-gh release create "v$VERSION" "$DMG" \
+SYMBOLS="$HOME/.openramble/release-symbols/OpenRamble-$VERSION-symbols.zip"
+[[ -s "$SYMBOLS" ]] || fail "The matching release symbols archive is missing."
+gh release create "v$VERSION" "$DMG" "$SYMBOLS" \
   --repo "$REPO_SLUG" \
   --title "$VERSION" \
   --notes-file "$NOTES"

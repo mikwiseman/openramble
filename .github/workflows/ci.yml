@@ -312,6 +312,7 @@ jobs:
 
       - name: Check release policy, bootstrap and notary credentials
         run: |
+          python3 -m unittest scripts.tests.test_release_symbols
           ./scripts/tests/test-release-policy.sh
           ./scripts/tests/test-notary-credentials.sh
           ./scripts/tests/test-bootstrap-release-secrets.sh

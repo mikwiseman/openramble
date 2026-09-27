@@ -1,40 +1,75 @@
 import XCTest
 
-/// The log a tester can send — and the promise that it does not exist unasked.
 final class DictationLogFileTests: XCTestCase {
-    /// Off means nothing is written, not "written but hidden".
-    ///
-    /// A file that appears without being asked for is a file nobody consented
-    /// to, and this one is going to strangers' machines.
-    func testWritingIsOffUntilAskedFor() {
-        XCTAssertFalse(SettingsDefaults.detailedLogging)
-        let log = DictationLogFile.shared
-        let wasEnabled = log.isEnabled
-        defer { log.isEnabled = wasEnabled }
+    private var root: URL!
+    override func setUpWithError() throws {
+        root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    }
+    override func tearDownWithError() throws { try? FileManager.default.removeItem(at: root) }
 
-        log.isEnabled = false
-        log.write("this must not reach disk")
-        // The write is queued, so give the queue a turn before looking.
-        let settled = expectation(description: "queue drained")
-        DispatchQueue.global().asyncAfter(deadline: .now() + 0.2) { settled.fulfill() }
-        wait(for: [settled], timeout: 2)
-
-        let files = (try? FileManager.default.contentsOfDirectory(
-            at: DictationLogFile.directory,
-            includingPropertiesForKeys: nil
-        )) ?? []
-        for file in files where file.pathExtension == "log" {
-            let text = (try? String(contentsOf: file, encoding: .utf8)) ?? ""
-            XCTAssertFalse(
-                text.contains("this must not reach disk"),
-                "a disabled log wrote to \(file.lastPathComponent)"
-            )
-        }
+    func testEnabledByDefaultAndWritesSurviveReopening() throws {
+        XCTAssertTrue(SettingsDefaults.detailedLogging)
+        let log = DictationLogFile(directory: root, enabled: true)
+        log.record(.dictationListening)
+        let saved = log.snapshot()
+        XCTAssertFalse(saved.incomplete)
+        XCTAssertTrue(String(decoding: saved.data, as: UTF8.self).contains("dictationListening"))
+        let reopened = DictationLogFile(directory: root, enabled: true)
+        XCTAssertEqual(reopened.snapshot().data, saved.data)
     }
 
-    /// It goes where a person would look for it, and where Handy puts its own.
-    func testItLivesSomewhereAPersonWouldLook() {
-        let path = DictationLogFile.directory.path
-        XCTAssertTrue(path.hasSuffix("Library/Logs/is.waiwai.dictation"), path)
+    func testOptOutCreatesNothingAndClearsEarlierEvents() throws {
+        let log = DictationLogFile(directory: root, enabled: false)
+        log.record(.appLaunched)
+        XCTAssertTrue(log.snapshot().data.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: root.path))
+        log.isEnabled = true
+        log.record(.appLaunched)
+        XCTAssertFalse(log.snapshot().data.isEmpty)
+        log.isEnabled = false
+        log.record(.dictationListening)
+        XCTAssertTrue(log.snapshot().data.isEmpty)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    func testSevenDayAndTotalByteLimitsKeepNewestCompleteEntries() throws {
+        let now = Date()
+        let log = DictationLogFile(directory: root, enabled: true, maxBytes: 1000)
+        log.record(.engineFailed, at: now.addingTimeInterval(-8 * 86400))
+        for i in 0..<100 { log.record(.dictationListening, milliseconds: i, at: now) }
+        log.record(.appTerminationReady, at: now)
+        let saved = log.snapshot(at: now)
+        XCTAssertLessThanOrEqual(saved.data.count, 1000)
+        XCTAssertFalse(String(decoding: saved.data, as: UTF8.self).contains("engineFailed"))
+        XCTAssertTrue(String(decoding: saved.data, as: UTF8.self).contains("appTerminationReady"))
+        let files = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: [.fileSizeKey])
+        let bytes = try files.reduce(0) { try $0 + ($1.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) }
+        XCTAssertLessThanOrEqual(bytes, 1000)
+        XCTAssertFalse(saved.incomplete)
+    }
+
+    func testExportReencodesKnownFieldsAndSkipsInterruptedWrites() throws {
+        let log = DictationLogFile(directory: root, enabled: true)
+        log.record(.dictationListening)
+        _ = log.snapshot()
+        let file = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil).first)
+        var text = try String(contentsOf: file, encoding: .utf8)
+        text = text.replacingOccurrences(of: "\"event\":", with: "\"private\":\"PRIVATE_CANARY\",\"event\":")
+        text += "{\"partial\":\"PRIVATE_CANARY"
+        try Data(text.utf8).write(to: file)
+        let saved = log.snapshot()
+        XCTAssertTrue(saved.incomplete)
+        XCTAssertFalse(String(decoding: saved.data, as: UTF8.self).contains("PRIVATE_CANARY"))
+        XCTAssertTrue(String(decoding: saved.data, as: UTF8.self).contains("dictationListening"))
+    }
+
+    func testConcurrentWritersProduceCompleteEntries() async throws {
+        let log = DictationLogFile(directory: root, enabled: true)
+        await withTaskGroup(of: Void.self) { group in
+            for i in 0..<100 { group.addTask { log.record(.dictationCompleted, milliseconds: i) } }
+        }
+        let saved = log.snapshot()
+        XCTAssertEqual(saved.data.split(separator: 10).count, 100)
+        XCTAssertFalse(saved.incomplete)
     }
 }

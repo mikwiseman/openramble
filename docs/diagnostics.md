@@ -1,4 +1,45 @@
-# Diagnostics build
+# Support reports
+
+The shipping app has one export button: **Settings → About → Save Error Report…**.
+It creates a ZIP locally and reveals it in Finder. The user shares it manually.
+There is no reporting service, custom crash handler, upload or post-crash prompt.
+
+`SupportLogs/events-YYYY-MM-DD.jsonl` is an allowlisted event journal, enabled by
+default, bounded to seven UTC dates and 5 MB total. Turning the existing switch
+off clears it. Writes run on a utility queue and close after each event. A process
+crash preserves completed appends; power loss or an immediate crash before a
+queued append reaches disk may lose the latest event. Export skips partial lines.
+No free-text logging API is exposed.
+
+The ZIP contains `system.json`, `events.jsonl`, `README.txt`, and at most five
+redacted Apple `.ips` crash reports (each source limited to 5 MB, last seven days).
+Only reports with OpenRamble's bundle identifier and process name are accepted.
+The collector checks the user's and system DiagnosticReports folders, including
+Retired. Inaccessible, malformed or unsupported reports are counted, never copied
+raw. Native stack frames, offsets and image UUIDs remain usable for symbolication.
+Free-form exception messages, thread names, queues, personal paths and identifiers
+are omitted. No audio, text, image, user settings dump, other applications' logs
+or whole-system log archive is included. An empty journal or unavailable crash
+report still produces a useful ZIP with a clear explanation.
+
+Every shipped release also preserves its exact `.xcarchive` in
+`~/.openramble/release-symbols/OpenRamble-<version>-symbols.zip` and attaches that
+archive to the GitHub release. `symbols.json` records build, source commit, binary
+hashes and architecture UUIDs. Main-app and CLI dSYMs must match before publishing.
+Download the matching release's symbol archive, extract it, and use Xcode or
+`xcrun crashlog` / `atos` with the matching UUID and architecture. Rebuilding the
+same source does not recreate a missing dSYM. A report with no stack frames cannot
+be repaired by symbols; register addresses can sometimes locate the leaf frame.
+
+Apple references (checked 2026-09-27):
+- [Acquiring crash reports](https://developer.apple.com/documentation/xcode/acquiring-crash-reports-and-diagnostic-logs)
+- [Symbolicating a crash report](https://developer.apple.com/documentation/xcode/adding-identifiable-symbol-names-to-a-crash-report)
+- [Logging privacy](https://developer.apple.com/documentation/os/generating-log-messages-from-your-code)
+
+The performance research build below is separate. Its existing release prohibition
+and `OPENRAMBLE_DIAGNOSTICS` gate remain unchanged.
+
+# Performance diagnostics build
 
 A diagnostics build is an ordinary build of OpenRamble that also writes one
 durable record per dictation, describing where the time went and what the

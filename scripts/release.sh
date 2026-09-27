@@ -431,6 +431,11 @@ DMG_URL="$DOWNLOAD_BASE/v$VERSION/$(basename "$DMG_PATH")"
 
 shasum -a 256 -c "$DMG_PATH.sha256" >/dev/null \
   || fail "The verified DMG changed before appcast mutation."
+# Retain this exact archive before a future build can delete artifacts/build.
+# ship.sh also uploads it as a release asset, so it survives loss of this Mac.
+python3 scripts/archive-release-symbols.py artifacts/build/OpenRamble.xcarchive \
+  "$HOME/.openramble/release-symbols" --commit "$HEAD_SHA"
+
 assert_release_source_unchanged "immediately before appcast mutation"
 echo "→Updating $APPCAST"
 APPCAST="$APPCAST" NOTES_PATH="$NOTES_PATH" KEEP_ITEMS="$KEEP_ITEMS" \

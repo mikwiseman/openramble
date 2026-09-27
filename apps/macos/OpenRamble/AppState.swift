@@ -387,7 +387,18 @@ public struct AppEnvironment {
 @MainActor
 public final class AppState: ObservableObject {
     // Shown in the interface.
-    @Published public private(set) var dictationState: DictationState = .idle
+    @Published public private(set) var dictationState: DictationState = .idle {
+        didSet {
+            guard oldValue != dictationState else { return }
+            switch dictationState {
+            case .idle: diagnostics.record(.dictationIdle)
+            case .preparing: diagnostics.record(.dictationPreparing)
+            case .listening: diagnostics.record(.dictationListening)
+            case .transcribing: diagnostics.record(.dictationTranscribing)
+            case .inserting: diagnostics.record(.dictationInserting)
+            }
+        }
+    }
     /// Every route by which the files become usable starts preparation.
     ///
     /// Readiness arrives from more places than the two that used to start a
@@ -407,7 +418,12 @@ public final class AppState: ObservableObject {
     @Published public private(set) var accessibilityGranted = false
     @Published public private(set) var accessibilityState: AccessibilityPermissionState = .denied
     @Published public private(set) var microphoneGranted = false
-    @Published public private(set) var lastNotice: DictationNotice?
+    @Published public private(set) var lastNotice: DictationNotice? {
+        didSet {
+            if lastNotice?.kind == .failure { diagnostics.record(.dictationFailed) }
+            if lastNotice?.kind == .warning { diagnostics.record(.dictationWarning) }
+        }
+    }
     @Published public private(set) var isPreparingEngine = false
     /// What to show while the engine is preparing for the first dictation.
     ///
@@ -423,6 +439,7 @@ public final class AppState: ObservableObject {
     public var isCountingEnginePreparation: Bool { preparationTimer != nil }
     @Published public private(set) var isEngineReady = false {
         didSet {
+            if oldValue != isEngineReady { diagnostics.record(isEngineReady ? .engineReady : .engineUnavailable) }
             if isEngineReady { hasEngineBeenReady = true }
             let arbiter = engineArbiter
             let ready = isEngineReady
@@ -515,7 +532,18 @@ public final class AppState: ObservableObject {
         case paused
         case stopping
     }
-    @Published public private(set) var meetingState: MeetingState = .idle
+    @Published public private(set) var meetingState: MeetingState = .idle {
+        didSet {
+            guard oldValue != meetingState else { return }
+            switch meetingState {
+            case .idle: diagnostics.record(.recordingIdle)
+            case .starting: diagnostics.record(.recordingStarting)
+            case .recording: diagnostics.record(.recordingActive)
+            case .paused: diagnostics.record(.recordingPaused)
+            case .stopping: diagnostics.record(.recordingStopping)
+            }
+        }
+    }
     /// Every finished recording, newest first.
     @Published public private(set) var recordings: [MeetingRecordingMetadata] = []
     /// The recording in progress, once it has actually started.
@@ -537,9 +565,17 @@ public final class AppState: ObservableObject {
                   let data = try? JSONEncoder().encode(screenRecordingOptions)
             else { return }
             defaults.set(data, forKey: Self.screenRecordingOptionsKey)
+            if oldValue.cameraEnabled != screenRecordingOptions.cameraEnabled {
+                diagnostics.record(screenRecordingOptions.cameraEnabled ? .cameraEnabled : .cameraDisabled)
+            }
         }
     }
-    @Published public private(set) var isScreenRecordingSetupPresented = false
+    @Published public private(set) var isScreenRecordingSetupPresented = false {
+        didSet {
+            guard oldValue != isScreenRecordingSetupPresented else { return }
+            diagnostics.record(isScreenRecordingSetupPresented ? .screenSetupOpened : .screenSetupClosed)
+        }
+    }
     @Published public private(set) var screenDisplays: [ScreenDisplayOption] = []
     @Published public private(set) var isLoadingScreenDisplays = false
     @Published public private(set) var screenSetupIssue: ScreenRecordingSetupIssue?
@@ -729,24 +765,13 @@ public final class AppState: ObservableObject {
     /// Tracks the quiet. Reset per take, never shared between them.
     private var silence = SilencePolicy()
 
-    /// Keep the engine's own notes, not just the per-dictation numbers.
-    ///
-    /// Off by default, and what it changes is narrow: the engine already
-    /// writes notes about loading, unloading and warming, but at `info` level,
-    /// which macOS discards unless someone passes `--info` to `log show`. On,
-    /// they are written at `notice` and survive — so a slow dictation can be
-    /// explained after the fact rather than only while someone is watching.
-    ///
-    /// It does not turn on any new measurement. Every stage of every dictation
-    /// is already timed and logged, because a number that only exists when a
-    /// setting is on is a number missing from the report you actually need.
-    /// And nothing here ever carries a word of what was said.
+    /// A bounded local technical history; the existing opt-out survives upgrades.
     @Published public var detailedLogging: Bool {
         didSet {
             guard oldValue != detailedLogging else { return }
             defaults.set(detailedLogging, forKey: Keys.detailedLogging)
             EngineNotes.isDetailed = detailedLogging
-            DictationLogFile.shared.isEnabled = detailedLogging
+            diagnostics.isEnabled = detailedLogging
         }
     }
 
@@ -869,6 +894,7 @@ public final class AppState: ObservableObject {
     static let accessibilityRelaunchPendingKey = "accessibilityRelaunchPending"
 
     private let defaults: UserDefaults
+    let diagnostics: DictationLogFile
     private let paths: AppPaths
     private let permissions: any PermissionReading
     private let accessibilityManager: any AccessibilityManaging
@@ -1018,6 +1044,11 @@ public final class AppState: ObservableObject {
 
     public init(environment: AppEnvironment) {
         defaults = environment.defaults
+        diagnostics = DictationLogFile(
+            directory: environment.paths.diagnosticEvents,
+            enabled: environment.defaults.object(forKey: Keys.detailedLogging) as? Bool
+                ?? SettingsDefaults.detailedLogging
+        )
         editWatcher = EditLearningWatcher(reader: environment.focusedFieldReader)
         // No key = disabled: `bool(forKey:)` returns false. This
         // reads someone else's window and therefore requires an explicit opt-in.
@@ -1114,6 +1145,8 @@ public final class AppState: ObservableObject {
 
         (overlay as? any OverlayPlacementConfiguring)?.placement = overlayPlacement
 
+        EngineNotes.isDetailed = detailedLogging
+        diagnostics.record(.appLaunched)
         setUp()
 
         // We inform you after the build: before it there would have been nowhere to show the message.
@@ -1150,6 +1183,7 @@ public final class AppState: ObservableObject {
                     // stopping is not possible: the person speaks into emptiness, and the reason
                     // must be shown exactly.
                     Task { @MainActor in
+                        self?.diagnostics.record(.audioCaptureFailed, errorCode: (error as NSError).code)
                         self?.controller?.interrupt(
                             session: session,
                             reason: Self.captureFailureMessage(error)
@@ -1346,6 +1380,7 @@ public final class AppState: ObservableObject {
             controller.onTranscriptionStall = { [weak self] in
                 // Recognition blew its deadline: the engine is presumed wedged
                 // on a dead system service. A fresh session is the cure.
+                self?.diagnostics.record(.transcriptionStalled)
                 self?.recycleWedgedEngine()
             }
             controller.onTextInserted = { [weak self] text in
@@ -1381,7 +1416,9 @@ public final class AppState: ObservableObject {
                 // `notice`, not `info`: a slow take is exactly the entry that
                 // must survive in the system log long enough to be read.
                 engineLog.notice("\(DictationSpeedLine.text(for: report), privacy: .public)")
-                DictationLogFile.shared.write(DictationSpeedLine.text(for: report))
+                let elapsed = report.toRecognizedText.appSeconds * 1000
+                self?.diagnostics.record(.dictationCompleted,
+                    milliseconds: elapsed >= 0 && elapsed < Double(Int.max) ? Int(elapsed) : nil)
                 DictationDiagnostics.noteCompleted(
                     report: report,
                     characterCount: self?.lastDictation?.insertedText.count ?? 0
@@ -1926,6 +1963,7 @@ public final class AppState: ObservableObject {
     /// “listening” forever - with the microphone on and the indicator on
     /// records, and the only way out of this would be through Escape.
     private func handleSleep() {
+        diagnostics.record(.systemSleeping)
         switch dictationState {
         case .listening:
             // What was said before bed has already been written down. Let's recognize it and not throw it away.
@@ -1948,6 +1986,7 @@ public final class AppState: ObservableObject {
     /// the monitor still considers it clamped and will swallow the next press.
     /// Restarting tracking is the only thing that erases the memory of the started gesture.
     private func handleWake() {
+        diagnostics.record(.systemWoke)
         hotkeyMonitor.stop()
         copyShortcutMonitor?.stop()
         recordingShortcutMonitor?.stop()
@@ -2259,6 +2298,7 @@ public final class AppState: ObservableObject {
     /// launched, but frames no longer arrive to it. Man speaks in
     /// silence and learns about it only by the empty result.
     private func handleAudioConfigurationChange() {
+        diagnostics.record(.audioConfigurationChanged)
         guard dictationState == .listening else { return }
         controller?.preserveActiveRecording(
             reason: "The microphone or audio device was disconnected. Dictation stopped."
@@ -2649,6 +2689,7 @@ public final class AppState: ObservableObject {
         guard !isCameraChanging, screenRecordingOptions.cameraEnabled != enabled else { return }
         let previous = screenRecordingOptions.cameraEnabled
         isCameraChanging = true
+        diagnostics.record(.cameraChanging)
         Task { [weak self] in
             do {
                 try await screen.updateCameraEnabled(enabled)
@@ -2658,6 +2699,7 @@ public final class AppState: ObservableObject {
                     self.screenRecordingOptions.cameraEnabled = previous
                     self.notify(DictationNotice(kind: .warning, message: "Couldn't change the camera during this recording."))
                     self.isCameraChanging = false
+                    self.diagnostics.record(.cameraFailed, errorCode: (error as NSError).code)
                 }
                 return
             }
@@ -2665,6 +2707,7 @@ public final class AppState: ObservableObject {
                 guard let self else { return }
                 self.screenRecordingOptions.cameraEnabled = enabled
                 self.isCameraChanging = false
+                self.diagnostics.record(.cameraChanged)
             }
         }
     }
@@ -2737,6 +2780,7 @@ public final class AppState: ObservableObject {
     }
 
     private func screenRecordingFailed(_ message: String) {
+        diagnostics.record(.recordingFailed)
         guard meetingState == .recording || meetingState == .paused else { return }
         notify(DictationNotice(kind: .warning, message: "Screen recording stopped: \(message)"))
         stopRecording()
@@ -3449,6 +3493,7 @@ public final class AppState: ObservableObject {
     }
 
     private func recordingFailed(_ failure: MeetingCapture.Failure) {
+        diagnostics.record(.recordingFailed)
         switch failure {
         case .diskFull, .writeFailed:
             // The recorder has already stopped writing on its own. End the
@@ -4079,6 +4124,7 @@ public final class AppState: ObservableObject {
         guard modelState.isReady else { return .skipped }
         isEngineReady = false
         isPreparingEngine = true
+        diagnostics.record(.enginePreparing)
         // The retry loop owns one continuous countdown across its waits; a
         // lone attempt owns its own. Whoever owns it also ends it, so the
         // indicator never blinks between two attempts of the same preparation.
@@ -4120,6 +4166,7 @@ public final class AppState: ObservableObject {
         } catch is CancellationError {
             return .skipped
         } catch {
+            diagnostics.record(.engineFailed, errorCode: (error as NSError).code)
             if let reason = verifiedModelRejection(from: error) {
                 let detail =
                     "the files passed verification, but Core ML couldn't load the model: \(reason)"
