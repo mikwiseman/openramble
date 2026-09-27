@@ -89,7 +89,8 @@ struct SettingsView: View {
                 updater: state.updater,
                 revealSupportFolder: state.revealSupportFolder,
                 appearance: $state.appearance,
-                detailedLogging: $state.detailedLogging
+                detailedLogging: $state.detailedLogging,
+            diagnostics: state.diagnostics
             )
         }
     }
@@ -709,29 +710,32 @@ private struct AboutView: View {
     let revealSupportFolder: () -> Void
     @Binding var appearance: AppAppearance
     @Binding var detailedLogging: Bool
+    let diagnostics: DictationLogFile
+    @State private var isSavingReport = false
+    @State private var reportSaveFailed = false
 
     /// The one link in this window. An app whose whole claim is that speech
     /// never leaves the machine should be readable by anyone who doubts it.
     static let sourceURL = URL(string: "https://github.com/mikwiseman/openramble")!
 
-    /// Where the system writes this app's logs.
-    /// Open this app's own log folder, with today's file selected when there
-    /// is one.
-    ///
-    /// Not the system-wide `~/Library/Logs`, which is everybody's and helps
-    /// nobody. Someone asked to send their log should land on the file.
-    private func revealLogFolder() {
-        let directory = DictationLogFile.directory
-        let manager = FileManager.default
-        try? manager.createDirectory(at: directory, withIntermediateDirectories: true)
-        let files = (try? manager.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: nil
-        )) ?? []
-        if let newest = files.filter({ $0.pathExtension == "log" }).sorted(by: { $0.path > $1.path }).first {
-            NSWorkspace.shared.activateFileViewerSelecting([newest])
-        } else {
-            NSWorkspace.shared.activateFileViewerSelecting([directory])
+    private func saveErrorReport() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.zip]
+        panel.nameFieldStringValue = "OpenRamble-Error-Report.zip"
+        panel.canCreateDirectories = true
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            isSavingReport = true
+            Task { @MainActor in
+                defer { isSavingReport = false }
+                do {
+                    let journal = diagnostics
+                    try await Task.detached(priority: .utility) {
+                        try ErrorReport.save(to: url, journal: journal)
+                    }.value
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                } catch { reportSaveFailed = true }
+            }
         }
     }
 
@@ -828,23 +832,21 @@ private struct AboutView: View {
                 }
                 .accessibilityElement(children: .combine)
                 SettingRow(
-                    title: "Keep detailed logs",
+                    title: "Keep local diagnostics",
                     isChanged: detailedLogging != SettingsDefaults.detailedLogging,
                     revert: { detailedLogging = SettingsDefaults.detailedLogging }
                 ) {
                     Toggle("", isOn: $detailedLogging)
                         .labelsHidden()
                         .toggleStyle(.switch)
-                        .accessibilityLabel("Keep detailed logs")
+                        .accessibilityLabel("Keep local diagnostics")
                         .accessibilityHint(
-                            "Writes a plain text file you can open and send. Off by default, and nothing is written while it is off. Nothing you say is ever recorded — timings and reasons only."
+                            "Keeps technical events for up to 7 days, limited to 5 MB. No speech or personal content. Turning this off clears the journal."
                         )
                 }
-                Button("Open Logs", action: revealLogFolder)
-                    // Logs are what a person can attach to a bug report. They
-                    // hold no dictated text — the privacy rules forbid it — so
-                    // there is nothing here to warn about before opening.
-                    .accessibilityLabel("Open log folder")
+                Button(isSavingReport ? "Saving Report…" : "Save Error Report…", action: saveErrorReport)
+                    .disabled(isSavingReport)
+                    .accessibilityHint("Saves a ZIP with local technical events and available crash reports. Nothing is sent automatically.")
                 Button("Reveal Support Folder", action: revealSupportFolder)
                     // The title alone does not survive into the accessibility
                     // tree on this Form layout — VoiceOver would announce an
@@ -854,7 +856,7 @@ private struct AboutView: View {
             } header: {
                 Text("Privacy")
             } footer: {
-                Text("No account, analytics, or cloud transcription. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder.")
+                Text("No account, analytics, or cloud transcription. Reports contain technical events and available crash details, never your speech. Nothing is sent automatically. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder.")
             }
 
             Section("Credits") {
@@ -871,5 +873,10 @@ private struct AboutView: View {
             }
         }
         .formStyle(.grouped)
+        .alert("Couldn’t save the report", isPresented: $reportSaveFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Try another location with available disk space.")
+        }
     }
 }

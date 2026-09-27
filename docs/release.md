@@ -74,7 +74,7 @@ requirements.
 That is the whole command, from any directory in the repository. It moves the
 release worktree to `origin/main`, finds the Sparkle key, the signing identity
 and the model root, runs the build below, creates the GitHub release, uploads
-the image, publishes the feed, and then **fetches the live feed off the
+the image and its matching symbols archive, publishes the feed, and then **fetches the live feed off the
 internet and reads it**. It either ends by printing that the version is live
 and its image downloads, or it fails.
 
@@ -132,6 +132,16 @@ fact explicitly. Do not describe this binary as transport-free: the enforced
 release guarantee is successful packaged recognition under the OS network
 deny. Removing the symbols requires splitting a runtime-only LocalASR product.
 
+## Symbols
+
+`release.sh` archives the exact `.xcarchive`, including binaries and dSYMs, to
+`~/.openramble/release-symbols/OpenRamble-<version>-symbols.zip` after verification.
+It validates the app and CLI UUIDs, records version/build/source commit and binary
+hashes, and refuses to overwrite a different build. This directory survives the
+next build's cleanup. `ship.sh` uploads the ZIP alongside the DMG as a durable
+backup on GitHub Releases. Keep these archives for every distributed version.
+See [support reports](diagnostics.md) for symbolication and privacy limits.
+
 ## Publish
 
 Upload the exact verified image and use the matching English notes:
@@ -140,6 +150,7 @@ Upload the exact verified image and use the matching English notes:
 VERSION=0.7.0
 gh release create "v$VERSION" \
   "artifacts/dmg/OpenRamble-$VERSION.dmg" \
+  "$HOME/.openramble/release-symbols/OpenRamble-$VERSION-symbols.zip" \
   --repo mikwiseman/openramble \
   --title "OpenRamble $VERSION" \
   --notes-file "docs/release-notes/$VERSION.md"

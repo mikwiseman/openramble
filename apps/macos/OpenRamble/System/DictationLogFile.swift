@@ -1,88 +1,168 @@
 import Foundation
 
-/// A plain text log a person can find, open, and send to someone.
-///
-/// The system log already has everything, but it is not a file: reading it
-/// takes a terminal and the right flags, and there is nothing to attach to a
-/// message. Someone testing this app and hitting a slow dictation should be
-/// able to open a folder and send what they see.
-///
-/// Off unless asked for. When off nothing is opened, nothing is written, and
-/// no file exists — a log that appears without being asked for is a file
-/// someone did not consent to.
-///
-/// Never contains dictated text. Numbers, stages and reasons only, exactly
-/// like the system log line it mirrors. That is not a policy this class is
-/// free to relax: it is written down in CLAUDE.md and checked in review.
+/// An allowlist, not a free-text logger. No user content can be passed here.
+enum DiagnosticEvent: String, Codable, Sendable {
+    case appLaunched, appTerminating, appTerminationReady
+    case dictationIdle, dictationPreparing, dictationListening, dictationTranscribing, dictationInserting
+    case dictationCompleted, dictationWarning, dictationFailed, transcriptionStalled
+    case enginePreparing, engineReady, engineUnavailable, engineFailed
+    case audioConfigurationChanged, audioCaptureFailed
+    case recordingIdle, recordingStarting, recordingActive, recordingPaused, recordingStopping, recordingFailed
+    case cameraChanging, cameraChanged, cameraFailed, cameraEnabled, cameraDisabled
+    case screenSetupOpened, screenSetupClosed, systemSleeping, systemWoke
+}
+
+/// Local support history: at most seven UTC dates and 5 MB in total.
+/// A serial utility queue keeps disk I/O off the audio and UI threads. Closing
+/// each append makes completed writes survive a process crash; no signal handler.
 final class DictationLogFile: @unchecked Sendable {
-    static let shared = DictationLogFile()
-
-    /// Where a person would look, and the same place Handy uses for its own.
-    static var directory: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appending(path: "Library/Logs/is.waiwai.dictation", directoryHint: .isDirectory)
+    struct Entry: Codable, Sendable {
+        let time: Date
+        let event: DiagnosticEvent
+        let version: String
+        let build: String
+        let milliseconds: Int?
+        let errorCode: Int?
     }
 
-    /// One file per day. A single growing file is impossible to send once it is
-    /// large, and rotating by size loses the day someone wants to talk about.
-    private var currentURL: URL {
-        let day = Self.dayFormatter.string(from: Date())
-        return Self.directory.appending(path: "dictation-\(day).log", directoryHint: .notDirectory)
+    let directory: URL
+    private let maxBytes: Int
+    private let version: String
+    private let build: String
+    private let queue = DispatchQueue(label: "is.waiwai.dictation.support-log", qos: .utility)
+    private var enabled: Bool
+    private var writeFailed = false
+
+    init(directory: URL, enabled: Bool, maxBytes: Int = 5_000_000,
+         version: String = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown",
+         build: String = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown") {
+        self.directory = directory
+        self.enabled = enabled
+        self.maxBytes = maxBytes
+        self.version = Self.safeVersion(version)
+        self.build = Self.safeVersion(build)
+        queue.async { self.maintain(at: Date()) }
     }
 
-    private static let dayFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        return formatter
-    }()
+    func flush() { queue.sync {} }
 
-    private static let stampFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss.SSS"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        return formatter
-    }()
-
-    /// Set from the setting; read on every line so the switch takes effect at
-    /// once rather than at the next launch.
-    var isEnabled = false
-
-    /// Its own queue: appending to a file is blocking work, and this app has
-    /// spent a long time learning not to do that on the pool a dictation waits
-    /// on. Logging that slows dictation would be a poor way to study why
-    /// dictation is slow.
-    private let queue = DispatchQueue(label: "is.waiwai.dictation.log-file", qos: .utility)
-
-    func write(_ line: String) {
-        guard isEnabled else { return }
-        let stamped = "\(Self.stampFormatter.string(from: Date()))  \(line)\n"
-        queue.async { [currentURL] in
-            guard let data = stamped.data(using: .utf8) else { return }
-            let manager = FileManager.default
-            try? manager.createDirectory(
-                at: Self.directory,
-                withIntermediateDirectories: true
-            )
-            if let handle = try? FileHandle(forWritingTo: currentURL) {
-                defer { try? handle.close() }
-                _ = try? handle.seekToEnd()
-                try? handle.write(contentsOf: data)
-            } else {
-                try? data.write(to: currentURL, options: .atomic)
+    var isEnabled: Bool {
+        get { queue.sync { enabled } }
+        set {
+            queue.sync {
+                enabled = newValue
+                // Turning the existing switch off also clears the local history.
+                if !newValue { clear() }
             }
         }
     }
 
-    /// Delete every log this app has written.
-    ///
-    /// Offered because the person who turned this on should be able to take it
-    /// back, and "off" that leaves files behind is not off.
-    func removeAll() {
+    func record(_ event: DiagnosticEvent, milliseconds: Int? = nil, errorCode: Int? = nil, at time: Date = Date()) {
         queue.async {
-            try? FileManager.default.removeItem(at: Self.directory)
+            guard self.enabled else { return }
+            do {
+                let manager = FileManager.default
+                try manager.createDirectory(at: self.directory, withIntermediateDirectories: true,
+                                            attributes: [.posixPermissions: 0o700])
+                let entry = Entry(time: time, event: event, version: self.version, build: self.build,
+                                  milliseconds: milliseconds, errorCode: errorCode)
+                var data = try Self.encoder().encode(entry)
+                data.append(10)
+                let url = self.directory.appending(path: "events-\(Self.day(time)).jsonl")
+                if !manager.fileExists(atPath: url.path) {
+                    try data.write(to: url, options: .withoutOverwriting)
+                    try manager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+                } else {
+                    let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                    guard values.isRegularFile == true, values.isSymbolicLink != true else {
+                        self.writeFailed = true
+                        return
+                    }
+                    let handle = try FileHandle(forWritingTo: url)
+                    defer { try? handle.close() }
+                    try handle.seekToEnd()
+                    try handle.write(contentsOf: data)
+                }
+                self.maintain(at: time)
+            } catch { self.writeFailed = true }
         }
+    }
+
+    /// A queue barrier for export and normal termination. Invalid/truncated
+    /// lines are skipped and unknown JSON fields are never copied to the ZIP.
+    func snapshot(at now: Date = Date()) -> (data: Data, enabled: Bool, incomplete: Bool) {
+        queue.sync {
+            maintain(at: now)
+            var output = Data()
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            for url in files() {
+                guard let data = FileManager.default.contents(atPath: url.path) else { writeFailed = true; continue }
+                for line in data.split(separator: 10) {
+                    guard let entry = try? decoder.decode(Entry.self, from: Data(line)),
+                          entry.time <= now, entry.time > now.addingTimeInterval(-7 * 86400),
+                          entry.version == Self.safeVersion(entry.version), entry.build == Self.safeVersion(entry.build),
+                          let safe = try? Self.encoder().encode(entry) else { writeFailed = true; continue }
+                    output.append(safe)
+                    output.append(10)
+                }
+            }
+            return (output, enabled, writeFailed)
+        }
+    }
+
+    private static func encoder() -> JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.sortedKeys]
+        return encoder
+    }
+
+    private static func safeVersion(_ value: String) -> String {
+        value.range(of: #"^[0-9A-Za-z.-]{1,32}$"#, options: .regularExpression) != nil ? value : "unknown"
+    }
+
+    private static func day(_ date: Date) -> String {
+        String(ISO8601DateFormatter().string(from: date).prefix(10))
+    }
+
+    private func files() -> [URL] {
+        ((try? FileManager.default.contentsOfDirectory(at: directory,
+            includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey])) ?? [])
+            .filter {
+                let values = try? $0.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                return values?.isRegularFile == true && values?.isSymbolicLink != true
+                    && $0.lastPathComponent.range(of: #"^events-\d{4}-\d{2}-\d{2}\.jsonl$"#, options: .regularExpression) != nil
+            }.sorted { $0.lastPathComponent < $1.lastPathComponent }
+    }
+
+    private func clear() {
+        for file in files() { do { try FileManager.default.removeItem(at: file) } catch { writeFailed = true } }
+    }
+
+    private func maintain(at now: Date) {
+        guard enabled else { clear(); return }
+        let oldest = "events-\(Self.day(now.addingTimeInterval(-6 * 86400))).jsonl"
+        do {
+            for file in files() where file.lastPathComponent < oldest {
+                try FileManager.default.removeItem(at: file)
+            }
+            // Keep complete newest lines, even if a single day exceeds the limit.
+            var remaining = maxBytes
+            for file in files().reversed() {
+                let size = try file.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+                if size <= remaining { remaining -= size; continue }
+                if remaining <= 0 { try FileManager.default.removeItem(at: file); continue }
+                let handle = try FileHandle(forReadingFrom: file)
+                defer { try? handle.close() }
+                try handle.seek(toOffset: UInt64(size - remaining))
+                let tail = try handle.readToEnd() ?? Data()
+                let kept = tail.firstIndex(of: 10).map { Data(tail.suffix(from: $0 + 1)) } ?? Data()
+                try kept.write(to: file, options: .atomic)
+                try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+                remaining = 0
+            }
+        } catch { writeFailed = true }
     }
 }
 

@@ -160,7 +160,7 @@ struct OnboardingView: View {
                     // An open lock reads as “unprotected” — the opposite.
                     symbol: "hand.raised",
                     title: "Nothing leaves this Mac",
-                    text: "No accounts, no analytics, no reports. The code is open — you can check."
+                    text: "No accounts, no analytics, no automatic reports. The code is open — you can check."
                 )
                 OnboardingFeatureRow(
                     symbol: "arrow.down.circle",

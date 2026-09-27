@@ -26,6 +26,18 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(state.appearance, SettingsDefaults.appearance)
     }
 
+    func testExistingDiagnosticsOptOutIsRespectedAtLaunch() {
+        harness.defaults.set(false, forKey: "detailedLogging")
+        let state = harness.makeState()
+        XCTAssertFalse(state.detailedLogging)
+        XCTAssertFalse(state.diagnostics.isEnabled)
+        XCTAssertTrue(state.diagnostics.snapshot().data.isEmpty)
+        state.detailedLogging = true
+        XCTAssertTrue(state.diagnostics.isEnabled)
+        state.detailedLogging = false
+        XCTAssertTrue(state.diagnostics.snapshot().data.isEmpty)
+    }
+
     /// Changing a setting and reverting it returns exactly the start value.
     func testScenario002() {
         let state = harness.makeState()

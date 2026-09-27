@@ -18,7 +18,7 @@ public enum SettingsDefaults {
     public static let overlayPlacement: DictationOverlayPlacement = .top
     public static let appearance: AppAppearance = .system
     public static let presence: AppPresence = .menuBar
-    public static let detailedLogging = false
+    public static let detailedLogging = true
     public static let stopsOnSilence = false
 }
 

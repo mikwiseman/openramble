@@ -27,7 +27,11 @@ private final class TerminationObserver: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        state?.diagnostics.record(.appTerminating)
+        state?.diagnostics.flush()
         state?.releaseEngineBeforeTermination()
+        state?.diagnostics.record(.appTerminationReady)
+        state?.diagnostics.flush()
     }
 }
 

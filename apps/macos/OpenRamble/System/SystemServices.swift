@@ -381,6 +381,11 @@ public struct AppPaths: Sendable {
         return AppPaths(root: base)
     }
 
+    /// Separate from recordings and from the opt-in performance research build.
+    var diagnosticEvents: URL {
+        root.appending(path: "OpenRamble/SupportLogs", directoryHint: .isDirectory)
+    }
+
     /// Application data root.
     public func support() throws -> URL {
         let directory = root.appending(path: "OpenRamble", directoryHint: .isDirectory)

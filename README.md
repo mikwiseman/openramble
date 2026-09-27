@@ -136,8 +136,22 @@ Application data is stored under
 | Recovery audio after a technical failure | Up to 10 WAV files, seven days, and 1 GiB |
 | Dictation history: transcripts and their audio | The last 5 by default (5–50 in Settings ▸ History); older entries and their recordings are deleted when they fall off |
 | Recordings: two-channel audio, optional screen video, transcript and metadata | Until you delete them. Not bounded by count or age. Audio is about 230 MB per hour; screen video size depends on display and activity. Each recording's size is under More ▸ Recording Details |
+| Local technical journal (`SupportLogs`) | Enabled by default; at most 7 days / 5 MB total. Removed when switched off. |
 | Settings and replacement dictionary | Stored in macOS defaults |
 | Text that could not be inserted | Memory only, until the next dictation or app exit |
+
+**Settings → About → Save Error Report…** saves a local ZIP you can send to the
+developer. It includes predefined technical events, timings, numeric error
+codes, app/macOS versions and architecture, plus up to five available Apple
+crash reports from the past seven days. Crash reports are rebuilt from an
+allowlist: addresses, binary UUIDs and stacks are kept; user paths, device and
+account identifiers, free-form error messages and unknown fields are omitted.
+Audio, transcripts, clipboard, screen/document contents, other apps' logs and
+the contents of the Support folder are never included. Nothing is uploaded.
+The ZIP remains wherever you save it until you delete it. A previous explicit
+logging opt-out is respected. Cleanup runs on launch, new events and export;
+macOS manages retention of its own crash reports. A missing report or empty
+stack is reported honestly and cannot be recreated by the app.
 
 When a technical failure or interrupted process leaves recovery audio,
 OpenRamble discloses a newly recovered take and shows `Recovered Recordings

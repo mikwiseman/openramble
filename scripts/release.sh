@@ -431,6 +431,11 @@ DMG_URL="$DOWNLOAD_BASE/v$VERSION/$(basename "$DMG_PATH")"
 
 shasum -a 256 -c "$DMG_PATH.sha256" >/dev/null \
   || fail "The verified DMG changed before appcast mutation."
+# Retain this exact archive before a future build can delete artifacts/build.
+# ship.sh also uploads it as a release asset, so it survives loss of this Mac.
+python3 scripts/archive-release-symbols.py artifacts/build/OpenRamble.xcarchive \
+  "$HOME/.openramble/release-symbols" --commit "$HEAD_SHA"
+
 assert_release_source_unchanged "immediately before appcast mutation"
 echo "→Updating $APPCAST"
 APPCAST="$APPCAST" NOTES_PATH="$NOTES_PATH" KEEP_ITEMS="$KEEP_ITEMS" \
@@ -445,8 +450,8 @@ cat <<TEXT
 Done. All that remains is to put it in its place:
 
   1. Check the feed: git diff $APPCAST
-  2. Create a release and upload the image:
-       gh release create v$VERSION "$DMG_PATH" --title "$VERSION" --notes-file "$NOTES_PATH"
+  2. Create a release and upload the image and symbols:
+       gh release create v$VERSION "$DMG_PATH" "$HOME/.openramble/release-symbols/OpenRamble-$VERSION-symbols.zip" --title "$VERSION" --notes-file "$NOTES_PATH"
      The link in the feed is waiting for the image exactly here:
        $DMG_URL
   3. Commit the feed and description - GitHub Pages distributes them from docs/:
