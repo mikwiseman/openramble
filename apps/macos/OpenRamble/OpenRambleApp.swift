@@ -62,7 +62,7 @@ struct OpenRambleApp: App {
                 AppState.applyDockPresence(state.presence)
                 // Closing the settings window must not take away a Dock icon
                 // the person asked to keep.
-                WindowFronting.onWindowsClosed = { [weak state] in
+                WindowFronting.onWindowsClosed = { [weak state = state] in
                     (state?.presence.showsDockIcon ?? false) ? .regular : .accessory
                 }
             }

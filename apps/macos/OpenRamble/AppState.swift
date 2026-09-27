@@ -1185,7 +1185,13 @@ public final class AppState: ObservableObject {
                     // finish the complete retained take normally instead of
                     // dropping history or continuing into unrecoverable audio.
                     Task { @MainActor in
-                        self?.controller?.stopAtCaptureMemoryLimit(session: session)
+                        guard let self,
+                              self.controller?.stopAtCaptureMemoryLimit(session: session) == true
+                        else { return }
+                        self.noticeAfterSession = DictationNotice(
+                            kind: .warning,
+                            message: "Recording stopped because audio couldn't be saved to disk. The audio held in memory was kept for transcription."
+                        )
                     }
                 },
                 preferredInputDeviceID

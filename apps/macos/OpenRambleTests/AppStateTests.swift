@@ -411,6 +411,35 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(recoveryFiles().isEmpty, "the interrupted take must be kept on disk")
     }
 
+    func testStorageCapacityStopKeepsTextAndExplainsWhyWithoutSound() async throws {
+        try installModelMarker()
+        let state = makeState()
+        await state.refreshModelState()
+        monitor.onPress?()
+        for _ in 0..<200 where state.dictationState != .listening {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(state.dictationState, .listening)
+        let active = await capture.session
+        let session = try XCTUnwrap(active)
+        let signalLimit = try XCTUnwrap(harness.captureMemoryLimit)
+        signalLimit(DictationSessionID())
+        try await Task.sleep(for: .milliseconds(20))
+        XCTAssertEqual(state.dictationState, .listening, "an old capture must not stop this dictation")
+        XCTAssertNil(state.lastNotice)
+
+        signalLimit(session)
+        for _ in 0..<200 where state.dictationState != .idle {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(state.dictationState, .idle)
+        XCTAssertFalse(state.history.isEmpty, "the retained take must still be transcribed")
+        let notice = try XCTUnwrap(state.lastNotice)
+        XCTAssertEqual(notice.kind, .warning)
+        XCTAssertTrue(notice.message.contains("disk"))
+        XCTAssertFalse(notice.wordsDidNotLand, "a storage notice must not add a stop sound")
+    }
+
     func testScenario014() async throws {
         try installModelMarker()
         let state = makeState()
