@@ -26,6 +26,15 @@ public struct AudioFileReader: Sendable {
         }
     }
 
+    /// The app's file-backed dictation path must not block an actor or the UI
+    /// while restoring PCM whose in-memory copy was released during capture.
+    public func samplesOnDiskQueue(from url: URL) async throws -> [Float] {
+        try Task.checkCancellation()
+        let samples = try await LocalTranscriber.onDisk { try self.samples(from: url) }
+        try Task.checkCancellation()
+        return samples
+    }
+
     /// Either local to one synchronous call or owned by AudioFileStream and
     /// accessed exclusively on LocalTranscriber's serial disk queue.
     final class Cursor: @unchecked Sendable {

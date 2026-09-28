@@ -11,6 +11,13 @@ crash preserves completed appends; power loss or an immediate crash before a
 queued append reaches disk may lose the latest event. Export skips partial lines.
 No free-text logging API is exposed.
 
+Completed dictations include numeric audio/engine/file-read timings, the count
+of pre-recognized segments and whether PCM came from the WAV. Recognition
+failures record an allowlisted category and the native runtime status when
+available, never the error description. Reports from 0.31.0 contain only the
+overall completion time and a generic failure event, so they cannot identify
+the cause of every failed recognition.
+
 The ZIP contains `system.json`, `events.jsonl`, `README.txt`, and at most five
 redacted Apple `.ips` crash reports (each source limited to 5 MB, last seven days).
 Only reports with OpenRamble's bundle identifier and process name are accepted;

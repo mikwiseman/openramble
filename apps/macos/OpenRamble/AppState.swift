@@ -1307,6 +1307,7 @@ public final class AppState: ObservableObject {
                 capture: capture,
                 transcribe: transcribe(engineDirectory),
                 transcribeSamples: transcribeSamples,
+                readSamples: { try await AudioFileReader().samplesOnDiskQueue(from: $0) },
                 inserter: inserter,
                 targetApplicationSnapshot: targetApplicationSnapshot,
                 overlay: overlay,
@@ -1383,6 +1384,9 @@ public final class AppState: ObservableObject {
                 self?.diagnostics.record(.transcriptionStalled)
                 self?.recycleWedgedEngine()
             }
+            controller.onRecognitionFailure = { [weak self] error in
+                self?.diagnostics.recordRecognitionFailure(error)
+            }
             controller.onTextInserted = { [weak self] text in
                 guard let self else { return }
                 self.recordSuccessfulDictation(text)
@@ -1416,9 +1420,15 @@ public final class AppState: ObservableObject {
                 // `notice`, not `info`: a slow take is exactly the entry that
                 // must survive in the system log long enough to be read.
                 engineLog.notice("\(DictationSpeedLine.text(for: report), privacy: .public)")
-                let elapsed = report.toRecognizedText.appSeconds * 1000
                 self?.diagnostics.record(.dictationCompleted,
-                    milliseconds: elapsed >= 0 && elapsed < Double(Int.max) ? Int(elapsed) : nil)
+                    milliseconds: DictationLogFile.milliseconds(report.toRecognizedText.appSeconds),
+                    recognition: report.phases.map {
+                        .init(audioMilliseconds: DictationLogFile.milliseconds($0.audioDuration.appSeconds),
+                              engineMilliseconds: $0.engineProcessing.flatMap { DictationLogFile.milliseconds($0.appSeconds) },
+                              decodingMilliseconds: $0.audioDecoding.flatMap { DictationLogFile.milliseconds($0.appSeconds) },
+                              streamedSegments: $0.streamedSegments,
+                              fileBacked: $0.recordingReadable != nil)
+                    })
                 DictationDiagnostics.noteCompleted(
                     report: report,
                     characterCount: self?.lastDictation?.insertedText.count ?? 0
