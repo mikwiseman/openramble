@@ -121,7 +121,7 @@ public enum ASREngineError: Error, Sendable, Equatable {
     /// Audio is not in the format expected by the engine.
     case unsupportedAudioFormat(String)
     /// The engine worked, but fell inside.
-    case inferenceFailed(String)
+    case inferenceFailed(String, code: Int? = nil)
     /// Recognition has been canceled by the user.
     case cancelled
 }

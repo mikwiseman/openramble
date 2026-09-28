@@ -353,7 +353,7 @@ public actor TranscribeCppAdapter: BatchASREngineAdapting {
         case TRANSCRIBE_ERR_ABORTED:
             throw ASREngineError.cancelled
         default:
-            throw ASREngineError.inferenceFailed(Self.describe(status))
+            throw ASREngineError.inferenceFailed(Self.describe(status), code: Int(status.rawValue))
         }
 
         // Empty is not an error here, however tempting it looks. Silence
@@ -410,12 +410,12 @@ public actor TranscribeCppAdapter: BatchASREngineAdapting {
                 }
                 let elapsed = runtimeStarted.duration(to: .now).seconds
                 guard status == TRANSCRIBE_OK || status == TRANSCRIBE_ERR_ABORTED else {
-                    return batch.map { _ in .failure(.inferenceFailed(Self.describe(status))) }
+                    return batch.map { _ in .failure(.inferenceFailed(Self.describe(status), code: Int(status.rawValue))) }
                 }
                 return batch.indices.map { index in
                     let code = transcribe_batch_status(session, Int32(index))
                     guard code == TRANSCRIBE_OK else {
-                        return .failure(code == TRANSCRIBE_ERR_ABORTED ? .cancelled : .inferenceFailed(Self.describe(code)))
+                        return .failure(code == TRANSCRIBE_ERR_ABORTED ? .cancelled : .inferenceFailed(Self.describe(code), code: Int(code.rawValue)))
                     }
                     return .success(ASRResult(
                         text: String(cString: transcribe_batch_full_text(session, Int32(index)))

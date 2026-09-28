@@ -1,4 +1,5 @@
 import XCTest
+import DictationCore
 
 final class DictationLogFileTests: XCTestCase {
     private var root: URL!
@@ -71,5 +72,35 @@ final class DictationLogFileTests: XCTestCase {
         let saved = log.snapshot()
         XCTAssertEqual(saved.data.split(separator: 10).count, 100)
         XCTAssertFalse(saved.incomplete)
+    }
+
+    func testRecognitionFailureKeepsNativeCodeWithoutErrorText() throws {
+        let log = DictationLogFile(directory: root, enabled: true)
+        log.recordRecognitionFailure(ASREngineError.inferenceFailed("PRIVATE_CANARY /Users/someone/take.wav", code: -7))
+        log.recordRecognitionFailure(ASREngineError.unsupportedAudioFormat("PRIVATE_CANARY"))
+        let saved = log.snapshot()
+        let text = String(decoding: saved.data, as: UTF8.self)
+        XCTAssertTrue(text.contains("recognitionEngineFailed"))
+        XCTAssertTrue(text.contains("\"errorCode\":-7"))
+        XCTAssertTrue(text.contains("recognitionAudioInvalid"))
+        XCTAssertFalse(text.contains("PRIVATE_CANARY"))
+        XCTAssertFalse(text.contains("/Users/"))
+    }
+
+    func testRecognitionTimingsSurviveExportAlongsideOlderEntries() throws {
+        let log = DictationLogFile(directory: root, enabled: true)
+        log.record(.appLaunched)
+        log.record(.dictationCompleted, milliseconds: 52000,
+            recognition: .init(audioMilliseconds: 480000, engineMilliseconds: 51900,
+                               decodingMilliseconds: 50, streamedSegments: 23, fileBacked: true))
+        let saved = log.snapshot()
+        let text = String(decoding: saved.data, as: UTF8.self)
+        XCTAssertFalse(saved.incomplete)
+        XCTAssertEqual(saved.data.split(separator: 10).count, 2)
+        XCTAssertTrue(text.contains("\"streamedSegments\":23"))
+        XCTAssertTrue(text.contains("\"engineMilliseconds\":51900"))
+        XCTAssertTrue(text.contains("\"fileBacked\":true"))
+        XCTAssertNil(DictationLogFile.milliseconds(.infinity))
+        XCTAssertNil(DictationLogFile.milliseconds(.nan))
     }
 }

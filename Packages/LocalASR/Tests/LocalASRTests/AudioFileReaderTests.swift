@@ -78,6 +78,13 @@ final class AudioFileReaderTests: XCTestCase {
         XCTAssertTrue(samples.contains { $0 != 0 }, "\u{041F}\u{0440}\u{043E}\u{0447}\u{0438}\u{0442}\u{0430}\u{043D}\u{0430} \u{0442}\u{0438}\u{0448}\u{0438}\u{043D}\u{0430} \u{0432}\u{043C}\u{0435}\u{0441}\u{0442}\u{043E} \u{0441}\u{0438}\u{043D}\u{0443}\u{0441}\u{043E}\u{0438}\u{0434}\u{044B}")
     }
 
+    func testDiskQueueReadsTheExactRecordedSamples() async throws {
+        let url = try writeWAV(seconds: 2.37, sampleRate: 16_000, channels: 1)
+        let expected = try reader.samples(from: url)
+        let actual = try await reader.samplesOnDiskQueue(from: url)
+        XCTAssertEqual(actual, expected)
+    }
+
     func testBoundedStereoReadsPreserveTheResampledTail() async throws {
         let url = try writeWAV(seconds: 4.013, sampleRate: 48_000, channels: 2)
         let whole = try AudioFileReader().samples(from: url)

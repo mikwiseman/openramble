@@ -235,6 +235,8 @@ public final class DictationController {
     /// How long did it take “let go → text in place.” For successful inserts only:
     /// the unsuccessful one does not have an honest number.
     public var onSpeed: (@MainActor (DictationSpeedReport) -> Void)?
+    /// Technical cause, before it is replaced by a short user-facing notice.
+    public var onRecognitionFailure: (@MainActor (any Error) -> Void)?
     /// Tells whether recording is going on without holding: this determines how
     /// interpret the next keystroke.
     public var onHandsFreeChange: (@MainActor (Bool) -> Void)?
@@ -277,6 +279,8 @@ public final class DictationController {
     /// Fast path for captures that already own recognizer-ready PCM. The file
     /// closure remains the compatibility and recovery path.
     private let transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)?
+    /// Reopen file-backed PCM after capture releases its bounded memory copy.
+    private let readSamples: (@Sendable (URL) async throws -> [Float])?
     /// Recognizes the take in pieces while it is still being spoken.
     ///
     /// Present only when there is a sample-path recognizer to give it to and a
@@ -285,7 +289,7 @@ public final class DictationController {
     private var streamedSegments: StreamedSegmentRecognizer?
     /// Sample rate every part of this app agrees on. Named rather than spelled
     /// out at the three places below that need it.
-    private static let sampleRate = 16_000
+    private nonisolated static let sampleRate = 16_000
     /// Below this a piece of audio is not handed to the engine on its own.
     ///
     /// Measured against the shipping model: under about two seconds its output
@@ -398,6 +402,7 @@ public final class DictationController {
         capture: any AudioCapturing,
         transcribe: @escaping @Sendable (URL) async throws -> ASRResult,
         transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)? = nil,
+        readSamples: (@Sendable (URL) async throws -> [Float])? = nil,
         inserter: any TextInserting,
         targetApplicationSnapshot: (@Sendable () -> TargetApplication?)? = nil,
         overlay: any OverlayPresenting,
@@ -423,6 +428,7 @@ public final class DictationController {
         self.capture = capture
         self.transcribe = transcribe
         self.transcribeSamples = transcribeSamples
+        self.readSamples = readSamples
         self.inserter = inserter
         self.targetApplicationSnapshot = targetApplicationSnapshot
             ?? { inserter.frontmostApplication() }
@@ -921,8 +927,15 @@ public final class DictationController {
         segmentSampleCounts: [Int],
         consumedSamples: Int,
         samples: [Float],
+        decodingDuration: TimeInterval = 0,
         transcribe: @Sendable ([Float]) async throws -> ASRResult
     ) async throws -> ASRResult {
+        guard consumedSamples >= 0, consumedSamples <= samples.count,
+              texts.count == segmentSampleCounts.count,
+              segmentSampleCounts.allSatisfy({ $0 > 0 }),
+              segmentSampleCounts.reduce(0, +) == consumedSamples else {
+            throw ASREngineError.unsupportedAudioFormat("incomplete streamed recording")
+        }
         var pieces = texts
         var tailStart = min(max(0, consumedSamples), samples.count)
 
@@ -957,7 +970,8 @@ public final class DictationController {
             words: [],
             audioDuration: Double(samples.count) / Double(sampleRate),
             processingDuration: processing,
-            engineDispatchDuration: dispatch
+            engineDispatchDuration: dispatch,
+            decodingDuration: decodingDuration
         )
     }
 
@@ -1111,7 +1125,7 @@ public final class DictationController {
             let streamed = streamedSegments
             let consumedSamples = recording.consumedSampleCount
             let framedRecognition: @Sendable () async throws -> ASRResult = {
-                [transcribe, transcribeSamples, streamed, consumedSamples] in
+                [transcribe, transcribeSamples, readSamples, streamed, consumedSamples] in
                 pickedUpBox.set(dispatchedAt.duration(to: clockNow()))
                 defer {
                     returnFrameBox.set(pthread_main_np() != 0)
@@ -1151,6 +1165,28 @@ public final class DictationController {
                     let readableStart = clockNow()
                     let url = try await self.readableURL(for: recording)
                     readableWaitBox.set(readableStart.duration(to: clockNow()))
+                    // The five-minute PCM cap changes where audio lives, not
+                    // which words have already been recognized. Reopen the
+                    // complete local WAV and reuse the same prefix/tail join.
+                    if let transcribeSamples, let readSamples,
+                       case let .recognized(texts) = await streamed?.finish(), !texts.isEmpty {
+                        let decodingStarted = clockNow()
+                        let samples = try await readSamples(url)
+                        let decodingDuration = decodingStarted.duration(to: clockNow())
+                        try Task.checkCancellation()
+                        guard abs(Double(samples.count) - recording.duration * Double(Self.sampleRate)) < 1 else {
+                            throw ASREngineError.unsupportedAudioFormat("incomplete file-backed recording")
+                        }
+                        return try await Self.joinStreamed(
+                            texts: texts,
+                            segmentSampleCounts: streamed?.submittedSampleCounts ?? [],
+                            consumedSamples: consumedSamples,
+                            samples: samples,
+                            decodingDuration: Double(decodingDuration.components.seconds)
+                                + Double(decodingDuration.components.attoseconds) / 1e18,
+                            transcribe: transcribeSamples
+                        )
+                    }
                     return try await transcribe(url)
                 }
             }
@@ -1231,6 +1267,7 @@ public final class DictationController {
                 await finishWithoutInsertion(session: session)
                 return
             }
+            onRecognitionFailure?(error)
             recording.disposition.keepInBackground()
             currentDisposition?.keepInBackground()
             let (saved, suffix) = await preserveWithinForegroundGrace(recording, session: session)

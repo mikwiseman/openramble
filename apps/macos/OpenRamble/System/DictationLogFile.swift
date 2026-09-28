@@ -1,10 +1,12 @@
 import Foundation
+import DictationCore
 
 /// An allowlist, not a free-text logger. No user content can be passed here.
 enum DiagnosticEvent: String, Codable, Sendable {
     case appLaunched, appTerminating, appTerminationReady
     case dictationIdle, dictationPreparing, dictationListening, dictationTranscribing, dictationInserting
     case dictationCompleted, dictationWarning, dictationFailed, transcriptionStalled
+    case recognitionFailed, recognitionModelUnavailable, recognitionAudioInvalid, recognitionEngineFailed, recognitionCancelled
     case enginePreparing, engineReady, engineUnavailable, engineFailed
     case audioConfigurationChanged, audioCaptureFailed
     case recordingIdle, recordingStarting, recordingActive, recordingPaused, recordingStopping, recordingFailed
@@ -23,6 +25,32 @@ final class DictationLogFile: @unchecked Sendable {
         let build: String
         let milliseconds: Int?
         let errorCode: Int?
+        let recognition: Recognition?
+    }
+
+    struct Recognition: Codable, Sendable {
+        let audioMilliseconds: Int?
+        let engineMilliseconds: Int?
+        let decodingMilliseconds: Int?
+        let streamedSegments: Int
+        let fileBacked: Bool
+    }
+
+    static func milliseconds(_ seconds: Double) -> Int? {
+        let value = seconds * 1000
+        return value >= 0 && value < Double(Int.max) ? Int(value) : nil
+    }
+
+    /// Only the enum case and native numeric status enter the journal.
+    /// Error descriptions may contain user paths or text and are never saved.
+    func recordRecognitionFailure(_ error: any Error) {
+        switch error as? ASREngineError {
+        case .modelsNotLoaded, .modelsUnavailable: record(.recognitionModelUnavailable)
+        case .unsupportedAudioFormat: record(.recognitionAudioInvalid)
+        case let .inferenceFailed(_, code): record(.recognitionEngineFailed, errorCode: code)
+        case .cancelled: record(.recognitionCancelled)
+        case nil: record(error is CancellationError ? .recognitionCancelled : .recognitionFailed)
+        }
     }
 
     let directory: URL
@@ -57,7 +85,8 @@ final class DictationLogFile: @unchecked Sendable {
         }
     }
 
-    func record(_ event: DiagnosticEvent, milliseconds: Int? = nil, errorCode: Int? = nil, at time: Date = Date()) {
+    func record(_ event: DiagnosticEvent, milliseconds: Int? = nil, errorCode: Int? = nil,
+                recognition: Recognition? = nil, at time: Date = Date()) {
         queue.async {
             guard self.enabled else { return }
             do {
@@ -65,7 +94,7 @@ final class DictationLogFile: @unchecked Sendable {
                 try manager.createDirectory(at: self.directory, withIntermediateDirectories: true,
                                             attributes: [.posixPermissions: 0o700])
                 let entry = Entry(time: time, event: event, version: self.version, build: self.build,
-                                  milliseconds: milliseconds, errorCode: errorCode)
+                                  milliseconds: milliseconds, errorCode: errorCode, recognition: recognition)
                 var data = try Self.encoder().encode(entry)
                 data.append(10)
                 let url = self.directory.appending(path: "events-\(Self.day(time)).jsonl")

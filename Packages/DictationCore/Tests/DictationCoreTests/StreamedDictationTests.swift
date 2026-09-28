@@ -14,14 +14,16 @@ final class StreamedDictationTests: XCTestCase {
     private actor StreamingCapture: AudioCapturing {
         private let file = URL(fileURLWithPath: "/tmp/streamed-take.wav")
         private let samples: [Float]
+        private let fileBacked: Bool
         /// Sample counts to ship as segments before the key comes up.
         private let segments: [Int]
         private var sink: (@Sendable ([Float]) -> Void)?
         private(set) var consumed = 0
 
-        init(samples: [Float], segments: [Int]) {
+        init(samples: [Float], segments: [Int], fileBacked: Bool = false) {
             self.samples = samples
             self.segments = segments
+            self.fileBacked = fileBacked
         }
 
         func setSegmentSink(_ sink: (@Sendable ([Float]) -> Void)?) { self.sink = sink }
@@ -49,12 +51,14 @@ final class StreamedDictationTests: XCTestCase {
             CapturedRecording(
                 url: file,
                 duration: Double(samples.count) / 16_000,
-                samples: samples,
+                samples: fileBacked ? nil : samples,
                 consumedSampleCount: consumed
             )
         }
 
         func abortRecording() async {}
+
+        func readSamples() -> [Float] { samples }
     }
 
     private func makeController(
@@ -75,6 +79,7 @@ final class StreamedDictationTests: XCTestCase {
                     processingDuration: 0.01
                 )
             },
+            readSamples: { _ in await capture.readSamples() },
             inserter: inserter,
             overlay: FakeOverlay(),
             sounds: FakeSounds(),
@@ -156,5 +161,78 @@ final class StreamedDictationTests: XCTestCase {
         await run(controller)
         let inserted = await inserter.insertedTexts
         XCTAssertEqual(inserted.first, "One whole take.")
+    }
+
+    func testEightMinuteFileBackedTakeReusesEveryStreamedPiece() async {
+        let samples = [Float](repeating: 0.5, count: 480 * 16_000)
+        let capture = StreamingCapture(samples: samples,
+            segments: Array(repeating: 20 * 16_000, count: 23), fileBacked: true)
+        let inserter = FakeInserter()
+        let controller = makeController(capture: capture, inserter: inserter) { chunk in
+            XCTAssertEqual(chunk.count, 20 * 16_000, "only the last 20 seconds need recognition at stop")
+            return "piece"
+        }
+
+        await run(controller)
+
+        let inserted = await inserter.insertedTexts
+        XCTAssertEqual(inserted.first?.lowercased().split(separator: " ").count, 24,
+                       "all 23 precomputed pieces and the tail must survive the five-minute memory boundary")
+    }
+
+    func testFileBackedShortTailIsJoinedToThePreviousSegment() async {
+        let samples = [Float](repeating: 0.5, count: 360 * 16_000)
+        let capture = StreamingCapture(samples: samples,
+            segments: [340 * 16_000, 19 * 16_000], fileBacked: true)
+        let inserter = FakeInserter()
+        let controller = makeController(capture: capture, inserter: inserter) { chunk in
+            switch chunk.count {
+            case 340 * 16_000: return "first"
+            case 19 * 16_000: return "discard this version"
+            case 20 * 16_000: return "second and tail together."
+            default: XCTFail("unexpected decode length: \(chunk.count)"); return "wrong"
+            }
+        }
+
+        await run(controller)
+
+        let inserted = await inserter.insertedTexts
+        XCTAssertEqual(inserted.first, "First second and tail together.")
+    }
+
+    func testFailedStreamStillRecognizesTheCompleteFile() async {
+        let capture = StreamingCapture(samples: [Float](repeating: 0.5, count: 360 * 16_000),
+                                       segments: [20 * 16_000], fileBacked: true)
+        let inserter = FakeInserter()
+        let controller = DictationController(capture: capture,
+            transcribe: { _ in ASRResult(text: "complete recording.", audioDuration: 360, processingDuration: 1) },
+            transcribeSamples: { _ in throw ASREngineError.inferenceFailed("failed segment", code: -7) },
+            readSamples: { _ in XCTFail("failed prefix cannot be reused"); return [] },
+            inserter: inserter, overlay: FakeOverlay(), sounds: FakeSounds())
+
+        await run(controller)
+
+        let inserted = await inserter.insertedTexts
+        XCTAssertEqual(inserted.first, "Complete recording.")
+    }
+
+    func testTruncatedFileDoesNotPublishAPartialTranscript() async {
+        let samples = [Float](repeating: 0.5, count: 360 * 16_000)
+        let capture = StreamingCapture(samples: samples, segments: [20 * 16_000], fileBacked: true)
+        let inserter = FakeInserter()
+        let controller = DictationController(capture: capture,
+            transcribe: { _ in XCTFail("must not hide an incomplete file"); throw ASREngineError.cancelled },
+            transcribeSamples: { _ in ASRResult(text: "prefix", audioDuration: 20, processingDuration: 0.01) },
+            readSamples: { _ in Array(samples.prefix(25 * 16_000)) },
+            inserter: inserter, overlay: FakeOverlay(), sounds: FakeSounds())
+        var failure: ASREngineError?
+        controller.onRecognitionFailure = { failure = $0 as? ASREngineError }
+
+        await run(controller)
+
+        let inserted = await inserter.insertedTexts
+        XCTAssertTrue(inserted.isEmpty)
+        guard case .unsupportedAudioFormat = failure else { return XCTFail("missing technical failure") }
+        XCTAssertEqual(controller.state, .idle)
     }
 }
