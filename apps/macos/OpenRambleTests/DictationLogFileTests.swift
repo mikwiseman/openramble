@@ -103,4 +103,20 @@ final class DictationLogFileTests: XCTestCase {
         XCTAssertNil(DictationLogFile.milliseconds(.infinity))
         XCTAssertNil(DictationLogFile.milliseconds(.nan))
     }
+
+    func testFailureStageAndRecoveredStreamErrorStayPrivateAndSurviveExport() throws {
+        let log = DictationLogFile(directory: root, enabled: true)
+        log.record(.dictationStageFailed, milliseconds: 10001, stage: .captureFreeze, timedOut: true)
+        log.recordFallback(.segmentFailed,
+            error: ASREngineError.inferenceFailed("PRIVATE_CANARY /Users/private/take.wav", code: -7))
+        let saved = log.snapshot()
+        let text = String(decoding: saved.data, as: UTF8.self)
+        XCTAssertFalse(saved.incomplete)
+        XCTAssertTrue(text.contains("\"stage\":\"captureFreeze\""))
+        XCTAssertTrue(text.contains("\"timedOut\":true"))
+        XCTAssertTrue(text.contains("\"fallbackReason\":\"segmentFailed\""))
+        XCTAssertTrue(text.contains("\"errorCode\":-7"))
+        XCTAssertFalse(text.contains("PRIVATE_CANARY"))
+        XCTAssertFalse(text.contains("/Users/"))
+    }
 }

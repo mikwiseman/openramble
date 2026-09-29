@@ -12,7 +12,10 @@ struct FileAudioChunk: Sendable {
 /// Keeps at most one segment plus overlap and one second of read-ahead.
 actor FileAudioChunks {
     nonisolated let duration: Double
-    private let stream: AudioFileStream
+    private let stream: AudioFileStream?
+    private let samples: [Float]?
+    private var sampleOffset = 0
+    private(set) var readSeconds = 0.0
     private var policy: MeetingSegmentPolicy
     private var buffer: [Float] = []
     private var bufferStart = 0
@@ -23,7 +26,9 @@ actor FileAudioChunks {
     private let overlap = 2 * 16_000
 
     init(url: URL, seconds: Int = 30) async throws {
-        stream = try await AudioFileStream(url: url)
+        let stream = try await AudioFileStream(url: url)
+        self.stream = stream
+        samples = nil
         duration = stream.duration
         whole = duration <= 30
         policy = MeetingSegmentPolicy(channel: .microphone, parameters: .init(
@@ -32,11 +37,38 @@ actor FileAudioChunks {
         ))
     }
 
+    init(samples: [Float], seconds: Int = 30) {
+        stream = nil
+        self.samples = samples
+        duration = Double(samples.count) / 16_000
+        whole = duration <= 30
+        policy = MeetingSegmentPolicy(channel: .microphone, parameters: .init(
+            speech: .init(minimumSegment: .seconds(15), relaxAfter: .seconds(seconds)),
+            hardCap: .seconds(seconds), forcedCutWindow: .seconds(1), preserveQuietAudio: true
+        ))
+    }
+
+    private func read(frames: Int = 16_384) async throws -> [Float] {
+        try Task.checkCancellation()
+        if let stream {
+            let start = ContinuousClock.now
+            defer {
+                let duration = start.duration(to: .now)
+                readSeconds += Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
+            }
+            return try await stream.read(frames: frames)
+        }
+        guard let samples else { return [] }
+        let end = min(samples.count, sampleOffset + frames)
+        defer { sampleOffset = end }
+        return Array(samples[sampleOffset..<end])
+    }
+
     func next() async throws -> FileAudioChunk? {
         if whole {
             guard !ended else { return nil }
             while true {
-                let part = try await stream.read()
+                let part = try await read()
                 if part.isEmpty { break }
                 buffer.append(contentsOf: part)
             }
@@ -58,7 +90,7 @@ actor FileAudioChunks {
                 return chunk
             }
             if ended { return nil }
-            let part = try await stream.read(frames: 16_000)
+            let part = try await read(frames: 16_000)
             if part.isEmpty {
                 ended = true
                 if let tail = policy.flush() {

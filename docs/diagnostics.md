@@ -18,6 +18,14 @@ available, never the error description. Reports from 0.31.0 contain only the
 overall completion time and a generic failure event, so they cannot identify
 the cause of every failed recognition.
 
+From 0.31.2, `dictationStageFailed` includes an allowlisted stage (capture freeze,
+readable WAV, model preparation, or recognition), elapsed milliseconds, and a
+timeout flag. `recognitionFallback` distinguishes a take with no completed
+segments from a failed segment, retaining a native numeric status when present.
+Successful recovery does not erase that fallback event. Completed dictations
+also include capture-freeze, WAV-readiness and model-preparation durations.
+These durations can overlap background work and must not be summed as a total.
+
 The ZIP contains `system.json`, `events.jsonl`, `README.txt`, and at most five
 redacted Apple `.ips` crash reports (each source limited to 5 MB, last seven days).
 Only reports with OpenRamble's bundle identifier and process name are accepted;

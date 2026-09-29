@@ -237,6 +237,8 @@ public final class DictationController {
     public var onSpeed: (@MainActor (DictationSpeedReport) -> Void)?
     /// Technical cause, before it is replaced by a short user-facing notice.
     public var onRecognitionFailure: (@MainActor (any Error) -> Void)?
+    public var onStageFailure: (@MainActor (DictationFailureStage, Duration, Bool) -> Void)?
+    public var onRecognitionFallback: (@MainActor (DictationFallbackReason, (any Error)?) -> Void)?
     /// Tells whether recording is going on without holding: this determines how
     /// interpret the next keystroke.
     public var onHandsFreeChange: (@MainActor (Bool) -> Void)?
@@ -334,6 +336,7 @@ public final class DictationController {
     /// Capture stop owns only the audio-engine handoff and PCM freeze. Disk
     /// drain and fsync are separate milestones and do not consume this budget.
     private let captureFreezeDeadline: Duration
+    private let preparingStopDeadline: Duration
     /// Rare file-only recordings wait for a readable WAV, never for fsync.
     private let recordingReadableDeadline: Duration
     /// Moving a failed take into the support folder is also storage I/O and
@@ -418,8 +421,9 @@ public final class DictationController {
         // surfaces well before the worker's own watchdog escalates.
         prepareDeadline: Duration = .seconds(25),
         enginePreparationNoticeDelay: Duration = .milliseconds(250),
-        captureFreezeDeadline: Duration = .milliseconds(500),
-        recordingReadableDeadline: Duration = .seconds(2),
+        captureFreezeDeadline: Duration = .seconds(10),
+        preparingStopDeadline: Duration = .milliseconds(500),
+        recordingReadableDeadline: Duration = .seconds(10),
         recordingPreserveDeadline: Duration = .seconds(2),
         recoveryForegroundGrace: Duration = .milliseconds(150),
         insertionDeadline: Duration = .seconds(2),
@@ -445,6 +449,7 @@ public final class DictationController {
         self.prepareDeadline = prepareDeadline
         self.enginePreparationNoticeDelay = enginePreparationNoticeDelay
         self.captureFreezeDeadline = captureFreezeDeadline
+        self.preparingStopDeadline = preparingStopDeadline
         self.recordingReadableDeadline = recordingReadableDeadline
         self.recordingPreserveDeadline = recordingPreserveDeadline
         self.recoveryForegroundGrace = recoveryForegroundGrace
@@ -710,7 +715,7 @@ public final class DictationController {
 
     private func schedulePreparingStopWatchdog(session: DictationSessionID) {
         guard preparingStopWatchdog == nil, let stopSLORequestedAt else { return }
-        let deadline = stopSLORequestedAt.advanced(by: captureFreezeDeadline)
+        let deadline = stopSLORequestedAt.advanced(by: preparingStopDeadline)
         let task = Task { [weak self] in
             let remaining = ContinuousClock.now.duration(to: deadline)
             if remaining > .zero { try? await Task.sleep(for: remaining) }
@@ -726,6 +731,7 @@ public final class DictationController {
         preparingStopWatchdog = nil
         finalizationTask = owner
         cancellationRequested = true
+        streamedSegments?.cancel()
         currentDisposition?.keepInBackground()
         state = .transcribing
         guard !Task.isCancelled, isCurrent(session) else { return }
@@ -977,6 +983,7 @@ public final class DictationController {
 
     private func finalize(session: DictationSessionID) async {
         let recording: CapturedRecording
+        let freezeStarted = ContinuousClock.now
         do {
             guard shouldContinue(session), let expectedURL = activeRecordingURL else {
                 await finishWithoutInsertion(session: session)
@@ -988,6 +995,7 @@ public final class DictationController {
                 await finishWithoutInsertion(session: session)
                 return
             }
+            onStageFailure?(.captureFreeze, freezeStarted.duration(to: .now), true)
             if let expectedURL = activeRecordingURL {
                 let capture = capture
                 Task.detached(priority: .userInitiated) {
@@ -1008,6 +1016,7 @@ public final class DictationController {
                 await finishWithoutInsertion(session: session)
                 return
             }
+            onStageFailure?(.captureFreeze, freezeStarted.duration(to: .now), false)
             await fail(session: session, with: .capture(String(describing: error)))
             return
         }
@@ -1065,7 +1074,19 @@ public final class DictationController {
         let workDoneBox = DurationBox()
         let returnedBox = DurationBox()
         let returnFrameBox = MeasurementBox<Bool>()
+        let stageBox = MeasurementBox<(stage: DictationFailureStage, started: ContinuousClock.Instant)>()
+        let fallbackBox = MeasurementBox<(reason: DictationFallbackReason, error: (any Error)?)>()
+        let recordStageFailure: (Bool) -> Void = { [self] timedOut in
+            if let progress = stageBox.get() {
+                onStageFailure?(progress.stage, progress.started.duration(to: .now), timedOut)
+            }
+        }
         do {
+            defer {
+                if shouldContinue(session), let fallback = fallbackBox.get() {
+                    onRecognitionFallback?(fallback.reason, fallback.error)
+                }
+            }
             var foregroundEnd = (stopSLORequestedAt ?? .now).advanced(
                 by: captureFreezeDeadline + transcriptionDeadline(recording.duration)
             )
@@ -1079,6 +1100,7 @@ public final class DictationController {
             // watchdog, so a genuinely wedged load surfaces here first and
             // recovery stays with the worker.
             if let prepareForTranscription {
+                stageBox.set((.modelPreparation, .now))
                 let prepareStarted = ContinuousClock.now
                 // A resident engine answers this in microseconds, and flipping
                 // the panel to a loading message for every take would be a
@@ -1119,6 +1141,7 @@ public final class DictationController {
             // of every slow take and had no number, because every previous
             // stamp sat past it.
             let dispatchedAt = monotonicNow()
+            stageBox.set((.recognition, .now))
             let clockNow = monotonicNow
             // The explicit type is load-bearing. If this closure inherited
             // MainActor isolation, the return hop would become a plausible zero.
@@ -1156,6 +1179,11 @@ public final class DictationController {
                                 transcribe: transcribeSamples
                             )
                         }
+                        if case let .failed(error) = outcome {
+                            fallbackBox.set((.segmentFailed, error))
+                        } else {
+                            fallbackBox.set((.noSegments, nil))
+                        }
                         // No cuts were made, or a segment failed. Either way the
                         // whole take is recognized here exactly as it always
                         // was — a stream that could not finish costs latency,
@@ -1163,13 +1191,16 @@ public final class DictationController {
                         return try await transcribeSamples(bufferedSamples)
                     }
                     let readableStart = clockNow()
+                    stageBox.set((.readableFile, .now))
                     let url = try await self.readableURL(for: recording)
                     readableWaitBox.set(readableStart.duration(to: clockNow()))
+                    stageBox.set((.recognition, .now))
                     // The five-minute PCM cap changes where audio lives, not
                     // which words have already been recognized. Reopen the
                     // complete local WAV and reuse the same prefix/tail join.
+                    let outcome = await streamed?.finish()
                     if let transcribeSamples, let readSamples,
-                       case let .recognized(texts) = await streamed?.finish(), !texts.isEmpty {
+                       case let .recognized(texts) = outcome, !texts.isEmpty {
                         let decodingStarted = clockNow()
                         let samples = try await readSamples(url)
                         let decodingDuration = decodingStarted.duration(to: clockNow())
@@ -1187,6 +1218,11 @@ public final class DictationController {
                             transcribe: transcribeSamples
                         )
                     }
+                    if case let .failed(error) = outcome {
+                        fallbackBox.set((.segmentFailed, error))
+                    } else {
+                        fallbackBox.set((.noSegments, nil))
+                    }
                     return try await transcribe(url)
                 }
             }
@@ -1198,6 +1234,7 @@ public final class DictationController {
                 await finishWithoutInsertion(session: session)
                 return
             }
+            recordStageFailure(true)
             let notice = DictationNotice(
                 kind: .failure,
                 message: "Finishing the local recording took too long. The unfinished file will be checked for automatic recovery.",
@@ -1212,6 +1249,7 @@ public final class DictationController {
                 await finishWithoutInsertion(session: session)
                 return
             }
+            recordStageFailure(true)
             // A cold generation may still be loading normally. Free the
             // foreground session and keep the take, but do not signal the
             // inference-stall hook: the worker's preparation watchdog owns
@@ -1238,6 +1276,7 @@ public final class DictationController {
                 await finishWithoutInsertion(session: session)
                 return
             }
+            recordStageFailure(true)
             // Signal containment at the moment the deadline is known. Recovery
             // file I/O and user feedback must never postpone worker fencing.
             onTranscriptionStall?()
@@ -1268,6 +1307,7 @@ public final class DictationController {
                 return
             }
             onRecognitionFailure?(error)
+            recordStageFailure(false)
             recording.disposition.keepInBackground()
             currentDisposition?.keepInBackground()
             let (saved, suffix) = await preserveWithinForegroundGrace(recording, session: session)
@@ -1570,6 +1610,7 @@ public final class DictationController {
     /// Cancel dictation.
     public func cancel() {
         guard DictationStopPolicy.canCancel(state: state) else { return }
+        streamedSegments?.cancel()
 
         // The order is important: first the flag, then cancel the task. Canceling a task does not
         // interrupts an already ongoing wait, and the flag is checked after each of them.
@@ -1786,6 +1827,8 @@ public final class DictationController {
     /// woke up after cancellation, otherwise he would have extinguished the new one already in progress.
     private func cleanup(session: DictationSessionID) async {
         guard isCurrent(session) else { return }
+        streamedSegments?.cancel()
+        streamedSegments = nil
 
         // Issue the terminal HUD command while N is still current, then make
         // its identity terminal before publishing any externally observable
@@ -1932,6 +1975,14 @@ public enum DictationError: Error, Sendable, Equatable {
             return "Couldn't transcribe speech."
         }
     }
+}
+
+public enum DictationFailureStage: String, Codable, Sendable {
+    case captureFreeze, readableFile, modelPreparation, recognition
+}
+
+public enum DictationFallbackReason: String, Codable, Sendable {
+    case noSegments, segmentFailed
 }
 
 private enum RecordingFinalizationStage: Sendable, Equatable {

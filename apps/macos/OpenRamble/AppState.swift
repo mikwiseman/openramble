@@ -1387,6 +1387,14 @@ public final class AppState: ObservableObject {
             controller.onRecognitionFailure = { [weak self] error in
                 self?.diagnostics.recordRecognitionFailure(error)
             }
+            controller.onStageFailure = { [weak self] stage, elapsed, timedOut in
+                self?.diagnostics.record(.dictationStageFailed,
+                    milliseconds: DictationLogFile.milliseconds(elapsed.appSeconds),
+                    stage: stage, timedOut: timedOut)
+            }
+            controller.onRecognitionFallback = { [weak self] reason, error in
+                self?.diagnostics.recordFallback(reason, error: error)
+            }
             controller.onTextInserted = { [weak self] text in
                 guard let self else { return }
                 self.recordSuccessfulDictation(text)
@@ -1427,7 +1435,10 @@ public final class AppState: ObservableObject {
                               engineMilliseconds: $0.engineProcessing.flatMap { DictationLogFile.milliseconds($0.appSeconds) },
                               decodingMilliseconds: $0.audioDecoding.flatMap { DictationLogFile.milliseconds($0.appSeconds) },
                               streamedSegments: $0.streamedSegments,
-                              fileBacked: $0.recordingReadable != nil)
+                              fileBacked: $0.recordingReadable != nil,
+                              freezeMilliseconds: DictationLogFile.milliseconds($0.captureFreeze.appSeconds),
+                              readableMilliseconds: $0.recordingReadable.flatMap { DictationLogFile.milliseconds($0.appSeconds) },
+                              preparationMilliseconds: $0.enginePreparation.flatMap { DictationLogFile.milliseconds($0.appSeconds) })
                     })
                 DictationDiagnostics.noteCompleted(
                     report: report,

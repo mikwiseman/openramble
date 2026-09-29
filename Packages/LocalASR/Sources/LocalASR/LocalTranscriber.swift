@@ -50,6 +50,29 @@ public actor LocalTranscriber {
     /// Is a recognition or load running right now?
     public var isBusy: Bool { activeOperations > 0 || loadTask != nil }
 
+    /// A whole recording owns one residency, including the gaps between chunks.
+    /// Forced unload invalidates the generation; no later chunk may use its replacement.
+    func withPreparedModel<T: Sendable>(_ operation: @Sendable (Int) async throws -> T) async throws -> T {
+        guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
+        activeOperations += 1
+        defer { activeOperations -= 1 }
+        let expected = generation
+        try Task.checkCancellation()
+        if let inferenceWarmupTask { try await inferenceWarmupTask.value }
+        try Task.checkCancellation()
+        guard expected == generation, loadedDirectory != nil else { throw CancellationError() }
+        let result = try await operation(expected)
+        try Task.checkCancellation()
+        guard expected == generation, loadedDirectory != nil else { throw CancellationError() }
+        return result
+    }
+
+    func transcribeChunk(_ samples: [Float], generation expected: Int,
+                         shouldYield: @escaping @Sendable () -> Bool) async throws -> [Result<ASRResult, ASREngineError>] {
+        guard generation == expected else { throw CancellationError() }
+        return try await transcribe(batch: [samples], timestamps: true, shouldYield: shouldYield)
+    }
+
     public func transcribe(
         batch: [[Float]], timestamps: Bool = false,
         shouldYield: @escaping @Sendable () -> Bool = { false }
@@ -124,63 +147,48 @@ public actor LocalTranscriber {
 
     /// Recognize the recorded file.
     public func transcribe(fileURL: URL) async throws -> ASRResult {
-        guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
-
-        // Stamped before the read, because the read is where the time went.
         let arrived = ContinuousClock.now
-
-        // Reading and decoding the recording is synchronous file work, and it
-        // used to happen right here — on this actor, which runs on Swift's
-        // cooperative pool. A pool thread blocked on a disk is not yielded but
-        // lost, and the whole dictation is waiting behind it. Field logs showed
-        // recognition of 11.65 s around an engine call of 0.11 s, with the
-        // stage timer reporting a queue of zero — because the timer sat after
-        // this line rather than before it.
-        let reader = reader
-        let decodeStarted = ContinuousClock.now
-        let samples: [Float]
         do {
-            samples = try await LocalTranscriber.onDisk { try reader.samples(from: fileURL) }
+            return try await withPreparedModel { generation in
+                let decodeStarted = ContinuousClock.now
+                let chunks = try await FileAudioChunks(url: fileURL)
+                if chunks.duration > 30 {
+                    let transcript = try await FileTranscriber(transcriber: self)
+                        .transcribe(chunks: chunks, generation: generation)
+                    return Self.result(transcript, since: arrived)
+                }
+                let samples = try await chunks.next()?.samples ?? []
+                let decoded = Self.seconds(decodeStarted.duration(to: .now))
+                let result = try await self.transcribe(samples: samples)
+                return ASRResult(text: result.text, words: result.words,
+                    audioDuration: result.audioDuration, processingDuration: result.processingDuration,
+                    engineDispatchDuration: result.engineDispatchDuration,
+                    queueingDuration: max(0, Self.seconds(arrived.duration(to: .now))
+                        - result.processingDuration - result.engineDispatchDuration),
+                    decodingDuration: decoded, phaseTimings: result.phaseTimings)
+            }
         } catch let failure as AudioFileReader.Failure {
             throw ASREngineError.unsupportedAudioFormat(String(describing: failure))
         }
+    }
 
-        let decoded = decodeStarted.duration(to: .now)
-        try Task.checkCancellation()
-        let result = try await transcribe(samples: samples)
-        // Report the whole wait, decode included, rather than only the part
-        // after it. The previous number was true and useless.
-        let waited = arrived.duration(to: .now)
-        return ASRResult(
-            text: result.text,
-            words: result.words,
-            audioDuration: result.audioDuration,
-            processingDuration: result.processingDuration,
-            engineDispatchDuration: result.engineDispatchDuration,
-            queueingDuration: max(
-                0,
-                Double(waited.components.seconds)
-                    + Double(waited.components.attoseconds) / 1e18
-                    - result.processingDuration
-                    - result.engineDispatchDuration
-            ),
-            decodingDuration: Double(decoded.components.seconds)
-                + Double(decoded.components.attoseconds) / 1e18,
-            phaseTimings: result.phaseTimings
-        )
+    private static func seconds(_ duration: Duration) -> Double {
+        Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
+    }
+
+    private static func result(_ transcript: FileTranscript, since start: ContinuousClock.Instant) -> ASRResult {
+        ASRResult(text: transcript.text, words: transcript.words, audioDuration: transcript.duration,
+            processingDuration: transcript.recognitionSeconds,
+            engineDispatchDuration: transcript.dispatchSeconds,
+            queueingDuration: max(0, seconds(start.duration(to: .now))
+                - transcript.recognitionSeconds - transcript.dispatchSeconds),
+            decodingDuration: transcript.decodingSeconds)
     }
 
     /// Recognize a ready buffer.
     ///
-    /// The entire recording goes into the engine, no matter how long it is: splicing
-    /// He makes fifteen-second windows himself, with overlap and deduplication
-    /// tokens. Previously, there was its own cutting of pauses - it was
-    /// written against the silent loss of speech at the junction of the windows. The measurements showed that
-    /// the reason for the loss was not in the length of the piece, but in the `melChunkContext` flag
-    /// libraries; cutting cut phrases in the middle, slowed down parsing twice and
-    /// on the main scenario (Russian speech with English inserts) lost three times
-    /// more words than a properly configured engine. Details and numbers - in
-    /// `docs/benchmarks.md`.
+    /// Parakeet does not split long inputs internally. Reuse the file pipeline's
+    /// bounded windows and timestamp seams; ordinary short dictations stay direct.
     public func transcribe(samples: [Float]) async throws -> ASRResult {
         guard loadedDirectory != nil else { throw ASREngineError.modelsNotLoaded }
         guard !samples.isEmpty else {
@@ -192,6 +200,14 @@ public actor LocalTranscriber {
         // to be reported nowhere at all, and that interval is where every
         // stall this app has had actually lived.
         let arrived = ContinuousClock.now
+
+        if samples.count > 30 * 16_000 {
+            return try await withPreparedModel { generation in
+                let transcript = try await FileTranscriber(transcriber: self)
+                    .transcribe(chunks: FileAudioChunks(samples: samples), generation: generation)
+                return Self.result(transcript, since: arrived)
+            }
+        }
 
         // Claim residency before waiting on the shared warm-up. Otherwise the
         // warm-up owner can drop its busy count just before this continuation
