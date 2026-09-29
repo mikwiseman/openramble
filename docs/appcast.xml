@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.31.1</title>
-      <pubDate>Mon, 28 Sep 2026 18:37:15 +0300</pubDate>
-      <sparkle:version>73</sparkle:version>
-      <sparkle:shortVersionString>0.31.1</sparkle:shortVersionString>
+      <title>0.31.2</title>
+      <pubDate>Tue, 29 Sep 2026 14:12:29 +0300</pubDate>
+      <sparkle:version>74</sparkle:version>
+      <sparkle:shortVersionString>0.31.2</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.31.1&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Long dictations keep the speech already recognized while you talk. Crossing five minutes no longer makes OpenRamble recognize the entire recording again after you stop.&lt;/li&gt;&lt;li&gt;Error reports include recognition-stage timings and numeric engine failure codes to help diagnose slow or unsuccessful dictations. Audio, transcripts and error-message contents remain excluded; reports are only shared manually.&lt;/li&gt;&lt;/ul&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.31.1/OpenRamble-0.31.1.dmg" length="12697251" type="application/octet-stream" sparkle:edSignature="xXbvKyTRHn5X+BFOH0wxTWqT7DOnUa6yu6EPPC4s7vLN+CRcGzuckXMVxRPsunPb/abovbSO/tiqiBGcPuhyDw==" />
+      <description>&lt;h2&gt;OpenRamble 0.31.2&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Long dictations, including speech without pauses and recognition retried from history, use bounded audio fragments instead of one large inference call. Speech already recognized during dictation is still reused.&lt;/li&gt;&lt;li&gt;Stopping a recording and finishing its WAV have more time to complete on a busy Mac. Healthy operations finish immediately; genuine stalls still preserve the local take for recovery.&lt;/li&gt;&lt;li&gt;Cancelling dictation stops its queued recognition work and prevents late results from appearing in the next dictation.&lt;/li&gt;&lt;li&gt;Local error reports identify the failed stage and why a recording needed recognition again. Reports still exclude audio, dictated text and error-message contents, and are shared only when you choose.&lt;/li&gt;&lt;/ul&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.31.2/OpenRamble-0.31.2.dmg" length="13321476" type="application/octet-stream" sparkle:edSignature="Pui6dWanNzDJUOUQYet/qpeLq0Tj0N1Sp9v0maRCidFIROAAkZHl/9CPUm6mmOjqpDbMfDsahcwnUn0j4autDg==" />
     </item>
   </channel>
 </rss>
