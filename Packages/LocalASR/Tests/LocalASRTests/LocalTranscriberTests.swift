@@ -306,17 +306,14 @@ final class LocalTranscriberTests: XCTestCase {
         }
     }
 
-    // MARK: - A long recording goes into the engine entirely
+    // MARK: - Compatibility with base-only engine adapters
 
-    /// Previously, recordings longer than twelve seconds were cut here into pauses. Rezalo
-    /// in the middle of a phrase, it slowed down parsing twice and lost more in mixed speech
-    /// text than the engine with its own window gluing (measurements are in docs/benchmarks.md).
-    /// The test guards so that the cutting does not return unnoticed.
-    func testLongRecordingGoesToEngineInOnePiece() async throws {
+    /// The base protocol does not promise word timestamps. Its existing
+    /// single-call behavior remains available to callers supplying such engines.
+    func testBaseOnlyEngineRetainsItsLongRecordingContract() async throws {
         let engine = StubEngine()
         let transcriber = LocalTranscriber(engine: engine)
         try await transcriber.prepare(modelDirectory: directory)
-        // Minute: five times longer than the previous slicing threshold.
         let samples = (0..<(60 * 16_000)).map { sin(Float($0) * 0.05) * 0.3 }
 
         _ = try await transcriber.transcribe(samples: samples)

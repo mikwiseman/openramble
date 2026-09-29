@@ -12,7 +12,7 @@ final class FileQualityTests: XCTestCase {
             + " Последний номер 2026. Работа завершена."
         let transcriber = try await requireEndToEndTranscriber()
         let url = try await SpeechFixtures.shared.speech(expectedText)
-        let whole = try await transcriber.transcribe(fileURL: url)
+        let whole = try await oneShotReference(transcriber, url: url)
         let capture = Capture()
         try await FileTranscriber(transcriber: transcriber).transcribe(files: [url]) { _, result in
             await capture.store(result)
@@ -32,7 +32,7 @@ final class FileQualityTests: XCTestCase {
     func testChunkProfilesPreserveRepeatedSpeechAndTheFinalWords() async throws {
         let transcriber = try await requireEndToEndTranscriber()
         let url = try await SpeechFixtures.shared.speech(Phrase.veryLong)
-        let reference = try await transcriber.transcribe(fileURL: url)
+        let reference = try await oneShotReference(transcriber, url: url)
         let expected = Self.words(Phrase.veryLong)
         let referenceErrors = Self.distance(expected, Self.words(reference.text))
         for length in [15, 30, 60] {
@@ -58,6 +58,14 @@ final class FileQualityTests: XCTestCase {
         var outcome: Result<FileTranscript, Error>?
         func store(_ result: Result<FileTranscript, Error>) { outcome = result }
         func get() throws -> FileTranscript { try XCTUnwrap(outcome).get() }
+    }
+
+    /// Keep the pre-0.31.2 native path as an independent quality baseline.
+    /// Comparing two calls to the new router would only test it against itself.
+    private func oneShotReference(_ transcriber: LocalTranscriber, url: URL) async throws -> ASRResult {
+        let samples = try await AudioFileReader().samplesOnDiskQueue(from: url)
+        let results = try await transcriber.transcribe(batch: [samples])
+        return try XCTUnwrap(results.first).get()
     }
 
     private static func words(_ text: String) -> [String] {

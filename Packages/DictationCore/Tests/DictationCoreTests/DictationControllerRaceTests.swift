@@ -368,7 +368,7 @@ final class DictationControllerRaceTests: XCTestCase {
             inserter: inserter,
             overlay: overlay,
             sounds: sounds,
-            captureFreezeDeadline: .milliseconds(30)
+            preparingStopDeadline: .milliseconds(30)
         )
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
@@ -401,7 +401,7 @@ final class DictationControllerRaceTests: XCTestCase {
             inserter: inserter,
             overlay: overlay,
             sounds: sounds,
-            captureFreezeDeadline: .milliseconds(30)
+            preparingStopDeadline: .milliseconds(30)
         )
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)

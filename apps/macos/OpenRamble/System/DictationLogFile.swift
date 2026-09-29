@@ -7,6 +7,7 @@ enum DiagnosticEvent: String, Codable, Sendable {
     case dictationIdle, dictationPreparing, dictationListening, dictationTranscribing, dictationInserting
     case dictationCompleted, dictationWarning, dictationFailed, transcriptionStalled
     case recognitionFailed, recognitionModelUnavailable, recognitionAudioInvalid, recognitionEngineFailed, recognitionCancelled
+    case dictationStageFailed, recognitionFallback
     case enginePreparing, engineReady, engineUnavailable, engineFailed
     case audioConfigurationChanged, audioCaptureFailed
     case recordingIdle, recordingStarting, recordingActive, recordingPaused, recordingStopping, recordingFailed
@@ -26,6 +27,9 @@ final class DictationLogFile: @unchecked Sendable {
         let milliseconds: Int?
         let errorCode: Int?
         let recognition: Recognition?
+        let stage: DictationFailureStage?
+        let timedOut: Bool?
+        let fallbackReason: DictationFallbackReason?
     }
 
     struct Recognition: Codable, Sendable {
@@ -34,6 +38,9 @@ final class DictationLogFile: @unchecked Sendable {
         let decodingMilliseconds: Int?
         let streamedSegments: Int
         let fileBacked: Bool
+        var freezeMilliseconds: Int? = nil
+        var readableMilliseconds: Int? = nil
+        var preparationMilliseconds: Int? = nil
     }
 
     static func milliseconds(_ seconds: Double) -> Int? {
@@ -51,6 +58,13 @@ final class DictationLogFile: @unchecked Sendable {
         case .cancelled: record(.recognitionCancelled)
         case nil: record(error is CancellationError ? .recognitionCancelled : .recognitionFailed)
         }
+    }
+
+    func recordFallback(_ reason: DictationFallbackReason, error: (any Error)?) {
+        let code: Int?
+        if case let .inferenceFailed(_, value) = error as? ASREngineError { code = value }
+        else { code = nil }
+        record(.recognitionFallback, errorCode: code, fallbackReason: reason)
     }
 
     let directory: URL
@@ -86,7 +100,9 @@ final class DictationLogFile: @unchecked Sendable {
     }
 
     func record(_ event: DiagnosticEvent, milliseconds: Int? = nil, errorCode: Int? = nil,
-                recognition: Recognition? = nil, at time: Date = Date()) {
+                recognition: Recognition? = nil, stage: DictationFailureStage? = nil,
+                timedOut: Bool? = nil, fallbackReason: DictationFallbackReason? = nil,
+                at time: Date = Date()) {
         queue.async {
             guard self.enabled else { return }
             do {
@@ -94,7 +110,8 @@ final class DictationLogFile: @unchecked Sendable {
                 try manager.createDirectory(at: self.directory, withIntermediateDirectories: true,
                                             attributes: [.posixPermissions: 0o700])
                 let entry = Entry(time: time, event: event, version: self.version, build: self.build,
-                                  milliseconds: milliseconds, errorCode: errorCode, recognition: recognition)
+                                  milliseconds: milliseconds, errorCode: errorCode, recognition: recognition,
+                                  stage: stage, timedOut: timedOut, fallbackReason: fallbackReason)
                 var data = try Self.encoder().encode(entry)
                 data.append(10)
                 let url = self.directory.appending(path: "events-\(Self.day(time)).jsonl")

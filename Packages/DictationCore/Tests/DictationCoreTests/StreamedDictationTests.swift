@@ -209,11 +209,20 @@ final class StreamedDictationTests: XCTestCase {
             transcribeSamples: { _ in throw ASREngineError.inferenceFailed("failed segment", code: -7) },
             readSamples: { _ in XCTFail("failed prefix cannot be reused"); return [] },
             inserter: inserter, overlay: FakeOverlay(), sounds: FakeSounds())
+        var fallbackReasons: [DictationFallbackReason] = []
+        controller.onRecognitionFallback = { reason, error in
+            fallbackReasons.append(reason)
+            guard case let .inferenceFailed(_, code) = error as? ASREngineError else {
+                return XCTFail("the original stream error must survive the successful fallback")
+            }
+            XCTAssertEqual(code, -7)
+        }
 
         await run(controller)
 
         let inserted = await inserter.insertedTexts
         XCTAssertEqual(inserted.first, "Complete recording.")
+        XCTAssertEqual(fallbackReasons, [.segmentFailed])
     }
 
     func testTruncatedFileDoesNotPublishAPartialTranscript() async {

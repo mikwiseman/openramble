@@ -36,6 +36,7 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
     private var sampleCounts: [Int] = []
     private var failure: (any Error)?
     private var stopped = false
+    private var cancelled = false
 
     public init(transcribe: @escaping @Sendable ([Float]) async throws -> ASRResult) {
         self.transcribe = transcribe
@@ -59,7 +60,7 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
             guard let self else { return }
             // A failure earlier in the chain makes every later segment
             // pointless: the take is going to be recognized whole regardless.
-            guard !self.hasFailed else { return }
+            guard !self.isAbandoned else { return }
             do {
                 let result = try await transcribe(samples)
                 let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -72,11 +73,11 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
         lock.unlock()
     }
 
-    private var hasFailed: Bool { lock.withLock { failure != nil } }
+    private var isAbandoned: Bool { lock.withLock { failure != nil || cancelled } }
 
     private func append(_ text: String) {
         lock.withLock {
-            guard failure == nil else { return }
+            guard failure == nil, !cancelled else { return }
             // Appended even when empty. A segment of pure breath recognizes as
             // nothing, and dropping it here would misalign the transcripts from
             // the sample counts — which is what the owner uses to take the last
@@ -87,7 +88,19 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
     }
 
     private func recordFailure(_ error: any Error) {
-        lock.withLock { if failure == nil { failure = error } }
+        lock.withLock { if failure == nil, !cancelled { failure = error } }
+    }
+
+    /// Unlike finish(), abandon queued work. Native inference already in
+    /// flight may finish, but cannot publish or start the next old fragment.
+    public func cancel() {
+        let pending = lock.withLock {
+            stopped = true
+            cancelled = true
+            texts.removeAll()
+            return tail
+        }
+        pending?.cancel()
     }
 
     /// Wait for everything submitted so far, and say how it went.
@@ -107,6 +120,7 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
         await pending?.value
 
         return lock.withLock {
+            if cancelled { return .failed(CancellationError()) }
             if let failure { return .failed(failure) }
             return .recognized(texts)
         }
