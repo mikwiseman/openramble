@@ -148,16 +148,23 @@ public actor LocalTranscriber {
     /// Recognize the recorded file.
     public func transcribe(fileURL: URL) async throws -> ASRResult {
         let arrived = ContinuousClock.now
+        let supportsTimedChunks = engine is any BatchASREngineAdapting
+        let reader = reader
         do {
             return try await withPreparedModel { generation in
                 let decodeStarted = ContinuousClock.now
-                let chunks = try await FileAudioChunks(url: fileURL)
-                if chunks.duration > 30 {
+                let chunks = supportsTimedChunks ? try await FileAudioChunks(url: fileURL) : nil
+                if let chunks, chunks.duration > 30 {
                     let transcript = try await FileTranscriber(transcriber: self)
                         .transcribe(chunks: chunks, generation: generation)
                     return Self.result(transcript, since: arrived)
                 }
-                let samples = try await chunks.next()?.samples ?? []
+                let samples: [Float]
+                if let chunks {
+                    samples = try await chunks.next()?.samples ?? []
+                } else {
+                    samples = try await Self.onDisk { try reader.samples(from: fileURL) }
+                }
                 let decoded = Self.seconds(decodeStarted.duration(to: .now))
                 let result = try await self.transcribe(samples: samples)
                 return ASRResult(text: result.text, words: result.words,
@@ -201,7 +208,9 @@ public actor LocalTranscriber {
         // stall this app has had actually lived.
         let arrived = ContinuousClock.now
 
-        if samples.count > 30 * 16_000 {
+        // Base-only adapters may omit word timestamps entirely. Preserve their
+        // original direct contract; the shipping adapter supports timed chunks.
+        if samples.count > 30 * 16_000, engine is any BatchASREngineAdapting {
             return try await withPreparedModel { generation in
                 let transcript = try await FileTranscriber(transcriber: self)
                     .transcribe(chunks: FileAudioChunks(samples: samples), generation: generation)

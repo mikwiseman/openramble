@@ -306,13 +306,15 @@ final class LocalTranscriberTests: XCTestCase {
         }
     }
 
-    // MARK: - Short dictations retain their original engine context
+    // MARK: - Compatibility with base-only engine adapters
 
-    func testThirtySecondRecordingGoesToEngineInOnePiece() async throws {
+    /// The base protocol does not promise word timestamps. Its existing
+    /// single-call behavior remains available to callers supplying such engines.
+    func testBaseOnlyEngineRetainsItsLongRecordingContract() async throws {
         let engine = StubEngine()
         let transcriber = LocalTranscriber(engine: engine)
         try await transcriber.prepare(modelDirectory: directory)
-        let samples = (0..<(30 * 16_000)).map { sin(Float($0) * 0.05) * 0.3 }
+        let samples = (0..<(60 * 16_000)).map { sin(Float($0) * 0.05) * 0.3 }
 
         _ = try await transcriber.transcribe(samples: samples)
 
@@ -352,21 +354,21 @@ final class LocalTranscriberTests: XCTestCase {
                 text: "\u{0440}\u{0430}\u{0437} \u{0434}\u{0432}\u{0430}",
                 words: [
                     .init(text: "\u{0440}\u{0430}\u{0437}", start: 0.2, end: 0.6, confidence: 0.9),
-                    .init(text: "\u{0434}\u{0432}\u{0430}", start: 20.0, end: 20.5, confidence: 0.8),
+                    .init(text: "\u{0434}\u{0432}\u{0430}", start: 40.0, end: 40.5, confidence: 0.8),
                 ],
-                audioDuration: 30,
+                audioDuration: 60,
                 processingDuration: 0.5
             )
         )
         let transcriber = LocalTranscriber(engine: engine)
         try await transcriber.prepare(modelDirectory: directory)
-        let samples = (0..<(30 * 16_000)).map { sin(Float($0) * 0.05) * 0.3 }
+        let samples = (0..<(60 * 16_000)).map { sin(Float($0) * 0.05) * 0.3 }
 
         let result = try await transcriber.transcribe(samples: samples)
 
         XCTAssertEqual(result.text, "\u{0440}\u{0430}\u{0437} \u{0434}\u{0432}\u{0430}")
-        XCTAssertEqual(result.words.map(\.start), [0.2, 20.0])
-        XCTAssertEqual(result.words.map(\.end), [0.6, 20.5])
+        XCTAssertEqual(result.words.map(\.start), [0.2, 40.0])
+        XCTAssertEqual(result.words.map(\.end), [0.6, 40.5])
     }
 
     func testEmptyBufferIsRejected() async throws {

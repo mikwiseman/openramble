@@ -27,6 +27,24 @@ final class LongInputRoutingTests: XCTestCase {
         }
     }
 
+    func testLongPublicInputsStillAcceptBaseOnlyEnginesWithoutWordTimestamps() async throws {
+        let engine = StubEngine()
+        await engine.setResult(ASRResult(text: "complete recording", audioDuration: 60, processingDuration: 0.1))
+        let transcriber = LocalTranscriber(engine: engine)
+        try await transcriber.prepare(modelDirectory: URL(fileURLWithPath: "/unused"))
+        let samples = [Float](repeating: 0.1, count: 60 * 16_000)
+        let memory = try await transcriber.transcribe(samples: samples)
+        let url = try recording(samples)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let file = try await transcriber.transcribe(fileURL: url)
+        XCTAssertEqual(memory.text, "complete recording")
+        XCTAssertEqual(file.text, memory.text)
+        XCTAssertTrue(memory.words.isEmpty)
+        let received = await engine.receivedBatches
+        XCTAssertEqual(received.map(\.count), [samples.count, samples.count],
+            "the optional timed-batch protocol cannot become mandatory above thirty seconds")
+    }
+
     func testShortInputKeepsDirectEnginePath() async throws {
         let engine = MarkerEngine()
         let transcriber = LocalTranscriber(engine: engine)

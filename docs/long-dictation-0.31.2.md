@@ -80,3 +80,19 @@ wall time, including model loading, was 16.97 seconds; maximum RSS was
 971,915,264 bytes (0.91 GiB), and reported peak footprint was 1,035,142,800 bytes.
 The fixed 1,036-word reference had 43 word errors (4.15%); the final marker
 appeared once. These numbers describe that host and controlled input.
+
+## Compatibility and manual coverage
+
+Review caught an optional-protocol regression: caller-supplied base-only ASR
+adapters can omit word timestamps, so forcing them through the timed chunk
+joiner broke their previously supported long public inputs. A new failing
+memory/file test reproduced it. Such adapters retain their existing direct
+path; the shipping Parakeet adapter still uses bounded timed chunks. The
+27 focused routing/transcriber tests and warnings-as-errors build passed after
+this correction; the old long-input word-timestamp compatibility test remains.
+
+Live microphone-to-editor insertion and the GUI history-retry exercise were
+not completed in this pass. Publication was explicitly authorized with those
+manual checks outstanding; they are not claimed as passed. Synthetic/model,
+controller recovery/cancellation, and signed-artifact results above remain the
+available evidence, rather than a reproduction of Grisha's original failure.
