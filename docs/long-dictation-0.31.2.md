@@ -67,3 +67,16 @@ application artifact and network/diagnostics policy checks. The local Rust 1.97.
 cache was shared with the unchanged release checkout because this host rejects
 new proc-macro dylibs built under the longer worktree path (LINKEDIT alignment).
 No product build settings or gates were disabled.
+
+## Signed candidate and CPU load
+
+The clean 0a65900 candidate (0.31.2, build 74) passed Developer ID validation,
+Apple notarization, mounted-DMG checks, and packaged CLI recognition with the
+network denied on both arm64 and x86_64. All 14 pull-request CI jobs passed.
+
+A separate 493.86-second Russian fixture with synthetic noise ran through the
+signed packaged CLI while eight CPU load processes were active. Cold-process
+wall time, including model loading, was 16.97 seconds; maximum RSS was
+971,915,264 bytes (0.91 GiB), and reported peak footprint was 1,035,142,800 bytes.
+The fixed 1,036-word reference had 43 word errors (4.15%); the final marker
+appeared once. These numbers describe that host and controlled input.
