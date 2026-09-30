@@ -47,3 +47,19 @@ for Parakeet / Turbo / Breeze; the equivalent 490 Farfield references score
 7.23% / 19.32% / 37.77%. The overall model ranking is therefore not explained
 solely by spelling numbers differently. These exploratory strata do not
 replace the preregistered 500-example sets or their paired intervals.
+
+GigaAM CTC's 15 held-out RU outputs also retain the reviewed values
+208/63/4500/09:20, all four prohibitions, the six fictional names and the
+ordinary Russian controls. Technical terms account for substantial errors.
+Its additional Crowd lexical split still scores 9.18% WER on the same 398
+references without listed numeral lexemes, versus Parakeet 3.85%; the 490
+Farfield counterparts score 6.16% versus 7.23%. Formatting and domain effects
+must be reported together, without claiming that every lexical difference
+changes a numeric value.
+
+The separate 15-RU RNN-T development screen retains reviewed values
+42/17/12900/September 15 and the prohibitions/value 7. It improves a few
+technical outputs relative to CTC, but the English-native voice still writes
+ordinary Russian `центре` in Latin script as `Centre`. No broad correction
+of that ordinary word is justified. Its small development improvement is
+not a held-out semantic guarantee.

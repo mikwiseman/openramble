@@ -1,0 +1,89 @@
+{
+  "scope": "Repeated predecoded adapter inference, not file decode or GUI insertion",
+  "order": [
+    "parakeet-a",
+    "gigaam-e2e-ctc-a",
+    "gigaam-e2e-ctc-b",
+    "parakeet-b"
+  ],
+  "plan_sha256": "e8ec31d9cd413a07603f85ac9e6c1e8795c7272eb00db47cc078d73ac53bc87d",
+  "reports": {
+    "parakeet-a": {
+      "model_id": "parakeet",
+      "sets": {
+        "en": {
+          "observations": 120,
+          "fixtures": 6,
+          "p50_seconds": 0.0882870625,
+          "p95_seconds": 0.1207876899,
+          "max_seconds": 0.129472542,
+          "unstable_normalized_outputs": 0
+        },
+        "ru": {
+          "observations": 120,
+          "fixtures": 6,
+          "p50_seconds": 0.08874610399999999,
+          "p95_seconds": 0.15182958895,
+          "max_seconds": 0.163914041,
+          "unstable_normalized_outputs": 0
+        }
+      },
+      "process_peak_memory_bytes": 939409408,
+      "output_sha256": "955525cff210f475939f24c37ede781fd0b3231ddf7d51c95ae82db7c9d7cf27"
+    },
+    "gigaam-e2e-ctc-a": {
+      "model_id": "gigaam-e2e-ctc",
+      "sets": {
+        "ru": {
+          "observations": 120,
+          "fixtures": 6,
+          "p50_seconds": 0.04627375,
+          "p95_seconds": 0.07515903155,
+          "max_seconds": 0.085003875,
+          "unstable_normalized_outputs": 0
+        }
+      },
+      "process_peak_memory_bytes": 347701248,
+      "output_sha256": "5daa5448a05e23a2b85e38507335217f4ccc16c28c2fb7a88d375d3894e9d85a"
+    },
+    "gigaam-e2e-ctc-b": {
+      "model_id": "gigaam-e2e-ctc",
+      "sets": {
+        "ru": {
+          "observations": 120,
+          "fixtures": 6,
+          "p50_seconds": 0.045772396,
+          "p95_seconds": 0.0752557229,
+          "max_seconds": 0.079723959,
+          "unstable_normalized_outputs": 0
+        }
+      },
+      "process_peak_memory_bytes": 346669056,
+      "output_sha256": "db375baff8c961b999445894b7ea29f622fa59eda99df8f5dbe1bd45020dda6d"
+    },
+    "parakeet-b": {
+      "model_id": "parakeet",
+      "sets": {
+        "en": {
+          "observations": 120,
+          "fixtures": 6,
+          "p50_seconds": 0.0888267085,
+          "p95_seconds": 0.1215460417,
+          "max_seconds": 0.127604,
+          "unstable_normalized_outputs": 0
+        },
+        "ru": {
+          "observations": 120,
+          "fixtures": 6,
+          "p50_seconds": 0.090030125,
+          "p95_seconds": 0.15086221635,
+          "max_seconds": 0.155618959,
+          "unstable_normalized_outputs": 0
+        }
+      },
+      "process_peak_memory_bytes": 938999808,
+      "output_sha256": "ed0c0511d02ec5157edaf5b443953ead10348e4975bac6b029c7ec6e1ee21e16"
+    }
+  },
+  "limitations": "ABBA process brackets; six source inputs per language, repeated observations are not independent quality examples; no GUI timer"
+}

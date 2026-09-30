@@ -1,0 +1,94 @@
+{
+  "candidate_identity_sha256": "8e5e02d6177e75a5562efcc68ec0badce5bf2e1b4981fac4530199fbeff30421",
+  "candidate_results_sha256": "34e12dc58716be1b726bbc65757c88dfd4d5b388ec20bbcbe0e8f7ab61043b0a",
+  "memory_note": "parent process peak covers the full original manifest, not just this subset; do not compare it as subset RSS",
+  "parent_identity_sha256": "57c8aa3a2cd03827a45acf81ee50cdff507d119b0d37f9585261304baca0328b",
+  "parent_manifest_sha256": "4d3a11141dba3254814b8c6e628e1a1e97b6727493eb0757def4a4d6abddf711",
+  "parent_results_sha256": "f60701f7b253dfa17be475986777dc3fbff6374fa9ab05fc95d9d964b8b116e4",
+  "scope": "exact source-only subset; baseline inference reused, not re-run",
+  "sets": {
+    "fleurs/ru": {
+      "gigaam-e2e-ctc": {
+        "app": {
+          "cer": 0.018614756425093346,
+          "deletions": 134,
+          "insertions": 53,
+          "reference_units": 15098,
+          "substitutions": 570,
+          "wer": 0.050139091270366934
+        },
+        "examples": 775,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 1,
+        "groups": 344,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.018614756425093346,
+          "deletions": 134,
+          "insertions": 53,
+          "reference_units": 15098,
+          "substitutions": 570,
+          "wer": 0.050139091270366934
+        },
+        "timed_successes": 774,
+        "wall_seconds": {
+          "max": 0.252464833,
+          "p50": 0.0982866875,
+          "p95": 0.1680631982499999
+        }
+      },
+      "paired_app": {
+        "independent_groups": 344,
+        "method": "paired bootstrap of source groups; word-weighted WER",
+        "resamples": 2000,
+        "seed": 20260930,
+        "wer_delta": -0.005364948999867532,
+        "wer_delta_ci95": [
+          -0.012850358395889848,
+          0.004065316808059384
+        ]
+      },
+      "paired_raw": {
+        "independent_groups": 344,
+        "method": "paired bootstrap of source groups; word-weighted WER",
+        "resamples": 2000,
+        "seed": 20260930,
+        "wer_delta": -0.005364948999867532,
+        "wer_delta_ci95": [
+          -0.012850358395889848,
+          0.004065316808059384
+        ]
+      },
+      "parakeet": {
+        "app": {
+          "cer": 0.016354783064392864,
+          "deletions": 98,
+          "insertions": 52,
+          "reference_units": 15098,
+          "substitutions": 688,
+          "wer": 0.05550404027023447
+        },
+        "examples": 775,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 344,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.016354783064392864,
+          "deletions": 98,
+          "insertions": 52,
+          "reference_units": 15098,
+          "substitutions": 688,
+          "wer": 0.05550404027023447
+        },
+        "timed_successes": 775,
+        "wall_seconds": {
+          "max": 0.530387833,
+          "p50": 0.161853375,
+          "p95": 0.28617108299999994
+        }
+      }
+    }
+  },
+  "subset_manifest_sha256": "6041e27588faef4f4d98ab3a18dbe001c2fdc6663c4f32e5116b81fd95fc2396"
+}

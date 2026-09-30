@@ -1,0 +1,13 @@
+{
+  "scope": "five-second CPU stack samples of a separate owned warmed Parakeet process",
+  "started_unix": 1790809611.6147,
+  "finished_unix": 1790809636.1147451,
+  "engine_exit_code": 0,
+  "sample_exit_code": 0,
+  "acceptance": "excluded from latency gates; CPU samples do not attribute GPU kernel time",
+  "native_sample_sha256": "157a1b7a6058f21a1c9de359c516916cd09fa0ae29b1ebf104db5f3d553cb96d",
+  "transcribe_run_worker_samples": 3623,
+  "metal_wait_samples": 2522,
+  "decoder_subtree_samples": 979,
+  "interpretation": "69.61% of the sampled native worker stacks wait for Metal command completion; 27.02% are in the decoder subtree. These include blocked stacks, not CPU utilization or a measurement of individual GPU kernels. No measured speed improvement is claimed."
+}

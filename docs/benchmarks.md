@@ -81,6 +81,23 @@ See the [main results](../research/asr-quality-2026-09/main/REPORT.md),
 [additional RU model screen](../research/asr-quality-2026-09/giga-dev/REPORT.md),
 [synthetic holdout](../research/asr-quality-2026-09/synthetic-holdout/REPORT.md),
 and [frozen candidates](../research/asr-quality-2026-09/FROZEN-CANDIDATES.md).
+The [current results and outstanding checks](../research/asr-quality-2026-09/RESULTS.md)
+also include full FLEURS, expanded GigaAM, primeLine/RNN-T screens, idle timing
+and separate profiling. GUI Stop-to-insertion and genuine long tracks remain
+unmeasured; CLI timings do not substitute for either.
+
+The native command-error regression is opt-in and uses an existing model:
+
+```bash
+WAI_ASR_BENCH=/absolute/path/to/asr-bench \
+WAI_ASR_MODEL_DIR=/absolute/path/to/model \
+python3 scripts/tests/test_asr_cli_errors.py
+```
+
+It requires an ordinary file-read failure to exit 70 after releasing the native
+model, rather than aborting in the Metal static destructor. It performs no
+download. Research quality series retain their original sealed binary even
+when a diagnostic command is repaired later.
 
 ## Historical methods and evidence
 
