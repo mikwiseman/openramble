@@ -223,10 +223,12 @@ case "transcribe":
         } catch {
             print("\n=== \(url.lastPathComponent) ===")
             print("Error: \(error)")
+            await transcriber.unload()
             exit(70)
         }
     }
     print("\nprocess peak memory: \(formatBytes(peakMemoryBytes()))")
+    await transcriber.unload()
 
 case "stream":
     // What the shipping path will do, measured on a file so it can be compared
