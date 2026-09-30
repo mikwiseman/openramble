@@ -6,6 +6,8 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'asr-quality.py'
 spec = importlib.util.spec_from_file_location('asr_quality', SCRIPT)
@@ -67,6 +69,16 @@ class QualityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             quality.check_resume({'model_sha256': 'a'}, {'model_sha256': 'b'})
 
+    def test_documentation_commit_can_resume_without_relabeling_original_provenance(self):
+        previous = {'source_commit': 'original', 'benchmark_sources': {'runner': 'unchanged'},
+                    'model_sha256': 'fixed', 'app_settings': {'starter_dictionary': True}}
+        current = previous | {'source_commit': 'documentation-update'}
+        self.assertEqual(quality.check_resume(previous, current), previous)
+        for change in ({'model_sha256': 'different'}, {'benchmark_sources': {'runner': 'different'}},
+                       {'app_settings': {'starter_dictionary': False}}):
+            with self.assertRaises(ValueError):
+                quality.check_resume(previous, current | change)
+
     def test_timing_is_per_file_and_failures_have_no_invented_latency(self):
         fixtures = [{'id': str(i), 'group_id': str(i), 'reference': 'one'} for i in range(3)]
         results = [{'id': '0', 'status': 'ok', 'raw_text': 'one', 'app_text': 'one', 'wall_seconds': 1},
@@ -99,6 +111,57 @@ class QualityTests(unittest.TestCase):
                 self.assertEqual(quality.read_line(process, selector, 2), {})
         finally:
             process.wait(); process.stdout.close()
+
+    def minimal_manifest(self, root):
+        audio = root / 'audio.wav'
+        audio.write_bytes(b'local test fixture')
+        fixture = {'id': 'a', 'group_id': 'a', 'dataset': 'fictional', 'split': 'dev', 'language': 'en',
+                   'path': str(audio), 'audio_sha256': quality.sha256(audio),
+                   'reference': 'one', 'reference_sha256': quality.text_hash('one')}
+        manifest = root / 'manifest.json'
+        manifest.write_text(json.dumps({'schema_version': 1, 'fixtures': [fixture]}))
+        return manifest
+
+    def test_comparison_rejects_a_different_runtime_even_for_identical_audio(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            manifest = self.minimal_manifest(root)
+            runs = []
+            for model in ('baseline', 'candidate'):
+                run = root / model
+                run.mkdir()
+                identity = {'manifest_sha256': quality.sha256(manifest), 'model_id': model,
+                            'asr_binary_sha256': model, 'pipeline_binary_sha256': 'same',
+                            'host': {'chip': 'same'}, 'app_settings': {}, 'normalization': 'same'}
+                (run / 'report.json').write_text(json.dumps({'identity': identity, 'sets': {}}))
+                (run / 'results.jsonl').write_text(json.dumps({'id': 'a', 'status': 'ok', 'raw_text': 'one', 'app_text': 'one'}) + '\n')
+                runs.append(run)
+            with self.assertRaisesRegex(ValueError, 'asr_binary_sha256'):
+                quality.compare(SimpleNamespace(manifest=manifest, runs=runs, output=root / 'comparison'))
+
+    def test_pipeline_startup_failure_stops_the_owned_engine_and_retains_outcomes(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            manifest = self.minimal_manifest(root)
+            weights = root / 'weights'
+            weights.mkdir()
+            model = weights / 'model.gguf'
+            model.write_bytes(b'fixed model')
+            binary = root / 'binary'
+            binary.write_bytes(b'fixed executable')
+            engine = Mock()
+            engine.poll.return_value = None
+            args = SimpleNamespace(manifest=manifest, model_dir=weights, model_sha256=quality.sha256(model),
+                                   model_id='test', model_revision='fixed', threads=1, asr_bin=binary,
+                                   pipeline_bin=binary, timeout=1, output=root / 'run', resume=False)
+            with patch.object(quality, 'host_identity', return_value={'chip': 'test'}), \
+                 patch.object(quality.subprocess, 'check_output', return_value='test-base'), \
+                 patch.object(quality.subprocess, 'Popen', side_effect=[engine, OSError('pipeline not executable')]):
+                report = quality.run(args)
+            engine.terminate.assert_called_once()
+            engine.wait.assert_called_once()
+            self.assertEqual(report['overall']['failures'], 1)
+            self.assertEqual(report['overall']['raw']['wer'], 1)
 
 
 if __name__ == '__main__':

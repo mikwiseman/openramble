@@ -42,7 +42,10 @@ python3 scripts/asr-quality.py compare --manifest /absolute/path/to/data/manifes
   --runs /absolute/path/to/baseline /absolute/path/to/candidate --output /absolute/path/to/comparison
 ```
 
-Run model series sequentially. `--resume` accepts only an identical identity.
+Run model series sequentially. `--resume` requires identical execution inputs;
+an unrelated documentation commit is allowed while preserving the original
+inference's commit provenance. Source hashes, binary hashes, models, manifests,
+settings and host identity must still match exactly.
 Outputs include incremental JSONL checkpoints, aggregate WER/CER, paired source
 group confidence intervals, model load/warm-up, file timing and process peak
 RSS. Errors stay in the denominator and in the outcome log. Strict quality
@@ -59,6 +62,25 @@ requires the complete set; `--available-only` produces a separately labeled
 partial diagnostic. Split recognition by the manifest's `split` field before
 using dev results to choose a candidate. References describe intended scripts,
 not independently verified spoken gold. The app itself does not call this tool.
+
+`prepare-long-asr-quality.py` freezes three unique continuous fictional scripts,
+checks the same shared ledger before every paragraph generation, and derives
+4/5/8/15-minute variants at aligned word boundaries. It refuses a parent shorter
+than fifteen minutes and never pads or loops it. Its generation seams remain
+annotated. For long-character alignment, install `rapidfuzz==3.14.6` in the
+external benchmark environment. RapidFuzz computes only the optimal distance;
+the scorer retains the original exact S/D/I tie policy within that distance
+band. Scoring happens after model inference exits.
+
+`replay-asr-quality.py` evaluates a frozen text-core candidate on the existing
+raw inference outputs. It preserves the ASR result and file timer, verifies the
+same manifest and complete result identities, and reports paired differences
+without a second model call. The current exact-alias example is research-only.
+
+See the [main results](../research/asr-quality-2026-09/main/REPORT.md),
+[additional RU model screen](../research/asr-quality-2026-09/giga-dev/REPORT.md),
+[synthetic holdout](../research/asr-quality-2026-09/synthetic-holdout/REPORT.md),
+and [frozen candidates](../research/asr-quality-2026-09/FROZEN-CANDIDATES.md).
 
 ## Historical methods and evidence
 

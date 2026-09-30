@@ -82,6 +82,11 @@ load and warm-up; it is never a per-file increment or Metal allocator estimate.
 | Parakeet | `85ac09ea12fc4b1112fa76810059364bc6adc9de` | Q8_0, shipping manifest |
 | Whisper Turbo | `ceea6c8a94a21ab85be244d311e874a39344dbf5` | Q8_0 |
 | Breeze-ASR-25 | `6b7a53cea9265a2cf2b19e37b3ceadeb2927d3ba` | Q8_0 |
+| GigaAM v3 E2E CTC, RU-only diagnostic | `ab38ecc31dbd25264cf96e07dd4dbcf744151618` | Q8_0 |
+
+[Frozen candidates](FROZEN-CANDIDATES.md) records the additional one-thread
+GigaAM configuration and the exact text alias before held-out recognition.
+GigaAM uses the same existing adapter; it cannot replace multilingual dictation.
 
 CV19 uses the explicitly labeled `fsicoli/common_voice_19_0` mirror at
 `590c8abec6cf7c8d06e650f1438e60332a796e11` (CC0). FLEURS is the official
@@ -117,13 +122,30 @@ Do not change account billing, clone voices or use private text to clear a
 quota limitation. Synthesis is clearly labeled AI-generated and cannot replace
 human-speech evidence.
 
+The three continuous scripts have 3077–3155 unique words each. The sealed
+long-generation plan uses 49 paragraph-bounded requests of at most 1800
+characters through the already validated v4 dialogue endpoint. Joining adjacent
+native PCM adds no loops or silence. Every generation boundary is retained for
+seam analysis. Additional synthesis is conservatively bounded by $5.15128;
+including the 72 short generations, the reserved total would be at most $5.7424.
+The shared ledger records and fsyncs even uncertain attempts before requesting
+paid work. A zero-credit preflight issued no long-generation request. Account
+reset is 2026-10-01 10:25:21 UTC; resume after it without changing billing.
+
+The diagnostic 58.244-second file established a runtime compatibility failure:
+Whisper Turbo and Breeze return native error 12 (`UNSUPPORTED_TIMESTAMPS`) when
+the current file pipeline requests token timestamps. This is retained as a
+failure, not bypassed with a different pipeline. It does not replace the genuine
+4/5/8/15-minute tests still pending synthesis.
+
 ## Initial validation
 
 Before inference, the harness compiled against the pinned runtime. DictationCore
 644 tests passed; the Rust text core and conformance passed. In a pristine
 archive of the base commit, two installed-model tests reproduced: the final
-English “send it” was lost and one repeated name was missing in the long-file
-fixture. The latency test passed in that isolated run. These are recorded
+English “send it” was lost and the final “Мария” became “Мари” in the long-file
+fixture. This is a name substitution, not evidence that the whole phrase was
+dropped. The latency test passed in that isolated run. These are recorded
 baseline limitations, not passing checks or a reason to weaken the tests.
 Benchmark-only work needs no new application release. Any product change must
 pass its regression checks, then follow the repository's normal CI/ship flow.

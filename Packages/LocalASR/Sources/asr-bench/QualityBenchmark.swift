@@ -85,12 +85,17 @@ func benchmarkQuality(_ args: [String]) async throws {
                     "words": result.words.map { ["text": $0.text, "start": $0.start, "end": $0.end] as [String: Any] },
                 ])
             } catch {
-                try qualityJSON([
+                var failure: [String: Any] = [
                     "type": "result", "id": input.id, "status": "error",
                     "error_type": String(reflecting: type(of: error)),
                     "wall_seconds": seconds(started.duration(to: .now)),
                     "process_peak_memory_bytes": peakMemoryBytes(),
-                ])
+                ]
+                if let engineError = error as? ASREngineError,
+                   case let .inferenceFailed(_, code) = engineError, let code {
+                    failure["native_error_code"] = code
+                }
+                try qualityJSON(failure)
             }
         }
         try qualityJSON(["type": "complete", "process_peak_memory_bytes": peakMemoryBytes()])

@@ -2,6 +2,7 @@
 """Opt-in Eleven v4 fictional fixtures; fixed inputs, budget and no paid retries."""
 import argparse
 import base64
+import fcntl
 import importlib.util
 import json
 import urllib.error
@@ -62,6 +63,12 @@ def plan(args):
     print(f"sealed {len(jobs)} short jobs; conservative cost ${document['estimated_cost_usd']:.2f}",flush=True)
 
 def generate(args):
+    folder=args.root/'synthetic'; folder.mkdir(parents=True,exist_ok=True)
+    with (folder/'ledger.lock').open('a') as lock:
+        fcntl.flock(lock,fcntl.LOCK_EX)
+        generate_locked(args)
+
+def generate_locked(args):
     key=args.key_file.read_text().strip()
     document=json.loads((args.root/'manifests/synthetic-plan.json').read_text())
     folder=args.root/'synthetic'/'generations'; folder.mkdir(parents=True,exist_ok=True)

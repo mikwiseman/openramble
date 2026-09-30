@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import importlib.util
+import importlib.metadata
 import json
 import math
 import os
@@ -28,6 +29,9 @@ _spec.loader.exec_module(_legacy)
 sha256 = _legacy.sha256
 percentile = _legacy.percentile
 host_identity = _legacy.host_identity
+_alignment_spec = importlib.util.spec_from_file_location('quality_alignment', Path(__file__).with_name('quality-alignment.py'))
+_alignment = importlib.util.module_from_spec(_alignment_spec)
+_alignment_spec.loader.exec_module(_alignment)
 
 
 def text_hash(text):
@@ -40,6 +44,8 @@ def normalize(text):
 
 
 def edit_counts(reference, hypothesis):
+    if len(reference) * len(hypothesis) > 1_000_000:
+        return _alignment.fast_counts(reference, hypothesis)
     # Deterministic Levenshtein alignment. Prefer a substitution on ties, then
     # a deletion, then an insertion. Counts always sum to the edit distance.
     previous = [(i, 0, 0, i) for i in range(len(hypothesis) + 1)]
@@ -146,8 +152,14 @@ def load_manifest(path):
 
 
 def check_resume(previous, current):
-    if previous != current:
+    # HEAD is provenance, not an execution input: an unrelated report commit
+    # must not strand a long run. All actual source, binary, model, host,
+    # manifest and settings hashes still have to match exactly. Keep the
+    # original commit on resumed results rather than relabeling old inference.
+    if ({k: v for k, v in previous.items() if k != 'source_commit'} !=
+            {k: v for k, v in current.items() if k != 'source_commit'}):
         raise ValueError('resume identity changed; use a new output directory')
+    return previous
 
 
 def atomic_json(path, document):
@@ -185,11 +197,15 @@ def run(args):
     if sha256(model) != args.model_sha256:
         raise ValueError('model hash differs from predeclared configuration')
     root = Path(__file__).resolve().parents[1]
+    try:
+        distance_dependency = importlib.metadata.version('rapidfuzz')
+    except importlib.metadata.PackageNotFoundError:
+        distance_dependency = None
     identity = {'schema_version': 1, 'manifest_sha256': sha256(args.manifest), 'model_sha256': args.model_sha256,
                 'model_id': args.model_id, 'model_revision': args.model_revision, 'threads': args.threads,
                 'asr_binary_sha256': sha256(args.asr_bin), 'pipeline_binary_sha256': sha256(args.pipeline_bin),
                 'benchmark_sources': {p: sha256(root / p) for p in (
-                    'scripts/asr-quality.py', 'scripts/prepare-asr-quality.py',
+                    'scripts/asr-quality.py', 'scripts/prepare-asr-quality.py', 'scripts/quality-alignment.py',
                     'Packages/LocalASR/Sources/asr-bench/QualityBenchmark.swift',
                     'core/ramble-text/examples/quality_pipeline.rs')},
                 'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
@@ -201,6 +217,9 @@ def run(args):
                 'app_settings': {'starter_dictionary': True, 'personal_dictionary': False, 'phonetic_matching': True,
                                  'allow_press_return': False, 'trailing_space': False},
                 'normalization': 'NFC lowercase yo=ye punctuation+whitespace; preserves script and digits',
+                'alignment': {'ties': 'diagonal then deletion then insertion',
+                              'long_distance_dependency': distance_dependency,
+                              'method': 'exact DP; exact-distance band for matrices over 1 million cells'},
                 'host': host_identity(), 'timeout_seconds': args.timeout}
     args.output.mkdir(parents=True, exist_ok=True)
     identity_path = args.output / 'identity.json'
@@ -208,7 +227,7 @@ def run(args):
     completed = []
     if identity_path.exists():
         if not args.resume: raise ValueError('output already exists; use --resume or a new directory')
-        check_resume(json.loads(identity_path.read_text()), identity)
+        identity = check_resume(json.loads(identity_path.read_text()), identity)
         if results_path.exists(): completed = [json.loads(line) for line in results_path.read_text().splitlines()]
         if len({r['id'] for r in completed}) != len(completed) or any(r['id'] not in {f['id'] for f in fixtures} for r in completed):
             raise ValueError('invalid checkpoint')
@@ -224,9 +243,10 @@ def run(args):
         with (args.output / 'runtime.log').open('ab') as stderr, results_path.open('a') as output:
             engine = subprocess.Popen([str(args.asr_bin), 'quality-benchmark', str(pending_path), str(args.threads)],
                                       env=environment, stdout=subprocess.PIPE, stderr=stderr, bufsize=0)
-            pipeline = subprocess.Popen([str(args.pipeline_bin)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=stderr, bufsize=0)
-            selector.register(engine.stdout, selectors.EVENT_READ)
+            pipeline = None
             try:
+                pipeline = subprocess.Popen([str(args.pipeline_bin)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=stderr, bufsize=0)
+                selector.register(engine.stdout, selectors.EVENT_READ)
                 ready = read_line(engine, selector, args.timeout)
                 if ready.get('type') != 'ready': raise ValueError('missing runtime load identity')
                 atomic_json(args.output / f'load-{time.time_ns()}.json', ready)
@@ -256,7 +276,7 @@ def run(args):
                 engine.wait(timeout=10)
                 if engine.returncode: raise RuntimeError('runtime failed on teardown')
                 process_status = {'status':'ok', 'engine_exit_code':engine.returncode, **final}
-            except (TimeoutError, RuntimeError) as error:
+            except (TimeoutError, RuntimeError, OSError, ValueError, KeyError) as error:
                 # A process timeout affects the remaining series. Preserve every
                 # missing outcome; an operator may explicitly retry in a NEW run.
                 status = 'timeout' if isinstance(error, TimeoutError) else 'process_error'
@@ -270,10 +290,15 @@ def run(args):
             finally:
                 selector.close()
                 for process in (engine, pipeline):
+                    if process is None:
+                        continue
                     if process.poll() is None:
                         process.terminate()
                         try: process.wait(timeout=10)
                         except subprocess.TimeoutExpired: process.kill(); process.wait()
+                    for pipe in (process.stdout, process.stdin):
+                        if pipe is not None:
+                            pipe.close()
         atomic_json(args.output/'process-status.json', process_status)
     elif (args.output/'process-status.json').exists():
         process_status = json.loads((args.output/'process-status.json').read_text())
@@ -327,6 +352,11 @@ def compare(args):
         if report['identity']['manifest_sha256'] != sha256(args.manifest): raise ValueError('different manifests')
         model = report['identity']['model_id']
         if model in reports: raise ValueError('model IDs must be unique')
+        if reports:
+            baseline_identity = next(iter(reports.values()))['identity']
+            for field in ('asr_binary_sha256', 'pipeline_binary_sha256', 'app_settings', 'normalization', 'host'):
+                if report['identity'][field] != baseline_identity[field]:
+                    raise ValueError(f'different {field}; this is not a paired model comparison')
         reports[model] = report
         outputs[model] = [json.loads(line) for line in (directory/'results.jsonl').read_text().splitlines()]
     baseline = next(iter(reports)); comparisons = {}
