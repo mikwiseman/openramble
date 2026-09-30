@@ -13,9 +13,15 @@ private struct QualityManifest: Decodable {
     let fixtures: [Input]
 }
 
+private func readLocalFile(_ url: URL) throws -> Data {
+    let handle = try FileHandle(forReadingFrom: url)
+    defer { try? handle.close() }
+    return try handle.readToEnd() ?? Data()
+}
+
 private func readQualityInputs(_ path: String) throws -> [QualityManifest.Input] {
     let manifest = try JSONDecoder().decode(QualityManifest.self,
-        from: Data(contentsOf: URL(fileURLWithPath: path)))
+        from: readLocalFile(URL(fileURLWithPath: path)))
     guard !manifest.fixtures.isEmpty,
           Set(manifest.fixtures.map(\.id)).count == manifest.fixtures.count else {
         throw ASREngineError.unsupportedAudioFormat("empty or duplicate benchmark inputs")
@@ -134,7 +140,7 @@ func canonicalizeQuality(_ args: [String]) throws {
             try write()
             // Do not overwrite an already sealed artifact with new bytes.
             if FileManager.default.fileExists(atPath: url.path) {
-                guard try Data(contentsOf: temporary) == Data(contentsOf: url) else {
+                guard try readLocalFile(temporary) == readLocalFile(url) else {
                     throw ASREngineError.unsupportedAudioFormat("canonical artifact already differs")
                 }
                 try FileManager.default.removeItem(at: temporary)
