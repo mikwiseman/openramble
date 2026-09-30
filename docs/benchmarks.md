@@ -1,5 +1,67 @@
 # Benchmark methodology
 
+## Current runtime quality comparison (2026-09-30)
+
+The [quality study plan](../research/asr-quality-2026-09/PLAN.md) fixes the
+corpora, comparison order, model hashes and decision criteria. The runner uses
+the shipping `LocalTranscriber` and Rust app text core. The older Core ML
+protocol and results below are historical and do not run on the current runtime.
+
+Build the two opt-in adapters:
+
+```bash
+swift build --package-path Packages/LocalASR --scratch-path Packages/LocalASR/.build/quality -c release --product asr-bench
+cargo build -p ramble-text --example quality_pipeline --release
+```
+
+Use a data directory outside Git. Prepare each frozen corpus before inference:
+
+```bash
+python3 scripts/prepare-asr-quality.py models --root /absolute/path/to/data
+python3 scripts/prepare-asr-quality.py quick --root /absolute/path/to/data --asr-bin Packages/LocalASR/.build/quality/release/asr-bench
+python3 scripts/prepare-asr-quality.py cv-main --root /absolute/path/to/data --asr-bin Packages/LocalASR/.build/quality/release/asr-bench
+python3 -m venv /absolute/path/to/data/python-env
+/absolute/path/to/data/python-env/bin/pip install pyarrow==25.0.1
+/absolute/path/to/data/python-env/bin/python scripts/prepare-asr-quality.py golos --root /absolute/path/to/data --asr-bin Packages/LocalASR/.build/quality/release/asr-bench
+python3 scripts/prepare-asr-quality.py main --root /absolute/path/to/data
+```
+
+`holdout` only prepares FLEURS; run recognition after the candidate is frozen.
+The preparation tool downloads immutable files, verifies source hashes and
+canonical PCM, and never executes a remote dataset loader. Model cards and
+local manifests retain attribution and license metadata.
+
+```bash
+python3 scripts/asr-quality.py run --manifest /absolute/path/to/data/manifests/quick.json \
+  --asr-bin Packages/LocalASR/.build/quality/release/asr-bench \
+  --pipeline-bin target/release/examples/quality_pipeline \
+  --model-dir /absolute/path/to/one-gguf-directory --model-id MODEL \
+  --model-revision PINNED_REVISION --model-sha256 PINNED_SHA256 --threads THREADS \
+  --output /absolute/path/to/data/runs/quick/MODEL
+python3 scripts/asr-quality.py compare --manifest /absolute/path/to/data/manifests/quick.json \
+  --runs /absolute/path/to/baseline /absolute/path/to/candidate --output /absolute/path/to/comparison
+```
+
+Run model series sequentially. `--resume` accepts only an identical identity.
+Outputs include incremental JSONL checkpoints, aggregate WER/CER, paired source
+group confidence intervals, model load/warm-up, file timing and process peak
+RSS. Errors stay in the denominator and in the outcome log. Strict quality
+normalization preserves digits and alphabets. This lane does not measure GUI
+Stop→insertion. Keep raw/app transcripts and audio local; only curated aggregate
+reports belong in the repository.
+
+`prepare-synthetic-asr-quality.py` freezes 72 fictional short inputs with three
+existing library voices and explicitly requests Eleven v4. Its `plan` phase
+uses locally captured provider model/voice metadata. `generate --key-file`
+reads an external credential file, checks credits and the shared $20 ledger
+before each request, and never retries a paid or uncertain generation. `freeze`
+requires the complete set; `--available-only` produces a separately labeled
+partial diagnostic. Split recognition by the manifest's `split` field before
+using dev results to choose a candidate. References describe intended scripts,
+not independently verified spoken gold. The app itself does not call this tool.
+
+## Historical methods and evidence
+
 The `asr-bench` executable measures a pinned local recognition pipeline. These
 benchmarks are development evidence, not an application release gate.
 
