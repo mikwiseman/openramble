@@ -1,0 +1,816 @@
+{
+  "baseline": "parakeet",
+  "paired": {
+    "breeze/common_voice_19_mirror/en/app": {
+      "independent_groups": 497,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.01583663263179829,
+      "wer_delta_ci95": [
+        0.006542574099781569,
+        0.025402741086689665
+      ]
+    },
+    "breeze/common_voice_19_mirror/en/raw": {
+      "independent_groups": 497,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.01583663263179829,
+      "wer_delta_ci95": [
+        0.006542574099781569,
+        0.025402741086689665
+      ]
+    },
+    "breeze/common_voice_19_mirror/ru/app": {
+      "independent_groups": 425,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.04429626101452727,
+      "wer_delta_ci95": [
+        0.028869876386211923,
+        0.06112201400900339
+      ]
+    },
+    "breeze/common_voice_19_mirror/ru/raw": {
+      "independent_groups": 425,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.04429626101452727,
+      "wer_delta_ci95": [
+        0.028869876386211923,
+        0.06112201400900339
+      ]
+    },
+    "breeze/golos_crowd_mirror/ru/app": {
+      "independent_groups": 497,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.3420641125879593,
+      "wer_delta_ci95": [
+        0.30753896207851633,
+        0.3787492518240609
+      ]
+    },
+    "breeze/golos_crowd_mirror/ru/raw": {
+      "independent_groups": 497,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.3420641125879593,
+      "wer_delta_ci95": [
+        0.30753896207851633,
+        0.3787492518240609
+      ]
+    },
+    "breeze/golos_farfield_mirror/ru/app": {
+      "independent_groups": 449,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.31018301267010795,
+      "wer_delta_ci95": [
+        0.2736382124551419,
+        0.3466862552532062
+      ]
+    },
+    "breeze/golos_farfield_mirror/ru/raw": {
+      "independent_groups": 449,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.31018301267010795,
+      "wer_delta_ci95": [
+        0.2736382124551419,
+        0.3466862552532062
+      ]
+    },
+    "turbo/common_voice_19_mirror/en/app": {
+      "independent_groups": 497,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.04771827464055012,
+      "wer_delta_ci95": [
+        0.03106659108934537,
+        0.06685003453471591
+      ]
+    },
+    "turbo/common_voice_19_mirror/en/raw": {
+      "independent_groups": 497,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.04771827464055012,
+      "wer_delta_ci95": [
+        0.03106659108934537,
+        0.06685003453471591
+      ]
+    },
+    "turbo/common_voice_19_mirror/ru/app": {
+      "independent_groups": 425,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.02262443438914027,
+      "wer_delta_ci95": [
+        0.009838647445703449,
+        0.0349819145561899
+      ]
+    },
+    "turbo/common_voice_19_mirror/ru/raw": {
+      "independent_groups": 425,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.02262443438914027,
+      "wer_delta_ci95": [
+        0.009838647445703449,
+        0.0349819145561899
+      ]
+    },
+    "turbo/golos_crowd_mirror/ru/app": {
+      "independent_groups": 497,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.20132916340891321,
+      "wer_delta_ci95": [
+        0.1700765797886162,
+        0.23410490595898392
+      ]
+    },
+    "turbo/golos_crowd_mirror/ru/raw": {
+      "independent_groups": 497,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.20132916340891321,
+      "wer_delta_ci95": [
+        0.1700765797886162,
+        0.23410490595898392
+      ]
+    },
+    "turbo/golos_farfield_mirror/ru/app": {
+      "independent_groups": 449,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.12529328953542937,
+      "wer_delta_ci95": [
+        0.10347912873840157,
+        0.14696427087085423
+      ]
+    },
+    "turbo/golos_farfield_mirror/ru/raw": {
+      "independent_groups": 449,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.12529328953542937,
+      "wer_delta_ci95": [
+        0.10347912873840157,
+        0.14696427087085423
+      ]
+    }
+  },
+  "reports": {
+    "breeze": {
+      "identity": {
+        "app_settings": {
+          "allow_press_return": false,
+          "personal_dictionary": false,
+          "phonetic_matching": true,
+          "starter_dictionary": true,
+          "trailing_space": false
+        },
+        "asr_binary_sha256": "2f0da41cd64867c7eff87b07fa7cfebb8d25b366bcc50b1787bf9be9ad0566ef",
+        "benchmark_sources": {
+          "Packages/LocalASR/Sources/asr-bench/QualityBenchmark.swift": "07f979e773ae2e9827b8cc2d5a5b9a2ef9aabb5d699a5721467c222fb81a41bf",
+          "core/ramble-text/examples/quality_pipeline.rs": "6a69af3ce102f071084bfa30379b600b384793f5e225739faaed3762f669c839",
+          "scripts/asr-quality.py": "89540eaaf9883e690372b609d0dc461efb704ff8030df3de9cd29d90120c6ca4",
+          "scripts/prepare-asr-quality.py": "bbee9aa1cd75f1e55507240689149ae7fa2f734f9526211184d2880022efa0d3"
+        },
+        "host": {
+          "chip": "Apple M4",
+          "hardware_model": "Mac16,10",
+          "machine": "arm64",
+          "macos": "26.4",
+          "macos_build": "25E246",
+          "memory_bytes": 17179869184,
+          "python": "3.12.13"
+        },
+        "manifest_sha256": "ff58ed1c9ca9790038ea5b5a21d1f2df8fe893e15ed48da5517e96d98e8769b1",
+        "model_id": "breeze",
+        "model_revision": "6b7a53cea9265a2cf2b19e37b3ceadeb2927d3ba",
+        "model_sha256": "1650c163cd1623d13b585368ffd87d7e669c5ff23014511e0fa91bb4ce994756",
+        "normalization": "NFC lowercase yo=ye punctuation+whitespace; preserves script and digits",
+        "pipeline_binary_sha256": "a37f0f721b48530f576d70cb5334b8247ea0aabd571b069aca5ce551e9828a2a",
+        "pipeline_sources": {
+          "apps/macos/OpenRamble/System/SettingsDefaults.swift": "6338bdd7eb7ebcb476e7b252d2e377e88e992f6a7d141dd7c5cff4cf71f80d94",
+          "apps/macos/OpenRamble/System/SharedCorePipeline.swift": "ed38d69642d2528a9266cced4f4fd88cbb7776eb436ce358da6bd724eea3d0ee",
+          "core/conformance/fixtures/text/starter-dictionary.json": "14629315103bb784b61672393c8a184c39e90f80c2ff1ba29c9cc6f6aa4f3fb6",
+          "core/ramble-ffi/src/lib.rs": "1900ffca2e20ce0b5176b9fc67bf57684ffea50babd2130a3df41c37ae4cf770",
+          "core/ramble-text/src/pipeline.rs": "700d83d013cd17d5979798f65ea0a16bd440a29be63e8ff55a2c7d06942fd5fe"
+        },
+        "schema_version": 1,
+        "source_commit": "d566d704a88c31faa5f779fefc499b1ccfc25707",
+        "threads": 4,
+        "timeout_seconds": 300
+      },
+      "loads": [
+        {
+          "backend": "MTL0",
+          "load_seconds": 0.74948925,
+          "memory_scope": "cumulative process high-water mark; fresh process per model",
+          "process_peak_memory_bytes": 2158166016,
+          "recognition_scope": "current LocalTranscriber; default pause-aware long chunks",
+          "runtime": "0.2.3",
+          "schema_version": 1,
+          "threads": 4,
+          "type": "ready",
+          "warmup_seconds": 8.332286125
+        }
+      ],
+      "overall": {
+        "app": {
+          "cer": 0.1256994161981421,
+          "deletions": 278,
+          "insertions": 273,
+          "reference_units": 13687,
+          "substitutions": 2109,
+          "wer": 0.19434499890406956
+        },
+        "examples": 2000,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 1868,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.1256994161981421,
+          "deletions": 278,
+          "insertions": 273,
+          "reference_units": 13687,
+          "substitutions": 2109,
+          "wer": 0.19434499890406956
+        },
+        "timed_successes": 2000,
+        "wall_seconds": {
+          "max": 3.617299167,
+          "p50": 1.577896667,
+          "p95": 2.03089835275
+        }
+      },
+      "process": {
+        "engine_exit_code": 0,
+        "process_peak_memory_bytes": 2188918784,
+        "status": "ok",
+        "type": "complete"
+      },
+      "sets": {
+        "common_voice_19_mirror/en": {
+          "app": {
+            "cer": 0.04584926884139483,
+            "deletions": 32,
+            "insertions": 65,
+            "reference_units": 4799,
+            "substitutions": 366,
+            "wer": 0.09647843300687643
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 497,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.04584926884139483,
+            "deletions": 32,
+            "insertions": 65,
+            "reference_units": 4799,
+            "substitutions": 366,
+            "wer": 0.09647843300687643
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 3.617299167,
+            "p50": 1.57289525,
+            "p95": 1.70017196875
+          }
+        },
+        "common_voice_19_mirror/ru": {
+          "app": {
+            "cer": 0.04236241182799984,
+            "deletions": 38,
+            "insertions": 44,
+            "reference_units": 4199,
+            "substitutions": 340,
+            "wer": 0.10050011907597046
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 425,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.04236241182799984,
+            "deletions": 38,
+            "insertions": 44,
+            "reference_units": 4199,
+            "substitutions": 340,
+            "wer": 0.10050011907597046
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 2.741109166,
+            "p50": 1.7753212294999998,
+            "p95": 2.18997482085
+          }
+        },
+        "golos_crowd_mirror/ru": {
+          "app": {
+            "cer": 0.29477332970842113,
+            "deletions": 175,
+            "insertions": 62,
+            "reference_units": 2558,
+            "substitutions": 720,
+            "wer": 0.37412040656763096
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 497,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.29477332970842113,
+            "deletions": 175,
+            "insertions": 62,
+            "reference_units": 2558,
+            "substitutions": 720,
+            "wer": 0.37412040656763096
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 3.5483105,
+            "p50": 1.536954625,
+            "p95": 1.73239479615
+          }
+        },
+        "golos_farfield_mirror/ru": {
+          "app": {
+            "cer": 0.2392486406327237,
+            "deletions": 33,
+            "insertions": 102,
+            "reference_units": 2131,
+            "substitutions": 683,
+            "wer": 0.3838573439699671
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 449,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.2392486406327237,
+            "deletions": 33,
+            "insertions": 102,
+            "reference_units": 2131,
+            "substitutions": 683,
+            "wer": 0.3838573439699671
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 2.955563125,
+            "p50": 1.540587125,
+            "p95": 1.8082097353999993
+          }
+        }
+      }
+    },
+    "parakeet": {
+      "identity": {
+        "app_settings": {
+          "allow_press_return": false,
+          "personal_dictionary": false,
+          "phonetic_matching": true,
+          "starter_dictionary": true,
+          "trailing_space": false
+        },
+        "asr_binary_sha256": "2f0da41cd64867c7eff87b07fa7cfebb8d25b366bcc50b1787bf9be9ad0566ef",
+        "benchmark_sources": {
+          "Packages/LocalASR/Sources/asr-bench/QualityBenchmark.swift": "07f979e773ae2e9827b8cc2d5a5b9a2ef9aabb5d699a5721467c222fb81a41bf",
+          "core/ramble-text/examples/quality_pipeline.rs": "6a69af3ce102f071084bfa30379b600b384793f5e225739faaed3762f669c839",
+          "scripts/asr-quality.py": "89540eaaf9883e690372b609d0dc461efb704ff8030df3de9cd29d90120c6ca4",
+          "scripts/prepare-asr-quality.py": "bbee9aa1cd75f1e55507240689149ae7fa2f734f9526211184d2880022efa0d3"
+        },
+        "host": {
+          "chip": "Apple M4",
+          "hardware_model": "Mac16,10",
+          "machine": "arm64",
+          "macos": "26.4",
+          "macos_build": "25E246",
+          "memory_bytes": 17179869184,
+          "python": "3.12.13"
+        },
+        "manifest_sha256": "ff58ed1c9ca9790038ea5b5a21d1f2df8fe893e15ed48da5517e96d98e8769b1",
+        "model_id": "parakeet",
+        "model_revision": "85ac09ea12fc4b1112fa76810059364bc6adc9de",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+        "normalization": "NFC lowercase yo=ye punctuation+whitespace; preserves script and digits",
+        "pipeline_binary_sha256": "a37f0f721b48530f576d70cb5334b8247ea0aabd571b069aca5ce551e9828a2a",
+        "pipeline_sources": {
+          "apps/macos/OpenRamble/System/SettingsDefaults.swift": "6338bdd7eb7ebcb476e7b252d2e377e88e992f6a7d141dd7c5cff4cf71f80d94",
+          "apps/macos/OpenRamble/System/SharedCorePipeline.swift": "ed38d69642d2528a9266cced4f4fd88cbb7776eb436ce358da6bd724eea3d0ee",
+          "core/conformance/fixtures/text/starter-dictionary.json": "14629315103bb784b61672393c8a184c39e90f80c2ff1ba29c9cc6f6aa4f3fb6",
+          "core/ramble-ffi/src/lib.rs": "1900ffca2e20ce0b5176b9fc67bf57684ffea50babd2130a3df41c37ae4cf770",
+          "core/ramble-text/src/pipeline.rs": "700d83d013cd17d5979798f65ea0a16bd440a29be63e8ff55a2c7d06942fd5fe"
+        },
+        "schema_version": 1,
+        "source_commit": "ed1d0fe14bda180e7f6977b664f0d9d14e0455fc",
+        "threads": 1,
+        "timeout_seconds": 300
+      },
+      "loads": [
+        {
+          "backend": "MTL0",
+          "load_seconds": 0.227703125,
+          "memory_scope": "cumulative process high-water mark; fresh process per model",
+          "process_peak_memory_bytes": 924893184,
+          "recognition_scope": "current LocalTranscriber; default pause-aware long chunks",
+          "runtime": "0.2.3",
+          "schema_version": 1,
+          "threads": 1,
+          "type": "ready",
+          "warmup_seconds": 0.061908667
+        }
+      ],
+      "overall": {
+        "app": {
+          "cer": 0.02128921786730305,
+          "deletions": 96,
+          "insertions": 75,
+          "reference_units": 13687,
+          "substitutions": 691,
+          "wer": 0.06297946956966465
+        },
+        "examples": 2000,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 1868,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.02128921786730305,
+          "deletions": 96,
+          "insertions": 75,
+          "reference_units": 13687,
+          "substitutions": 691,
+          "wer": 0.06297946956966465
+        },
+        "timed_successes": 2000,
+        "wall_seconds": {
+          "max": 0.272571833,
+          "p50": 0.0771465835,
+          "p95": 0.140914242
+        }
+      },
+      "process": {
+        "engine_exit_code": 0,
+        "process_peak_memory_bytes": 958595072,
+        "status": "ok",
+        "type": "complete"
+      },
+      "sets": {
+        "common_voice_19_mirror/en": {
+          "app": {
+            "cer": 0.03919010123734533,
+            "deletions": 49,
+            "insertions": 32,
+            "reference_units": 4799,
+            "substitutions": 306,
+            "wer": 0.08064180037507813
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 497,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.03919010123734533,
+            "deletions": 49,
+            "insertions": 32,
+            "reference_units": 4799,
+            "substitutions": 306,
+            "wer": 0.08064180037507813
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 0.272571833,
+            "p50": 0.095854708,
+            "p95": 0.14637211669999992
+          }
+        },
+        "common_voice_19_mirror/ru": {
+          "app": {
+            "cer": 0.013390188498784521,
+            "deletions": 28,
+            "insertions": 16,
+            "reference_units": 4199,
+            "substitutions": 192,
+            "wer": 0.0562038580614432
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 425,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.013390188498784521,
+            "deletions": 28,
+            "insertions": 16,
+            "reference_units": 4199,
+            "substitutions": 192,
+            "wer": 0.0562038580614432
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 0.243194833,
+            "p50": 0.09294295799999999,
+            "p95": 0.14605545655
+          }
+        },
+        "golos_crowd_mirror/ru": {
+          "app": {
+            "cer": 0.006592809080405084,
+            "deletions": 12,
+            "insertions": 12,
+            "reference_units": 2558,
+            "substitutions": 58,
+            "wer": 0.03205629397967162
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 497,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.006592809080405084,
+            "deletions": 12,
+            "insertions": 12,
+            "reference_units": 2558,
+            "substitutions": 58,
+            "wer": 0.03205629397967162
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 0.230415625,
+            "p50": 0.07490747950000001,
+            "p95": 0.1367673628
+          }
+        },
+        "golos_farfield_mirror/ru": {
+          "app": {
+            "cer": 0.022656121272038227,
+            "deletions": 7,
+            "insertions": 15,
+            "reference_units": 2131,
+            "substitutions": 135,
+            "wer": 0.07367433129985922
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 449,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.022656121272038227,
+            "deletions": 7,
+            "insertions": 15,
+            "reference_units": 2131,
+            "substitutions": 135,
+            "wer": 0.07367433129985922
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 0.1888035,
+            "p50": 0.052093417,
+            "p95": 0.09057638095
+          }
+        }
+      }
+    },
+    "turbo": {
+      "identity": {
+        "app_settings": {
+          "allow_press_return": false,
+          "personal_dictionary": false,
+          "phonetic_matching": true,
+          "starter_dictionary": true,
+          "trailing_space": false
+        },
+        "asr_binary_sha256": "2f0da41cd64867c7eff87b07fa7cfebb8d25b366bcc50b1787bf9be9ad0566ef",
+        "benchmark_sources": {
+          "Packages/LocalASR/Sources/asr-bench/QualityBenchmark.swift": "07f979e773ae2e9827b8cc2d5a5b9a2ef9aabb5d699a5721467c222fb81a41bf",
+          "core/ramble-text/examples/quality_pipeline.rs": "6a69af3ce102f071084bfa30379b600b384793f5e225739faaed3762f669c839",
+          "scripts/asr-quality.py": "89540eaaf9883e690372b609d0dc461efb704ff8030df3de9cd29d90120c6ca4",
+          "scripts/prepare-asr-quality.py": "bbee9aa1cd75f1e55507240689149ae7fa2f734f9526211184d2880022efa0d3"
+        },
+        "host": {
+          "chip": "Apple M4",
+          "hardware_model": "Mac16,10",
+          "machine": "arm64",
+          "macos": "26.4",
+          "macos_build": "25E246",
+          "memory_bytes": 17179869184,
+          "python": "3.12.13"
+        },
+        "manifest_sha256": "ff58ed1c9ca9790038ea5b5a21d1f2df8fe893e15ed48da5517e96d98e8769b1",
+        "model_id": "turbo",
+        "model_revision": "ceea6c8a94a21ab85be244d311e874a39344dbf5",
+        "model_sha256": "b2e30cc286bc9f3aba4db9099fc7403543497c05ce7100d0d83091ddfd25a183",
+        "normalization": "NFC lowercase yo=ye punctuation+whitespace; preserves script and digits",
+        "pipeline_binary_sha256": "a37f0f721b48530f576d70cb5334b8247ea0aabd571b069aca5ce551e9828a2a",
+        "pipeline_sources": {
+          "apps/macos/OpenRamble/System/SettingsDefaults.swift": "6338bdd7eb7ebcb476e7b252d2e377e88e992f6a7d141dd7c5cff4cf71f80d94",
+          "apps/macos/OpenRamble/System/SharedCorePipeline.swift": "ed38d69642d2528a9266cced4f4fd88cbb7776eb436ce358da6bd724eea3d0ee",
+          "core/conformance/fixtures/text/starter-dictionary.json": "14629315103bb784b61672393c8a184c39e90f80c2ff1ba29c9cc6f6aa4f3fb6",
+          "core/ramble-ffi/src/lib.rs": "1900ffca2e20ce0b5176b9fc67bf57684ffea50babd2130a3df41c37ae4cf770",
+          "core/ramble-text/src/pipeline.rs": "700d83d013cd17d5979798f65ea0a16bd440a29be63e8ff55a2c7d06942fd5fe"
+        },
+        "schema_version": 1,
+        "source_commit": "ed1d0fe14bda180e7f6977b664f0d9d14e0455fc",
+        "threads": 4,
+        "timeout_seconds": 300
+      },
+      "loads": [
+        {
+          "backend": "MTL0",
+          "load_seconds": 0.280694334,
+          "memory_scope": "cumulative process high-water mark; fresh process per model",
+          "process_peak_memory_bytes": 1120370688,
+          "recognition_scope": "current LocalTranscriber; default pause-aware long chunks",
+          "runtime": "0.2.3",
+          "schema_version": 1,
+          "threads": 4,
+          "type": "ready",
+          "warmup_seconds": 1.05748925
+        }
+      ],
+      "overall": {
+        "app": {
+          "cer": 0.07918402567110248,
+          "deletions": 270,
+          "insertions": 169,
+          "reference_units": 13687,
+          "substitutions": 1529,
+          "wer": 0.1437860743771462
+        },
+        "examples": 2000,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 1868,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.07918402567110248,
+          "deletions": 270,
+          "insertions": 169,
+          "reference_units": 13687,
+          "substitutions": 1529,
+          "wer": 0.1437860743771462
+        },
+        "timed_successes": 2000,
+        "wall_seconds": {
+          "max": 2.436607292,
+          "p50": 1.194116375,
+          "p95": 1.3968030517999999
+        }
+      },
+      "process": {
+        "engine_exit_code": 0,
+        "process_peak_memory_bytes": 1147518976,
+        "status": "ok",
+        "type": "complete"
+      },
+      "sets": {
+        "common_voice_19_mirror/en": {
+          "app": {
+            "cer": 0.07253093363329584,
+            "deletions": 62,
+            "insertions": 86,
+            "reference_units": 4799,
+            "substitutions": 468,
+            "wer": 0.12836007501562827
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 497,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.07253093363329584,
+            "deletions": 62,
+            "insertions": 86,
+            "reference_units": 4799,
+            "substitutions": 468,
+            "wer": 0.12836007501562827
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 2.436607292,
+            "p50": 1.2958470415,
+            "p95": 1.4393117701999996
+          }
+        },
+        "common_voice_19_mirror/ru": {
+          "app": {
+            "cer": 0.03319650898656996,
+            "deletions": 35,
+            "insertions": 23,
+            "reference_units": 4199,
+            "substitutions": 273,
+            "wer": 0.07882829245058347
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 425,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.03319650898656996,
+            "deletions": 35,
+            "insertions": 23,
+            "reference_units": 4199,
+            "substitutions": 273,
+            "wer": 0.07882829245058347
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 1.546398792,
+            "p50": 1.1639137915,
+            "p95": 1.3775452441
+          }
+        },
+        "golos_crowd_mirror/ru": {
+          "app": {
+            "cer": 0.1753551281179909,
+            "deletions": 143,
+            "insertions": 28,
+            "reference_units": 2558,
+            "substitutions": 426,
+            "wer": 0.23338545738858482
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 497,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.1753551281179909,
+            "deletions": 143,
+            "insertions": 28,
+            "reference_units": 2558,
+            "substitutions": 426,
+            "wer": 0.23338545738858482
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 1.723101417,
+            "p50": 1.1924201879999998,
+            "p95": 1.3793621899000001
+          }
+        },
+        "golos_farfield_mirror/ru": {
+          "app": {
+            "cer": 0.06986323941341242,
+            "deletions": 30,
+            "insertions": 32,
+            "reference_units": 2131,
+            "substitutions": 362,
+            "wer": 0.1989676208352886
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 449,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.06986323941341242,
+            "deletions": 30,
+            "insertions": 32,
+            "reference_units": 2131,
+            "substitutions": 362,
+            "wer": 0.1989676208352886
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 1.571017959,
+            "p50": 1.1614363330000002,
+            "p95": 1.38801797675
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,197 @@
+{
+  "scope": "three observed-script development diagnostics; exact original baseline outcomes reused; one source parent per language; no confidence interval or idle speed acceptance",
+  "deliberate_producer_difference": "20s candidate binary and separate source patch; do not route through the generic paired-model comparison which rejects different producers",
+  "candidate_manifest_sha256": "bd01f62acc5c83d0c610696ff9d21b8ab2bc8822c4ae9c258c654ed49b824d33",
+  "languages": {
+    "en": {
+      "baseline": {
+        "app": {
+          "cer": 0.005896656534954407,
+          "deletions": 2,
+          "insertions": 2,
+          "reference_units": 3165,
+          "substitutions": 31,
+          "wer": 0.011058451816745656
+        },
+        "examples": 1,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 1,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.005896656534954407,
+          "deletions": 2,
+          "insertions": 2,
+          "reference_units": 3165,
+          "substitutions": 31,
+          "wer": 0.011058451816745656
+        },
+        "timed_successes": 1,
+        "wall_seconds": {
+          "max": 23.418289833,
+          "p50": 23.418289833,
+          "p95": 23.418289833
+        }
+      },
+      "candidate": {
+        "app": {
+          "cer": 0.0060790273556231,
+          "deletions": 2,
+          "insertions": 1,
+          "reference_units": 3165,
+          "substitutions": 31,
+          "wer": 0.010742496050552922
+        },
+        "examples": 1,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 1,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.0060790273556231,
+          "deletions": 2,
+          "insertions": 1,
+          "reference_units": 3165,
+          "substitutions": 31,
+          "wer": 0.010742496050552922
+        },
+        "timed_successes": 1,
+        "wall_seconds": {
+          "max": 23.963103833,
+          "p50": 23.963103833,
+          "p95": 23.963103833
+        }
+      },
+      "app_wer_delta_pp": -0.0315955766192734,
+      "relative_app_wer_change": -0.028571428571428692,
+      "file_wall_ratio": 1.0232644656755538
+    },
+    "mixed": {
+      "baseline": {
+        "app": {
+          "cer": 0.1003904071388734,
+          "deletions": 223,
+          "insertions": 41,
+          "reference_units": 3086,
+          "substitutions": 267,
+          "wer": 0.17206740116655866
+        },
+        "examples": 1,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 1,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.1003904071388734,
+          "deletions": 223,
+          "insertions": 41,
+          "reference_units": 3086,
+          "substitutions": 267,
+          "wer": 0.17206740116655866
+        },
+        "timed_successes": 1,
+        "wall_seconds": {
+          "max": 29.037442375,
+          "p50": 29.037442375,
+          "p95": 29.037442375
+        }
+      },
+      "candidate": {
+        "app": {
+          "cer": 0.07746793084216397,
+          "deletions": 164,
+          "insertions": 24,
+          "reference_units": 3086,
+          "substitutions": 266,
+          "wer": 0.1471160077770577
+        },
+        "examples": 1,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 1,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.077356385945343,
+          "deletions": 164,
+          "insertions": 24,
+          "reference_units": 3086,
+          "substitutions": 267,
+          "wer": 0.1474400518470512
+        },
+        "timed_successes": 1,
+        "wall_seconds": {
+          "max": 29.906793583,
+          "p50": 29.906793583,
+          "p95": 29.906793583
+        }
+      },
+      "app_wer_delta_pp": -2.4951393389500973,
+      "relative_app_wer_change": -0.14500941619585683,
+      "file_wall_ratio": 1.0299389731634379
+    },
+    "ru": {
+      "baseline": {
+        "app": {
+          "cer": 0.010358688930117502,
+          "deletions": 9,
+          "insertions": 4,
+          "reference_units": 3121,
+          "substitutions": 77,
+          "wer": 0.028836911246395387
+        },
+        "examples": 1,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 1,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.011234796949082663,
+          "deletions": 9,
+          "insertions": 4,
+          "reference_units": 3121,
+          "substitutions": 80,
+          "wer": 0.029798141621275233
+        },
+        "timed_successes": 1,
+        "wall_seconds": {
+          "max": 31.665443542,
+          "p50": 31.665443542,
+          "p95": 31.665443542
+        }
+      },
+      "candidate": {
+        "app": {
+          "cer": 0.010667903525046383,
+          "deletions": 11,
+          "insertions": 4,
+          "reference_units": 3121,
+          "substitutions": 76,
+          "wer": 0.029157321371355335
+        },
+        "examples": 1,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 1,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.011544011544011544,
+          "deletions": 11,
+          "insertions": 4,
+          "reference_units": 3121,
+          "substitutions": 79,
+          "wer": 0.03011855174623518
+        },
+        "timed_successes": 1,
+        "wall_seconds": {
+          "max": 33.920896458,
+          "p50": 33.920896458,
+          "p95": 33.920896458
+        }
+      },
+      "app_wer_delta_pp": 0.03204101249599488,
+      "relative_app_wer_change": 0.011111111111111072,
+      "file_wall_ratio": 1.071227580090847
+    }
+  },
+  "decision": "reject for production; mixed negative-marker nonmatches rise 3 to 5 and long omissions remain despite lower aggregate WER"
+}
