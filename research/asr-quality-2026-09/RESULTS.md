@@ -5,6 +5,10 @@ universal RU/EN replacement. The study is still open for primary Eleven v4 long 
 and observable GUI Stop-to-insertion; neither is a passed check. The installed
 application is published 0.31.2, with verified signatures, feed and native load.
 
+A [benchmark infographic](infographic/README.md) shows the measured per-domain
+WER and separately scoped repeated RU latency, with the underlying reports and
+the exact image-generation prompt retained.
+
 ## Main and independent public holdout
 
 Strict app WER includes spelling numbers differently, digit/word conversion,
@@ -164,9 +168,11 @@ check also passes. See
 `scripts/tests/test_asr_cli_errors.py`.
 
 The known external ElevenLabs credit reset is October 1 at 13:25:21 Moscow.
-The verified current-thread heartbeat resumes after it, rechecks quota and
-generates the frozen genuine 4/5/8/15-minute RU/EN/mixed tracks within the
-existing $20 cap. No billing changes, private upload, automatic retry of an
+The user requested removal of the periodic task on October 1, and the app
+confirmed its deletion. No future scheduled continuation is active. The frozen
+genuine 4/5/8/15-minute RU/EN/mixed tracks remain pending; a later continuation
+can recheck quota after that time under the existing $20 cap.
+No billing changes, private upload, automatic retry of an
 uncertain paid request, or extra permission question is required. Preserve
 parent grouping, actual seams and failed outcomes. The long and GUI checks
 remain outstanding; this document does not mark the full study complete.
