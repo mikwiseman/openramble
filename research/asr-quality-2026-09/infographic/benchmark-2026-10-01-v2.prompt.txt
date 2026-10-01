@@ -1,0 +1,54 @@
+Redesign the attached OpenRamble benchmark infographic into a beautiful, rigorously typeset editorial data poster. Treat the attachment as the existing infographic being edited and as a source of numerical invariants. Make a substantial visual redesign. Output a high-resolution landscape image, around 3:2, with exceptionally readable Cyrillic and numbers.
+
+DESIGN:
+Premium Swiss editorial design, meticulously art-directed and minimal. Warm ivory paper background, deep ink typography, a small restrained teal accent, fine horizontal rules, a generous optical grid and negative space. Strong large headline, elegantly aligned tabular numerals, compact monospace methodology labels. Sophisticated typography and proportion. Flat graphic design, not a dashboard UI: no rounded cards, thick box borders, gradients, shadows, trophies, checkmarks, icons, stock illustrations, logos or decorative widgets. The numbers ARE the graphic. Use mostly dark ink, with restrained muted model-color accents: Parakeet teal, Turbo slate, Breeze muted terracotta, GigaAM soft violet. No marketing conclusions.
+
+CONTENT AND COMPOSITION:
+Top: small label "OPENRAMBLE / ASR"
+Large title "BENCHMARK"
+Small equipment line "Mac mini M4 · 16 ГБ · Q8 · 01.10.2026"
+
+Upper central area: a beautiful, spacious borderless numerical comparison table, only fine horizontal rules. Heading "ТОЧНОСТЬ" with small label "WER, % ↓".
+Column headers, exactly this order:
+"Parakeet" [small sublabel "OpenRamble"]
+"Whisper Turbo"
+"Breeze-ASR-25"
+"GigaAM CTC" [small sublabel "RU"]
+Dataset name at left, sample count in a slim secondary column or a restrained suffix. Keep every numerical value exact, in the following order:
+"CV19 / EN", "N=500": 8,06 | 12,84 | 9,65 | —
+"CV19 / RU", "N=500": 5,62 | 7,88 | 10,05 | 2,24
+"Golos Crowd / RU", "N=500": 3,21 | 23,34 | 37,41 | 19,16
+"Golos Farfield / RU", "N=500": 7,37 | 19,90 | 38,39 | 7,23
+"FLEURS / EN", "N=647": 5,44 | 4,92 | 5,39 | —
+"FLEURS / RU", "N=775": 5,55 | 4,80 | 6,74 | 5,01
+Render numbers without percent symbols in individual cells, because the table unit is clearly WER, %. Russian decimal commas. No aggregate average and no invented observations. A row minimum may use slightly stronger weight, but no winner badges or implied statistical significance. All models get equal visual status.
+
+Lower area: heading "СКОРОСТЬ" and two clearly separated horizontal bar-chart panels. Their different measurement scopes must remain legible. Each chart has a genuine shared zero baseline and correctly proportional bars.
+
+LEFT PANEL:
+Heading "CV19 RU · N=500"
+Scope label "Файл · p95, мс"
+Bars:
+Parakeet: 146
+Whisper Turbo: 1378
+Breeze-ASR-25: 2190
+Zero-based axis from 0 to 2200. All bar lengths must be proportional to 146, 1378, 2190; do not exaggerate the small Parakeet bar. Show exact numeric labels.
+Small caption "Первый проход: чтение файла + ASR".
+Do not add GigaAM to this panel; its paired file run used a different series.
+
+RIGHT PANEL:
+Heading "Повторный RU-тест"
+Scope label "Прогретый ASR · p95, мс"
+Bars:
+Parakeet: bar at 152; exact numeric label "151–152"
+GigaAM CTC: 75
+Zero-based axis from 0 to 160 with accurately proportional bars.
+Small caption "Без загрузки модели и чтения файла".
+
+BOTTOM:
+One tiny but comfortably legible methodology line:
+"CPU-потоки: Parakeet/GigaAM — 1, Turbo/Breeze — 4 · WER учитывает сбои и оформление чисел · GUI вне замера"
+
+REMOVE from the old image:
+The entire "Текущий выбор" badge, all recommendations and winner/conclusion slogans, the long-recording panel, memory numbers, amber warning boxes and long paragraphs. Do not write that OpenRamble wins everywhere, is faster than GigaAM, or that this chart isolates a threading-optimization benefit. Do not label any model OpenAI or GigaChat, because those cloud services were not measured. Keep only benchmark metrics and concise scope labels. No prose explanation of these constraints in the final artwork.
+The final image must feel remarkably elegant, intentional and concise, with precise alignment, coherent color and type, substantial breathing room, and all labels uncut and readable.
