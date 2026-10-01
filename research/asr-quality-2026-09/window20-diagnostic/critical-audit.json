@@ -1,0 +1,122 @@
+{
+  "scope": "one unique offline parent per language; intended scripts, not independent spoken gold; whole-file alignment, not independently located seam errors",
+  "manifest_sha256": "bd01f62acc5c83d0c610696ff9d21b8ab2bc8822c4ae9c258c654ed49b824d33",
+  "alignment_ties": "exact optimal band; diagonal then deletion then insertion; matches primary S/D/I",
+  "semantic_limits": "Marker matches do not establish complete clause meaning or numeric values; no reference word alignment or lossless-seam guarantee",
+  "fixtures": {
+    "system-long-ru-unique": {
+      "language": "ru",
+      "status": "ok",
+      "duration_seconds": 1463.9223125,
+      "raw": {
+        "counts": {
+          "substitutions": 79,
+          "deletions": 11,
+          "insertions": 4
+        },
+        "reference_words": 3121,
+        "hypothesis_words": 3114,
+        "longest_consecutive_reference_deletion_words": 1,
+        "negative_marker_instances": 81,
+        "negative_marker_nonmatches": 0,
+        "first_ten_reference_words_retained": true,
+        "last_ten_reference_words_retained": true
+      },
+      "app": {
+        "counts": {
+          "substitutions": 76,
+          "deletions": 11,
+          "insertions": 4
+        },
+        "reference_words": 3121,
+        "hypothesis_words": 3114,
+        "longest_consecutive_reference_deletion_words": 1,
+        "negative_marker_instances": 81,
+        "negative_marker_nonmatches": 0,
+        "first_ten_reference_words_retained": true,
+        "last_ten_reference_words_retained": true
+      },
+      "word_intervals": 3112,
+      "invalid_word_intervals": 0,
+      "reversed_start_intervals": 0,
+      "last_word_end_seconds": 1463.88,
+      "command_emitted": false
+    },
+    "system-long-en-unique": {
+      "language": "en",
+      "status": "ok",
+      "duration_seconds": 1098.8209375,
+      "raw": {
+        "counts": {
+          "substitutions": 31,
+          "deletions": 2,
+          "insertions": 1
+        },
+        "reference_words": 3165,
+        "hypothesis_words": 3164,
+        "longest_consecutive_reference_deletion_words": 1,
+        "negative_marker_instances": 38,
+        "negative_marker_nonmatches": 0,
+        "first_ten_reference_words_retained": true,
+        "last_ten_reference_words_retained": true
+      },
+      "app": {
+        "counts": {
+          "substitutions": 31,
+          "deletions": 2,
+          "insertions": 1
+        },
+        "reference_words": 3165,
+        "hypothesis_words": 3164,
+        "longest_consecutive_reference_deletion_words": 1,
+        "negative_marker_instances": 38,
+        "negative_marker_nonmatches": 0,
+        "first_ten_reference_words_retained": true,
+        "last_ten_reference_words_retained": true
+      },
+      "word_intervals": 3154,
+      "invalid_word_intervals": 0,
+      "reversed_start_intervals": 0,
+      "last_word_end_seconds": 1098.78,
+      "command_emitted": false
+    },
+    "system-long-mixed-unique": {
+      "language": "mixed",
+      "status": "ok",
+      "duration_seconds": 1352.315,
+      "raw": {
+        "counts": {
+          "substitutions": 267,
+          "deletions": 164,
+          "insertions": 24
+        },
+        "reference_words": 3086,
+        "hypothesis_words": 2946,
+        "longest_consecutive_reference_deletion_words": 22,
+        "negative_marker_instances": 62,
+        "negative_marker_nonmatches": 5,
+        "first_ten_reference_words_retained": true,
+        "last_ten_reference_words_retained": true
+      },
+      "app": {
+        "counts": {
+          "substitutions": 266,
+          "deletions": 164,
+          "insertions": 24
+        },
+        "reference_words": 3086,
+        "hypothesis_words": 2946,
+        "longest_consecutive_reference_deletion_words": 22,
+        "negative_marker_instances": 62,
+        "negative_marker_nonmatches": 5,
+        "first_ten_reference_words_retained": true,
+        "last_ten_reference_words_retained": true
+      },
+      "word_intervals": 2933,
+      "invalid_word_intervals": 0,
+      "reversed_start_intervals": 0,
+      "last_word_end_seconds": 1352.26,
+      "command_emitted": false
+    }
+  }
+}

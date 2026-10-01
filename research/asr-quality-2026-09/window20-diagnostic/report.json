@@ -1,0 +1,188 @@
+{
+  "identity": {
+    "alignment": {
+      "long_distance_dependency": "3.14.6",
+      "method": "exact DP; exact-distance band for matrices over 1 million cells",
+      "ties": "diagonal then deletion then insertion"
+    },
+    "app_settings": {
+      "allow_press_return": false,
+      "personal_dictionary": false,
+      "phonetic_matching": true,
+      "starter_dictionary": true,
+      "trailing_space": false
+    },
+    "asr_binary_sha256": "a8e16d703e1c01c81151847e13289d7205816a804760d8b176d6054780e40a63",
+    "benchmark_sources": {
+      "Packages/LocalASR/Sources/asr-bench/QualityBenchmark.swift": "890d344d9719d99d974eb41bb853d05c6f6135ca528970d642b68ed7b415e774",
+      "core/ramble-text/examples/quality_pipeline.rs": "6a69af3ce102f071084bfa30379b600b384793f5e225739faaed3762f669c839",
+      "scripts/asr-quality.py": "f48d81291fd2157a63124f75bba297fa1132f2740ba8aceabb56956fa2ae9d86",
+      "scripts/prepare-asr-quality.py": "bbee9aa1cd75f1e55507240689149ae7fa2f734f9526211184d2880022efa0d3",
+      "scripts/quality-alignment.py": "a087ea61dab64ef000a011bc58082240b316d18be057661db8d11cc8b0ed5773"
+    },
+    "host": {
+      "chip": "Apple M4",
+      "hardware_model": "Mac16,10",
+      "machine": "arm64",
+      "macos": "26.4",
+      "macos_build": "25E246",
+      "memory_bytes": 17179869184,
+      "python": "3.14.7"
+    },
+    "manifest_sha256": "bd01f62acc5c83d0c610696ff9d21b8ab2bc8822c4ae9c258c654ed49b824d33",
+    "model_id": "parakeet-window20",
+    "model_revision": "85ac09ea12fc4b1112fa76810059364bc6adc9de",
+    "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+    "normalization": "NFC lowercase yo=ye punctuation+whitespace; preserves script and digits",
+    "pipeline_binary_sha256": "a37f0f721b48530f576d70cb5334b8247ea0aabd571b069aca5ce551e9828a2a",
+    "pipeline_sources": {
+      "apps/macos/OpenRamble/System/SettingsDefaults.swift": "6338bdd7eb7ebcb476e7b252d2e377e88e992f6a7d141dd7c5cff4cf71f80d94",
+      "apps/macos/OpenRamble/System/SharedCorePipeline.swift": "ed38d69642d2528a9266cced4f4fd88cbb7776eb436ce358da6bd724eea3d0ee",
+      "core/conformance/fixtures/text/starter-dictionary.json": "14629315103bb784b61672393c8a184c39e90f80c2ff1ba29c9cc6f6aa4f3fb6",
+      "core/ramble-ffi/src/lib.rs": "1900ffca2e20ce0b5176b9fc67bf57684ffea50babd2130a3df41c37ae4cf770",
+      "core/ramble-text/src/pipeline.rs": "700d83d013cd17d5979798f65ea0a16bd440a29be63e8ff55a2c7d06942fd5fe"
+    },
+    "schema_version": 1,
+    "source_commit": "b938962a8cd2d8e5133efc38cfb5daaf0415b102",
+    "threads": 1,
+    "timeout_seconds": 300
+  },
+  "loads": [
+    {
+      "backend": "MTL0",
+      "load_seconds": 9.000915583,
+      "memory_scope": "cumulative process high-water mark; fresh process per model",
+      "process_peak_memory_bytes": 930791424,
+      "recognition_scope": "current LocalTranscriber; default pause-aware long chunks",
+      "runtime": "0.2.3",
+      "schema_version": 1,
+      "threads": 1,
+      "type": "ready",
+      "warmup_seconds": 0.076300791
+    }
+  ],
+  "overall": {
+    "app": {
+      "cer": 0.031533541573702216,
+      "deletions": 177,
+      "insertions": 29,
+      "reference_units": 9372,
+      "substitutions": 373,
+      "wer": 0.0617797695262484
+    },
+    "examples": 3,
+    "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+    "failures": 0,
+    "groups": 3,
+    "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+    "raw": {
+      "cer": 0.031812434924884725,
+      "deletions": 177,
+      "insertions": 29,
+      "reference_units": 9372,
+      "substitutions": 377,
+      "wer": 0.062206572769953054
+    },
+    "timed_successes": 3,
+    "wall_seconds": {
+      "max": 33.920896458,
+      "p50": 29.906793583,
+      "p95": 33.5194861705
+    }
+  },
+  "process": {
+    "engine_exit_code": 0,
+    "process_peak_memory_bytes": 961789952,
+    "status": "ok",
+    "type": "complete"
+  },
+  "sets": {
+    "system_speech_long_diagnostic/en": {
+      "app": {
+        "cer": 0.0060790273556231,
+        "deletions": 2,
+        "insertions": 1,
+        "reference_units": 3165,
+        "substitutions": 31,
+        "wer": 0.010742496050552922
+      },
+      "examples": 1,
+      "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+      "failures": 0,
+      "groups": 1,
+      "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+      "raw": {
+        "cer": 0.0060790273556231,
+        "deletions": 2,
+        "insertions": 1,
+        "reference_units": 3165,
+        "substitutions": 31,
+        "wer": 0.010742496050552922
+      },
+      "timed_successes": 1,
+      "wall_seconds": {
+        "max": 23.963103833,
+        "p50": 23.963103833,
+        "p95": 23.963103833
+      }
+    },
+    "system_speech_long_diagnostic/mixed": {
+      "app": {
+        "cer": 0.07746793084216397,
+        "deletions": 164,
+        "insertions": 24,
+        "reference_units": 3086,
+        "substitutions": 266,
+        "wer": 0.1471160077770577
+      },
+      "examples": 1,
+      "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+      "failures": 0,
+      "groups": 1,
+      "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+      "raw": {
+        "cer": 0.077356385945343,
+        "deletions": 164,
+        "insertions": 24,
+        "reference_units": 3086,
+        "substitutions": 267,
+        "wer": 0.1474400518470512
+      },
+      "timed_successes": 1,
+      "wall_seconds": {
+        "max": 29.906793583,
+        "p50": 29.906793583,
+        "p95": 29.906793583
+      }
+    },
+    "system_speech_long_diagnostic/ru": {
+      "app": {
+        "cer": 0.010667903525046383,
+        "deletions": 11,
+        "insertions": 4,
+        "reference_units": 3121,
+        "substitutions": 76,
+        "wer": 0.029157321371355335
+      },
+      "examples": 1,
+      "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+      "failures": 0,
+      "groups": 1,
+      "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+      "raw": {
+        "cer": 0.011544011544011544,
+        "deletions": 11,
+        "insertions": 4,
+        "reference_units": 3121,
+        "substitutions": 79,
+        "wer": 0.03011855174623518
+      },
+      "timed_successes": 1,
+      "wall_seconds": {
+        "max": 33.920896458,
+        "p50": 33.920896458,
+        "p95": 33.920896458
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 # Current-runtime results and remaining checks
 
 Keep the shipping Parakeet model. No tested candidate has established a safe
-universal RU/EN replacement. The study is still open for genuine long tracks
+universal RU/EN replacement. The study is still open for primary Eleven v4 long tracks
 and observable GUI Stop-to-insertion; neither is a passed check. The installed
 application is published 0.31.2, with verified signatures, feed and native load.
 
@@ -66,6 +66,53 @@ It remains a small exploratory screen with five script groups; there is no
 confirmed held-out RNN-T gain or claim about its larger datasets. Both GigaAM
 heads are RU-only; no automatic language router has been added.
 
+Five additional precisions of the exact shipping Parakeet checkpoint completed
+the same 100 EN + 100 RU development screen, with no failures. The
+[precision comparison](QUANTIZATION.md) covers Q4_K_M, Q5_K_M, Q6_K, F16 and
+F32. None meets the declared 10% relative WER improvement. Q4 uses about 29%
+less process memory; F16/F32 provide no established accuracy gain. Q5's small
+EN improvement has an interval crossing zero and a RU point estimate just
+over the +0.5 percentage-point limit. Keep Q8; screening timings do not
+establish a repeated idle speed advantage or held-out quality.
+
+## Unique long-file diagnostic
+
+A separate offline Milena rendition of the full fictional RU script lasts
+24 minutes 23.9 seconds without looping or padding. Parakeet recognizes it
+in 31.665 seconds, raw/app WER 2.98%/2.88%, process peak 924.5 MiB. Turbo and
+Breeze each fail with native unsupported-token-timestamp code 12. Their
+failures remain in the denominator and are not successful speed results.
+
+The [protocol and audit](system-long-diagnostic/PROTOCOL.md) preserve the
+pre-inference manifest-header correction, fixed producer identity and the
+single-parent scope. Whole-file raw alignment has no consecutive deletion
+longer than one word, retains the first/last ten words and matches all 81
+negative-marker instances. These checks do not establish preservation of
+every negated clause or numeric value. Word timings are decoder outputs,
+not reference alignment. The intended script is not independently verified
+spoken gold. This diagnostic does not complete the Eleven v4 primary
+RU/EN/mixed variants or establish a lossless seam guarantee.
+
+The additional [EN/mixed offline diagnostics](system-long-extra/PROTOCOL.md)
+last 18m18.8s/22m32.3s. Parakeet file times are 23.418/29.037 seconds and app
+WER 1.11%/17.21%. Turbo and Breeze fail both with code 12. Mixed alignment
+exposes a 37-word consecutive deletion and three nonmatching negative
+markers; matching timestamps do not establish completeness. The text core
+does not change those errors. All three decoders recover the missing clause
+from a separately declared 18.64-second crop of the same PCM. This is an
+observed-error diagnostic with no new independent quality example or speed
+gate. A Russian system voice's English pronunciation remains a confound;
+primary Eleven coverage is still required.
+
+One separately declared [20-second window experiment](window20-diagnostic/PROTOCOL.md)
+uses an isolated source copy, preserving original sources and v2. Mixed app
+WER improves 14.50% relative (17.21% to 14.71%), but negative-marker nonmatches
+rise from three to five and a 22-word consecutive omission remains. Reject
+it for production. RU/EN WER point changes are only +0.032/-0.032 percentage
+points; file time rises 7.12%/2.33%/2.99% across RU/EN/mixed. First-pass times
+and observed scripts are not independent acceptance evidence. Lower WER alone
+does not justify shipping a variant with worse critical coverage.
+
 ## Speed, resources and application scope
 
 Repeated predecoded timing uses six frozen inputs per language, warmed once,
@@ -106,7 +153,7 @@ This is a tool blocker, not an approval request or an application failure.
 
 ## Validation and autonomous continuation
 
-All 14 CI checks passed on the preceding frozen-study commit `b7cfc88`.
+All 14 CI checks passed on frozen-study commit `b938962` (also on `b7cfc88`).
 The new CLI error regression fails on the unfixed binary with SIGABRT, then
 passes after unloading the model before exit; the retained GigaAM timing error
 now exits 70 cleanly. The diagnostic-only v3 binary does not replace the sealed

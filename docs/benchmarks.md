@@ -83,8 +83,13 @@ See the [main results](../research/asr-quality-2026-09/main/REPORT.md),
 and [frozen candidates](../research/asr-quality-2026-09/FROZEN-CANDIDATES.md).
 The [current results and outstanding checks](../research/asr-quality-2026-09/RESULTS.md)
 also include full FLEURS, expanded GigaAM, primeLine/RNN-T screens, idle timing
-and separate profiling. GUI Stop-to-insertion and genuine long tracks remain
-unmeasured; CLI timings do not substitute for either.
+and separate profiling. Five additional precisions of the shipping checkpoint
+are covered in the [precision screen](../research/asr-quality-2026-09/QUANTIZATION.md).
+Separate unique offline RU/EN/mixed long parents expose context-sensitive
+omissions. A [20-second window diagnostic](../research/asr-quality-2026-09/window20-diagnostic/PROTOCOL.md)
+improves aggregate mixed WER but worsens negative-marker coverage, so it is
+rejected for production. GUI Stop-to-insertion and the primary aligned Eleven
+v4 long tracks remain unmeasured; these diagnostics do not substitute for them.
 
 The native command-error regression is opt-in and uses an existing model:
 

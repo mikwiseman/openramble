@@ -1,0 +1,46 @@
+{
+  "plan_sha256": "ad0367ce41a4537989b722121cfebba2c825b59ee987963b1f59608f59441025",
+  "source_sha256": "72034f3ae9ac2c2a040a6ba2f5c0ee851140ed0a8d76d048134c640c55f8348c",
+  "audio_sha256": "fbd4b5c8210887701fb722978817be844f29f9b74ddd8e238b1c2dba439f57f5",
+  "pcm_sha256": "7c6a6328cefc28189f5da2bdeb231d017ea62c463e0eacc525ffe0359a08c523",
+  "duration_seconds": 18.64,
+  "start_seconds": 100.8,
+  "end_seconds": 119.44,
+  "nonzero_sample_count": 298240,
+  "peak": 0.7199152708053589,
+  "scope": "post-error exploratory short-crop diagnostic from the same parent; no independent spoken gold, WER/CI/latency gate, new quality example, or causal seam attribution",
+  "models": {
+    "parakeet": {
+      "status": "ok",
+      "exit_code": 0,
+      "threads": 1,
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+      "missing_clause_recovered_in_short_crop": true,
+      "celsius_value_12_retained": true,
+      "app_command_emitted": false
+    },
+    "turbo": {
+      "status": "ok",
+      "exit_code": 0,
+      "threads": 4,
+      "model_sha256": "b2e30cc286bc9f3aba4db9099fc7403543497c05ce7100d0d83091ddfd25a183",
+      "missing_clause_recovered_in_short_crop": true,
+      "celsius_value_12_retained": true,
+      "app_command_emitted": false
+    },
+    "breeze": {
+      "status": "ok",
+      "exit_code": 0,
+      "threads": 4,
+      "model_sha256": "1650c163cd1623d13b585368ffd87d7e669c5ff23014511e0fa91bb4ce994756",
+      "missing_clause_recovered_in_short_crop": true,
+      "celsius_value_12_retained": true,
+      "app_command_emitted": false
+    }
+  },
+  "selected_after_observing_error": true,
+  "independent_quality_example": false,
+  "clause_reference_words": 37,
+  "comparison_scope": "diagnostic exact clause match with only twelve/12 equivalence; no change to primary WER normalization, no WER/latency claim for the crop",
+  "interpretation": "same 18.64-second PCM crop lets all three decoders recover the clause absent from the full Parakeet output; source absence alone does not explain the loss; does not distinguish language decoding, segmentation and joining causes"
+}
