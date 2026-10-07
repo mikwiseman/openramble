@@ -2,9 +2,10 @@
 
 Open [the visual benchmark](index.html) or read [the Russian research report](REPORT.ru.md).
 
-This is an evidence refresh and a reproducible presentation of the existing
-30 September–1 October study, not a new inference run. No production code,
-model, setting or release is changed. The source study is commit
+The main comparison is a reproducible presentation of the existing
+30 September–1 October study. A separate [execution of roadmap steps 1–3](steps123/RESULTS.ru.md)
+adds new paired runtime, text replay and long-speech diagnostics on 7 October.
+No production code, model, setting or release is changed. The source study is commit
 `53dca43` on `codex/asr-quality-20260930`; its product baseline is OpenRamble
 0.31.2 / transcribe.cpp 0.2.3, commit
 `ed1d0fe14bda180e7f6977b664f0d9d14e0455fc`.
@@ -22,6 +23,8 @@ of official Handy, klava-nevinovata, or other GUI applications.
   rules, and a separately scoped future custom eval.
 - [sources.json](sources.json): external source inventory checked on 7 October.
 - [build.py](build.py): validates and rebuilds the data, plots and standalone HTML.
+- [steps123/results.json](steps123/results.json): new measurements and evidence
+  hashes, kept separate from September's model comparison and device.
 
 From this directory, with Python and Matplotlib installed:
 
@@ -37,8 +40,9 @@ The existing inference and scoring entry points remain documented in
 
 The headline conclusion is bounded: the shipping configuration is a strong
 default in the tested class, but a claim of overall market leadership is not
-established. The highest-value next experiments are the newer native runtime,
-properly tuned Whisper controls, and a genuine RU/EN streaming candidate.
+established. The 0.3.1 runtime screen found no benefit worth adopting. The next
+model experiments remain properly tuned Whisper controls and a genuine RU/EN
+streaming candidate, with the known mixed-language omission as a required case.
 
 The Russian report also contains a staged improvement roadmap: small runtime
 and text-correction experiments, measured pipeline issues, ready-made model
@@ -72,3 +76,17 @@ in LocalASR: the existing ready-PCM-to-test-insertion latency test measured
 1.0345 s for the fixture labeled “half a minute”, over its 1 s budget. This
 single observation is recorded in the roadmap, not imported into the benchmark
 charts or treated as a controlled regression. No thresholds were changed.
+
+## New execution of steps 1–3
+
+The [execution report](steps123/RESULTS.ru.md) records 209 paired inputs, four
+120-inference timing blocks, text replay and the native-chunk omission trace.
+The runtime pin was restored after building the isolated candidate. No product
+source, default or test threshold changed. The page's new section is separate
+from the original plots and the model comparison's 3,422 inputs.
+
+Local verification remains non-green: the cleanup test fails both in the suite
+and alone; the later LocalASR E2E run exceeds the one-second budget under heavy
+load; FFI reproduces its loader failure with Rust 1.97.1 too. Full details and
+the successful targeted diagnostics are in the execution report. None of these
+failures is replaced with `pass`.
