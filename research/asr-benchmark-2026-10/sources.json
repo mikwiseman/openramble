@@ -1,0 +1,338 @@
+{
+  "scope": "Source inventory, not a cross-source leaderboard. External numerical results are not imported into benchmark.json.",
+  "sources": [
+    {
+      "id": "parakeet",
+      "title": "NVIDIA Parakeet TDT 0.6B v3",
+      "url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3",
+      "type": "model author",
+      "relevance": "25-language baseline; published WER excludes punctuation/case",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "whisper",
+      "title": "OpenAI Whisper",
+      "url": "https://github.com/openai/whisper",
+      "type": "model author",
+      "relevance": "Whisper family and public reference implementation",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "klava",
+      "title": "klava-nevinovata",
+      "url": "https://github.com/egsok/klava-nevinovata",
+      "type": "application author",
+      "relevance": "Tuned Whisper, context continuity and Cyrillic postprocessing",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "egor",
+      "title": "Russian IT-speech benchmark",
+      "url": "https://egorsokolov.ru/ai/whisper-asr-benchmark-russian-it/",
+      "type": "benchmark author",
+      "relevance": "Two human speakers; RTX 5070 Ti; Q composite; repeated configurations",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "runtime-release",
+      "title": "transcribe.cpp v0.3.1",
+      "url": "https://github.com/handy-computer/transcribe.cpp/releases/tag/v0.3.1",
+      "type": "runtime author",
+      "relevance": "Released 2026-10-04; commit 3f32fbcc7bb3246851a0234263438bc3c0fa1cac",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "runtime-memory",
+      "title": "Parakeet memory change",
+      "url": "https://github.com/handy-computer/transcribe.cpp/commit/139869c291adca73e44dc237fb66305d90b2c367",
+      "type": "runtime source",
+      "relevance": "Changed relative-attention-mask allocation and direct pre-encode convolution",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "runtime-budget",
+      "title": "Decode budget scaling",
+      "url": "https://github.com/handy-computer/transcribe.cpp/commit/ed3468f3881abb9e7b6c7d404f75049aecccb04f",
+      "type": "runtime source",
+      "relevance": "Audio-length-dependent budgets for listed decoder families; not a Parakeet omission fix",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "runtime-catalog",
+      "title": "Pinned native model catalog",
+      "url": "https://github.com/handy-computer/transcribe.cpp/tree/v0.3.1/catalog",
+      "type": "runtime author",
+      "relevance": "Checkpoint-specific language, features, quantization and provenance",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "qwen",
+      "title": "Qwen3-ASR",
+      "url": "https://github.com/QwenLM/Qwen3-ASR",
+      "type": "model author",
+      "relevance": "0.6B/1.7B; RU/EN; published throughput is not local single-request latency",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "qwen06",
+      "title": "Qwen3-ASR 0.6B native port",
+      "url": "https://github.com/handy-computer/transcribe.cpp/blob/v0.3.1/docs/models/qwen3-asr-0.6b.md",
+      "type": "runtime author",
+      "relevance": "Port settings, context/prompt leakage caveat and Apple benchmark scope",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "qwen17",
+      "title": "Qwen3-ASR 1.7B native port",
+      "url": "https://github.com/handy-computer/transcribe.cpp/blob/v0.3.1/docs/models/qwen3-asr-1.7b.md",
+      "type": "runtime author",
+      "relevance": "Native GGUF candidate; own run pending",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "gigaam",
+      "title": "GigaAM",
+      "url": "https://github.com/salute-developers/GigaAM",
+      "type": "model author",
+      "relevance": "v3 RU family differs from the multilingual family",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "gigaam-eval",
+      "title": "GigaAM evaluation",
+      "url": "https://github.com/salute-developers/GigaAM/blob/main/evaluation.md",
+      "type": "model author",
+      "relevance": "Multilingual 220M/600M scores and evaluation exclusions; external results only",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "nemotron",
+      "title": "Nemotron 3.5 ASR 0.6B",
+      "url": "https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b",
+      "type": "model author",
+      "relevance": "Cache-aware streaming; supported RU; explicit auto language; H100 concurrency is separate",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "nemotron-native",
+      "title": "Nemotron native contract",
+      "url": "https://github.com/handy-computer/transcribe.cpp/blob/v0.3.1/docs/models/nemotron-3.5-asr-streaming-0.6b.md",
+      "type": "runtime author",
+      "relevance": "Supported versus adaptation-ready locales, streaming and explicit language contract",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "voxtral",
+      "title": "Voxtral Realtime 4B",
+      "url": "https://huggingface.co/mistralai/Voxtral-Mini-4B-Realtime-2602",
+      "type": "model author",
+      "relevance": "Causal streaming and RU; algorithmic delay is not GUI stop latency",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "whisper-cpp",
+      "title": "whisper.cpp",
+      "url": "https://github.com/ggml-org/whisper.cpp",
+      "type": "runtime author",
+      "relevance": "Native Whisper execution candidate",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "faster-whisper",
+      "title": "faster-whisper",
+      "url": "https://github.com/SYSTRAN/faster-whisper",
+      "type": "runtime author",
+      "relevance": "Batch versus single inference; precision, beam and hardware caveats",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "whisperkit",
+      "title": "WhisperKit / Argmax",
+      "url": "https://github.com/argmaxinc/WhisperKit",
+      "type": "runtime author",
+      "relevance": "Core ML Whisper and device-specific models",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "fluidaudio",
+      "title": "FluidAudio benchmarks",
+      "url": "https://github.com/FluidInference/FluidAudio/blob/main/Documentation/Benchmarks.md",
+      "type": "runtime author",
+      "relevance": "Apple ASR throughput and WER; cold behavior requires own recheck",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "mlx-whisper",
+      "title": "MLX Whisper",
+      "url": "https://github.com/ml-explore/mlx-examples/tree/main/whisper",
+      "type": "runtime author",
+      "relevance": "Apple GPU reference path",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "mlx-audio",
+      "title": "MLX Audio",
+      "url": "https://github.com/Blaizzy/mlx-audio",
+      "type": "runtime author",
+      "relevance": "Multiple STT implementations on Apple GPU",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "mlx-swift",
+      "title": "MLX Audio Swift",
+      "url": "https://github.com/Blaizzy/mlx-audio-swift",
+      "type": "runtime author",
+      "relevance": "Native Swift integration route",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "sherpa",
+      "title": "sherpa-onnx",
+      "url": "https://github.com/k2-fsa/sherpa-onnx",
+      "type": "runtime author",
+      "relevance": "Cross-platform offline and streaming model/runtime contracts",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "vosk",
+      "title": "Vosk model catalog",
+      "url": "https://alphacephei.com/vosk/models",
+      "type": "runtime author",
+      "relevance": "RU/EN CPU alternatives and exact model licenses",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "nemo",
+      "title": "NVIDIA NeMo",
+      "url": "https://github.com/NVIDIA/NeMo",
+      "type": "model/runtime author",
+      "relevance": "Reference implementations, server training/inference",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "whisperx",
+      "title": "WhisperX",
+      "url": "https://github.com/m-bain/whisperX",
+      "type": "runtime author",
+      "relevance": "ASR plus alignment and diarization; distinct work scope",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "open-asr",
+      "title": "Hugging Face Open ASR Leaderboard",
+      "url": "https://github.com/huggingface/open_asr_leaderboard",
+      "type": "benchmark author",
+      "relevance": "Short, long and multilingual partitions, reproducible evaluation",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "fleurs",
+      "title": "FLEURS",
+      "url": "https://huggingface.co/datasets/google/fleurs",
+      "type": "dataset author",
+      "relevance": "Public multilingual read-speech set; existing pinned study has RU/EN",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "stt-ru",
+      "title": "Three-domain Russian STT benchmark",
+      "url": "https://github.com/vakovalskii/stt-ru-benchmark",
+      "type": "benchmark author with service affiliation",
+      "relevance": "Published per-domain outcomes; external hardware/API scope",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "handy",
+      "title": "Handy v0.9.8",
+      "url": "https://github.com/cjpais/Handy/releases/tag/v0.9.8",
+      "type": "application author",
+      "relevance": "Released 2026-10-03; transcribe.cpp 0.2.4 update",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "superwhisper",
+      "title": "Superwhisper models",
+      "url": "https://superwhisper.com/models",
+      "type": "application author",
+      "relevance": "Local/cloud model selection; optional rewrite requires separate lane",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "nemo-speech-cpp",
+      "title": "NVIDIA NeMo-Speech.cpp",
+      "url": "https://github.com/NVIDIA/NeMo-Speech.cpp",
+      "type": "runtime author",
+      "relevance": "Official native runtime with Metal, Parakeet v3 and Nemotron; own Mac comparison pending",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "nemo-finetune",
+      "title": "NeMo Speech ASR fine-tuning",
+      "url": "https://docs.nvidia.com/nemo/speech/latest/asr/fine_tuning.html",
+      "type": "training framework author",
+      "relevance": "Pretrained checkpoint initialization, tokenizer preservation and standard ASR fine-tuning script",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "nemo-datasets",
+      "title": "NeMo Speech ASR datasets",
+      "url": "https://docs.nvidia.com/nemo/speech/latest/asr/datasets.html",
+      "type": "training framework author",
+      "relevance": "Audio/transcript/duration manifest and separate train, validation and test splits",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "nemo-language-adaptation",
+      "title": "NeMo ASR language modeling and customization",
+      "url": "https://docs.nvidia.com/nemo/speech/latest/asr/asr_language_modeling_and_customization.html",
+      "type": "training framework author",
+      "relevance": "LM fusion and phrase boosting, including TDT; not proof of availability in OpenRamble Metal adapter",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "parakeet-converter",
+      "title": "Pinned Parakeet NeMo-to-GGUF converter",
+      "url": "https://github.com/handy-computer/transcribe.cpp/blob/v0.3.1/scripts/convert-parakeet.py",
+      "type": "runtime source",
+      "relevance": "Accepts local .nemo checkpoint, preserves FP32 source weights; custom trained export still needs end-to-end validation",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    }
+  ]
+}
