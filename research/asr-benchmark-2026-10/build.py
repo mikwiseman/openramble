@@ -148,7 +148,9 @@ def plot(domains, filename, title, subtitle):
     fig.text(.04, .021, 'OpenRamble benchmark · 30.09–01.10.2026 · transcribe.cpp 0.2.3 · Q8 · Mac mini M4, 16 GiB',
              fontsize=10, color='#566361')
     fig.subplots_adjust(left=.20, right=.96, top=.85, bottom=.15, wspace=.78, hspace=.62)
-    fig.savefig(HERE / f'{filename}.svg', metadata={'Date': '2026-10-07', 'Creator': 'OpenRamble benchmark'})
+    svg_path = HERE / f'{filename}.svg'
+    fig.savefig(svg_path, metadata={'Date': '2026-10-07', 'Creator': 'OpenRamble benchmark'})
+    svg_path.write_text('\n'.join(line.rstrip() for line in svg_path.read_text().splitlines()) + '\n')
     if filename == 'quality':
         fig.savefig(HERE / f'{filename}.png', dpi=150)
     plt.close(fig)
