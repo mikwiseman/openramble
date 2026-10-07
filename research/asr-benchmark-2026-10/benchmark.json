@@ -1,0 +1,1409 @@
+{
+  "schema": 1,
+  "compiled_on": "2026-10-07",
+  "inference_dates": "2026-09-30 to 2026-10-01",
+  "study_commit": "53dca43",
+  "product_baseline_commit": "ed1d0fe14bda180e7f6977b664f0d9d14e0455fc",
+  "product_version": "0.31.2",
+  "runtime": "transcribe.cpp 0.2.3",
+  "host": {
+    "chip": "Apple M4",
+    "ram_gib": 16,
+    "macos": "26.4"
+  },
+  "models": {
+    "parakeet": {
+      "label": "Parakeet · OpenRamble",
+      "color": "#15766d"
+    },
+    "turbo": {
+      "label": "Whisper Turbo",
+      "color": "#5173b4"
+    },
+    "breeze": {
+      "label": "Breeze-ASR-25",
+      "color": "#b27b35"
+    },
+    "gigaam-e2e-ctc": {
+      "label": "GigaAM v3 CTC · RU",
+      "color": "#986193"
+    }
+  },
+  "quality_scope": "Model configurations in OpenRamble harness; not official competing apps",
+  "normalization": "NFC, lowercase, yo=ye, non-alphanumeric characters become spaces, whitespace collapsed; script and digits preserved",
+  "failure_policy": "empty hypothesis in WER; failure count retained",
+  "public_market_leadership_established": false,
+  "gui_stop_to_insertion_measured": false,
+  "new_inference_in_this_refresh": false,
+  "domains": [
+    {
+      "id": "common_voice_19_mirror/en",
+      "title": "Common Voice 19 · EN",
+      "kind": "human",
+      "examples": 500,
+      "groups": 497,
+      "rows": [
+        {
+          "model": "parakeet",
+          "domain": "common_voice_19_mirror/en",
+          "examples": 500,
+          "groups": 497,
+          "failures": 0,
+          "app": {
+            "cer": 0.03919010123734533,
+            "deletions": 49,
+            "insertions": 32,
+            "reference_units": 4799,
+            "substitutions": 306,
+            "wer": 0.08064180037507813
+          },
+          "raw": {
+            "cer": 0.03919010123734533,
+            "deletions": 49,
+            "insertions": 32,
+            "reference_units": 4799,
+            "substitutions": 306,
+            "wer": 0.08064180037507813
+          },
+          "paired_vs_parakeet": null,
+          "file_timing_screening_only": {
+            "max": 0.272571833,
+            "p50": 0.095854708,
+            "p95": 0.14637211669999992
+          },
+          "source": "main/comparison.json"
+        },
+        {
+          "model": "turbo",
+          "domain": "common_voice_19_mirror/en",
+          "examples": 500,
+          "groups": 497,
+          "failures": 0,
+          "app": {
+            "cer": 0.07253093363329584,
+            "deletions": 62,
+            "insertions": 86,
+            "reference_units": 4799,
+            "substitutions": 468,
+            "wer": 0.12836007501562827
+          },
+          "raw": {
+            "cer": 0.07253093363329584,
+            "deletions": 62,
+            "insertions": 86,
+            "reference_units": 4799,
+            "substitutions": 468,
+            "wer": 0.12836007501562827
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 497,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": 0.04771827464055012,
+            "wer_delta_ci95": [
+              0.03106659108934537,
+              0.06685003453471591
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 2.436607292,
+            "p50": 1.2958470415,
+            "p95": 1.4393117701999996
+          },
+          "source": "main/comparison.json"
+        },
+        {
+          "model": "breeze",
+          "domain": "common_voice_19_mirror/en",
+          "examples": 500,
+          "groups": 497,
+          "failures": 0,
+          "app": {
+            "cer": 0.04584926884139483,
+            "deletions": 32,
+            "insertions": 65,
+            "reference_units": 4799,
+            "substitutions": 366,
+            "wer": 0.09647843300687643
+          },
+          "raw": {
+            "cer": 0.04584926884139483,
+            "deletions": 32,
+            "insertions": 65,
+            "reference_units": 4799,
+            "substitutions": 366,
+            "wer": 0.09647843300687643
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 497,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": 0.01583663263179829,
+            "wer_delta_ci95": [
+              0.006542574099781569,
+              0.025402741086689665
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 3.617299167,
+            "p50": 1.57289525,
+            "p95": 1.70017196875
+          },
+          "source": "main/comparison.json"
+        }
+      ]
+    },
+    {
+      "id": "common_voice_19_mirror/ru",
+      "title": "Common Voice 19 · RU",
+      "kind": "human",
+      "examples": 500,
+      "groups": 425,
+      "rows": [
+        {
+          "model": "parakeet",
+          "domain": "common_voice_19_mirror/ru",
+          "examples": 500,
+          "groups": 425,
+          "failures": 0,
+          "app": {
+            "cer": 0.013390188498784521,
+            "deletions": 28,
+            "insertions": 16,
+            "reference_units": 4199,
+            "substitutions": 192,
+            "wer": 0.0562038580614432
+          },
+          "raw": {
+            "cer": 0.013390188498784521,
+            "deletions": 28,
+            "insertions": 16,
+            "reference_units": 4199,
+            "substitutions": 192,
+            "wer": 0.0562038580614432
+          },
+          "paired_vs_parakeet": null,
+          "file_timing_screening_only": {
+            "max": 0.243194833,
+            "p50": 0.09294295799999999,
+            "p95": 0.14605545655
+          },
+          "source": "main/comparison.json"
+        },
+        {
+          "model": "turbo",
+          "domain": "common_voice_19_mirror/ru",
+          "examples": 500,
+          "groups": 425,
+          "failures": 0,
+          "app": {
+            "cer": 0.03319650898656996,
+            "deletions": 35,
+            "insertions": 23,
+            "reference_units": 4199,
+            "substitutions": 273,
+            "wer": 0.07882829245058347
+          },
+          "raw": {
+            "cer": 0.03319650898656996,
+            "deletions": 35,
+            "insertions": 23,
+            "reference_units": 4199,
+            "substitutions": 273,
+            "wer": 0.07882829245058347
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 425,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": 0.02262443438914027,
+            "wer_delta_ci95": [
+              0.009838647445703449,
+              0.0349819145561899
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 1.546398792,
+            "p50": 1.1639137915,
+            "p95": 1.3775452441
+          },
+          "source": "main/comparison.json"
+        },
+        {
+          "model": "breeze",
+          "domain": "common_voice_19_mirror/ru",
+          "examples": 500,
+          "groups": 425,
+          "failures": 0,
+          "app": {
+            "cer": 0.04236241182799984,
+            "deletions": 38,
+            "insertions": 44,
+            "reference_units": 4199,
+            "substitutions": 340,
+            "wer": 0.10050011907597046
+          },
+          "raw": {
+            "cer": 0.04236241182799984,
+            "deletions": 38,
+            "insertions": 44,
+            "reference_units": 4199,
+            "substitutions": 340,
+            "wer": 0.10050011907597046
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 425,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": 0.04429626101452727,
+            "wer_delta_ci95": [
+              0.028869876386211923,
+              0.06112201400900339
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 2.741109166,
+            "p50": 1.7753212294999998,
+            "p95": 2.18997482085
+          },
+          "source": "main/comparison.json"
+        },
+        {
+          "model": "gigaam-e2e-ctc",
+          "domain": "common_voice_19_mirror/ru",
+          "examples": 500,
+          "groups": 425,
+          "failures": 0,
+          "app": {
+            "cer": 0.006256724983063006,
+            "deletions": 13,
+            "insertions": 7,
+            "reference_units": 4199,
+            "substitutions": 74,
+            "wer": 0.02238628244820195
+          },
+          "raw": {
+            "cer": 0.006256724983063006,
+            "deletions": 13,
+            "insertions": 7,
+            "reference_units": 4199,
+            "substitutions": 74,
+            "wer": 0.02238628244820195
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 425,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": -0.033817575613241245,
+            "wer_delta_ci95": [
+              -0.043900897303320384,
+              -0.023642374867552624
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 0.098842375,
+            "p50": 0.0518843125,
+            "p95": 0.07977979615
+          },
+          "source": "giga-main/comparison.json"
+        }
+      ]
+    },
+    {
+      "id": "golos_crowd_mirror/ru",
+      "title": "Golos Crowd · RU",
+      "kind": "human",
+      "examples": 500,
+      "groups": 497,
+      "rows": [
+        {
+          "model": "parakeet",
+          "domain": "golos_crowd_mirror/ru",
+          "examples": 500,
+          "groups": 497,
+          "failures": 0,
+          "app": {
+            "cer": 0.006592809080405084,
+            "deletions": 12,
+            "insertions": 12,
+            "reference_units": 2558,
+            "substitutions": 58,
+            "wer": 0.03205629397967162
+          },
+          "raw": {
+            "cer": 0.006592809080405084,
+            "deletions": 12,
+            "insertions": 12,
+            "reference_units": 2558,
+            "substitutions": 58,
+            "wer": 0.03205629397967162
+          },
+          "paired_vs_parakeet": null,
+          "file_timing_screening_only": {
+            "max": 0.230415625,
+            "p50": 0.07490747950000001,
+            "p95": 0.1367673628
+          },
+          "source": "main/comparison.json"
+        },
+        {
+          "model": "turbo",
+          "domain": "golos_crowd_mirror/ru",
+          "examples": 500,
+          "groups": 497,
+          "failures": 0,
+          "app": {
+            "cer": 0.1753551281179909,
+            "deletions": 143,
+            "insertions": 28,
+            "reference_units": 2558,
+            "substitutions": 426,
+            "wer": 0.23338545738858482
+          },
+          "raw": {
+            "cer": 0.1753551281179909,
+            "deletions": 143,
+            "insertions": 28,
+            "reference_units": 2558,
+            "substitutions": 426,
+            "wer": 0.23338545738858482
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 497,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": 0.20132916340891321,
+            "wer_delta_ci95": [
+              0.1700765797886162,
+              0.23410490595898392
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 1.723101417,
+            "p50": 1.1924201879999998,
+            "p95": 1.3793621899000001
+          },
+          "source": "main/comparison.json"
+        },
+        {
+          "model": "breeze",
+          "domain": "golos_crowd_mirror/ru",
+          "examples": 500,
+          "groups": 497,
+          "failures": 0,
+          "app": {
+            "cer": 0.29477332970842113,
+            "deletions": 175,
+            "insertions": 62,
+            "reference_units": 2558,
+            "substitutions": 720,
+            "wer": 0.37412040656763096
+          },
+          "raw": {
+            "cer": 0.29477332970842113,
+            "deletions": 175,
+            "insertions": 62,
+            "reference_units": 2558,
+            "substitutions": 720,
+            "wer": 0.37412040656763096
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 497,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": 0.3420641125879593,
+            "wer_delta_ci95": [
+              0.30753896207851633,
+              0.3787492518240609
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 3.5483105,
+            "p50": 1.536954625,
+            "p95": 1.73239479615
+          },
+          "source": "main/comparison.json"
+        },
+        {
+          "model": "gigaam-e2e-ctc",
+          "domain": "golos_crowd_mirror/ru",
+          "examples": 500,
+          "groups": 497,
+          "failures": 0,
+          "app": {
+            "cer": 0.16033439815129477,
+            "deletions": 181,
+            "insertions": 12,
+            "reference_units": 2558,
+            "substitutions": 297,
+            "wer": 0.19155590304925724
+          },
+          "raw": {
+            "cer": 0.16033439815129477,
+            "deletions": 181,
+            "insertions": 12,
+            "reference_units": 2558,
+            "substitutions": 297,
+            "wer": 0.19155590304925724
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 497,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": 0.1594996090695856,
+            "wer_delta_ci95": [
+              0.1266555841104293,
+              0.1942566817336897
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 0.148019333,
+            "p50": 0.0397491875,
+            "p95": 0.07458303784999996
+          },
+          "source": "giga-main/comparison.json"
+        }
+      ]
+    },
+    {
+      "id": "golos_farfield_mirror/ru",
+      "title": "Golos Farfield · RU",
+      "kind": "human",
+      "examples": 500,
+      "groups": 449,
+      "rows": [
+        {
+          "model": "parakeet",
+          "domain": "golos_farfield_mirror/ru",
+          "examples": 500,
+          "groups": 449,
+          "failures": 0,
+          "app": {
+            "cer": 0.022656121272038227,
+            "deletions": 7,
+            "insertions": 15,
+            "reference_units": 2131,
+            "substitutions": 135,
+            "wer": 0.07367433129985922
+          },
+          "raw": {
+            "cer": 0.022656121272038227,
+            "deletions": 7,
+            "insertions": 15,
+            "reference_units": 2131,
+            "substitutions": 135,
+            "wer": 0.07367433129985922
+          },
+          "paired_vs_parakeet": null,
+          "file_timing_screening_only": {
+            "max": 0.1888035,
+            "p50": 0.052093417,
+            "p95": 0.09057638095
+          },
+          "source": "main/comparison.json"
+        },
+        {
+          "model": "turbo",
+          "domain": "golos_farfield_mirror/ru",
+          "examples": 500,
+          "groups": 449,
+          "failures": 0,
+          "app": {
+            "cer": 0.06986323941341242,
+            "deletions": 30,
+            "insertions": 32,
+            "reference_units": 2131,
+            "substitutions": 362,
+            "wer": 0.1989676208352886
+          },
+          "raw": {
+            "cer": 0.06986323941341242,
+            "deletions": 30,
+            "insertions": 32,
+            "reference_units": 2131,
+            "substitutions": 362,
+            "wer": 0.1989676208352886
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 449,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": 0.12529328953542937,
+            "wer_delta_ci95": [
+              0.10347912873840157,
+              0.14696427087085423
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 1.571017959,
+            "p50": 1.1614363330000002,
+            "p95": 1.38801797675
+          },
+          "source": "main/comparison.json"
+        },
+        {
+          "model": "breeze",
+          "domain": "golos_farfield_mirror/ru",
+          "examples": 500,
+          "groups": 449,
+          "failures": 0,
+          "app": {
+            "cer": 0.2392486406327237,
+            "deletions": 33,
+            "insertions": 102,
+            "reference_units": 2131,
+            "substitutions": 683,
+            "wer": 0.3838573439699671
+          },
+          "raw": {
+            "cer": 0.2392486406327237,
+            "deletions": 33,
+            "insertions": 102,
+            "reference_units": 2131,
+            "substitutions": 683,
+            "wer": 0.3838573439699671
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 449,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": 0.31018301267010795,
+            "wer_delta_ci95": [
+              0.2736382124551419,
+              0.3466862552532062
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 2.955563125,
+            "p50": 1.540587125,
+            "p95": 1.8082097353999993
+          },
+          "source": "main/comparison.json"
+        },
+        {
+          "model": "gigaam-e2e-ctc",
+          "domain": "golos_farfield_mirror/ru",
+          "examples": 500,
+          "groups": 449,
+          "failures": 0,
+          "app": {
+            "cer": 0.029082221123743614,
+            "deletions": 17,
+            "insertions": 4,
+            "reference_units": 2131,
+            "substitutions": 133,
+            "wer": 0.07226654152979822
+          },
+          "raw": {
+            "cer": 0.029082221123743614,
+            "deletions": 17,
+            "insertions": 4,
+            "reference_units": 2131,
+            "substitutions": 133,
+            "wer": 0.07226654152979822
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 449,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": -0.0014077897700610043,
+            "wer_delta_ci95": [
+              -0.015625359360625576,
+              0.012082628872944213
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 0.108749458,
+            "p50": 0.030524792,
+            "p95": 0.048427023249999986
+          },
+          "source": "giga-main/comparison.json"
+        }
+      ]
+    },
+    {
+      "id": "fleurs/en",
+      "title": "FLEURS · EN",
+      "kind": "human",
+      "examples": 647,
+      "groups": 350,
+      "rows": [
+        {
+          "model": "parakeet",
+          "domain": "fleurs/en",
+          "examples": 647,
+          "groups": 350,
+          "failures": 0,
+          "app": {
+            "cer": 0.024461028192371476,
+            "deletions": 158,
+            "insertions": 69,
+            "reference_units": 14571,
+            "substitutions": 565,
+            "wer": 0.054354539839407044
+          },
+          "raw": {
+            "cer": 0.024461028192371476,
+            "deletions": 158,
+            "insertions": 69,
+            "reference_units": 14571,
+            "substitutions": 565,
+            "wer": 0.054354539839407044
+          },
+          "paired_vs_parakeet": null,
+          "file_timing_screening_only": {
+            "max": 0.416339291,
+            "p50": 0.138261792,
+            "p95": 0.23461637059999987
+          },
+          "source": "holdout/comparison.json"
+        },
+        {
+          "model": "turbo",
+          "domain": "fleurs/en",
+          "examples": 647,
+          "groups": 350,
+          "failures": 0,
+          "app": {
+            "cer": 0.02233087436381312,
+            "deletions": 113,
+            "insertions": 87,
+            "reference_units": 14571,
+            "substitutions": 517,
+            "wer": 0.04920732962734198
+          },
+          "raw": {
+            "cer": 0.02233087436381312,
+            "deletions": 113,
+            "insertions": 87,
+            "reference_units": 14571,
+            "substitutions": 517,
+            "wer": 0.04920732962734198
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 350,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": -0.005147210212065061,
+            "wer_delta_ci95": [
+              -0.009104168008268998,
+              -0.0013691338905744486
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 1.375397125,
+            "p50": 1.1599907919999999,
+            "p95": 1.2320733293
+          },
+          "source": "holdout/comparison.json"
+        },
+        {
+          "model": "breeze",
+          "domain": "fleurs/en",
+          "examples": 647,
+          "groups": 350,
+          "failures": 0,
+          "app": {
+            "cer": 0.028707039515068335,
+            "deletions": 94,
+            "insertions": 137,
+            "reference_units": 14571,
+            "substitutions": 555,
+            "wer": 0.05394276302244184
+          },
+          "raw": {
+            "cer": 0.028707039515068335,
+            "deletions": 94,
+            "insertions": 137,
+            "reference_units": 14571,
+            "substitutions": 555,
+            "wer": 0.05394276302244184
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 350,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": -0.00041177681696520483,
+            "wer_delta_ci95": [
+              -0.0061545284278424,
+              0.0050849270032255044
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 2.898953375,
+            "p50": 2.079742834,
+            "p95": 2.3868696410999997
+          },
+          "source": "holdout/comparison.json"
+        }
+      ]
+    },
+    {
+      "id": "fleurs/ru",
+      "title": "FLEURS · RU",
+      "kind": "human",
+      "examples": 775,
+      "groups": 344,
+      "rows": [
+        {
+          "model": "parakeet",
+          "domain": "fleurs/ru",
+          "examples": 775,
+          "groups": 344,
+          "failures": 0,
+          "app": {
+            "cer": 0.016354783064392864,
+            "deletions": 98,
+            "insertions": 52,
+            "reference_units": 15098,
+            "substitutions": 688,
+            "wer": 0.05550404027023447
+          },
+          "raw": {
+            "cer": 0.016354783064392864,
+            "deletions": 98,
+            "insertions": 52,
+            "reference_units": 15098,
+            "substitutions": 688,
+            "wer": 0.05550404027023447
+          },
+          "paired_vs_parakeet": null,
+          "file_timing_screening_only": {
+            "max": 0.530387833,
+            "p50": 0.161853375,
+            "p95": 0.28617108299999994
+          },
+          "source": "holdout/comparison.json"
+        },
+        {
+          "model": "turbo",
+          "domain": "fleurs/ru",
+          "examples": 775,
+          "groups": 344,
+          "failures": 1,
+          "app": {
+            "cer": 0.016747821909732077,
+            "deletions": 129,
+            "insertions": 53,
+            "reference_units": 15098,
+            "substitutions": 543,
+            "wer": 0.04801960524572791
+          },
+          "raw": {
+            "cer": 0.016747821909732077,
+            "deletions": 129,
+            "insertions": 53,
+            "reference_units": 15098,
+            "substitutions": 543,
+            "wer": 0.04801960524572791
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 344,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": -0.007484435024506558,
+            "wer_delta_ci95": [
+              -0.0144753620463601,
+              0.001883040701840509
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 1.489253667,
+            "p50": 1.206127041,
+            "p95": 1.3365156397
+          },
+          "source": "holdout/comparison.json"
+        },
+        {
+          "model": "breeze",
+          "domain": "fleurs/ru",
+          "examples": 775,
+          "groups": 344,
+          "failures": 1,
+          "app": {
+            "cer": 0.03300434526279014,
+            "deletions": 123,
+            "insertions": 103,
+            "reference_units": 15098,
+            "substitutions": 791,
+            "wer": 0.06735991522055901
+          },
+          "raw": {
+            "cer": 0.03300434526279014,
+            "deletions": 123,
+            "insertions": 103,
+            "reference_units": 15098,
+            "substitutions": 791,
+            "wer": 0.06735991522055901
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 344,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": 0.011855874950324547,
+            "wer_delta_ci95": [
+              0.004371368180242179,
+              0.02130954316043614
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 3.572676791,
+            "p50": 2.2428808755,
+            "p95": 2.8479461313499996
+          },
+          "source": "holdout/comparison.json"
+        },
+        {
+          "model": "gigaam-e2e-ctc",
+          "domain": "fleurs/ru",
+          "examples": 775,
+          "groups": 344,
+          "failures": 1,
+          "app": {
+            "cer": 0.018614756425093346,
+            "deletions": 134,
+            "insertions": 53,
+            "reference_units": 15098,
+            "substitutions": 570,
+            "wer": 0.050139091270366934
+          },
+          "raw": {
+            "cer": 0.018614756425093346,
+            "deletions": 134,
+            "insertions": 53,
+            "reference_units": 15098,
+            "substitutions": 570,
+            "wer": 0.050139091270366934
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 344,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": -0.005364948999867532,
+            "wer_delta_ci95": [
+              -0.012850358395889848,
+              0.004065316808059384
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 0.252464833,
+            "p50": 0.0982866875,
+            "p95": 0.1680631982499999
+          },
+          "source": "holdout-ru/comparison.json"
+        }
+      ]
+    },
+    {
+      "id": "eleven_v4_short/ru",
+      "title": "Технические фразы · RU",
+      "kind": "synthetic",
+      "examples": 15,
+      "groups": 5,
+      "rows": [
+        {
+          "model": "parakeet",
+          "domain": "eleven_v4_short/ru",
+          "examples": 15,
+          "groups": 5,
+          "failures": 0,
+          "app": {
+            "cer": 0.0800615858352579,
+            "deletions": 0,
+            "insertions": 10,
+            "reference_units": 231,
+            "substitutions": 11,
+            "wer": 0.09090909090909091
+          },
+          "raw": {
+            "cer": 0.08468052347959969,
+            "deletions": 0,
+            "insertions": 10,
+            "reference_units": 231,
+            "substitutions": 12,
+            "wer": 0.09523809523809523
+          },
+          "paired_vs_parakeet": null,
+          "file_timing_screening_only": {
+            "max": 0.152582875,
+            "p50": 0.116843875,
+            "p95": 0.1489250537
+          },
+          "source": "synthetic-holdout/comparison.json"
+        },
+        {
+          "model": "turbo",
+          "domain": "eleven_v4_short/ru",
+          "examples": 15,
+          "groups": 5,
+          "failures": 0,
+          "app": {
+            "cer": 0.033102386451116246,
+            "deletions": 0,
+            "insertions": 0,
+            "reference_units": 231,
+            "substitutions": 7,
+            "wer": 0.030303030303030304
+          },
+          "raw": {
+            "cer": 0.033102386451116246,
+            "deletions": 0,
+            "insertions": 0,
+            "reference_units": 231,
+            "substitutions": 7,
+            "wer": 0.030303030303030304
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 5,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": -0.06060606060606061,
+            "wer_delta_ci95": [
+              -0.13821138211382114,
+              0.0
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 1.168214166,
+            "p50": 1.125807542,
+            "p95": 1.165387041
+          },
+          "source": "synthetic-holdout/comparison.json"
+        },
+        {
+          "model": "breeze",
+          "domain": "eleven_v4_short/ru",
+          "examples": 15,
+          "groups": 5,
+          "failures": 0,
+          "app": {
+            "cer": 0.046189376443418015,
+            "deletions": 0,
+            "insertions": 5,
+            "reference_units": 231,
+            "substitutions": 17,
+            "wer": 0.09523809523809523
+          },
+          "raw": {
+            "cer": 0.046189376443418015,
+            "deletions": 0,
+            "insertions": 5,
+            "reference_units": 231,
+            "substitutions": 17,
+            "wer": 0.09523809523809523
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 5,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": 0.004329004329004329,
+            "wer_delta_ci95": [
+              -0.047058823529411764,
+              0.07042253521126761
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 1.9511699999999998,
+            "p50": 1.791059791,
+            "p95": 1.949612325
+          },
+          "source": "synthetic-holdout/comparison.json"
+        },
+        {
+          "model": "gigaam-e2e-ctc",
+          "domain": "eleven_v4_short/ru",
+          "examples": 15,
+          "groups": 5,
+          "failures": 0,
+          "app": {
+            "cer": 0.123941493456505,
+            "deletions": 6,
+            "insertions": 6,
+            "reference_units": 231,
+            "substitutions": 31,
+            "wer": 0.18614718614718614
+          },
+          "raw": {
+            "cer": 0.14857582755966128,
+            "deletions": 6,
+            "insertions": 8,
+            "reference_units": 231,
+            "substitutions": 35,
+            "wer": 0.21212121212121213
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 5,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": 0.09523809523809523,
+            "wer_delta_ci95": [
+              0.013157894736842105,
+              0.21759259259259256
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 0.093325209,
+            "p50": 0.067873917,
+            "p95": 0.08859898399999999
+          },
+          "source": "giga-synthetic-holdout/comparison.json"
+        }
+      ]
+    },
+    {
+      "id": "eleven_v4_short/en",
+      "title": "Технические фразы · EN",
+      "kind": "synthetic",
+      "examples": 15,
+      "groups": 5,
+      "rows": [
+        {
+          "model": "parakeet",
+          "domain": "eleven_v4_short/en",
+          "examples": 15,
+          "groups": 5,
+          "failures": 0,
+          "app": {
+            "cer": 0.10336538461538461,
+            "deletions": 1,
+            "insertions": 15,
+            "reference_units": 273,
+            "substitutions": 13,
+            "wer": 0.10622710622710622
+          },
+          "raw": {
+            "cer": 0.10336538461538461,
+            "deletions": 1,
+            "insertions": 15,
+            "reference_units": 273,
+            "substitutions": 13,
+            "wer": 0.10622710622710622
+          },
+          "paired_vs_parakeet": null,
+          "file_timing_screening_only": {
+            "max": 0.140846959,
+            "p50": 0.109154917,
+            "p95": 0.1399390583
+          },
+          "source": "synthetic-holdout/comparison.json"
+        },
+        {
+          "model": "turbo",
+          "domain": "eleven_v4_short/en",
+          "examples": 15,
+          "groups": 5,
+          "failures": 0,
+          "app": {
+            "cer": 0.04807692307692308,
+            "deletions": 3,
+            "insertions": 0,
+            "reference_units": 273,
+            "substitutions": 12,
+            "wer": 0.054945054945054944
+          },
+          "raw": {
+            "cer": 0.04807692307692308,
+            "deletions": 3,
+            "insertions": 0,
+            "reference_units": 273,
+            "substitutions": 12,
+            "wer": 0.054945054945054944
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 5,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": -0.05128205128205128,
+            "wer_delta_ci95": [
+              -0.1439807558342041,
+              0.0
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 1.116737667,
+            "p50": 1.0858385,
+            "p95": 1.1162841839
+          },
+          "source": "synthetic-holdout/comparison.json"
+        },
+        {
+          "model": "breeze",
+          "domain": "eleven_v4_short/en",
+          "examples": 15,
+          "groups": 5,
+          "failures": 0,
+          "app": {
+            "cer": 0.07692307692307693,
+            "deletions": 1,
+            "insertions": 8,
+            "reference_units": 273,
+            "substitutions": 10,
+            "wer": 0.0695970695970696
+          },
+          "raw": {
+            "cer": 0.07692307692307693,
+            "deletions": 1,
+            "insertions": 8,
+            "reference_units": 273,
+            "substitutions": 10,
+            "wer": 0.0695970695970696
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 5,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": -0.03663003663003663,
+            "wer_delta_ci95": [
+              -0.09851314872866597,
+              0.0
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 1.731636833,
+            "p50": 1.678557625,
+            "p95": 1.7294424499
+          },
+          "source": "synthetic-holdout/comparison.json"
+        }
+      ]
+    },
+    {
+      "id": "eleven_v4_short/mixed",
+      "title": "Технические фразы · RU + EN",
+      "kind": "synthetic",
+      "examples": 6,
+      "groups": 2,
+      "rows": [
+        {
+          "model": "parakeet",
+          "domain": "eleven_v4_short/mixed",
+          "examples": 6,
+          "groups": 2,
+          "failures": 0,
+          "app": {
+            "cer": 0.07051282051282051,
+            "deletions": 0,
+            "insertions": 2,
+            "reference_units": 96,
+            "substitutions": 9,
+            "wer": 0.11458333333333333
+          },
+          "raw": {
+            "cer": 0.07051282051282051,
+            "deletions": 0,
+            "insertions": 2,
+            "reference_units": 96,
+            "substitutions": 9,
+            "wer": 0.11458333333333333
+          },
+          "paired_vs_parakeet": null,
+          "file_timing_screening_only": {
+            "max": 0.123501084,
+            "p50": 0.1155149165,
+            "p95": 0.12330141725
+          },
+          "source": "synthetic-holdout/comparison.json"
+        },
+        {
+          "model": "turbo",
+          "domain": "eleven_v4_short/mixed",
+          "examples": 6,
+          "groups": 2,
+          "failures": 0,
+          "app": {
+            "cer": 0.04487179487179487,
+            "deletions": 1,
+            "insertions": 1,
+            "reference_units": 96,
+            "substitutions": 6,
+            "wer": 0.08333333333333333
+          },
+          "raw": {
+            "cer": 0.04487179487179487,
+            "deletions": 1,
+            "insertions": 1,
+            "reference_units": 96,
+            "substitutions": 6,
+            "wer": 0.08333333333333333
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 2,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": -0.03125,
+            "wer_delta_ci95": [
+              -0.058823529411764705,
+              0.0
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 1.132397625,
+            "p50": 1.1047825,
+            "p95": 1.1261610625
+          },
+          "source": "synthetic-holdout/comparison.json"
+        },
+        {
+          "model": "breeze",
+          "domain": "eleven_v4_short/mixed",
+          "examples": 6,
+          "groups": 2,
+          "failures": 0,
+          "app": {
+            "cer": 0.0811965811965812,
+            "deletions": 3,
+            "insertions": 0,
+            "reference_units": 96,
+            "substitutions": 13,
+            "wer": 0.16666666666666666
+          },
+          "raw": {
+            "cer": 0.0811965811965812,
+            "deletions": 3,
+            "insertions": 0,
+            "reference_units": 96,
+            "substitutions": 13,
+            "wer": 0.16666666666666666
+          },
+          "paired_vs_parakeet": {
+            "independent_groups": 2,
+            "method": "paired bootstrap of source groups; word-weighted WER",
+            "resamples": 2000,
+            "seed": 20260930,
+            "wer_delta": 0.052083333333333336,
+            "wer_delta_ci95": [
+              -0.06666666666666667,
+              0.1568627450980392
+            ]
+          },
+          "file_timing_screening_only": {
+            "max": 1.773561,
+            "p50": 1.6695666665000002,
+            "p95": 1.74931192725
+          },
+          "source": "synthetic-holdout/comparison.json"
+        }
+      ]
+    }
+  ],
+  "latency": {
+    "scope": "Repeated predecoded adapter inference, not file decode or GUI insertion",
+    "order": [
+      "parakeet-a",
+      "gigaam-e2e-ctc-a",
+      "gigaam-e2e-ctc-b",
+      "parakeet-b"
+    ],
+    "plan_sha256": "e8ec31d9cd413a07603f85ac9e6c1e8795c7272eb00db47cc078d73ac53bc87d",
+    "reports": {
+      "parakeet-a": {
+        "model_id": "parakeet",
+        "sets": {
+          "en": {
+            "observations": 120,
+            "fixtures": 6,
+            "p50_seconds": 0.0882870625,
+            "p95_seconds": 0.1207876899,
+            "max_seconds": 0.129472542,
+            "unstable_normalized_outputs": 0
+          },
+          "ru": {
+            "observations": 120,
+            "fixtures": 6,
+            "p50_seconds": 0.08874610399999999,
+            "p95_seconds": 0.15182958895,
+            "max_seconds": 0.163914041,
+            "unstable_normalized_outputs": 0
+          }
+        },
+        "process_peak_memory_bytes": 939409408,
+        "output_sha256": "955525cff210f475939f24c37ede781fd0b3231ddf7d51c95ae82db7c9d7cf27"
+      },
+      "gigaam-e2e-ctc-a": {
+        "model_id": "gigaam-e2e-ctc",
+        "sets": {
+          "ru": {
+            "observations": 120,
+            "fixtures": 6,
+            "p50_seconds": 0.04627375,
+            "p95_seconds": 0.07515903155,
+            "max_seconds": 0.085003875,
+            "unstable_normalized_outputs": 0
+          }
+        },
+        "process_peak_memory_bytes": 347701248,
+        "output_sha256": "5daa5448a05e23a2b85e38507335217f4ccc16c28c2fb7a88d375d3894e9d85a"
+      },
+      "gigaam-e2e-ctc-b": {
+        "model_id": "gigaam-e2e-ctc",
+        "sets": {
+          "ru": {
+            "observations": 120,
+            "fixtures": 6,
+            "p50_seconds": 0.045772396,
+            "p95_seconds": 0.0752557229,
+            "max_seconds": 0.079723959,
+            "unstable_normalized_outputs": 0
+          }
+        },
+        "process_peak_memory_bytes": 346669056,
+        "output_sha256": "db375baff8c961b999445894b7ea29f622fa59eda99df8f5dbe1bd45020dda6d"
+      },
+      "parakeet-b": {
+        "model_id": "parakeet",
+        "sets": {
+          "en": {
+            "observations": 120,
+            "fixtures": 6,
+            "p50_seconds": 0.0888267085,
+            "p95_seconds": 0.1215460417,
+            "max_seconds": 0.127604,
+            "unstable_normalized_outputs": 0
+          },
+          "ru": {
+            "observations": 120,
+            "fixtures": 6,
+            "p50_seconds": 0.090030125,
+            "p95_seconds": 0.15086221635,
+            "max_seconds": 0.155618959,
+            "unstable_normalized_outputs": 0
+          }
+        },
+        "process_peak_memory_bytes": 938999808,
+        "output_sha256": "ed0c0511d02ec5157edaf5b443953ead10348e4975bac6b029c7ec6e1ee21e16"
+      }
+    },
+    "limitations": "ABBA process brackets; six source inputs per language, repeated observations are not independent quality examples; no GUI timer"
+  },
+  "source_sha256": {
+    "main/comparison.json": "40045c0b5383175607a6621dc0b6ce1b5c0d67cf6fc9d52f50449b658be6daf9",
+    "giga-main/comparison.json": "bce088b1d578b400f47c71096ca522b01384b68d8d861d71e889311125fd71fe",
+    "holdout/comparison.json": "2b52019596aaf1d548049b3e31ff82e5e9ab17faa125d71e8ed288f99bdf00cc",
+    "synthetic-holdout/comparison.json": "6ac6c8660e1a0107576378c5b9b9bd44ecf5bad8e2edf883ffcb74221b73e53b",
+    "holdout-ru/comparison.json": "c4032fa62bb13367a1e0e43a1201b02051490e6a07dc5a144fbe049bec85f88e",
+    "giga-synthetic-holdout/comparison.json": "d98752886ad2fe52a2a5338b6938b3dbdd50efb5491a3de0980e3869d8c5f4ac",
+    "runtime/idle-latency.json": "713a07ba5d4452e5d4a5c4996bd9e3767b4ad47161fcbfd61661ae3497240c43"
+  }
+}

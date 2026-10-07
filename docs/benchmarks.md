@@ -1,5 +1,9 @@
 # Benchmark methodology
 
+The [October overview](../research/asr-benchmark-2026-10/README.md) consolidates
+the existing measurements into a [visual comparison](../research/asr-benchmark-2026-10/index.html),
+with current external sources and a staged plan. It adds no new inference runs.
+
 ## Current runtime quality comparison (2026-09-30)
 
 The [quality study plan](../research/asr-quality-2026-09/PLAN.md) fixes the
