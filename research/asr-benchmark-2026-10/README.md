@@ -40,6 +40,12 @@ default in the tested class, but a claim of overall market leadership is not
 established. The highest-value next experiments are the newer native runtime,
 properly tuned Whisper controls, and a genuine RU/EN streaming candidate.
 
+The Russian report also contains a staged improvement roadmap: small runtime
+and text-correction experiments, measured pipeline issues, ready-made model
+alternatives, and only then a GPU fine-tuning pilot that must verify export back
+to Mac. Fine-tuning needs checked audio/transcript pairs; text-only adaptation
+and TTS-derived training are described separately. No training was launched.
+
 ## Verification of this presentation
 
 The builder validated 32 model/domain rows, shared reference denominators,
@@ -55,3 +61,14 @@ stages (three LocalASR tests skipped), then stopped at the Swift/Rust bridge.
 while loading a generated Rust proc-macro library. The host reports Rust 1.88.0;
 CI pins 1.97.1. The repository gate is **not green** on this host. No application
 source was modified to work around that build failure.
+
+The subsequent [CI run for `ba173f0`](https://github.com/mikwiseman/openramble/actions/runs/37576330235)
+completed all 14 checks successfully, including the Swift/Rust bridge. This
+confirms that commit's CI result without changing the local failure record.
+The following roadmap extension changes prose and the source inventory only.
+
+Its local `check.sh --fast` retry passed DictationCore and then stopped earlier,
+in LocalASR: the existing ready-PCM-to-test-insertion latency test measured
+1.0345 s for the fixture labeled “half a minute”, over its 1 s budget. This
+single observation is recorded in the roadmap, not imported into the benchmark
+charts or treated as a controlled regression. No thresholds were changed.

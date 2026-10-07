@@ -288,6 +288,51 @@
       "relevance": "Local/cloud model selection; optional rewrite requires separate lane",
       "checked_on": "2026-10-07",
       "measured_by_this_refresh": false
+    },
+    {
+      "id": "nemo-speech-cpp",
+      "title": "NVIDIA NeMo-Speech.cpp",
+      "url": "https://github.com/NVIDIA/NeMo-Speech.cpp",
+      "type": "runtime author",
+      "relevance": "Official native runtime with Metal, Parakeet v3 and Nemotron; own Mac comparison pending",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "nemo-finetune",
+      "title": "NeMo Speech ASR fine-tuning",
+      "url": "https://docs.nvidia.com/nemo/speech/latest/asr/fine_tuning.html",
+      "type": "training framework author",
+      "relevance": "Pretrained checkpoint initialization, tokenizer preservation and standard ASR fine-tuning script",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "nemo-datasets",
+      "title": "NeMo Speech ASR datasets",
+      "url": "https://docs.nvidia.com/nemo/speech/latest/asr/datasets.html",
+      "type": "training framework author",
+      "relevance": "Audio/transcript/duration manifest and separate train, validation and test splits",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "nemo-language-adaptation",
+      "title": "NeMo ASR language modeling and customization",
+      "url": "https://docs.nvidia.com/nemo/speech/latest/asr/asr_language_modeling_and_customization.html",
+      "type": "training framework author",
+      "relevance": "LM fusion and phrase boosting, including TDT; not proof of availability in OpenRamble Metal adapter",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
+    },
+    {
+      "id": "parakeet-converter",
+      "title": "Pinned Parakeet NeMo-to-GGUF converter",
+      "url": "https://github.com/handy-computer/transcribe.cpp/blob/v0.3.1/scripts/convert-parakeet.py",
+      "type": "runtime source",
+      "relevance": "Accepts local .nemo checkpoint, preserves FP32 source weights; custom trained export still needs end-to-end validation",
+      "checked_on": "2026-10-07",
+      "measured_by_this_refresh": false
     }
   ]
 }
