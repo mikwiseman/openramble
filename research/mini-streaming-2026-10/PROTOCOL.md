@@ -90,3 +90,23 @@ desktop background work and keep the process snapshots. Do not interrupt
 other work. Abort if any real compilation/linking starts during inference.
 The first file runner only waited; it produced no measurements before this
 gate adjustment. Preserve that wait log as files-v1 and start files-v2.
+
+## Resource reset and new scaling series, 16:18 UTC
+
+The user explicitly authorized shutting down competing work to finish the
+benchmark map and then test improvement hypotheses. Two simulators from the
+morning session were already shut down. With no active build or XCTest
+process, the remaining idle iPhone simulator was shut down by its exact ID.
+Before that shutdown, swap use was approximately 3.4 GiB instead of 12 GiB,
+memory pressure was normal, and free disk space had increased to 12 GiB.
+The private evidence includes before/after process and memory snapshots.
+
+This is a new resource condition. It supersedes the earlier prohibition on
+another four-model attempt: run a new smoke series, then a fresh 1/2/4 file
+matrix only if the smoke passes. Keep the same immediate memory-pressure
+abort, compiler gate, model, fixtures and binary. Preserve all earlier
+failures and the four incomplete pilot timings; do not pool those timings
+with the new primary series. If four models warn again, keep that cell as
+unmeasured and continue the supported worker counts. The real-time controller,
+meeting and long-capture matrices remain as registered above. Other resource
+changes must be recorded, and inference never overlaps our own builds.
