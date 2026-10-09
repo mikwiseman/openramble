@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.31.2</title>
-      <pubDate>Tue, 29 Sep 2026 14:12:29 +0300</pubDate>
-      <sparkle:version>74</sparkle:version>
-      <sparkle:shortVersionString>0.31.2</sparkle:shortVersionString>
+      <title>0.32.0</title>
+      <pubDate>Fri, 09 Oct 2026 09:34:04 +0300</pubDate>
+      <sparkle:version>75</sparkle:version>
+      <sparkle:shortVersionString>0.32.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.31.2&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Long dictations, including speech without pauses and recognition retried from history, use bounded audio fragments instead of one large inference call. Speech already recognized during dictation is still reused.&lt;/li&gt;&lt;li&gt;Stopping a recording and finishing its WAV have more time to complete on a busy Mac. Healthy operations finish immediately; genuine stalls still preserve the local take for recovery.&lt;/li&gt;&lt;li&gt;Cancelling dictation stops its queued recognition work and prevents late results from appearing in the next dictation.&lt;/li&gt;&lt;li&gt;Local error reports identify the failed stage and why a recording needed recognition again. Reports still exclude audio, dictated text and error-message contents, and are shared only when you choose.&lt;/li&gt;&lt;/ul&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.31.2/OpenRamble-0.31.2.dmg" length="13321476" type="application/octet-stream" sparkle:edSignature="Pui6dWanNzDJUOUQYet/qpeLq0Tj0N1Sp9v0maRCidFIROAAkZHl/9CPUm6mmOjqpDbMfDsahcwnUn0j4autDg==" />
+      <description>&lt;h2&gt;OpenRamble 0.32.0&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Choose English or Russian on the welcome screen or in Settings → General → Language. English is the default, regardless of the Mac&amp;#x27;s language.&lt;/li&gt;&lt;li&gt;The interface switches immediately and remembers your choice. Setup, settings, dictation notices, the recordings library, transcript exports and accessibility descriptions are translated. macOS dialogs and system menus use the selected language after the next launch.&lt;/li&gt;&lt;li&gt;Russian dates, durations and recording controls follow the selected interface language. Recordings, their names and your own text stay unchanged.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Speech recognition, models and privacy settings are unchanged.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.32.0/OpenRamble-0.32.0.dmg" length="12902902" type="application/octet-stream" sparkle:edSignature="sQwd2lZ9TZg6M2ZMCaXTh4NI1595LqQgaX/54ECARUmj7M5nWeFJanuYOhJkm+XQvSevbhZ7mnlIF6TT5myoAQ==" />
     </item>
   </channel>
 </rss>
