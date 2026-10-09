@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="936pt" height="532.8pt" viewBox="0 0 936 532.8" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-10-09T13:02:06.600142</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 532.8
+L 936 532.8
+L 936 0
+L 0 0
+z
+" style="fill: #f6f5f0"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 187.2 383.616
+L 448.573585 383.616
+L 448.573585 165.168
+L 187.2 165.168
+z
+" style="fill: #f6f5f0"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <path d="M 187.2 383.616
+L 187.2 165.168
+" clip-path="url(#p172278dd18)" style="fill: none; stroke: #dce1da; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_2"/>
+     <g id="text_1">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #637067" x="187.2" y="401.733188" transform="rotate(-0 187.2 401.733188)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_3">
+      <path d="M 253.245259 383.616
+L 253.245259 165.168
+" clip-path="url(#p172278dd18)" style="fill: none; stroke: #dce1da; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_4"/>
+     <g id="text_2">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #637067" x="253.245259" y="401.733188" transform="rotate(-0 253.245259 401.733188)">2</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_5">
+      <path d="M 319.290517 383.616
+L 319.290517 165.168
+" clip-path="url(#p172278dd18)" style="fill: none; stroke: #dce1da; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6"/>
+     <g id="text_3">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #637067" x="319.290517" y="401.733188" transform="rotate(-0 319.290517 401.733188)">4</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_7">
+      <path d="M 385.335776 383.616
+L 385.335776 165.168
+" clip-path="url(#p172278dd18)" style="fill: none; stroke: #dce1da; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8"/>
+     <g id="text_4">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #637067" x="385.335776" y="401.733188" transform="rotate(-0 385.335776 401.733188)">6</text>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_9"/>
+     <g id="text_5">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #202923" x="178.2" y="193.352316" transform="rotate(-0 178.2 193.352316)">OpenRamble</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_10"/>
+     <g id="text_6">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #202923" x="178.2" y="250.418147" transform="rotate(-0 178.2 250.418147)">Handy</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_11"/>
+     <g id="text_7">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #202923" x="178.2" y="307.483978" transform="rotate(-0 178.2 307.483978)">whisper.cpp · Turbo</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_12"/>
+     <g id="text_8">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #202923" x="178.2" y="364.549809" transform="rotate(-0 178.2 364.549809)">Superwhisper · Turbo</text>
+     </g>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 187.2 175.097455
+L 383.721492 175.097455
+L 383.721492 202.489053
+L 187.2 202.489053
+z
+" clip-path="url(#p172278dd18)" style="fill: #197458"/>
+   </g>
+   <g id="text_9">
+    <text style="font-weight: 700; font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="387.023755" y="191.910441" transform="rotate(-0 387.023755 191.910441)">5,95%</text>
+   </g>
+   <g id="patch_4">
+    <path d="M 187.2 232.163285
+L 383.721492 232.163285
+L 383.721492 259.554884
+L 187.2 259.554884
+z
+" clip-path="url(#p172278dd18)" style="fill: #90988f"/>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="387.023755" y="248.976272" transform="rotate(-0 387.023755 248.976272)">5,95%</text>
+   </g>
+   <g id="patch_5">
+    <path d="M 187.2 289.229116
+L 357.40165 289.229116
+L 357.40165 316.620715
+L 187.2 316.620715
+z
+" clip-path="url(#p172278dd18)" style="fill: #627b9b"/>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="360.703913" y="306.042103" transform="rotate(-0 360.703913 306.042103)">5,15%</text>
+   </g>
+   <g id="patch_6">
+    <path d="M 187.2 346.294947
+L 366.174931 346.294947
+L 366.174931 373.686545
+L 187.2 373.686545
+z
+" clip-path="url(#p172278dd18)" style="fill: #956978"/>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="369.477194" y="363.107934" transform="rotate(-0 369.477194 363.107934)">5,42%</text>
+   </g>
+   <g id="text_13">
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="187.2" y="145.168" transform="rotate(-0 187.2 145.168)">Русский · 100 записей</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_7">
+    <path d="M 618.466415 383.616
+L 879.84 383.616
+L 879.84 165.168
+L 618.466415 165.168
+z
+" style="fill: #f6f5f0"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_5">
+     <g id="line2d_13">
+      <path d="M 618.466415 383.616
+L 618.466415 165.168
+" clip-path="url(#p17b9ae7ce4)" style="fill: none; stroke: #dce1da; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14"/>
+     <g id="text_14">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #637067" x="618.466415" y="401.733188" transform="rotate(-0 618.466415 401.733188)">0</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_15">
+      <path d="M 684.633809 383.616
+L 684.633809 165.168
+" clip-path="url(#p17b9ae7ce4)" style="fill: none; stroke: #dce1da; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16"/>
+     <g id="text_15">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #637067" x="684.633809" y="401.733188" transform="rotate(-0 684.633809 401.733188)">2</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_17">
+      <path d="M 750.801203 383.616
+L 750.801203 165.168
+" clip-path="url(#p17b9ae7ce4)" style="fill: none; stroke: #dce1da; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_18"/>
+     <g id="text_16">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #637067" x="750.801203" y="401.733188" transform="rotate(-0 750.801203 401.733188)">4</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_19">
+      <path d="M 816.968597 383.616
+L 816.968597 165.168
+" clip-path="url(#p17b9ae7ce4)" style="fill: none; stroke: #dce1da; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_20"/>
+     <g id="text_17">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #637067" x="816.968597" y="401.733188" transform="rotate(-0 816.968597 401.733188)">6</text>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_5">
+     <g id="line2d_21"/>
+     <g id="text_18">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #202923" x="609.466415" y="193.352316" transform="rotate(-0 609.466415 193.352316)">OpenRamble</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_22"/>
+     <g id="text_19">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #202923" x="609.466415" y="250.418147" transform="rotate(-0 609.466415 250.418147)">Handy</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_23"/>
+     <g id="text_20">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #202923" x="609.466415" y="307.483978" transform="rotate(-0 609.466415 307.483978)">whisper.cpp · Turbo</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_24"/>
+     <g id="text_21">
+      <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #202923" x="609.466415" y="364.549809" transform="rotate(-0 609.466415 364.549809)">Superwhisper · Turbo</text>
+     </g>
+    </g>
+   </g>
+   <g id="patch_8">
+    <path d="M 618.466415 175.097455
+L 802.608601 175.097455
+L 802.608601 202.489053
+L 618.466415 202.489053
+z
+" clip-path="url(#p17b9ae7ce4)" style="fill: #197458"/>
+   </g>
+   <g id="text_22">
+    <text style="font-weight: 700; font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="805.916971" y="191.910441" transform="rotate(-0 805.916971 191.910441)">5,57%</text>
+   </g>
+   <g id="patch_9">
+    <path d="M 618.466415 232.163285
+L 802.608601 232.163285
+L 802.608601 259.554884
+L 618.466415 259.554884
+z
+" clip-path="url(#p17b9ae7ce4)" style="fill: #90988f"/>
+   </g>
+   <g id="text_23">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="805.916971" y="248.976272" transform="rotate(-0 805.916971 248.976272)">5,57%</text>
+   </g>
+   <g id="patch_10">
+    <path d="M 618.466415 289.229116
+L 787.134468 289.229116
+L 787.134468 316.620715
+L 618.466415 316.620715
+z
+" clip-path="url(#p17b9ae7ce4)" style="fill: #627b9b"/>
+   </g>
+   <g id="text_24">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="790.442837" y="306.042103" transform="rotate(-0 790.442837 306.042103)">5,10%</text>
+   </g>
+   <g id="patch_11">
+    <path d="M 618.466415 346.294947
+L 814.987908 346.294947
+L 814.987908 373.686545
+L 618.466415 373.686545
+z
+" clip-path="url(#p17b9ae7ce4)" style="fill: #956978"/>
+   </g>
+   <g id="text_25">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="818.296277" y="363.107934" transform="rotate(-0 818.296277 363.107934)">5,94%</text>
+   </g>
+   <g id="text_26">
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="618.466415" y="145.168" transform="rotate(-0 618.466415 145.168)">Английский · 100 записей</text>
+   </g>
+  </g>
+  <g id="text_27">
+   <text style="font-weight: 700; font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #197458" x="51.48" y="34.632" transform="rotate(-0 51.48 34.632)">OPENRAMBLE / КАЧЕСТВО</text>
+  </g>
+  <g id="text_28">
+   <text style="font-weight: 700; font-size: 25px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="51.48" y="78.3216" transform="rotate(-0 51.48 78.3216)">Одинаковые записи. Проверяемые ошибки.</text>
+  </g>
+  <g id="text_29">
+   <text style="font-weight: 700; font-size: 13px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="51.48" y="447.552" transform="rotate(-0 51.48 447.552)">OpenRamble и Handy: все 200 текстов совпали после нормализации.</text>
+  </g>
+  <g id="text_30">
+   <text style="font-size: 10px; font-family: 'DejaVu Sans'; fill: #637067" transform="translate(51.48 465.269156)">WER, меньше — лучше. FLEURS test, фиксированная выборка. Регистр и пунктуация исключены.</text>
+   <text style="font-size: 10px; font-family: 'DejaVu Sans'; fill: #637067" transform="translate(51.48 482.184)">OpenRamble / Handy: один Parakeet v3 Q8. Whisper: Large v3 Turbo F16. Без словаря и AI-переписывания.</text>
+  </g>
+  <g id="text_31">
+   <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #637067" x="51.48" y="511.488" transform="rotate(-0 51.48 511.488)">OpenRamble 0.32.0 · Handy 0.9.8 · whisper.cpp 1.9.5 · Superwhisper 2.19.2 · 09.10.2026.</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p172278dd18">
+   <rect x="187.2" y="165.168" width="261.373585" height="218.448"/>
+  </clipPath>
+  <clipPath id="p17b9ae7ce4">
+   <rect x="618.466415" y="165.168" width="261.373585" height="218.448"/>
+  </clipPath>
+ </defs>
+</svg>

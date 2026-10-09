@@ -1,0 +1,1399 @@
+{
+  "measurement_dates": [
+    "2026-10-09"
+  ],
+  "quality": {
+    "openramble": {
+      "ru": {
+        "n": 100,
+        "wer": 0.05951115834218916,
+        "reference_words": 1882,
+        "substitutions": 88,
+        "deletions": 17,
+        "insertions": 7,
+        "failures": 0
+      },
+      "en": {
+        "n": 100,
+        "wer": 0.055659494855004675,
+        "reference_words": 2138,
+        "substitutions": 90,
+        "deletions": 22,
+        "insertions": 7,
+        "failures": 0
+      }
+    },
+    "handy": {
+      "ru": {
+        "n": 100,
+        "wer": 0.05951115834218916,
+        "reference_words": 1882,
+        "substitutions": 88,
+        "deletions": 17,
+        "insertions": 7,
+        "failures": 0
+      },
+      "en": {
+        "n": 100,
+        "wer": 0.055659494855004675,
+        "reference_words": 2138,
+        "substitutions": 90,
+        "deletions": 22,
+        "insertions": 7,
+        "failures": 0
+      }
+    },
+    "whisper": {
+      "ru": {
+        "n": 100,
+        "wer": 0.05154091392136025,
+        "reference_words": 1882,
+        "substitutions": 79,
+        "deletions": 11,
+        "insertions": 7,
+        "failures": 0
+      },
+      "en": {
+        "n": 100,
+        "wer": 0.0509822263797942,
+        "reference_words": 2138,
+        "substitutions": 79,
+        "deletions": 18,
+        "insertions": 12,
+        "failures": 0
+      }
+    },
+    "superwhisper_turbo": {
+      "ru": {
+        "n": 100,
+        "wer": 0.05419766206163656,
+        "reference_words": 1882,
+        "substitutions": 80,
+        "deletions": 10,
+        "insertions": 12,
+        "failures": 0
+      },
+      "en": {
+        "n": 100,
+        "wer": 0.05940130963517306,
+        "reference_words": 2138,
+        "substitutions": 82,
+        "deletions": 31,
+        "insertions": 14,
+        "failures": 0
+      }
+    }
+  },
+  "speed": {
+    "quiet": {
+      "openramble": {
+        "n": 36,
+        "success": 36,
+        "p50_seconds": 0.3585942085,
+        "p95_seconds": 0.53498528075,
+        "fixtures": [
+          {
+            "fixture": "en_us-14648010410081654131",
+            "audio_seconds": 4.5,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.31265716649999997,
+            "p95_seconds": 0.31775622925,
+            "min_seconds": 0.308694875,
+            "max_seconds": 0.318391875,
+            "max_rss_bytes": 932937728,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 72,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "en_us-2381187994276969930",
+            "audio_seconds": 8.8,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.34086289599999997,
+            "p95_seconds": 0.3440179895,
+            "min_seconds": 0.332022834,
+            "max_seconds": 0.3443355,
+            "max_rss_bytes": 936837120,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 90,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "en_us-2508559905589212221",
+            "audio_seconds": 29.3,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.530376167,
+            "p95_seconds": 0.5355622602500001,
+            "min_seconds": 0.523158875,
+            "max_seconds": 0.53585075,
+            "max_rss_bytes": 949796864,
+            "quality": {
+              "n": 6,
+              "wer": 0.057692307692307696,
+              "reference_words": 312,
+              "substitutions": 6,
+              "deletions": 12,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-18363036360322471934",
+            "audio_seconds": 4.5,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.3059376875,
+            "p95_seconds": 0.34621711450000003,
+            "min_seconds": 0.298366125,
+            "max_seconds": 0.3478915,
+            "max_rss_bytes": 933904384,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 30,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-15785260273753185229",
+            "audio_seconds": 11.1,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.37436129149999997,
+            "p95_seconds": 0.38985215624999997,
+            "min_seconds": 0.369296917,
+            "max_seconds": 0.391990625,
+            "max_rss_bytes": 940589056,
+            "quality": {
+              "n": 6,
+              "wer": 0.1,
+              "reference_words": 120,
+              "substitutions": 12,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-3470812321873741369",
+            "audio_seconds": 23.16,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.523778625,
+            "p95_seconds": 0.53976566675,
+            "min_seconds": 0.506431625,
+            "max_seconds": 0.542243542,
+            "max_rss_bytes": 949108736,
+            "quality": {
+              "n": 6,
+              "wer": 0.09090909090909091,
+              "reference_words": 264,
+              "substitutions": 18,
+              "deletions": 0,
+              "insertions": 6,
+              "failures": 0
+            }
+          }
+        ]
+      },
+      "handy": {
+        "n": 36,
+        "success": 36,
+        "p50_seconds": 0.4124747915,
+        "p95_seconds": 0.5253573225,
+        "fixtures": [
+          {
+            "fixture": "en_us-14648010410081654131",
+            "audio_seconds": 4.5,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.363285896,
+            "p95_seconds": 0.37012184375,
+            "min_seconds": 0.347833625,
+            "max_seconds": 0.370608375,
+            "max_rss_bytes": 1018298368,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 72,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "en_us-2381187994276969930",
+            "audio_seconds": 8.8,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.3997667915,
+            "p95_seconds": 0.41461402075000003,
+            "min_seconds": 0.388923417,
+            "max_seconds": 0.41551225,
+            "max_rss_bytes": 1024393216,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 90,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "en_us-2508559905589212221",
+            "audio_seconds": 29.3,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.5244218119999999,
+            "p95_seconds": 0.52812044775,
+            "min_seconds": 0.517530458,
+            "max_seconds": 0.528128875,
+            "max_rss_bytes": 1034502144,
+            "quality": {
+              "n": 6,
+              "wer": 0.057692307692307696,
+              "reference_words": 312,
+              "substitutions": 6,
+              "deletions": 12,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-18363036360322471934",
+            "audio_seconds": 4.5,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.363929125,
+            "p95_seconds": 0.41825011475,
+            "min_seconds": 0.354144875,
+            "max_seconds": 0.424750417,
+            "max_rss_bytes": 1018626048,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 30,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-15785260273753185229",
+            "audio_seconds": 11.1,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.414561917,
+            "p95_seconds": 0.42592271924999997,
+            "min_seconds": 0.4054475,
+            "max_seconds": 0.427372084,
+            "max_rss_bytes": 1025146880,
+            "quality": {
+              "n": 6,
+              "wer": 0.1,
+              "reference_words": 120,
+              "substitutions": 12,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-3470812321873741369",
+            "audio_seconds": 23.16,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.5031442085,
+            "p95_seconds": 0.52131923925,
+            "min_seconds": 0.497228917,
+            "max_seconds": 0.521912458,
+            "max_rss_bytes": 1033060352,
+            "quality": {
+              "n": 6,
+              "wer": 0.09090909090909091,
+              "reference_words": 264,
+              "substitutions": 18,
+              "deletions": 0,
+              "insertions": 6,
+              "failures": 0
+            }
+          }
+        ]
+      },
+      "whisper": {
+        "n": 36,
+        "success": 36,
+        "p50_seconds": 1.4779095625,
+        "p95_seconds": 1.72989120825,
+        "fixtures": [
+          {
+            "fixture": "en_us-14648010410081654131",
+            "audio_seconds": 4.5,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 1.3971628329999999,
+            "p95_seconds": 1.4069430837499999,
+            "min_seconds": 1.382079625,
+            "max_seconds": 1.407351917,
+            "max_rss_bytes": 2008006656,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 72,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "en_us-2381187994276969930",
+            "audio_seconds": 8.8,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 1.408368125,
+            "p95_seconds": 1.4146223855,
+            "min_seconds": 1.397417666,
+            "max_seconds": 1.4147435,
+            "max_rss_bytes": 2007482368,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 90,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "en_us-2508559905589212221",
+            "audio_seconds": 29.3,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 1.5678220835,
+            "p95_seconds": 1.57579330175,
+            "min_seconds": 1.552678667,
+            "max_seconds": 1.577545958,
+            "max_rss_bytes": 2013429760,
+            "quality": {
+              "n": 6,
+              "wer": 0.07692307692307693,
+              "reference_words": 312,
+              "substitutions": 12,
+              "deletions": 12,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-18363036360322471934",
+            "audio_seconds": 4.5,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 1.4006663335,
+            "p95_seconds": 1.4395030420000001,
+            "min_seconds": 1.37563875,
+            "max_seconds": 1.444951459,
+            "max_rss_bytes": 2007842816,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 30,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-15785260273753185229",
+            "audio_seconds": 11.1,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 1.5260656455000001,
+            "p95_seconds": 1.533441416,
+            "min_seconds": 1.510867666,
+            "max_seconds": 1.533457416,
+            "max_rss_bytes": 2010513408,
+            "quality": {
+              "n": 6,
+              "wer": 0.1,
+              "reference_words": 120,
+              "substitutions": 6,
+              "deletions": 0,
+              "insertions": 6,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-3470812321873741369",
+            "audio_seconds": 23.16,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 1.7251656039999999,
+            "p95_seconds": 1.73669261475,
+            "min_seconds": 1.704453,
+            "max_seconds": 1.738302,
+            "max_rss_bytes": 2015313920,
+            "quality": {
+              "n": 6,
+              "wer": 0.11363636363636363,
+              "reference_words": 264,
+              "substitutions": 30,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          }
+        ]
+      }
+    },
+    "load": {
+      "openramble": {
+        "n": 36,
+        "success": 36,
+        "p50_seconds": 0.5108887915,
+        "p95_seconds": 0.7305318015,
+        "fixtures": [
+          {
+            "fixture": "en_us-14648010410081654131",
+            "audio_seconds": 4.5,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.4354998745,
+            "p95_seconds": 0.49965685424999995,
+            "min_seconds": 0.411471834,
+            "max_seconds": 0.51027375,
+            "max_rss_bytes": 934412288,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 72,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "en_us-2381187994276969930",
+            "audio_seconds": 8.8,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.4616295415,
+            "p95_seconds": 0.5689003025,
+            "min_seconds": 0.417672209,
+            "max_seconds": 0.575641209,
+            "max_rss_bytes": 938180608,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 90,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "en_us-2508559905589212221",
+            "audio_seconds": 29.3,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.6586088955,
+            "p95_seconds": 0.7038379375,
+            "min_seconds": 0.649448917,
+            "max_seconds": 0.706484375,
+            "max_rss_bytes": 951992320,
+            "quality": {
+              "n": 6,
+              "wer": 0.057692307692307696,
+              "reference_words": 312,
+              "substitutions": 6,
+              "deletions": 12,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-18363036360322471934",
+            "audio_seconds": 4.5,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.396255792,
+            "p95_seconds": 0.474439531,
+            "min_seconds": 0.369859625,
+            "max_seconds": 0.477401583,
+            "max_rss_bytes": 934854656,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 30,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-15785260273753185229",
+            "audio_seconds": 11.1,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.5155443125,
+            "p95_seconds": 0.525583479,
+            "min_seconds": 0.454342417,
+            "max_seconds": 0.526095583,
+            "max_rss_bytes": 940457984,
+            "quality": {
+              "n": 6,
+              "wer": 0.1,
+              "reference_words": 120,
+              "substitutions": 12,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-3470812321873741369",
+            "audio_seconds": 23.16,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.716673958,
+            "p95_seconds": 0.7574835209999999,
+            "min_seconds": 0.646929375,
+            "max_seconds": 0.761803542,
+            "max_rss_bytes": 950190080,
+            "quality": {
+              "n": 6,
+              "wer": 0.09090909090909091,
+              "reference_words": 264,
+              "substitutions": 18,
+              "deletions": 0,
+              "insertions": 6,
+              "failures": 0
+            }
+          }
+        ]
+      },
+      "handy": {
+        "n": 36,
+        "success": 36,
+        "p50_seconds": 1.134113021,
+        "p95_seconds": 2.87233946875,
+        "fixtures": [
+          {
+            "fixture": "en_us-14648010410081654131",
+            "audio_seconds": 4.5,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.755265708,
+            "p95_seconds": 0.816439969,
+            "min_seconds": 0.635536083,
+            "max_seconds": 0.819461917,
+            "max_rss_bytes": 1019281408,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 72,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "en_us-2381187994276969930",
+            "audio_seconds": 8.8,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.8780127915,
+            "p95_seconds": 1.1849109375,
+            "min_seconds": 0.73108775,
+            "max_seconds": 1.271020375,
+            "max_rss_bytes": 1025540096,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 90,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "en_us-2508559905589212221",
+            "audio_seconds": 29.3,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 2.2610848955,
+            "p95_seconds": 2.639466052,
+            "min_seconds": 1.506728167,
+            "max_seconds": 2.738287375,
+            "max_rss_bytes": 1035370496,
+            "quality": {
+              "n": 6,
+              "wer": 0.057692307692307696,
+              "reference_words": 312,
+              "substitutions": 6,
+              "deletions": 12,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-18363036360322471934",
+            "audio_seconds": 4.5,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 0.7989238125,
+            "p95_seconds": 1.139371802,
+            "min_seconds": 0.517687917,
+            "max_seconds": 1.144630583,
+            "max_rss_bytes": 1019576320,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 30,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-15785260273753185229",
+            "audio_seconds": 11.1,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 1.3000693540000001,
+            "p95_seconds": 1.771074615,
+            "min_seconds": 0.805712917,
+            "max_seconds": 1.789175584,
+            "max_rss_bytes": 1025032192,
+            "quality": {
+              "n": 6,
+              "wer": 0.1,
+              "reference_words": 120,
+              "substitutions": 12,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-3470812321873741369",
+            "audio_seconds": 23.16,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 2.505590771,
+            "p95_seconds": 3.6250555314999997,
+            "min_seconds": 1.441448167,
+            "max_seconds": 3.741908792,
+            "max_rss_bytes": 1033388032,
+            "quality": {
+              "n": 6,
+              "wer": 0.09090909090909091,
+              "reference_words": 264,
+              "substitutions": 18,
+              "deletions": 0,
+              "insertions": 6,
+              "failures": 0
+            }
+          }
+        ]
+      },
+      "whisper": {
+        "n": 36,
+        "success": 36,
+        "p50_seconds": 1.770237292,
+        "p95_seconds": 2.256483969,
+        "fixtures": [
+          {
+            "fixture": "en_us-14648010410081654131",
+            "audio_seconds": 4.5,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 1.6670538750000001,
+            "p95_seconds": 1.6870453752499999,
+            "min_seconds": 1.585720667,
+            "max_seconds": 1.687959292,
+            "max_rss_bytes": 2010562560,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 72,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "en_us-2381187994276969930",
+            "audio_seconds": 8.8,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 1.659211209,
+            "p95_seconds": 1.73186393775,
+            "min_seconds": 1.607847667,
+            "max_seconds": 1.740647167,
+            "max_rss_bytes": 2007580672,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 90,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "en_us-2508559905589212221",
+            "audio_seconds": 29.3,
+            "language": "en",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 2.018853875,
+            "p95_seconds": 2.10347179125,
+            "min_seconds": 1.849842167,
+            "max_seconds": 2.111155541,
+            "max_rss_bytes": 2013986816,
+            "quality": {
+              "n": 6,
+              "wer": 0.07692307692307693,
+              "reference_words": 312,
+              "substitutions": 12,
+              "deletions": 12,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-18363036360322471934",
+            "audio_seconds": 4.5,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 1.6204218125,
+            "p95_seconds": 1.6694266565,
+            "min_seconds": 1.548609958,
+            "max_seconds": 1.678765292,
+            "max_rss_bytes": 2007973888,
+            "quality": {
+              "n": 6,
+              "wer": 0.0,
+              "reference_words": 30,
+              "substitutions": 0,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-15785260273753185229",
+            "audio_seconds": 11.1,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 1.8554905835,
+            "p95_seconds": 1.9236353225,
+            "min_seconds": 1.799827417,
+            "max_seconds": 1.937500333,
+            "max_rss_bytes": 2008547328,
+            "quality": {
+              "n": 6,
+              "wer": 0.1,
+              "reference_words": 120,
+              "substitutions": 6,
+              "deletions": 0,
+              "insertions": 6,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru_ru-3470812321873741369",
+            "audio_seconds": 23.16,
+            "language": "ru",
+            "n": 6,
+            "success": 6,
+            "p50_seconds": 2.2224840209999996,
+            "p95_seconds": 2.31123081225,
+            "min_seconds": 2.142175375,
+            "max_seconds": 2.315748833,
+            "max_rss_bytes": 2014986240,
+            "quality": {
+              "n": 6,
+              "wer": 0.11363636363636363,
+              "reference_words": 264,
+              "substitutions": 30,
+              "deletions": 0,
+              "insertions": 0,
+              "failures": 0
+            }
+          }
+        ]
+      }
+    }
+  },
+  "long": {
+    "quiet": {
+      "openramble": {
+        "n": 6,
+        "success": 6,
+        "p50_seconds": 7.3812730415,
+        "p95_seconds": 41.48106082325,
+        "fixtures": [
+          {
+            "fixture": "mixed-60s",
+            "audio_seconds": 71.46,
+            "language": "mixed",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 1.1720570005000002,
+            "p95_seconds": 1.26285050035,
+            "min_seconds": 1.071175334,
+            "max_seconds": 1.272938667,
+            "max_rss_bytes": 962166784,
+            "quality": {
+              "n": 2,
+              "wer": 0.21323529411764705,
+              "reference_words": 272,
+              "substitutions": 0,
+              "deletions": 56,
+              "insertions": 2,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "mixed-600s",
+            "audio_seconds": 613.22,
+            "language": "mixed",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 7.3812730415,
+            "p95_seconds": 7.51222285385,
+            "min_seconds": 7.23577325,
+            "max_seconds": 7.526772833,
+            "max_rss_bytes": 992706560,
+            "quality": {
+              "n": 2,
+              "wer": 0.36568457538994803,
+              "reference_words": 2308,
+              "substitutions": 86,
+              "deletions": 746,
+              "insertions": 12,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "mixed-3540s",
+            "audio_seconds": 3543.3,
+            "language": "mixed",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 41.3478838545,
+            "p95_seconds": 41.58760239825,
+            "min_seconds": 41.081529917,
+            "max_seconds": 41.614237792,
+            "max_rss_bytes": 1006157824,
+            "quality": {
+              "n": 2,
+              "wer": 0.3906674720628209,
+              "reference_words": 13244,
+              "substitutions": 626,
+              "deletions": 4476,
+              "insertions": 72,
+              "failures": 0
+            }
+          }
+        ]
+      },
+      "handy": {
+        "n": 6,
+        "success": 4,
+        "p50_seconds": 7.733133478999999,
+        "p95_seconds": 15.28963283385,
+        "fixtures": [
+          {
+            "fixture": "mixed-60s",
+            "audio_seconds": 71.46,
+            "language": "mixed",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 1.1845656249999998,
+            "p95_seconds": 1.39413985,
+            "min_seconds": 0.951705375,
+            "max_seconds": 1.417425875,
+            "max_rss_bytes": 1072693248,
+            "quality": {
+              "n": 2,
+              "wer": 0.4264705882352941,
+              "reference_words": 272,
+              "substitutions": 0,
+              "deletions": 116,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "mixed-600s",
+            "audio_seconds": 613.22,
+            "language": "mixed",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 14.7787185835,
+            "p95_seconds": 15.43560833395,
+            "min_seconds": 14.048841083,
+            "max_seconds": 15.508596084,
+            "max_rss_bytes": 1573994496,
+            "quality": {
+              "n": 2,
+              "wer": 0.729636048526863,
+              "reference_words": 2308,
+              "substitutions": 40,
+              "deletions": 1644,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "mixed-3540s",
+            "audio_seconds": 3543.3,
+            "language": "mixed",
+            "n": 2,
+            "success": 0,
+            "p50_seconds": null,
+            "p95_seconds": null,
+            "min_seconds": null,
+            "max_seconds": null,
+            "max_rss_bytes": 2726182912,
+            "quality": {
+              "n": 2,
+              "wer": 1.0,
+              "reference_words": 13244,
+              "substitutions": 0,
+              "deletions": 13244,
+              "insertions": 0,
+              "failures": 2
+            }
+          }
+        ]
+      }
+    },
+    "load": {
+      "openramble": {
+        "n": 6,
+        "success": 6,
+        "p50_seconds": 8.8148839795,
+        "p95_seconds": 52.95180348925,
+        "fixtures": [
+          {
+            "fixture": "mixed-60s",
+            "audio_seconds": 71.46,
+            "language": "mixed",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 1.319486896,
+            "p95_seconds": 1.3470930271,
+            "min_seconds": 1.288813417,
+            "max_seconds": 1.350160375,
+            "max_rss_bytes": 964165632,
+            "quality": {
+              "n": 2,
+              "wer": 0.21323529411764705,
+              "reference_words": 272,
+              "substitutions": 0,
+              "deletions": 56,
+              "insertions": 2,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "mixed-600s",
+            "audio_seconds": 613.22,
+            "language": "mixed",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 8.8148839795,
+            "p95_seconds": 8.96549277355,
+            "min_seconds": 8.647540875,
+            "max_seconds": 8.982227084,
+            "max_rss_bytes": 994803712,
+            "quality": {
+              "n": 2,
+              "wer": 0.36568457538994803,
+              "reference_words": 2308,
+              "substitutions": 86,
+              "deletions": 746,
+              "insertions": 12,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "mixed-3540s",
+            "audio_seconds": 3543.3,
+            "language": "mixed",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 52.8469897705,
+            "p95_seconds": 53.03565446425,
+            "min_seconds": 52.637362333,
+            "max_seconds": 53.056617208,
+            "max_rss_bytes": 1012908032,
+            "quality": {
+              "n": 2,
+              "wer": 0.3906674720628209,
+              "reference_words": 13244,
+              "substitutions": 626,
+              "deletions": 4476,
+              "insertions": 72,
+              "failures": 0
+            }
+          }
+        ]
+      },
+      "handy": {
+        "n": 6,
+        "success": 4,
+        "p50_seconds": 14.5194385005,
+        "p95_seconds": 38.51544162244999,
+        "fixtures": [
+          {
+            "fixture": "mixed-60s",
+            "audio_seconds": 71.46,
+            "language": "mixed",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 4.0398225,
+            "p95_seconds": 4.1070679503,
+            "min_seconds": 3.965105333,
+            "max_seconds": 4.114539667,
+            "max_rss_bytes": 1072889856,
+            "quality": {
+              "n": 2,
+              "wer": 0.4264705882352941,
+              "reference_words": 272,
+              "substitutions": 0,
+              "deletions": 116,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "mixed-600s",
+            "audio_seconds": 613.22,
+            "language": "mixed",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 32.919104562499996,
+            "p95_seconds": 40.114395068149996,
+            "min_seconds": 24.924337334,
+            "max_seconds": 40.913871791,
+            "max_rss_bytes": 1572241408,
+            "quality": {
+              "n": 2,
+              "wer": 0.729636048526863,
+              "reference_words": 2308,
+              "substitutions": 40,
+              "deletions": 1644,
+              "insertions": 0,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "mixed-3540s",
+            "audio_seconds": 3543.3,
+            "language": "mixed",
+            "n": 2,
+            "success": 0,
+            "p50_seconds": null,
+            "p95_seconds": null,
+            "min_seconds": null,
+            "max_seconds": null,
+            "max_rss_bytes": 2726854656,
+            "quality": {
+              "n": 2,
+              "wer": 1.0,
+              "reference_words": 13244,
+              "substitutions": 0,
+              "deletions": 13244,
+              "insertions": 0,
+              "failures": 2
+            }
+          }
+        ]
+      }
+    }
+  },
+  "matched_normalized_outputs_openramble_handy": 200,
+  "manifest_sha256": "27b1a6759fe07063b69e1759fd64a039b21fd0fe2bf6a4e9d638dd30bdb98fab",
+  "normalization": "Unicode NFC, lowercase, ё→е, alphanumeric tokens, punctuation omitted; numerals not expanded",
+  "speed_scope": "Full CLI process including launch, model load, decode, recognition, output and shutdown. OS file cache warm; models reloaded each observation. Not physical key-release latency.",
+  "speed_sampling": "6 representative inputs (shortest/median/longest per language), all six product orders, two CPU conditions; 36 observations per product and condition",
+  "long_scope": "Composite of public utterances alternating RU/EN, with 0.5 s gaps; not a natural meeting. 2 observations per file and condition.",
+  "long_mono": {
+    "quiet": {
+      "openramble": {
+        "n": 4,
+        "success": 4,
+        "p50_seconds": 43.8568122295,
+        "p95_seconds": 45.33874622245,
+        "fixtures": [
+          {
+            "fixture": "en-3540s",
+            "audio_seconds": 3546.8,
+            "language": "en",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 42.726971520999996,
+            "p95_seconds": 43.1293772521,
+            "min_seconds": 42.279854042,
+            "max_seconds": 43.174089,
+            "max_rss_bytes": 1004781568,
+            "quality": {
+              "n": 2,
+              "wer": 0.09762703120969822,
+              "reference_words": 15508,
+              "substitutions": 570,
+              "deletions": 744,
+              "insertions": 200,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru-3540s",
+            "audio_seconds": 3550.1,
+            "language": "ru",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 45.0096594375,
+            "p95_seconds": 45.43277101815,
+            "min_seconds": 44.539535459,
+            "max_seconds": 45.479783416,
+            "max_rss_bytes": 1023852544,
+            "quality": {
+              "n": 2,
+              "wer": 0.06492589978828511,
+              "reference_words": 11336,
+              "substitutions": 482,
+              "deletions": 194,
+              "insertions": 60,
+              "failures": 0
+            }
+          }
+        ]
+      },
+      "handy": {
+        "n": 4,
+        "success": 0,
+        "p50_seconds": null,
+        "p95_seconds": null,
+        "fixtures": [
+          {
+            "fixture": "en-3540s",
+            "audio_seconds": 3546.8,
+            "language": "en",
+            "n": 2,
+            "success": 0,
+            "p50_seconds": null,
+            "p95_seconds": null,
+            "min_seconds": null,
+            "max_seconds": null,
+            "max_rss_bytes": 2726985728,
+            "quality": {
+              "n": 2,
+              "wer": 1.0,
+              "reference_words": 15508,
+              "substitutions": 0,
+              "deletions": 15508,
+              "insertions": 0,
+              "failures": 2
+            }
+          },
+          {
+            "fixture": "ru-3540s",
+            "audio_seconds": 3550.1,
+            "language": "ru",
+            "n": 2,
+            "success": 0,
+            "p50_seconds": null,
+            "p95_seconds": null,
+            "min_seconds": null,
+            "max_seconds": null,
+            "max_rss_bytes": 2729099264,
+            "quality": {
+              "n": 2,
+              "wer": 1.0,
+              "reference_words": 11336,
+              "substitutions": 0,
+              "deletions": 11336,
+              "insertions": 0,
+              "failures": 2
+            }
+          }
+        ]
+      }
+    },
+    "load": {
+      "openramble": {
+        "n": 4,
+        "success": 4,
+        "p50_seconds": 56.7280937915,
+        "p95_seconds": 59.8438010919,
+        "fixtures": [
+          {
+            "fixture": "en-3540s",
+            "audio_seconds": 3546.8,
+            "language": "en",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 56.7280937915,
+            "p95_seconds": 57.67569100385,
+            "min_seconds": 55.675208,
+            "max_seconds": 57.780979583,
+            "max_rss_bytes": 1013137408,
+            "quality": {
+              "n": 2,
+              "wer": 0.09762703120969822,
+              "reference_words": 15508,
+              "substitutions": 570,
+              "deletions": 744,
+              "insertions": 200,
+              "failures": 0
+            }
+          },
+          {
+            "fixture": "ru-3540s",
+            "audio_seconds": 3550.1,
+            "language": "ru",
+            "n": 2,
+            "success": 2,
+            "p50_seconds": 57.5634418125,
+            "p95_seconds": 59.943389756550005,
+            "min_seconds": 54.919055208,
+            "max_seconds": 60.207828417,
+            "max_rss_bytes": 1030373376,
+            "quality": {
+              "n": 2,
+              "wer": 0.06492589978828511,
+              "reference_words": 11336,
+              "substitutions": 482,
+              "deletions": 194,
+              "insertions": 60,
+              "failures": 0
+            }
+          }
+        ]
+      },
+      "handy": {
+        "n": 4,
+        "success": 0,
+        "p50_seconds": null,
+        "p95_seconds": null,
+        "fixtures": [
+          {
+            "fixture": "en-3540s",
+            "audio_seconds": 3546.8,
+            "language": "en",
+            "n": 2,
+            "success": 0,
+            "p50_seconds": null,
+            "p95_seconds": null,
+            "min_seconds": null,
+            "max_seconds": null,
+            "max_rss_bytes": 2728329216,
+            "quality": {
+              "n": 2,
+              "wer": 1.0,
+              "reference_words": 15508,
+              "substitutions": 0,
+              "deletions": 15508,
+              "insertions": 0,
+              "failures": 2
+            }
+          },
+          {
+            "fixture": "ru-3540s",
+            "audio_seconds": 3550.1,
+            "language": "ru",
+            "n": 2,
+            "success": 0,
+            "p50_seconds": null,
+            "p95_seconds": null,
+            "min_seconds": null,
+            "max_seconds": null,
+            "max_rss_bytes": 2729558016,
+            "quality": {
+              "n": 2,
+              "wer": 1.0,
+              "reference_words": 11336,
+              "substitutions": 0,
+              "deletions": 11336,
+              "insertions": 0,
+              "failures": 2
+            }
+          }
+        ]
+      }
+    }
+  }
+}

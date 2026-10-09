@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="936pt" height="532.8pt" viewBox="0 0 936 532.8" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-10-09T13:02:06.761361</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 532.8
+L 936 532.8
+L 936 0
+L 0 0
+z
+" style="fill: #f6f5f0"/>
+  </g>
+  <g id="axes_1"/>
+  <g id="text_1">
+   <text style="font-weight: 700; font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #ad513f" x="51.48" y="34.632" transform="rotate(-0 51.48 34.632)">OPENRAMBLE / ДИАГНОСТИКА ДЛИННЫХ ФАЙЛОВ</text>
+  </g>
+  <g id="text_2">
+   <text style="font-weight: 700; font-size: 28px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="51.48" y="85.248" transform="rotate(-0 51.48 85.248)">Час аудио: язык меняет результат.</text>
+  </g>
+  <g id="text_3">
+   <text style="font-size: 13px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #637067" x="51.48" y="135.864" transform="rotate(-0 51.48 135.864)">Составные файлы по 59 минут · обычная нагрузка · OpenRamble 0.32.0</text>
+  </g>
+  <g id="text_4">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #637067" x="51.48" y="186.48" transform="rotate(-0 51.48 186.48)">Речь</text>
+  </g>
+  <g id="text_5">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #637067" x="402.48" y="186.48" transform="rotate(-0 402.48 186.48)">Время CLI</text>
+  </g>
+  <g id="text_6">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #637067" x="608.4" y="186.48" transform="rotate(-0 608.4 186.48)">WER ↓</text>
+  </g>
+  <g id="text_7">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #637067" x="767.52" y="186.48" transform="rotate(-0 767.52 186.48)">Удаления / слова</text>
+  </g>
+  <g id="text_8">
+   <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="51.48" y="239.76" transform="rotate(-0 51.48 239.76)">Русский</text>
+  </g>
+  <g id="text_9">
+   <text style="font-weight: 700; font-size: 19px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="402.48" y="239.76" transform="rotate(-0 402.48 239.76)">45,0 с</text>
+  </g>
+  <g id="text_10">
+   <text style="font-weight: 700; font-size: 19px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #ad513f" x="608.4" y="239.76" transform="rotate(-0 608.4 239.76)">6,5%</text>
+  </g>
+  <g id="text_11">
+   <text style="font-size: 19px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #ad513f" x="767.52" y="239.76" transform="rotate(-0 767.52 239.76)">1,7%</text>
+  </g>
+  <g id="text_12">
+   <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="51.48" y="293.04" transform="rotate(-0 51.48 293.04)">English</text>
+  </g>
+  <g id="text_13">
+   <text style="font-weight: 700; font-size: 19px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="402.48" y="293.04" transform="rotate(-0 402.48 293.04)">42,7 с</text>
+  </g>
+  <g id="text_14">
+   <text style="font-weight: 700; font-size: 19px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #ad513f" x="608.4" y="293.04" transform="rotate(-0 608.4 293.04)">9,8%</text>
+  </g>
+  <g id="text_15">
+   <text style="font-size: 19px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #ad513f" x="767.52" y="293.04" transform="rotate(-0 767.52 293.04)">4,8%</text>
+  </g>
+  <g id="text_16">
+   <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="51.48" y="346.32" transform="rotate(-0 51.48 346.32)">RU + EN по очереди</text>
+  </g>
+  <g id="text_17">
+   <text style="font-weight: 700; font-size: 19px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="402.48" y="346.32" transform="rotate(-0 402.48 346.32)">41,3 с</text>
+  </g>
+  <g id="text_18">
+   <text style="font-weight: 700; font-size: 19px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #ad513f" x="608.4" y="346.32" transform="rotate(-0 608.4 346.32)">39,1%</text>
+  </g>
+  <g id="text_19">
+   <text style="font-size: 19px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #ad513f" x="767.52" y="346.32" transform="rotate(-0 767.52 346.32)">33,8%</text>
+  </g>
+  <g id="text_20">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #202923" x="51.48" y="431.568" transform="rotate(-0 51.48 431.568)">Handy 0.9.8 + та же Parakeet v3 Q8: нехватка памяти на всех трёх часовых файлах.</text>
+  </g>
+  <g id="text_21">
+   <text style="font-size: 10px; font-family: 'DejaVu Sans'; fill: #637067" transform="translate(51.48 459.770063)">Это воспроизводимый стресс-тест, а не естественная встреча. Каждый файл: 2 запуска на условие.</text>
+   <text style="font-size: 10px; font-family: 'DejaVu Sans'; fill: #637067" transform="translate(51.48 476.856)">Скорость без сохранности текста не считается победой. Подробности и все неудачи — в отчёте.</text>
+  </g>
+  <g id="text_22">
+   <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #637067" x="51.48" y="511.488" transform="rotate(-0 51.48 511.488)">M4 Pro · 24 ГБ · Metal · 09.10.2026. Одноязычные файлы добавлены после смешанного теста.</text>
+  </g>
+ </g>
+</svg>
