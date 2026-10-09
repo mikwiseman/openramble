@@ -57,18 +57,18 @@ struct CaptureHealthStrip: View {
             }
             if systemUnheardActions {
                 HStack(spacing: GlassTokens.Space.inline) {
-                    Button("Open System Settings") { state.openSystemAudioSettings() }
-                    Button("Relaunch OpenRamble") { state.relaunchForSystemAudio() }
+                    Button(L10n.tr("Open System Settings")) { state.openSystemAudioSettings() }
+                    Button(L10n.tr("Relaunch OpenRamble")) { state.relaunchForSystemAudio() }
                         .disabled(state.isRecordingInProgress)
                         .help(state.isRecordingInProgress
-                            ? "Finish the current recording first — relaunching now would end it."
-                            : "Relaunch so macOS applies the permission to the new process")
+                            ? L10n.tr("Finish the current recording first — relaunching now would end it.")
+                            : L10n.tr("Relaunch so macOS applies the permission to the new process"))
                 }
                 .controlSize(.small)
                 if state.isRecordingInProgress {
                     // A dead button without a reason is where setup ends
                     // for a blind person.
-                    Text("Finish the current recording first — relaunching now would end it.")
+                    Text(L10n.tr("Finish the current recording first — relaunching now would end it."))
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
@@ -88,23 +88,23 @@ struct SystemAudioIntroSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: GlassTokens.Space.stack) {
-            Text("Ready to record")
+            Text(L10n.tr("Ready to record"))
                 .font(.title2.weight(.semibold))
-            Text("OpenRamble records your voice and, when available, what this Mac plays — the other people in a call or anything playing on the Mac. macOS will ask for permission the first time.")
+            Text(L10n.tr("OpenRamble records your voice and, when available, what this Mac plays — the other people in a call or anything playing on the Mac. macOS will ask for permission the first time."))
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Everything stays on this Mac. Nothing is uploaded, and no other app is told you are recording. In many places recording a conversation without everyone's consent is illegal; asking is your responsibility.")
+            Text(L10n.tr("Everything stays on this Mac. Nothing is uploaded, and no other app is told you are recording. In many places recording a conversation without everyone's consent is illegal; asking is your responsibility."))
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Headphones keep the Mac’s audio out of your microphone and help keep the two sides apart.")
+            Text(L10n.tr("Headphones keep the Mac’s audio out of your microphone and help keep the two sides apart."))
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack {
-                Button("Cancel") { state.dismissSystemAudioIntro() }
+                Button(L10n.tr("Cancel")) { state.dismissSystemAudioIntro() }
                     .keyboardShortcut(.cancelAction)
                 Spacer()
-                Button("Continue") { state.confirmSystemAudioIntro(includeSystemAudio: true) }
+                Button(L10n.tr("Continue")) { state.confirmSystemAudioIntro(includeSystemAudio: true) }
                     .keyboardShortcut(.defaultAction)
             }
             .padding(.top, GlassTokens.Space.tight)

@@ -1,6 +1,14 @@
 import XCTest
 
 final class RecordingTimeTests: XCTestCase {
+    func testRussianDurationsUseRussianPluralForms() {
+        XCTAssertEqual(RecordingTime.spoken(1, language: .russian), "1 секунда")
+        XCTAssertEqual(RecordingTime.spoken(2, language: .russian), "2 секунды")
+        XCTAssertEqual(RecordingTime.spoken(11, language: .russian), "11 секунд")
+        XCTAssertEqual(RecordingTime.spoken(21, language: .russian), "21 секунда")
+        XCTAssertEqual(RecordingTime.spoken(65, language: .russian), "1 минута 5 секунд")
+        XCTAssertEqual(RecordingTime.spoken(5_025, language: .russian), "1 час 23 минуты 45 секунд")
+    }
     func testClockUnderAnHourIsMinutesAndSeconds() {
         XCTAssertEqual(RecordingTime.clock(0), "0:00")
         XCTAssertEqual(RecordingTime.clock(7.9), "0:07")

@@ -15,7 +15,7 @@ struct PermissionStatus: Equatable {
         self.detail = detail
         self.granted = granted
         explicitValue = nil
-        explicitActionTitle = granted ? nil : "Grant"
+        explicitActionTitle = granted ? nil : L10n.tr("Grant")
     }
 
     private init(
@@ -39,58 +39,58 @@ struct PermissionStatus: Equatable {
         switch state {
         case .denied:
             return .init(
-                title: "Accessibility",
+                title: L10n.tr("Accessibility"),
                 detail: detail,
                 granted: false,
-                value: "Permission not granted",
-                actionTitle: "Grant"
+                value: L10n.tr("Permission not granted"),
+                actionTitle: L10n.tr("Grant")
             )
         case .waitingForSettings:
             return .init(
-                title: "Accessibility",
-                detail: "Turn on OpenRamble in the System Settings window that just opened, then come back here.",
+                title: L10n.tr("Accessibility"),
+                detail: L10n.tr("Turn on OpenRamble in the System Settings window that just opened, then come back here."),
                 granted: false,
-                value: "Waiting for permission in System Settings",
-                actionTitle: "Open System Settings"
+                value: L10n.tr("Waiting for permission in System Settings"),
+                actionTitle: L10n.tr("Open System Settings")
             )
         case .restartRequired:
             return .init(
-                title: "Accessibility",
-                detail: "If OpenRamble is already turned on, relaunch the app so macOS applies the access to the new process.",
+                title: L10n.tr("Accessibility"),
+                detail: L10n.tr("If OpenRamble is already turned on, relaunch the app so macOS applies the access to the new process."),
                 granted: false,
-                value: "App relaunch required",
-                actionTitle: "Relaunch"
+                value: L10n.tr("App relaunch required"),
+                actionTitle: L10n.tr("Relaunch")
             )
         case .repairRequired:
             return .init(
-                title: "Accessibility",
-                detail: "macOS keeps an old or duplicate entry for OpenRamble. Remove just that entry and grant access again.",
+                title: L10n.tr("Accessibility"),
+                detail: L10n.tr("macOS keeps an old or duplicate entry for OpenRamble. Remove just that entry and grant access again."),
                 granted: false,
-                value: "The system permission entry needs repair",
-                actionTitle: "Repair"
+                value: L10n.tr("The system permission entry needs repair"),
+                actionTitle: L10n.tr("Repair")
             )
         case .repairing:
             return .init(
-                title: "Accessibility",
-                detail: "Removing the old entry and relaunching OpenRamble.",
+                title: L10n.tr("Accessibility"),
+                detail: L10n.tr("Removing the old entry and relaunching OpenRamble."),
                 granted: false,
-                value: "Repairing the permission",
+                value: L10n.tr("Repairing the permission"),
                 actionTitle: nil
             )
         case let .failed(message):
             return .init(
-                title: "Accessibility",
-                detail: "Repair failed: \(message)",
+                title: L10n.tr("Accessibility"),
+                detail: L10n.tr("Repair failed: %@", String(describing: message)),
                 granted: false,
-                value: "Permission repair failed",
-                actionTitle: "Repair"
+                value: L10n.tr("Permission repair failed"),
+                actionTitle: L10n.tr("Repair")
             )
         case .granted:
             return .init(
-                title: "Accessibility",
+                title: L10n.tr("Accessibility"),
                 detail: detail,
                 granted: true,
-                value: "Permission granted",
+                value: L10n.tr("Permission granted"),
                 actionTitle: nil
             )
         }
@@ -101,41 +101,41 @@ struct PermissionStatus: Equatable {
     /// learns by trying, so the value here is what the last recording found,
     /// never a guess.
     static func systemAudio(mode: SystemAudioPermissionMode) -> PermissionStatus {
-        let detail = "Lets OpenRamble record the other people in a call. Used only while you are recording."
+        let detail = L10n.tr("Lets OpenRamble record the other people in a call. Used only while you are recording.")
         switch mode {
         case .unsupported:
             return .init(
-                title: "System Audio",
-                detail: "Recording what you hear needs macOS 14.2 or later. Dictation and voice notes are unaffected.",
+                title: L10n.tr("System Audio"),
+                detail: L10n.tr("Recording what you hear needs macOS 14.2 or later. Dictation and voice notes are unaffected."),
                 granted: false,
-                value: "Not available on this macOS",
+                value: L10n.tr("Not available on this macOS"),
                 actionTitle: nil
             )
         case .declined:
             return .init(
-                title: "System Audio",
-                detail: "System audio is off. Recordings include your voice only until you turn it on.",
+                title: L10n.tr("System Audio"),
+                detail: L10n.tr("System audio is off. Recordings include your voice only until you turn it on."),
                 granted: false,
-                value: "Turned off",
-                actionTitle: "Turn On"
+                value: L10n.tr("Turned off"),
+                actionTitle: L10n.tr("Turn On")
             )
         case .notChecked:
             return .init(
-                title: "System Audio",
-                detail: detail + " macOS asks the first time you record.",
+                title: L10n.tr("System Audio"),
+                detail: detail + L10n.tr(" macOS asks the first time you record."),
                 granted: false,
-                value: "Not checked yet",
+                value: L10n.tr("Not checked yet"),
                 actionTitle: nil
             )
         case .working:
-            return .init(title: "System Audio", detail: detail, granted: true, value: "Working", actionTitle: nil)
+            return .init(title: L10n.tr("System Audio"), detail: detail, granted: true, value: L10n.tr("Working"), actionTitle: nil)
         case .unheard:
             return .init(
-                title: "System Audio",
-                detail: "The last recording heard nothing from what this Mac plays. Allow OpenRamble under Screen & System Audio Recording, then relaunch the app.",
+                title: L10n.tr("System Audio"),
+                detail: L10n.tr("The last recording heard nothing from what this Mac plays. Allow OpenRamble under Screen & System Audio Recording, then relaunch the app."),
                 granted: false,
-                value: "No sound arrived last time",
-                actionTitle: "Open System Settings"
+                value: L10n.tr("No sound arrived last time"),
+                actionTitle: L10n.tr("Open System Settings")
             )
         }
     }
@@ -145,7 +145,7 @@ struct PermissionStatus: Equatable {
 
     /// Tick with words: the picture itself doesn't tell VoiceOver anything.
     var accessibilityValue: String {
-        explicitValue ?? (granted ? "Permission granted" : "Permission not granted")
+        explicitValue ?? (granted ? L10n.tr("Permission granted") : L10n.tr("Permission not granted"))
     }
 
     /// The button is only available where there is still something to output.
@@ -153,7 +153,7 @@ struct PermissionStatus: Equatable {
 
     var actionAccessibilityLabel: String? {
         actionTitle.map { action in
-            action == "Grant" ? "Grant access: \(title)" : "\(action): \(title)"
+            action == L10n.tr("Grant") ? L10n.tr("Grant access: %@", String(describing: title)) : "\(action): \(title)"
         }
     }
 }

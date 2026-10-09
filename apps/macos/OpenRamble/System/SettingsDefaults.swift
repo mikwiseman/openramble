@@ -34,9 +34,9 @@ public enum AppAppearance: String, CaseIterable, Identifiable, Sendable {
 
     public var title: String {
         switch self {
-        case .system: return "System"
-        case .light: return "Light"
-        case .dark: return "Dark"
+        case .system: return L10n.tr("System")
+        case .light: return L10n.tr("Light")
+        case .dark: return L10n.tr("Dark")
         }
     }
 }
@@ -59,9 +59,9 @@ public enum AppPresence: String, CaseIterable, Identifiable, Sendable {
 
     public var title: String {
         switch self {
-        case .menuBar: return "Menu bar"
-        case .dock: return "Dock"
-        case .both: return "Menu bar and Dock"
+        case .menuBar: return L10n.tr("Menu bar")
+        case .dock: return L10n.tr("Dock")
+        case .both: return L10n.tr("Menu bar and Dock")
         }
     }
 

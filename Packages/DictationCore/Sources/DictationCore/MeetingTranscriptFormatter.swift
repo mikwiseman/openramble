@@ -7,8 +7,8 @@ import Foundation
 /// checkbox for them is exactly the kind of option this app refuses, and
 /// removing them is a find-and-replace in any editor. Pure.
 public enum MeetingTranscriptFormatter {
-    public static let defaultNames: [MeetingChannel: String] = [.microphone: "You", .system: "Others"]
-    public static let failedLine = "[couldn't transcribe this part]"
+    public static var defaultNames: [MeetingChannel: String] { [.microphone: L10n.tr("You"), .system: L10n.tr("Others")] }
+    public static var failedLine: String { L10n.tr("[couldn't transcribe this part]") }
 
     public static func plainText(
         _ utterances: [MeetingUtterance],
@@ -29,7 +29,7 @@ public enum MeetingTranscriptFormatter {
         note: String? = nil,
         names: [MeetingChannel: String] = defaultNames
     ) -> String {
-        var lines = ["# \(title)", "", subtitle, "", "> Recorded with OpenRamble. This transcript was produced on this Mac."]
+        var lines = ["# \(title)", "", subtitle, "", L10n.tr("> Recorded with OpenRamble. This transcript was produced on this Mac.")]
         if let note { lines += ["", "> \(note)"] }
         for utterance in ordered(utterances) {
             lines += ["", "**\(name(utterance.channel, names))** · \(timestamp(utterance.start))", body(utterance)]

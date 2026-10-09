@@ -25,11 +25,11 @@ struct SettingsView: View {
 
         var title: String {
             switch self {
-            case .general: return "General"
-            case .recognition: return "Recognition"
-            case .history: return "Dictation History"
-            case .dictionary: return "Dictionary"
-            case .about: return "About"
+            case .general: return L10n.tr("General")
+            case .recognition: return L10n.tr("Recognition")
+            case .history: return L10n.tr("Dictation History")
+            case .dictionary: return L10n.tr("Dictionary")
+            case .about: return L10n.tr("About")
             }
         }
 
@@ -105,8 +105,11 @@ private struct GeneralSettings: View {
     var body: some View {
         Form {
             Section {
+                LanguagePicker()
+            }
+            Section {
                 SettingRow(
-                    title: "Dictation key",
+                    title: L10n.tr("Dictation key"),
                     isChanged: state.hotkey != SettingsDefaults.hotkey,
                     revert: { state.hotkey = SettingsDefaults.hotkey }
                 ) {
@@ -116,8 +119,8 @@ private struct GeneralSettings: View {
                         }
                     }
                     .labelsHidden()
-                    .accessibilityLabel("Dictation key")
-                    .accessibilityHint("The key you hold down while dictating")
+                    .accessibilityLabel(L10n.tr("Dictation key"))
+                    .accessibilityHint(L10n.tr("The key you hold down while dictating"))
                 }
 
                 if let warning = state.hotkeyWarning {
@@ -134,105 +137,105 @@ private struct GeneralSettings: View {
                             .foregroundStyle(StatusColorRole.attention.color)
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Key warning. \(warning)")
+                    .accessibilityLabel(L10n.tr("Key warning. %@", String(describing: warning)))
                 }
                 SettingRow(
-                    title: "Copy last dictation",
+                    title: L10n.tr("Copy last dictation"),
                     isChanged: state.copyShortcut != SettingsDefaults.copyShortcut,
                     revert: { state.copyShortcut = SettingsDefaults.copyShortcut }
                 ) {
                     ShortcutRecorder(
                         shortcut: $state.copyShortcut,
-                        reserved: state.recordingShortcut.map { [$0: "Record"] } ?? [:]
+                        reserved: state.recordingShortcut.map { [$0: L10n.tr("Record")] } ?? [:]
                     )
                 }
-                .accessibilityHint("Press this shortcut to put the last dictation back on the clipboard")
+                .accessibilityHint(L10n.tr("Press this shortcut to put the last dictation back on the clipboard"))
                 SettingRow(
-                    title: "Record",
+                    title: L10n.tr("Record"),
                     isChanged: state.recordingShortcut != SettingsDefaults.recordingShortcut,
                     revert: { state.recordingShortcut = SettingsDefaults.recordingShortcut }
                 ) {
                     ShortcutRecorder(
                         shortcut: $state.recordingShortcut,
-                        reserved: state.copyShortcut.map { [$0: "Copy last dictation"] } ?? [:]
+                        reserved: state.copyShortcut.map { [$0: L10n.tr("Copy last dictation")] } ?? [:]
                     )
                 }
-                .accessibilityHint("Press this shortcut to start or stop a recording")
+                .accessibilityHint(L10n.tr("Press this shortcut to start or stop a recording"))
             } header: {
-                Text("Shortcut")
+                Text(L10n.tr("Shortcut"))
             } footer: {
-                Text("Hold the dictation key to speak, or double-press for hands-free dictation. Press once more to finish. Record starts and stops a recording from any app; choose a shortcut that your other apps don't use. ⌘R opens Recordings while OpenRamble is active.")
+                Text(L10n.tr("Hold the dictation key to speak, or double-press for hands-free dictation. Press once more to finish. Record starts and stops a recording from any app; choose a shortcut that your other apps don't use. ⌘R opens Recordings while OpenRamble is active."))
             }
 
-            Section("Behavior") {
+            Section(L10n.tr("Behavior")) {
                 // Autorun was written and worked, but it was impossible to enable it
                 // nowhere: hotkey utility, not survived
                 // reboot, indistinguishable from a broken one - the key is just
                 // is silent, and there is no one to explain it to.
                 SettingRow(
-                    title: "Launch at login",
+                    title: L10n.tr("Launch at login"),
                     isChanged: state.launchAtLogin != SettingsDefaults.launchAtLogin,
                     revert: { state.launchAtLogin = SettingsDefaults.launchAtLogin }
                 ) {
                     Toggle("", isOn: $state.launchAtLogin)
                         .labelsHidden()
                         .toggleStyle(.switch)
-                        .accessibilityLabel("Launch at login")
-                        .accessibilityHint("Starts OpenRamble automatically when you log in")
+                        .accessibilityLabel(L10n.tr("Launch at login"))
+                        .accessibilityHint(L10n.tr("Starts OpenRamble automatically when you log in"))
                 }
                 SettingRow(
-                    title: "Also copy dictations to the clipboard",
+                    title: L10n.tr("Also copy dictations to the clipboard"),
                     isChanged: state.copiesToClipboard != SettingsDefaults.copiesToClipboard,
                     revert: { state.copiesToClipboard = SettingsDefaults.copiesToClipboard }
                 ) {
                     Toggle("", isOn: $state.copiesToClipboard)
                         .labelsHidden()
                         .toggleStyle(.switch)
-                        .accessibilityLabel("Also copy dictations to the clipboard")
+                        .accessibilityLabel(L10n.tr("Also copy dictations to the clipboard"))
                         .accessibilityHint(
-                            "Leaves each finished dictation on the clipboard of this Mac. Off by default — the clipboard is shared with everything else running here."
+                            L10n.tr("Leaves each finished dictation on the clipboard of this Mac. Off by default — the clipboard is shared with everything else running here.")
                         )
                 }
                 SettingRow(
-                    title: "Add a space after each dictation",
+                    title: L10n.tr("Add a space after each dictation"),
                     isChanged: state.appendsTrailingSpace != SettingsDefaults.appendsTrailingSpace,
                     revert: { state.appendsTrailingSpace = SettingsDefaults.appendsTrailingSpace }
                 ) {
                     Toggle("", isOn: $state.appendsTrailingSpace)
                         .labelsHidden()
                         .toggleStyle(.switch)
-                        .accessibilityLabel("Add a space after each dictation")
+                        .accessibilityLabel(L10n.tr("Add a space after each dictation"))
                         .accessibilityHint(
-                            "For dictating in runs, so the next phrase does not arrive welded to the last word."
+                            L10n.tr("For dictating in runs, so the next phrase does not arrive welded to the last word.")
                         )
                 }
                 SettingRow(
-                    title: "Play a sound when something needs you",
+                    title: L10n.tr("Play a sound when something needs you"),
                     isChanged: state.soundsEnabled != SettingsDefaults.soundsEnabled,
                     revert: { state.soundsEnabled = SettingsDefaults.soundsEnabled }
                 ) {
                     Toggle("", isOn: $state.soundsEnabled)
                         .labelsHidden()
                         .toggleStyle(.switch)
-                        .accessibilityLabel("Play a sound when something needs you")
+                        .accessibilityLabel(L10n.tr("Play a sound when something needs you"))
                         .accessibilityHint(
-                            "A quiet tone when the text didn't reach the field or nothing was recognized. A dictation that works stays silent."
+                            L10n.tr("A quiet tone when the text didn't reach the field or nothing was recognized. A dictation that works stays silent.")
                         )
                 }
                 SettingRow(
-                    title: "Microphone",
+                    title: L10n.tr("Microphone"),
                     isChanged: state.inputDeviceUID != nil,
                     revert: { state.inputDeviceUID = nil }
                 ) {
                     Picker("", selection: $state.inputDeviceUID) {
-                        Text("System default").tag(String?.none)
+                        Text(L10n.tr("System default")).tag(String?.none)
                         ForEach(state.availableInputDevices) { device in
                             Text(device.name).tag(String?.some(device.uid))
                         }
                     }
                     .labelsHidden()
-                    .accessibilityLabel("Microphone")
-                    .accessibilityHint("Which input to record through. The system default follows whatever your Mac is using.")
+                    .accessibilityLabel(L10n.tr("Microphone"))
+                    .accessibilityHint(L10n.tr("Which input to record through. The system default follows whatever your Mac is using."))
                 }
                 if let notice = state.inputDeviceNotice {
                     // Said out loud rather than swapped silently: someone who
@@ -247,20 +250,20 @@ private struct GeneralSettings: View {
                     .accessibilityElement(children: .combine)
                 }
                 SettingRow(
-                    title: "Finish hands-free dictation on silence",
+                    title: L10n.tr("Finish hands-free dictation on silence"),
                     isChanged: state.stopsOnSilence != SettingsDefaults.stopsOnSilence,
                     revert: { state.stopsOnSilence = SettingsDefaults.stopsOnSilence }
                 ) {
                     Toggle("", isOn: $state.stopsOnSilence)
                         .labelsHidden()
                         .toggleStyle(.switch)
-                        .accessibilityLabel("Finish hands-free dictation on silence")
+                        .accessibilityLabel(L10n.tr("Finish hands-free dictation on silence"))
                         .accessibilityHint(
-                            "Only in hands-free mode. While you hold the key, a pause is never treated as the end."
+                            L10n.tr("Only in hands-free mode. While you hold the key, a pause is never treated as the end.")
                         )
                 }
                 SettingRow(
-                    title: "Show OpenRamble in",
+                    title: L10n.tr("Show OpenRamble in"),
                     isChanged: state.presence != SettingsDefaults.presence,
                     revert: { state.presence = SettingsDefaults.presence }
                 ) {
@@ -270,11 +273,11 @@ private struct GeneralSettings: View {
                         }
                     }
                     .labelsHidden()
-                    .accessibilityLabel("Show OpenRamble in")
-                    .accessibilityHint("There is no option to hide it entirely — an app you cannot see is one you cannot open again.")
+                    .accessibilityLabel(L10n.tr("Show OpenRamble in"))
+                    .accessibilityHint(L10n.tr("There is no option to hide it entirely — an app you cannot see is one you cannot open again."))
                 }
                 SettingRow(
-                    title: "Dictation panel",
+                    title: L10n.tr("Dictation panel"),
                     isChanged: state.overlayPlacement != SettingsDefaults.overlayPlacement,
                     revert: { state.overlayPlacement = SettingsDefaults.overlayPlacement }
                 ) {
@@ -284,16 +287,16 @@ private struct GeneralSettings: View {
                         }
                     }
                     .labelsHidden()
-                    .accessibilityLabel("Dictation panel")
-                    .accessibilityHint("Places dictation feedback at the top or bottom of the active screen")
+                    .accessibilityLabel(L10n.tr("Dictation panel"))
+                    .accessibilityHint(L10n.tr("Places dictation feedback at the top or bottom of the active screen"))
                 }
-                Picker("Unload model", selection: $state.modelUnloadTimeout) {
+                Picker(L10n.tr("Unload model"), selection: $state.modelUnloadTimeout) {
                     ForEach(IdleUnloadPolicy.allCases) { option in
                         Text(option.label).tag(option)
                     }
                 }
                 .accessibilityHint(
-                    "Frees the speech model's memory after this much idle time. It reloads under your voice at the next dictation."
+                    L10n.tr("Frees the speech model's memory after this much idle time. It reloads under your voice at the next dictation.")
                 )
             }
 
@@ -301,24 +304,24 @@ private struct GeneralSettings: View {
                 PermissionRow(
                     status: PermissionStatus.accessibility(
                         state: state.accessibilityState,
-                        detail: "Notices your dictation key and types the finished text at your cursor.",
+                        detail: L10n.tr("Notices your dictation key and types the finished text at your cursor."),
                     ),
                     action: performAccessibilityAction
                 )
                 if needsAccessibilityRepair {
                     HStack {
-                        Button("Show in Finder") {
+                        Button(L10n.tr("Show in Finder")) {
                             state.revealApplicationForAccessibility()
                         }
-                        Button("Open System Settings") {
+                        Button(L10n.tr("Open System Settings")) {
                             state.openAccessibilitySettings()
                         }
                     }
                 }
                 PermissionRow(
                     status: PermissionStatus(
-                        title: "Microphone",
-                        detail: "Hears your voice during dictation and recordings you start.",
+                        title: L10n.tr("Microphone"),
+                        detail: L10n.tr("Hears your voice during dictation and recordings you start."),
                         granted: state.microphoneGranted
                     ),
                     action: state.requestMicrophone
@@ -328,9 +331,9 @@ private struct GeneralSettings: View {
                     action: state.performSystemAudioAction
                 )
             } header: {
-                Text("Permissions")
+                Text(L10n.tr("Permissions"))
             } footer: {
-                Text("Finished text is pasted through the clipboard; its previous contents are restored shortly afterward.")
+                Text(L10n.tr("Finished text is pasted through the clipboard; its previous contents are restored shortly afterward."))
             }
             CommandLineToolSettings()
         }
@@ -339,16 +342,16 @@ private struct GeneralSettings: View {
         // a person should see a fresh state, and not what was before leaving.
         .task { state.refreshPermissions() }
         .confirmationDialog(
-            "Repair Accessibility access?",
+            L10n.tr("Repair Accessibility access?"),
             isPresented: $showAccessibilityRepairConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Reset OpenRamble's access and relaunch", role: .destructive) {
+            Button(L10n.tr("Reset OpenRamble's access and relaunch"), role: .destructive) {
                 state.repairAccessibility()
             }
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.tr("Cancel"), role: .cancel) {}
         } message: {
-            Text("macOS will remove only OpenRamble's Accessibility entries. After the relaunch you will need to grant access again.")
+            Text(L10n.tr("macOS will remove only OpenRamble's Accessibility entries. After the relaunch you will need to grant access again."))
         }
     }
 
@@ -398,7 +401,7 @@ private struct PermissionRow: View {
                 Button(title, action: action)
                     .accessibilityLabel(status.actionAccessibilityLabel ?? title)
             } else if status.granted {
-                Label("Granted", systemImage: "checkmark.circle.fill")
+                Label(L10n.tr("Granted"), systemImage: "checkmark.circle.fill")
                     .foregroundStyle(StatusColorRole.success.color)
                     .labelStyle(.iconOnly)
                     .font(.title3)
@@ -440,23 +443,23 @@ private struct RecognitionSettings: View {
                 // by the failure notice when it happens, and findable here for
                 // as long as it exists.
             } header: {
-                Text("Speech model")
+                Text(L10n.tr("Speech model"))
             } footer: {
-                Text("Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings.")
+                Text(L10n.tr("Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings."))
             }
 
         }
         .formStyle(.grouped)
         .task { await state.refreshModelState() }
         .confirmationDialog(
-            "Delete the recognition model?",
+            L10n.tr("Delete the recognition model?"),
             isPresented: $showDeleteConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Delete Model", role: .destructive) { state.deleteModel() }
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.tr("Delete Model"), role: .destructive) { state.deleteModel() }
+            Button(L10n.tr("Cancel"), role: .cancel) {}
         } message: {
-            Text("Dictation stops working until you download the model again — that's another \(state.fullModelDownloadMegabytes) MB over the network.")
+            Text(L10n.tr("Dictation stops working until you download the model again — that's another %@ MB over the network.", String(describing: state.fullModelDownloadMegabytes)))
         }
     }
 }
@@ -479,14 +482,14 @@ private struct DictionarySettings: View {
                     // here: the person stands exactly on the page where he is going
                     // edit it, and must find out before you start.
                     VStack(alignment: .leading, spacing: 2) {
-                        Label("Dictionary can't be edited", systemImage: "lock.fill")
+                        Label(L10n.tr("Dictionary can't be edited"), systemImage: "lock.fill")
                             .foregroundStyle(StatusColorRole.attention.color)
                         Text(problem.message)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Dictionary can't be edited. \(problem.message)")
+                    .accessibilityLabel(L10n.tr("Dictionary can't be edited. %@", String(describing: problem.message)))
                 }
             }
 
@@ -495,10 +498,10 @@ private struct DictionarySettings: View {
                 // to be just a half-window gap without a single word.
                 if state.replacements.isEmpty {
                     VStack(spacing: 4) {
-                        Text("No personal replacements yet")
+                        Text(L10n.tr("No personal replacements yet"))
                             .font(.headline)
                             .foregroundStyle(.secondary)
-                        Text("Add a pair below: what the model hears on the left, what should be written on the right.")
+                        Text(L10n.tr("Add a pair below: what the model hears on the left, what should be written on the right."))
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                             .multilineTextAlignment(.center)
@@ -521,7 +524,7 @@ private struct DictionarySettings: View {
                                 // The attribute is visible in the list, because otherwise it
                                 // inexplicable: the person marked the term, nothing
                                 // has changed in appearance, and the sign is forgotten.
-                                Text("text only")
+                                Text(L10n.tr("text only"))
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                             } else {
@@ -537,7 +540,7 @@ private struct DictionarySettings: View {
                             .buttonStyle(.borderless)
                             .disabled(!state.isDictionaryEditable)
                             .accessibilityLabel(
-                                "Delete replacement “\(replacement.spoken)” to “\(replacement.written)”"
+                                L10n.tr("Delete replacement “%@” to “%@”", String(describing: replacement.spoken), String(describing: replacement.written))
                             )
                         }
                         // The row is read whole: "sentry", arrow and "Sentry"
@@ -546,71 +549,71 @@ private struct DictionarySettings: View {
                         .accessibilityElement(children: .contain)
                         .accessibilityLabel(
                             replacement.noAcousticBoost
-                                ? "Heard as “\(replacement.spoken)”, written as “\(replacement.written)”, text only — not used to help recognition"
-                                : "Heard as “\(replacement.spoken)”, written as “\(replacement.written)”"
+                                ? L10n.tr("Heard as “%@”, written as “%@”, text only — not used to help recognition", String(describing: replacement.spoken), String(describing: replacement.written))
+                                : L10n.tr("Heard as “%@”, written as “%@”", String(describing: replacement.spoken), String(describing: replacement.written))
                         )
                     }
                     .onDelete(perform: state.removeReplacements)
                 }
             } header: {
                 HStack {
-                    Text("Replacements")
+                    Text(L10n.tr("Replacements"))
                     Spacer()
                     // The dictionary is the one piece of dictation state worth
                     // carrying to another Mac — quiet header actions, like
                     // System Settings' own list tools.
-                    Button("Import…") { showImporter = true }
+                    Button(L10n.tr("Import…")) { showImporter = true }
                         .disabled(!state.isDictionaryEditable)
-                        .accessibilityHint("Adds phrases from an OpenRamble dictionary file")
-                    Button("Export…") {
+                        .accessibilityHint(L10n.tr("Adds phrases from an OpenRamble dictionary file"))
+                    Button(L10n.tr("Export…")) {
                         guard let data = try? state.exportedDictionary() else { return }
                         exportDocument = DictionaryTransferFile(data: data)
                         showExporter = true
                     }
                     .disabled(state.replacements.isEmpty)
-                    .accessibilityHint("Saves all phrases to a file")
+                    .accessibilityHint(L10n.tr("Saves all phrases to a file"))
                 }
                 .buttonStyle(.borderless)
             } footer: {
-                Text("Common technical terms are handled automatically. Add personal names or phrases the model hears differently.")
+                Text(L10n.tr("Common technical terms are handled automatically. Add personal names or phrases the model hears differently."))
             }
 
             Section {
                 // The only place where the application reads the content of someone else's
                 // windows. Off by default, and the footer says exactly what is
                 // read - otherwise the choice is not conscious.
-                Toggle("Learn from your edits", isOn: $state.learnFromEdits)
-                    .accessibilityHint("Reads back the field it pasted into, to learn words you fix by hand")
+                Toggle(L10n.tr("Learn from your edits"), isOn: $state.learnFromEdits)
+                    .accessibilityHint(L10n.tr("Reads back the field it pasted into, to learn words you fix by hand"))
             } header: {
-                Text("Personalization")
+                Text(L10n.tr("Personalization"))
             } footer: {
-                Text("Off by default. After a paste, OpenRamble can re-read only that field at 8 and 25 seconds to learn a correction. The content stays on this Mac.")
+                Text(L10n.tr("Off by default. After a paste, OpenRamble can re-read only that field at 8 and 25 seconds to learn a correction. The content stays on this Mac."))
             }
 
-            Section("Add replacement") {
+            Section(L10n.tr("Add replacement")) {
                 // A composer, not a settings value: the grouped form's default
                 // trailing-aligned fields are for tweaking short values, and
                 // typing a new phrase against the right edge reads backwards.
                 // Two bordered leading fields mirror the rows above — what is
                 // heard flows into what gets written.
                 HStack(spacing: 8) {
-                    TextField("Heard as", text: $spoken, prompt: Text("Spoken phrase"))
+                    TextField(L10n.tr("Heard as"), text: $spoken, prompt: Text(L10n.tr("Spoken phrase")))
                         .textFieldStyle(.roundedBorder)
                         .labelsHidden()
-                        .accessibilityLabel("Heard as")
+                        .accessibilityLabel(L10n.tr("Heard as"))
                         .onSubmit(addReplacement)
                     Image(systemName: "arrow.right")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .accessibilityHidden(true)
-                    TextField("Write as", text: $written, prompt: Text("Final spelling"))
+                    TextField(L10n.tr("Write as"), text: $written, prompt: Text(L10n.tr("Final spelling")))
                         .textFieldStyle(.roundedBorder)
                         .labelsHidden()
-                        .accessibilityLabel("Write as")
+                        .accessibilityLabel(L10n.tr("Write as"))
                         .onSubmit(addReplacement)
-                    Button("Add", action: addReplacement)
+                    Button(L10n.tr("Add"), action: addReplacement)
                         .disabled(!canAddReplacement)
-                        .accessibilityLabel("Add replacement")
+                        .accessibilityLabel(L10n.tr("Add replacement"))
                         .accessibilityHint(addReplacementHint)
                 }
                 .padding(.vertical, 2)
@@ -631,11 +634,11 @@ private struct DictionarySettings: View {
                 if url.isFileURL, let data = FileManager.default.contents(atPath: url.path) {
                     state.importDictionary(from: data)
                 } else {
-                    state.reportDictionaryFileProblem("The file couldn't be opened.")
+                    state.reportDictionaryFileProblem(L10n.tr("The file couldn't be opened."))
                 }
             case let .failure(error):
                 state.reportDictionaryFileProblem(
-                    "The file couldn't be opened: \(error.localizedDescription)"
+                    L10n.tr("The file couldn't be opened: %@", String(describing: error.localizedDescription))
                 )
             }
         }
@@ -643,13 +646,13 @@ private struct DictionarySettings: View {
             isPresented: $showExporter,
             document: exportDocument,
             contentType: .json,
-            defaultFilename: "OpenRamble Dictionary"
+            defaultFilename: L10n.tr("OpenRamble Dictionary")
         ) { result in
             // The file appearing where the person chose is the success signal;
             // only a failure needs words.
             if case let .failure(error) = result {
                 state.reportDictionaryFileProblem(
-                    "The dictionary couldn't be exported: \(error.localizedDescription)"
+                    L10n.tr("The dictionary couldn't be exported: %@", String(describing: error.localizedDescription))
                 )
             }
         }
@@ -668,11 +671,11 @@ private struct DictionarySettings: View {
 
     private var addReplacementHint: String {
         if !state.isDictionaryEditable {
-            return "The dictionary can't be edited until the previous data has been read"
+            return L10n.tr("The dictionary can't be edited until the previous data has been read")
         }
         return canAddReplacement
-            ? "Adds this replacement to future dictations"
-            : "Fill in both fields"
+            ? L10n.tr("Adds this replacement to future dictations")
+            : L10n.tr("Fill in both fields")
     }
 
     private func addReplacement() {
@@ -746,7 +749,7 @@ private struct AboutView: View {
         let info = Bundle.main.infoDictionary
         let marketing = info?["CFBundleShortVersionString"] as? String ?? "—"
         let build = info?["CFBundleVersion"] as? String ?? "—"
-        return "Version \(marketing) (\(build))"
+        return L10n.tr("Version %@ (%@)", String(describing: marketing), String(describing: build))
     }
 
     @State private var showsCredits = false
@@ -763,7 +766,7 @@ private struct AboutView: View {
                         Text("OpenRamble")
                             .font(.title2.bold())
                             .accessibilityAddTraits(.isHeader)
-                        Text("Private dictation for your Mac")
+                        Text(L10n.tr("Private dictation for your Mac"))
                             .foregroundStyle(.secondary)
                         Text(version)
                             .font(.caption.monospacedDigit())
@@ -774,9 +777,9 @@ private struct AboutView: View {
                 .padding(.vertical, 4)
             }
 
-            Section("Appearance") {
+            Section(L10n.tr("Appearance")) {
                 SettingRow(
-                    title: "Theme",
+                    title: L10n.tr("Theme"),
                     isChanged: appearance != SettingsDefaults.appearance,
                     revert: { appearance = SettingsDefaults.appearance }
                 ) {
@@ -786,8 +789,8 @@ private struct AboutView: View {
                         }
                     }
                     .labelsHidden()
-                    .accessibilityLabel("Theme")
-                    .accessibilityHint("Follow the system, or keep this app light or dark on its own")
+                    .accessibilityLabel(L10n.tr("Theme"))
+                    .accessibilityHint(L10n.tr("Follow the system, or keep this app light or dark on its own"))
                 }
             }
 
@@ -797,33 +800,33 @@ private struct AboutView: View {
                 // work”, the person clicks the switch, the text below it
                 // promises daily checks - and the setup goes into
                 // the mechanism is not running and does nothing.
-                Toggle("Check for updates automatically", isOn: $updater.automaticChecksEnabled)
-                    .accessibilityHint("The only switch that changes the app's network behavior")
+                Toggle(L10n.tr("Check for updates automatically"), isOn: $updater.automaticChecksEnabled)
+                    .accessibilityHint(L10n.tr("The only switch that changes the app's network behavior"))
                     .disabled(updater.startupFailure != nil)
-                Button("Check Now", action: updater.checkForUpdates)
+                Button(L10n.tr("Check Now"), action: updater.checkForUpdates)
                     .disabled(!updater.canCheckForUpdates)
                 if let failure = updater.startupFailure {
                     // You can’t be silent: otherwise a person will think that
                     // updates come, but they don't arrive.
                     VStack(alignment: .leading, spacing: 2) {
-                        Label("Updates are not working", systemImage: "exclamationmark.triangle.fill")
+                        Label(L10n.tr("Updates are not working"), systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(StatusColorRole.attention.color)
                         Text(failure)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Updates are not working. \(failure)")
+                    .accessibilityLabel(L10n.tr("Updates are not working. %@", String(describing: failure)))
                 }
             } header: {
-                Text("Updates")
+                Text(L10n.tr("Updates"))
             } footer: {
-                Text("On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled network access.")
+                Text(L10n.tr("On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled network access."))
             }
 
             Section {
                 Label {
-                    Text("Speech stays on this Mac")
+                    Text(L10n.tr("Speech stays on this Mac"))
                         .font(.headline)
                 } icon: {
                     Image(systemName: "lock.shield.fill")
@@ -832,51 +835,51 @@ private struct AboutView: View {
                 }
                 .accessibilityElement(children: .combine)
                 SettingRow(
-                    title: "Keep local diagnostics",
+                    title: L10n.tr("Keep local diagnostics"),
                     isChanged: detailedLogging != SettingsDefaults.detailedLogging,
                     revert: { detailedLogging = SettingsDefaults.detailedLogging }
                 ) {
                     Toggle("", isOn: $detailedLogging)
                         .labelsHidden()
                         .toggleStyle(.switch)
-                        .accessibilityLabel("Keep local diagnostics")
+                        .accessibilityLabel(L10n.tr("Keep local diagnostics"))
                         .accessibilityHint(
-                            "Keeps technical events for up to 7 days, limited to 5 MB. No speech or personal content. Turning this off clears the journal."
+                            L10n.tr("Keeps technical events for up to 7 days, limited to 5 MB. No speech or personal content. Turning this off clears the journal.")
                         )
                 }
-                Button(isSavingReport ? "Saving Report…" : "Save Error Report…", action: saveErrorReport)
+                Button(isSavingReport ? L10n.tr("Saving Report…") : L10n.tr("Save Error Report…"), action: saveErrorReport)
                     .disabled(isSavingReport)
-                    .accessibilityHint("Saves a ZIP with local technical events and available crash reports. Nothing is sent automatically.")
-                Button("Reveal Support Folder", action: revealSupportFolder)
+                    .accessibilityHint(L10n.tr("Saves a ZIP with local technical events and available crash reports. Nothing is sent automatically."))
+                Button(L10n.tr("Reveal Support Folder"), action: revealSupportFolder)
                     // The title alone does not survive into the accessibility
                     // tree on this Form layout — VoiceOver would announce an
                     // unnamed button.
-                    .accessibilityLabel("Reveal Support Folder")
-                    .accessibilityHint("Opens the folder with downloaded models and any recordings kept after a failure")
+                    .accessibilityLabel(L10n.tr("Reveal Support Folder"))
+                    .accessibilityHint(L10n.tr("Opens the folder with downloaded models and any recordings kept after a failure"))
             } header: {
-                Text("Privacy")
+                Text(L10n.tr("Privacy"))
             } footer: {
-                Text("No account, analytics, or cloud transcription. Reports contain technical events and available crash details, never your speech. Nothing is sent automatically. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder.")
+                Text(L10n.tr("No account, analytics, or cloud transcription. Reports contain technical events and available crash details, never your speech. Nothing is sent automatically. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder."))
             }
 
-            Section("Credits") {
-                DisclosureGroup("Model and library credits", isExpanded: $showsCredits) {
+            Section(L10n.tr("Credits")) {
+                DisclosureGroup(L10n.tr("Model and library credits"), isExpanded: $showsCredits) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Parakeet TDT 0.6B v3 and Parakeet TDT-CTC 110M © NVIDIA, licensed under CC BY 4.0. Core ML conversions by FluidInference.")
-                        Text("FluidAudio is licensed under Apache 2.0. Sparkle is licensed under MIT.")
+                        Text(L10n.tr("Parakeet TDT 0.6B v3 and Parakeet TDT-CTC 110M © NVIDIA, licensed under CC BY 4.0. Core ML conversions by FluidInference."))
+                        Text(L10n.tr("FluidAudio is licensed under Apache 2.0. Sparkle is licensed under MIT."))
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.top, 6)
                 }
-                Link("View source on GitHub", destination: URL(string: "https://github.com/mikwiseman/openramble")!)
+                Link(L10n.tr("View source on GitHub"), destination: URL(string: "https://github.com/mikwiseman/openramble")!)
             }
         }
         .formStyle(.grouped)
-        .alert("Couldn’t save the report", isPresented: $reportSaveFailed) {
-            Button("OK", role: .cancel) {}
+        .alert(L10n.tr("Couldn’t save the report"), isPresented: $reportSaveFailed) {
+            Button(L10n.tr("OK"), role: .cancel) {}
         } message: {
-            Text("Try another location with available disk space.")
+            Text(L10n.tr("Try another location with available disk space."))
         }
     }
 }

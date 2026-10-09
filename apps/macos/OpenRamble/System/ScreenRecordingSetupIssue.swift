@@ -15,37 +15,37 @@ public enum ScreenRecordingSetupIssue: Equatable, Sendable {
 
     var title: String {
         switch self {
-        case .screenPermission: return "Allow screen recording"
-        case .cameraPermission: return "Allow camera access"
-        case .cameraRestricted: return "Camera access is restricted"
-        case .microphonePermission: return "Allow microphone access"
-        case .noDisplay: return "No display available"
-        case .captureFailed: return "Recording couldn't start"
+        case .screenPermission: return L10n.tr("Allow screen recording")
+        case .cameraPermission: return L10n.tr("Allow camera access")
+        case .cameraRestricted: return L10n.tr("Camera access is restricted")
+        case .microphonePermission: return L10n.tr("Allow microphone access")
+        case .noDisplay: return L10n.tr("No display available")
+        case .captureFailed: return L10n.tr("Recording couldn't start")
         }
     }
 
     var message: String {
         switch self {
         case .screenPermission:
-            return "Enable OpenRamble in Screen & System Audio Recording. Return here to check again."
+            return L10n.tr("Enable OpenRamble in Screen & System Audio Recording. Return here to check again.")
         case .cameraPermission:
-            return "Enable OpenRamble in Camera settings, or turn off the camera bubble."
+            return L10n.tr("Enable OpenRamble in Camera settings, or turn off the camera bubble.")
         case .cameraRestricted:
-            return "This Mac restricts camera access. Turn off the bubble to record your screen."
+            return L10n.tr("This Mac restricts camera access. Turn off the bubble to record your screen.")
         case .microphonePermission:
-            return "Enable OpenRamble in Microphone settings, or turn off the microphone."
+            return L10n.tr("Enable OpenRamble in Microphone settings, or turn off the microphone.")
         case .noDisplay:
-            return "Connect a display, then try again."
+            return L10n.tr("Connect a display, then try again.")
         case .captureFailed:
-            return "Check that your display and selected devices are available, then try again."
+            return L10n.tr("Check that your display and selected devices are available, then try again.")
         }
     }
 
     var settingsTitle: String? {
         switch self {
-        case .screenPermission: return "Screen Recording Settings"
-        case .cameraPermission: return "Camera Settings"
-        case .microphonePermission: return "Microphone Settings"
+        case .screenPermission: return L10n.tr("Screen Recording Settings")
+        case .cameraPermission: return L10n.tr("Camera Settings")
+        case .microphonePermission: return L10n.tr("Microphone Settings")
         case .cameraRestricted, .noDisplay, .captureFailed: return nil
         }
     }

@@ -39,13 +39,13 @@ public enum IdleUnloadPolicy: String, CaseIterable, Identifiable, Sendable {
 
     public var label: String {
         switch self {
-        case .never: return "Never"
-        case .immediately: return "Immediately"
-        case .afterTwoMinutes: return "After 2 minutes"
-        case .afterFiveMinutes: return "After 5 minutes"
-        case .afterTenMinutes: return "After 10 minutes"
-        case .afterFifteenMinutes: return "After 15 minutes"
-        case .afterOneHour: return "After 1 hour"
+        case .never: return L10n.tr("Never")
+        case .immediately: return L10n.tr("Immediately")
+        case .afterTwoMinutes: return L10n.tr("After 2 minutes")
+        case .afterFiveMinutes: return L10n.tr("After 5 minutes")
+        case .afterTenMinutes: return L10n.tr("After 10 minutes")
+        case .afterFifteenMinutes: return L10n.tr("After 15 minutes")
+        case .afterOneHour: return L10n.tr("After 1 hour")
         }
     }
 

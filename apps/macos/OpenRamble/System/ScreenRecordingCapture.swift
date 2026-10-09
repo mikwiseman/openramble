@@ -52,7 +52,7 @@ public final class ScreenRecordingCapture: NSObject, ScreenRecordingCapturing, S
         return content.displays.map { display in
             let name = NSScreen.screens.first(where: {
                 ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == display.displayID
-            })?.localizedName ?? "Display \(display.displayID)"
+            })?.localizedName ?? L10n.tr("Display %@", String(describing: display.displayID))
             return ScreenDisplayOption(id: display.displayID, name: name)
         }
     }
@@ -69,7 +69,7 @@ public final class ScreenRecordingCapture: NSObject, ScreenRecordingCapturing, S
         options.displayID = selected.displayID
         displayOptionName = NSScreen.screens.first(where: {
             ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == selected.displayID
-        })?.localizedName ?? "Display \(selected.displayID)"
+        })?.localizedName ?? L10n.tr("Display %@", String(describing: selected.displayID))
 
         if options.cameraEnabled {
             try await prepareCamera()
@@ -238,14 +238,14 @@ public final class ScreenRecordingCapture: NSObject, ScreenRecordingCapturing, S
             break
         case .notDetermined:
             guard await AVCaptureDevice.requestAccess(for: .video) else {
-                throw ScreenRecordingError.permissionDenied("Камера")
+                throw ScreenRecordingError.permissionDenied(L10n.tr("Camera"))
             }
         case .restricted:
             throw ScreenRecordingError.cameraRestricted
         case .denied:
-            throw ScreenRecordingError.permissionDenied("Камера")
+            throw ScreenRecordingError.permissionDenied(L10n.tr("Camera"))
         @unknown default:
-            throw ScreenRecordingError.permissionDenied("Камера")
+            throw ScreenRecordingError.permissionDenied(L10n.tr("Camera"))
         }
         if cameraSession != nil { return }
         guard let device = AVCaptureDevice.default(for: .video) else { throw ScreenRecordingError.cameraUnavailable }

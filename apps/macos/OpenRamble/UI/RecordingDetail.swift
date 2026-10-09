@@ -47,20 +47,20 @@ struct RecordingDetail: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    Button("Rename…", action: beginRenaming)
-                    Button("Save Transcript…") { saveTranscript() }
+                    Button(L10n.tr("Rename…"), action: beginRenaming)
+                    Button(L10n.tr("Save Transcript…")) { saveTranscript() }
                         .disabled(state.transcript(for: recording.id).isEmpty)
-                    Button("Save Audio…") { saveAudio() }
+                    Button(L10n.tr("Save Audio…")) { saveAudio() }
                         .disabled(state.recordingAudioURL(recording.id) == nil || state.audioExportProgress != nil)
                     if recording.captureKind == .screen {
-                        Button("Save Video…") { saveVideo() }
+                        Button(L10n.tr("Save Video…")) { saveVideo() }
                             .disabled(state.recordingVideoURL(recording.id) == nil)
                     }
                     Divider()
-                    Button("Show in Finder") { state.revealRecording(recording.id) }
-                    Button("Recording Details…") { showsInfo = true }
+                    Button(L10n.tr("Show in Finder")) { state.revealRecording(recording.id) }
+                    Button(L10n.tr("Recording Details…")) { showsInfo = true }
                     Divider()
-                    Button("Move to Trash", role: .destructive) { state.trashRecording(recording.id) }
+                    Button(L10n.tr("Move to Trash"), role: .destructive) { state.trashRecording(recording.id) }
                 }
                 label: {
                     Image(systemName: "ellipsis")
@@ -68,11 +68,11 @@ struct RecordingDetail: View {
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
-                .help("Recording details and actions")
-                .accessibilityLabel("More recording actions")
+                .help(L10n.tr("Recording details and actions"))
+                .accessibilityLabel(L10n.tr("More recording actions"))
                 .popover(isPresented: $showsInfo) {
                     VStack(alignment: .leading, spacing: GlassTokens.Space.inline) {
-                        Text("Recording Details").font(.headline)
+                        Text(L10n.tr("Recording Details")).font(.headline)
                         Text(metadataLine).font(.callout).textSelection(.enabled)
                     }
                     .padding(GlassTokens.Space.section)
@@ -86,7 +86,7 @@ struct RecordingDetail: View {
         VStack(alignment: .leading, spacing: GlassTokens.Space.tight) {
             if isRenaming {
                 TextField(
-                    "Recording name",
+                    L10n.tr("Recording name"),
                     text: $draftTitle,
                     prompt: Text(RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
                 )
@@ -95,7 +95,7 @@ struct RecordingDetail: View {
                 .focused($titleIsFocused)
                 .onSubmit(commitRename)
                 .onExitCommand(perform: cancelRename)
-                .accessibilityLabel("Recording name")
+                .accessibilityLabel(L10n.tr("Recording name"))
                 .task { titleIsFocused = true }
             } else {
                 Text(recording.title ?? RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
@@ -103,13 +103,13 @@ struct RecordingDetail: View {
                     .lineLimit(2)
                     .contentShape(Rectangle())
                     .onTapGesture(count: 2, perform: beginRenaming)
-                    .help("Double-click to rename")
+                    .help(L10n.tr("Double-click to rename"))
                     .accessibilityIdentifier("rename-recording")
             }
 
             Text(recording.title == nil
                  ? RecordingTime.brief(recording.duration)
-                 : recording.startedAt.formatted(date: .long, time: .shortened)
+                 : recording.startedAt.formatted(Date.FormatStyle(date: .long, time: .shortened, locale: L10n.shared.language.locale))
                     + " · " + RecordingTime.brief(recording.duration))
                 .font(.system(size: GlassTokens.Label.footnote))
                 .foregroundStyle(.secondary)
@@ -118,14 +118,14 @@ struct RecordingDetail: View {
 
     private var metadataLine: String {
         var parts = [
-            recording.startedAt.formatted(date: .long, time: .shortened),
+            recording.startedAt.formatted(Date.FormatStyle(date: .long, time: .shortened, locale: L10n.shared.language.locale)),
             RecordingTime.brief(recording.duration),
             recording.captureKind == .screen
-                ? "Screen recording"
-                : (recording.isMeeting ? "Meeting" : "Voice note"),
+                ? L10n.tr("Screen recording")
+                : (recording.isMeeting ? L10n.tr("Meeting") : L10n.tr("Voice note")),
         ]
         if let transport = recording.systemAudio.outputTransport, recording.isMeeting {
-            parts.append("other side via \(transport)")
+            parts.append(L10n.tr("other side via %@", String(describing: transport)))
         }
         if let bytes = state.recordingBytes(recording.id) {
             parts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
@@ -158,11 +158,11 @@ struct RecordingDetail: View {
                         .clipShape(RoundedRectangle(cornerRadius: GlassTokens.Radius.surface, style: .continuous))
                         .padding(.horizontal, GlassTokens.Space.page)
                         .padding(.top, GlassTokens.Space.section)
-                        .accessibilityLabel("Screen recording video")
+                        .accessibilityLabel(L10n.tr("Screen recording video"))
                 } else if player.videoFailedToLoad {
                     LocalRecordingVideoPlaceholder(
-                        title: "Video unavailable",
-                        detail: "The audio and transcript are still available."
+                        title: L10n.tr("Video unavailable"),
+                        detail: L10n.tr("The audio and transcript are still available.")
                     )
                     .padding(.horizontal, GlassTokens.Space.page)
                     .padding(.top, GlassTokens.Space.section)
@@ -173,19 +173,19 @@ struct RecordingDetail: View {
                     ProgressView(value: progress)
                         .progressViewStyle(.linear)
                         .frame(maxWidth: 220)
-                    Text("Preparing the audio…")
+                    Text(L10n.tr("Preparing the audio…"))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                     Spacer(minLength: GlassTokens.Space.inline)
-                    Button("Cancel") { state.cancelAudioExport() }
+                    Button(L10n.tr("Cancel")) { state.cancelAudioExport() }
                 }
                 .padding(GlassTokens.Space.stack)
                 .contentSurface(RoundedRectangle(cornerRadius: GlassTokens.Radius.control, style: .continuous))
                 .padding(.horizontal, GlassTokens.Space.page)
                 .padding(.top, GlassTokens.Space.section)
                 .accessibilityElement(children: .contain)
-                .accessibilityLabel("Preparing the audio")
-                .accessibilityValue("\(Int(progress * 100)) percent")
+                .accessibilityLabel(L10n.tr("Preparing the audio"))
+                .accessibilityValue(L10n.tr("%@ percent", String(describing: Int(progress * 100))))
             }
             if let note = RecordingsPlaceholder.endNote(for: recording.endReason)
                 ?? RecordingsPlaceholder.degradedNote(for: recording) {
@@ -289,7 +289,7 @@ struct LiveRecordingDetail: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .padding(GlassTokens.Space.page)
-                    .accessibilityLabel(state.meetingState == .paused ? "Recording paused" : RecordingsPlaceholder.listening.title)
+                    .accessibilityLabel(state.meetingState == .paused ? L10n.tr("Recording paused") : RecordingsPlaceholder.listening.title)
                     .accessibilityValue(RecordingsPlaceholder.listening.detail)
                 Spacer(minLength: 0)
             } else {

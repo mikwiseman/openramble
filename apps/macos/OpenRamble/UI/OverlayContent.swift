@@ -79,10 +79,10 @@ struct OverlayContent: Equatable {
         switch state {
         case .idle:
             return OverlayContent(
-                title: "Done",
+                title: L10n.tr("Done"),
                 subtitle: nil,
                 tone: .idle,
-                accessibilityLabel: "Not dictating",
+                accessibilityLabel: L10n.tr("Not dictating"),
                 // The panel is removed at this moment. Announcing “ready” into the void
                 // no need: the person already heard that the dictation was over.
                 announcement: nil,
@@ -91,24 +91,24 @@ struct OverlayContent: Equatable {
 
         case .preparing:
             return OverlayContent(
-                title: "Turning on the microphone…",
+                title: L10n.tr("Turning on the microphone…"),
                 subtitle: nil,
                 tone: .working,
-                accessibilityLabel: "Turning on the microphone",
-                announcement: "Turning on the microphone",
+                accessibilityLabel: L10n.tr("Turning on the microphone"),
+                announcement: L10n.tr("Turning on the microphone"),
                 isAnnouncementUrgent: false
             )
 
         case .listening:
             let seconds = spokenSeconds(elapsed)
             return OverlayContent(
-                title: "Listening",
+                title: L10n.tr("Listening"),
                 subtitle: nil,
                 tone: .recording,
-                accessibilityLabel: "Recording, \(seconds).",
+                accessibilityLabel: L10n.tr("Recording, %@.", String(describing: seconds)),
                 // The main announcement throughout the application: without it, you are blind
                 // the person does not know that the microphone is on.
-                announcement: "Recording.",
+                announcement: L10n.tr("Recording."),
                 isAnnouncementUrgent: true
             )
 
@@ -122,31 +122,31 @@ struct OverlayContent: Equatable {
             // say what is actually happening.
             if isWaitingForEngine {
                 return OverlayContent(
-                    title: "Waking the model…",
-                    subtitle: "Your words are waiting, not lost.",
+                    title: L10n.tr("Waking the model…"),
+                    subtitle: L10n.tr("Your words are waiting, not lost."),
                     tone: .working,
-                    accessibilityLabel: "Recording stopped, waiting for the speech model to load",
-                    announcement: "Waiting for the speech model to load",
+                    accessibilityLabel: L10n.tr("Recording stopped, waiting for the speech model to load"),
+                    announcement: L10n.tr("Waiting for the speech model to load"),
                     isAnnouncementUrgent: false
                 )
             }
             return OverlayContent(
-                title: "Transcribing…",
+                title: L10n.tr("Transcribing…"),
                 // The number is the length of the finished recording, not progress.
                 // Showing it next to a spinner looks like a processing timer and is misleading.
                 subtitle: nil,
                 tone: .working,
-                accessibilityLabel: "Recording stopped, transcribing speech",
-                announcement: "Recording stopped, transcribing speech",
+                accessibilityLabel: L10n.tr("Recording stopped, transcribing speech"),
+                announcement: L10n.tr("Recording stopped, transcribing speech"),
                 isAnnouncementUrgent: false
             )
 
         case .inserting:
             return OverlayContent(
-                title: "Done",
+                title: L10n.tr("Done"),
                 subtitle: nil,
                 tone: .idle,
-                accessibilityLabel: "Text inserted",
+                accessibilityLabel: L10n.tr("Text inserted"),
                 announcement: nil,
                 isAnnouncementUrgent: false
             )
@@ -167,11 +167,6 @@ struct OverlayContent: Equatable {
     /// The recording is really going on, but that’s not enough.
     static func spokenSeconds(_ elapsed: TimeInterval) -> String {
         let value = Int(max(0, elapsed).rounded())
-        return "\(value) \(secondsWord(value))"
-    }
-
-    /// Form of the word "second" for a number.
-    private static func secondsWord(_ value: Int) -> String {
-        value == 1 ? "second" : "seconds"
+        return RecordingTime.spokenUnit(value, "second")
     }
 }

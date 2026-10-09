@@ -2,6 +2,8 @@ name: OpenRamble
 
 options:
   bundleIdPrefix: is.waiwai
+  developmentLanguage: en
+  knownRegions: [en, ru]
   deploymentTarget:
     macOS: "14.0"
   createIntermediateGroups: true
@@ -42,8 +44,8 @@ settings:
     OPENRAMBLE_DIAGNOSTICS_CONDITION: ""
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
-    MARKETING_VERSION: "0.31.2"
-    CURRENT_PROJECT_VERSION: "74"
+    MARKETING_VERSION: "0.32.0"
+    CURRENT_PROJECT_VERSION: "75"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     # The sandbox is turned off intentionally: dictation must insert text into other people's
@@ -128,14 +130,13 @@ targets:
         OpenRambleDiagnostics: "$(OPENRAMBLE_DIAGNOSTICS_CONDITION)"
         # The application lives in the menu bar and is not shown in the Dock.
         LSUIElement: true
-        # This line is read by the person in the system permission dialog - that is
-        # this is an interface, not a comment, and its language is the same as everything else
-        # rest: English.
+        CFBundleDevelopmentRegion: en
+        # System permission prompts also have Russian InfoPlist.strings.
         NSMicrophoneUsageDescription: >-
           OpenRamble needs the microphone to record your speech. The
           recording is processed on this Mac and is never sent anywhere.
         # The other side of a call. Asked the first time a recording of it
-        # starts, never at launch; the same rule about language applies.
+        # starts, never at launch.
         NSAudioCaptureUsageDescription: >-
           OpenRamble records the audio your Mac plays so the other people in
           a meeting appear in the transcript. The recording stays on this Mac

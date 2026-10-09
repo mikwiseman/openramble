@@ -37,7 +37,7 @@ final class CameraBubbleOverlay: NSObject, NSWindowDelegate {
                                       styleMask: [.borderless, .nonactivatingPanel, .resizable],
                                       backing: .buffered,
                                       defer: false)
-        panel.title = "OpenRamble · Камера"
+        panel.title = L10n.tr("OpenRamble · Camera")
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
@@ -153,7 +153,7 @@ private final class CameraBubbleView: NSView {
         layer?.addSublayer(previewLayer)
         setAccessibilityElement(true)
         setAccessibilityRole(.image)
-        setAccessibilityLabel("Кружок камеры. Перетащите, чтобы переместить или изменить размер.")
+        setAccessibilityLabel(L10n.tr("Camera bubble. Drag to move or resize."))
     }
 
     required init?(coder: NSCoder) { nil }

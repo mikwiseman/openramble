@@ -53,35 +53,35 @@ public struct EnginePreparationState: Equatable {
         case .idle:
             return EnginePreparationState(
                 phase: phase, elapsed: elapsed,
-                title: "Model not prepared",
+                title: L10n.tr("Model not prepared"),
                 detail: nil
             )
         case .loadingRecognizer:
             return EnginePreparationState(
                 phase: phase, elapsed: elapsed,
-                title: "Loading the recognizer… \(seconds) s",
+                title: L10n.tr("Loading the recognizer… %@ s", String(describing: seconds)),
                 // The formulation is correct both on a cold and on a warm start, so
                 // branches are not needed and the promise cannot be broken.
-                detail: "macOS is compiling the model for this Mac. Up to about "
-                    + "20 seconds the first time after install, a fraction of a second "
-                    + "afterwards."
+                detail: L10n.tr("macOS is compiling the model for this Mac. Up to about ")
+                    + L10n.tr("20 seconds the first time after install, a fraction of a second ")
+                    + L10n.tr("afterwards.")
             )
         case .loadingVocabulary:
             return EnginePreparationState(
                 phase: phase, elapsed: elapsed,
-                title: "Loading the term booster… \(seconds) s",
-                detail: "A second, smaller model. Same one-time compile."
+                title: L10n.tr("Loading the term booster… %@ s", String(describing: seconds)),
+                detail: L10n.tr("A second, smaller model. Same one-time compile.")
             )
         case .warmingUp:
             return EnginePreparationState(
                 phase: phase, elapsed: elapsed,
-                title: "Warming up recognition… \(seconds) s",
-                detail: "One silent recognition, so your first real dictation is fast."
+                title: L10n.tr("Warming up recognition… %@ s", String(describing: seconds)),
+                detail: L10n.tr("One silent recognition, so your first real dictation is fast.")
             )
         case .ready:
             return EnginePreparationState(
                 phase: phase, elapsed: elapsed,
-                title: "Ready to dictate",
+                title: L10n.tr("Ready to dictate"),
                 detail: nil
             )
         }

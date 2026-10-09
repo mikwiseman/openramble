@@ -29,7 +29,7 @@ enum ShortcutRecording {
             return .clear
         }
         guard combination.isValid else {
-            return .reject("Add ⌘, ⌃ or ⌥ — a plain key would fire while you type.")
+            return .reject(L10n.tr("Add ⌘, ⌃ or ⌥ — a plain key would fire while you type."))
         }
         return .commit(combination)
     }
@@ -59,12 +59,12 @@ struct ShortcutRecorder: View {
             }
             .buttonStyle(.bordered)
             .focused($isFocused)
-            .accessibilityLabel("Shortcut")
-            .accessibilityValue(shortcut?.displayString ?? "None")
+            .accessibilityLabel(L10n.tr("Shortcut"))
+            .accessibilityValue(shortcut?.displayString ?? L10n.tr("None"))
             .accessibilityHint(
                 isRecording
-                    ? "Press the keys you want. Escape cancels, Delete removes it."
-                    : "Activate, then press the keys you want"
+                    ? L10n.tr("Press the keys you want. Escape cancels, Delete removes it.")
+                    : L10n.tr("Activate, then press the keys you want")
             )
 
             if let problem {
@@ -85,8 +85,8 @@ struct ShortcutRecorder: View {
     }
 
     private var label: String {
-        if isRecording { return "Press keys…" }
-        return shortcut?.displayString ?? "Off"
+        if isRecording { return L10n.tr("Press keys…") }
+        return shortcut?.displayString ?? L10n.tr("Off")
     }
 
     private var labelColor: Color {
@@ -98,7 +98,7 @@ struct ShortcutRecorder: View {
         switch ShortcutRecording.outcome(keyCode: keyCode, modifiers: modifiers) {
         case let .commit(combination):
             if let owner = reserved[combination] {
-                problem = "\(combination.displayString) is already \(owner)."
+                problem = L10n.tr("%@ is already %@.", String(describing: combination.displayString), String(describing: owner))
                 return
             }
             shortcut = combination

@@ -38,7 +38,7 @@ struct RecordBar: View {
                 }
                 if isRecording {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(state.meetingState == .paused ? "Paused" : "Recording")
+                        Text(state.meetingState == .paused ? L10n.tr("Paused") : L10n.tr("Recording"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text(RecordingTime.clock(state.liveDuration))
@@ -47,19 +47,19 @@ struct RecordBar: View {
                     }
                     .frame(minWidth: 84, alignment: .leading)
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(state.meetingState == .paused ? "Paused" : "Recording")
+                    .accessibilityLabel(state.meetingState == .paused ? L10n.tr("Paused") : L10n.tr("Recording"))
                     .accessibilityValue(RecordingTime.spoken(state.liveDuration))
                 } else {
                     VStack(alignment: .leading, spacing: GlassTokens.Space.tight) {
                         if !isRecording {
-                            Picker("Recording type", selection: $state.recordingCaptureKind) {
-                                Label("Audio", systemImage: "waveform").tag(RecordingCaptureKind.audio)
-                                Label("Screen", systemImage: "rectangle.inset.filled").tag(RecordingCaptureKind.screen)
+                            Picker(L10n.tr("Recording type"), selection: $state.recordingCaptureKind) {
+                                Label(L10n.tr("Audio"), systemImage: "waveform").tag(RecordingCaptureKind.audio)
+                                Label(L10n.tr("Screen"), systemImage: "rectangle.inset.filled").tag(RecordingCaptureKind.screen)
                             }
                             .pickerStyle(.segmented)
                             .labelsHidden()
                             .frame(width: 132)
-                            .accessibilityLabel("Recording type")
+                            .accessibilityLabel(L10n.tr("Recording type"))
                         }
                         Text(line)
                             .font(.caption)
@@ -86,8 +86,8 @@ struct RecordBar: View {
                         .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .help(state.meetingState == .paused ? "Resume recording" : "Pause recording")
-                .accessibilityLabel(state.meetingState == .paused ? "Resume recording" : "Pause recording")
+                .help(state.meetingState == .paused ? L10n.tr("Resume recording") : L10n.tr("Pause recording"))
+                .accessibilityLabel(state.meetingState == .paused ? L10n.tr("Resume recording") : L10n.tr("Pause recording"))
             }
             HStack(spacing: 0) {
                 Button {
@@ -100,7 +100,7 @@ struct RecordBar: View {
                     }
                 } label: {
                     Label(
-                        isRecording ? "Stop" : "Record",
+                        isRecording ? L10n.tr("Stop") : L10n.tr("Record"),
                         systemImage: isRecording ? "stop.fill" : "record.circle"
                     )
                         .font(.callout.weight(.semibold))
@@ -109,8 +109,8 @@ struct RecordBar: View {
                         .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(isRecording ? "Stop recording" : "Record")
-                .accessibilityHint(isRecording ? "Ends the recording and keeps it" : line)
+                .accessibilityLabel(isRecording ? L10n.tr("Stop recording") : L10n.tr("Record"))
+                .accessibilityHint(isRecording ? L10n.tr("Ends the recording and keeps it") : line)
             }
             .foregroundStyle(.white)
             .background(StatusColorRole.recording.color, in: Capsule())
@@ -126,12 +126,12 @@ struct RecordBar: View {
     private var line: String {
         switch state.meetingState {
         case .idle:
-            if isScreenMode { return "Records this display" }
-            return state.systemAudioMode == .enabled ? "Records you and the other side" : "Records your voice"
-        case .starting: return "Starting…"
-        case .recording: return "Recording — \(RecordingTime.clock(state.liveDuration))"
-        case .paused: return "Paused — \(RecordingTime.clock(state.liveDuration))"
-        case .stopping: return "Saving…"
+            if isScreenMode { return L10n.tr("Records this display") }
+            return state.systemAudioMode == .enabled ? L10n.tr("Records you and the other side") : L10n.tr("Records your voice")
+        case .starting: return L10n.tr("Starting…")
+        case .recording: return L10n.tr("Recording — %@", String(describing: RecordingTime.clock(state.liveDuration)))
+        case .paused: return L10n.tr("Paused — %@", String(describing: RecordingTime.clock(state.liveDuration)))
+        case .stopping: return L10n.tr("Saving…")
         }
     }
 }

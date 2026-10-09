@@ -11,53 +11,53 @@ struct RecordingsPlaceholder: Equatable {
     let title: String
     let detail: String
 
-    static let emptyLibrary = RecordingsPlaceholder(
+    static var emptyLibrary: RecordingsPlaceholder { RecordingsPlaceholder(
         symbol: "waveform",
-        title: "No recordings yet",
-        detail: "Press the red button to record a meeting or a voice note. Everything stays on this Mac."
-    )
+        title: L10n.tr("No recordings yet"),
+        detail: L10n.tr("Press the red button to record a meeting or a voice note. Everything stays on this Mac.")
+    ) }
 
-    static let nothingSelected = RecordingsPlaceholder(
+    static var nothingSelected: RecordingsPlaceholder { RecordingsPlaceholder(
         symbol: "waveform",
-        title: "Select a recording",
-        detail: "Its audio and transcript appear here."
-    )
+        title: L10n.tr("Select a recording"),
+        detail: L10n.tr("Its audio and transcript appear here.")
+    ) }
 
-    static let listening = RecordingsPlaceholder(
+    static var listening: RecordingsPlaceholder { RecordingsPlaceholder(
         symbol: "text.alignleft",
-        title: "Listening",
-        detail: "Your transcript appears here as you speak."
-    )
+        title: L10n.tr("Listening"),
+        detail: L10n.tr("Your transcript appears here as you speak.")
+    ) }
 
-    static let stillTranscribing = RecordingsPlaceholder(
+    static var stillTranscribing: RecordingsPlaceholder { RecordingsPlaceholder(
         symbol: "text.alignleft",
-        title: "Still transcribing",
-        detail: "The rest of this recording is being transcribed. The audio is complete."
-    )
+        title: L10n.tr("Still transcribing"),
+        detail: L10n.tr("The rest of this recording is being transcribed. The audio is complete.")
+    ) }
 
-    static let noSpeech = RecordingsPlaceholder(
+    static var noSpeech: RecordingsPlaceholder { RecordingsPlaceholder(
         symbol: "text.alignleft",
-        title: "Nothing to transcribe",
-        detail: "No speech was heard in this recording."
-    )
+        title: L10n.tr("Nothing to transcribe"),
+        detail: L10n.tr("No speech was heard in this recording.")
+    ) }
 
-    static let transcriptionDidNotFinish = RecordingsPlaceholder(
+    static var transcriptionDidNotFinish: RecordingsPlaceholder { RecordingsPlaceholder(
         symbol: "text.alignleft",
-        title: "Transcription didn't finish",
-        detail: "The audio is complete; the transcript is not."
-    )
+        title: L10n.tr("Transcription didn't finish"),
+        detail: L10n.tr("The audio is complete; the transcript is not.")
+    ) }
 
-    static let waitingForModel = RecordingsPlaceholder(
+    static var waitingForModel: RecordingsPlaceholder { RecordingsPlaceholder(
         symbol: "clock",
-        title: "Waiting for the speech model",
-        detail: "Transcription starts once the model is downloaded and ready."
-    )
+        title: L10n.tr("Waiting for the speech model"),
+        detail: L10n.tr("Transcription starts once the model is downloaded and ready.")
+    ) }
 
-    static let notTranscribed = RecordingsPlaceholder(
+    static var notTranscribed: RecordingsPlaceholder { RecordingsPlaceholder(
         symbol: "text.alignleft",
-        title: "Not transcribed",
-        detail: "This recording was interrupted before it could be transcribed."
-    )
+        title: L10n.tr("Not transcribed"),
+        detail: L10n.tr("This recording was interrupted before it could be transcribed.")
+    ) }
 
     /// What to show in place of an empty transcript, given how far it got.
     static func transcript(for state: MeetingTranscriptionState) -> RecordingsPlaceholder {
@@ -70,27 +70,27 @@ struct RecordingsPlaceholder: Equatable {
         }
     }
 
-    static let audioMissing = RecordingsPlaceholder(
+    static var audioMissing: RecordingsPlaceholder { RecordingsPlaceholder(
         symbol: "waveform.slash",
-        title: "Recording no longer on disk",
-        detail: "Its audio file was moved or deleted outside OpenRamble. The entry can be removed."
-    )
+        title: L10n.tr("Recording no longer on disk"),
+        detail: L10n.tr("Its audio file was moved or deleted outside OpenRamble. The entry can be removed.")
+    ) }
 
-    static let recovered = RecordingsPlaceholder(
+    static var recovered: RecordingsPlaceholder { RecordingsPlaceholder(
         symbol: "waveform.badge.exclamationmark",
-        title: "Recovered after an interruption",
-        detail: "OpenRamble stopped before this recording could end normally. Everything recorded up to that moment was kept."
-    )
+        title: L10n.tr("Recovered after an interruption"),
+        detail: L10n.tr("OpenRamble stopped before this recording could end normally. Everything recorded up to that moment was kept.")
+    ) }
 
     /// A one-line explanation of how a recording ended, when it did not end
     /// by the person's hand. `nil` for the ordinary case.
     static func endNote(for reason: MeetingEndReason?) -> String? {
         switch reason {
         case nil, .stoppedByUser: return nil
-        case .diskFull: return "Stopped because this Mac ran out of space. Everything up to that moment was kept."
-        case .writeFailed: return "Stopped because the recording could no longer be written. Everything up to that moment was kept."
-        case .applicationQuit: return "Stopped when OpenRamble quit."
-        case .crashRecovered: return "Recovered after an interruption. Everything recorded up to that moment was kept."
+        case .diskFull: return L10n.tr("Stopped because this Mac ran out of space. Everything up to that moment was kept.")
+        case .writeFailed: return L10n.tr("Stopped because the recording could no longer be written. Everything up to that moment was kept.")
+        case .applicationQuit: return L10n.tr("Stopped when OpenRamble quit.")
+        case .crashRecovered: return L10n.tr("Recovered after an interruption. Everything recorded up to that moment was kept.")
         }
     }
 
@@ -100,13 +100,13 @@ struct RecordingsPlaceholder: Equatable {
         let othersMissing = recording.systemAudio.wasRequested && !recording.systemAudio.everDeliveredAudio
         switch (microphoneMissing, othersMissing) {
         case (true, true):
-            return "Neither your microphone nor the other side of this call was captured."
+            return L10n.tr("Neither your microphone nor the other side of this call was captured.")
         case (true, false):
             return recording.systemAudio.wasRequested
-                ? "The other side of this call was recorded. Your microphone was not captured."
-                : "Your microphone was not captured."
+                ? L10n.tr("The other side of this call was recorded. Your microphone was not captured.")
+                : L10n.tr("Your microphone was not captured.")
         case (false, true):
-            return "Only your microphone was recorded. The other side of this call was not captured."
+            return L10n.tr("Only your microphone was recorded. The other side of this call was not captured.")
         case (false, false):
             return nil
         }
@@ -114,6 +114,6 @@ struct RecordingsPlaceholder: Equatable {
 
     /// The title a recording shows when the person has not given it one.
     static func defaultTitle(for startedAt: Date) -> String {
-        startedAt.formatted(date: .abbreviated, time: .shortened)
+        startedAt.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened, locale: L10n.shared.language.locale))
     }
 }

@@ -21,10 +21,10 @@ enum MeetingAudioExporter {
 
         var errorDescription: String? {
             switch self {
-            case .unreadable(let detail): "The recording could not be read. \(detail)"
-            case .unwritable(let detail): "The audio file could not be written. \(detail)"
-            case .formatMismatch: "The recording is in an unexpected format."
-            case .cancelled: "The export was cancelled."
+            case .unreadable(let detail): L10n.tr("The recording could not be read. %@", String(describing: detail))
+            case .unwritable(let detail): L10n.tr("The audio file could not be written. %@", String(describing: detail))
+            case .formatMismatch: L10n.tr("The recording is in an unexpected format.")
+            case .cancelled: L10n.tr("The export was cancelled.")
             }
         }
     }

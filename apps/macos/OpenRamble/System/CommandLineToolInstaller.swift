@@ -9,11 +9,11 @@ enum CommandLineToolInstaller {
         var errorDescription: String? {
             switch self {
             case .missingExecutable:
-                return "This copy of OpenRamble does not contain the command-line tool."
+                return L10n.tr("This copy of OpenRamble does not contain the command-line tool.")
             case .unstableLocation:
-                return "Move OpenRamble to Applications first: the link would point at a location that disappears."
+                return L10n.tr("Move OpenRamble to Applications first: the link would point at a location that disappears.")
             case let .destinationExists(path):
-                return "Something else already exists at \(path). Move or remove it before installing the command-line tool."
+                return L10n.tr("Something else already exists at %@. Move or remove it before installing the command-line tool.", String(describing: path))
             }
         }
     }

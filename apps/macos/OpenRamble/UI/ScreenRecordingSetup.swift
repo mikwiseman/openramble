@@ -53,9 +53,9 @@ struct ScreenRecordingSetup: View {
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text("Screen recording")
+                Text(L10n.tr("Screen recording"))
                     .font(.title3.weight(.semibold))
-                Text("Choose what to include.")
+                Text(L10n.tr("Choose what to include."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -72,7 +72,7 @@ struct ScreenRecordingSetup: View {
                 .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Display")
+                Text(L10n.tr("Display"))
                     .font(.body.weight(.medium))
                 Text(selectedDisplayName)
                     .font(.caption)
@@ -96,7 +96,7 @@ struct ScreenRecordingSetup: View {
                         }
                     }
                 } label: {
-                    Label("Change", systemImage: "chevron.up.chevron.down")
+                    Label(L10n.tr("Change"), systemImage: "chevron.up.chevron.down")
                         .labelStyle(.titleAndIcon)
                 }
                 .menuStyle(.borderlessButton)
@@ -108,18 +108,18 @@ struct ScreenRecordingSetup: View {
         .padding(.vertical, 10)
         .contentSurface(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Display: \(selectedDisplayName)")
+        .accessibilityLabel(L10n.tr("Display: %@", String(describing: selectedDisplayName)))
     }
 
     private var captureControls: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Include")
+            Text(L10n.tr("Include"))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 
             VStack(spacing: 0) {
                 CaptureOptionRow(
-                    title: "Camera",
+                    title: L10n.tr("Camera"),
                     subtitle: cameraSubtitle,
                     symbol: "video.fill",
                     isOn: cameraBinding,
@@ -128,7 +128,7 @@ struct ScreenRecordingSetup: View {
                     state.refreshScreenRecordingPermissions()
                 }
                 CaptureOptionRow(
-                    title: "Microphone",
+                    title: L10n.tr("Microphone"),
                     subtitle: microphoneSubtitle,
                     symbol: "mic.fill",
                     isOn: $state.screenRecordingOptions.microphoneEnabled,
@@ -137,8 +137,8 @@ struct ScreenRecordingSetup: View {
                     state.refreshScreenRecordingPermissions()
                 }
                 CaptureOptionRow(
-                    title: "Mac audio",
-                    subtitle: state.systemAudioMode == .unsupported ? "Unavailable on this Mac" : "System sound",
+                    title: L10n.tr("Mac audio"),
+                    subtitle: state.systemAudioMode == .unsupported ? L10n.tr("Unavailable on this Mac") : L10n.tr("System sound"),
                     symbol: "speaker.wave.2.fill",
                     isOn: $state.screenRecordingOptions.systemAudioEnabled,
                     isDisabled: state.systemAudioMode == .unsupported
@@ -158,12 +158,12 @@ struct ScreenRecordingSetup: View {
                 .padding(.top, 2)
 
                 HStack(spacing: 10) {
-                    Text("Smaller")
+                    Text(L10n.tr("Smaller"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Slider(value: $state.screenRecordingOptions.bubbleScale, in: 0.12...0.34)
-                        .accessibilityLabel("Camera bubble size")
-                    Text("Larger")
+                        .accessibilityLabel(L10n.tr("Camera bubble size"))
+                    Text(L10n.tr("Larger"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -179,7 +179,7 @@ struct ScreenRecordingSetup: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
-            Button("Cancel") { state.dismissScreenRecordingSetup() }
+            Button(L10n.tr("Cancel")) { state.dismissScreenRecordingSetup() }
                 .keyboardShortcut(.cancelAction)
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
@@ -189,7 +189,7 @@ struct ScreenRecordingSetup: View {
             Button {
                 state.startScreenRecording()
             } label: {
-                Label("Record", systemImage: "record.circle.fill")
+                Label(L10n.tr("Record"), systemImage: "record.circle.fill")
                     .font(.body.weight(.semibold))
                     .padding(.horizontal, 16)
                     .frame(height: 36)
@@ -203,7 +203,7 @@ struct ScreenRecordingSetup: View {
 
     private func permissionMessage(for issue: ScreenRecordingSetupIssue) -> String {
         if issue == .screenPermission && state.screenRecordingRestartRequired {
-            return "If access is enabled in Settings and Retry still fails, quit and reopen OpenRamble once."
+            return L10n.tr("If access is enabled in Settings and Retry still fails, quit and reopen OpenRamble once.")
         }
         return issue.message
     }
@@ -211,26 +211,26 @@ struct ScreenRecordingSetup: View {
     private var selectedDisplayName: String {
         state.screenDisplays.first(where: { $0.id == state.screenRecordingOptions.displayID })?.name
             ?? state.screenDisplays.first?.name
-            ?? "Choose a display"
+            ?? L10n.tr("Choose a display")
     }
 
     private var cameraSubtitle: String {
-        guard state.screenRecordingOptions.cameraEnabled else { return "Bubble off" }
+        guard state.screenRecordingOptions.cameraEnabled else { return L10n.tr("Bubble off") }
         switch state.screenCameraPermission {
-        case .granted: return "Bubble on"
-        case .notDetermined: return "Ask on start"
-        case .denied: return "Allow in Settings"
-        case .restricted: return "Restricted"
+        case .granted: return L10n.tr("Bubble on")
+        case .notDetermined: return L10n.tr("Ask on start")
+        case .denied: return L10n.tr("Allow in Settings")
+        case .restricted: return L10n.tr("Restricted")
         }
     }
 
     private var microphoneSubtitle: String {
-        guard state.screenRecordingOptions.microphoneEnabled else { return "Voice off" }
+        guard state.screenRecordingOptions.microphoneEnabled else { return L10n.tr("Voice off") }
         switch state.screenMicrophonePermission {
-        case .granted: return "Your voice"
-        case .notDetermined: return "Ask on start"
-        case .denied: return "Allow in Settings"
-        case .restricted: return "Restricted"
+        case .granted: return L10n.tr("Your voice")
+        case .notDetermined: return L10n.tr("Ask on start")
+        case .denied: return L10n.tr("Allow in Settings")
+        case .restricted: return L10n.tr("Restricted")
         }
     }
 
@@ -286,14 +286,14 @@ struct ScreenRecordingSetup: View {
             }
             HStack(spacing: 8) {
                 if issue.settingsTitle != nil {
-                    Button("Settings") { openSettings(for: issue) }
+                    Button(L10n.tr("Settings")) { openSettings(for: issue) }
                         .controlSize(.small)
                 }
                 if issue == .screenPermission && state.screenRecordingRestartRequired {
-                    Button("Restart") { state.relaunchForScreenRecording() }
+                    Button(L10n.tr("Restart")) { state.relaunchForScreenRecording() }
                         .controlSize(.small)
                 }
-                Button("Retry") { state.retryScreenRecordingSetup() }
+                Button(L10n.tr("Retry")) { state.retryScreenRecordingSetup() }
                     .controlSize(.small)
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -360,7 +360,7 @@ private struct CaptureOptionRow: View {
         .opacity(isDisabled ? 0.48 : 1)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(title)
-        .accessibilityValue(isDisabled ? "Unavailable" : (isOn ? "On" : "Off"))
+        .accessibilityValue(isDisabled ? L10n.tr("Unavailable") : (isOn ? L10n.tr("On") : L10n.tr("Off")))
     }
 }
 

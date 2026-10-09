@@ -39,10 +39,10 @@ enum FnKeyUsage: Sendable, Equatable {
         switch self {
         case .doNothing: return nil
         case .systemDefault: return nil
-        case .changeInputSource: return "input source switching"
-        case .showEmoji: return "the emoji panel"
-        case .startDictation: return "Apple's built-in dictation"
-        case .unknown: return "a system action"
+        case .changeInputSource: return L10n.tr("input source switching")
+        case .showEmoji: return L10n.tr("the emoji panel")
+        case .startDictation: return L10n.tr("Apple's built-in dictation")
+        case .unknown: return L10n.tr("a system action")
         }
     }
 }
@@ -57,22 +57,14 @@ enum HotkeyAdvice {
     static func warning(for hotkey: DictationHotkey, fnUsage: FnKeyUsage) -> String? {
         guard hotkey == .fn else { return nil }
 
-        let external = "On an external keyboard without a 🌐 key, dictation won't start at all."
+        let external = L10n.tr("On an external keyboard without a 🌐 key, dictation won't start at all.")
 
         guard fnUsage.isTakenBySystem else { return external }
 
         if let action = fnUsage.systemAction {
-            return """
-                Pressing 🌐 already triggers \(action) — dictation and that \
-                action will fire together. To change this: System Settings → \
-                Keyboard → “Press 🌐 key”. \(external)
-                """
+            return L10n.tr("Pressing 🌐 already triggers %@ — dictation and that action will fire together. To change this: System Settings → Keyboard → “Press 🌐 key”. %@", String(describing: action), String(describing: external))
         }
 
-        return """
-            Make sure pressing 🌐 is not assigned to anything in the system: \
-            System Settings → Keyboard → “Press 🌐 key”. Otherwise dictation \
-            will fire together with the system action. \(external)
-            """
+        return L10n.tr("Make sure pressing 🌐 is not assigned to anything in the system: System Settings → Keyboard → “Press 🌐 key”. Otherwise dictation will fire together with the system action. %@", String(describing: external))
     }
 }

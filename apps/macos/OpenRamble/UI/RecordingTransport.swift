@@ -18,17 +18,17 @@ struct RecordingTransport: View {
                 Button { player.skip(by: -RecordingPlayer.skipInterval) } label: {
                     Image(systemName: "gobackward.15").font(.title3)
                 }
-                .accessibilityLabel("Skip back 15 seconds")
+                .accessibilityLabel(L10n.tr("Skip back 15 seconds"))
                 Button { player.toggle() } label: {
                     Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
                         .font(.title2)
                         .frame(width: 36, height: 36)
                 }
-                .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
+                .accessibilityLabel(player.isPlaying ? L10n.tr("Pause") : L10n.tr("Play"))
                 Button { player.skip(by: RecordingPlayer.skipInterval) } label: {
                     Image(systemName: "goforward.15").font(.title3)
                 }
-                .accessibilityLabel("Skip forward 15 seconds")
+                .accessibilityLabel(L10n.tr("Skip forward 15 seconds"))
             }
             .buttonStyle(.borderless)
             .disabled(player.duration == 0)
@@ -52,8 +52,8 @@ struct RecordingTransport: View {
                 }
             )
             .disabled(player.duration == 0)
-            .accessibilityLabel("Position")
-            .accessibilityValue("\(RecordingTime.spoken(position)) of \(RecordingTime.spoken(player.duration))")
+            .accessibilityLabel(L10n.tr("Position"))
+            .accessibilityValue(L10n.tr("Position %@ of %@", String(describing: RecordingTime.spoken(position)), String(describing: RecordingTime.spoken(player.duration))))
             Text(RecordingTime.clock(player.duration))
                 .font(.caption)
                 .monospacedDigit()

@@ -1,0 +1,4 @@
+"NSMicrophoneUsageDescription" = "OpenRamble нужен микрофон для записи вашей речи. Запись обрабатывается на этом Mac и никуда не отправляется.";
+"NSAudioCaptureUsageDescription" = "OpenRamble записывает звук Mac, чтобы речь собеседников попала в расшифровку. Запись остаётся на этом Mac и никуда не отправляется.";
+"NSCameraUsageDescription" = "OpenRamble использует камеру, только когда вы включаете кружок с камерой при записи экрана. Видео остаётся на этом Mac.";
+"NSScreenCaptureUsageDescription" = "OpenRamble записывает выбранный вами экран. Видео остаётся на этом Mac.";

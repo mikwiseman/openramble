@@ -68,7 +68,7 @@ struct TranscriptView: View {
                             proxy.scrollTo(bottomID, anchor: .bottom)
                         }
                     } label: {
-                        Label("Jump to Latest", systemImage: "arrow.down")
+                        Label(L10n.tr("Jump to Latest"), systemImage: "arrow.down")
                             .font(.callout.weight(.medium))
                             .padding(.horizontal, GlassTokens.Space.stack)
                             .padding(.vertical, GlassTokens.Space.inline)
@@ -121,8 +121,8 @@ struct TranscriptTurnView: View {
                 if let onTap {
                     Button(action: onTap) { timestamp }
                         .buttonStyle(.plain)
-                        .help("Play from " + RecordingTime.clock(utterance.start))
-                        .accessibilityLabel("Play from " + RecordingTime.spoken(utterance.start))
+                        .help(L10n.tr("Play from ") + RecordingTime.clock(utterance.start))
+                        .accessibilityLabel(L10n.tr("Play from ") + RecordingTime.spoken(utterance.start))
                 } else {
                     timestamp
                 }
@@ -130,7 +130,7 @@ struct TranscriptTurnView: View {
             .frame(minWidth: 44, alignment: .trailing)
             Group {
                 if utterance.isFailed {
-                    Text("Couldn't transcribe this part")
+                    Text(L10n.tr("Couldn't transcribe this part"))
                         .italic()
                         .foregroundStyle(StatusColorRole.attention.color)
                 } else {
@@ -142,7 +142,7 @@ struct TranscriptTurnView: View {
             .lineSpacing(4)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityLabel(speaker + ": " + (utterance.isFailed ? "Couldn't transcribe this part" : utterance.text))
+            .accessibilityLabel(speaker + ": " + (utterance.isFailed ? L10n.tr("Couldn't transcribe this part") : utterance.text))
         }
         .padding(.vertical, GlassTokens.Space.inline)
         .padding(.horizontal, GlassTokens.Space.inline)
@@ -191,7 +191,7 @@ struct TranscriptStatusLine: View {
                     .fixedSize(horizontal: false, vertical: true)
                 if state.isTranscriptionPaused {
                     Spacer(minLength: GlassTokens.Space.inline)
-                    Button("Retry") { state.resumeTranscription() }
+                    Button(L10n.tr("Retry")) { state.resumeTranscription() }
                         .controlSize(.small)
                 }
             }
@@ -203,16 +203,16 @@ struct TranscriptStatusLine: View {
 
     private var line: (symbol: String, role: StatusColorRole, text: String)? {
         if state.isTranscriptionPaused {
-            return ("exclamationmark.triangle.fill", .attention, "Transcription paused.")
+            return ("exclamationmark.triangle.fill", .attention, L10n.tr("Transcription paused."))
         }
         if !state.isEngineReady {
-            return ("clock", .processing, "Waiting for the speech model.")
+            return ("clock", .processing, L10n.tr("Waiting for the speech model."))
         }
         if state.dictationState != .idle {
-            return ("waveform", .processing, "Transcription paused while you dictate.")
+            return ("waveform", .processing, L10n.tr("Transcription paused while you dictate."))
         }
         if state.transcriptBacklogSeconds >= TranscriptStatusPolicy.backlogVisibleAfter {
-            return ("waveform", .processing, "Transcribing — about \(Int(state.transcriptBacklogSeconds.rounded())) seconds behind.")
+            return ("waveform", .processing, L10n.tr("Transcribing — about %@ seconds behind.", String(describing: Int(state.transcriptBacklogSeconds.rounded()))))
         }
         return nil
     }

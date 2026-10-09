@@ -9,8 +9,8 @@ public enum DictationOverlayPlacement: String, CaseIterable, Identifiable, Senda
 
     var title: String {
         switch self {
-        case .top: "Top"
-        case .bottom: "Bottom"
+        case .top: L10n.tr("Top")
+        case .bottom: L10n.tr("Bottom")
         }
     }
 }

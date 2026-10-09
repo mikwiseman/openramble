@@ -20,9 +20,9 @@ struct RecordingDayGroup: Identifiable {
     }
 
     var title: String {
-        if Calendar.current.isDateInToday(day) { return "Today" }
-        if Calendar.current.isDateInYesterday(day) { return "Yesterday" }
-        return day.formatted(.dateTime.day().month(.wide).year())
+        if Calendar.current.isDateInToday(day) { return L10n.tr("Today") }
+        if Calendar.current.isDateInYesterday(day) { return L10n.tr("Yesterday") }
+        return day.formatted(.dateTime.day().month(.wide).year().locale(L10n.shared.language.locale))
     }
 }
 

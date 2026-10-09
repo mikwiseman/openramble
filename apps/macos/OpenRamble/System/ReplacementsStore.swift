@@ -28,15 +28,9 @@ public struct ReplacementsStore {
         public var message: String {
             switch self {
             case .unreadable:
-                return """
-                    The replacement dictionary couldn't be read, so it can't be edited. \
-                    The previous data is preserved — nothing is lost.
-                    """
+                return L10n.tr("The replacement dictionary couldn't be read, so it can't be edited. The previous data is preserved — nothing is lost.")
             case let .writtenByNewerVersion(version):
-                return """
-                    The replacement dictionary was written by a newer version of the app \
-                    (format \(version)). It can't be edited so that version's data isn't lost.
-                    """
+                return L10n.tr("The replacement dictionary was written by a newer version of the app (format %@). It can't be edited so that version's data isn't lost.", String(describing: version))
             }
         }
     }
