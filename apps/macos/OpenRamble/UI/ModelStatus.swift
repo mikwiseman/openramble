@@ -24,22 +24,22 @@ struct ModelStatus: Equatable {
         /// only the remainder - when the hint is downloaded after the update.
         func title(downloadMegabytes: Int) -> String {
             switch self {
-            case .install: return "Download Model — \(downloadMegabytes) MB"
-            case .retry: return "Try Again"
-            case .repair: return "Redownload Model — \(downloadMegabytes) MB"
-            case .cancel: return "Cancel Download"
-            case .delete: return "Delete Model"
+            case .install: return L10n.tr("Download Model — %@ MB", String(describing: downloadMegabytes))
+            case .retry: return L10n.tr("Try Again")
+            case .repair: return L10n.tr("Redownload Model — %@ MB", String(describing: downloadMegabytes))
+            case .cancel: return L10n.tr("Cancel Download")
+            case .delete: return L10n.tr("Delete Model")
             }
         }
 
         /// VoiceOver hint: what will happen when you press it.
         func hint(downloadMegabytes: Int) -> String {
             switch self {
-            case .install: return "Downloads about \(downloadMegabytes) MB. This is the app's only download."
-            case .retry: return "Restarts the model download from the beginning."
-            case .repair: return "Downloads and verifies a fresh copy of the model. The damaged copy is not used."
-            case .cancel: return "Stops the download and deletes the partially downloaded files."
-            case .delete: return "Frees up disk space. Dictation stops working until the model is downloaded again."
+            case .install: return L10n.tr("Downloads about %@ MB. This is the app's only download.", String(describing: downloadMegabytes))
+            case .retry: return L10n.tr("Restarts the model download from the beginning.")
+            case .repair: return L10n.tr("Downloads and verifies a fresh copy of the model. The damaged copy is not used.")
+            case .cancel: return L10n.tr("Stops the download and deletes the partially downloaded files.")
+            case .delete: return L10n.tr("Frees up disk space. Dictation stops working until the model is downloaded again.")
             }
         }
     }
@@ -125,25 +125,25 @@ struct ModelStatus: Equatable {
         switch state {
         case .notInstalled:
             return ModelStatus(
-                title: "Model not installed",
-                detail: "\(downloadMegabytes) MB from the GitHub release mirror; the Hugging Face CDN if it's unavailable. After verification, recognition works without the network.",
+                title: L10n.tr("Model not installed"),
+                detail: L10n.tr("%@ MB from the GitHub release mirror; the Hugging Face CDN if it's unavailable. After verification, recognition works without the network.", String(describing: downloadMegabytes)),
                 progress: nil,
                 progressLabel: nil,
                 actions: [.install],
                 tone: .neutral,
-                announcement: "Model not installed"
+                announcement: L10n.tr("Model not installed")
             )
 
         case let .downloading(received, total):
-            let label = "\(megabytes(received)) of \(megabytes(total)) MB"
+            let label = L10n.tr("%@ of %@ MB", String(describing: megabytes(received)), String(describing: megabytes(total)))
             return ModelStatus(
-                title: "Downloading model…",
+                title: L10n.tr("Downloading model…"),
                 // The same fact serves two different moments: in onboarding the
                 // person is mid-checklist and the download must not read as a
                 // blocker; in settings they are just visiting.
                 detail: place == .onboarding
-                    ? "Keep going — grant the permissions below while it downloads."
-                    : "You can keep working — the download won't be interrupted.",
+                    ? L10n.tr("Keep going — grant the permissions below while it downloads.")
+                    : L10n.tr("You can keep working — the download won't be interrupted."),
                 progress: state.progress,
                 progressLabel: label,
                 actions: [.cancel],
@@ -151,19 +151,19 @@ struct ModelStatus: Equatable {
                 // Exact progress stays available on the ProgressView. Keeping the
                 // proactive announcement stable prevents VoiceOver from speaking
                 // on every network progress callback.
-                announcement: "Downloading model"
+                announcement: L10n.tr("Downloading model")
             )
 
         case let .verifying(checked, total):
-            let label = "File \(checked) of \(total)"
+            let label = L10n.tr("File %@ of %@", String(describing: checked), String(describing: total))
             return ModelStatus(
-                title: "Verifying download…",
-                detail: "Checking every file against its checksum.",
+                title: L10n.tr("Verifying download…"),
+                detail: L10n.tr("Checking every file against its checksum."),
                 progress: state.progress,
                 progressLabel: label,
                 actions: [],
                 tone: .neutral,
-                announcement: "Verifying download"
+                announcement: L10n.tr("Verifying download")
             )
 
         case .ready:
@@ -175,50 +175,50 @@ struct ModelStatus: Equatable {
                 let step = preparation?.step ?? 1
                 let total = EnginePreparationState.stepCount
                 return ModelStatus(
-                    title: "Preparing the model",
+                    title: L10n.tr("Preparing the model"),
                     // Live seconds, not "usually 20-40": a wait with a moving
                     // counter reads as work, without one it reads as stuck.
                     detail: preparation?.detail
-                        ?? "macOS is compiling the model for this Mac. This happens once.",
+                        ?? L10n.tr("macOS is compiling the model for this Mac. This happens once."),
                     progress: Double(step - 1) / Double(total),
-                    progressLabel: preparation.map { "Step \(step) of \(total) · \($0.title)" }
-                        ?? "Step \(step) of \(total)",
+                    progressLabel: preparation.map { L10n.tr("Step %@ of %@ · %@", String(describing: step), String(describing: total), String(describing: $0.title)) }
+                        ?? L10n.tr("Step %@ of %@", String(describing: step), String(describing: total)),
                     actions: place == .settings ? [.delete] : [],
                     tone: .neutral,
-                    announcement: "Preparing the model, step \(step) of \(total)"
+                    announcement: L10n.tr("Preparing the model, step %@ of %@", String(describing: step), String(describing: total))
                 )
             }
             if !isEngineReady {
                 return ModelStatus(
-                    title: "Model ready",
-                    detail: "The model rests until your next dictation, then loads in a moment.",
+                    title: L10n.tr("Model ready"),
+                    detail: L10n.tr("The model rests until your next dictation, then loads in a moment."),
                     progress: nil,
                     progressLabel: nil,
                     actions: place == .settings ? [.delete] : [],
                     tone: .success,
-                    announcement: "Model ready, resting"
+                    announcement: L10n.tr("Model ready, resting")
                 )
             }
             return ModelStatus(
-                title: "Model ready",
+                title: L10n.tr("Model ready"),
                 detail: nil,
                 progress: nil,
                 progressLabel: nil,
                 actions: place == .settings ? [.delete] : [],
                 tone: .success,
-                announcement: "Model ready"
+                announcement: L10n.tr("Model ready")
             )
 
         case let .repairRequired(detail):
             let reason = message(for: .repairRequired(detail))
             return ModelStatus(
-                title: "Model needs repair",
+                title: L10n.tr("Model needs repair"),
                 detail: reason,
                 progress: nil,
                 progressLabel: nil,
                 actions: [.repair],
                 tone: .failure,
-                announcement: "Model needs repair. \(reason)"
+                announcement: L10n.tr("Model needs repair. %@", String(describing: reason))
             )
 
         case let .failed(error):
@@ -230,26 +230,26 @@ struct ModelStatus: Equatable {
                 requiresRepair = false
             }
             return ModelStatus(
-                title: requiresRepair ? "Model needs repair" : "Model installation failed",
+                title: requiresRepair ? L10n.tr("Model needs repair") : L10n.tr("Model installation failed"),
                 detail: reason,
                 progress: nil,
                 progressLabel: nil,
                 actions: [requiresRepair ? .repair : .retry],
                 tone: .failure,
                 announcement: requiresRepair
-                    ? "Model needs repair. \(reason)"
-                    : "Model installation failed. \(reason)"
+                    ? L10n.tr("Model needs repair. %@", String(describing: reason))
+                    : L10n.tr("Model installation failed. %@", String(describing: reason))
             )
 
         case .deleting:
             return ModelStatus(
-                title: "Deleting model…",
+                title: L10n.tr("Deleting model…"),
                 detail: nil,
                 progress: nil,
                 progressLabel: nil,
                 actions: [],
                 tone: .neutral,
-                announcement: "Deleting model"
+                announcement: L10n.tr("Deleting model")
             )
         }
     }
@@ -262,24 +262,21 @@ struct ModelStatus: Equatable {
     static func message(for error: ModelStoreError) -> String {
         switch error {
         case let .notEnoughDiskSpace(required, available):
-            return """
-                Not enough disk space: \(megabytes(required)) MB needed, \
-                \(megabytes(available)) MB free.
-                """
+            return L10n.tr("Not enough disk space: %@ MB needed, %@ MB free.", String(describing: megabytes(required)), String(describing: megabytes(available)))
         case let .download(detail):
-            return "Download failed: \(detail)"
+            return L10n.tr("Download failed: %@", String(describing: detail))
         case let .verification(detail):
-            return "The download didn't match its checksums: \(detail)"
+            return L10n.tr("The download didn't match its checksums: %@", String(describing: detail))
         case let .install(detail):
-            return "Couldn't put the files in place: \(detail)"
+            return L10n.tr("Couldn't put the files in place: %@", String(describing: detail))
         case let .repairRequired(detail):
-            return "The model is damaged or incomplete: \(detail). Redownload it explicitly."
+            return L10n.tr("The model is damaged or incomplete: %@. Redownload it explicitly.", String(describing: detail))
         case let .manifest(detail):
-            return "The model's file list is corrupted: \(detail)"
+            return L10n.tr("The model's file list is corrupted: %@", String(describing: detail))
         case let .importSource(detail):
-            return "That folder didn't work: \(detail)"
+            return L10n.tr("That folder didn't work: %@", String(describing: detail))
         case .cancelled:
-            return "Download cancelled."
+            return L10n.tr("Download cancelled.")
         }
     }
 

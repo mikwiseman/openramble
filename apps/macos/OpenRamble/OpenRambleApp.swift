@@ -17,10 +17,10 @@ private final class TerminationObserver: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let state, state.isRecordingInProgress else { return .terminateNow }
         let alert = NSAlert()
-        alert.messageText = "Stop recording and quit?"
-        alert.informativeText = "Everything recorded so far will be kept."
-        alert.addButton(withTitle: "Stop and Quit")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = L10n.tr("Stop recording and quit?")
+        alert.informativeText = L10n.tr("Everything recorded so far will be kept.")
+        alert.addButton(withTitle: L10n.tr("Stop and Quit"))
+        alert.addButton(withTitle: L10n.tr("Cancel"))
         guard alert.runModal() == .alertFirstButtonReturn else { return .terminateCancel }
         state.stopRecordingBeforeTermination()
         return .terminateLater
@@ -58,6 +58,7 @@ struct OpenRambleApp: App {
                 state: state,
                 showOnboarding: { onboardingCompleted = false }
             )
+            .environment(\.locale, L10n.shared.language.locale)
             // The chosen look has to be applied to AppKit, and the menu is the
             // one piece of this app that exists from launch — every window
             // here is opened later, or never.
@@ -113,8 +114,9 @@ struct OpenRambleApp: App {
         // setup the "Window" menu had a "Welcome" item that opened a 0x0
         // frame without content. Now the same item honestly shows setup
         // again, exactly like "Finish Setting Up…" in the menu bar.
-        Window("Welcome", id: "onboarding") {
+        Window(L10n.tr("Welcome"), id: "onboarding") {
             OnboardingView(state: state) { onboardingCompleted = true }
+                .environment(\.locale, L10n.shared.language.locale)
         }
         .windowResizability(.contentSize)
         // No title bar strip: the first-run wizard has neither a document nor
@@ -133,25 +135,27 @@ struct OpenRambleApp: App {
         // The library. A `Window` for the same reason Settings is one, sized
         // for content that is unbounded: a person decides how much of a
         // transcript to look at, not the window.
-        Window("Recordings", id: RecordingsWindow.windowID) {
+        Window(L10n.tr("Recordings"), id: RecordingsWindow.windowID) {
             RecordingsWindow(state: state)
+                .environment(\.locale, L10n.shared.language.locale)
         }
         .defaultSize(width: 1080, height: 720)
         .windowResizability(.contentMinSize)
 
-        Window("Settings", id: Self.settingsWindowID) {
+        Window(L10n.tr("Settings"), id: Self.settingsWindowID) {
             SettingsView(state: state)
+                .environment(\.locale, L10n.shared.language.locale)
         }
         .windowResizability(.contentSize)
         .defaultSize(width: 780, height: 580)
         .commands {
             CommandGroup(replacing: .appSettings) {
-                Button("Settings…") {
+                Button(L10n.tr("Settings…")) {
                     openWindow(id: Self.settingsWindowID)
                     WindowFronting.raiseOpenedWindow(id: Self.settingsWindowID)
                 }
                 .keyboardShortcut(",", modifiers: .command)
-                Button("Recordings…") {
+                Button(L10n.tr("Recordings…")) {
                     openWindow(id: RecordingsWindow.windowID)
                     WindowFronting.raiseOpenedWindow(id: RecordingsWindow.windowID)
                 }

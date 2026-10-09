@@ -69,10 +69,7 @@ public final class SparkleUpdater: ObservableObject {
         // would weaken, and there would be nowhere to find out about it.
         let publicKey = Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") as? String
         guard let publicKey, !publicKey.isEmpty else {
-            startupFailure = """
-                This build has no public update-signing key (SUPublicEDKey). \
-                Updates are disabled: without it there is no way to verify them.
-                """
+            startupFailure = L10n.tr("This build has no public update-signing key (SUPublicEDKey). Updates are disabled: without it there is no way to verify them.")
             return
         }
 

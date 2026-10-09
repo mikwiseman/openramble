@@ -742,7 +742,7 @@ public final class DictationController {
         }
         let notice = DictationNotice(
             kind: .failure,
-            message: "Starting the microphone took too long. Dictation was stopped.",
+            message: L10n.tr("Starting the microphone took too long. Dictation was stopped."),
             wordsDidNotLand: true
         )
         await report(notice, session: session, allowCancellation: true)
@@ -864,7 +864,7 @@ public final class DictationController {
             case .deleted:
                 saved = nil
             case let .notCommitted(_, reason):
-                return (nil, " The recording couldn't be kept: \(reason)")
+                return (nil, L10n.tr(" The recording couldn't be kept: %@", String(describing: reason)))
             }
             if source.rebuiltFromPCM, saved != nil {
                 // The complete rebuilt WAV is now in Recovery. The original
@@ -876,24 +876,24 @@ public final class DictationController {
             return (
                 saved,
                 saved == nil
-                    ? " The recording couldn't be kept."
-                    : " The recording is kept on this Mac for a few days"
-                        + " (Settings → About → Reveal Support Folder)."
+                    ? L10n.tr(" The recording couldn't be kept.")
+                    : L10n.tr(" The recording is kept on this Mac for a few days")
+                        + L10n.tr(" (Settings → About → Reveal Support Folder).")
             )
         } catch is RecordingFinalizationTimeout {
             return (
                 nil,
-                " The local take will be checked for automatic recovery on the next launch."
+                L10n.tr(" The local take will be checked for automatic recovery on the next launch.")
             )
         } catch is TranscriptionTimeout {
             return (
                 nil,
-                " Local safekeeping did not finish in time; automatic recovery will check the take on the next launch."
+                L10n.tr(" Local safekeeping did not finish in time; automatic recovery will check the take on the next launch.")
             )
         } catch {
             return (
                 nil,
-                " Safekeeping failed: \(error.localizedDescription). The local take will be checked on the next launch."
+                L10n.tr(" Safekeeping failed: %@. The local take will be checked on the next launch.", String(describing: error.localizedDescription))
             )
         }
     }
@@ -904,7 +904,7 @@ public final class DictationController {
     ) async -> (saved: URL?, suffix: String) {
         let background = Task { [weak self] in
             guard let self else {
-                return (saved: URL?.none, suffix: " The recording couldn't be kept.")
+                return (saved: URL?.none, suffix: L10n.tr(" The recording couldn't be kept."))
             }
             return await self.preserveForRetry(recording, session: session)
         }
@@ -915,7 +915,7 @@ public final class DictationController {
         } catch {
             return (
                 nil,
-                " Local safekeeping is continuing in the background; automatic recovery will keep the take on this Mac even if Retry is not shown immediately."
+                L10n.tr(" Local safekeeping is continuing in the background; automatic recovery will keep the take on this Mac even if Retry is not shown immediately.")
             )
         }
     }
@@ -1005,7 +1005,7 @@ public final class DictationController {
             currentDisposition?.keepInBackground()
             let notice = DictationNotice(
                 kind: .failure,
-                message: "Stopping the recording took too long. The local take will be checked for automatic recovery.",
+                message: L10n.tr("Stopping the recording took too long. The local take will be checked for automatic recovery."),
                 wordsDidNotLand: true
             )
             await report(notice, session: session)
@@ -1051,7 +1051,7 @@ public final class DictationController {
             case .reportSilentInput:
                 let notice = DictationNotice(
                     kind: .failure,
-                    message: "The microphone recorded nothing — check that the right input device is selected and not muted."
+                    message: L10n.tr("The microphone recorded nothing — check that the right input device is selected and not muted.")
                 )
                 await report(notice, session: session)
                 await cleanup(session: session)
@@ -1237,7 +1237,7 @@ public final class DictationController {
             recordStageFailure(true)
             let notice = DictationNotice(
                 kind: .failure,
-                message: "Finishing the local recording took too long. The unfinished file will be checked for automatic recovery.",
+                message: L10n.tr("Finishing the local recording took too long. The unfinished file will be checked for automatic recovery."),
                 wordsDidNotLand: true
             )
             await report(notice, session: session)
@@ -1264,7 +1264,7 @@ public final class DictationController {
             }
             let notice = DictationNotice(
                 kind: .failure,
-                message: "The speech model is still getting ready; this take was not discarded." + suffix,
+                message: L10n.tr("The speech model is still getting ready; this take was not discarded.") + suffix,
                 recoveryAudio: saved
             )
             await report(notice, session: session)
@@ -1290,7 +1290,7 @@ public final class DictationController {
             }
             let notice = DictationNotice(
                 kind: .failure,
-                message: "Transcribing took too long and was stopped." + suffix,
+                message: L10n.tr("Transcribing took too long and was stopped.") + suffix,
                 recoveryAudio: saved
             )
             await report(notice, session: session)
@@ -1414,7 +1414,7 @@ public final class DictationController {
             await discard(recording.url, session: session)
             let notice = DictationNotice(
                 kind: .info,
-                message: "Nothing was recognized — nothing was inserted.",
+                message: L10n.tr("Nothing was recognized — nothing was inserted."),
                 wordsDidNotLand: true
             )
             await report(notice, session: session)
@@ -1540,7 +1540,7 @@ public final class DictationController {
         pendingRecovery = RecoveredDictation(text: text)
         let notice = DictationNotice(
             kind: .warning,
-            message: "Insertion couldn't be confirmed in time. The text is saved in the menu and may already have been pasted.",
+            message: L10n.tr("Insertion couldn't be confirmed in time. The text is saved in the menu and may already have been pasted."),
             recoverableText: text,
             wordsDidNotLand: true
         )
@@ -1556,7 +1556,7 @@ public final class DictationController {
     private func reportReturnFailure(session: DictationSessionID) async {
         let notice = DictationNotice(
             kind: .warning,
-            message: "The text was inserted, but pressing Return failed."
+            message: L10n.tr("The text was inserted, but pressing Return failed.")
         )
         await report(notice, session: session)
         await cleanup(session: session)
@@ -1572,7 +1572,7 @@ public final class DictationController {
            insertion == .insertedButClipboardRestoreFailed {
             let notice = DictationNotice(
                 kind: .warning,
-                message: "The text was inserted, but the previous clipboard couldn't be restored."
+                message: L10n.tr("The text was inserted, but the previous clipboard couldn't be restored.")
             )
             await report(notice, session: session)
             await cleanup(session: session)
@@ -1585,14 +1585,14 @@ public final class DictationController {
             switch insertion {
             case .secureInputActive:
                 // Not a failure, but a normal situation: the password field is active.
-                message = "Text not inserted: secure input is active. Your text is saved in the menu."
+                message = L10n.tr("Text not inserted: secure input is active. Your text is saved in the menu.")
             case .insertionInProgress:
-                message = "A previous paste is still finishing. Your text is saved in the menu."
+                message = L10n.tr("A previous paste is still finishing. Your text is saved in the menu.")
             default:
-                message = "The text couldn't be inserted. It's saved in the menu."
+                message = L10n.tr("The text couldn't be inserted. It's saved in the menu.")
             }
         } else {
-            message = "The text couldn't be inserted. It's saved in the menu."
+            message = L10n.tr("The text couldn't be inserted. It's saved in the menu.")
         }
 
         let notice = DictationNotice(
@@ -1762,7 +1762,7 @@ public final class DictationController {
                 notice = DictationNotice(kind: .failure, message: message)
             } else {
                 var saved: URL?
-                var suffix = " The recording couldn't be kept."
+                var suffix = L10n.tr(" The recording couldn't be kept.")
                 if let recording {
                     let outcome = await self.preserveWithinForegroundGrace(
                         recording,
@@ -1970,9 +1970,9 @@ public enum DictationError: Error, Sendable, Equatable {
     public var userMessage: String {
         switch self {
         case .capture:
-            return "Couldn't record audio."
+            return L10n.tr("Couldn't record audio.")
         case .recognition:
-            return "Couldn't transcribe speech."
+            return L10n.tr("Couldn't transcribe speech.")
         }
     }
 }

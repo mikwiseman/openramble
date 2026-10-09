@@ -48,10 +48,10 @@ struct MenuContent: View {
             )
 
         case .stopAndInsert:
-            Button("Stop and Insert") { state.finishCurrentDictation() }
+            Button(L10n.tr("Stop and Insert")) { state.finishCurrentDictation() }
 
         case .cancelDictation:
-            Button("Cancel Dictation", role: .destructive) {
+            Button(L10n.tr("Cancel Dictation"), role: .destructive) {
                 state.cancelCurrentDictation()
             }
 
@@ -59,7 +59,7 @@ struct MenuContent: View {
             setupHints
 
         case .finishSetup:
-            Button("Finish Setting Up…") {
+            Button(L10n.tr("Finish Setting Up…")) {
                 showOnboarding()
                 openWindow(id: "onboarding")
                 // Activation alone is not enough — the window does not exist
@@ -69,25 +69,25 @@ struct MenuContent: View {
             }
 
         case .insertLastDictation:
-            Button("Insert Last Dictation") { state.retryRecoveredText() }
+            Button(L10n.tr("Insert Last Dictation")) { state.retryRecoveredText() }
                 .disabled(state.dictationState != .idle)
                 .accessibilityHint(
                     state.dictationState == .idle
-                        ? "Attempts to insert the saved text into the current field"
-                        : "Finish or cancel the current dictation first"
+                        ? L10n.tr("Attempts to insert the saved text into the current field")
+                        : L10n.tr("Finish or cancel the current dictation first")
                 )
 
         case .revealRecoveredRecordings:
             Button(
                 state.recordingRecoveryStorageFaulted
-                    ? "Recording Support Files — Recovery Disabled…"
-                    : "Recovered Recordings (\(state.recoveredRecordingCount))…"
+                    ? L10n.tr("Recording Support Files — Recovery Disabled…")
+                    : L10n.tr("Recovered Recordings (%@)…", String(describing: state.recoveredRecordingCount))
             ) {
                 state.revealRecoveredRecordings()
             }
 
         case .recentDictations:
-            Menu("Recent Dictations") {
+            Menu(L10n.tr("Recent Dictations")) {
                 ForEach(Array(state.recentDictations.enumerated()), id: \.element.id) { index, dictation in
                     Button {
                         state.copyRecentDictation(dictation)
@@ -112,14 +112,14 @@ struct MenuContent: View {
             } label: {
                 // Written into the title: this can be a bare function key,
                 // which `keyboardShortcut` cannot express.
-                Text(titled("Copy Last Dictation", shortcut: state.copyShortcut))
+                Text(titled(L10n.tr("Copy Last Dictation"), shortcut: state.copyShortcut))
             }
 
 
         case .recordingLine:
             switch state.meetingState {
-            case .starting: Text("Starting recording…")
-            case .stopping: Text("Saving recording…")
+            case .starting: Text(L10n.tr("Starting recording…"))
+            case .stopping: Text(L10n.tr("Saving recording…"))
             case .idle, .recording, .paused:
                 Text(MenuBarStatus.recordingLine(
                     isPaused: state.meetingState == .paused,
@@ -139,39 +139,39 @@ struct MenuContent: View {
                     state.startRecording()
                 }
             } label: {
-                Text(titled("Start Recording", shortcut: state.recordingShortcut))
+                Text(titled(L10n.tr("Start Recording"), shortcut: state.recordingShortcut))
             }
             .accessibilityHint(
                 state.recordingCaptureKind == .screen
-                    ? "Opens screen recording choices"
+                    ? L10n.tr("Opens screen recording choices")
                     : (state.systemAudioMode == .enabled
-                        ? "Records you and the other side until you stop"
-                        : "Records your microphone until you stop")
+                        ? L10n.tr("Records you and the other side until you stop")
+                        : L10n.tr("Records your microphone until you stop"))
             )
 
         case .pauseRecording:
-            Button("Pause Recording") { state.pauseRecording() }
+            Button(L10n.tr("Pause Recording")) { state.pauseRecording() }
 
         case .resumeRecording:
-            Button("Resume Recording") { state.resumeRecording() }
+            Button(L10n.tr("Resume Recording")) { state.resumeRecording() }
 
         case .stopRecording:
             Button {
                 state.stopRecording()
             } label: {
-                Text(titled("Stop Recording", shortcut: state.recordingShortcut))
+                Text(titled(L10n.tr("Stop Recording"), shortcut: state.recordingShortcut))
             }
-            .accessibilityHint("Ends the recording and keeps it")
+            .accessibilityHint(L10n.tr("Ends the recording and keeps it"))
 
         case .openRecordings:
-            Button("Recordings…") {
+            Button(L10n.tr("Recordings…")) {
                 openWindow(id: RecordingsWindow.windowID)
                 WindowFronting.raiseOpenedWindow(id: RecordingsWindow.windowID)
             }
             .keyboardShortcut("r", modifiers: .command)
 
         case .settings:
-            Button("Settings…") {
+            Button(L10n.tr("Settings…")) {
                 openWindow(id: "settings")
                 // The Settings window is created after this action returns, so
                 // it has to be raised once it exists. See `WindowFronting`.
@@ -180,7 +180,7 @@ struct MenuContent: View {
             .keyboardShortcut(",", modifiers: .command)
 
         case .quit:
-            Button("Quit OpenRamble") { NSApplication.shared.terminate(nil) }
+            Button(L10n.tr("Quit OpenRamble")) { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q", modifiers: .command)
         }
     }
@@ -197,21 +197,21 @@ struct MenuContent: View {
         if !state.accessibilityGranted {
             switch state.accessibilityState {
             case .denied:
-                Button("Grant Accessibility Access") { state.requestAccessibility() }
+                Button(L10n.tr("Grant Accessibility Access")) { state.requestAccessibility() }
             case .waitingForSettings:
-                Button("Open Accessibility Settings") { state.openAccessibilitySettings() }
+                Button(L10n.tr("Open Accessibility Settings")) { state.openAccessibilitySettings() }
             case .restartRequired:
-                Button("Relaunch to Apply Access") { state.restartForAccessibility() }
+                Button(L10n.tr("Relaunch to Apply Access")) { state.restartForAccessibility() }
             case .repairRequired, .failed:
-                Text("Accessibility access needs repair")
+                Text(L10n.tr("Accessibility access needs repair"))
             case .repairing:
-                Text("Repairing Accessibility access…")
+                Text(L10n.tr("Repairing Accessibility access…"))
             case .granted:
                 EmptyView()
             }
         }
         if !state.microphoneGranted {
-            Button("Allow Microphone") { state.requestMicrophone() }
+            Button(L10n.tr("Allow Microphone")) { state.requestMicrophone() }
         }
         // Via the same type as both screens. Previously, the menu knew one
         // boolean about the model and suggested "Download" even mid-download —

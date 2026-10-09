@@ -87,24 +87,24 @@ enum CaptureHealth: Equatable {
     /// Nothing to say, or the one line worth saying.
     var title: String? {
         switch self {
-        case .unsupported: return "This Mac can't record other apps' audio"
+        case .unsupported: return L10n.tr("This Mac can't record other apps' audio")
         case .notRequested, .verifying, .capturing: return nil
-        case .unheard: return "Only your microphone is being recorded"
-        case let .wentSilent(seconds): return "The other side went quiet \(RecordingTime.brief(seconds)) ago"
-        case .unavailable: return "Only your microphone is being recorded"
+        case .unheard: return L10n.tr("Only your microphone is being recorded")
+        case let .wentSilent(seconds): return L10n.tr("The other side went quiet %@ ago", String(describing: RecordingTime.brief(seconds)))
+        case .unavailable: return L10n.tr("Only your microphone is being recorded")
         }
     }
 
     var detail: String? {
         switch self {
         case .unsupported:
-            return "Recording what you hear needs macOS 14.2 or later. Everything else works."
+            return L10n.tr("Recording what you hear needs macOS 14.2 or later. Everything else works.")
         case .notRequested, .verifying, .capturing:
             return nil
         case .unheard:
-            return "Nothing is arriving from what this Mac plays. Either System Audio Recording isn't allowed for OpenRamble, or this output is one macOS can't record — Bluetooth and AirPlay are. If you've just allowed it, relaunch OpenRamble."
+            return L10n.tr("Nothing is arriving from what this Mac plays. Either System Audio Recording isn't allowed for OpenRamble, or this output is one macOS can't record — Bluetooth and AirPlay are. If you've just allowed it, relaunch OpenRamble.")
         case .wentSilent:
-            return "Sound was arriving earlier. Your audio output may have changed."
+            return L10n.tr("Sound was arriving earlier. Your audio output may have changed.")
         case let .unavailable(reason):
             return reason
         }
@@ -113,9 +113,9 @@ enum CaptureHealth: Equatable {
     /// What VoiceOver says when this state is first reached, if anything.
     var announcement: String? {
         switch self {
-        case .unheard: return "The other side is not being captured."
-        case .wentSilent: return "The other side went quiet."
-        case .capturing: return "The other side is being captured."
+        case .unheard: return L10n.tr("The other side is not being captured.")
+        case .wentSilent: return L10n.tr("The other side went quiet.")
+        case .capturing: return L10n.tr("The other side is being captured.")
         case .unsupported, .notRequested, .verifying, .unavailable: return nil
         }
     }
@@ -174,8 +174,8 @@ enum MicrophoneHealth: Equatable {
     var title: String? {
         switch self {
         case .idle, .verifying, .capturing: return nil
-        case .unheard, .unavailable: return "Your microphone isn't being captured"
-        case let .wentSilent(seconds): return "Your microphone went quiet \(RecordingTime.brief(seconds)) ago"
+        case .unheard, .unavailable: return L10n.tr("Your microphone isn't being captured")
+        case let .wentSilent(seconds): return L10n.tr("Your microphone went quiet %@ ago", String(describing: RecordingTime.brief(seconds)))
         }
     }
 
@@ -184,9 +184,9 @@ enum MicrophoneHealth: Equatable {
         case .idle, .verifying, .capturing:
             return nil
         case .unheard:
-            return "Nothing is arriving from your microphone. Another app may have exclusive access, or this input is silent. The other side is still being recorded."
+            return L10n.tr("Nothing is arriving from your microphone. Another app may have exclusive access, or this input is silent. The other side is still being recorded.")
         case .wentSilent:
-            return "Sound was arriving earlier. The selected input may have changed, or another app may have taken the microphone."
+            return L10n.tr("Sound was arriving earlier. The selected input may have changed, or another app may have taken the microphone.")
         case let .unavailable(reason):
             return reason
         }
@@ -196,8 +196,8 @@ enum MicrophoneHealth: Equatable {
     /// microphone is the thing a blind person cannot see on a meter.
     var announcement: String? {
         switch self {
-        case .unheard: return "Your microphone is not being captured."
-        case .wentSilent: return "Your microphone went quiet."
+        case .unheard: return L10n.tr("Your microphone is not being captured.")
+        case .wentSilent: return L10n.tr("Your microphone went quiet.")
         case .idle, .verifying, .capturing, .unavailable: return nil
         }
     }

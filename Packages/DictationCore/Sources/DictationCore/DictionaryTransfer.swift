@@ -19,11 +19,11 @@ public enum DictionaryTransfer {
         public var errorDescription: String? {
             switch self {
             case .notADictionaryFile:
-                return "This file is not an OpenRamble dictionary."
+                return L10n.tr("This file is not an OpenRamble dictionary.")
             case let .newerFormat(version):
-                return "This dictionary file needs a newer version of OpenRamble (format \(version))."
+                return L10n.tr("This dictionary file needs a newer version of OpenRamble (format %@).", String(describing: version))
             case let .damaged(detail):
-                return "The dictionary file couldn't be read: \(detail)"
+                return L10n.tr("The dictionary file couldn't be read: %@", String(describing: detail))
             }
         }
     }

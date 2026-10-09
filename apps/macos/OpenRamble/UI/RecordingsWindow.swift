@@ -46,7 +46,7 @@ struct RecordingsWindow: View {
             }
         }
         .frame(minWidth: 860, minHeight: 560)
-        .navigationTitle("Recordings")
+        .navigationTitle(L10n.tr("Recordings"))
         .glassWindowBackground()
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -56,8 +56,8 @@ struct RecordingsWindow: View {
                     Image(systemName: "folder")
                         .frame(width: 28, height: 28)
                 }
-                .help("Open recording in Finder")
-                .accessibilityLabel("Open in Finder")
+                .help(L10n.tr("Open recording in Finder"))
+                .accessibilityLabel(L10n.tr("Open in Finder"))
                 .accessibilityIdentifier("open-recording-in-finder")
                 .buttonStyle(.borderless)
                 .disabled(primarySelection == nil)
@@ -68,8 +68,8 @@ struct RecordingsWindow: View {
                     Image(systemName: "doc.on.doc")
                         .frame(width: 28, height: 28)
                 }
-                .help("Copy all text transcribed so far")
-                .accessibilityLabel("Copy Transcript")
+                .help(L10n.tr("Copy all text transcribed so far"))
+                .accessibilityLabel(L10n.tr("Copy Transcript"))
                 .accessibilityIdentifier("copy-transcript")
                 .buttonStyle(.borderless)
                 .disabled(primarySelection.map { state.transcript(for: $0).isEmpty } ?? true)
@@ -79,8 +79,8 @@ struct RecordingsWindow: View {
                         Image(systemName: "trash")
                             .frame(width: 28, height: 28)
                     }
-                    .help(selection.count == 1 ? "Move recording to Trash" : "Move selected recordings to Trash")
-                    .accessibilityLabel(selection.count == 1 ? "Move recording to Trash" : "Move selected recordings to Trash")
+                    .help(selection.count == 1 ? L10n.tr("Move recording to Trash") : L10n.tr("Move selected recordings to Trash"))
+                    .accessibilityLabel(selection.count == 1 ? L10n.tr("Move recording to Trash") : L10n.tr("Move selected recordings to Trash"))
                     .buttonStyle(.borderless)
                 }
             }

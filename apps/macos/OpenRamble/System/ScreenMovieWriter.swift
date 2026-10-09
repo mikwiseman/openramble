@@ -16,14 +16,14 @@ enum ScreenRecordingError: LocalizedError, Sendable {
 
     var errorDescription: String? {
         switch self {
-        case .noDisplay: return "Не найден экран для записи"
-        case .notPrepared: return "Запись экрана ещё не подготовлена"
-        case .alreadyRecording: return "Запись уже идёт"
-        case .notRecording: return "Запись не запущена"
-        case let .permissionDenied(name): return "Нет доступа: \(name)"
-        case .cameraRestricted: return "Camera access is restricted on this Mac."
-        case .cameraUnavailable: return "Камера недоступна"
-        case .writerUnavailable: return "Не удалось подготовить файл записи"
+        case .noDisplay: return L10n.tr("No display found for recording")
+        case .notPrepared: return L10n.tr("Screen recording is not prepared yet")
+        case .alreadyRecording: return L10n.tr("A recording is already running")
+        case .notRecording: return L10n.tr("No recording is running")
+        case let .permissionDenied(name): return L10n.tr("Access denied: %@", name)
+        case .cameraRestricted: return L10n.tr("Camera access is restricted on this Mac.")
+        case .cameraUnavailable: return L10n.tr("Camera is unavailable")
+        case .writerUnavailable: return L10n.tr("Could not prepare the recording file")
         case let .writerFailed(message): return message
         }
     }
@@ -119,7 +119,7 @@ final class ScreenMovieWriter: @unchecked Sendable {
         if !startIfNeeded(at: time) { return false }
         guard videoInput.isReadyForMoreMediaData else { return false }
         guard adaptor.append(pixelBuffer, withPresentationTime: time) else {
-            error = writer.error ?? ScreenRecordingError.writerFailed("Не удалось записать кадр экрана")
+            error = writer.error ?? ScreenRecordingError.writerFailed(L10n.tr("Could not write a screen frame"))
             return false
         }
         lastVideoTime = time
@@ -147,7 +147,7 @@ final class ScreenMovieWriter: @unchecked Sendable {
         if !startIfNeeded(at: timestamp) { return false }
         guard audioInput.isReadyForMoreMediaData else { return false }
         guard audioInput.append(sample) else {
-            error = writer.error ?? ScreenRecordingError.writerFailed("Не удалось записать звук")
+            error = writer.error ?? ScreenRecordingError.writerFailed(L10n.tr("Could not write audio"))
             return false
         }
         return true
@@ -161,7 +161,7 @@ final class ScreenMovieWriter: @unchecked Sendable {
         finished = true
         guard started else {
             writer.cancelWriting()
-            throw writerError ?? ScreenRecordingError.writerFailed("Запись не содержит кадров")
+            throw writerError ?? ScreenRecordingError.writerFailed(L10n.tr("The recording has no frames"))
         }
         videoInput.markAsFinished()
         audioInput.markAsFinished()
@@ -171,7 +171,7 @@ final class ScreenMovieWriter: @unchecked Sendable {
                 if self.writer.status == .completed {
                     continuation.resume()
                 } else {
-                    continuation.resume(throwing: self.writerError ?? ScreenRecordingError.writerFailed("Не удалось закрыть видео"))
+                    continuation.resume(throwing: self.writerError ?? ScreenRecordingError.writerFailed(L10n.tr("Could not finish the video")))
                 }
             }
         }
@@ -186,7 +186,7 @@ final class ScreenMovieWriter: @unchecked Sendable {
     private func startIfNeeded(at time: CMTime) -> Bool {
         if started { return writer.status == .writing }
         guard writer.startWriting() else {
-            error = writer.error ?? ScreenRecordingError.writerFailed("Не удалось начать запись")
+            error = writer.error ?? ScreenRecordingError.writerFailed(L10n.tr("Could not start recording"))
             return false
         }
         // Both tracks use the recording timeline (the first audio block is

@@ -56,11 +56,11 @@ enum MenuBarStatus {
         isDegraded: Bool = false,
         microphoneMissing: Bool = false
     ) -> String {
-        let line = "\(isPaused ? "Paused" : "Recording") — \(RecordingTime.clock(duration))"
+        let line = "\(isPaused ? L10n.tr("Paused") : L10n.tr("Recording")) — \(RecordingTime.clock(duration))"
         guard !isPaused else { return line }
-        if microphoneMissing, isDegraded { return line + " — nothing arriving" }
-        if microphoneMissing { return line + " — not your microphone" }
-        if isDegraded { return line + " — only your microphone" }
+        if microphoneMissing, isDegraded { return line + L10n.tr(" — nothing arriving") }
+        if microphoneMissing { return line + L10n.tr(" — not your microphone") }
+        if isDegraded { return line + L10n.tr(" — only your microphone") }
         return line
     }
 
@@ -123,28 +123,28 @@ enum MenuBarStatus {
         microphoneMissing: Bool = false
     ) -> String {
         if isRecordingMeeting, microphoneMissing {
-            return "OpenRamble: recording — your microphone isn't being captured"
+            return L10n.tr("OpenRamble: recording — your microphone isn't being captured")
         }
         if isRecordingMeeting, recordingIsDegraded {
-            return "OpenRamble: recording — the other side isn't being captured"
+            return L10n.tr("OpenRamble: recording — the other side isn't being captured")
         }
         switch state {
-        case .listening: return "OpenRamble: recording"
-        case .transcribing: return "OpenRamble: transcribing speech"
-        case .inserting: return "OpenRamble: inserting text"
-        case .preparing: return "OpenRamble: turning on the microphone"
+        case .listening: return L10n.tr("OpenRamble: recording")
+        case .transcribing: return L10n.tr("OpenRamble: transcribing speech")
+        case .inserting: return L10n.tr("OpenRamble: inserting text")
+        case .preparing: return L10n.tr("OpenRamble: turning on the microphone")
         case .idle:
             if isRecordingMeeting {
-                return "OpenRamble: recording"
+                return L10n.tr("OpenRamble: recording")
             }
             // The dot on the icon must also sound for VoiceOver: a picture
             // without words does not exist for the blind.
             if hasRecoveredWork {
-                return "OpenRamble: last dictation needs attention — open the menu"
+                return L10n.tr("OpenRamble: last dictation needs attention — open the menu")
             }
             return isDictationReady
-                ? "OpenRamble: ready to dictate"
-                : "OpenRamble: setup needed"
+                ? L10n.tr("OpenRamble: ready to dictate")
+                : L10n.tr("OpenRamble: setup needed")
         }
     }
 
@@ -164,23 +164,23 @@ enum MenuBarStatus {
         switch state {
         case .idle:
             if hasRecoveredText {
-                return "Last dictation wasn't inserted"
+                return L10n.tr("Last dictation wasn't inserted")
             }
             // The idle line teaches the one gesture the app has. "Ready"
             // alone told a new person nothing about what to do next.
             return isDictationReady
-                ? "Ready — hold \(hotkeyTitle) and speak"
-                : "Setup needed"
-        case .preparing: return "Turning on the microphone…"
+                ? L10n.tr("Ready — hold %@ and speak", String(describing: hotkeyTitle))
+                : L10n.tr("Setup needed")
+        case .preparing: return L10n.tr("Turning on the microphone…")
         case .listening:
             // In hands-free mode the key is released and recording continues.
             // Not saying so leaves the person with a live microphone and the
             // belief that it is already off.
             return isHandsFreeActive
-                ? "Listening — press \(hotkeyTitle) to finish"
-                : "Listening"
-        case .transcribing: return "Transcribing…"
-        case .inserting: return "Inserting…"
+                ? L10n.tr("Listening — press %@ to finish", String(describing: hotkeyTitle))
+                : L10n.tr("Listening")
+        case .transcribing: return L10n.tr("Transcribing…")
+        case .inserting: return L10n.tr("Inserting…")
         }
     }
 }

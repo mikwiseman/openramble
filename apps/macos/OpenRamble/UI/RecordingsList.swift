@@ -38,11 +38,11 @@ struct RecordingsList: View {
                                 guard editingID == nil else { return }
                                 beginRenaming(recording)
                             }
-                            .accessibilityAction(named: "Rename") { beginRenaming(recording) }
+                            .accessibilityAction(named: L10n.tr("Rename")) { beginRenaming(recording) }
                             .contextMenu {
-                                Button("Rename…") { beginRenaming(recording) }
+                                Button(L10n.tr("Rename…")) { beginRenaming(recording) }
                                 Divider()
-                                Button("Move to Trash", role: .destructive) { onDelete([recording.id]) }
+                                Button(L10n.tr("Move to Trash"), role: .destructive) { onDelete([recording.id]) }
                             }
                     }
                 } header: {
@@ -114,7 +114,7 @@ struct RecordingRow: View {
     var onCancel: (() -> Void)? = nil
 
     private var startTime: String {
-        let format = Date.FormatStyle.dateTime.hour().minute()
+        let format = Date.FormatStyle.dateTime.hour().minute().locale(L10n.shared.language.locale)
         return recording.startedAt.formatted(showsSeconds ? format.second() : format)
     }
 
@@ -132,7 +132,7 @@ struct RecordingRow: View {
                     .accessibilityHidden(true)
                 if isEditing, let editingTitle, let focusedEditingID {
                     TextField(
-                        "Recording name",
+                        L10n.tr("Recording name"),
                         text: editingTitle,
                         prompt: Text(RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
                     )
@@ -141,7 +141,7 @@ struct RecordingRow: View {
                     .focused(focusedEditingID, equals: recording.id)
                     .onSubmit { onCommit?() }
                     .onExitCommand { onCancel?() }
-                    .accessibilityLabel("Recording name")
+                    .accessibilityLabel(L10n.tr("Recording name"))
                 } else {
                     Text(recording.title ?? startTime)
                         .font(.body)
@@ -167,7 +167,7 @@ struct RecordingRow: View {
             }
         }
         .padding(.vertical, GlassTokens.Space.tight)
-        .help(recording.startedAt.formatted(date: .complete, time: .standard))
+        .help(recording.startedAt.formatted(Date.FormatStyle(date: .complete, time: .standard, locale: L10n.shared.language.locale)))
         .accessibilityElement(children: isEditing ? .contain : .ignore)
         .accessibilityLabel(recording.title ?? RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
         .accessibilityValue(accessibilityValue)
@@ -176,10 +176,10 @@ struct RecordingRow: View {
     private var accessibilityValue: String {
         var parts = [
             recording.captureKind == .screen
-                ? "Screen recording"
-                : (recording.isMeeting ? "Meeting" : "Voice note"),
+                ? L10n.tr("Screen recording")
+                : (recording.isMeeting ? L10n.tr("Meeting") : L10n.tr("Voice note")),
             RecordingTime.spoken(recording.duration),
-            recording.startedAt.formatted(date: .abbreviated, time: .shortened),
+            recording.startedAt.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened, locale: L10n.shared.language.locale)),
         ]
         if let note = RecordingsPlaceholder.endNote(for: recording.endReason) { parts.append(note) }
         if let note = RecordingsPlaceholder.degradedNote(for: recording) { parts.append(note) }
@@ -196,12 +196,12 @@ struct LiveRecordingRow: View {
                 .fill(state.meetingState == .paused ? Color.secondary : StatusColorRole.recording.color)
                 .frame(width: 7, height: 7)
                 .accessibilityHidden(true)
-            Text(state.meetingState == .paused ? "Paused" : "Recording")
+            Text(state.meetingState == .paused ? L10n.tr("Paused") : L10n.tr("Recording"))
                 .font(.body.weight(.medium))
         }
         .padding(.vertical, GlassTokens.Space.inline)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(state.meetingState == .paused ? "Recording, paused" : "Recording")
+        .accessibilityLabel(state.meetingState == .paused ? L10n.tr("Recording, paused") : L10n.tr("Recording"))
         .accessibilityValue(RecordingTime.spoken(state.liveDuration))
     }
 }
@@ -218,9 +218,9 @@ struct LiveLevelMeters: View {
 
     var body: some View {
         HStack(spacing: GlassTokens.Space.section) {
-            meter("You", samples: you, color: youDegraded ? StatusColorRole.attention.color : .accentColor)
+            meter(L10n.tr("You"), samples: you, color: youDegraded ? StatusColorRole.attention.color : .accentColor)
             if showsOthers {
-                meter("Others", samples: others, color: othersDegraded ? StatusColorRole.attention.color : .secondary)
+                meter(L10n.tr("Others"), samples: others, color: othersDegraded ? StatusColorRole.attention.color : .secondary)
             }
         }
         .onChange(of: levels) { _, levels in

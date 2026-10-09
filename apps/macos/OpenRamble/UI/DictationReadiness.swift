@@ -24,23 +24,23 @@ enum DictationReadiness {
         engineWasReadyBefore: Bool = false
     ) -> String? {
         guard accessibilityGranted else {
-            return "Dictation needs Accessibility access. Open Settings → General → Permissions."
+            return L10n.tr("Dictation needs Accessibility access. Open Settings → General → Permissions.")
         }
         guard microphoneGranted else {
-            return "Dictation needs microphone access. Open Settings → General → Permissions."
+            return L10n.tr("Dictation needs microphone access. Open Settings → General → Permissions.")
         }
 
         switch modelState {
         case .notInstalled:
-            return "The recognition model isn't downloaded yet. Open Settings → Model."
+            return L10n.tr("The recognition model isn't downloaded yet. Open Settings → Model.")
         case .downloading:
-            return "The recognition model is still downloading."
+            return L10n.tr("The recognition model is still downloading.")
         case .verifying:
-            return "The downloaded model is still being verified."
+            return L10n.tr("The downloaded model is still being verified.")
         case .deleting:
-            return "The recognition model is being deleted."
+            return L10n.tr("The recognition model is being deleted.")
         case .repairRequired, .failed:
-            return "The recognition model needs repair. Open Settings → Model."
+            return L10n.tr("The recognition model needs repair. Open Settings → Model.")
         case .ready:
             break
         }
@@ -54,7 +54,7 @@ enum DictationReadiness {
             // ready, an unloaded engine (residency gave its memory back) must
             // not stop the press: recording starts instantly and the reload
             // rides under the voice.
-            return "The model is getting ready for this Mac — usually 20–40 seconds, and only once."
+            return L10n.tr("The model is getting ready for this Mac — usually 20–40 seconds, and only once.")
         }
 
         return nil

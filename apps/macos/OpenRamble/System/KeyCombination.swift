@@ -113,13 +113,13 @@ public struct KeyCombination: Sendable, Equatable, Hashable {
     /// which is why a Mac menu shows `⌘Q` while you are typing in Russian —
     /// the shortcut lives on the physical key, not on the letter.
     static func keyLabel(for keyCode: UInt16) -> String {
-        if let named = namedKeys[keyCode] { return named }
+        if let named = namedKeys[keyCode] { return L10n.tr(named) }
 
         guard let source = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?
             .takeRetainedValue(),
             let data = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData)
         else {
-            return "Key \(keyCode)"
+            return L10n.tr("Key %@", String(describing: keyCode))
         }
         let layout = unsafeBitCast(data, to: CFData.self) as Data
 
@@ -141,7 +141,7 @@ public struct KeyCombination: Sendable, Equatable, Hashable {
                 &characters
             )
         }
-        guard status == noErr, length > 0 else { return "Key \(keyCode)" }
+        guard status == noErr, length > 0 else { return L10n.tr("Key %@", String(describing: keyCode)) }
         return String(utf16CodeUnits: characters, count: length).uppercased()
     }
 }

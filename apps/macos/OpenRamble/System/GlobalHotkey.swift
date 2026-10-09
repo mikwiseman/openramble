@@ -18,12 +18,12 @@ public enum DictationHotkey: String, CaseIterable, Sendable, Codable {
     public var title: String {
         switch self {
         case .fn: return "Fn (🌐)"
-        case .rightCommand: return "Right Command"
-        case .rightOption: return "Right Option"
-        case .leftControl: return "Left Control"
-        case .leftCommand: return "Left Command"
-        case .leftOption: return "Left Option"
-        case .rightControl: return "Right Control"
+        case .rightCommand: return L10n.tr("Right Command")
+        case .rightOption: return L10n.tr("Right Option")
+        case .leftControl: return L10n.tr("Left Control")
+        case .leftCommand: return L10n.tr("Left Command")
+        case .leftOption: return L10n.tr("Left Option")
+        case .rightControl: return L10n.tr("Right Control")
         }
     }
 

@@ -67,7 +67,7 @@ private struct ScreenRecordingHUDView: View {
                 .frame(width: 8, height: 8)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
-                Text(isPaused ? "Paused" : "Recording screen")
+                Text(isPaused ? L10n.tr("Paused") : L10n.tr("Recording screen"))
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
                 Text(RecordingTime.clock(state.liveDuration))
@@ -81,8 +81,8 @@ private struct ScreenRecordingHUDView: View {
                 } label: {
                     Image(systemName: "video.fill")
                 }
-                .help("Hide camera bubble")
-                .accessibilityLabel("Hide camera bubble")
+                .help(L10n.tr("Hide camera bubble"))
+                .accessibilityLabel(L10n.tr("Hide camera bubble"))
                 .disabled(state.isCameraChanging)
             } else {
                 Button {
@@ -90,8 +90,8 @@ private struct ScreenRecordingHUDView: View {
                 } label: {
                     Image(systemName: "video.slash")
                 }
-                .help("Show camera bubble")
-                .accessibilityLabel("Show camera bubble")
+                .help(L10n.tr("Show camera bubble"))
+                .accessibilityLabel(L10n.tr("Show camera bubble"))
                 .disabled(state.isCameraChanging)
             }
             Menu {
@@ -103,21 +103,21 @@ private struct ScreenRecordingHUDView: View {
                     in: 0.12...0.36
                 )
                 .labelsHidden()
-                Text("Bubble size")
+                Text(L10n.tr("Bubble size"))
             } label: {
                 Image(systemName: "circle.dashed")
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
-            .help("Camera bubble size")
-            .accessibilityLabel("Camera bubble size")
+            .help(L10n.tr("Camera bubble size"))
+            .accessibilityLabel(L10n.tr("Camera bubble size"))
             Button {
                 if isPaused { state.resumeRecording() } else { state.pauseRecording() }
             } label: {
                 Image(systemName: isPaused ? "play.fill" : "pause.fill")
             }
-            .help(isPaused ? "Resume recording" : "Pause recording")
-            .accessibilityLabel(isPaused ? "Resume recording" : "Pause recording")
+            .help(isPaused ? L10n.tr("Resume recording") : L10n.tr("Pause recording"))
+            .accessibilityLabel(isPaused ? L10n.tr("Resume recording") : L10n.tr("Pause recording"))
             Button {
                 state.stopRecording()
             } label: {
@@ -127,8 +127,8 @@ private struct ScreenRecordingHUDView: View {
                     .background(StatusColorRole.recording.color, in: Circle())
             }
             .buttonStyle(.plain)
-            .help("Stop recording")
-            .accessibilityLabel("Stop recording")
+            .help(L10n.tr("Stop recording"))
+            .accessibilityLabel(L10n.tr("Stop recording"))
         }
         .padding(.horizontal, GlassTokens.Space.stack)
         .padding(.vertical, GlassTokens.Space.inline)

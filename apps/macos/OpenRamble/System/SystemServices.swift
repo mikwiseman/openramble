@@ -214,10 +214,10 @@ public enum AccessibilityRecoveryError: LocalizedError, Equatable {
     public var errorDescription: String? {
         switch self {
         case .missingBundleIdentifier:
-            return "The app has no bundle identifier."
+            return L10n.tr("The app has no bundle identifier.")
         case let .resetFailed(status, output):
             let suffix = output.isEmpty ? "" : " \(output)"
-            return "tccutil exited with code \(status).\(suffix)"
+            return L10n.tr("tccutil exited with code %@.%@", String(describing: status), String(describing: suffix))
         }
     }
 }

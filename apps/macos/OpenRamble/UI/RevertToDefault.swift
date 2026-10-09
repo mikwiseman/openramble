@@ -21,9 +21,9 @@ struct RevertToDefault: View {
         // Kept in the layout rather than removed when inactive: a control that
         // appears and disappears makes every row jump as settings change.
         .opacity(isChanged ? 1 : 0)
-        .accessibilityLabel("Reset to default")
+        .accessibilityLabel(L10n.tr("Reset to default"))
         .accessibilityHidden(!isChanged)
-        .help("Reset to default")
+        .help(L10n.tr("Reset to default"))
     }
 }
 

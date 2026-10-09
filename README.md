@@ -5,6 +5,11 @@ Private, local dictation and meeting recording for Macs.
 Hold a hotkey, speak, and release it. OpenRamble transcribes the recording on
 your Mac and inserts the text at the current cursor.
 
+The interface starts in English. Choose **Русский** on the welcome screen or
+in **Settings → General → Language** to use Russian. The app changes language
+immediately and remembers your choice; macOS dialogs and system menus use it
+after the next launch. This setting does not change speech recognition.
+
 There are no engine knobs to tune: model choice, memory residency, timing
 budgets, and paste behavior are automatic and covered by tests. Under memory
 pressure the app releases the recognition engine on its own and reloads it

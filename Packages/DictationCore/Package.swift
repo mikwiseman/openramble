@@ -8,6 +8,7 @@ import PackageDescription
 // the direction would drag the FluidAudio graph into each `swift test` of pure logic.
 let package = Package(
     name: "DictationCore",
+    defaultLocalization: "en",
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "DictationCore", targets: ["DictationCore"]),
@@ -18,6 +19,7 @@ let package = Package(
         // storage, localization. No AppKit - the edges of the application are behind the protocols.
         .target(
             name: "DictationCore",
+            resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         // Audio capture: engine, resampler, ring buffer, WAV recording.

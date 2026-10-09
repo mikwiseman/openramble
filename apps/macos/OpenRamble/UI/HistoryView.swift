@@ -37,9 +37,9 @@ struct HistoryView: View {
             Image(systemName: "clock.arrow.circlepath")
                 .font(.system(size: 28))
                 .foregroundStyle(.secondary)
-            Text("No dictations yet")
+            Text(L10n.tr("No dictations yet"))
                 .font(.headline)
-            Text("Finished dictations appear here with their audio.")
+            Text(L10n.tr("Finished dictations appear here with their audio."))
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -83,12 +83,12 @@ struct HistoryView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(state.recordingRecoveryStorageFaulted
-                    ? "Keeping interrupted recordings is switched off"
-                    : "\(state.recoveredRecordingCount) dictation\(state.recoveredRecordingCount == 1 ? "" : "s") didn't finish")
+                    ? L10n.tr("Keeping interrupted recordings is switched off")
+                    : L10n.tr("Unfinished dictations: %@", String(describing: state.recoveredRecordingCount)))
                     .font(.callout.weight(.medium))
                 Text(state.recordingRecoveryStorageFaulted
-                    ? "The app could not record what is safe to delete, so it stops rather than guess about your voice data."
-                    : "Their audio was kept so nothing was lost. It is deleted within seven days.")
+                    ? L10n.tr("The app could not record what is safe to delete, so it stops rather than guess about your voice data.")
+                    : L10n.tr("Their audio was kept so nothing was lost. It is deleted within seven days."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -96,8 +96,8 @@ struct HistoryView: View {
 
             Spacer(minLength: 8)
 
-            Button("Show in Finder") { state.revealRecoveredRecordings() }
-                .accessibilityHint("Opens the folder holding the kept audio")
+            Button(L10n.tr("Show in Finder")) { state.revealRecoveredRecordings() }
+                .accessibilityHint(L10n.tr("Opens the folder holding the kept audio"))
         }
         .padding(12)
         .accessibilityElement(children: .contain)
@@ -108,45 +108,45 @@ struct HistoryView: View {
             // Two stores, two promises. This one is bounded and about
             // dictation; the other keeps what the person recorded on purpose.
             // Said here so they never read as the same thing.
-            Text("Meetings and voice notes you record on purpose live in their own window: Recordings, ⌘R.")
+            Text(L10n.tr("Meetings and voice notes you record on purpose live in their own window: Recordings, ⌘R."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack {
-                Picker("Keep", selection: $state.historyLimit) {
+                Picker(L10n.tr("Keep"), selection: $state.historyLimit) {
                     ForEach([5, 10, 20, 50], id: \.self) { count in
-                        Text("Last \(count)").tag(count)
+                        Text(L10n.tr("Last %@", String(describing: count))).tag(count)
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(maxWidth: 160)
-                .accessibilityHint("How many dictations to keep, with their audio")
+                .fixedSize()
+                .accessibilityHint(L10n.tr("How many dictations to keep, with their audio"))
 
                 Spacer()
 
                 // "Show in Finder", no longer "Show Recordings": that word now
                 // names the window next door.
-                Button("Show in Finder") { state.revealHistoryAudio() }
+                Button(L10n.tr("Show in Finder")) { state.revealHistoryAudio() }
                     .disabled(state.history.isEmpty)
-                    .accessibilityHint("Opens the folder holding the audio kept with these dictations")
+                    .accessibilityHint(L10n.tr("Opens the folder holding the audio kept with these dictations"))
 
-                Button("Delete All", role: .destructive) { showClearConfirmation = true }
+                Button(L10n.tr("Delete All"), role: .destructive) { showClearConfirmation = true }
                     .disabled(state.history.isEmpty)
             }
         }
         .padding(12)
         .confirmationDialog(
-            "Delete all dictation history?",
+            L10n.tr("Delete all dictation history?"),
             isPresented: $showClearConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Delete All", role: .destructive) {
+            Button(L10n.tr("Delete All"), role: .destructive) {
                 player.stop()
                 state.clearHistory()
             }
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.tr("Cancel"), role: .cancel) {}
         } message: {
-            Text("The transcripts and their recordings are removed from this Mac.")
+            Text(L10n.tr("The transcripts and their recordings are removed from this Mac."))
         }
     }
 }
@@ -166,7 +166,7 @@ private struct HistoryRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(entry.date.formatted(date: .abbreviated, time: .shortened))
+                Text(entry.date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened, locale: L10n.shared.language.locale)))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -175,8 +175,8 @@ private struct HistoryRow: View {
                         .foregroundStyle(entry.isKept ? StatusColorRole.attention.color : .secondary)
                 }
                 .buttonStyle(.borderless)
-                .help(entry.isKept ? "Stop keeping this one" : "Keep this one")
-                .accessibilityLabel(entry.isKept ? "Kept. Stop keeping" : "Keep this dictation")
+                .help(entry.isKept ? L10n.tr("Stop keeping this one") : L10n.tr("Keep this one"))
+                .accessibilityLabel(entry.isKept ? L10n.tr("Kept. Stop keeping") : L10n.tr("Keep this dictation"))
 
                 if audioURL != nil {
                     Button(action: onRetranscribe) {
@@ -184,23 +184,23 @@ private struct HistoryRow: View {
                     }
                     .buttonStyle(.borderless)
                     .disabled(isRetranscribing)
-                    .help("Recognise this recording again")
-                    .accessibilityLabel("Recognise this recording again")
+                    .help(L10n.tr("Recognise this recording again"))
+                    .accessibilityLabel(L10n.tr("Recognise this recording again"))
                 }
 
                 Button(action: onCopy) {
                     Image(systemName: "doc.on.doc")
                 }
                 .buttonStyle(.borderless)
-                .help("Copy")
-                .accessibilityLabel("Copy this dictation")
+                .help(L10n.tr("Copy"))
+                .accessibilityLabel(L10n.tr("Copy this dictation"))
 
                 Button(role: .destructive, action: onDelete) {
                     Image(systemName: "trash")
                 }
                 .buttonStyle(.borderless)
-                .help("Delete")
-                .accessibilityLabel("Delete this dictation")
+                .help(L10n.tr("Delete"))
+                .accessibilityLabel(L10n.tr("Delete this dictation"))
             }
 
             Text(entry.text)
@@ -213,17 +213,17 @@ private struct HistoryRow: View {
                     player.toggle(entry.id, url: audioURL)
                 } label: {
                     Label(
-                        isPlaying ? "Stop" : "Play",
+                        isPlaying ? L10n.tr("Stop") : L10n.tr("Play"),
                         systemImage: isPlaying ? "stop.fill" : "play.fill"
                     )
                     .font(.callout)
                 }
                 .buttonStyle(.borderless)
-                .accessibilityLabel(isPlaying ? "Stop playback" : "Play this recording")
+                .accessibilityLabel(isPlaying ? L10n.tr("Stop playback") : L10n.tr("Play this recording"))
             } else {
                 // Said rather than hidden: a row without a Play button and no
                 // explanation reads as a bug.
-                Text("Recording no longer on disk")
+                Text(L10n.tr("Recording no longer on disk"))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }

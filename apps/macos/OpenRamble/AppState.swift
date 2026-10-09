@@ -734,7 +734,7 @@ public final class AppState: ObservableObject {
     public var inputDeviceNotice: String? {
         guard let inputDeviceUID, !inputDeviceUID.isEmpty else { return nil }
         guard preferredInputDeviceID == nil else { return nil }
-        return "The microphone you chose isn't connected. Dictation is using the system default."
+        return L10n.tr("The microphone you chose isn't connected. Dictation is using the system default.")
     }
 
     /// End every dictation with a space.
@@ -1224,7 +1224,7 @@ public final class AppState: ObservableObject {
                         else { return }
                         self.noticeAfterSession = DictationNotice(
                             kind: .warning,
-                            message: "Recording stopped because audio couldn't be saved to disk. The audio held in memory was kept for transcription."
+                            message: L10n.tr("Recording stopped because audio couldn't be saved to disk. The audio held in memory was kept for transcription.")
                         )
                     }
                 },
@@ -1264,8 +1264,8 @@ public final class AppState: ObservableObject {
                 notify(DictationNotice(
                     kind: .info,
                     message: recovered.count == 1
-                        ? "A recording was recovered after an interruption."
-                        : "\(recovered.count) recordings were recovered after an interruption."
+                        ? L10n.tr("A recording was recovered after an interruption.")
+                        : L10n.tr("%@ recordings were recovered after an interruption.", String(describing: recovered.count))
                 ))
             }
 
@@ -1328,7 +1328,7 @@ public final class AppState: ObservableObject {
                 } catch {
                     if state == .preparing {
                         self?.notify(DictationNotice(kind: .warning,
-                            message: "Couldn't pause background CLI transcription for dictation."))
+                            message: L10n.tr("Couldn't pause background CLI transcription for dictation.")))
                     }
                 }
                 // A session that has started owns the engine until it ends;
@@ -1464,7 +1464,7 @@ public final class AppState: ObservableObject {
                     self?.notify(
                         DictationNotice(
                             kind: .warning,
-                            message: "The text was inserted, but the previous clipboard couldn't be restored."
+                            message: L10n.tr("The text was inserted, but the previous clipboard couldn't be restored.")
                         )
                     )
                 }
@@ -1474,7 +1474,7 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .failure,
-                    message: "Couldn't prepare the app's working folders: \(error.localizedDescription)"
+                    message: L10n.tr("Couldn't prepare the app's working folders: %@", String(describing: error.localizedDescription))
                 )
             )
         }
@@ -1564,8 +1564,8 @@ public final class AppState: ObservableObject {
                     notices.append(
                         DictationNotice(
                             kind: .warning,
-                            message: "Couldn't delete the old version's recovery texts. "
-                                + "Delete them manually: ~/Library/Application Support/OpenRamble/Recovered"
+                            message: L10n.tr("Couldn't delete the old version's recovery texts. ")
+                                + L10n.tr("Delete them manually: ~/Library/Application Support/OpenRamble/Recovered")
                         )
                     )
                 }
@@ -1578,7 +1578,7 @@ public final class AppState: ObservableObject {
             notices.append(
                 DictationNotice(
                     kind: .warning,
-                    message: "Couldn't delete audio staged by the retired agent transcription feature. Restart OpenRamble to retry cleanup."
+                    message: L10n.tr("Couldn't delete audio staged by the retired agent transcription feature. Restart OpenRamble to retry cleanup.")
                 )
             )
         }
@@ -1592,17 +1592,17 @@ public final class AppState: ObservableObject {
     static func captureFailureMessage(_ error: AudioCaptureError) -> String {
         switch error {
         case .unsupportedAudioFormat(let detail):
-            return "Couldn't handle the selected microphone's audio format: \(detail)"
+            return L10n.tr("Couldn't handle the selected microphone's audio format: %@", String(describing: detail))
         case .microphonePermissionDenied:
-            return "No microphone access. Open System Settings."
+            return L10n.tr("No microphone access. Open System Settings.")
         case .engineUnavailable(let detail):
-            return "The microphone stopped responding: \(detail)"
+            return L10n.tr("The microphone stopped responding: %@", String(describing: detail))
         case .diskFull:
-            return "Couldn't record audio: no free disk space."
+            return L10n.tr("Couldn't record audio: no free disk space.")
         case .writeFailed(let detail):
-            return "Couldn't record audio: \(detail)"
+            return L10n.tr("Couldn't record audio: %@", String(describing: detail))
         case .notRecording:
-            return "Recording stopped unexpectedly."
+            return L10n.tr("Recording stopped unexpectedly.")
         }
     }
 
@@ -1622,7 +1622,7 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .failure,
-                    message: "Couldn't prepare recording recovery: \(error.localizedDescription)"
+                    message: L10n.tr("Couldn't prepare recording recovery: %@", String(describing: error.localizedDescription))
                 )
             )
         }
@@ -1656,9 +1656,9 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Automatic audio recovery was disabled after a storage failure. "
-                            + "Open Recording Support Files from the menu: ambiguous recordings "
-                            + "were left untouched, not deleted or imported."
+                        message: L10n.tr("Automatic audio recovery was disabled after a storage failure. ")
+                            + L10n.tr("Open Recording Support Files from the menu: ambiguous recordings ")
+                            + L10n.tr("were left untouched, not deleted or imported.")
                     )
                 )
             }
@@ -1666,13 +1666,15 @@ public final class AppState: ObservableObject {
         }
 
         guard result.newlyImportedCount > 0 else { return }
-        let noun = result.newlyImportedCount == 1 ? "recording" : "recordings"
         notify(
             DictationNotice(
                 kind: .warning,
-                message: "OpenRamble recovered \(result.newlyImportedCount) unfinished \(noun) "
-                    + "after an interrupted session. Open Recovered Recordings from the menu "
-                    + "to review or delete the audio; retention is limited to seven days."
+                message: L10n.tr(
+                    result.newlyImportedCount == 1
+                        ? "OpenRamble recovered %@ unfinished recording after an interrupted session. Open Recovered Recordings from the menu to review or delete the audio; retention is limited to seven days."
+                        : "OpenRamble recovered %@ unfinished recordings after an interrupted session. Open Recovered Recordings from the menu to review or delete the audio; retention is limited to seven days.",
+                    String(describing: result.newlyImportedCount)
+                )
             )
         )
     }
@@ -1704,7 +1706,7 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .failure,
-                    message: "Couldn't reveal recovered recordings: \(error.localizedDescription)"
+                    message: L10n.tr("Couldn't reveal recovered recordings: %@", String(describing: error.localizedDescription))
                 )
             )
         }
@@ -1739,7 +1741,7 @@ public final class AppState: ObservableObject {
     public func revealHistoryAudio() {
         let target = history.compactMap(historyAudioURL(for:)).first
         guard let target else {
-            notify(DictationNotice(kind: .info, message: "No recordings kept yet."))
+            notify(DictationNotice(kind: .info, message: L10n.tr("No recordings kept yet.")))
             return
         }
         NSWorkspace.shared.activateFileViewerSelecting([target])
@@ -1758,11 +1760,11 @@ public final class AppState: ObservableObject {
     public func retranscribeHistoryEntry(_ entry: HistoryEntry) {
         guard !isRetranscribing else { return }
         guard let audio = historyAudioURL(for: entry) else {
-            notify(DictationNotice(kind: .info, message: "That dictation's audio is gone."))
+            notify(DictationNotice(kind: .info, message: L10n.tr("That dictation's audio is gone.")))
             return
         }
         guard let transcriber, isEngineReady else {
-            notify(DictationNotice(kind: .info, message: "The speech model isn't ready yet."))
+            notify(DictationNotice(kind: .info, message: L10n.tr("The speech model isn't ready yet.")))
             return
         }
         isRetranscribing = true
@@ -1780,7 +1782,7 @@ public final class AppState: ObservableObject {
                     self?.notify(
                         DictationNotice(
                             kind: .failure,
-                            message: "Couldn't recognise that recording again."
+                            message: L10n.tr("Couldn't recognise that recording again.")
                         )
                     )
                 }
@@ -1814,7 +1816,7 @@ public final class AppState: ObservableObject {
         do {
             try HostOnlyPasteboard().copyHostOnly(entry.text)
         } catch {
-            notify(DictationNotice(kind: .failure, message: "Couldn't copy the dictation."))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation.")))
         }
     }
 
@@ -1851,7 +1853,7 @@ public final class AppState: ObservableObject {
         do {
             try HostOnlyPasteboard().copyHostOnly(dictation.text)
         } catch {
-            notify(DictationNotice(kind: .failure, message: "Couldn't copy the dictation."))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation.")))
         }
     }
 
@@ -1863,14 +1865,14 @@ public final class AppState: ObservableObject {
         guard let text = lastDictation?.insertedText,
               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else {
-            notify(DictationNotice(kind: .info, message: "Nothing dictated yet."))
+            notify(DictationNotice(kind: .info, message: L10n.tr("Nothing dictated yet.")))
             return
         }
         do {
             try HostOnlyPasteboard().copyHostOnly(text)
-            notify(DictationNotice(kind: .info, message: "Copied — to this Mac only."))
+            notify(DictationNotice(kind: .info, message: L10n.tr("Copied — to this Mac only.")))
         } catch {
-            notify(DictationNotice(kind: .failure, message: "Couldn't copy the dictation."))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation.")))
         }
     }
 
@@ -1912,7 +1914,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .warning,
-                        message: "Insertion couldn't be confirmed in time. The text stays in the menu and may already have been pasted.",
+                        message: L10n.tr("Insertion couldn't be confirmed in time. The text stays in the menu and may already have been pasted."),
                         recoverableText: recoveredText
                     )
                 )
@@ -1920,7 +1922,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .warning,
-                        message: "The text still couldn't be inserted — it stays in the menu.",
+                        message: L10n.tr("The text still couldn't be inserted — it stays in the menu."),
                         recoverableText: recoveredText
                     )
                 )
@@ -1990,7 +1992,7 @@ public final class AppState: ObservableObject {
             // What was said before bed has already been written down. Let's recognize it and not throw it away.
             noticeAfterSession = DictationNotice(
                 kind: .info,
-                message: "The Mac went to sleep — recording had to stop."
+                message: L10n.tr("The Mac went to sleep — recording had to stop.")
             )
             stopCurrentRecording()
         case .preparing:
@@ -2322,7 +2324,7 @@ public final class AppState: ObservableObject {
         diagnostics.record(.audioConfigurationChanged)
         guard dictationState == .listening else { return }
         controller?.preserveActiveRecording(
-            reason: "The microphone or audio device was disconnected. Dictation stopped."
+            reason: L10n.tr("The microphone or audio device was disconnected. Dictation stopped.")
         )
     }
 
@@ -2374,7 +2376,7 @@ public final class AppState: ObservableObject {
         notify(
             DictationNotice(
                 kind: .info,
-                message: "Dictation cancelled. Its local recording is queued for deletion."
+                message: L10n.tr("Dictation cancelled. Its local recording is queued for deletion.")
             )
         )
     }
@@ -2587,7 +2589,7 @@ public final class AppState: ObservableObject {
         if screenRecordingOptions.microphoneEnabled && screenMicrophonePermission != .granted {
             screenSetupIssue = .microphonePermission
             let message = screenMicrophonePermission == .notDetermined
-                ? "OpenRamble needs microphone access for your voice."
+                ? L10n.tr("OpenRamble needs microphone access for your voice.")
                 : ScreenRecordingSetupIssue.microphonePermission.message
             notify(DictationNotice(kind: .warning, message: message))
             requestMicrophone()
@@ -2611,7 +2613,7 @@ public final class AppState: ObservableObject {
             try meetingStore.write(metadata, incomplete: true)
         } catch {
             rescheduleIdleUnload()
-            notify(DictationNotice(kind: .failure, message: "Couldn't start screen recording: \(error.localizedDescription)"))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't start screen recording: %@", String(describing: error.localizedDescription))))
             return
         }
 
@@ -2698,7 +2700,7 @@ public final class AppState: ObservableObject {
                         self.refreshScreenRecordingPermissions()
                         self.notify(DictationNotice(kind: .warning, message: permissionMessage))
                     } else {
-                        self.notify(DictationNotice(kind: .failure, message: "Couldn't start screen recording: \(error.localizedDescription)"))
+                        self.notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't start screen recording: %@", String(describing: error.localizedDescription))))
                     }
                 }
             }
@@ -2718,7 +2720,7 @@ public final class AppState: ObservableObject {
                 await MainActor.run {
                     guard let self else { return }
                     self.screenRecordingOptions.cameraEnabled = previous
-                    self.notify(DictationNotice(kind: .warning, message: "Couldn't change the camera during this recording."))
+                    self.notify(DictationNotice(kind: .warning, message: L10n.tr("Couldn't change the camera during this recording.")))
                     self.isCameraChanging = false
                     self.diagnostics.record(.cameraFailed, errorCode: (error as NSError).code)
                 }
@@ -2783,7 +2785,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Couldn't relaunch OpenRamble: \(error.localizedDescription)"
+                        message: L10n.tr("Couldn't relaunch OpenRamble: %@", String(describing: error.localizedDescription))
                     )
                 )
             }
@@ -2803,7 +2805,7 @@ public final class AppState: ObservableObject {
     private func screenRecordingFailed(_ message: String) {
         diagnostics.record(.recordingFailed)
         guard meetingState == .recording || meetingState == .paused else { return }
-        notify(DictationNotice(kind: .warning, message: "Screen recording stopped: \(message)"))
+        notify(DictationNotice(kind: .warning, message: L10n.tr("Screen recording stopped: %@", String(describing: message))))
         stopRecording()
     }
 
@@ -2855,7 +2857,7 @@ public final class AppState: ObservableObject {
             do {
                 try await accessibilityManager.relaunchApplication()
             } catch {
-                notify(DictationNotice(kind: .failure, message: "Couldn't relaunch OpenRamble: \(error.localizedDescription)"))
+                notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't relaunch OpenRamble: %@", String(describing: error.localizedDescription))))
             }
         }
     }
@@ -2891,7 +2893,7 @@ public final class AppState: ObservableObject {
     public func startRecording(includingSystemAudio: Bool) {
         guard meetingState == .idle, let meetingStore else { return }
         guard microphoneGranted else {
-            notify(DictationNotice(kind: .warning, message: "Allow the microphone to record."))
+            notify(DictationNotice(kind: .warning, message: L10n.tr("Allow the microphone to record.")))
             requestMicrophone()
             return
         }
@@ -2910,7 +2912,7 @@ public final class AppState: ObservableObject {
             try meetingStore.write(metadata, incomplete: true)
         } catch {
             rescheduleIdleUnload()
-            notify(DictationNotice(kind: .failure, message: "Couldn't start recording: \(error.localizedDescription)"))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't start recording: %@", String(describing: error.localizedDescription))))
             return
         }
         let capture = makeMeetingCapture(
@@ -3006,7 +3008,7 @@ public final class AppState: ObservableObject {
                 } catch {
                     self.notify(DictationNotice(
                         kind: .failure,
-                        message: "The recording ended but couldn't be filed: \(error.localizedDescription)"
+                        message: L10n.tr("The recording ended but couldn't be filed: %@", String(describing: error.localizedDescription))
                     ))
                 }
                 self.meetingCapture = nil
@@ -3076,7 +3078,7 @@ public final class AppState: ObservableObject {
                 } catch {
                     self.notify(DictationNotice(
                         kind: .failure,
-                        message: "The recording ended but couldn't be filed: \(error.localizedDescription)"
+                        message: L10n.tr("The recording ended but couldn't be filed: %@", String(describing: error.localizedDescription))
                     ))
                 }
                 self.meetingCapture = nil
@@ -3129,7 +3131,7 @@ public final class AppState: ObservableObject {
                 }
             } catch {
                 await MainActor.run {
-                    self?.notify(DictationNotice(kind: .failure, message: "Couldn't pause the recording."))
+                    self?.notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't pause the recording.")))
                 }
             }
         }
@@ -3199,7 +3201,7 @@ public final class AppState: ObservableObject {
             try meetingStore.rename(id, title: title)
             reloadRecordings()
         } catch {
-            notify(DictationNotice(kind: .failure, message: "Couldn't rename the recording."))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't rename the recording.")))
         }
     }
 
@@ -3218,7 +3220,7 @@ public final class AppState: ObservableObject {
             }
             reloadRecordings()
         } catch {
-            notify(DictationNotice(kind: .failure, message: "Couldn't move the recording to the Trash."))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't move the recording to the Trash.")))
         }
     }
 
@@ -3251,7 +3253,7 @@ public final class AppState: ObservableObject {
         do {
             try HostOnlyPasteboard().copyHostOnly(MeetingTranscriptFormatter.plainText(utterances))
         } catch {
-            notify(DictationNotice(kind: .failure, message: "Couldn't copy the transcript."))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the transcript.")))
         }
     }
 
@@ -3273,9 +3275,9 @@ public final class AppState: ObservableObject {
         let utterances = transcript(for: id)
         guard !utterances.isEmpty, let recording = recordings.first(where: { $0.id == id }) else { return nil }
         let subtitle = [
-            recording.startedAt.formatted(date: .long, time: .shortened),
+            recording.startedAt.formatted(Date.FormatStyle(date: .long, time: .shortened, locale: L10n.shared.language.locale)),
             RecordingTime.brief(recording.duration),
-            recording.isMeeting ? "Meeting" : "Voice note",
+            recording.isMeeting ? L10n.tr("Meeting") : L10n.tr("Voice note"),
         ].joined(separator: " · ")
         return MeetingTranscriptFormatter.markdown(
             utterances,
@@ -3290,7 +3292,7 @@ public final class AppState: ObservableObject {
         do {
             try markdown.write(to: url, atomically: true, encoding: .utf8)
         } catch {
-            notify(DictationNotice(kind: .failure, message: "Couldn't save the transcript."))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't save the transcript.")))
         }
     }
 
@@ -3312,7 +3314,7 @@ public final class AppState: ObservableObject {
             } catch {
                 await MainActor.run {
                     self?.audioExportProgress = nil
-                    self?.notify(DictationNotice(kind: .failure, message: "Couldn't save the audio."))
+                    self?.notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't save the audio.")))
                 }
             }
         }
@@ -3334,7 +3336,7 @@ public final class AppState: ObservableObject {
                     try FileManager.default.copyItem(at: source, to: destination)
                 }.value
             } catch {
-                self?.notify(DictationNotice(kind: .failure, message: "Couldn't save the video."))
+                self?.notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't save the video.")))
             }
         }
     }
@@ -3453,7 +3455,7 @@ public final class AppState: ObservableObject {
             // Said once; the audio is still being recorded regardless.
             guard !transcriptWriteFailureReported else { return }
             transcriptWriteFailureReported = true
-            notify(DictationNotice(kind: .warning, message: "The transcript can't be saved. The recording continues."))
+            notify(DictationNotice(kind: .warning, message: L10n.tr("The transcript can't be saved. The recording continues.")))
         }
     }
 
@@ -3525,17 +3527,17 @@ public final class AppState: ObservableObject {
             microphoneStartFailure = Self.describe(reason)
             let isMeeting = liveRecording?.isMeeting == true || liveCaptureHealth != .notRequested
             let message = isMeeting
-                ? "Your microphone isn't being captured (\(Self.describe(reason))). The other side is still being recorded."
-                : "The microphone stopped (\(Self.describe(reason)))."
+                ? L10n.tr("Your microphone isn't being captured (%@). The other side is still being recorded.", String(describing: Self.describe(reason)))
+                : L10n.tr("The microphone stopped (%@).", String(describing: Self.describe(reason)))
             notify(DictationNotice(kind: .warning, message: message))
         case let .systemAudio(reason):
             systemAudioStartFailure = Self.describe(reason)
             notify(DictationNotice(
                 kind: .warning,
-                message: "The other side isn't being recorded (\(Self.describe(reason))). Only your microphone is."
+                message: L10n.tr("The other side isn't being recorded (%@). Only your microphone is.", String(describing: Self.describe(reason)))
             ))
         case .notIdle, .notRecording, .cannotCreateDirectory:
-            notify(DictationNotice(kind: .failure, message: "Recording failed: \(failure)"))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Recording failed: %@", String(describing: failure))))
         }
     }
 
@@ -3544,27 +3546,27 @@ public final class AppState: ObservableObject {
         case let .unavailable(message), let .startFailed(message), let .conversionFailed(message):
             return message
         case .configurationChanged:
-            return "the device changed"
+            return L10n.tr("the device changed")
         }
     }
 
     private static func recordingStartFailureMessage(_ error: Error) -> String {
         guard let failure = error as? MeetingCapture.Failure else {
-            return "Couldn't start recording: \(error.localizedDescription)"
+            return L10n.tr("Couldn't start recording: %@", String(describing: error.localizedDescription))
         }
         switch failure {
         case .diskFull:
-            return "Not enough free space to record. Free up at least 500 MB and try again."
+            return L10n.tr("Not enough free space to record. Free up at least 500 MB and try again.")
         case let .microphone(reason):
-            return "Couldn't start the microphone: \(describe(reason))."
+            return L10n.tr("Couldn't start the microphone: %@.", String(describing: describe(reason)))
         case let .systemAudio(reason):
-            return "Couldn't record the other side: \(describe(reason))."
+            return L10n.tr("Couldn't record the other side: %@.", String(describing: describe(reason)))
         case let .cannotCreateDirectory(message), let .writeFailed(message):
-            return "Couldn't start recording: \(message)"
+            return L10n.tr("Couldn't start recording: %@", String(describing: message))
         case .notIdle:
-            return "A recording is already running."
+            return L10n.tr("A recording is already running.")
         case .notRecording:
-            return "No recording is running."
+            return L10n.tr("No recording is running.")
         }
     }
 
@@ -3573,12 +3575,12 @@ public final class AppState: ObservableObject {
         case .diskFull:
             return DictationNotice(
                 kind: .warning,
-                message: "Recording stopped: this Mac ran out of space. Everything up to that moment was kept."
+                message: L10n.tr("Recording stopped: this Mac ran out of space. Everything up to that moment was kept.")
             )
         case .writeFailed:
             return DictationNotice(
                 kind: .warning,
-                message: "Recording stopped: it could no longer be written. Everything up to that moment was kept."
+                message: L10n.tr("Recording stopped: it could no longer be written. Everything up to that moment was kept.")
             )
         default:
             return nil
@@ -3736,41 +3738,41 @@ public final class AppState: ObservableObject {
             if defaults.bool(forKey: "onboardingCompleted"), !accessibility || !microphone {
                 let missingAccess: String
                 switch (microphone, accessibility) {
-                case (false, false): missingAccess = "Microphone and Accessibility access"
-                case (false, true): missingAccess = "Microphone access"
-                case (true, false): missingAccess = "Accessibility access"
+                case (false, false): missingAccess = L10n.tr("Microphone and Accessibility access")
+                case (false, true): missingAccess = L10n.tr("Microphone access")
+                case (true, false): missingAccess = L10n.tr("Accessibility access")
                 case (true, true): return
                 }
                 notify(
                     DictationNotice(
                         kind: .warning,
-                        message: "Dictation is off: grant \(missingAccess) in System Settings."
+                        message: L10n.tr("Dictation is off: grant %@ in System Settings.", String(describing: missingAccess))
                     )
                 )
             }
         } else if previousAccessibility, !accessibility {
             if dictationState == .preparing || dictationState == .listening {
                 controller?.preserveActiveRecording(
-                    reason: "Accessibility access was revoked. Dictation stopped; open System Settings."
+                    reason: L10n.tr("Accessibility access was revoked. Dictation stopped; open System Settings.")
                 )
             } else {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Accessibility access was revoked. Open System Settings."
+                        message: L10n.tr("Accessibility access was revoked. Open System Settings.")
                     )
                 )
             }
         } else if previousMicrophone, !microphone {
             if dictationState == .preparing || dictationState == .listening {
                 controller?.preserveActiveRecording(
-                    reason: "Microphone access was revoked. Dictation stopped; open System Settings."
+                    reason: L10n.tr("Microphone access was revoked. Dictation stopped; open System Settings.")
                 )
             } else {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Microphone access was revoked. The app may need a relaunch."
+                        message: L10n.tr("Microphone access was revoked. The app may need a relaunch.")
                     )
                 )
             }
@@ -3847,7 +3849,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Couldn't relaunch OpenRamble: \(error.localizedDescription)"
+                        message: L10n.tr("Couldn't relaunch OpenRamble: %@", String(describing: error.localizedDescription))
                     )
                 )
             }
@@ -3875,7 +3877,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "Couldn't repair Accessibility access: \(error.localizedDescription)"
+                        message: L10n.tr("Couldn't repair Accessibility access: %@", String(describing: error.localizedDescription))
                     )
                 )
             }
@@ -4018,7 +4020,7 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .warning,
-                    message: "Dictation is in progress. Wait for it to finish."
+                    message: L10n.tr("Dictation is in progress. Wait for it to finish.")
                 )
             )
             return
@@ -4190,7 +4192,7 @@ public final class AppState: ObservableObject {
             diagnostics.record(.engineFailed, errorCode: (error as NSError).code)
             if let reason = verifiedModelRejection(from: error) {
                 let detail =
-                    "the files passed verification, but Core ML couldn't load the model: \(reason)"
+                    L10n.tr("the files passed verification, but Core ML couldn't load the model: %@", String(describing: reason))
                 // Both stores said the files are there — the guard at the top of
                 // this function is that very statement, and it is what makes
                 // this a rejection rather than a missing model. The repair
@@ -4207,8 +4209,8 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "The model didn't load. An explicit repair will redownload "
-                            + "\(remainingDownloadMegabytes) MB."
+                        message: L10n.tr("The model didn't load. An explicit repair will redownload ")
+                            + L10n.tr("%@ MB.", String(describing: remainingDownloadMegabytes))
                     )
                 )
                 return .repairRequired(detail)
@@ -4357,7 +4359,7 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .warning,
-                    message: "Could not update the login item: \(error.localizedDescription)"
+                    message: L10n.tr("Could not update the login item: %@", String(describing: error.localizedDescription))
                 )
             )
         }
@@ -4450,8 +4452,8 @@ public final class AppState: ObservableObject {
                 DictationNotice(
                     kind: .info,
                     message: proposals.count == 1
-                        ? "Learned 1 replacement from your edit."
-                        : "Learned \(proposals.count) replacements from your edit."
+                        ? L10n.tr("Learned 1 replacement from your edit.")
+                        : L10n.tr("Learned %@ replacements from your edit.", String(describing: proposals.count))
                 )
             )
         }
@@ -4474,8 +4476,8 @@ public final class AppState: ObservableObject {
                 DictationNotice(
                     kind: .info,
                     message: proposals.count == 1
-                        ? "Learned 1 replacement for future dictations."
-                        : "Learned \(proposals.count) replacements for future dictations."
+                        ? L10n.tr("Learned 1 replacement for future dictations.")
+                        : L10n.tr("Learned %@ replacements for future dictations.", String(describing: proposals.count))
                 )
             )
         }
@@ -4487,7 +4489,7 @@ public final class AppState: ObservableObject {
         notify(
             DictationNotice(
                 kind: .info,
-                message: "No new terms to learn — only term-like corrections become replacements."
+                message: L10n.tr("No new terms to learn — only term-like corrections become replacements.")
             )
         )
     }
@@ -4526,7 +4528,7 @@ public final class AppState: ObservableObject {
                 DictationNotice(
                     kind: .failure,
                     message: (error as? LocalizedError)?.errorDescription
-                        ?? "The dictionary file couldn't be read."
+                        ?? L10n.tr("The dictionary file couldn't be read.")
                 )
             )
             return
@@ -4535,7 +4537,7 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .info,
-                    message: "Nothing to import — every phrase in the file is already in the dictionary."
+                    message: L10n.tr("Nothing to import — every phrase in the file is already in the dictionary.")
                 )
             )
             return
@@ -4559,16 +4561,16 @@ public final class AppState: ObservableObject {
     }
 
     private func importSummary(added: Int, updated: Int) -> String {
-        let phrases = { (count: Int) in count == 1 ? "1 phrase" : "\(count) phrases" }
+        let phrases = { (count: Int) in count == 1 ? L10n.tr("1 phrase") : L10n.tr("%@ phrases", String(describing: count)) }
         switch (added > 0, updated > 0) {
         case (true, true):
-            return "Imported \(phrases(added)), updated \(phrases(updated))."
+            return L10n.tr("Imported %@, updated %@.", String(describing: phrases(added)), String(describing: phrases(updated)))
         case (true, false):
-            return "Imported \(phrases(added))."
+            return L10n.tr("Imported %@.", String(describing: phrases(added)))
         case (false, true):
-            return "Updated \(phrases(updated)) from the file."
+            return L10n.tr("Updated %@ from the file.", String(describing: phrases(updated)))
         case (false, false):
-            return "Nothing to import."
+            return L10n.tr("Nothing to import.")
         }
     }
 
@@ -4589,7 +4591,7 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: "The dictionary wasn't saved: \(error.localizedDescription)"
+                        message: L10n.tr("The dictionary wasn't saved: %@", String(describing: error.localizedDescription))
                     )
                 )
                 return

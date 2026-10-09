@@ -28,7 +28,7 @@ struct ScreenCameraPreview: View {
                             Image(systemName: "rectangle.inset.filled")
                                 .font(.title3)
                                 .foregroundStyle(.white.opacity(0.36))
-                            Text("Your display")
+                            Text(L10n.tr("Your display"))
                                 .font(.caption)
                                 .foregroundStyle(.white.opacity(0.42))
                         }
@@ -76,8 +76,8 @@ struct ScreenCameraPreview: View {
         .frame(height: 190)
         .coordinateSpace(name: "screen-preview")
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(cameraAvailable ? "Live camera bubble preview" : "Camera preview unavailable")
-        .accessibilityHint("Drag to move the camera bubble")
+        .accessibilityLabel(cameraAvailable ? L10n.tr("Live camera bubble preview") : L10n.tr("Camera preview unavailable"))
+        .accessibilityHint(L10n.tr("Drag to move the camera bubble"))
     }
 }
 

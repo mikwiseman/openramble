@@ -23,15 +23,15 @@ enum OnboardingStep: Int, CaseIterable, Sendable {
     var isLast: Bool { next == nil }
 
     /// Signature of the transition button.
-    var nextButtonTitle: String { isLast ? "Done" : "Continue" }
+    var nextButtonTitle: String { isLast ? L10n.tr("Done") : L10n.tr("Continue") }
 
-    var progressText: String { "\(rawValue + 1) of \(Self.allCases.count)" }
+    var progressText: String { L10n.tr("%@ of %@", String(describing: rawValue + 1), String(describing: Self.allCases.count)) }
 
     /// The same thing in words.
     ///
     /// "1 of 3" without the word "step" VoiceOver reads like a couple of numbers out of nowhere.
     var progressAccessibilityLabel: String {
-        "Step \(rawValue + 1) of \(Self.allCases.count)"
+        L10n.tr("Step %@ of %@", String(describing: rawValue + 1), String(describing: Self.allCases.count))
     }
 }
 
@@ -88,7 +88,7 @@ enum OnboardingGate {
         // is the sentence under all of them. It outranks the step's own reason
         // because it is the one thing the person can act on right now.
         if conditions.isDictationBusy {
-            return "Finish or cancel the current dictation first."
+            return L10n.tr("Finish or cancel the current dictation first.")
         }
 
         switch step {
@@ -105,7 +105,7 @@ enum OnboardingGate {
             // ends by itself and "Skip the try-out" is on the same screen, so
             // nothing here is a deadlock; it only has to be true.
             if let refusal = conditions.dictationRefusal { return refusal }
-            return "Try dictation first, or press “Skip the try-out”."
+            return L10n.tr("Try dictation first, or press “Skip the try-out”.")
 
         case .setup:
             // Permissions and the local model are one setup job. Keeping them on
@@ -113,19 +113,19 @@ enum OnboardingGate {
             // installs and made the shortest path feel longer than it is.
             switch (conditions.microphoneGranted, conditions.accessibilityGranted) {
             case (true, true): break
-            case (false, false): return "Two permissions left to grant — Microphone and Accessibility."
-            case (false, true): return "Microphone is still needed."
-            case (true, false): return "Accessibility is still needed."
+            case (false, false): return L10n.tr("Two permissions left to grant — Microphone and Accessibility.")
+            case (false, true): return L10n.tr("Microphone is still needed.")
+            case (true, false): return L10n.tr("Accessibility is still needed.")
             }
 
             switch conditions.modelState {
             case .ready: return nil
-            case .notInstalled: return "Download the model first — without it there is nothing to recognize with."
-            case .downloading: return "Wait for the download to finish."
-            case .verifying: return "The download is being verified."
-            case .repairRequired: return "The model is damaged. Redownload it explicitly."
-            case .failed: return "The download failed. Try again."
-            case .deleting: return "The model is being deleted."
+            case .notInstalled: return L10n.tr("Download the model first — without it there is nothing to recognize with.")
+            case .downloading: return L10n.tr("Wait for the download to finish.")
+            case .verifying: return L10n.tr("The download is being verified.")
+            case .repairRequired: return L10n.tr("The model is damaged. Redownload it explicitly.")
+            case .failed: return L10n.tr("The download failed. Try again.")
+            case .deleting: return L10n.tr("The model is being deleted.")
             }
         }
     }
