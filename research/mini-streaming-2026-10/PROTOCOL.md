@@ -81,3 +81,12 @@ The failure and log remain in smoke-v1. Do not repeat four-model attempts on
 this machine. Continue the file matrix with `--max-workers 2`; keep 4 marked
 as not measured due to the safety stop. No file-speed conclusion was drawn
 before this amendment. The primary dictation matrix remains unchanged.
+
+Before the first long-file measurement, the build gate was narrowed to real
+compiler/linker processes. `xcodebuild test` was idle after compilation while
+a separate project's UI test remained active. Its children were idle
+SWBBuildService and DTServiceHub, with no compiler processes. Treat this as
+desktop background work and keep the process snapshots. Do not interrupt
+other work. Abort if any real compilation/linking starts during inference.
+The first file runner only waited; it produced no measurements before this
+gate adjustment. Preserve that wait log as files-v1 and start files-v2.

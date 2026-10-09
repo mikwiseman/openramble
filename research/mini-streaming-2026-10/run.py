@@ -89,7 +89,11 @@ def command(*words):
     return subprocess.run(words, capture_output=True, text=True).stdout.strip()
 
 def builds():
-    names = {"swift-frontend", "swift-build", "rustc", "clang", "clang++", "xcodebuild", "cargo"}
+    # xcodebuild can remain alive for minutes after compilation while a UI
+    # test waits. Detect the actual compiler/linker processes, not that idle
+    # orchestrator. All other desktop activity stays in the private snapshot.
+    names = {"swift-frontend", "swift-build", "swiftc", "rustc", "clang", "clang++",
+             "ld", "metal", "metallib", "cmake", "make", "ninja", "cargo"}
     return sorted({Path(line.strip()).name for line in command("ps", "-axo", "comm").splitlines()
                    if Path(line.strip()).name in names})
 
