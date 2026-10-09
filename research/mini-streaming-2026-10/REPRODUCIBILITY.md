@@ -45,9 +45,9 @@ from an isolated task environment. Neither change touches the application.
 ## Run one lane at a time
 
 ```bash
-python3 research/mini-streaming-2026-10/run.py smoke \
+python3 research/mini-streaming-2026-10/run.py smoke --max-workers 2 \
   --data "$BENCH_ROOT" --out work/mini-smoke --model "$BENCH_MODEL"
-python3 research/mini-streaming-2026-10/run.py file \
+python3 research/mini-streaming-2026-10/run.py file --max-workers 2 \
   --data "$BENCH_ROOT" --out work/mini-files --model "$BENCH_MODEL"
 python3 research/mini-streaming-2026-10/run.py controller \
   --data "$BENCH_ROOT" --out work/mini-controller --model "$BENCH_MODEL"
@@ -73,8 +73,10 @@ with identical commands; only jobs with a successful process completion and
 a recorded JSON result are skipped. A changed identity needs a new output
 directory. Never combine different binaries into one primary series.
 
-The runner waits for compiler/build processes before each job and aborts a
-job if a build begins during it. It stops on memory pressure, process error,
+The runner waits for active compiler/linker processes before each job and
+aborts a job if compilation begins during it. A UI test's idle `xcodebuild`
+parent is ordinary background workload, recorded in the private snapshot.
+The runner stops on memory pressure, process error,
 missing output or timeout. It terminates only the CPU load processes it owns.
 Failed runs are evidence, not successful speed measurements.
 
@@ -94,6 +96,11 @@ python3 research/mini-streaming-2026-10/plot.py \
   --old research/product-benchmark-2026-10/data/products-benchmark.json \
   --out work/mini-figures
 ```
+
+If a preparation run contains a safety abort, append `--failure-runs` and
+that run's directory to the analysis command. The published Mini export
+includes the original four-model smoke abort this way, while excluding
+successful smoke timings from the primary groups.
 
 WER uses Unicode NFC, lowercase, `ё` to `е`, and Unicode word tokens with
 punctuation removed. Numerals are not expanded. Deletion rate is deletions

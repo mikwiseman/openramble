@@ -70,7 +70,8 @@ def main():
             path = run / "raw" / (observation["id"] + ".json")
             if observation["exit_code"] != 0 or "hard_stop" in observation or not path.exists():
                 failures.append({"run": run.name, "id": observation["id"], "exitCode": observation["exit_code"],
-                                 "hardStop": observation.get("hard_stop")})
+                                 "hardStop": observation.get("hard_stop"), "samples": observation["pressure"],
+                                 "utc": observation["before"]["utc"], "identity": identities[run.name]})
                 continue
             if key in seen:
                 raise ValueError(f"duplicate completed run: {key}")
