@@ -104,6 +104,10 @@ public struct MeetingSegmentPolicy: Sendable {
         if !heardSpeech, !parameters.preserveQuietAudio, pendingFrames > frames(Self.leadingSilence) {
             segmentStart = end - frames(Self.leadingSilence)
             segmenter.reset()
+            // Its cut offset is relative to segmentStart, including the quiet
+            // prefix kept above. Dropping that prefix from the counter would
+            // move a later pause cut into the last second of spoken audio.
+            _ = segmenter.observe(peak: 0, count: frames(Self.leadingSilence))
             return nil
         }
 

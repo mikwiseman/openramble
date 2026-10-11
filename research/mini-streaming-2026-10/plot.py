@@ -55,7 +55,8 @@ if len(primary) == 8:
         ax.set_xlabel("Миллисекунды, меньше лучше", labelpad=12)
         ax.grid(axis="x", color="#e9eaf0", zorder=0)
         ax.tick_params(axis="y", length=0)
-        ax.legend(frameon=False, loc="lower right", ncol=2)
+    handles, legend_labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, legend_labels, frameon=False, loc="upper right", bbox_to_anchor=(.97,.97), ncol=2)
     axes[0].invert_yaxis()
     finish(fig, "stop-latency", "Mac Mini M4, 16 ГиБ · OpenRamble 0.32.0 · Parakeet v3 Q8 · Metal · 20 повторов на условие, четыре фиксированных входа FLEURS.\n"
            "p50 — медиана, p95 — 95-й процентиль, линейная интерполяция. Прогретая модель, подача PCM в реальном темпе.\n"
@@ -95,7 +96,10 @@ if files:
     four_caption = (
         "Четыре модели: по одному успешному запуску на язык; повторная попытка прервана по памяти. Устойчивый выигрыш не подтверждён."
         if 4 in workers_present else
-        "Четыре модели: нет завершённого замера. Прерывания по памяти приведены в полном отчёте.")
+        "В основной серии четыре модели прерваны при загрузке. Дополнительная диагностика 11 октября показана отдельно.")
+    repetitions_caption = (
+        "1/2 модели: медиана трёх повторов; 4 модели: один диагностический запуск."
+        if 4 in workers_present else "Основная серия 9 октября: медиана трёх повторов с одной и двумя моделями.")
     fig, axes = plt.subplots(1,3,figsize=(17,7.7))
     fig.suptitle("Параллельная обработка 59 минут аудио",x=.02,ha="left",fontsize=25,weight="bold")
     for language,color,offset in zip(["ru","en","mixed"],[blue,"#6F8996","#B49568"],[-.23,0,.23]):
@@ -110,6 +114,7 @@ if files:
                 ax.errorbar(np.arange(3)+offset,values,yerr=[mins,maxs],fmt="none",ecolor="#25262e",capsize=3,lw=1,zorder=4)
             ax.set_title(title,loc="left",fontsize=15,pad=15)
             ax.set_xticks(range(3),["1 модель","2 модели","4 модели · n=1" if 4 in workers_present else "4 модели"])
+            ax.set_xlim(-.55,2.6)
             ax.grid(axis="y",color="#e9eaf0",zorder=0)
             ax.tick_params(axis="both",length=0)
     handles, legend_labels = axes[2].get_legend_handles_labels()
@@ -126,7 +131,7 @@ if files:
     for ax, upper in zip(axes, upper_limits):
         ax.set_ylim(0,upper*1.22)
     finish(fig,"parallel-files","Mac Mini M4, 16 ГиБ · Parakeet v3 Q8 · Metal · одинаковые фрагменты и исходный порядок текста.\n"
-           "1/2 модели: медиана трёх повторов, отрезки: минимум–максимум. 4 модели: единичные диагностические значения. Загрузка и прогрев отдельно.\n"
+           + repetitions_caption + " Отрезки: минимум–максимум. Загрузка и прогрев отдельно.\n"
            "Память процесса: максимум выборки с шагом 1 с, включая загрузку.\n"
            "Файлы составлены из целых фраз FLEURS с паузами 0,5 с. Это проверка длинного ввода, а не естественная встреча.\n"
            + resource_caption + "\n"
@@ -153,6 +158,6 @@ if files:
     ax.set_ylabel("Ошибки слов, WER % · меньше лучше",labelpad=14)
     ax.grid(color="#e9eaf0",zorder=0)
     finish(fig,"quality-vs-time","Mac Mini M4, 16 ГиБ · OpenRamble 0.32.0 · Parakeet v3 Q8, Metal · три составных файла около 59 минут.\n"
-           "Подпись: язык и число моделей. 1/2 модели: медиана трёх повторов; 4 модели: один запуск. Без загрузки модели. WER на фиксированном входе.\n"
+           "Подпись: язык и число моделей. " + repetitions_caption + "\nБез загрузки модели. WER на фиксированном входе. "
            "Сравнивать число моделей можно внутри одного цвета. Языковые файлы содержат разные исходные фразы.\n"
            + four_caption,bottom=.23)

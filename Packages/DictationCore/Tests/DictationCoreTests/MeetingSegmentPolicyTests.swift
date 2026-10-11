@@ -108,4 +108,17 @@ final class MeetingSegmentPolicyTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(cuts[0].startFrame, frames(3_599), "the segment begins just before the word")
         XCTAssertLessThan(cuts[0].frameCount, frames(14))
     }
+
+    func testLeadingSilenceDoesNotShiftAPauseCutIntoSpokenAudio() {
+        var policy = MeetingSegmentPolicy(channel: .microphone)
+        feed(&policy, quiet, seconds: 5)
+        feed(&policy, speech, seconds: 12)
+        let cuts = feed(&policy, quiet, seconds: 1)
+        XCTAssertEqual(cuts.count, 1)
+        guard let cut = cuts.first else { return }
+        XCTAssertLessThanOrEqual(cut.startFrame, frames(5))
+        XCTAssertGreaterThanOrEqual(cut.endFrame, frames(17),
+            "a pause cut must include all twelve seconds of spoken audio after the leading silence")
+        XCTAssertLessThan(cut.endFrame, frames(18))
+    }
 }

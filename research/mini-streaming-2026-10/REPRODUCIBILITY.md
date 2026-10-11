@@ -159,3 +159,14 @@ Do not tune a new policy on this heldout output; a subsequent new hypothesis
 requires a fresh disjoint validation set. An approved quality policy still
 needs native regression tests, matching repeated controls and final lifecycle
 checks before adoption.
+
+## Synthetic final-context diagnostic
+
+This separate probe uses the cached Samantha WAV from the existing
+`testEnglishTrailingSendStaysVerbatimAndNeverPressesReturn` test. Its exact
+hash is registered in HYPOTHESES.md. `prepare-end-context.py --source-wav
+<cached-WAV> --out <fresh-directory>` verifies that hash and writes an identical
+PCM control plus a500ms-zero suffix variant. Use this new directory as
+`run.py custom --data` with `experiment-plans/tts-end-context.json`. Never mix
+these synthetic results into the FLEURS quality tables. A different system
+voice asset requires a new cohort rather than ignoring the hash mismatch.

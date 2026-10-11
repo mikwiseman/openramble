@@ -1,0 +1,9 @@
+diff --git b/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift a/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
+index ec91f8d..32d2482 100644
+--- b/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
++++ a/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
+@@ -107,4 +106,0 @@ public struct MeetingSegmentPolicy: Sendable {
+-            // Its cut offset is relative to segmentStart, including the quiet
+-            // prefix kept above. Dropping that prefix from the counter would
+-            // move a later pause cut into the last second of spoken audio.
+-            _ = segmenter.observe(peak: 0, count: frames(Self.leadingSilence))

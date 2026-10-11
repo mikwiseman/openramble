@@ -1,0 +1,22 @@
+[
+  {
+    "fixture": "synthetic-en-original",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "original",
+    "parameters": {}
+  },
+  {
+    "fixture": "synthetic-en-pad500",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "pad500",
+    "parameters": {}
+  }
+]

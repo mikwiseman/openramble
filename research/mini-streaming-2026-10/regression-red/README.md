@@ -27,3 +27,11 @@ swift test --package-path Packages/LocalASR \
 Restore boundaries.patch with git apply -R --unidiff-zero. The original behavior must fail
 the earlier-cut and exact-context assertions. The candidate must preserve
 the original default, complete audio ownership and the minimum final tail.
+
+## Meeting leading-silence offset
+
+`meeting-offset.patch` restores the old relative-counter bug while retaining
+the new regression. Apply with `git apply --unidiff-zero`, run the command in
+`meeting-offset-evidence.json`, and observe the cut ending at261600 instead
+of at least272000. Reverse exactly that patch afterward. The full
+model-independent check passed with the correction; no live threshold changed.

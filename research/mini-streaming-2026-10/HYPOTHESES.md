@@ -358,3 +358,42 @@ further retries; investigate quality and suffix I/O mechanisms next.
 An idle OpenStrudel UI quit normally. Warp declined normal quit and was left
 running. The attempted non-interactive disk-cache purge required a password
 and did not execute. No file or chat history was deleted.
+
+## Completed localization and resource closure, 11 October
+
+The separate scaling diagnostic closed at17successes, after two pressure
+warnings and four compiler interruptions. Seven remaining supported jobs
+were cancelled. The previous24-success amendment was a plan, never a
+completed matrix. Four-model results remain n=1 per language; the complete
+21-file earlier series supplies the main repeated timings.
+
+All eight original-policy coverage jobs completed. One compiler interruption
+and one pressure warning are retained separately. The EN minute submitted
+only22.66 of61.92seconds; its WER was65.35%. With the existing imported-audio
+preservation option it submitted all audio and WER was8.66%. EN six-minute
+WER was71.70% versus8.76%; RU minute6.31% versus1.80%; RU six-minute21.49%
+versus8.63%. These fixed public inputs include low-level speech. Preserving
+all audio is diagnostic evidence, not an approved live default.
+
+The predeclared offset regression failed at absolute frame261600, short of
+the required272000. Apply the retained-prefix accounting correction and
+rerun coverage before evaluating its effect. This does not by itself solve
+speech consistently below the live threshold.
+
+## Final-context localization from existing E2E failures
+
+Both preserved original and candidate release binaries omit the expected
+final “send it” on the cached Samantha phrase “Please review my pull request
+send it”. The exact synthetic WAV is2.0298125seconds, SHA-256
+b0d44e74fd9b91db9e6f4ddd787764d656ea617936996d64a37b76c0bd6601ea.
+The text pipeline is configured to preserve sending words. Before changing
+it, compare the unchanged controller on that WAV and on the same PCM with
+exactly500ms of digital silence appended. This tests missing end context,
+not a padded timing claim. No amplitude, wording or recognizer setting changes.
+The amount is fixed before inference; no padding sweep is planned.
+
+If both remain incomplete, close this narrow padding hypothesis. If padding
+recovers the phrase, it is only a localization result. A product change would
+require separate public-speech quality, silence/hallucination and latency
+checks, and cross-platform sample-duration/timestamp semantics. A single
+synthetic phrase cannot approve it. The two runs stay separate from FLEURS.

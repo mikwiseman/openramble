@@ -53,7 +53,7 @@ for event in events['events']:
     x = (stamp(event['utc']) - start) / 60
     for axis in (timing, memory):
         axis.axvline(x, color='#8B67A0', linestyle='--', linewidth=1.2, zorder=1)
-    timing.text(x+.4, .96, 'Освобождено ≈1,59 ГиБ', transform=timing.get_xaxis_transform(),
+    timing.text(x+.4, .96, 'Закрыты фоновые процессы', transform=timing.get_xaxis_transform(),
                 fontsize=11, va='top', color='#735184')
 timing.set_ylabel('Обработка файла, с')
 memory.set_ylabel('Пик физической памяти, ГиБ')
@@ -65,15 +65,17 @@ for axis in (timing, memory):
 legend = [Line2D([], [], marker='o', linestyle='', color=color, label=language)
           for language, color in zip(['RU', 'EN', 'RU + EN'], colors.values())]
 legend += [Line2D([], [], marker=marker, linestyle='', color='#444750', label=label)
-           for marker, label in [('o', '1 модель'), ('s', '2 модели'), ('D', '4 модели · n=1'), ('P', 'Путь приложения')]]
+           for marker, label in [('o', '1 модель'), ('s', '2 модели'), ('D', '4 модели · n=1')]]
+if any(r['mode']=='shipping-file' for r in runs.values()):
+    legend.append(Line2D([], [], marker='P', linestyle='', color='#444750', label='Путь приложения'))
 legend += [Line2D([], [], marker='x', linestyle='', color=color, label=label)
            for color, label in [('#B03B40', 'Прервано: память'), ('#777B88', 'Прервано: сборка')]]
-fig.legend(handles=legend, loc='upper center', bbox_to_anchor=(.51, .93), ncol=5, frameon=False, fontsize=10)
+fig.legend(handles=legend, loc='upper center', bbox_to_anchor=(.51, .93), ncol=4, frameon=False, fontsize=10)
 fig.subplots_adjust(top=.81, bottom=.17, left=.095, right=.97, hspace=.15)
 fig.text(.03, .025,
          'Mac Mini M4, 16 ГиБ · Parakeet v3 Q8 · три фиксированных файла около 59 минут, свежий процесс и прогрев перед каждым запуском.\n'
          'На верхнем графике только завершённые распознавания. Кресты снизу — прерванные попытки с максимумом памяти до остановки.\n'
-         'Память измерена с шагом 1 с и включает загрузку. Пунктир отмечает закрытие двух простаивавших процессов с помощниками.\n'
+         'Память измерена с шагом 1 с и включает загрузку. Пунктир: закрыты простаивавшие процессы, занимавшие около 1,59 ГиБ физической памяти.\n'
          'Рабочий компьютер использовался и для других задач. Все условия, прерывания и диапазоны сохранены; универсальный выигрыш не заявляется.',
          fontsize=10.5, color='#5D606B', linespacing=1.5)
 args.out.mkdir(parents=True, exist_ok=True)
