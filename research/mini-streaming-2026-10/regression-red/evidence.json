@@ -1,0 +1,29 @@
+{
+  "status": "Expected behavior failures observed before implementation",
+  "records": [
+    {
+      "logSHA256": "738b3c02898ba5f33b67df17eea93bc6d173788448eb86ba3cb1b4d53db69fd0",
+      "testsExecuted": 1,
+      "assertionFailures": [
+        "Packages/DictationCore/Tests/DictationCoreTests/StreamedDictationTests.swift:239: error: -[DictationCoreTests.StreamedDictationTests testFileBackedReaderRequestsOnlyTheRequiredSuffix] : XCTAssertEqual failed: (\"1\") is not equal to (\"0\") - a long capture must not restore its recognized prefix into memory",
+        "Packages/DictationCore/Tests/DictationCoreTests/StreamedDictationTests.swift:240: error: -[DictationCoreTests.StreamedDictationTests testFileBackedReaderRequestsOnlyTheRequiredSuffix] : XCTAssertEqual failed: (\"[]\") is not equal to (\"[[7360000, 7680000]]\")",
+        "Packages/DictationCore/Tests/DictationCoreTests/StreamedDictationTests.swift:239: error: -[DictationCoreTests.StreamedDictationTests testFileBackedReaderRequestsOnlyTheRequiredSuffix] : XCTAssertEqual failed: (\"1\") is not equal to (\"0\") - a long capture must not restore its recognized prefix into memory",
+        "Packages/DictationCore/Tests/DictationCoreTests/StreamedDictationTests.swift:240: error: -[DictationCoreTests.StreamedDictationTests testFileBackedReaderRequestsOnlyTheRequiredSuffix] : XCTAssertEqual failed: (\"[]\") is not equal to (\"[[5440000, 5760000]]\")"
+      ]
+    },
+    {
+      "logSHA256": "c9b325a9598a141fe9ba4aa5ee11672e98f62b5e9563cf3d6c19651e8eea94c3",
+      "testsExecuted": 2,
+      "assertionFailures": [
+        "Packages/LocalASR/Tests/LocalASRTests/FileAudioChunksTests.swift:61: error: -[LocalASRTests.FileAudioChunksTests testEarlierPausePolicyChangesCutsWithoutLosingAudio] : XCTAssertLessThan failed: (\"277600\") is not less than (\"240000\")",
+        "Packages/LocalASR/Tests/LocalASRTests/FileAudioChunksTests.swift:66: error: -[LocalASRTests.FileAudioChunksTests testEarlierPausePolicyChangesCutsWithoutLosingAudio] : XCTAssertGreaterThan failed: (\"3\") is not greater than (\"3\")",
+        "Packages/LocalASR/Tests/LocalASRTests/FileAudioChunksTests.swift:29: error: -[LocalASRTests.FileAudioChunksTests testNarrowContextPreservesOwnershipAndMergesTheShortFinalTail] : XCTAssertEqual failed: (\"512000\") is not equal to (\"484000\")",
+        "Packages/LocalASR/Tests/LocalASRTests/FileAudioChunksTests.swift:30: error: -[LocalASRTests.FileAudioChunksTests testNarrowContextPreservesOwnershipAndMergesTheShortFinalTail] : XCTAssertTrue failed - the exact narrow-context sample window must survive",
+        "Packages/LocalASR/Tests/LocalASRTests/FileAudioChunksTests.swift:28: error: -[LocalASRTests.FileAudioChunksTests testNarrowContextPreservesOwnershipAndMergesTheShortFinalTail] : XCTAssertEqual failed: (\"448000\") is not equal to (\"476000\")",
+        "Packages/LocalASR/Tests/LocalASRTests/FileAudioChunksTests.swift:29: error: -[LocalASRTests.FileAudioChunksTests testNarrowContextPreservesOwnershipAndMergesTheShortFinalTail] : XCTAssertEqual failed: (\"512000\") is not equal to (\"484000\")",
+        "Packages/LocalASR/Tests/LocalASRTests/FileAudioChunksTests.swift:30: error: -[LocalASRTests.FileAudioChunksTests testNarrowContextPreservesOwnershipAndMergesTheShortFinalTail] : XCTAssertTrue failed - the exact narrow-context sample window must survive",
+        "Packages/LocalASR/Tests/LocalASRTests/FileAudioChunksTests.swift:28: error: -[LocalASRTests.FileAudioChunksTests testNarrowContextPreservesOwnershipAndMergesTheShortFinalTail] : XCTAssertEqual failed: (\"448000\") is not equal to (\"476000\")"
+      ]
+    }
+  ]
+}

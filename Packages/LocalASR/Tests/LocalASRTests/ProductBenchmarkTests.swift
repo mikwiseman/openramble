@@ -17,6 +17,11 @@ final class ProductBenchmarkTests: XCTestCase {
         let mode: String
         let pacing: String
         let workers: Int
+        let tailRead: Bool?
+        let segmentSeconds: Int?
+        let minimumSegmentSeconds: Int?
+        let meetingPreserveQuietAudio: Bool?
+        let overlapMilliseconds: Int?
     }
 
     func testPublicFixture() async throws {
@@ -27,6 +32,9 @@ final class ProductBenchmarkTests: XCTestCase {
         guard [1, 2, 4].contains(config.workers), ["realtime", "settled", "burst"].contains(config.pacing) else {
             throw BenchError.invalidConfiguration
         }
+        guard [15, 30, 60].contains(config.segmentSeconds ?? 30) else { throw BenchError.invalidConfiguration }
+        guard [4, 15].contains(config.minimumSegmentSeconds ?? 15) else { throw BenchError.invalidConfiguration }
+        guard [250, 2_000].contains(config.overlapMilliseconds ?? 2_000) else { throw BenchError.invalidConfiguration }
         let engines = (0..<config.workers).map { _ in TranscribeCppAdapter() }
         let transcribers = engines.map { LocalTranscriber(engine: $0) }
         let loadStart = ContinuousClock.now
@@ -51,6 +59,11 @@ final class ProductBenchmarkTests: XCTestCase {
             row["mode"] = config.mode
             row["pacing"] = config.pacing
             row["workers"] = config.workers
+            row["tailRead"] = config.tailRead ?? false
+            row["segmentSeconds"] = config.segmentSeconds ?? 30
+            row["minimumSegmentSeconds"] = config.minimumSegmentSeconds ?? 15
+            row["meetingPreserveQuietAudio"] = config.meetingPreserveQuietAudio ?? false
+            row["overlapMilliseconds"] = config.overlapMilliseconds ?? 2_000
             row["loadSeconds"] = loadSeconds
             row["runtime"] = TranscribeCppAdapter.runtimeVersion
             row["backend"] = await engines[0].activeBackend
@@ -77,10 +90,19 @@ final class ProductBenchmarkTests: XCTestCase {
         let capture = PlaybackCapture(url: take, samples: samples)
         let sink = BenchmarkInserter()
         let probe = DecodeProbe(transcriber: transcriber)
+        let tailReader: (@Sendable (URL, Int, Int) async throws -> [Float])?
+        if config.tailRead == true {
+            tailReader = { url, start, total in
+                try await AudioFileReader().tailSamplesOnDiskQueue(from: url, startingAt: start, totalFrames: total)
+            }
+        } else {
+            tailReader = nil
+        }
         let controller = DictationController(capture: capture,
             transcribe: { try await transcriber.transcribe(fileURL: $0) },
             transcribeSamples: { try await probe.decode($0) },
             readSamples: { try await AudioFileReader().samplesOnDiskQueue(from: $0) },
+            readTailSamples: tailReader,
             inserter: sink, overlay: BenchmarkOverlay(), sounds: BenchmarkSounds())
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         let startDeadline = ContinuousClock.now.advanced(by: .seconds(10))
@@ -106,12 +128,16 @@ final class ProductBenchmarkTests: XCTestCase {
                 "cuts": cuts, "completedBeforeStop": completedBefore,
                 "calls": calls.map { ["samples": $0.samples, "wallSeconds": $0.wall, "engineSeconds": $0.engine] },
                 "maxFeedLatenessSeconds": await capture.maxLateness,
+                "lastInputSHA256": await probe.lastInputSHA256(),
                 "fileBacked": samples.count > 300 * 16_000]
     }
 
     private func file(_ config: Configuration, engines: [TranscribeCppAdapter]) async throws -> [String: Any] {
         let start = ContinuousClock.now
-        let chunks = try await FileAudioChunks(url: URL(fileURLWithPath: config.input))
+        let chunks = try await FileAudioChunks(url: URL(fileURLWithPath: config.input),
+                                              seconds: config.segmentSeconds ?? 30,
+                                              minimumSeconds: config.minimumSegmentSeconds ?? 15,
+                                              overlapMilliseconds: config.overlapMilliseconds ?? 2_000)
         var joiner = TimedTranscriptJoiner()
         var count = 0
         var chunkRows: [[String: Any]] = []
@@ -139,6 +165,7 @@ final class ProductBenchmarkTests: XCTestCase {
                 chunkRows.append(["index": count, "startFrame": chunk.startFrame,
                                   "boundaryFrame": chunk.boundaryFrame, "endFrame": chunk.endFrame,
                                   "text": result.text, "textSHA256": digest(result.text),
+                                  "words": result.words.map { ["text": $0.text, "start": $0.start, "end": $0.end] },
                                   "engineSeconds": result.processingDuration])
                 count += 1
             }
@@ -150,7 +177,8 @@ final class ProductBenchmarkTests: XCTestCase {
     private func shippingFile(_ config: Configuration, transcriber: LocalTranscriber) async throws -> [String: Any] {
         let start = ContinuousClock.now
         let result = TranscriptBox()
-        try await FileTranscriber(transcriber: transcriber).transcribe(files: [URL(fileURLWithPath: config.input)]) { _, value in
+        try await FileTranscriber(transcriber: transcriber, segmentSeconds: config.segmentSeconds ?? 30)
+            .transcribe(files: [URL(fileURLWithPath: config.input)]) { _, value in
             await result.set(value)
         }
         guard let value = await result.value else { throw BenchError.missingChunk }
@@ -165,7 +193,9 @@ final class ProductBenchmarkTests: XCTestCase {
         let queue = MeetingTranscriptionQueue(read: { ref in Array(samples[ref.startFrame..<ref.endFrame]) },
             decode: { try await transcriber.transcribe(samples: $0).text }, awaitTurn: {},
             emit: { ref, result in await output.append(ref, result) })
-        var policy = MeetingSegmentPolicy(channel: .microphone)
+        var parameters = MeetingSegmentPolicy.Parameters.meeting
+        parameters.preserveQuietAudio = config.meetingPreserveQuietAudio ?? false
+        var policy = MeetingSegmentPolicy(channel: .microphone, parameters: parameters)
         let start = ContinuousClock.now
         for cursor in stride(from: 0, to: samples.count, by: 320) {
             let end = min(cursor + 320, samples.count)
@@ -184,9 +214,30 @@ final class ProductBenchmarkTests: XCTestCase {
         let wall = elapsed(stop)
         let rows = await output.rows
         guard !rows.contains(where: { $0.failed }) else { throw BenchError.missingChunk }
+        // Coverage diagnostics run after the Stop timer. They distinguish
+        // samples never submitted from text lost inside recognition.
+        var coveredUntil = 0
+        var submittedFrames = 0
+        var gaps: [[String: Any]] = []
+        func gap(_ start: Int, _ end: Int) -> [String: Any] {
+            ["startFrame": start, "endFrame": end,
+             "peak": samples[start..<end].reduce(Float(0)) { max($0, abs($1)) }]
+        }
+        for row in rows {
+            guard row.ref.startFrame >= coveredUntil, row.ref.endFrame <= samples.count,
+                  row.ref.frameCount > 0 else { throw BenchError.invalidCoverage }
+            if row.ref.startFrame > coveredUntil { gaps.append(gap(coveredUntil, row.ref.startFrame)) }
+            submittedFrames += row.ref.frameCount
+            coveredUntil = row.ref.endFrame
+        }
+        if coveredUntil < samples.count { gaps.append(gap(coveredUntil, samples.count)) }
         return ["text": rows.map(\.text).joined(separator: " "), "stopSeconds": wall,
                 "audioSeconds": Double(samples.count) / 16_000, "completedBeforeStop": before,
-                "segments": rows.count, "backlogAfterDrain": await queue.backlog]
+                "segments": rows.count, "backlogAfterDrain": await queue.backlog,
+                "submittedFrames": submittedFrames, "unsubmittedFrames": samples.count - submittedFrames,
+                "unsubmittedIntervals": gaps,
+                "segmentRows": rows.map { ["startFrame": $0.ref.startFrame,
+                    "endFrame": $0.ref.endFrame, "text": $0.text] as [String: Any] }]
     }
 
     private func transcriptRow(text: String, words: [ASRResult.Word], audio: Double,
@@ -198,7 +249,7 @@ final class ProductBenchmarkTests: XCTestCase {
     }
 }
 
-private enum BenchError: Error { case invalidConfiguration, startFailed, insertionFailed, missingChunk }
+private enum BenchError: Error { case invalidConfiguration, startFailed, insertionFailed, missingChunk, invalidCoverage }
 private func duration(_ value: Duration) -> Double {
     Double(value.components.seconds) + Double(value.components.attoseconds) / 1e18
 }
@@ -213,12 +264,21 @@ private actor DecodeProbe {
     struct Row: Sendable { let samples: Int; let wall: Double; let engine: Double }
     let transcriber: LocalTranscriber
     var results: [Row] = []
+    var lastSamples: [Float] = []
     init(transcriber: LocalTranscriber) { self.transcriber = transcriber }
     func decode(_ samples: [Float]) async throws -> ASRResult {
         let start = ContinuousClock.now
         let result = try await transcriber.transcribe(samples: samples)
+        lastSamples = samples
         results.append(Row(samples: samples.count, wall: elapsed(start), engine: result.processingDuration))
         return result
+    }
+    // Hash after insertion timing ends; keeping the last buffer uses at most
+    // one decode input and does not restore the full file-backed recording.
+    func lastInputSHA256() -> String {
+        lastSamples.withUnsafeBufferPointer { buffer in
+            SHA256.hash(data: Data(buffer: buffer)).map { String(format: "%02x", $0) }.joined()
+        }
     }
 }
 private actor PlaybackCapture: AudioCapturing {
@@ -280,12 +340,12 @@ private actor BenchmarkOverlay: OverlayPresenting {
 }
 private actor BenchmarkSounds: Sounding { func playAttention() async {} }
 private actor MeetingOutput {
-    struct Row: Sendable { let text: String; let failed: Bool }
+    struct Row: Sendable { let ref: MeetingSegmentRef; let text: String; let failed: Bool }
     var rows: [Row] = []
     func append(_ ref: MeetingSegmentRef, _ result: MeetingTranscriptionQueue.Outcome) {
         switch result {
-        case let .decoded(text): rows.append(Row(text: text, failed: false))
-        case let .failed(error): rows.append(Row(text: error, failed: true))
+        case let .decoded(text): rows.append(Row(ref: ref, text: text, failed: false))
+        case let .failed(error): rows.append(Row(ref: ref, text: error, failed: true))
         }
     }
 }

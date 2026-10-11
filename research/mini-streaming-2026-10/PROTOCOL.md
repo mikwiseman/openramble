@@ -110,3 +110,46 @@ with the new primary series. If four models warn again, keep that cell as
 unmeasured and continue the supported worker counts. The real-time controller,
 meeting and long-capture matrices remain as registered above. Other resource
 changes must be recorded, and inference never overlaps our own builds.
+
+## Follow-up closure and candidate registration, 11 October
+
+The primary matrix completed all301 jobs:21file,160controller,80meeting and
+40long-capture runs. An additional same-binary scaling qualification passed
+all10smokes, then completed17long files before closing with2memory warnings
+and4compiler interruptions. Each four-model language has one successful
+diagnostic only. The remaining seven supported jobs were cancelled after
+the resource gate failed and preflight pressure persisted. Keep the complete
+primary file matrix for repeated medians; show the supplementary series,
+changing host conditions and failed attempts separately. Neither two nor
+four models passes the no-new-memory-warning adoption gate.
+
+[HYPOTHESES.md](HYPOTHESES.md) records the prospective quality and I/O plans,
+their amendments and closed mechanisms. The JSON plans in experiment-plans
+are hashed into each custom run's identity. New code exposes experimental
+parameters without changing production defaults. Commit the source and
+finish compilation before each new inference series.
+
+First run eight meeting coverage diagnostics with the original policy,
+comparing its existing quiet-audio preservation flag. Coverage calculation
+and peak measurements of omitted intervals occur after the Stop timer.
+Keep the apparent leading-silence coordinate defect unfixed until these
+original-policy intervals have been collected. Require a failing pure
+regression before any accounting correction, then repeat the same inputs.
+
+The file quality family compares15/30/60-second caps, optionally earlier
+pause-aligned cuts and250ms context, and replays one frozen gap-preserving
+joiner. Select at most one policy using the registered development gates
+before opening the sealed50RU+50EN holdout. Repeated text from the200-item
+development set is excluded at both recording-ID and normalized-phrase
+levels. The superseded, unused selection remains as provenance.
+
+The suffix-reader family compares both paths within the same binary in40
+paired runs. It must preserve exact final samples, text and decode sizes,
+pass lifecycle checks, avoid new pressure failures, and improve each normal
+long-language median Stop time by at least10%. The replay's retained input
+buffer is disclosed; process footprint is not shipping capture memory.
+
+Tail-reader and file-boundary regressions were first run with the added
+parameters accepted but ignored. They failed on behavior assertions before
+the candidate implementations were applied. No default or release decision
+is implied by a passing test or an exploratory timing.

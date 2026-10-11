@@ -78,7 +78,12 @@ def main():
             seen.add(key)
             raw = json.loads(path.read_text())
             row = {**raw, "run": run.name, "fixture": observation["fixture"],
-                   "condition": observation["condition"], "repeat": observation["repeat"]}
+                   "condition": observation["condition"], "repeat": observation["repeat"],
+                   "variant": observation.get("variant"),
+                   "tailRead": raw.get("tailRead", False), "segmentSeconds": raw.get("segmentSeconds", 30),
+                   "minimumSegmentSeconds": raw.get("minimumSegmentSeconds", 15)}
+            row["meetingPreserveQuietAudio"] = raw.get("meetingPreserveQuietAudio", False)
+            row["overlapMilliseconds"] = raw.get("overlapMilliseconds", 2000)
             row["quality"] = score(fixtures[row["fixture"]]["reference"], row["text"])
             row["normalizedTextSHA256"] = hashlib.sha256(normalized(row["text"]).encode()).hexdigest()
             memory = [p["memory"]["physicalFootprintBytes"] for p in observation["pressure"] if p.get("memory")]
@@ -92,13 +97,17 @@ def main():
 
     groups = defaultdict(list)
     for row in rows:
-        key = (row["mode"], row["fixture"], row["pacing"], row["workers"], row["condition"])
+        key = (row["mode"], row["fixture"], row["pacing"], row["workers"], row["condition"],
+               row["segmentSeconds"], row["minimumSegmentSeconds"], row["tailRead"], row["meetingPreserveQuietAudio"], row["overlapMilliseconds"])
         groups[key].append(row)
     summaries = []
     for key, members in sorted(groups.items()):
-        mode, fixture, pacing, workers, condition = key
+        mode, fixture, pacing, workers, condition, segment_seconds, minimum_seconds, tail_read, meeting_preserve, overlap_ms = key
         field = "stopSeconds" if mode in ("controller", "meeting") else "processingSeconds"
         summary = dict(mode=mode, fixture=fixture, pacing=pacing, workers=workers, condition=condition,
+                       segmentSeconds=segment_seconds, minimumSegmentSeconds=minimum_seconds, tailRead=tail_read,
+                       meetingPreserveQuietAudio=meeting_preserve,
+                       overlapMilliseconds=overlap_ms,
                        seconds=stats([r[field] for r in members]),
                        audioSeconds=members[0]["audioSeconds"],
                        peakRSSBytes=max(r["peakRSSBytes"] for r in members),
@@ -114,16 +123,24 @@ def main():
                            completedBeforeStop=sorted({r["completedBeforeStop"] for r in members}),
                            maxFeedLatenessSeconds=max(r["maxFeedLatenessSeconds"] for r in members),
                            fileBacked=all(r["fileBacked"] for r in members))
+        if mode == "meeting" and all("submittedFrames" in r for r in members):
+            summary.update(submittedFrames=stats([r["submittedFrames"] for r in members]),
+                           unsubmittedFrames=stats([r["unsubmittedFrames"] for r in members]))
         summaries.append(summary)
 
     parity = []
-    for fixture in sorted({r["fixture"] for r in rows if r["mode"] == "file"}):
-        candidates = [r for r in rows if r["mode"] == "file" and r["fixture"] == fixture]
+    for fixture, segment_seconds, minimum_seconds, overlap_ms in sorted({(r["fixture"], r["segmentSeconds"], r["minimumSegmentSeconds"], r["overlapMilliseconds"]) for r in rows if r["mode"] == "file"}):
+        candidates = [r for r in rows if r["mode"] == "file" and r["fixture"] == fixture
+                      and r["segmentSeconds"] == segment_seconds and r["minimumSegmentSeconds"] == minimum_seconds
+                      and r["overlapMilliseconds"] == overlap_ms]
         base = next(r for r in candidates if r["workers"] == 1)
         def chunks(r):
             return [(c["index"], c["startFrame"], c["boundaryFrame"], c["endFrame"], c["textSHA256"]) for c in r["chunks"]]
-        for row in candidates + [r for r in rows if r["mode"] == "shipping-file" and r["fixture"] == fixture]:
-            parity.append({"fixture": fixture, "id": row["id"], "baseline": base["id"],
+        for row in candidates + [r for r in rows if r["mode"] == "shipping-file" and r["fixture"] == fixture
+                                 and r["segmentSeconds"] == segment_seconds and r["minimumSegmentSeconds"] == minimum_seconds
+                                 and r["overlapMilliseconds"] == overlap_ms]:
+            parity.append({"fixture": fixture, "segmentSeconds": segment_seconds, "minimumSegmentSeconds": minimum_seconds, "overlapMilliseconds": overlap_ms,
+                           "id": row["id"], "baseline": base["id"],
                            "exactText": row["text"] == base["text"],
                            "normalizedText": row["normalizedTextSHA256"] == base["normalizedTextSHA256"],
                            "exactWordTimings": row["words"] == base["words"],
@@ -131,9 +148,26 @@ def main():
                            "chunkCount": len(row["chunks"]),
                            "chunkBoundariesAndText": chunks(row) == chunks(base) if row["mode"] == "file" else None})
 
+    tail_parity = []
+    tail_cohorts = {(r["fixture"], r["pacing"], r["condition"]) for r in rows
+                    if r["mode"] == "controller" and r["tailRead"]}
+    for fixture, pacing, condition in sorted(tail_cohorts):
+        candidates = [r for r in rows if r["mode"] == "controller" and r["fixture"] == fixture
+                      and r["pacing"] == pacing and r["condition"] == condition]
+        base = next(r for r in candidates if not r["tailRead"])
+        for row in candidates:
+            tail_parity.append({"fixture": fixture, "condition": condition, "pacing": pacing,
+                                "id": row["id"], "baseline": base["id"],
+                                "exactText": row["text"] == base["text"],
+                                "sameFinalSamples": row.get("lastInputSHA256") is not None
+                                    and row["lastInputSHA256"] == base.get("lastInputSHA256"),
+                                "sameDecodeSizes": [c["samples"] for c in row["calls"]]
+                                    == [c["samples"] for c in base["calls"]]})
+
     result = {"normalization": "Unicode NFC, lowercase, ё→е, Unicode word tokens, no numeral expansion",
               "quantiles": "linear interpolation at (n-1)*p", "qualityScope": "Fixed public fixtures; timing repeats are not independent quality examples.",
-              "identities": identities, "completedRuns": len(rows), "failures": failures, "groups": summaries, "fileParity": parity}
+              "identities": identities, "completedRuns": len(rows), "failures": failures,
+              "groups": summaries, "fileParity": parity, "tailParity": tail_parity}
     (args.out / "summary.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     # Gzip stores no timestamp or local filename. No audio or private paths.
     for name, values in (("public-runs.jsonl.gz", rows), ("system-observations.jsonl.gz", observations)):

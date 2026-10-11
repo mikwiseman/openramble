@@ -283,6 +283,10 @@ public final class DictationController {
     private let transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)?
     /// Reopen file-backed PCM after capture releases its bounded memory copy.
     private let readSamples: (@Sendable (URL) async throws -> [Float])?
+    /// Read a suffix without restoring the recognized prefix into memory.
+    /// Arguments are URL, first frame and expected total frames at 16 kHz.
+    /// The reader must validate the complete file length before returning.
+    private let readTailSamples: (@Sendable (URL, Int, Int) async throws -> [Float])?
     /// Recognizes the take in pieces while it is still being spoken.
     ///
     /// Present only when there is a sample-path recognizer to give it to and a
@@ -298,7 +302,7 @@ public final class DictationController {
     /// is not merely worse but non-monotonic — the same start offset returned
     /// text at 0.8 s, nothing at 1.0 s, text again at 1.2 s. A tail shorter than
     /// this is recognized together with the segment before it instead.
-    private static let minimumTailSamples = 2 * sampleRate
+    private nonisolated static let minimumTailSamples = 2 * sampleRate
     private let inserter: any TextInserting
     private let overlay: any OverlayPresenting
     private let sounds: any Sounding
@@ -406,6 +410,7 @@ public final class DictationController {
         transcribe: @escaping @Sendable (URL) async throws -> ASRResult,
         transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)? = nil,
         readSamples: (@Sendable (URL) async throws -> [Float])? = nil,
+        readTailSamples: (@Sendable (URL, Int, Int) async throws -> [Float])? = nil,
         inserter: any TextInserting,
         targetApplicationSnapshot: (@Sendable () -> TargetApplication?)? = nil,
         overlay: any OverlayPresenting,
@@ -433,6 +438,7 @@ public final class DictationController {
         self.transcribe = transcribe
         self.transcribeSamples = transcribeSamples
         self.readSamples = readSamples
+        self.readTailSamples = readTailSamples
         self.inserter = inserter
         self.targetApplicationSnapshot = targetApplicationSnapshot
             ?? { inserter.frontmostApplication() }
@@ -933,28 +939,26 @@ public final class DictationController {
         segmentSampleCounts: [Int],
         consumedSamples: Int,
         samples: [Float],
+        sampleOffset: Int = 0,
         decodingDuration: TimeInterval = 0,
         transcribe: @Sendable ([Float]) async throws -> ASRResult
     ) async throws -> ASRResult {
-        guard consumedSamples >= 0, consumedSamples <= samples.count,
-              texts.count == segmentSampleCounts.count,
-              segmentSampleCounts.allSatisfy({ $0 > 0 }),
-              segmentSampleCounts.reduce(0, +) == consumedSamples else {
+        guard sampleOffset >= 0, samples.count <= Int.max - sampleOffset else {
+            throw ASREngineError.unsupportedAudioFormat("incomplete streamed recording")
+        }
+        let tailStart = try streamedTailStart(texts: texts, segmentSampleCounts: segmentSampleCounts,
+            consumedSamples: consumedSamples, totalSamples: samples.count + sampleOffset)
+        guard sampleOffset <= tailStart else {
             throw ASREngineError.unsupportedAudioFormat("incomplete streamed recording")
         }
         var pieces = texts
-        var tailStart = min(max(0, consumedSamples), samples.count)
-
-        if samples.count - tailStart < minimumTailSamples,
-           pieces.count == segmentSampleCounts.count,
-           let last = segmentSampleCounts.last {
+        if tailStart < consumedSamples {
             pieces.removeLast()
-            tailStart = max(0, tailStart - last)
         }
 
         var processing = 0.0
         var dispatch = 0.0
-        let tail = Array(samples[tailStart...])
+        let tail = Array(samples[(tailStart - sampleOffset)...])
         if !tail.isEmpty {
             let result = try await transcribe(tail)
             pieces.append(result.text)
@@ -974,11 +978,25 @@ public final class DictationController {
         return ASRResult(
             text: text,
             words: [],
-            audioDuration: Double(samples.count) / Double(sampleRate),
+            audioDuration: Double(samples.count + sampleOffset) / Double(sampleRate),
             processingDuration: processing,
             engineDispatchDuration: dispatch,
             decodingDuration: decodingDuration
         )
+    }
+
+    private nonisolated static func streamedTailStart(texts: [String], segmentSampleCounts: [Int],
+                                          consumedSamples: Int, totalSamples: Int) throws -> Int {
+        guard consumedSamples >= 0, consumedSamples <= totalSamples,
+              texts.count == segmentSampleCounts.count,
+              segmentSampleCounts.allSatisfy({ $0 > 0 }),
+              segmentSampleCounts.reduce(0, +) == consumedSamples else {
+            throw ASREngineError.unsupportedAudioFormat("incomplete streamed recording")
+        }
+        if totalSamples - consumedSamples < minimumTailSamples, let last = segmentSampleCounts.last {
+            return consumedSamples - last
+        }
+        return consumedSamples
     }
 
     private func finalize(session: DictationSessionID) async {
@@ -1148,7 +1166,7 @@ public final class DictationController {
             let streamed = streamedSegments
             let consumedSamples = recording.consumedSampleCount
             let framedRecognition: @Sendable () async throws -> ASRResult = {
-                [transcribe, transcribeSamples, readSamples, streamed, consumedSamples] in
+                [transcribe, transcribeSamples, readSamples, readTailSamples, streamed, consumedSamples] in
                 pickedUpBox.set(dispatchedAt.duration(to: clockNow()))
                 defer {
                     returnFrameBox.set(pthread_main_np() != 0)
@@ -1197,22 +1215,44 @@ public final class DictationController {
                     stageBox.set((.recognition, .now))
                     // The five-minute PCM cap changes where audio lives, not
                     // which words have already been recognized. Reopen the
-                    // complete local WAV and reuse the same prefix/tail join.
+                    // local WAV and reuse the same prefix/tail join. A range
+                    // reader avoids restoring the recognized prefix at Stop.
                     let outcome = await streamed?.finish()
-                    if let transcribeSamples, let readSamples,
-                       case let .recognized(texts) = outcome, !texts.isEmpty {
+                    if let transcribeSamples,
+                       case let .recognized(texts) = outcome, !texts.isEmpty,
+                       readTailSamples != nil || readSamples != nil {
                         let decodingStarted = clockNow()
-                        let samples = try await readSamples(url)
+                        let sampleCounts = streamed?.submittedSampleCounts ?? []
+                        let samples: [Float]
+                        let sampleOffset: Int
+                        if let readTailSamples {
+                            let expected = recording.duration * Double(Self.sampleRate)
+                            guard expected.isFinite, expected > 0, expected < Double(Int.max) else {
+                                throw ASREngineError.unsupportedAudioFormat("invalid file-backed duration")
+                            }
+                            let totalSamples = Int(expected.rounded())
+                            sampleOffset = try Self.streamedTailStart(texts: texts,
+                                segmentSampleCounts: sampleCounts, consumedSamples: consumedSamples,
+                                totalSamples: totalSamples)
+                            samples = try await readTailSamples(url, sampleOffset, totalSamples)
+                        } else if let readSamples {
+                            sampleOffset = 0
+                            samples = try await readSamples(url)
+                        } else {
+                            throw ASREngineError.unsupportedAudioFormat("no file-backed reader")
+                        }
                         let decodingDuration = decodingStarted.duration(to: clockNow())
                         try Task.checkCancellation()
-                        guard abs(Double(samples.count) - recording.duration * Double(Self.sampleRate)) < 1 else {
+                        guard abs(Double(samples.count) + Double(sampleOffset)
+                            - recording.duration * Double(Self.sampleRate)) < 1 else {
                             throw ASREngineError.unsupportedAudioFormat("incomplete file-backed recording")
                         }
                         return try await Self.joinStreamed(
                             texts: texts,
-                            segmentSampleCounts: streamed?.submittedSampleCounts ?? [],
+                            segmentSampleCounts: sampleCounts,
                             consumedSamples: consumedSamples,
                             samples: samples,
+                            sampleOffset: sampleOffset,
                             decodingDuration: Double(decodingDuration.components.seconds)
                                 + Double(decodingDuration.components.attoseconds) / 1e18,
                             transcribe: transcribeSamples

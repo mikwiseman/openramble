@@ -114,3 +114,48 @@ through Darwin `proc_pid_rusage` at one-second intervals. The sample maximum
 can miss shorter peaks. Model load and warmup are inside memory accounting
 but outside recognition time. CPU pressure is ten separate busy-loop
 processes, not a guarantee about total system utilization.
+
+## Registered follow-up experiments
+
+Build the committed candidate test bundle with the same release command
+above. All custom jobs bind the plan SHA-256 as well as source, runner,
+harness, binary, inputs and model. Keep every phase in its own output directory.
+
+```bash
+python3 research/mini-streaming-2026-10/run.py custom \
+  --plan research/mini-streaming-2026-10/experiment-plans/meeting-coverage.json \
+  --data "$BENCH_ROOT" --out work/mini-meeting-coverage --model "$BENCH_MODEL"
+python3 research/mini-streaming-2026-10/run.py custom \
+  --plan research/mini-streaming-2026-10/experiment-plans/segment-caps.json \
+  --data "$BENCH_ROOT" --out work/mini-segment-caps --model "$BENCH_MODEL"
+python3 research/mini-streaming-2026-10/offline-seam-study.py \
+  work/mini-segment-caps --data "$BENCH_ROOT" --all-caps \
+  --out work/mini-cap-replay.json
+python3 research/mini-streaming-2026-10/run.py custom \
+  --plan research/mini-streaming-2026-10/experiment-plans/tail-read.json \
+  --data "$BENCH_ROOT" --out work/mini-tail-read --model "$BENCH_MODEL"
+```
+
+Use early-pauses.json and narrow-context.json only as the registered
+conditional development follow-ups. Replay each with the same offline
+helper. Pass all completed development replay JSON paths to
+decide-joint-quality.py before extracting any holdout audio. The replay
+first asserts exact agreement with the native unchanged joiner.
+
+```bash
+python3 research/mini-streaming-2026-10/decide-joint-quality.py \
+  work/mini-cap-replay.json work/mini-early-replay.json work/mini-context-replay.json \
+  --out work/mini-quality-decision.json
+python3 research/mini-streaming-2026-10/prepare-heldout.py \
+  --decision work/mini-quality-decision.json --source-data "$BENCH_ROOT" \
+  --selection research/mini-streaming-2026-10/experiment-plans/heldout-selection.json \
+  --out work/mini-heldout-data
+```
+
+The preparer refuses to open the holdout without a positive development gate,
+checks the sealed selection and archive hashes, uses the same afconvert PCM16
+conversion, and rejects audio hashes already present in development.
+Do not tune a new policy on this heldout output; a subsequent new hypothesis
+requires a fresh disjoint validation set. An approved quality policy still
+needs native regression tests, matching repeated controls and final lifecycle
+checks before adoption.

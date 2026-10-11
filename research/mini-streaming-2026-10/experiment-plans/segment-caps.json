@@ -1,0 +1,110 @@
+[
+  {
+    "fixture": "ru-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "cap30",
+    "parameters": {
+      "segmentSeconds": 30
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "cap15",
+    "parameters": {
+      "segmentSeconds": 15
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "cap60",
+    "parameters": {
+      "segmentSeconds": 60
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "cap15",
+    "parameters": {
+      "segmentSeconds": 15
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "cap60",
+    "parameters": {
+      "segmentSeconds": 60
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "cap30",
+    "parameters": {
+      "segmentSeconds": 30
+    }
+  },
+  {
+    "fixture": "mixed-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "cap60",
+    "parameters": {
+      "segmentSeconds": 60
+    }
+  },
+  {
+    "fixture": "mixed-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "cap30",
+    "parameters": {
+      "segmentSeconds": 30
+    }
+  },
+  {
+    "fixture": "mixed-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "cap15",
+    "parameters": {
+      "segmentSeconds": 15
+    }
+  }
+]

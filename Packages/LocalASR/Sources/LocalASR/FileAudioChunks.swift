@@ -23,27 +23,34 @@ actor FileAudioChunks {
     private var ready: [MeetingSegmentRef] = []
     private var ended = false
     private let whole: Bool
-    private let overlap = 2 * 16_000
+    private let overlap: Int
+    private let minimumTail = 2 * 16_000
 
-    init(url: URL, seconds: Int = 30) async throws {
+    init(url: URL, seconds: Int = 30, minimumSeconds: Int = 15, overlapMilliseconds: Int = 2_000) async throws {
+        precondition(minimumSeconds > 0 && minimumSeconds <= seconds)
+        precondition((0...2_000).contains(overlapMilliseconds))
+        overlap = overlapMilliseconds * 16
         let stream = try await AudioFileStream(url: url)
         self.stream = stream
         samples = nil
         duration = stream.duration
         whole = duration <= 30
         policy = MeetingSegmentPolicy(channel: .microphone, parameters: .init(
-            speech: .init(minimumSegment: .seconds(15), relaxAfter: .seconds(seconds)),
+            speech: .init(minimumSegment: .seconds(minimumSeconds), relaxAfter: .seconds(seconds)),
             hardCap: .seconds(seconds), forcedCutWindow: .seconds(1), preserveQuietAudio: true
         ))
     }
 
-    init(samples: [Float], seconds: Int = 30) {
+    init(samples: [Float], seconds: Int = 30, minimumSeconds: Int = 15, overlapMilliseconds: Int = 2_000) {
+        precondition(minimumSeconds > 0 && minimumSeconds <= seconds)
+        precondition((0...2_000).contains(overlapMilliseconds))
+        overlap = overlapMilliseconds * 16
         stream = nil
         self.samples = samples
         duration = Double(samples.count) / 16_000
         whole = duration <= 30
         policy = MeetingSegmentPolicy(channel: .microphone, parameters: .init(
-            speech: .init(minimumSegment: .seconds(15), relaxAfter: .seconds(seconds)),
+            speech: .init(minimumSegment: .seconds(minimumSeconds), relaxAfter: .seconds(seconds)),
             hardCap: .seconds(seconds), forcedCutWindow: .seconds(1), preserveQuietAudio: true
         ))
     }
@@ -78,7 +85,7 @@ actor FileAudioChunks {
         while true {
             // Keep a just-cut segment until its right context is available.
             // At EOF this also lets a <2 s tail merge into that segment.
-            if let first = ready.first, ended || observed >= first.endFrame + overlap {
+            if let first = ready.first, ended || observed >= first.endFrame + max(overlap, minimumTail) {
                 ready.removeFirst()
                 let start = max(bufferStart, first.startFrame - overlap)
                 let end = min(observed, first.endFrame + overlap)
@@ -94,7 +101,7 @@ actor FileAudioChunks {
             if part.isEmpty {
                 ended = true
                 if let tail = policy.flush() {
-                    if tail.frameCount < overlap, let previous = ready.last {
+                    if tail.frameCount < minimumTail, let previous = ready.last {
                         ready[ready.count - 1] = MeetingSegmentRef(channel: .microphone,
                             startFrame: previous.startFrame, frameCount: tail.endFrame - previous.startFrame)
                     } else {

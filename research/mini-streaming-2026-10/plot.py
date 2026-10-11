@@ -11,10 +11,12 @@ import numpy as np
 parser = argparse.ArgumentParser()
 parser.add_argument("--summary", type=Path, required=True)
 parser.add_argument("--old", type=Path, required=True)
+parser.add_argument("--files-summary", type=Path, help="separate complete scaling cohort; never pooled with primary timings")
 parser.add_argument("--out", type=Path, required=True)
 args = parser.parse_args()
 data = json.loads(args.summary.read_text())
 old = json.loads(args.old.read_text())
+file_data = json.loads(args.files_summary.read_text()) if args.files_summary else data
 args.out.mkdir(parents=True, exist_ok=True)
 plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 13,
                      "axes.spines.top": False, "axes.spines.right": False,
@@ -35,6 +37,7 @@ def finish(fig, name, caption, bottom=.20, left=.12):
 
 primary = [g for g in data["groups"] if g["mode"] == "controller" and g["pacing"] == "realtime"]
 if len(primary) == 8:
+    assert all(g["seconds"]["n"] == 20 for g in primary), "primary figure requires the full registered matrix"
     fig, axes = plt.subplots(1, 2, figsize=(15, 7.8), sharex=True, sharey=True)
     fig.suptitle("Ожидание после Stop", x=.02, ha="left", fontsize=25, weight="bold")
     names = ["ru-short", "en-short", "ru-60s", "en-60s"]
@@ -78,8 +81,21 @@ finish(fig,"word-errors","Отдельная серия M4 Pro, 14 CPU, 24 ГБ 
        "OpenRamble и Handy: Parakeet v3 Q8. whisper.cpp и Superwhisper: локальная Turbo. Нормализованные слова OpenRamble и Handy совпали 200/200.\n"
        "Небольшие различия WER на этом наборе не доказывают статистического превосходства.",left=.18)
 
-files = [g for g in data["groups"] if g["mode"] == "file"]
+files = [g for g in file_data["groups"] if g["mode"] == "file"]
 if files:
+    workers_present = {g["workers"] for g in files}
+    assert workers_present in ({1, 2}, {1, 2, 4})
+    assert len(files) == 3 * len(workers_present)
+    assert all(g["seconds"]["n"] == (1 if g["workers"] == 4 else 3) for g in files), "three repeats for1/2 models; four-model n=1 is diagnostic"
+    assert len({(g["fixture"], g["workers"]) for g in files}) == len(files), "do not mix candidate policies"
+    resource_caption = (
+        "Общий рабочий компьютер. Две и четыре модели предупреждали о памяти; во время серии освобождена память простаивавших процессов."
+        if 4 in workers_present else
+        "Одна попытка с двумя моделями прервана по памяти; затем закрыты незанятые приложения и выполнен повтор. Четыре модели прерваны при загрузке.")
+    four_caption = (
+        "Четыре модели: по одному успешному запуску на язык; повторная попытка прервана по памяти. Устойчивый выигрыш не подтверждён."
+        if 4 in workers_present else
+        "Четыре модели: нет завершённого замера. Прерывания по памяти приведены в полном отчёте.")
     fig, axes = plt.subplots(1,3,figsize=(17,7.7))
     fig.suptitle("Параллельная обработка 59 минут аудио",x=.02,ha="left",fontsize=25,weight="bold")
     for language,color,offset in zip(["ru","en","mixed"],[blue,"#6F8996","#B49568"],[-.23,0,.23]):
@@ -93,33 +109,50 @@ if files:
                 maxs=[0 if g is None else g["seconds"]["max"]-g["seconds"]["p50"] for g in groups]
                 ax.errorbar(np.arange(3)+offset,values,yerr=[mins,maxs],fmt="none",ecolor="#25262e",capsize=3,lw=1,zorder=4)
             ax.set_title(title,loc="left",fontsize=15,pad=15)
-            ax.set_xticks(range(3),["1 модель","2 модели","4 модели"])
-            ax.set_ylim(bottom=0)
+            ax.set_xticks(range(3),["1 модель","2 модели","4 модели · n=1" if 4 in workers_present else "4 модели"])
             ax.grid(axis="y",color="#e9eaf0",zorder=0)
             ax.tick_params(axis="both",length=0)
-    axes[2].legend(frameon=False,loc="upper left")
+    handles, legend_labels = axes[2].get_legend_handles_labels()
+    fig.legend(handles, legend_labels, frameon=False, loc="upper right", bbox_to_anchor=(.97,.97), ncol=3)
     if not any(g["workers"] == 4 for g in files):
         for ax in axes:
             ax.text(2, .15, "Остановлено\nпо памяти", transform=ax.get_xaxis_transform(), ha="center", fontsize=10, color="#777B88")
-    for ax in axes: ax.set_ylim(0,ax.get_ylim()[1]*1.18)
-    finish(fig,"parallel-files","Mac Mini M4, 16 ГиБ · Parakeet v3 Q8 · Metal · одинаковые фрагменты и сборка текста в исходном порядке.\n"
-           "Время: медиана, отрезки: минимум–максимум повторов. Загрузка и прогрев моделей не входят. Память: максимум выборки с шагом 1 с, включая загрузку.\n"
+    # Set limits once, after every language has contributed data. Setting a
+    # lower limit inside the loop would freeze autoscaling at the first row
+    # and clip the much larger mixed-language WER.
+    upper_limits = [max(g["seconds"]["max"] for g in files),
+                    max(g["sampledPeakPhysicalFootprintBytes"] / 2**30 for g in files),
+                    max(g["wer"]["p50"] * 100 for g in files)]
+    for ax, upper in zip(axes, upper_limits):
+        ax.set_ylim(0,upper*1.22)
+    finish(fig,"parallel-files","Mac Mini M4, 16 ГиБ · Parakeet v3 Q8 · Metal · одинаковые фрагменты и исходный порядок текста.\n"
+           "1/2 модели: медиана трёх повторов, отрезки: минимум–максимум. 4 модели: единичные диагностические значения. Загрузка и прогрев отдельно.\n"
+           "Память процесса: максимум выборки с шагом 1 с, включая загрузку.\n"
            "Файлы составлены из целых фраз FLEURS с паузами 0,5 с. Это проверка длинного ввода, а не естественная встреча.\n"
-           "Смешанный RU/EN показан полностью: большое число пропусков нельзя считать ускорением.",bottom=.25)
+           + resource_caption + "\n"
+           "Смешанный RU/EN показан полностью: большое число пропусков нельзя считать ускорением.",bottom=.28)
 
     fig,ax=plt.subplots(figsize=(13,8))
     fig.suptitle("Скорость и качество на тех же длинных файлах",x=.02,ha="left",fontsize=23,weight="bold")
     for lang,color in zip(["ru","en","mixed"],[blue,"#6F8996","#B49568"]):
+        paired = [g for g in files if g["fixture"] == f"{lang}-3540s"]
+        paired.sort(key=lambda g:g["workers"])
+        ax.plot([g["seconds"]["p50"] for g in paired], [g["wer"]["p50"]*100 for g in paired],
+                color=color, linewidth=1.5, alpha=.6, zorder=2)
         for workers,marker in [(1,"o"),(2,"s"),(4,"D")]:
             g=next((g for g in files if g["fixture"]==f"{lang}-3540s" and g["workers"]==workers),None)
             if g:
                 x,y=g["seconds"]["p50"],g["wer"]["p50"]*100
                 ax.scatter(x,y,s=100,marker=marker,color=color,edgecolors="white",linewidths=1,zorder=3)
-                ax.annotate(f"{lang.upper()}, {workers}",(x,y),xytext=(5,7+12*(workers==2)),textcoords="offset points",fontsize=10)
-    ax.set_xlim(left=0);ax.set_ylim(bottom=0)
+                label = "RU + EN" if lang == "mixed" else lang.upper()
+                ax.annotate(f"{label}, {workers}",(x,y),xytext=(5,-20 if lang=="ru" else 9),textcoords="offset points",fontsize=10)
+    times = [g["seconds"]["p50"] for g in files]
+    ax.set_xlim(max(0,min(times)-8),max(times)+8)
+    ax.set_ylim(0,max(g["wer"]["p50"] for g in files)*100*1.16)
     ax.set_xlabel("Полная обработка файла, с · меньше лучше",labelpad=14)
     ax.set_ylabel("Ошибки слов, WER % · меньше лучше",labelpad=14)
     ax.grid(color="#e9eaf0",zorder=0)
     finish(fig,"quality-vs-time","Mac Mini M4, 16 ГиБ · OpenRamble 0.32.0 · Parakeet v3 Q8, Metal · три составных файла около 59 минут.\n"
-           "Подпись: язык и число независимых моделей. Скорость: медиана повторов, без загрузки модели. WER на фиксированном входе.\n"
-           "Сравнивать число моделей можно внутри одного цвета. Языковые файлы содержат разные исходные фразы.")
+           "Подпись: язык и число моделей. 1/2 модели: медиана трёх повторов; 4 модели: один запуск. Без загрузки модели. WER на фиксированном входе.\n"
+           "Сравнивать число моделей можно внутри одного цвета. Языковые файлы содержат разные исходные фразы.\n"
+           + four_caption,bottom=.23)

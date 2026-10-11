@@ -5,19 +5,23 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import signal
 import subprocess
 import sys
 import time
 
 parser = argparse.ArgumentParser()
-parser.add_argument("suite", choices=["smoke", "controller", "file", "meeting", "long"])
+parser.add_argument("suite", choices=["smoke", "controller", "file", "meeting", "long", "custom"])
 parser.add_argument("--data", required=True, type=Path)
 parser.add_argument("--out", required=True, type=Path)
 parser.add_argument("--model", required=True, type=Path)
 parser.add_argument("--repeats", type=int)
 parser.add_argument("--max-workers", type=int, choices=[1, 2, 4], default=4)
+parser.add_argument("--plan", type=Path, help="frozen JSON job list for the custom suite")
 args = parser.parse_args()
+if (args.suite == "custom") != (args.plan is not None):
+    parser.error("--plan is required only for the custom suite")
 repo = Path(__file__).resolve().parents[2]
 out = args.out.resolve()
 out.mkdir(parents=True, exist_ok=True)
@@ -35,6 +39,8 @@ identity = {"head": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=re
             "harness_sha256": hashlib.file_digest((repo / "Packages/LocalASR/Tests/LocalASRTests/ProductBenchmarkTests.swift").open("rb"), "sha256").hexdigest(),
             "input_manifest_sha256": hashlib.file_digest((args.data / "mini-inputs.json").open("rb"), "sha256").hexdigest(),
             "model_sha256": hashlib.file_digest(model.open("rb"), "sha256").hexdigest()}
+if args.plan is not None:
+    identity["plan_sha256"] = hashlib.sha256(args.plan.read_bytes()).hexdigest()
 identity_path = out / "identity.json"
 if identity_path.exists():
     assert json.loads(identity_path.read_text()) == identity, "changed run identity; choose a new output directory"
@@ -75,14 +81,43 @@ elif args.suite == "meeting":
         for condition in (["normal", "cpu10"] if repeat % 2 == 0 else ["cpu10", "normal"]):
             for name in ("ru-60s", "en-60s"):
                 add(name, "meeting", "settled", 1, condition, repeat)
-else:
+elif args.suite == "long":
     for repeat in range(args.repeats or 5):
         for condition in ("normal", "cpu10"):
             for name in ("ru-360s", "en-360s"):
                 for pacing in ("settled", "burst"):
                     add(name, "controller", pacing, 1, condition, repeat)
+else:
+    jobs = json.loads(args.plan.read_text())
+    assert isinstance(jobs, list) and jobs, "custom plan must be a nonempty job list"
+    for job in jobs:
+        assert job["fixture"] in fixture_map
+        assert job["mode"] in ("controller", "meeting", "file", "shipping-file")
+        assert job["pacing"] in ("realtime", "settled", "burst")
+        assert job["workers"] in (1, 2, 4)
+        assert job["condition"] in ("normal", "cpu10")
+        assert isinstance(job["repeat"], int) and job["repeat"] >= 0
+        assert re.fullmatch(r"[a-zA-Z0-9_-]+", job["variant"])
+        parameters = job.get("parameters", {})
+        assert set(parameters) <= {"tailRead", "segmentSeconds", "minimumSegmentSeconds", "meetingPreserveQuietAudio", "overlapMilliseconds"}
+        assert isinstance(parameters.get("tailRead", False), bool)
+        assert parameters.get("segmentSeconds", 30) in (15, 30, 60)
+        assert parameters.get("minimumSegmentSeconds", 15) in (4, 15)
+        assert "tailRead" not in parameters or job["mode"] == "controller"
+        assert "segmentSeconds" not in parameters or job["mode"] == "file"
+        assert "minimumSegmentSeconds" not in parameters or job["mode"] == "file"
+        assert isinstance(parameters.get("meetingPreserveQuietAudio", False), bool)
+        assert "meetingPreserveQuietAudio" not in parameters or job["mode"] == "meeting"
+        assert parameters.get("overlapMilliseconds", 2000) in (250, 2000)
+        assert "overlapMilliseconds" not in parameters or job["mode"] == "file"
+        assert job["mode"] in ("file", "shipping-file") or job["workers"] == 1
 
 jobs = [job for job in jobs if job["workers"] <= args.max_workers]
+def job_id(job):
+    identifier = "-".join(str(job[k]) for k in ("mode", "fixture", "pacing", "workers", "condition", "repeat"))
+    return identifier + ("-" + job["variant"] if "variant" in job else "")
+
+assert jobs and len({job_id(job) for job in jobs}) == len(jobs), "empty or duplicate job plan"
 (out / f"plan-{args.suite}.json").write_text(json.dumps(jobs, indent=2) + "\n")
 
 def command(*words):
@@ -149,7 +184,7 @@ signal.signal(signal.SIGTERM, interrupted)
 signal.signal(signal.SIGINT, interrupted)
 try:
     for index, job in enumerate(jobs):
-        identifier = "-".join(str(job[k]) for k in ("mode", "fixture", "pacing", "workers", "condition", "repeat"))
+        identifier = job_id(job)
         result_path = out / "raw" / (identifier + ".json")
         if result_path.exists() and identifier in finished: continue
         waiting = 0
@@ -169,6 +204,7 @@ try:
         assert hashlib.file_digest(Path(fixture["path"]).open("rb"), "sha256").hexdigest() == fixture["audio_sha256"]
         config = dict(id=identifier, input=fixture["path"], model=str(args.model.resolve()), output=str(result_path),
                       scratch=str(out / "scratch"), mode=job["mode"], pacing=job["pacing"], workers=job["workers"])
+        config.update(job.get("parameters", {}))
         config_path = out / "configs" / (identifier + ".json")
         config_path.write_text(json.dumps(config))
         before = snapshot()
@@ -177,7 +213,12 @@ try:
             time.sleep(2)
         record = {**job, "id": identifier, "before": before, "load_pids": [p.pid for p in owned]}
         record["under_condition"] = snapshot()
-        env = dict(os.environ, OPENRAMBLE_PRODUCT_BENCHMARK_CONFIG=str(config_path))
+        # Recognition needs system paths and locale, never connector credentials.
+        # XCTest can dump its environment on an invocation error.
+        system_keys = {"PATH", "HOME", "TMPDIR", "USER", "LOGNAME", "LANG", "LC_ALL", "LC_CTYPE",
+                       "DEVELOPER_DIR", "SDKROOT", "MallocNanoZone", "OSLogRateLimit"}
+        env = {key: value for key, value in os.environ.items() if key in system_keys}
+        env["OPENRAMBLE_PRODUCT_BENCHMARK_CONFIG"] = str(config_path)
         cmd = ["xcrun", "xctest", "-XCTest", "LocalASRTests.ProductBenchmarkTests/testPublicFixture", str(bundle)]
         print(f"[{index + 1}/{len(jobs)}] {identifier}", flush=True)
         start = time.monotonic()
