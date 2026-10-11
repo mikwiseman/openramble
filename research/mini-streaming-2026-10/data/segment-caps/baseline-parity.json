@@ -1,0 +1,20 @@
+[
+  {
+    "fixture": "ru-3540s",
+    "exactText": true,
+    "exactWords": true,
+    "exactChunks": true
+  },
+  {
+    "fixture": "en-3540s",
+    "exactText": true,
+    "exactWords": true,
+    "exactChunks": true
+  },
+  {
+    "fixture": "mixed-3540s",
+    "exactText": true,
+    "exactWords": true,
+    "exactChunks": true
+  }
+]

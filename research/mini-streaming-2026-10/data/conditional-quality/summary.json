@@ -1,0 +1,590 @@
+{
+  "normalization": "Unicode NFC, lowercase, ё→е, Unicode word tokens, no numeral expansion",
+  "quantiles": "linear interpolation at (n-1)*p",
+  "qualityScope": "Fixed public fixtures; timing repeats are not independent quality examples.",
+  "identities": {
+    "early-pauses-v1": {
+      "head": "048cefd20b4ea8ca37f2e4954a48acc3aca473dd",
+      "binary_sha256": "66f8fe8e8fccc44df6f1c426b9fef2c8bbba872f427e767a3ab26958f42d0e4d",
+      "runner_sha256": "d704a359e3863a075f73c30a166ab92fec1ab728ee5cfec60df784183e8d43b2",
+      "harness_sha256": "ab0b65ddc063d3151d18c75da817708f9b567778aa2b996232ac524b5110c6c4",
+      "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+      "plan_sha256": "fdacccfb777c56c50349a06581e67c85add52631ca53f2cac8c64a5976d293e2"
+    },
+    "narrow-context-v1": {
+      "head": "048cefd20b4ea8ca37f2e4954a48acc3aca473dd",
+      "binary_sha256": "66f8fe8e8fccc44df6f1c426b9fef2c8bbba872f427e767a3ab26958f42d0e4d",
+      "runner_sha256": "d704a359e3863a075f73c30a166ab92fec1ab728ee5cfec60df784183e8d43b2",
+      "harness_sha256": "ab0b65ddc063d3151d18c75da817708f9b567778aa2b996232ac524b5110c6c4",
+      "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+      "plan_sha256": "f9b75c32d21a1e8835f0de31be15a189e23e376783de9922c5636bcf48652b81"
+    }
+  },
+  "completedRuns": 9,
+  "failures": [],
+  "groups": [
+    {
+      "mode": "file",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 250,
+      "seconds": {
+        "n": 1,
+        "p50": 85.180849917,
+        "p95": 85.180849917,
+        "min": 85.180849917,
+        "max": 85.180849917
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 985006080,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.237957125,
+        "p95": 0.237957125,
+        "min": 0.237957125,
+        "max": 0.237957125
+      },
+      "sampledPeakPhysicalFootprintBytes": 987612600,
+      "wer": {
+        "n": 1,
+        "p50": 0.10059324219757544,
+        "p95": 0.10059324219757544,
+        "min": 0.10059324219757544,
+        "max": 0.10059324219757544
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.03856074284240392,
+        "p95": 0.03856074284240392,
+        "min": 0.03856074284240392,
+        "max": 0.03856074284240392
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-en-3540s-settled-1-normal-0-context250-min4"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 98.629496375,
+        "p95": 98.629496375,
+        "min": 98.629496375,
+        "max": 98.629496375
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 992788480,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.650677917,
+        "p95": 0.650677917,
+        "min": 0.650677917,
+        "max": 0.650677917
+      },
+      "sampledPeakPhysicalFootprintBytes": 995116472,
+      "wer": {
+        "n": 1,
+        "p50": 0.08627805003868971,
+        "p95": 0.08627805003868971,
+        "min": 0.08627805003868971,
+        "max": 0.08627805003868971
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.03443384059840082,
+        "p95": 0.03443384059840082,
+        "min": 0.03443384059840082,
+        "max": 0.03443384059840082
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-en-3540s-settled-1-normal-0-pause4"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 250,
+      "seconds": {
+        "n": 1,
+        "p50": 84.203893167,
+        "p95": 84.203893167,
+        "min": 84.203893167,
+        "max": 84.203893167
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 993083392,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.239470042,
+        "p95": 0.239470042,
+        "min": 0.239470042,
+        "max": 0.239470042
+      },
+      "sampledPeakPhysicalFootprintBytes": 997606864,
+      "wer": {
+        "n": 1,
+        "p50": 0.09981944802682487,
+        "p95": 0.09981944802682487,
+        "min": 0.09981944802682487,
+        "max": 0.09981944802682487
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.04126902244003095,
+        "p95": 0.04126902244003095,
+        "min": 0.04126902244003095,
+        "max": 0.04126902244003095
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-en-3540s-settled-1-normal-0-context250-min15"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "mixed-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 250,
+      "seconds": {
+        "n": 1,
+        "p50": 84.0298465,
+        "p95": 84.0298465,
+        "min": 84.0298465,
+        "max": 84.0298465
+      },
+      "audioSeconds": 3543.3,
+      "peakRSSBytes": 1003454464,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.590687708,
+        "p95": 0.590687708,
+        "min": 0.590687708,
+        "max": 0.590687708
+      },
+      "sampledPeakPhysicalFootprintBytes": 1005503952,
+      "wer": {
+        "n": 1,
+        "p50": 0.28057988523104804,
+        "p95": 0.28057988523104804,
+        "min": 0.28057988523104804,
+        "max": 0.28057988523104804
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.21836303231652068,
+        "p95": 0.21836303231652068,
+        "min": 0.21836303231652068,
+        "max": 0.21836303231652068
+      },
+      "referenceWords": 6622,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-mixed-3540s-settled-1-normal-0-context250-min4"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "mixed-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 104.863715958,
+        "p95": 104.863715958,
+        "min": 104.863715958,
+        "max": 104.863715958
+      },
+      "audioSeconds": 3543.3,
+      "peakRSSBytes": 989904896,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.234145083,
+        "p95": 0.234145083,
+        "min": 0.234145083,
+        "max": 0.234145083
+      },
+      "sampledPeakPhysicalFootprintBytes": 991364512,
+      "wer": {
+        "n": 1,
+        "p50": 0.36016309272123226,
+        "p95": 0.36016309272123226,
+        "min": 0.36016309272123226,
+        "max": 0.36016309272123226
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.30262760495318636,
+        "p95": 0.30262760495318636,
+        "min": 0.30262760495318636,
+        "max": 0.30262760495318636
+      },
+      "referenceWords": 6622,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-mixed-3540s-settled-1-normal-0-pause4"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "mixed-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 250,
+      "seconds": {
+        "n": 1,
+        "p50": 81.422274,
+        "p95": 81.422274,
+        "min": 81.422274,
+        "max": 81.422274
+      },
+      "audioSeconds": 3543.3,
+      "peakRSSBytes": 992182272,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.23870575,
+        "p95": 0.23870575,
+        "min": 0.23870575,
+        "max": 0.23870575
+      },
+      "sampledPeakPhysicalFootprintBytes": 994084280,
+      "wer": {
+        "n": 1,
+        "p50": 0.3273935366958623,
+        "p95": 0.3273935366958623,
+        "min": 0.3273935366958623,
+        "max": 0.3273935366958623
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.27167019027484146,
+        "p95": 0.27167019027484146,
+        "min": 0.27167019027484146,
+        "max": 0.27167019027484146
+      },
+      "referenceWords": 6622,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-mixed-3540s-settled-1-normal-0-context250-min15"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 250,
+      "seconds": {
+        "n": 1,
+        "p50": 89.881923125,
+        "p95": 89.881923125,
+        "min": 89.881923125,
+        "max": 89.881923125
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 986267648,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.24544,
+        "p95": 0.24544,
+        "min": 0.24544,
+        "max": 0.24544
+      },
+      "sampledPeakPhysicalFootprintBytes": 988071376,
+      "wer": {
+        "n": 1,
+        "p50": 0.08839096683133381,
+        "p95": 0.08839096683133381,
+        "min": 0.08839096683133381,
+        "max": 0.08839096683133381
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.012702893436838392,
+        "p95": 0.012702893436838392,
+        "min": 0.012702893436838392,
+        "max": 0.012702893436838392
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-ru-3540s-settled-1-normal-0-context250-min4"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 121.314809667,
+        "p95": 121.314809667,
+        "min": 121.314809667,
+        "max": 121.314809667
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 995508224,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.253539625,
+        "p95": 0.253539625,
+        "min": 0.253539625,
+        "max": 0.253539625
+      },
+      "sampledPeakPhysicalFootprintBytes": 997197216,
+      "wer": {
+        "n": 1,
+        "p50": 0.07462949894142555,
+        "p95": 0.07462949894142555,
+        "min": 0.07462949894142555,
+        "max": 0.07462949894142555
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.019054340155257588,
+        "p95": 0.019054340155257588,
+        "min": 0.019054340155257588,
+        "max": 0.019054340155257588
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-ru-3540s-settled-1-normal-0-pause4"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 250,
+      "seconds": {
+        "n": 1,
+        "p50": 84.844976375,
+        "p95": 84.844976375,
+        "min": 84.844976375,
+        "max": 84.844976375
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 994066432,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.235964041,
+        "p95": 0.235964041,
+        "min": 0.235964041,
+        "max": 0.235964041
+      },
+      "sampledPeakPhysicalFootprintBytes": 996328912,
+      "wer": {
+        "n": 1,
+        "p50": 0.06774876499647142,
+        "p95": 0.06774876499647142,
+        "min": 0.06774876499647142,
+        "max": 0.06774876499647142
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.013232180663373325,
+        "p95": 0.013232180663373325,
+        "min": 0.013232180663373325,
+        "max": 0.013232180663373325
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-ru-3540s-settled-1-normal-0-context250-min15"
+      ]
+    }
+  ],
+  "fileParity": [
+    {
+      "fixture": "en-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "overlapMilliseconds": 250,
+      "id": "file-en-3540s-settled-1-normal-0-context250-min4",
+      "baseline": "file-en-3540s-settled-1-normal-0-context250-min4",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 190,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "overlapMilliseconds": 2000,
+      "id": "file-en-3540s-settled-1-normal-0-pause4",
+      "baseline": "file-en-3540s-settled-1-normal-0-pause4",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 190,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 250,
+      "id": "file-en-3540s-settled-1-normal-0-context250-min15",
+      "baseline": "file-en-3540s-settled-1-normal-0-context250-min15",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "overlapMilliseconds": 250,
+      "id": "file-mixed-3540s-settled-1-normal-0-context250-min4",
+      "baseline": "file-mixed-3540s-settled-1-normal-0-context250-min4",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 303,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "overlapMilliseconds": 2000,
+      "id": "file-mixed-3540s-settled-1-normal-0-pause4",
+      "baseline": "file-mixed-3540s-settled-1-normal-0-pause4",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 303,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 250,
+      "id": "file-mixed-3540s-settled-1-normal-0-context250-min15",
+      "baseline": "file-mixed-3540s-settled-1-normal-0-context250-min15",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 206,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "overlapMilliseconds": 250,
+      "id": "file-ru-3540s-settled-1-normal-0-context250-min4",
+      "baseline": "file-ru-3540s-settled-1-normal-0-context250-min4",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 425,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "overlapMilliseconds": 2000,
+      "id": "file-ru-3540s-settled-1-normal-0-pause4",
+      "baseline": "file-ru-3540s-settled-1-normal-0-pause4",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 425,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 250,
+      "id": "file-ru-3540s-settled-1-normal-0-context250-min15",
+      "baseline": "file-ru-3540s-settled-1-normal-0-context250-min15",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    }
+  ],
+  "tailParity": []
+}

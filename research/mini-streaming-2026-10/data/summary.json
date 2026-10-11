@@ -1,0 +1,4300 @@
+{
+  "normalization": "Unicode NFC, lowercase, ё→е, Unicode word tokens, no numeral expansion",
+  "quantiles": "linear interpolation at (n-1)*p",
+  "qualityScope": "Fixed public fixtures; timing repeats are not independent quality examples.",
+  "identities": {
+    "files-v3": {
+      "head": "373f2c294a79daae76b449173c2001589df1cb01",
+      "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+      "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+      "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+      "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+    },
+    "controller-v1": {
+      "head": "373f2c294a79daae76b449173c2001589df1cb01",
+      "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+      "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+      "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+      "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+    },
+    "meeting-v1": {
+      "head": "373f2c294a79daae76b449173c2001589df1cb01",
+      "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+      "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+      "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+      "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+    },
+    "long-v1": {
+      "head": "373f2c294a79daae76b449173c2001589df1cb01",
+      "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+      "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+      "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+      "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+    }
+  },
+  "completedRuns": 301,
+  "failures": [
+    {
+      "run": "files-v2",
+      "id": "file-ru-3540s-settled-1-normal-0",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.043958291000308236,
+          "level": "1",
+          "memory": {
+            "residentBytes": 884736,
+            "physicalFootprintBytes": 295056
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.1051910410005803,
+          "level": "2",
+          "memory": {
+            "residentBytes": 943095808,
+            "physicalFootprintBytes": 960988552
+          },
+          "builds": []
+        }
+      ],
+      "identity": {
+        "head": "346704691491d149e51cf0805248c76f60e2488d",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "files-v2",
+      "id": "file-mixed-3540s-settled-1-normal-0",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.039523333000033745,
+          "level": "1",
+          "memory": {
+            "residentBytes": 23363584,
+            "physicalFootprintBytes": 5194376
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.1014765830004762,
+          "level": "1",
+          "memory": {
+            "residentBytes": 955891712,
+            "physicalFootprintBytes": 962512264
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.1446573749999516,
+          "level": "1",
+          "memory": {
+            "residentBytes": 965722112,
+            "physicalFootprintBytes": 972047752
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.1935876250008732,
+          "level": "1",
+          "memory": {
+            "residentBytes": 967180288,
+            "physicalFootprintBytes": 973407624
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.246411041000101,
+          "level": "1",
+          "memory": {
+            "residentBytes": 871841792,
+            "physicalFootprintBytes": 974194080
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.30470645800051,
+          "level": "1",
+          "memory": {
+            "residentBytes": 872857600,
+            "physicalFootprintBytes": 973309344
+          },
+          "builds": []
+        },
+        {
+          "seconds": 6.357872166001471,
+          "level": "1",
+          "memory": {
+            "residentBytes": 890241024,
+            "physicalFootprintBytes": 979846560
+          },
+          "builds": []
+        },
+        {
+          "seconds": 7.45284729100058,
+          "level": "1",
+          "memory": {
+            "residentBytes": 888258560,
+            "physicalFootprintBytes": 970868128
+          },
+          "builds": []
+        },
+        {
+          "seconds": 8.506237416000658,
+          "level": "2",
+          "memory": {
+            "residentBytes": 899235840,
+            "physicalFootprintBytes": 980813216
+          },
+          "builds": []
+        }
+      ],
+      "identity": {
+        "head": "346704691491d149e51cf0805248c76f60e2488d",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "files-v2",
+      "id": "file-mixed-3540s-settled-1-normal-0",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.054881374999240506,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1474560,
+            "physicalFootprintBytes": 377000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.1106474999996863,
+          "level": "2",
+          "memory": {
+            "residentBytes": 940032000,
+            "physicalFootprintBytes": 960906680
+          },
+          "builds": []
+        }
+      ],
+      "identity": {
+        "head": "346704691491d149e51cf0805248c76f60e2488d",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "smoke-v1",
+      "id": "file-en-60s-settled-4-normal-0",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.04072795799947926,
+          "level": "1",
+          "memory": {
+            "residentBytes": 22511616,
+            "physicalFootprintBytes": 4866648
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.1001022500004183,
+          "level": "2",
+          "memory": {
+            "residentBytes": 2532589568,
+            "physicalFootprintBytes": 2682194464
+          },
+          "builds": []
+        }
+      ],
+      "identity": {
+        "head": "8836439fb5cc51ffe9c64d31e6bfbc802cbb7367",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "84e5e8f1008702c78127552eedc2c0a34f3a3f609ccebc030ac6fd76e9433ee5",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "smoke-v3",
+      "id": "file-en-60s-settled-4-normal-0",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.021735959002398886,
+          "level": "1",
+          "memory": {
+            "residentBytes": 3997696,
+            "physicalFootprintBytes": 1261904
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0556056250024994,
+          "level": "2",
+          "memory": {
+            "residentBytes": 3148038144,
+            "physicalFootprintBytes": 3385740384
+          },
+          "builds": []
+        }
+      ],
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "files-v3",
+      "id": "file-en-3540s-settled-2-normal-2",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.023969958001544,
+          "level": "1",
+          "memory": {
+            "residentBytes": 10584064,
+            "physicalFootprintBytes": 1769856
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0645815419993596,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1777778688,
+            "physicalFootprintBytes": 1785153552
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.1016498749995662,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1808973824,
+            "physicalFootprintBytes": 1815955544
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.155295542001113,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1825193984,
+            "physicalFootprintBytes": 1832175704
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.208752082999126,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1829421056,
+            "physicalFootprintBytes": 1836370008
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.242457208001724,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1826701312,
+            "physicalFootprintBytes": 1833617496
+          },
+          "builds": []
+        },
+        {
+          "seconds": 6.270113375001529,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1833877504,
+            "physicalFootprintBytes": 1840793688
+          },
+          "builds": []
+        },
+        {
+          "seconds": 7.3037347919998865,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1843675136,
+            "physicalFootprintBytes": 1850591320
+          },
+          "builds": []
+        },
+        {
+          "seconds": 8.337383458001568,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1837252608,
+            "physicalFootprintBytes": 1844086896
+          },
+          "builds": []
+        },
+        {
+          "seconds": 9.368126792000112,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1844019200,
+            "physicalFootprintBytes": 1850935384
+          },
+          "builds": []
+        },
+        {
+          "seconds": 10.405236792001233,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1833074688,
+            "physicalFootprintBytes": 1839990872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 11.451896833001229,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1848164352,
+            "physicalFootprintBytes": 1855096944
+          },
+          "builds": []
+        },
+        {
+          "seconds": 12.487454624999373,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1838661632,
+            "physicalFootprintBytes": 1845594224
+          },
+          "builds": []
+        },
+        {
+          "seconds": 13.522692875001667,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1837662208,
+            "physicalFootprintBytes": 1844496496
+          },
+          "builds": []
+        },
+        {
+          "seconds": 14.575845250001294,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1842118656,
+            "physicalFootprintBytes": 1848969352
+          },
+          "builds": []
+        },
+        {
+          "seconds": 15.6885054580016,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1774354432,
+            "physicalFootprintBytes": 1864697968
+          },
+          "builds": []
+        },
+        {
+          "seconds": 16.724958375001734,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1759838208,
+            "physicalFootprintBytes": 1853409416
+          },
+          "builds": []
+        },
+        {
+          "seconds": 17.765752792001877,
+          "level": "2",
+          "memory": {
+            "residentBytes": 1754120192,
+            "physicalFootprintBytes": 1854408816
+          },
+          "builds": []
+        }
+      ],
+      "utc": "2026-10-09T16:32:32Z",
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "controller-v1",
+      "id": "controller-ru-60s-realtime-1-normal-5",
+      "exitCode": -15,
+      "hardStop": "build started during measurement",
+      "samples": [
+        {
+          "seconds": 0.0239480000018375,
+          "level": "1",
+          "memory": {
+            "residentBytes": 10387456,
+            "physicalFootprintBytes": 1720704
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0770806669970625,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935165952,
+            "physicalFootprintBytes": 941819248
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.129751166998176,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935165952,
+            "physicalFootprintBytes": 895141232
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.179824416998599,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935165952,
+            "physicalFootprintBytes": 895141232
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.234120667002571,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935165952,
+            "physicalFootprintBytes": 895141232
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.287452167001902,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935198720,
+            "physicalFootprintBytes": 895174000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 6.34151225000096,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935149568,
+            "physicalFootprintBytes": 895124848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 7.374132083001314,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935149568,
+            "physicalFootprintBytes": 895124848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 8.42409004199726,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935149568,
+            "physicalFootprintBytes": 895124848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 9.474539666996861,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935149568,
+            "physicalFootprintBytes": 895124848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 10.52680616699945,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935149568,
+            "physicalFootprintBytes": 895124848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 11.559548666999035,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935149568,
+            "physicalFootprintBytes": 895124848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 12.612253749997762,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935149568,
+            "physicalFootprintBytes": 895124848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 13.666106500000751,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935149568,
+            "physicalFootprintBytes": 895124848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 14.709036166997976,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935149568,
+            "physicalFootprintBytes": 895124848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 15.764003541997226,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935149568,
+            "physicalFootprintBytes": 895124848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 16.807456249996903,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935149568,
+            "physicalFootprintBytes": 895124848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 17.850389999999607,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935149568,
+            "physicalFootprintBytes": 895124848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 18.894512375001796,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935149568,
+            "physicalFootprintBytes": 895124848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 19.943618833000073,
+          "level": "1",
+          "memory": {
+            "residentBytes": 953008128,
+            "physicalFootprintBytes": 959514016
+          },
+          "builds": []
+        },
+        {
+          "seconds": 20.99474412499694,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945471488,
+            "physicalFootprintBytes": 951453064
+          },
+          "builds": []
+        },
+        {
+          "seconds": 22.048450583002705,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945471488,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": []
+        },
+        {
+          "seconds": 23.09881745799794,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945471488,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": []
+        },
+        {
+          "seconds": 24.151521125000727,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945471488,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": []
+        },
+        {
+          "seconds": 25.20369991700136,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945471488,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": []
+        },
+        {
+          "seconds": 26.257739082997432,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945471488,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": []
+        },
+        {
+          "seconds": 27.30675345799682,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945422336,
+            "physicalFootprintBytes": 905364872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 28.35967279200122,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945422336,
+            "physicalFootprintBytes": 905364872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 29.41105095799867,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945438720,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": []
+        },
+        {
+          "seconds": 30.461880707996897,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945438720,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": []
+        },
+        {
+          "seconds": 31.511247875001573,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945438720,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": []
+        },
+        {
+          "seconds": 32.54511570800241,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945438720,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": []
+        },
+        {
+          "seconds": 33.59982541699719,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945438720,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": []
+        },
+        {
+          "seconds": 34.640119707997655,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945438720,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": []
+        },
+        {
+          "seconds": 35.66698408299999,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945438720,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": []
+        },
+        {
+          "seconds": 36.69489962499938,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945389568,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": []
+        },
+        {
+          "seconds": 37.72177437500068,
+          "level": "1",
+          "memory": {
+            "residentBytes": 945389568,
+            "physicalFootprintBytes": 905381256
+          },
+          "builds": [
+            "clang"
+          ]
+        }
+      ],
+      "utc": "2026-10-09T17:09:44Z",
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "controller-v1",
+      "id": "controller-ru-60s-realtime-1-normal-5",
+      "exitCode": -15,
+      "hardStop": "build started during measurement",
+      "samples": [
+        {
+          "seconds": 0.02452600000106031,
+          "level": "1",
+          "memory": {
+            "residentBytes": 8454144,
+            "physicalFootprintBytes": 1278312
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.05327108399797,
+          "level": "1",
+          "memory": {
+            "residentBytes": 934985728,
+            "physicalFootprintBytes": 941639024
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.2084045419978793,
+          "level": "1",
+          "memory": {
+            "residentBytes": 779763712,
+            "physicalFootprintBytes": 894944624
+          },
+          "builds": [
+            "swift-frontend"
+          ]
+        }
+      ],
+      "utc": "2026-10-09T17:10:53Z",
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "controller-v1",
+      "id": "controller-ru-60s-realtime-1-normal-5",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.022356875000696164,
+          "level": "1",
+          "memory": {
+            "residentBytes": 327680,
+            "physicalFootprintBytes": 229496
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0462228749966016,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935084032,
+            "physicalFootprintBytes": 941737328
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.0965887079946697,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935280640,
+            "physicalFootprintBytes": 899859824
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.137123207998229,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935280640,
+            "physicalFootprintBytes": 895255920
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.178857415994571,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935280640,
+            "physicalFootprintBytes": 895255920
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.229640999998082,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935280640,
+            "physicalFootprintBytes": 895255920
+          },
+          "builds": []
+        },
+        {
+          "seconds": 6.273725082995952,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 7.321743458000128,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 8.3745464159947,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 9.422210332995746,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 10.476322208000056,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 11.515578874998027,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 12.556023707998975,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 13.609022790995368,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 14.631975374999456,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 15.676691749999009,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 16.719490666000638,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 17.776243874999636,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 18.818367125000805,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 19.87678720799886,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 20.912670290999813,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 952698248
+          },
+          "builds": []
+        },
+        {
+          "seconds": 21.95569216599688,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 910280072
+          },
+          "builds": []
+        },
+        {
+          "seconds": 22.98987095800112,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 24.041456082995865,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 25.085998957998527,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 26.136320040997816,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 27.18336279099458,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 28.234959333000006,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 29.274984582996694,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 30.31486733299971,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 31.370674790996418,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 32.40617779099557,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 33.44721266599663,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 34.497504082995874,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 35.553816624997125,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 36.59900375000143,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 37.647946375000174,
+          "level": "1",
+          "memory": {
+            "residentBytes": 946241536,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 38.68652070799726,
+          "level": "1",
+          "memory": {
+            "residentBytes": 944422912,
+            "physicalFootprintBytes": 906151304
+          },
+          "builds": []
+        },
+        {
+          "seconds": 39.73938287499914,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942931968,
+            "physicalFootprintBytes": 906118536
+          },
+          "builds": []
+        },
+        {
+          "seconds": 40.78497974999482,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942931968,
+            "physicalFootprintBytes": 906118536
+          },
+          "builds": []
+        },
+        {
+          "seconds": 41.837095666000096,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942931968,
+            "physicalFootprintBytes": 906118536
+          },
+          "builds": []
+        },
+        {
+          "seconds": 42.85961729099654,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942931968,
+            "physicalFootprintBytes": 906118536
+          },
+          "builds": []
+        },
+        {
+          "seconds": 43.9307214579967,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935608320,
+            "physicalFootprintBytes": 905971080
+          },
+          "builds": []
+        },
+        {
+          "seconds": 45.00984483299544,
+          "level": "1",
+          "memory": {
+            "residentBytes": 836698112,
+            "physicalFootprintBytes": 905971080
+          },
+          "builds": []
+        },
+        {
+          "seconds": 46.09389166600158,
+          "level": "1",
+          "memory": {
+            "residentBytes": 868024320,
+            "physicalFootprintBytes": 972981688
+          },
+          "builds": []
+        },
+        {
+          "seconds": 47.15053791600076,
+          "level": "1",
+          "memory": {
+            "residentBytes": 858603520,
+            "physicalFootprintBytes": 920896928
+          },
+          "builds": []
+        },
+        {
+          "seconds": 48.256686290995276,
+          "level": "1",
+          "memory": {
+            "residentBytes": 851738624,
+            "physicalFootprintBytes": 916768160
+          },
+          "builds": []
+        },
+        {
+          "seconds": 49.31979129099636,
+          "level": "1",
+          "memory": {
+            "residentBytes": 847921152,
+            "physicalFootprintBytes": 916768160
+          },
+          "builds": []
+        },
+        {
+          "seconds": 50.42801908299589,
+          "level": "1",
+          "memory": {
+            "residentBytes": 826441728,
+            "physicalFootprintBytes": 916768160
+          },
+          "builds": []
+        },
+        {
+          "seconds": 51.512616790998436,
+          "level": "1",
+          "memory": {
+            "residentBytes": 768851968,
+            "physicalFootprintBytes": 916768160
+          },
+          "builds": []
+        },
+        {
+          "seconds": 52.586797457996,
+          "level": "1",
+          "memory": {
+            "residentBytes": 768901120,
+            "physicalFootprintBytes": 916768160
+          },
+          "builds": []
+        },
+        {
+          "seconds": 53.85614566599543,
+          "level": "1",
+          "memory": {
+            "residentBytes": 763232256,
+            "physicalFootprintBytes": 916768160
+          },
+          "builds": []
+        },
+        {
+          "seconds": 54.98306316600065,
+          "level": "1",
+          "memory": {
+            "residentBytes": 762396672,
+            "physicalFootprintBytes": 916768160
+          },
+          "builds": []
+        },
+        {
+          "seconds": 56.18546137499652,
+          "level": "1",
+          "memory": {
+            "residentBytes": 758595584,
+            "physicalFootprintBytes": 916768160
+          },
+          "builds": []
+        },
+        {
+          "seconds": 57.22920999999769,
+          "level": "1",
+          "memory": {
+            "residentBytes": 758628352,
+            "physicalFootprintBytes": 916768160
+          },
+          "builds": []
+        },
+        {
+          "seconds": 58.31807791599567,
+          "level": "1",
+          "memory": {
+            "residentBytes": 758661120,
+            "physicalFootprintBytes": 916768160
+          },
+          "builds": []
+        },
+        {
+          "seconds": 59.395266708001145,
+          "level": "2",
+          "memory": {
+            "residentBytes": 758415360,
+            "physicalFootprintBytes": 861816200
+          },
+          "builds": []
+        }
+      ],
+      "utc": "2026-10-09T17:12:33Z",
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "controller-v1",
+      "id": "controller-ru-60s-realtime-1-normal-5",
+      "exitCode": -15,
+      "hardStop": "build started during measurement",
+      "samples": [
+        {
+          "seconds": 0.02075512499868637,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1245184,
+            "physicalFootprintBytes": 327848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0556106250005541,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935182336,
+            "physicalFootprintBytes": 941835632
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.081186292001803,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935182336,
+            "physicalFootprintBytes": 899761520
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.117053958005272,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935165952,
+            "physicalFootprintBytes": 895206792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.147096583001257,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935165952,
+            "physicalFootprintBytes": 895206792
+          },
+          "builds": [
+            "swiftc"
+          ]
+        }
+      ],
+      "utc": "2026-10-09T17:14:55Z",
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "controller-v1",
+      "id": "controller-en-60s-realtime-1-normal-5",
+      "exitCode": -15,
+      "hardStop": "build started during measurement",
+      "samples": [
+        {
+          "seconds": 0.023538041998108383,
+          "level": "1",
+          "memory": {
+            "residentBytes": 2080768,
+            "physicalFootprintBytes": 426152
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0512324169976637,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935084032,
+            "physicalFootprintBytes": 941753736
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.097669374998077,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935215104,
+            "physicalFootprintBytes": 899810696
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.149706584001251,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935247872,
+            "physicalFootprintBytes": 895239560
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.1968869589982205,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935247872,
+            "physicalFootprintBytes": 895239560
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.2358999170028255,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935247872,
+            "physicalFootprintBytes": 895239560
+          },
+          "builds": []
+        },
+        {
+          "seconds": 6.282367209001677,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 7.32552258400392,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 8.375437791997683,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 9.409925749998365,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 10.459007208999537,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 11.495855916997243,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 12.521940334001556,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 13.573145125003066,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 14.622898374997021,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 15.66618062499765,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935231488,
+            "physicalFootprintBytes": 895206792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 16.693139625000185,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 947815816
+          },
+          "builds": []
+        },
+        {
+          "seconds": 17.741940959000203,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 903775624
+          },
+          "builds": []
+        },
+        {
+          "seconds": 18.79179070900136,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 19.84274466700299,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 20.892608916998142,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 21.941248875002202,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 22.985980917001143,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 24.03696295899863,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 25.07908962500369,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 26.125794166997366,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 27.176865667002858,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 28.224440042002243,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 29.261105792000308,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 30.306867833998695,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 31.35576562499773,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 32.388587749999715,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 33.425580834002176,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 34.47463812500064,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 35.51788808400306,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 36.56578983399959,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 37.612667959001556,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 38.66167670900177,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 39.71296912500111,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 40.75611583400314,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 41.807120999998006,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 42.85812204200192,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 43.90560583399929,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 44.949211291997926,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 45.99850937500014,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 47.04915512500156,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 48.091153417000896,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 49.13120224999875,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 50.177064333998715,
+          "level": "1",
+          "memory": {
+            "residentBytes": 941375488,
+            "physicalFootprintBytes": 901268872
+          },
+          "builds": []
+        },
+        {
+          "seconds": 51.22225154199987,
+          "level": "1",
+          "memory": {
+            "residentBytes": 966688768,
+            "physicalFootprintBytes": 973014432
+          },
+          "builds": []
+        },
+        {
+          "seconds": 52.264101000000664,
+          "level": "1",
+          "memory": {
+            "residentBytes": 958152704,
+            "physicalFootprintBytes": 964461984
+          },
+          "builds": []
+        },
+        {
+          "seconds": 53.3068740000017,
+          "level": "1",
+          "memory": {
+            "residentBytes": 958152704,
+            "physicalFootprintBytes": 917915040
+          },
+          "builds": []
+        },
+        {
+          "seconds": 54.35488166700088,
+          "level": "1",
+          "memory": {
+            "residentBytes": 958152704,
+            "physicalFootprintBytes": 917915040
+          },
+          "builds": []
+        },
+        {
+          "seconds": 55.403345459002594,
+          "level": "1",
+          "memory": {
+            "residentBytes": 958152704,
+            "physicalFootprintBytes": 917915040
+          },
+          "builds": []
+        },
+        {
+          "seconds": 56.44203174999711,
+          "level": "1",
+          "memory": {
+            "residentBytes": 958152704,
+            "physicalFootprintBytes": 917915040
+          },
+          "builds": []
+        },
+        {
+          "seconds": 57.482362499999,
+          "level": "1",
+          "memory": {
+            "residentBytes": 958152704,
+            "physicalFootprintBytes": 917915040
+          },
+          "builds": []
+        },
+        {
+          "seconds": 58.51191720899806,
+          "level": "1",
+          "memory": {
+            "residentBytes": 958152704,
+            "physicalFootprintBytes": 917915040
+          },
+          "builds": []
+        },
+        {
+          "seconds": 59.53578891699726,
+          "level": "1",
+          "memory": {
+            "residentBytes": 958103552,
+            "physicalFootprintBytes": 917915040
+          },
+          "builds": []
+        },
+        {
+          "seconds": 60.573521709004126,
+          "level": "1",
+          "memory": {
+            "residentBytes": 958152704,
+            "physicalFootprintBytes": 917915040
+          },
+          "builds": []
+        },
+        {
+          "seconds": 61.59916737500316,
+          "level": "1",
+          "memory": {
+            "residentBytes": 958152704,
+            "physicalFootprintBytes": 917915040
+          },
+          "builds": [
+            "swift-frontend"
+          ]
+        }
+      ],
+      "utc": "2026-10-09T17:17:04Z",
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "controller-v1",
+      "id": "controller-en-60s-realtime-1-normal-5",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.021872207995329518,
+          "level": "1",
+          "memory": {
+            "residentBytes": 376832,
+            "physicalFootprintBytes": 229496
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0610142079967773,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935018496,
+            "physicalFootprintBytes": 941671792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.106008415998076,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935084032,
+            "physicalFootprintBytes": 899663216
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.1491099999984726,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935182336,
+            "physicalFootprintBytes": 895157616
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.197326665998844,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935215104,
+            "physicalFootprintBytes": 895190384
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.2404932499994175,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935215104,
+            "physicalFootprintBytes": 895190384
+          },
+          "builds": []
+        },
+        {
+          "seconds": 6.279877458000556,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935198720,
+            "physicalFootprintBytes": 895174000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 7.322766082994349,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935198720,
+            "physicalFootprintBytes": 895174000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 8.358031290998042,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935198720,
+            "physicalFootprintBytes": 895174000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 9.398115207994124,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935198720,
+            "physicalFootprintBytes": 895174000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 10.426952124995296,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935198720,
+            "physicalFootprintBytes": 895174000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 11.476252749998821,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935198720,
+            "physicalFootprintBytes": 895174000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 12.524421999994956,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935198720,
+            "physicalFootprintBytes": 895174000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 13.562658749993716,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935198720,
+            "physicalFootprintBytes": 895174000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 14.608297249993484,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935198720,
+            "physicalFootprintBytes": 895174000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 15.6553235829997,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935198720,
+            "physicalFootprintBytes": 895174000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 16.684654082993802,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942997504,
+            "physicalFootprintBytes": 949454216
+          },
+          "builds": []
+        },
+        {
+          "seconds": 17.723818540995126,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942997504,
+            "physicalFootprintBytes": 905414024
+          },
+          "builds": []
+        },
+        {
+          "seconds": 18.773046249996696,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942997504,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 19.814391082996735,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942997504,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 20.862268457996834,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942997504,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 21.90253391599981,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942997504,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 22.944722374995763,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942997504,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 23.991494290996343,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942997504,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 25.044623415997194,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942997504,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 26.06897987499542,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942997504,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 27.08984183299617,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942948352,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 28.114548582998395,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942948352,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 29.140576457997668,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942948352,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 30.17525824999757,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942866432,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 31.198345165998035,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942866432,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 32.22131370799616,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942866432,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 33.243121957995754,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942866432,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 34.277440165998996,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942866432,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 35.34523333299876,
+          "level": "1",
+          "memory": {
+            "residentBytes": 942866432,
+            "physicalFootprintBytes": 902907272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 36.409820332999516,
+          "level": "1",
+          "memory": {
+            "residentBytes": 934297600,
+            "physicalFootprintBytes": 902759816
+          },
+          "builds": []
+        },
+        {
+          "seconds": 37.4640412499939,
+          "level": "1",
+          "memory": {
+            "residentBytes": 780304384,
+            "physicalFootprintBytes": 902759816
+          },
+          "builds": []
+        },
+        {
+          "seconds": 38.54871899999853,
+          "level": "1",
+          "memory": {
+            "residentBytes": 780369920,
+            "physicalFootprintBytes": 902759816
+          },
+          "builds": []
+        },
+        {
+          "seconds": 39.62860033299512,
+          "level": "1",
+          "memory": {
+            "residentBytes": 780451840,
+            "physicalFootprintBytes": 902759816
+          },
+          "builds": []
+        },
+        {
+          "seconds": 40.95839745799458,
+          "level": "1",
+          "memory": {
+            "residentBytes": 780484608,
+            "physicalFootprintBytes": 902759816
+          },
+          "builds": []
+        },
+        {
+          "seconds": 42.06384424999851,
+          "level": "1",
+          "memory": {
+            "residentBytes": 780500992,
+            "physicalFootprintBytes": 902759816
+          },
+          "builds": []
+        },
+        {
+          "seconds": 43.15864429099747,
+          "level": "1",
+          "memory": {
+            "residentBytes": 780566528,
+            "physicalFootprintBytes": 902759816
+          },
+          "builds": []
+        },
+        {
+          "seconds": 44.26820674999908,
+          "level": "1",
+          "memory": {
+            "residentBytes": 778747904,
+            "physicalFootprintBytes": 902759816
+          },
+          "builds": []
+        },
+        {
+          "seconds": 45.368741582999064,
+          "level": "2",
+          "memory": {
+            "residentBytes": 757497856,
+            "physicalFootprintBytes": 849544560
+          },
+          "builds": []
+        }
+      ],
+      "utc": "2026-10-09T17:19:55Z",
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "mode": "controller",
+      "fixture": "en-360s",
+      "pacing": "burst",
+      "workers": 1,
+      "condition": "cpu10",
+      "seconds": {
+        "n": 5,
+        "p50": 6.177700459,
+        "p95": 6.326591158199999,
+        "min": 6.16005625,
+        "max": 6.354565875
+      },
+      "audioSeconds": 361.24,
+      "peakRSSBytes": 1044529152,
+      "loadSeconds": {
+        "n": 5,
+        "p50": 0.22056125,
+        "p95": 0.2602307832,
+        "min": 0.217631,
+        "max": 0.26857875
+      },
+      "sampledPeakPhysicalFootprintBytes": 1046906368,
+      "wer": {
+        "n": 5,
+        "p50": 0.06852791878172589,
+        "p95": 0.06852791878172589,
+        "min": 0.06852791878172589,
+        "max": 0.06852791878172589
+      },
+      "deletionRate": {
+        "n": 5,
+        "p50": 0.024111675126903553,
+        "p95": 0.024111675126903553,
+        "min": 0.024111675126903553,
+        "max": 0.024111675126903553
+      },
+      "referenceWords": 788,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-360s-burst-1-cpu10-0",
+        "controller-en-360s-burst-1-cpu10-1",
+        "controller-en-360s-burst-1-cpu10-2",
+        "controller-en-360s-burst-1-cpu10-3",
+        "controller-en-360s-burst-1-cpu10-4"
+      ],
+      "cuts": [
+        11
+      ],
+      "completedBeforeStop": [
+        0
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-360s",
+      "pacing": "burst",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 5,
+        "p50": 5.753784667,
+        "p95": 5.7709525578,
+        "min": 5.719765209,
+        "max": 5.772982541
+      },
+      "audioSeconds": 361.24,
+      "peakRSSBytes": 1051688960,
+      "loadSeconds": {
+        "n": 5,
+        "p50": 0.200659917,
+        "p95": 0.2065667922,
+        "min": 0.200230625,
+        "max": 0.207946584
+      },
+      "sampledPeakPhysicalFootprintBytes": 1025295848,
+      "wer": {
+        "n": 5,
+        "p50": 0.06852791878172589,
+        "p95": 0.06852791878172589,
+        "min": 0.06852791878172589,
+        "max": 0.06852791878172589
+      },
+      "deletionRate": {
+        "n": 5,
+        "p50": 0.024111675126903553,
+        "p95": 0.024111675126903553,
+        "min": 0.024111675126903553,
+        "max": 0.024111675126903553
+      },
+      "referenceWords": 788,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-360s-burst-1-normal-0",
+        "controller-en-360s-burst-1-normal-1",
+        "controller-en-360s-burst-1-normal-2",
+        "controller-en-360s-burst-1-normal-3",
+        "controller-en-360s-burst-1-normal-4"
+      ],
+      "cuts": [
+        11
+      ],
+      "completedBeforeStop": [
+        0
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "cpu10",
+      "seconds": {
+        "n": 5,
+        "p50": 0.465331917,
+        "p95": 0.5195489246,
+        "min": 0.4557375,
+        "max": 0.530420333
+      },
+      "audioSeconds": 361.24,
+      "peakRSSBytes": 1039826944,
+      "loadSeconds": {
+        "n": 5,
+        "p50": 0.254199958,
+        "p95": 0.2918835164,
+        "min": 0.215931375,
+        "max": 0.298319958
+      },
+      "sampledPeakPhysicalFootprintBytes": 1037829656,
+      "wer": {
+        "n": 5,
+        "p50": 0.06852791878172589,
+        "p95": 0.06852791878172589,
+        "min": 0.06852791878172589,
+        "max": 0.06852791878172589
+      },
+      "deletionRate": {
+        "n": 5,
+        "p50": 0.024111675126903553,
+        "p95": 0.024111675126903553,
+        "min": 0.024111675126903553,
+        "max": 0.024111675126903553
+      },
+      "referenceWords": 788,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-360s-settled-1-cpu10-0",
+        "controller-en-360s-settled-1-cpu10-1",
+        "controller-en-360s-settled-1-cpu10-2",
+        "controller-en-360s-settled-1-cpu10-3",
+        "controller-en-360s-settled-1-cpu10-4"
+      ],
+      "cuts": [
+        11
+      ],
+      "completedBeforeStop": [
+        11
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 5,
+        "p50": 0.435185208,
+        "p95": 0.4416697084,
+        "min": 0.434246458,
+        "max": 0.442857
+      },
+      "audioSeconds": 361.24,
+      "peakRSSBytes": 1032241152,
+      "loadSeconds": {
+        "n": 5,
+        "p50": 0.202111834,
+        "p95": 0.20587471640000002,
+        "min": 0.200376833,
+        "max": 0.206681833
+      },
+      "sampledPeakPhysicalFootprintBytes": 1005471184,
+      "wer": {
+        "n": 5,
+        "p50": 0.06852791878172589,
+        "p95": 0.06852791878172589,
+        "min": 0.06852791878172589,
+        "max": 0.06852791878172589
+      },
+      "deletionRate": {
+        "n": 5,
+        "p50": 0.024111675126903553,
+        "p95": 0.024111675126903553,
+        "min": 0.024111675126903553,
+        "max": 0.024111675126903553
+      },
+      "referenceWords": 788,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-360s-settled-1-normal-0",
+        "controller-en-360s-settled-1-normal-1",
+        "controller-en-360s-settled-1-normal-2",
+        "controller-en-360s-settled-1-normal-3",
+        "controller-en-360s-settled-1-normal-4"
+      ],
+      "cuts": [
+        11
+      ],
+      "completedBeforeStop": [
+        11
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-60s",
+      "pacing": "realtime",
+      "workers": 1,
+      "condition": "cpu10",
+      "seconds": {
+        "n": 20,
+        "p50": 0.21157154150000002,
+        "p95": 0.25995737885,
+        "min": 0.205389708,
+        "max": 0.278773
+      },
+      "audioSeconds": 61.92,
+      "peakRSSBytes": 973553664,
+      "loadSeconds": {
+        "n": 20,
+        "p50": 0.253519021,
+        "p95": 0.67439559825,
+        "min": 0.224366917,
+        "max": 0.701034667
+      },
+      "sampledPeakPhysicalFootprintBytes": 974161288,
+      "wer": {
+        "n": 20,
+        "p50": 0.11811023622047244,
+        "p95": 0.11811023622047244,
+        "min": 0.11811023622047244,
+        "max": 0.11811023622047244
+      },
+      "deletionRate": {
+        "n": 20,
+        "p50": 0.06299212598425197,
+        "p95": 0.06299212598425197,
+        "min": 0.06299212598425197,
+        "max": 0.06299212598425197
+      },
+      "referenceWords": 127,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-60s-realtime-1-cpu10-0",
+        "controller-en-60s-realtime-1-cpu10-1",
+        "controller-en-60s-realtime-1-cpu10-2",
+        "controller-en-60s-realtime-1-cpu10-3",
+        "controller-en-60s-realtime-1-cpu10-4",
+        "controller-en-60s-realtime-1-cpu10-5",
+        "controller-en-60s-realtime-1-cpu10-6",
+        "controller-en-60s-realtime-1-cpu10-7",
+        "controller-en-60s-realtime-1-cpu10-8",
+        "controller-en-60s-realtime-1-cpu10-9",
+        "controller-en-60s-realtime-1-cpu10-10",
+        "controller-en-60s-realtime-1-cpu10-11",
+        "controller-en-60s-realtime-1-cpu10-12",
+        "controller-en-60s-realtime-1-cpu10-13",
+        "controller-en-60s-realtime-1-cpu10-14",
+        "controller-en-60s-realtime-1-cpu10-15",
+        "controller-en-60s-realtime-1-cpu10-16",
+        "controller-en-60s-realtime-1-cpu10-17",
+        "controller-en-60s-realtime-1-cpu10-18",
+        "controller-en-60s-realtime-1-cpu10-19"
+      ],
+      "cuts": [
+        2
+      ],
+      "completedBeforeStop": [
+        2
+      ],
+      "maxFeedLatenessSeconds": 0.032829833000002175,
+      "fileBacked": false
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-60s",
+      "pacing": "realtime",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 20,
+        "p50": 0.2212535205,
+        "p95": 0.24058403479999999,
+        "min": 0.2023365,
+        "max": 0.247613917
+      },
+      "audioSeconds": 61.92,
+      "peakRSSBytes": 974766080,
+      "loadSeconds": {
+        "n": 20,
+        "p50": 0.2018541875,
+        "p95": 0.22113819820000005,
+        "min": 0.187489666,
+        "max": 0.265700916
+      },
+      "sampledPeakPhysicalFootprintBytes": 973145480,
+      "wer": {
+        "n": 20,
+        "p50": 0.11811023622047244,
+        "p95": 0.11811023622047244,
+        "min": 0.11811023622047244,
+        "max": 0.11811023622047244
+      },
+      "deletionRate": {
+        "n": 20,
+        "p50": 0.06299212598425197,
+        "p95": 0.06299212598425197,
+        "min": 0.06299212598425197,
+        "max": 0.06299212598425197
+      },
+      "referenceWords": 127,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-60s-realtime-1-normal-0",
+        "controller-en-60s-realtime-1-normal-1",
+        "controller-en-60s-realtime-1-normal-2",
+        "controller-en-60s-realtime-1-normal-3",
+        "controller-en-60s-realtime-1-normal-4",
+        "controller-en-60s-realtime-1-normal-5",
+        "controller-en-60s-realtime-1-normal-6",
+        "controller-en-60s-realtime-1-normal-7",
+        "controller-en-60s-realtime-1-normal-8",
+        "controller-en-60s-realtime-1-normal-9",
+        "controller-en-60s-realtime-1-normal-10",
+        "controller-en-60s-realtime-1-normal-11",
+        "controller-en-60s-realtime-1-normal-12",
+        "controller-en-60s-realtime-1-normal-13",
+        "controller-en-60s-realtime-1-normal-14",
+        "controller-en-60s-realtime-1-normal-15",
+        "controller-en-60s-realtime-1-normal-16",
+        "controller-en-60s-realtime-1-normal-17",
+        "controller-en-60s-realtime-1-normal-18",
+        "controller-en-60s-realtime-1-normal-19"
+      ],
+      "cuts": [
+        2
+      ],
+      "completedBeforeStop": [
+        2
+      ],
+      "maxFeedLatenessSeconds": 0.018336041999998127,
+      "fileBacked": false
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-short",
+      "pacing": "realtime",
+      "workers": 1,
+      "condition": "cpu10",
+      "seconds": {
+        "n": 20,
+        "p50": 0.1834993545,
+        "p95": 0.22240062295000018,
+        "min": 0.155982333,
+        "max": 0.461541709
+      },
+      "audioSeconds": 10.18,
+      "peakRSSBytes": 948568064,
+      "loadSeconds": {
+        "n": 20,
+        "p50": 0.2374113335,
+        "p95": 0.300071792,
+        "min": 0.216582792,
+        "max": 0.301772292
+      },
+      "sampledPeakPhysicalFootprintBytes": 953271688,
+      "wer": {
+        "n": 20,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "deletionRate": {
+        "n": 20,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "referenceWords": 18,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-short-realtime-1-cpu10-0",
+        "controller-en-short-realtime-1-cpu10-1",
+        "controller-en-short-realtime-1-cpu10-2",
+        "controller-en-short-realtime-1-cpu10-3",
+        "controller-en-short-realtime-1-cpu10-4",
+        "controller-en-short-realtime-1-cpu10-5",
+        "controller-en-short-realtime-1-cpu10-6",
+        "controller-en-short-realtime-1-cpu10-7",
+        "controller-en-short-realtime-1-cpu10-8",
+        "controller-en-short-realtime-1-cpu10-9",
+        "controller-en-short-realtime-1-cpu10-10",
+        "controller-en-short-realtime-1-cpu10-11",
+        "controller-en-short-realtime-1-cpu10-12",
+        "controller-en-short-realtime-1-cpu10-13",
+        "controller-en-short-realtime-1-cpu10-14",
+        "controller-en-short-realtime-1-cpu10-15",
+        "controller-en-short-realtime-1-cpu10-16",
+        "controller-en-short-realtime-1-cpu10-17",
+        "controller-en-short-realtime-1-cpu10-18",
+        "controller-en-short-realtime-1-cpu10-19"
+      ],
+      "cuts": [
+        0
+      ],
+      "completedBeforeStop": [
+        0
+      ],
+      "maxFeedLatenessSeconds": 0.017393833,
+      "fileBacked": false
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-short",
+      "pacing": "realtime",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 20,
+        "p50": 0.1774095415,
+        "p95": 0.1904330024,
+        "min": 0.159851583,
+        "max": 0.191075875
+      },
+      "audioSeconds": 10.18,
+      "peakRSSBytes": 945569792,
+      "loadSeconds": {
+        "n": 20,
+        "p50": 0.2006340415,
+        "p95": 0.21403225275,
+        "min": 0.187678166,
+        "max": 0.216130209
+      },
+      "sampledPeakPhysicalFootprintBytes": 950175136,
+      "wer": {
+        "n": 20,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "deletionRate": {
+        "n": 20,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "referenceWords": 18,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-short-realtime-1-normal-0",
+        "controller-en-short-realtime-1-normal-1",
+        "controller-en-short-realtime-1-normal-2",
+        "controller-en-short-realtime-1-normal-3",
+        "controller-en-short-realtime-1-normal-4",
+        "controller-en-short-realtime-1-normal-5",
+        "controller-en-short-realtime-1-normal-6",
+        "controller-en-short-realtime-1-normal-7",
+        "controller-en-short-realtime-1-normal-8",
+        "controller-en-short-realtime-1-normal-9",
+        "controller-en-short-realtime-1-normal-10",
+        "controller-en-short-realtime-1-normal-11",
+        "controller-en-short-realtime-1-normal-12",
+        "controller-en-short-realtime-1-normal-13",
+        "controller-en-short-realtime-1-normal-14",
+        "controller-en-short-realtime-1-normal-15",
+        "controller-en-short-realtime-1-normal-16",
+        "controller-en-short-realtime-1-normal-17",
+        "controller-en-short-realtime-1-normal-18",
+        "controller-en-short-realtime-1-normal-19"
+      ],
+      "cuts": [
+        0
+      ],
+      "completedBeforeStop": [
+        0
+      ],
+      "maxFeedLatenessSeconds": 0.010200915999999808,
+      "fileBacked": false
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-360s",
+      "pacing": "burst",
+      "workers": 1,
+      "condition": "cpu10",
+      "seconds": {
+        "n": 5,
+        "p50": 6.564942667,
+        "p95": 6.644362199800001,
+        "min": 6.486328708,
+        "max": 6.648990333
+      },
+      "audioSeconds": 369.66,
+      "peakRSSBytes": 1050198016,
+      "loadSeconds": {
+        "n": 5,
+        "p50": 0.23142125,
+        "p95": 0.2637955666,
+        "min": 0.21777975,
+        "max": 0.270830625
+      },
+      "sampledPeakPhysicalFootprintBytes": 1034028472,
+      "wer": {
+        "n": 5,
+        "p50": 0.0727580372250423,
+        "p95": 0.0727580372250423,
+        "min": 0.0727580372250423,
+        "max": 0.0727580372250423
+      },
+      "deletionRate": {
+        "n": 5,
+        "p50": 0.01692047377326565,
+        "p95": 0.01692047377326565,
+        "min": 0.01692047377326565,
+        "max": 0.01692047377326565
+      },
+      "referenceWords": 591,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-360s-burst-1-cpu10-0",
+        "controller-ru-360s-burst-1-cpu10-1",
+        "controller-ru-360s-burst-1-cpu10-2",
+        "controller-ru-360s-burst-1-cpu10-3",
+        "controller-ru-360s-burst-1-cpu10-4"
+      ],
+      "cuts": [
+        21
+      ],
+      "completedBeforeStop": [
+        0
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-360s",
+      "pacing": "burst",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 5,
+        "p50": 5.937791167,
+        "p95": 5.9512476752,
+        "min": 5.916248792,
+        "max": 5.951605917
+      },
+      "audioSeconds": 369.66,
+      "peakRSSBytes": 1041039360,
+      "loadSeconds": {
+        "n": 5,
+        "p50": 0.201771375,
+        "p95": 0.20480578359999999,
+        "min": 0.200223958,
+        "max": 0.205192417
+      },
+      "sampledPeakPhysicalFootprintBytes": 1044989416,
+      "wer": {
+        "n": 5,
+        "p50": 0.0727580372250423,
+        "p95": 0.0727580372250423,
+        "min": 0.0727580372250423,
+        "max": 0.0727580372250423
+      },
+      "deletionRate": {
+        "n": 5,
+        "p50": 0.01692047377326565,
+        "p95": 0.01692047377326565,
+        "min": 0.01692047377326565,
+        "max": 0.01692047377326565
+      },
+      "referenceWords": 591,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-360s-burst-1-normal-0",
+        "controller-ru-360s-burst-1-normal-1",
+        "controller-ru-360s-burst-1-normal-2",
+        "controller-ru-360s-burst-1-normal-3",
+        "controller-ru-360s-burst-1-normal-4"
+      ],
+      "cuts": [
+        21
+      ],
+      "completedBeforeStop": [
+        0
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "cpu10",
+      "seconds": {
+        "n": 5,
+        "p50": 0.348329333,
+        "p95": 0.3546549328,
+        "min": 0.338593875,
+        "max": 0.354765541
+      },
+      "audioSeconds": 369.66,
+      "peakRSSBytes": 1028898816,
+      "loadSeconds": {
+        "n": 5,
+        "p50": 0.249493417,
+        "p95": 0.2577422164,
+        "min": 0.221171542,
+        "max": 0.259428083
+      },
+      "sampledPeakPhysicalFootprintBytes": 1008518584,
+      "wer": {
+        "n": 5,
+        "p50": 0.0727580372250423,
+        "p95": 0.0727580372250423,
+        "min": 0.0727580372250423,
+        "max": 0.0727580372250423
+      },
+      "deletionRate": {
+        "n": 5,
+        "p50": 0.01692047377326565,
+        "p95": 0.01692047377326565,
+        "min": 0.01692047377326565,
+        "max": 0.01692047377326565
+      },
+      "referenceWords": 591,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-360s-settled-1-cpu10-0",
+        "controller-ru-360s-settled-1-cpu10-1",
+        "controller-ru-360s-settled-1-cpu10-2",
+        "controller-ru-360s-settled-1-cpu10-3",
+        "controller-ru-360s-settled-1-cpu10-4"
+      ],
+      "cuts": [
+        21
+      ],
+      "completedBeforeStop": [
+        21
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 5,
+        "p50": 0.32030825,
+        "p95": 0.3233809828,
+        "min": 0.318999583,
+        "max": 0.323702041
+      },
+      "audioSeconds": 369.66,
+      "peakRSSBytes": 1023180800,
+      "loadSeconds": {
+        "n": 5,
+        "p50": 0.202732541,
+        "p95": 0.2077441584,
+        "min": 0.19998425,
+        "max": 0.20816425
+      },
+      "sampledPeakPhysicalFootprintBytes": 1027130832,
+      "wer": {
+        "n": 5,
+        "p50": 0.0727580372250423,
+        "p95": 0.0727580372250423,
+        "min": 0.0727580372250423,
+        "max": 0.0727580372250423
+      },
+      "deletionRate": {
+        "n": 5,
+        "p50": 0.01692047377326565,
+        "p95": 0.01692047377326565,
+        "min": 0.01692047377326565,
+        "max": 0.01692047377326565
+      },
+      "referenceWords": 591,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-360s-settled-1-normal-0",
+        "controller-ru-360s-settled-1-normal-1",
+        "controller-ru-360s-settled-1-normal-2",
+        "controller-ru-360s-settled-1-normal-3",
+        "controller-ru-360s-settled-1-normal-4"
+      ],
+      "cuts": [
+        21
+      ],
+      "completedBeforeStop": [
+        21
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-60s",
+      "pacing": "realtime",
+      "workers": 1,
+      "condition": "cpu10",
+      "seconds": {
+        "n": 20,
+        "p50": 0.16500522899999998,
+        "p95": 0.19889384615,
+        "min": 0.151293833,
+        "max": 0.218749875
+      },
+      "audioSeconds": 66.24,
+      "peakRSSBytes": 971636736,
+      "loadSeconds": {
+        "n": 20,
+        "p50": 0.2297552295,
+        "p95": 0.27136895865000005,
+        "min": 0.215691333,
+        "max": 0.303254125
+      },
+      "sampledPeakPhysicalFootprintBytes": 974521736,
+      "wer": {
+        "n": 20,
+        "p50": 0.018018018018018018,
+        "p95": 0.018018018018018018,
+        "min": 0.018018018018018018,
+        "max": 0.018018018018018018
+      },
+      "deletionRate": {
+        "n": 20,
+        "p50": 0.018018018018018018,
+        "p95": 0.018018018018018018,
+        "min": 0.018018018018018018,
+        "max": 0.018018018018018018
+      },
+      "referenceWords": 111,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-60s-realtime-1-cpu10-0",
+        "controller-ru-60s-realtime-1-cpu10-1",
+        "controller-ru-60s-realtime-1-cpu10-2",
+        "controller-ru-60s-realtime-1-cpu10-3",
+        "controller-ru-60s-realtime-1-cpu10-4",
+        "controller-ru-60s-realtime-1-cpu10-5",
+        "controller-ru-60s-realtime-1-cpu10-6",
+        "controller-ru-60s-realtime-1-cpu10-7",
+        "controller-ru-60s-realtime-1-cpu10-8",
+        "controller-ru-60s-realtime-1-cpu10-9",
+        "controller-ru-60s-realtime-1-cpu10-10",
+        "controller-ru-60s-realtime-1-cpu10-11",
+        "controller-ru-60s-realtime-1-cpu10-12",
+        "controller-ru-60s-realtime-1-cpu10-13",
+        "controller-ru-60s-realtime-1-cpu10-14",
+        "controller-ru-60s-realtime-1-cpu10-15",
+        "controller-ru-60s-realtime-1-cpu10-16",
+        "controller-ru-60s-realtime-1-cpu10-17",
+        "controller-ru-60s-realtime-1-cpu10-18",
+        "controller-ru-60s-realtime-1-cpu10-19"
+      ],
+      "cuts": [
+        3
+      ],
+      "completedBeforeStop": [
+        3
+      ],
+      "maxFeedLatenessSeconds": 0.060850167,
+      "fileBacked": false
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-60s",
+      "pacing": "realtime",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 20,
+        "p50": 0.1829267295,
+        "p95": 0.20310635059999999,
+        "min": 0.167645291,
+        "max": 0.205438916
+      },
+      "audioSeconds": 66.24,
+      "peakRSSBytes": 970932224,
+      "loadSeconds": {
+        "n": 20,
+        "p50": 0.1994017295,
+        "p95": 0.2395139253000003,
+        "min": 0.191027416,
+        "max": 0.626232958
+      },
+      "sampledPeakPhysicalFootprintBytes": 974620088,
+      "wer": {
+        "n": 20,
+        "p50": 0.018018018018018018,
+        "p95": 0.018018018018018018,
+        "min": 0.018018018018018018,
+        "max": 0.018018018018018018
+      },
+      "deletionRate": {
+        "n": 20,
+        "p50": 0.018018018018018018,
+        "p95": 0.018018018018018018,
+        "min": 0.018018018018018018,
+        "max": 0.018018018018018018
+      },
+      "referenceWords": 111,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-60s-realtime-1-normal-0",
+        "controller-ru-60s-realtime-1-normal-1",
+        "controller-ru-60s-realtime-1-normal-2",
+        "controller-ru-60s-realtime-1-normal-3",
+        "controller-ru-60s-realtime-1-normal-4",
+        "controller-ru-60s-realtime-1-normal-5",
+        "controller-ru-60s-realtime-1-normal-6",
+        "controller-ru-60s-realtime-1-normal-7",
+        "controller-ru-60s-realtime-1-normal-8",
+        "controller-ru-60s-realtime-1-normal-9",
+        "controller-ru-60s-realtime-1-normal-10",
+        "controller-ru-60s-realtime-1-normal-11",
+        "controller-ru-60s-realtime-1-normal-12",
+        "controller-ru-60s-realtime-1-normal-13",
+        "controller-ru-60s-realtime-1-normal-14",
+        "controller-ru-60s-realtime-1-normal-15",
+        "controller-ru-60s-realtime-1-normal-16",
+        "controller-ru-60s-realtime-1-normal-17",
+        "controller-ru-60s-realtime-1-normal-18",
+        "controller-ru-60s-realtime-1-normal-19"
+      ],
+      "cuts": [
+        3
+      ],
+      "completedBeforeStop": [
+        3
+      ],
+      "maxFeedLatenessSeconds": 0.017024791999998592,
+      "fileBacked": false
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-short",
+      "pacing": "realtime",
+      "workers": 1,
+      "condition": "cpu10",
+      "seconds": {
+        "n": 20,
+        "p50": 0.20894070850000002,
+        "p95": 0.25247899310000005,
+        "min": 0.187577875,
+        "max": 0.277211333
+      },
+      "audioSeconds": 10.92,
+      "peakRSSBytes": 950059008,
+      "loadSeconds": {
+        "n": 20,
+        "p50": 0.2353370835,
+        "p95": 0.3423265465,
+        "min": 0.215716875,
+        "max": 0.397478084
+      },
+      "sampledPeakPhysicalFootprintBytes": 945096072,
+      "wer": {
+        "n": 20,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "deletionRate": {
+        "n": 20,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "referenceWords": 22,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-short-realtime-1-cpu10-0",
+        "controller-ru-short-realtime-1-cpu10-1",
+        "controller-ru-short-realtime-1-cpu10-2",
+        "controller-ru-short-realtime-1-cpu10-3",
+        "controller-ru-short-realtime-1-cpu10-4",
+        "controller-ru-short-realtime-1-cpu10-5",
+        "controller-ru-short-realtime-1-cpu10-6",
+        "controller-ru-short-realtime-1-cpu10-7",
+        "controller-ru-short-realtime-1-cpu10-8",
+        "controller-ru-short-realtime-1-cpu10-9",
+        "controller-ru-short-realtime-1-cpu10-10",
+        "controller-ru-short-realtime-1-cpu10-11",
+        "controller-ru-short-realtime-1-cpu10-12",
+        "controller-ru-short-realtime-1-cpu10-13",
+        "controller-ru-short-realtime-1-cpu10-14",
+        "controller-ru-short-realtime-1-cpu10-15",
+        "controller-ru-short-realtime-1-cpu10-16",
+        "controller-ru-short-realtime-1-cpu10-17",
+        "controller-ru-short-realtime-1-cpu10-18",
+        "controller-ru-short-realtime-1-cpu10-19"
+      ],
+      "cuts": [
+        0
+      ],
+      "completedBeforeStop": [
+        0
+      ],
+      "maxFeedLatenessSeconds": 0.016164625,
+      "fileBacked": false
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-short",
+      "pacing": "realtime",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 20,
+        "p50": 0.2218841245,
+        "p95": 0.24617043185,
+        "min": 0.198853792,
+        "max": 0.267454666
+      },
+      "audioSeconds": 10.92,
+      "peakRSSBytes": 947339264,
+      "loadSeconds": {
+        "n": 20,
+        "p50": 0.199512604,
+        "p95": 0.2223835774000001,
+        "min": 0.188855667,
+        "max": 0.3362085
+      },
+      "sampledPeakPhysicalFootprintBytes": 949880224,
+      "wer": {
+        "n": 20,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "deletionRate": {
+        "n": 20,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "referenceWords": 22,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-short-realtime-1-normal-0",
+        "controller-ru-short-realtime-1-normal-1",
+        "controller-ru-short-realtime-1-normal-2",
+        "controller-ru-short-realtime-1-normal-3",
+        "controller-ru-short-realtime-1-normal-4",
+        "controller-ru-short-realtime-1-normal-5",
+        "controller-ru-short-realtime-1-normal-6",
+        "controller-ru-short-realtime-1-normal-7",
+        "controller-ru-short-realtime-1-normal-8",
+        "controller-ru-short-realtime-1-normal-9",
+        "controller-ru-short-realtime-1-normal-10",
+        "controller-ru-short-realtime-1-normal-11",
+        "controller-ru-short-realtime-1-normal-12",
+        "controller-ru-short-realtime-1-normal-13",
+        "controller-ru-short-realtime-1-normal-14",
+        "controller-ru-short-realtime-1-normal-15",
+        "controller-ru-short-realtime-1-normal-16",
+        "controller-ru-short-realtime-1-normal-17",
+        "controller-ru-short-realtime-1-normal-18",
+        "controller-ru-short-realtime-1-normal-19"
+      ],
+      "cuts": [
+        0
+      ],
+      "completedBeforeStop": [
+        0
+      ],
+      "maxFeedLatenessSeconds": 0.010333750000000128,
+      "fileBacked": false
+    },
+    {
+      "mode": "file",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 3,
+        "p50": 68.922386834,
+        "p95": 69.06872889590001,
+        "min": 68.811745333,
+        "max": 69.084989125
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 1000112128,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.350504875,
+        "p95": 0.4870265122,
+        "min": 0.239847916,
+        "max": 0.502195583
+      },
+      "sampledPeakPhysicalFootprintBytes": 1004914104,
+      "wer": {
+        "n": 3,
+        "p50": 0.09762703120969822,
+        "p95": 0.09762703120969822,
+        "min": 0.09762703120969822,
+        "max": 0.09762703120969822
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.04797523858653598,
+        "p95": 0.04797523858653598,
+        "min": 0.04797523858653598,
+        "max": 0.04797523858653598
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-en-3540s-settled-1-normal-0",
+        "file-en-3540s-settled-1-normal-1",
+        "file-en-3540s-settled-1-normal-2"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 2,
+      "condition": "normal",
+      "seconds": {
+        "n": 3,
+        "p50": 60.559823541,
+        "p95": 60.6115036416,
+        "min": 60.503946959,
+        "max": 60.617245875
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 1860403200,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.375953625,
+        "p95": 0.39294911250000003,
+        "min": 0.371370292,
+        "max": 0.3948375
+      },
+      "sampledPeakPhysicalFootprintBytes": 1859717232,
+      "wer": {
+        "n": 3,
+        "p50": 0.09762703120969822,
+        "p95": 0.09762703120969822,
+        "min": 0.09762703120969822,
+        "max": 0.09762703120969822
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.04797523858653598,
+        "p95": 0.04797523858653598,
+        "min": 0.04797523858653598,
+        "max": 0.04797523858653598
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-en-3540s-settled-2-normal-0",
+        "file-en-3540s-settled-2-normal-1",
+        "file-en-3540s-settled-2-normal-2"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "mixed-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 3,
+        "p50": 67.09823175,
+        "p95": 67.4815100628,
+        "min": 67.091256541,
+        "max": 67.524096542
+      },
+      "audioSeconds": 3543.3,
+      "peakRSSBytes": 992329728,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.255208084,
+        "p95": 0.3781349206,
+        "min": 0.204412541,
+        "max": 0.391793458
+      },
+      "sampledPeakPhysicalFootprintBytes": 994428344,
+      "wer": {
+        "n": 3,
+        "p50": 0.3906674720628209,
+        "p95": 0.3906674720628209,
+        "min": 0.3906674720628209,
+        "max": 0.3906674720628209
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.33796436122017515,
+        "p95": 0.33796436122017515,
+        "min": 0.33796436122017515,
+        "max": 0.33796436122017515
+      },
+      "referenceWords": 6622,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-mixed-3540s-settled-1-normal-0",
+        "file-mixed-3540s-settled-1-normal-1",
+        "file-mixed-3540s-settled-1-normal-2"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "mixed-3540s",
+      "pacing": "settled",
+      "workers": 2,
+      "condition": "normal",
+      "seconds": {
+        "n": 3,
+        "p50": 58.291245125,
+        "p95": 58.497996536900004,
+        "min": 58.084741916,
+        "max": 58.520968916
+      },
+      "audioSeconds": 3543.3,
+      "peakRSSBytes": 1864433664,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.383657,
+        "p95": 0.3844536125,
+        "min": 0.382317667,
+        "max": 0.384542125
+      },
+      "sampledPeakPhysicalFootprintBytes": 1863256200,
+      "wer": {
+        "n": 3,
+        "p50": 0.3906674720628209,
+        "p95": 0.3906674720628209,
+        "min": 0.3906674720628209,
+        "max": 0.3906674720628209
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.33796436122017515,
+        "p95": 0.33796436122017515,
+        "min": 0.33796436122017515,
+        "max": 0.33796436122017515
+      },
+      "referenceWords": 6622,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-mixed-3540s-settled-2-normal-0",
+        "file-mixed-3540s-settled-2-normal-1",
+        "file-mixed-3540s-settled-2-normal-2"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 3,
+        "p50": 70.705689459,
+        "p95": 72.0198029337,
+        "min": 70.50374441700001,
+        "max": 72.165815542
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 1016004608,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.211453084,
+        "p95": 0.3182844331,
+        "min": 0.202713708,
+        "max": 0.330154583
+      },
+      "sampledPeakPhysicalFootprintBytes": 1017611752,
+      "wer": {
+        "n": 3,
+        "p50": 0.06492589978828511,
+        "p95": 0.06492589978828511,
+        "min": 0.06492589978828511,
+        "max": 0.06492589978828511
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.0171136203246295,
+        "p95": 0.0171136203246295,
+        "min": 0.0171136203246295,
+        "max": 0.0171136203246295
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-ru-3540s-settled-1-normal-0",
+        "file-ru-3540s-settled-1-normal-1",
+        "file-ru-3540s-settled-1-normal-2"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 2,
+      "condition": "normal",
+      "seconds": {
+        "n": 3,
+        "p50": 60.843537875,
+        "p95": 61.003869874399996,
+        "min": 60.618063667,
+        "max": 61.021684541
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 1855045632,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.402770209,
+        "p95": 0.5618552584,
+        "min": 0.376814042,
+        "max": 0.579531375
+      },
+      "sampledPeakPhysicalFootprintBytes": 1856571480,
+      "wer": {
+        "n": 3,
+        "p50": 0.06492589978828511,
+        "p95": 0.06492589978828511,
+        "min": 0.06492589978828511,
+        "max": 0.06492589978828511
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.0171136203246295,
+        "p95": 0.0171136203246295,
+        "min": 0.0171136203246295,
+        "max": 0.0171136203246295
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-ru-3540s-settled-2-normal-0",
+        "file-ru-3540s-settled-2-normal-1",
+        "file-ru-3540s-settled-2-normal-2"
+      ]
+    },
+    {
+      "mode": "meeting",
+      "fixture": "en-60s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "cpu10",
+      "seconds": {
+        "n": 20,
+        "p50": 4.2375e-05,
+        "p95": 0.003991308050000001,
+        "min": 1.7042e-05,
+        "max": 0.005437209
+      },
+      "audioSeconds": 61.92,
+      "peakRSSBytes": 953040896,
+      "loadSeconds": {
+        "n": 20,
+        "p50": 0.229496875,
+        "p95": 0.26120645385,
+        "min": 0.203696959,
+        "max": 0.272368875
+      },
+      "sampledPeakPhysicalFootprintBytes": 4342288,
+      "wer": {
+        "n": 20,
+        "p50": 0.6535433070866141,
+        "p95": 0.6535433070866141,
+        "min": 0.6535433070866141,
+        "max": 0.6535433070866141
+      },
+      "deletionRate": {
+        "n": 20,
+        "p50": 0.6535433070866141,
+        "p95": 0.6535433070866141,
+        "min": 0.6535433070866141,
+        "max": 0.6535433070866141
+      },
+      "referenceWords": 127,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-en-60s-settled-1-cpu10-0",
+        "meeting-en-60s-settled-1-cpu10-1",
+        "meeting-en-60s-settled-1-cpu10-2",
+        "meeting-en-60s-settled-1-cpu10-3",
+        "meeting-en-60s-settled-1-cpu10-4",
+        "meeting-en-60s-settled-1-cpu10-5",
+        "meeting-en-60s-settled-1-cpu10-6",
+        "meeting-en-60s-settled-1-cpu10-7",
+        "meeting-en-60s-settled-1-cpu10-8",
+        "meeting-en-60s-settled-1-cpu10-9",
+        "meeting-en-60s-settled-1-cpu10-10",
+        "meeting-en-60s-settled-1-cpu10-11",
+        "meeting-en-60s-settled-1-cpu10-12",
+        "meeting-en-60s-settled-1-cpu10-13",
+        "meeting-en-60s-settled-1-cpu10-14",
+        "meeting-en-60s-settled-1-cpu10-15",
+        "meeting-en-60s-settled-1-cpu10-16",
+        "meeting-en-60s-settled-1-cpu10-17",
+        "meeting-en-60s-settled-1-cpu10-18",
+        "meeting-en-60s-settled-1-cpu10-19"
+      ]
+    },
+    {
+      "mode": "meeting",
+      "fixture": "en-60s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 20,
+        "p50": 1.4687500000000001e-05,
+        "p95": 1.6720500000000004e-05,
+        "min": 9.25e-06,
+        "max": 2.1708e-05
+      },
+      "audioSeconds": 61.92,
+      "peakRSSBytes": 948879360,
+      "loadSeconds": {
+        "n": 20,
+        "p50": 0.201385438,
+        "p95": 0.2094767271,
+        "min": 0.18932,
+        "max": 0.210568792
+      },
+      "sampledPeakPhysicalFootprintBytes": 1606016,
+      "wer": {
+        "n": 20,
+        "p50": 0.6535433070866141,
+        "p95": 0.6535433070866141,
+        "min": 0.6535433070866141,
+        "max": 0.6535433070866141
+      },
+      "deletionRate": {
+        "n": 20,
+        "p50": 0.6535433070866141,
+        "p95": 0.6535433070866141,
+        "min": 0.6535433070866141,
+        "max": 0.6535433070866141
+      },
+      "referenceWords": 127,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-en-60s-settled-1-normal-0",
+        "meeting-en-60s-settled-1-normal-1",
+        "meeting-en-60s-settled-1-normal-2",
+        "meeting-en-60s-settled-1-normal-3",
+        "meeting-en-60s-settled-1-normal-4",
+        "meeting-en-60s-settled-1-normal-5",
+        "meeting-en-60s-settled-1-normal-6",
+        "meeting-en-60s-settled-1-normal-7",
+        "meeting-en-60s-settled-1-normal-8",
+        "meeting-en-60s-settled-1-normal-9",
+        "meeting-en-60s-settled-1-normal-10",
+        "meeting-en-60s-settled-1-normal-11",
+        "meeting-en-60s-settled-1-normal-12",
+        "meeting-en-60s-settled-1-normal-13",
+        "meeting-en-60s-settled-1-normal-14",
+        "meeting-en-60s-settled-1-normal-15",
+        "meeting-en-60s-settled-1-normal-16",
+        "meeting-en-60s-settled-1-normal-17",
+        "meeting-en-60s-settled-1-normal-18",
+        "meeting-en-60s-settled-1-normal-19"
+      ]
+    },
+    {
+      "mode": "meeting",
+      "fixture": "ru-60s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "cpu10",
+      "seconds": {
+        "n": 20,
+        "p50": 0.123535375,
+        "p95": 0.14770367465,
+        "min": 0.116870542,
+        "max": 0.147881166
+      },
+      "audioSeconds": 66.24,
+      "peakRSSBytes": 957120512,
+      "loadSeconds": {
+        "n": 20,
+        "p50": 0.22602239600000001,
+        "p95": 0.26604624164999996,
+        "min": 0.211158458,
+        "max": 0.272346958
+      },
+      "sampledPeakPhysicalFootprintBytes": 960775584,
+      "wer": {
+        "n": 20,
+        "p50": 0.06306306306306306,
+        "p95": 0.06306306306306306,
+        "min": 0.06306306306306306,
+        "max": 0.06306306306306306
+      },
+      "deletionRate": {
+        "n": 20,
+        "p50": 0.05405405405405406,
+        "p95": 0.05405405405405406,
+        "min": 0.05405405405405406,
+        "max": 0.05405405405405406
+      },
+      "referenceWords": 111,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-ru-60s-settled-1-cpu10-0",
+        "meeting-ru-60s-settled-1-cpu10-1",
+        "meeting-ru-60s-settled-1-cpu10-2",
+        "meeting-ru-60s-settled-1-cpu10-3",
+        "meeting-ru-60s-settled-1-cpu10-4",
+        "meeting-ru-60s-settled-1-cpu10-5",
+        "meeting-ru-60s-settled-1-cpu10-6",
+        "meeting-ru-60s-settled-1-cpu10-7",
+        "meeting-ru-60s-settled-1-cpu10-8",
+        "meeting-ru-60s-settled-1-cpu10-9",
+        "meeting-ru-60s-settled-1-cpu10-10",
+        "meeting-ru-60s-settled-1-cpu10-11",
+        "meeting-ru-60s-settled-1-cpu10-12",
+        "meeting-ru-60s-settled-1-cpu10-13",
+        "meeting-ru-60s-settled-1-cpu10-14",
+        "meeting-ru-60s-settled-1-cpu10-15",
+        "meeting-ru-60s-settled-1-cpu10-16",
+        "meeting-ru-60s-settled-1-cpu10-17",
+        "meeting-ru-60s-settled-1-cpu10-18",
+        "meeting-ru-60s-settled-1-cpu10-19"
+      ]
+    },
+    {
+      "mode": "meeting",
+      "fixture": "ru-60s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 20,
+        "p50": 0.10740810449999999,
+        "p95": 0.11079901045,
+        "min": 0.106319833,
+        "max": 0.110851459
+      },
+      "audioSeconds": 66.24,
+      "peakRSSBytes": 947322880,
+      "loadSeconds": {
+        "n": 20,
+        "p50": 0.200546625,
+        "p95": 0.21096993545,
+        "min": 0.189543875,
+        "max": 0.213319959
+      },
+      "sampledPeakPhysicalFootprintBytes": 953238872,
+      "wer": {
+        "n": 20,
+        "p50": 0.06306306306306306,
+        "p95": 0.06306306306306306,
+        "min": 0.06306306306306306,
+        "max": 0.06306306306306306
+      },
+      "deletionRate": {
+        "n": 20,
+        "p50": 0.05405405405405406,
+        "p95": 0.05405405405405406,
+        "min": 0.05405405405405406,
+        "max": 0.05405405405405406
+      },
+      "referenceWords": 111,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-ru-60s-settled-1-normal-0",
+        "meeting-ru-60s-settled-1-normal-1",
+        "meeting-ru-60s-settled-1-normal-2",
+        "meeting-ru-60s-settled-1-normal-3",
+        "meeting-ru-60s-settled-1-normal-4",
+        "meeting-ru-60s-settled-1-normal-5",
+        "meeting-ru-60s-settled-1-normal-6",
+        "meeting-ru-60s-settled-1-normal-7",
+        "meeting-ru-60s-settled-1-normal-8",
+        "meeting-ru-60s-settled-1-normal-9",
+        "meeting-ru-60s-settled-1-normal-10",
+        "meeting-ru-60s-settled-1-normal-11",
+        "meeting-ru-60s-settled-1-normal-12",
+        "meeting-ru-60s-settled-1-normal-13",
+        "meeting-ru-60s-settled-1-normal-14",
+        "meeting-ru-60s-settled-1-normal-15",
+        "meeting-ru-60s-settled-1-normal-16",
+        "meeting-ru-60s-settled-1-normal-17",
+        "meeting-ru-60s-settled-1-normal-18",
+        "meeting-ru-60s-settled-1-normal-19"
+      ]
+    },
+    {
+      "mode": "shipping-file",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 1,
+        "p50": 69.409720417,
+        "p95": 69.409720417,
+        "min": 69.409720417,
+        "max": 69.409720417
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 995344384,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.209551792,
+        "p95": 0.209551792,
+        "min": 0.209551792,
+        "max": 0.209551792
+      },
+      "sampledPeakPhysicalFootprintBytes": 997869008,
+      "wer": {
+        "n": 1,
+        "p50": 0.09762703120969822,
+        "p95": 0.09762703120969822,
+        "min": 0.09762703120969822,
+        "max": 0.09762703120969822
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.04797523858653598,
+        "p95": 0.04797523858653598,
+        "min": 0.04797523858653598,
+        "max": 0.04797523858653598
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "shipping-file-en-3540s-settled-1-normal-0"
+      ]
+    },
+    {
+      "mode": "shipping-file",
+      "fixture": "mixed-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 1,
+        "p50": 67.664123625,
+        "p95": 67.664123625,
+        "min": 67.664123625,
+        "max": 67.664123625
+      },
+      "audioSeconds": 3543.3,
+      "peakRSSBytes": 996507648,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.20513825,
+        "p95": 0.20513825,
+        "min": 0.20513825,
+        "max": 0.20513825
+      },
+      "sampledPeakPhysicalFootprintBytes": 998852000,
+      "wer": {
+        "n": 1,
+        "p50": 0.3906674720628209,
+        "p95": 0.3906674720628209,
+        "min": 0.3906674720628209,
+        "max": 0.3906674720628209
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.33796436122017515,
+        "p95": 0.33796436122017515,
+        "min": 0.33796436122017515,
+        "max": 0.33796436122017515
+      },
+      "referenceWords": 6622,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "shipping-file-mixed-3540s-settled-1-normal-0"
+      ]
+    },
+    {
+      "mode": "shipping-file",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 1,
+        "p50": 71.206243417,
+        "p95": 71.206243417,
+        "min": 71.206243417,
+        "max": 71.206243417
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 1010597888,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.204542583,
+        "p95": 0.204542583,
+        "min": 0.204542583,
+        "max": 0.204542583
+      },
+      "sampledPeakPhysicalFootprintBytes": 1012418000,
+      "wer": {
+        "n": 1,
+        "p50": 0.06492589978828511,
+        "p95": 0.06492589978828511,
+        "min": 0.06492589978828511,
+        "max": 0.06492589978828511
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.0171136203246295,
+        "p95": 0.0171136203246295,
+        "min": 0.0171136203246295,
+        "max": 0.0171136203246295
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "shipping-file-ru-3540s-settled-1-normal-0"
+      ]
+    }
+  ],
+  "fileParity": [
+    {
+      "fixture": "en-3540s",
+      "id": "file-en-3540s-settled-1-normal-0",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "id": "file-en-3540s-settled-2-normal-0",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "id": "file-en-3540s-settled-2-normal-1",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "id": "file-en-3540s-settled-1-normal-1",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "id": "file-en-3540s-settled-1-normal-2",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "id": "file-en-3540s-settled-2-normal-2",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "id": "shipping-file-en-3540s-settled-1-normal-0",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 0,
+      "chunkBoundariesAndText": null
+    },
+    {
+      "fixture": "mixed-3540s",
+      "id": "file-mixed-3540s-settled-1-normal-0",
+      "baseline": "file-mixed-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 206,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "id": "file-mixed-3540s-settled-2-normal-0",
+      "baseline": "file-mixed-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 206,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "id": "file-mixed-3540s-settled-2-normal-1",
+      "baseline": "file-mixed-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 206,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "id": "file-mixed-3540s-settled-1-normal-1",
+      "baseline": "file-mixed-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 206,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "id": "file-mixed-3540s-settled-1-normal-2",
+      "baseline": "file-mixed-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 206,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "id": "file-mixed-3540s-settled-2-normal-2",
+      "baseline": "file-mixed-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 206,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "id": "shipping-file-mixed-3540s-settled-1-normal-0",
+      "baseline": "file-mixed-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 0,
+      "chunkBoundariesAndText": null
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-1-normal-0",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-2-normal-0",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-2-normal-1",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-1-normal-1",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-1-normal-2",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-2-normal-2",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "shipping-file-ru-3540s-settled-1-normal-0",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 0,
+      "chunkBoundariesAndText": null
+    }
+  ]
+}

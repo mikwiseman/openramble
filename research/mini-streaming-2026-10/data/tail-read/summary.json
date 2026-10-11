@@ -1,0 +1,1753 @@
+{
+  "normalization": "Unicode NFC, lowercase, ё→е, Unicode word tokens, no numeral expansion",
+  "quantiles": "linear interpolation at (n-1)*p",
+  "qualityScope": "Fixed public fixtures; timing repeats are not independent quality examples.",
+  "identities": {
+    "tail-read-v1": {
+      "head": "048cefd20b4ea8ca37f2e4954a48acc3aca473dd",
+      "binary_sha256": "66f8fe8e8fccc44df6f1c426b9fef2c8bbba872f427e767a3ab26958f42d0e4d",
+      "runner_sha256": "d704a359e3863a075f73c30a166ab92fec1ab728ee5cfec60df784183e8d43b2",
+      "harness_sha256": "ab0b65ddc063d3151d18c75da817708f9b567778aa2b996232ac524b5110c6c4",
+      "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+      "plan_sha256": "487f64a29e7c732381eb57d25975692a0825bce4f629bf576dc631b7efcb7007"
+    }
+  },
+  "completedRuns": 40,
+  "failures": [
+    {
+      "run": "tail-read-v1",
+      "id": "controller-ru-360s-settled-1-cpu10-2-tail",
+      "exitCode": -15,
+      "hardStop": "build started during measurement",
+      "samples": [
+        {
+          "seconds": 0.04258820801624097,
+          "level": "1",
+          "memory": {
+            "residentBytes": 12845056,
+            "physicalFootprintBytes": 2294192
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0783303329953924,
+          "level": "1",
+          "memory": {
+            "residentBytes": 986906624,
+            "physicalFootprintBytes": 993478072
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.1172415830078535,
+          "level": "1",
+          "memory": {
+            "residentBytes": 992968704,
+            "physicalFootprintBytes": 999392696
+          },
+          "builds": [
+            "swift-frontend"
+          ]
+        }
+      ],
+      "utc": "2026-10-11T08:25:45Z",
+      "identity": {
+        "head": "048cefd20b4ea8ca37f2e4954a48acc3aca473dd",
+        "binary_sha256": "66f8fe8e8fccc44df6f1c426b9fef2c8bbba872f427e767a3ab26958f42d0e4d",
+        "runner_sha256": "d704a359e3863a075f73c30a166ab92fec1ab728ee5cfec60df784183e8d43b2",
+        "harness_sha256": "ab0b65ddc063d3151d18c75da817708f9b567778aa2b996232ac524b5110c6c4",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+        "plan_sha256": "487f64a29e7c732381eb57d25975692a0825bce4f629bf576dc631b7efcb7007"
+      }
+    },
+    {
+      "run": "tail-read-v1",
+      "id": "controller-ru-3540s-settled-1-cpu10-0-tail",
+      "exitCode": -15,
+      "hardStop": "build started during measurement",
+      "samples": [
+        {
+          "seconds": 0.03236116698826663,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1540096,
+            "physicalFootprintBytes": 393360
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0684210839972366,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1389690880,
+            "physicalFootprintBytes": 1396573888
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.1035663750080857,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1394900992,
+            "physicalFootprintBytes": 1401587392
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.16836812501424,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1404633088,
+            "physicalFootprintBytes": 1411319488
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.204995209001936,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1414627328,
+            "physicalFootprintBytes": 1421133504
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.2439117089961655,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1415299072,
+            "physicalFootprintBytes": 1421788864
+          },
+          "builds": []
+        },
+        {
+          "seconds": 6.280825166992145,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1416691712,
+            "physicalFootprintBytes": 1423181504
+          },
+          "builds": []
+        },
+        {
+          "seconds": 7.329427499993471,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1415348224,
+            "physicalFootprintBytes": 1421838016
+          },
+          "builds": []
+        },
+        {
+          "seconds": 8.38515804198687,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1416478720,
+            "physicalFootprintBytes": 1422968512
+          },
+          "builds": []
+        },
+        {
+          "seconds": 9.452431667014025,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1415495680,
+            "physicalFootprintBytes": 1421985472
+          },
+          "builds": []
+        },
+        {
+          "seconds": 10.492654417001177,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1415430144,
+            "physicalFootprintBytes": 1421919936
+          },
+          "builds": []
+        },
+        {
+          "seconds": 11.529736708995188,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1416347648,
+            "physicalFootprintBytes": 1422837440
+          },
+          "builds": []
+        },
+        {
+          "seconds": 12.590589500003261,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1417478144,
+            "physicalFootprintBytes": 1423967936
+          },
+          "builds": []
+        },
+        {
+          "seconds": 13.64482808401226,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1416904704,
+            "physicalFootprintBytes": 1423394496
+          },
+          "builds": []
+        },
+        {
+          "seconds": 14.692540499992901,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1422868480,
+            "physicalFootprintBytes": 1429358272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 15.737390708993189,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1423114240,
+            "physicalFootprintBytes": 1429620440
+          },
+          "builds": []
+        },
+        {
+          "seconds": 16.845205541991163,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1426456576,
+            "physicalFootprintBytes": 1432962776
+          },
+          "builds": []
+        },
+        {
+          "seconds": 17.892482124996604,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1423310848,
+            "physicalFootprintBytes": 1429817048
+          },
+          "builds": []
+        },
+        {
+          "seconds": 18.93013312498806,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1424441344,
+            "physicalFootprintBytes": 1430898392
+          },
+          "builds": []
+        },
+        {
+          "seconds": 20.002336500008823,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1423048704,
+            "physicalFootprintBytes": 1429505752
+          },
+          "builds": []
+        },
+        {
+          "seconds": 21.06949712499045,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1424932864,
+            "physicalFootprintBytes": 1431357144
+          },
+          "builds": []
+        },
+        {
+          "seconds": 22.101217791991076,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1424490496,
+            "physicalFootprintBytes": 1430882008
+          },
+          "builds": []
+        },
+        {
+          "seconds": 23.141457334015286,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1423097856,
+            "physicalFootprintBytes": 1429489368
+          },
+          "builds": []
+        },
+        {
+          "seconds": 24.17788937498699,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1427898368,
+            "physicalFootprintBytes": 1434306288
+          },
+          "builds": []
+        },
+        {
+          "seconds": 25.227157374989474,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1427144704,
+            "physicalFootprintBytes": 1433552624
+          },
+          "builds": []
+        },
+        {
+          "seconds": 26.27307437499985,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1428144128,
+            "physicalFootprintBytes": 1434552048
+          },
+          "builds": []
+        },
+        {
+          "seconds": 27.313828959013335,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1426161664,
+            "physicalFootprintBytes": 1432569584
+          },
+          "builds": []
+        },
+        {
+          "seconds": 28.35430274999817,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1426292736,
+            "physicalFootprintBytes": 1432700656
+          },
+          "builds": []
+        },
+        {
+          "seconds": 29.395231625007,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1432059904,
+            "physicalFootprintBytes": 1438467824
+          },
+          "builds": []
+        },
+        {
+          "seconds": 30.46908604199416,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1429553152,
+            "physicalFootprintBytes": 1435961072
+          },
+          "builds": []
+        },
+        {
+          "seconds": 31.508869874989614,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1428078592,
+            "physicalFootprintBytes": 1434486512
+          },
+          "builds": []
+        },
+        {
+          "seconds": 32.54389854200417,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1428979712,
+            "physicalFootprintBytes": 1435387632
+          },
+          "builds": []
+        },
+        {
+          "seconds": 33.58032170901424,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1428914176,
+            "physicalFootprintBytes": 1435322096
+          },
+          "builds": []
+        },
+        {
+          "seconds": 34.64011458400637,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1427390464,
+            "physicalFootprintBytes": 1433798384
+          },
+          "builds": []
+        },
+        {
+          "seconds": 35.68032908398891,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1427324928,
+            "physicalFootprintBytes": 1433732848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 36.73550800001249,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1428193280,
+            "physicalFootprintBytes": 1434601200
+          },
+          "builds": []
+        },
+        {
+          "seconds": 37.77508420898812,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1429323776,
+            "physicalFootprintBytes": 1435731696
+          },
+          "builds": []
+        },
+        {
+          "seconds": 38.80574395900476,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1050869760,
+            "physicalFootprintBytes": 1433700080
+          },
+          "builds": [
+            "swift-frontend"
+          ]
+        }
+      ],
+      "utc": "2026-10-11T08:30:41Z",
+      "identity": {
+        "head": "048cefd20b4ea8ca37f2e4954a48acc3aca473dd",
+        "binary_sha256": "66f8fe8e8fccc44df6f1c426b9fef2c8bbba872f427e767a3ab26958f42d0e4d",
+        "runner_sha256": "d704a359e3863a075f73c30a166ab92fec1ab728ee5cfec60df784183e8d43b2",
+        "harness_sha256": "ab0b65ddc063d3151d18c75da817708f9b567778aa2b996232ac524b5110c6c4",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+        "plan_sha256": "487f64a29e7c732381eb57d25975692a0825bce4f629bf576dc631b7efcb7007"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "mode": "controller",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "cpu10",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 1.3994757500000001,
+        "p95": 1.3994757500000001,
+        "min": 1.3994757500000001,
+        "max": 1.3994757500000001
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 1672413184,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.601741416,
+        "p95": 0.601741416,
+        "min": 0.601741416,
+        "max": 0.601741416
+      },
+      "sampledPeakPhysicalFootprintBytes": 1674381208,
+      "wer": {
+        "n": 1,
+        "p50": 0.09324219757544493,
+        "p95": 0.09324219757544493,
+        "min": 0.09324219757544493,
+        "max": 0.09324219757544493
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.04371937064740779,
+        "p95": 0.04371937064740779,
+        "min": 0.04371937064740779,
+        "max": 0.04371937064740779
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-3540s-settled-1-cpu10-0-full"
+      ],
+      "cuts": [
+        97
+      ],
+      "completedBeforeStop": [
+        97
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "cpu10",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": true,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 1.269755417,
+        "p95": 1.269755417,
+        "min": 1.269755417,
+        "max": 1.269755417
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 1454260224,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.765490083,
+        "p95": 0.765490083,
+        "min": 0.765490083,
+        "max": 0.765490083
+      },
+      "sampledPeakPhysicalFootprintBytes": 1457882888,
+      "wer": {
+        "n": 1,
+        "p50": 0.09324219757544493,
+        "p95": 0.09324219757544493,
+        "min": 0.09324219757544493,
+        "max": 0.09324219757544493
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.04371937064740779,
+        "p95": 0.04371937064740779,
+        "min": 0.04371937064740779,
+        "max": 0.04371937064740779
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-3540s-settled-1-cpu10-0-tail"
+      ],
+      "cuts": [
+        97
+      ],
+      "completedBeforeStop": [
+        97
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 1.169749875,
+        "p95": 1.1783523378,
+        "min": 1.168048167,
+        "max": 1.179308167
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 1666236416,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.597366583,
+        "p95": 0.6194108086,
+        "min": 0.263823167,
+        "max": 0.621860167
+      },
+      "sampledPeakPhysicalFootprintBytes": 1669007304,
+      "wer": {
+        "n": 3,
+        "p50": 0.09324219757544493,
+        "p95": 0.09324219757544493,
+        "min": 0.09324219757544493,
+        "max": 0.09324219757544493
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.04371937064740779,
+        "p95": 0.04371937064740779,
+        "min": 0.04371937064740779,
+        "max": 0.04371937064740779
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-3540s-settled-1-normal-0-full",
+        "controller-en-3540s-settled-1-normal-1-full",
+        "controller-en-3540s-settled-1-normal-2-full"
+      ],
+      "cuts": [
+        97
+      ],
+      "completedBeforeStop": [
+        97
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": true,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 1.098574875,
+        "p95": 1.1093611878,
+        "min": 1.087356875,
+        "max": 1.110559667
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 1437171712,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.253975625,
+        "p95": 0.3287485997,
+        "min": 0.23934025,
+        "max": 0.337056708
+      },
+      "sampledPeakPhysicalFootprintBytes": 1439368920,
+      "wer": {
+        "n": 3,
+        "p50": 0.09324219757544493,
+        "p95": 0.09324219757544493,
+        "min": 0.09324219757544493,
+        "max": 0.09324219757544493
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.04371937064740779,
+        "p95": 0.04371937064740779,
+        "min": 0.04371937064740779,
+        "max": 0.04371937064740779
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-3540s-settled-1-normal-0-tail",
+        "controller-en-3540s-settled-1-normal-1-tail",
+        "controller-en-3540s-settled-1-normal-2-tail"
+      ],
+      "cuts": [
+        97
+      ],
+      "completedBeforeStop": [
+        97
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "cpu10",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 0.709219791,
+        "p95": 0.7203522294,
+        "min": 0.55904875,
+        "max": 0.721589167
+      },
+      "audioSeconds": 361.24,
+      "peakRSSBytes": 1044578304,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.301325375,
+        "p95": 0.32897311220000003,
+        "min": 0.290496583,
+        "max": 0.332045083
+      },
+      "sampledPeakPhysicalFootprintBytes": 1038976464,
+      "wer": {
+        "n": 3,
+        "p50": 0.06852791878172589,
+        "p95": 0.06852791878172589,
+        "min": 0.06852791878172589,
+        "max": 0.06852791878172589
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.024111675126903553,
+        "p95": 0.024111675126903553,
+        "min": 0.024111675126903553,
+        "max": 0.024111675126903553
+      },
+      "referenceWords": 788,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-360s-settled-1-cpu10-0-full",
+        "controller-en-360s-settled-1-cpu10-1-full",
+        "controller-en-360s-settled-1-cpu10-2-full"
+      ],
+      "cuts": [
+        11
+      ],
+      "completedBeforeStop": [
+        11
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "cpu10",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": true,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 0.728082792,
+        "p95": 0.7502678667,
+        "min": 0.716809583,
+        "max": 0.752732875
+      },
+      "audioSeconds": 361.24,
+      "peakRSSBytes": 1017217024,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.297192084,
+        "p95": 0.32584099650000004,
+        "min": 0.268705917,
+        "max": 0.329024209
+      },
+      "sampledPeakPhysicalFootprintBytes": 1021773240,
+      "wer": {
+        "n": 3,
+        "p50": 0.06852791878172589,
+        "p95": 0.06852791878172589,
+        "min": 0.06852791878172589,
+        "max": 0.06852791878172589
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.024111675126903553,
+        "p95": 0.024111675126903553,
+        "min": 0.024111675126903553,
+        "max": 0.024111675126903553
+      },
+      "referenceWords": 788,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-360s-settled-1-cpu10-0-tail",
+        "controller-en-360s-settled-1-cpu10-1-tail",
+        "controller-en-360s-settled-1-cpu10-2-tail"
+      ],
+      "cuts": [
+        11
+      ],
+      "completedBeforeStop": [
+        11
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 0.691451208,
+        "p95": 0.7162709211,
+        "min": 0.65712475,
+        "max": 0.719028667
+      },
+      "audioSeconds": 361.24,
+      "peakRSSBytes": 1035403264,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.235780959,
+        "p95": 0.24042165869999998,
+        "min": 0.23277375,
+        "max": 0.240937292
+      },
+      "sampledPeakPhysicalFootprintBytes": 1037895144,
+      "wer": {
+        "n": 3,
+        "p50": 0.06852791878172589,
+        "p95": 0.06852791878172589,
+        "min": 0.06852791878172589,
+        "max": 0.06852791878172589
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.024111675126903553,
+        "p95": 0.024111675126903553,
+        "min": 0.024111675126903553,
+        "max": 0.024111675126903553
+      },
+      "referenceWords": 788,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-360s-settled-1-normal-0-full",
+        "controller-en-360s-settled-1-normal-1-full",
+        "controller-en-360s-settled-1-normal-2-full"
+      ],
+      "cuts": [
+        11
+      ],
+      "completedBeforeStop": [
+        11
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "en-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": true,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 0.685221125,
+        "p95": 0.7095490619,
+        "min": 0.624519833,
+        "max": 0.712252166
+      },
+      "audioSeconds": 361.24,
+      "peakRSSBytes": 1010532352,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.237138542,
+        "p95": 0.2432798045,
+        "min": 0.227142083,
+        "max": 0.243962167
+      },
+      "sampledPeakPhysicalFootprintBytes": 1009190376,
+      "wer": {
+        "n": 3,
+        "p50": 0.06852791878172589,
+        "p95": 0.06852791878172589,
+        "min": 0.06852791878172589,
+        "max": 0.06852791878172589
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.024111675126903553,
+        "p95": 0.024111675126903553,
+        "min": 0.024111675126903553,
+        "max": 0.024111675126903553
+      },
+      "referenceWords": 788,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-en-360s-settled-1-normal-0-tail",
+        "controller-en-360s-settled-1-normal-1-tail",
+        "controller-en-360s-settled-1-normal-2-tail"
+      ],
+      "cuts": [
+        11
+      ],
+      "completedBeforeStop": [
+        11
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "cpu10",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.250233541,
+        "p95": 0.250233541,
+        "min": 0.250233541,
+        "max": 0.250233541
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 1656111104,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.243494125,
+        "p95": 0.243494125,
+        "min": 0.243494125,
+        "max": 0.243494125
+      },
+      "sampledPeakPhysicalFootprintBytes": 1441449736,
+      "wer": {
+        "n": 1,
+        "p50": 0.0700423429781228,
+        "p95": 0.0700423429781228,
+        "min": 0.0700423429781228,
+        "max": 0.0700423429781228
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.014114326040931546,
+        "p95": 0.014114326040931546,
+        "min": 0.014114326040931546,
+        "max": 0.014114326040931546
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-3540s-settled-1-cpu10-0-full"
+      ],
+      "cuts": [
+        196
+      ],
+      "completedBeforeStop": [
+        196
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "cpu10",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": true,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.194105167,
+        "p95": 0.194105167,
+        "min": 0.194105167,
+        "max": 0.194105167
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 1437384704,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.319388416,
+        "p95": 0.319388416,
+        "min": 0.319388416,
+        "max": 0.319388416
+      },
+      "sampledPeakPhysicalFootprintBytes": 1440220912,
+      "wer": {
+        "n": 1,
+        "p50": 0.0700423429781228,
+        "p95": 0.0700423429781228,
+        "min": 0.0700423429781228,
+        "max": 0.0700423429781228
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.014114326040931546,
+        "p95": 0.014114326040931546,
+        "min": 0.014114326040931546,
+        "max": 0.014114326040931546
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-3540s-settled-1-cpu10-0-tail"
+      ],
+      "cuts": [
+        196
+      ],
+      "completedBeforeStop": [
+        196
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 0.230047792,
+        "p95": 0.2441705173,
+        "min": 0.226256042,
+        "max": 0.245739709
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 1642528768,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.234712208,
+        "p95": 0.5451290704999999,
+        "min": 0.226059834,
+        "max": 0.579619833
+      },
+      "sampledPeakPhysicalFootprintBytes": 1428653832,
+      "wer": {
+        "n": 3,
+        "p50": 0.0700423429781228,
+        "p95": 0.0700423429781228,
+        "min": 0.0700423429781228,
+        "max": 0.0700423429781228
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.014114326040931546,
+        "p95": 0.014114326040931546,
+        "min": 0.014114326040931546,
+        "max": 0.014114326040931546
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-3540s-settled-1-normal-0-full",
+        "controller-ru-3540s-settled-1-normal-1-full",
+        "controller-ru-3540s-settled-1-normal-2-full"
+      ],
+      "cuts": [
+        196
+      ],
+      "completedBeforeStop": [
+        196
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": true,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 0.148002084,
+        "p95": 0.1523115837,
+        "min": 0.143757917,
+        "max": 0.152790417
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 1432223744,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.259195917,
+        "p95": 0.3144869292,
+        "min": 0.235733833,
+        "max": 0.320630375
+      },
+      "sampledPeakPhysicalFootprintBytes": 1436698376,
+      "wer": {
+        "n": 3,
+        "p50": 0.0700423429781228,
+        "p95": 0.0700423429781228,
+        "min": 0.0700423429781228,
+        "max": 0.0700423429781228
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.014114326040931546,
+        "p95": 0.014114326040931546,
+        "min": 0.014114326040931546,
+        "max": 0.014114326040931546
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-3540s-settled-1-normal-0-tail",
+        "controller-ru-3540s-settled-1-normal-1-tail",
+        "controller-ru-3540s-settled-1-normal-2-tail"
+      ],
+      "cuts": [
+        196
+      ],
+      "completedBeforeStop": [
+        196
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "cpu10",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 0.522252666,
+        "p95": 0.5448428163,
+        "min": 0.506563583,
+        "max": 0.547352833
+      },
+      "audioSeconds": 369.66,
+      "peakRSSBytes": 1032273920,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.27821275,
+        "p95": 0.3058906381,
+        "min": 0.262451541,
+        "max": 0.308965959
+      },
+      "sampledPeakPhysicalFootprintBytes": 1036191232,
+      "wer": {
+        "n": 3,
+        "p50": 0.0727580372250423,
+        "p95": 0.0727580372250423,
+        "min": 0.0727580372250423,
+        "max": 0.0727580372250423
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.01692047377326565,
+        "p95": 0.01692047377326565,
+        "min": 0.01692047377326565,
+        "max": 0.01692047377326565
+      },
+      "referenceWords": 591,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-360s-settled-1-cpu10-0-full",
+        "controller-ru-360s-settled-1-cpu10-1-full",
+        "controller-ru-360s-settled-1-cpu10-2-full"
+      ],
+      "cuts": [
+        21
+      ],
+      "completedBeforeStop": [
+        21
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "cpu10",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": true,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 0.567747917,
+        "p95": 0.5757562295,
+        "min": 0.535276583,
+        "max": 0.576646042
+      },
+      "audioSeconds": 369.66,
+      "peakRSSBytes": 1010892800,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.293529209,
+        "p95": 0.3326294462,
+        "min": 0.264306417,
+        "max": 0.336973917
+      },
+      "sampledPeakPhysicalFootprintBytes": 1013679568,
+      "wer": {
+        "n": 3,
+        "p50": 0.0727580372250423,
+        "p95": 0.0727580372250423,
+        "min": 0.0727580372250423,
+        "max": 0.0727580372250423
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.01692047377326565,
+        "p95": 0.01692047377326565,
+        "min": 0.01692047377326565,
+        "max": 0.01692047377326565
+      },
+      "referenceWords": 591,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-360s-settled-1-cpu10-0-tail",
+        "controller-ru-360s-settled-1-cpu10-1-tail",
+        "controller-ru-360s-settled-1-cpu10-2-tail"
+      ],
+      "cuts": [
+        21
+      ],
+      "completedBeforeStop": [
+        21
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 0.488939417,
+        "p95": 0.5003374661,
+        "min": 0.483131042,
+        "max": 0.501603916
+      },
+      "audioSeconds": 369.66,
+      "peakRSSBytes": 1024278528,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.238208375,
+        "p95": 0.2409564503,
+        "min": 0.232992416,
+        "max": 0.241261792
+      },
+      "sampledPeakPhysicalFootprintBytes": 1027491304,
+      "wer": {
+        "n": 3,
+        "p50": 0.0727580372250423,
+        "p95": 0.0727580372250423,
+        "min": 0.0727580372250423,
+        "max": 0.0727580372250423
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.01692047377326565,
+        "p95": 0.01692047377326565,
+        "min": 0.01692047377326565,
+        "max": 0.01692047377326565
+      },
+      "referenceWords": 591,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-360s-settled-1-normal-0-full",
+        "controller-ru-360s-settled-1-normal-1-full",
+        "controller-ru-360s-settled-1-normal-2-full"
+      ],
+      "cuts": [
+        21
+      ],
+      "completedBeforeStop": [
+        21
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    },
+    {
+      "mode": "controller",
+      "fixture": "ru-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": true,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 0.478643416,
+        "p95": 0.4788876913,
+        "min": 0.46975875,
+        "max": 0.478914833
+      },
+      "audioSeconds": 369.66,
+      "peakRSSBytes": 1003307008,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.242586917,
+        "p95": 0.303889967,
+        "min": 0.236971667,
+        "max": 0.310701417
+      },
+      "sampledPeakPhysicalFootprintBytes": 1004242360,
+      "wer": {
+        "n": 3,
+        "p50": 0.0727580372250423,
+        "p95": 0.0727580372250423,
+        "min": 0.0727580372250423,
+        "max": 0.0727580372250423
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.01692047377326565,
+        "p95": 0.01692047377326565,
+        "min": 0.01692047377326565,
+        "max": 0.01692047377326565
+      },
+      "referenceWords": 591,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-ru-360s-settled-1-normal-0-tail",
+        "controller-ru-360s-settled-1-normal-1-tail",
+        "controller-ru-360s-settled-1-normal-2-tail"
+      ],
+      "cuts": [
+        21
+      ],
+      "completedBeforeStop": [
+        21
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": true
+    }
+  ],
+  "fileParity": [],
+  "tailParity": [
+    {
+      "fixture": "en-3540s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-en-3540s-settled-1-cpu10-0-full",
+      "baseline": "controller-en-3540s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-3540s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-en-3540s-settled-1-cpu10-0-tail",
+      "baseline": "controller-en-3540s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-3540s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-en-3540s-settled-1-normal-0-full",
+      "baseline": "controller-en-3540s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-3540s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-en-3540s-settled-1-normal-0-tail",
+      "baseline": "controller-en-3540s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-3540s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-en-3540s-settled-1-normal-1-tail",
+      "baseline": "controller-en-3540s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-3540s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-en-3540s-settled-1-normal-1-full",
+      "baseline": "controller-en-3540s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-3540s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-en-3540s-settled-1-normal-2-full",
+      "baseline": "controller-en-3540s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-3540s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-en-3540s-settled-1-normal-2-tail",
+      "baseline": "controller-en-3540s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-en-360s-settled-1-cpu10-0-tail",
+      "baseline": "controller-en-360s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-en-360s-settled-1-cpu10-0-full",
+      "baseline": "controller-en-360s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-en-360s-settled-1-cpu10-1-full",
+      "baseline": "controller-en-360s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-en-360s-settled-1-cpu10-1-tail",
+      "baseline": "controller-en-360s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-en-360s-settled-1-cpu10-2-tail",
+      "baseline": "controller-en-360s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-en-360s-settled-1-cpu10-2-full",
+      "baseline": "controller-en-360s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-en-360s-settled-1-normal-0-full",
+      "baseline": "controller-en-360s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-en-360s-settled-1-normal-0-tail",
+      "baseline": "controller-en-360s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-en-360s-settled-1-normal-1-tail",
+      "baseline": "controller-en-360s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-en-360s-settled-1-normal-1-full",
+      "baseline": "controller-en-360s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-en-360s-settled-1-normal-2-full",
+      "baseline": "controller-en-360s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-en-360s-settled-1-normal-2-tail",
+      "baseline": "controller-en-360s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-ru-3540s-settled-1-cpu10-0-full",
+      "baseline": "controller-ru-3540s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-ru-3540s-settled-1-cpu10-0-tail",
+      "baseline": "controller-ru-3540s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-ru-3540s-settled-1-normal-0-full",
+      "baseline": "controller-ru-3540s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-ru-3540s-settled-1-normal-0-tail",
+      "baseline": "controller-ru-3540s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-ru-3540s-settled-1-normal-1-tail",
+      "baseline": "controller-ru-3540s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-ru-3540s-settled-1-normal-1-full",
+      "baseline": "controller-ru-3540s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-ru-3540s-settled-1-normal-2-full",
+      "baseline": "controller-ru-3540s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-ru-3540s-settled-1-normal-2-tail",
+      "baseline": "controller-ru-3540s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-360s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-ru-360s-settled-1-cpu10-0-tail",
+      "baseline": "controller-ru-360s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-360s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-ru-360s-settled-1-cpu10-0-full",
+      "baseline": "controller-ru-360s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-360s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-ru-360s-settled-1-cpu10-1-full",
+      "baseline": "controller-ru-360s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-360s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-ru-360s-settled-1-cpu10-1-tail",
+      "baseline": "controller-ru-360s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-360s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-ru-360s-settled-1-cpu10-2-tail",
+      "baseline": "controller-ru-360s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-360s",
+      "condition": "cpu10",
+      "pacing": "settled",
+      "id": "controller-ru-360s-settled-1-cpu10-2-full",
+      "baseline": "controller-ru-360s-settled-1-cpu10-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-360s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-ru-360s-settled-1-normal-0-full",
+      "baseline": "controller-ru-360s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-360s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-ru-360s-settled-1-normal-0-tail",
+      "baseline": "controller-ru-360s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-360s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-ru-360s-settled-1-normal-1-tail",
+      "baseline": "controller-ru-360s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-360s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-ru-360s-settled-1-normal-1-full",
+      "baseline": "controller-ru-360s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-360s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-ru-360s-settled-1-normal-2-full",
+      "baseline": "controller-ru-360s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    },
+    {
+      "fixture": "ru-360s",
+      "condition": "normal",
+      "pacing": "settled",
+      "id": "controller-ru-360s-settled-1-normal-2-tail",
+      "baseline": "controller-ru-360s-settled-1-normal-0-full",
+      "exactText": true,
+      "sameFinalSamples": true,
+      "sameDecodeSizes": true
+    }
+  ]
+}

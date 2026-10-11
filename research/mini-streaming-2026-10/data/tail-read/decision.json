@@ -1,0 +1,326 @@
+{
+  "summarySHA256": "cdf6e30f80560dc2dc10981e81c70bb5c6d7002357810a08cba77ad8c0b1ed03",
+  "exactParityPassed": true,
+  "memoryGatePassed": true,
+  "longMedianGatePassed": false,
+  "comparisons": [
+    {
+      "fixture": "ru-360s",
+      "condition": "normal",
+      "n": 3,
+      "full": {
+        "n": 3,
+        "p50": 0.488939417,
+        "p95": 0.5003374661,
+        "min": 0.483131042,
+        "max": 0.501603916
+      },
+      "tail": {
+        "n": 3,
+        "p50": 0.478643416,
+        "p95": 0.4788876913,
+        "min": 0.46975875,
+        "max": 0.478914833
+      },
+      "medianGainPercent": 2.1057825656956575,
+      "fullPeakFootprintBytes": 1027491304,
+      "tailPeakFootprintBytes": 1004242360,
+      "pairs": [
+        {
+          "repeat": 0,
+          "fullSeconds": 0.501603916,
+          "tailSeconds": 0.46975875,
+          "differenceSeconds": -0.03184516599999998
+        },
+        {
+          "repeat": 1,
+          "fullSeconds": 0.483131042,
+          "tailSeconds": 0.478914833,
+          "differenceSeconds": -0.004216209000000026
+        },
+        {
+          "repeat": 2,
+          "fullSeconds": 0.488939417,
+          "tailSeconds": 0.478643416,
+          "differenceSeconds": -0.010296000999999999
+        }
+      ]
+    },
+    {
+      "fixture": "ru-360s",
+      "condition": "cpu10",
+      "n": 3,
+      "full": {
+        "n": 3,
+        "p50": 0.522252666,
+        "p95": 0.5448428163,
+        "min": 0.506563583,
+        "max": 0.547352833
+      },
+      "tail": {
+        "n": 3,
+        "p50": 0.567747917,
+        "p95": 0.5757562295,
+        "min": 0.535276583,
+        "max": 0.576646042
+      },
+      "medianGainPercent": -8.711348732492642,
+      "fullPeakFootprintBytes": 1036191232,
+      "tailPeakFootprintBytes": 1013679568,
+      "pairs": [
+        {
+          "repeat": 0,
+          "fullSeconds": 0.547352833,
+          "tailSeconds": 0.535276583,
+          "differenceSeconds": -0.01207625000000001
+        },
+        {
+          "repeat": 1,
+          "fullSeconds": 0.522252666,
+          "tailSeconds": 0.567747917,
+          "differenceSeconds": 0.04549525100000007
+        },
+        {
+          "repeat": 2,
+          "fullSeconds": 0.506563583,
+          "tailSeconds": 0.576646042,
+          "differenceSeconds": 0.07008245899999999
+        }
+      ]
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "normal",
+      "n": 3,
+      "full": {
+        "n": 3,
+        "p50": 0.691451208,
+        "p95": 0.7162709211,
+        "min": 0.65712475,
+        "max": 0.719028667
+      },
+      "tail": {
+        "n": 3,
+        "p50": 0.685221125,
+        "p95": 0.7095490619,
+        "min": 0.624519833,
+        "max": 0.712252166
+      },
+      "medianGainPercent": 0.9010155637764194,
+      "fullPeakFootprintBytes": 1037895144,
+      "tailPeakFootprintBytes": 1009190376,
+      "pairs": [
+        {
+          "repeat": 0,
+          "fullSeconds": 0.719028667,
+          "tailSeconds": 0.624519833,
+          "differenceSeconds": -0.09450883399999999
+        },
+        {
+          "repeat": 1,
+          "fullSeconds": 0.65712475,
+          "tailSeconds": 0.685221125,
+          "differenceSeconds": 0.02809637499999995
+        },
+        {
+          "repeat": 2,
+          "fullSeconds": 0.691451208,
+          "tailSeconds": 0.712252166,
+          "differenceSeconds": 0.020800957999999925
+        }
+      ]
+    },
+    {
+      "fixture": "en-360s",
+      "condition": "cpu10",
+      "n": 3,
+      "full": {
+        "n": 3,
+        "p50": 0.709219791,
+        "p95": 0.7203522294,
+        "min": 0.55904875,
+        "max": 0.721589167
+      },
+      "tail": {
+        "n": 3,
+        "p50": 0.728082792,
+        "p95": 0.7502678667,
+        "min": 0.716809583,
+        "max": 0.752732875
+      },
+      "medianGainPercent": -2.6596833928454355,
+      "fullPeakFootprintBytes": 1038976464,
+      "tailPeakFootprintBytes": 1021773240,
+      "pairs": [
+        {
+          "repeat": 0,
+          "fullSeconds": 0.709219791,
+          "tailSeconds": 0.752732875,
+          "differenceSeconds": 0.04351308399999998
+        },
+        {
+          "repeat": 1,
+          "fullSeconds": 0.721589167,
+          "tailSeconds": 0.716809583,
+          "differenceSeconds": -0.004779584000000003
+        },
+        {
+          "repeat": 2,
+          "fullSeconds": 0.55904875,
+          "tailSeconds": 0.728082792,
+          "differenceSeconds": 0.16903404200000005
+        }
+      ]
+    },
+    {
+      "fixture": "ru-3540s",
+      "condition": "normal",
+      "n": 3,
+      "full": {
+        "n": 3,
+        "p50": 0.230047792,
+        "p95": 0.2441705173,
+        "min": 0.226256042,
+        "max": 0.245739709
+      },
+      "tail": {
+        "n": 3,
+        "p50": 0.148002084,
+        "p95": 0.1523115837,
+        "min": 0.143757917,
+        "max": 0.152790417
+      },
+      "medianGainPercent": 35.66463615525595,
+      "fullPeakFootprintBytes": 1428653832,
+      "tailPeakFootprintBytes": 1436698376,
+      "pairs": [
+        {
+          "repeat": 0,
+          "fullSeconds": 0.245739709,
+          "tailSeconds": 0.152790417,
+          "differenceSeconds": -0.09294929199999999
+        },
+        {
+          "repeat": 1,
+          "fullSeconds": 0.230047792,
+          "tailSeconds": 0.148002084,
+          "differenceSeconds": -0.082045708
+        },
+        {
+          "repeat": 2,
+          "fullSeconds": 0.226256042,
+          "tailSeconds": 0.143757917,
+          "differenceSeconds": -0.08249812499999998
+        }
+      ]
+    },
+    {
+      "fixture": "ru-3540s",
+      "condition": "cpu10",
+      "n": 1,
+      "full": {
+        "n": 1,
+        "p50": 0.250233541,
+        "p95": 0.250233541,
+        "min": 0.250233541,
+        "max": 0.250233541
+      },
+      "tail": {
+        "n": 1,
+        "p50": 0.194105167,
+        "p95": 0.194105167,
+        "min": 0.194105167,
+        "max": 0.194105167
+      },
+      "medianGainPercent": 22.430395931614942,
+      "fullPeakFootprintBytes": 1441449736,
+      "tailPeakFootprintBytes": 1440220912,
+      "pairs": [
+        {
+          "repeat": 0,
+          "fullSeconds": 0.250233541,
+          "tailSeconds": 0.194105167,
+          "differenceSeconds": -0.05612837400000001
+        }
+      ]
+    },
+    {
+      "fixture": "en-3540s",
+      "condition": "normal",
+      "n": 3,
+      "full": {
+        "n": 3,
+        "p50": 1.169749875,
+        "p95": 1.1783523378,
+        "min": 1.168048167,
+        "max": 1.179308167
+      },
+      "tail": {
+        "n": 3,
+        "p50": 1.098574875,
+        "p95": 1.1093611878,
+        "min": 1.087356875,
+        "max": 1.110559667
+      },
+      "medianGainPercent": 6.08463411889657,
+      "fullPeakFootprintBytes": 1669007304,
+      "tailPeakFootprintBytes": 1439368920,
+      "pairs": [
+        {
+          "repeat": 0,
+          "fullSeconds": 1.179308167,
+          "tailSeconds": 1.098574875,
+          "differenceSeconds": -0.08073329200000012
+        },
+        {
+          "repeat": 1,
+          "fullSeconds": 1.169749875,
+          "tailSeconds": 1.087356875,
+          "differenceSeconds": -0.08239299999999994
+        },
+        {
+          "repeat": 2,
+          "fullSeconds": 1.168048167,
+          "tailSeconds": 1.110559667,
+          "differenceSeconds": -0.05748850000000005
+        }
+      ]
+    },
+    {
+      "fixture": "en-3540s",
+      "condition": "cpu10",
+      "n": 1,
+      "full": {
+        "n": 1,
+        "p50": 1.3994757500000001,
+        "p95": 1.3994757500000001,
+        "min": 1.3994757500000001,
+        "max": 1.3994757500000001
+      },
+      "tail": {
+        "n": 1,
+        "p50": 1.269755417,
+        "p95": 1.269755417,
+        "min": 1.269755417,
+        "max": 1.269755417
+      },
+      "medianGainPercent": 9.269209059178063,
+      "fullPeakFootprintBytes": 1674381208,
+      "tailPeakFootprintBytes": 1457882888,
+      "pairs": [
+        {
+          "repeat": 0,
+          "fullSeconds": 1.3994757500000001,
+          "tailSeconds": 1.269755417,
+          "differenceSeconds": -0.12972033300000008
+        }
+      ]
+    }
+  ],
+  "failedAttempts": 2,
+  "adoptionApproved": false,
+  "remainingGate": null,
+  "benchmarkGatePassed": false,
+  "status": "rejected",
+  "reason": "Exact samples/text and memory gates passed, but the registered >=10% normal-long median gain failed for English. App wiring is not adopted. The optional tested callback remains for reproducible research."
+}

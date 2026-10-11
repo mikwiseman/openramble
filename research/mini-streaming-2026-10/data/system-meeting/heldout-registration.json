@@ -1,0 +1,34 @@
+{
+  "utc": "2026-10-11T09:13:34.375514+00:00",
+  "candidateScope": "system-only",
+  "systemSpeechPeak": 0.005,
+  "microphoneSpeechPeak": 0.02,
+  "selectedArmUsesCaptureDefault": true,
+  "sourceSelectionSHA256": "91c79d513cbdac78ffc213e8f75e260385722fe8cb53b9bdc960d4a7b52ff24c",
+  "planSHA256": "a1d9b581e3a9fa156bca14f3c62ec0134c09ef552f9f66eb84d484798815a5f3",
+  "sourceManifestSHA256": "2700e5ab57dae4fba3d3d0a3b3e8f39a828dad1f23b911ba7643aa99b36c89d5",
+  "phrasesPerLanguage": 50,
+  "eachPhraseOnce": true,
+  "composites": [
+    {
+      "id": "ru-quiet-heldout",
+      "duration_seconds": 593.8,
+      "audio_sha256": "36d0427dd5f1933bbce5f9b23a132792403ee1daa66189c52b2db16c286e6db0",
+      "reference_sha256": "a83849ee196fa5c71e77c28921c798367a7eef39e399847da90a9fc1e91f5c87"
+    },
+    {
+      "id": "en-quiet-heldout",
+      "duration_seconds": 555.34,
+      "audio_sha256": "425cd0e472445574f1c0ff7d7b394cd2acfd00a9ee9b979e823d1cdec5273ce0",
+      "reference_sha256": "595b04c7a5acba52bca64406c4e3a2af157300a33e202fbfce2758c0063838b0"
+    }
+  ],
+  "nativeOutputsInspected": false,
+  "gates": {
+    "englishWERGainPointsAtLeast": 10,
+    "russianWEROrDeletionRegressionPointsAtMost": 0.5,
+    "englishDeletionRegressionAllowed": false,
+    "memoryWarningAllowed": false,
+    "maximumDecodeSeconds": 2
+  }
+}

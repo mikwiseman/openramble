@@ -3,6 +3,24 @@
 The raw evidence uses public FLEURS speech only. No microphone, clipboard or
 user recording is read. Audio and model binaries are not committed.
 
+## Source revisions matter
+
+The current branch includes accepted behavior changes. Rebuilding its tip
+does not reproduce the old default. Use a separate checkout of the recorded
+revision for each cohort, and inspect its saved identity before combining data.
+
+| Cohort | Source revision |
+| --- | --- |
+| Original 301-run baseline and separate scaling | `373f2c294a79daae76b449173c2001589df1cb01` |
+| Fixed meeting offsets, file-policy development/holdout, tail read | `048cefd` (full identity in each data export) |
+| Full FileTranscriber verification and 18 quiet/noise runs | `7dc3f2638b45a859fd232248c2497347719e3525` |
+| Second holdout, system-channel default | `cea8893575bbefb5c9af25c8103725cb57b07d03` |
+
+Every identity also records the runner, harness, binary, input manifest and
+model SHA-256; custom runs additionally bind their plan. A rebuild may have
+a different binary hash and must use a new output directory. New measurements
+must not be silently appended to the archived cohort.
+
 ## Inputs
 
 Use the October corpus preparer from this repository. It pins the dataset
@@ -170,3 +188,60 @@ PCM control plus a500ms-zero suffix variant. Use this new directory as
 `run.py custom --data` with `experiment-plans/tts-end-context.json`. Never mix
 these synthetic results into the FLEURS quality tables. A different system
 voice asset requires a new cohort rather than ignoring the hash mismatch.
+
+## Quiet speech, echo and the second heldout set
+
+At revision `7dc3f26`, generate the four development speech composites and
+five deterministic noise fixtures with `prepare-quiet-meeting.py
+--source-data "$BENCH_ROOT" --out work/mini-quiet-data`. Run the generated
+`quiet-meeting.json` with `run.py custom`, then score using
+`analyze-quiet-meeting.py --run work/mini-quiet --data work/mini-quiet-data
+--scorer research/mini-streaming-2026-10/analyze.py --out work/mini-quiet-export`.
+
+The global threshold is rejected on sparse echo. Do not describe the heldout
+results below as validation of that global candidate. The separately
+registered system-only variant first requires the capture tests in
+`SystemMeetingDefaultTests`, the existing `MeetingCaptureTests` and
+`CrossTalkGateTests`. Its RED/GREEN evidence is in `regression-red/` and
+`data/system-meeting/`. The microphone threshold and echo gate stay unchanged.
+
+At revision `cea8893`, the second preparation is:
+
+```bash
+python3 research/mini-streaming-2026-10/prepare-quiet-heldout.py \
+  --decision research/mini-streaming-2026-10/data/quiet-meeting/decision.json \
+  --echo-evidence research/mini-streaming-2026-10/data/system-meeting/echo-decision.json \
+  --system-only-registration research/mini-streaming-2026-10/experiment-plans/system-only-registration.json \
+  --selection research/mini-streaming-2026-10/experiment-plans/quiet-heldout-selection.json \
+  --source-data "$BENCH_ROOT" --first-heldout work/mini-heldout-data \
+  --out work/mini-system-heldout-data
+python3 research/mini-streaming-2026-10/run.py custom \
+  --data work/mini-system-heldout-data --out work/mini-system-heldout \
+  --plan work/mini-system-heldout-data/quiet-heldout.json --model "$BENCH_MODEL" --max-workers 1
+python3 research/mini-streaming-2026-10/analyze-quiet-meeting.py \
+  --run work/mini-system-heldout --data work/mini-system-heldout-data \
+  --scorer research/mini-streaming-2026-10/analyze.py \
+  --out work/mini-system-export --heldout --channel system
+```
+
+Use the final research helpers from this PR alongside the specified source
+checkout: some export/preparation helpers were added after native execution.
+The source-data directory must retain the pinned source archives and the
+first holdout's `source-clips.json` for actual PCM and normalized-text exclusion.
+The second heldout candidate omits a threshold override, exercising the real
+system default; the control explicitly selects 0.02.
+
+Both heldouts have now been inspected. Reproduction is possible, but they
+are no longer untouched validation data for another parameter search.
+One pass per threshold in the second holdout supports its fixed quality gate,
+not a repeatability, latency percentile or live-call speed claim.
+
+## Validation boundaries
+
+With an explicit empty `WAI_MODELS_ROOT`, `./scripts/check.sh --fast` passes
+659 core/capture tests, 199 LocalASR tests (32 model-related skips), the Rust
+workspace, FFI, conformance and surface checks on the final ASR source.
+That does not turn skipped inference checks into passes. Existing model E2E
+failures remain documented in `FINDINGS.md` and
+`regression-red/release-e2e-comparison.json`. Full-path file parity is separately
+recorded in `data/file-quality/native-verification.json`.
