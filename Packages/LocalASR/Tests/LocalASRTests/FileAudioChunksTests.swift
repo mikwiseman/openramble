@@ -4,6 +4,69 @@ import XCTest
 @testable import LocalASR
 
 final class FileAudioChunksTests: XCTestCase {
+    func testNarrowContextPreservesOwnershipAndMergesTheShortFinalTail() async throws {
+        // Every20ms frame has the same peak, so forced cuts stay at the cap;
+        // varying samples also catch a reader returning the wrong audio span.
+        let frameCount = 61 * 16_000 + 2_080
+        let samples: [Float] = (0..<frameCount).map { index -> Float in
+            if index % 16 == 0 { return 0.2 }
+            return 0.1 + Float(index % 251) / 10_000
+        }
+        let url = try recording(samples: samples)
+        defer { try? FileManager.default.removeItem(at: url) }
+        for fromFile in [false, true] {
+            let source: FileAudioChunks
+            if fromFile {
+                source = try await FileAudioChunks(url: url, seconds: 30, overlapMilliseconds: 250)
+            } else {
+                source = FileAudioChunks(samples: samples, seconds: 30, overlapMilliseconds: 250)
+            }
+            var end = 0
+            var count = 0
+            while let chunk = try await source.next() {
+                XCTAssertEqual(chunk.boundaryFrame, end)
+                XCTAssertEqual(chunk.startFrame, max(0, chunk.boundaryFrame - 4_000))
+                XCTAssertEqual(chunk.samples.count, min(samples.count, chunk.endFrame + 4_000) - chunk.startFrame)
+                XCTAssertTrue(chunk.samples == Array(samples[chunk.startFrame..<min(samples.count, chunk.endFrame + 4_000)]), "the exact narrow-context sample window must survive")
+                end = chunk.endFrame
+                count += 1
+            }
+            XCTAssertEqual(end, samples.count)
+            XCTAssertEqual(count, 2, "a narrow context must not make the1.13s tail a separate decode")
+        }
+    }
+
+    func testEarlierPausePolicyChangesCutsWithoutLosingAudio() async throws {
+        let phrase = [Float](repeating: 0.1, count: 8 * 16_000)
+            + [Float](repeating: 0, count: 16_000)
+        let samples = Array(repeating: phrase, count: 6).flatMap { $0 }
+        let url = try recording(samples: samples)
+        defer { try? FileManager.default.removeItem(at: url) }
+        var standardCount = 0
+        let standard = try await FileAudioChunks(url: url)
+        while try await standard.next() != nil { standardCount += 1 }
+
+        for fromFile in [false, true] {
+            let source: FileAudioChunks
+            if fromFile {
+                source = try await FileAudioChunks(url: url, minimumSeconds: 4)
+            } else {
+                source = FileAudioChunks(samples: samples, minimumSeconds: 4)
+            }
+            var end = 0
+            var count = 0
+            while let chunk = try await source.next() {
+                XCTAssertEqual(chunk.boundaryFrame, end)
+                XCTAssertTrue(chunk.samples == Array(samples[chunk.startFrame..<min(samples.count, chunk.endFrame + 2 * 16_000)]), "the exact earlier-pause sample window must survive")
+                if count == 0 { XCTAssertLessThan(chunk.endFrame, 15 * 16_000) }
+                end = chunk.endFrame
+                count += 1
+            }
+            XCTAssertEqual(end, samples.count)
+            XCTAssertGreaterThan(count, standardCount)
+        }
+    }
+
     func testQuietAudioBelowMeetingSpeechThresholdIsNotDiscarded() async throws {
         let url = try recording(seconds: 61, value: 0.001)
         defer { try? FileManager.default.removeItem(at: url) }
@@ -15,7 +78,7 @@ final class FileAudioChunksTests: XCTestCase {
     func testContinuousAudioHasBoundedChunksAndKeepsShortTail() async throws {
         let url = try recording(seconds: 61.13, value: 0.1)
         defer { try? FileManager.default.removeItem(at: url) }
-        let source = try await FileAudioChunks(url: url)
+        let source = try await FileAudioChunks(url: url, seconds: 30)
         var end = 0
         var count = 0
         while let chunk = try await source.next() {
@@ -61,6 +124,20 @@ final class FileAudioChunksTests: XCTestCase {
         XCTAssertEqual(joiner.words.map(\.text), ["Да", "да", "обсудим", "число", "2026."])
         XCTAssertEqual(joiner.words.last?.start, 31.8)
         XCTAssertEqual(joiner.words.last?.end, 32)
+    }
+
+    private func recording(samples: [Float]) throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appending(path: "pause-chunks-\(UUID()).wav")
+        try autoreleasepool {
+            let format = try XCTUnwrap(AVAudioFormat(commonFormat: .pcmFormatFloat32,
+                sampleRate: 16_000, channels: 1, interleaved: false))
+            let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count)))
+            buffer.frameLength = AVAudioFrameCount(samples.count)
+            for (index, value) in samples.enumerated() { buffer.floatChannelData![0][index] = value }
+            let file = try AVAudioFile(forWriting: url, settings: format.settings)
+            try file.write(from: buffer)
+        }
+        return url
     }
 
     private func recording(seconds: Double, value: Float) throws -> URL {

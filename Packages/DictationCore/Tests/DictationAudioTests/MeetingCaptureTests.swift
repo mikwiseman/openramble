@@ -182,7 +182,14 @@ final class MeetingCaptureTests: XCTestCase {
             audioSink: sink
         )
         try await capture.start()
-        try await Task.sleep(for: .milliseconds(230))
+        // Observe the timer's work, rather than racing it with a fixed sleep
+        // when a shared CI host delays scheduling the first tick.
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(5))
+        while clock.now < deadline {
+            if await capture.frameCount >= 1_600 { break }
+            try await Task.sleep(for: .milliseconds(20))
+        }
         let summary = try await capture.stop()
 
         XCTAssertGreaterThanOrEqual(summary.frameCount, 1_600)

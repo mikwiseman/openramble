@@ -1,0 +1,440 @@
+{
+  "normalization": "Unicode NFC, lowercase, ё→е, Unicode word tokens, no numeral expansion",
+  "quantiles": "linear interpolation at (n-1)*p",
+  "qualityScope": "Fixed public fixtures; timing repeats are not independent quality examples.",
+  "identities": {
+    "files-v2": {
+      "head": "346704691491d149e51cf0805248c76f60e2488d",
+      "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+      "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+      "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+      "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+    }
+  },
+  "completedRuns": 4,
+  "failures": [
+    {
+      "run": "smoke-v1",
+      "id": "file-en-60s-settled-4-normal-0",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.04072795799947926,
+          "level": "1",
+          "memory": {
+            "residentBytes": 22511616,
+            "physicalFootprintBytes": 4866648
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.1001022500004183,
+          "level": "2",
+          "memory": {
+            "residentBytes": 2532589568,
+            "physicalFootprintBytes": 2682194464
+          },
+          "builds": []
+        }
+      ],
+      "identity": {
+        "head": "8836439fb5cc51ffe9c64d31e6bfbc802cbb7367",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "84e5e8f1008702c78127552eedc2c0a34f3a3f609ccebc030ac6fd76e9433ee5",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "files-v2",
+      "id": "file-ru-3540s-settled-1-normal-0",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.043958291000308236,
+          "level": "1",
+          "memory": {
+            "residentBytes": 884736,
+            "physicalFootprintBytes": 295056
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.1051910410005803,
+          "level": "2",
+          "memory": {
+            "residentBytes": 943095808,
+            "physicalFootprintBytes": 960988552
+          },
+          "builds": []
+        }
+      ],
+      "utc": "2026-10-09T10:49:28Z",
+      "identity": {
+        "head": "346704691491d149e51cf0805248c76f60e2488d",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "files-v2",
+      "id": "file-mixed-3540s-settled-1-normal-0",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.039523333000033745,
+          "level": "1",
+          "memory": {
+            "residentBytes": 23363584,
+            "physicalFootprintBytes": 5194376
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.1014765830004762,
+          "level": "1",
+          "memory": {
+            "residentBytes": 955891712,
+            "physicalFootprintBytes": 962512264
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.1446573749999516,
+          "level": "1",
+          "memory": {
+            "residentBytes": 965722112,
+            "physicalFootprintBytes": 972047752
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.1935876250008732,
+          "level": "1",
+          "memory": {
+            "residentBytes": 967180288,
+            "physicalFootprintBytes": 973407624
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.246411041000101,
+          "level": "1",
+          "memory": {
+            "residentBytes": 871841792,
+            "physicalFootprintBytes": 974194080
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.30470645800051,
+          "level": "1",
+          "memory": {
+            "residentBytes": 872857600,
+            "physicalFootprintBytes": 973309344
+          },
+          "builds": []
+        },
+        {
+          "seconds": 6.357872166001471,
+          "level": "1",
+          "memory": {
+            "residentBytes": 890241024,
+            "physicalFootprintBytes": 979846560
+          },
+          "builds": []
+        },
+        {
+          "seconds": 7.45284729100058,
+          "level": "1",
+          "memory": {
+            "residentBytes": 888258560,
+            "physicalFootprintBytes": 970868128
+          },
+          "builds": []
+        },
+        {
+          "seconds": 8.506237416000658,
+          "level": "2",
+          "memory": {
+            "residentBytes": 899235840,
+            "physicalFootprintBytes": 980813216
+          },
+          "builds": []
+        }
+      ],
+      "utc": "2026-10-09T10:54:28Z",
+      "identity": {
+        "head": "346704691491d149e51cf0805248c76f60e2488d",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "files-v2",
+      "id": "file-mixed-3540s-settled-1-normal-0",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.054881374999240506,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1474560,
+            "physicalFootprintBytes": 377000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.1106474999996863,
+          "level": "2",
+          "memory": {
+            "residentBytes": 940032000,
+            "physicalFootprintBytes": 960906680
+          },
+          "builds": []
+        }
+      ],
+      "utc": "2026-10-09T10:55:16Z",
+      "identity": {
+        "head": "346704691491d149e51cf0805248c76f60e2488d",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "mode": "file",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 1,
+        "p50": 65.859847166,
+        "p95": 65.859847166,
+        "min": 65.859847166,
+        "max": 65.859847166
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 1002749952,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.594186084,
+        "p95": 0.594186084,
+        "min": 0.594186084,
+        "max": 0.594186084
+      },
+      "sampledPeakPhysicalFootprintBytes": 1005110736,
+      "wer": {
+        "n": 1,
+        "p50": 0.09762703120969822,
+        "p95": 0.09762703120969822,
+        "min": 0.09762703120969822,
+        "max": 0.09762703120969822
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.04797523858653598,
+        "p95": 0.04797523858653598,
+        "min": 0.04797523858653598,
+        "max": 0.04797523858653598
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-en-3540s-settled-1-normal-0"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 2,
+      "condition": "normal",
+      "seconds": {
+        "n": 1,
+        "p50": 58.092444667,
+        "p95": 58.092444667,
+        "min": 58.092444667,
+        "max": 58.092444667
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 1829289984,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.746296083,
+        "p95": 0.746296083,
+        "min": 0.746296083,
+        "max": 0.746296083
+      },
+      "sampledPeakPhysicalFootprintBytes": 1860012168,
+      "wer": {
+        "n": 1,
+        "p50": 0.09762703120969822,
+        "p95": 0.09762703120969822,
+        "min": 0.09762703120969822,
+        "max": 0.09762703120969822
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.04797523858653598,
+        "p95": 0.04797523858653598,
+        "min": 0.04797523858653598,
+        "max": 0.04797523858653598
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-en-3540s-settled-2-normal-0"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 1,
+        "p50": 69.356365458,
+        "p95": 69.356365458,
+        "min": 69.356365458,
+        "max": 69.356365458
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 1001701376,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.383218333,
+        "p95": 0.383218333,
+        "min": 0.383218333,
+        "max": 0.383218333
+      },
+      "sampledPeakPhysicalFootprintBytes": 1016169936,
+      "wer": {
+        "n": 1,
+        "p50": 0.06492589978828511,
+        "p95": 0.06492589978828511,
+        "min": 0.06492589978828511,
+        "max": 0.06492589978828511
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.0171136203246295,
+        "p95": 0.0171136203246295,
+        "min": 0.0171136203246295,
+        "max": 0.0171136203246295
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-ru-3540s-settled-1-normal-0"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 2,
+      "condition": "normal",
+      "seconds": {
+        "n": 1,
+        "p50": 58.373712208,
+        "p95": 58.373712208,
+        "min": 58.373712208,
+        "max": 58.373712208
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 1808564224,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.869065834,
+        "p95": 0.869065834,
+        "min": 0.869065834,
+        "max": 0.869065834
+      },
+      "sampledPeakPhysicalFootprintBytes": 1859389552,
+      "wer": {
+        "n": 1,
+        "p50": 0.06492589978828511,
+        "p95": 0.06492589978828511,
+        "min": 0.06492589978828511,
+        "max": 0.06492589978828511
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.0171136203246295,
+        "p95": 0.0171136203246295,
+        "min": 0.0171136203246295,
+        "max": 0.0171136203246295
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-ru-3540s-settled-2-normal-0"
+      ]
+    }
+  ],
+  "fileParity": [
+    {
+      "fixture": "en-3540s",
+      "id": "file-en-3540s-settled-1-normal-0",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "id": "file-en-3540s-settled-2-normal-0",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-1-normal-0",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-2-normal-0",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    }
+  ]
+}

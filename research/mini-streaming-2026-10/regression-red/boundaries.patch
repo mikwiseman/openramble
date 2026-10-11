@@ -1,0 +1,26 @@
+--- a/Packages/LocalASR/Sources/LocalASR/FileAudioChunks.swift
++++ b/Packages/LocalASR/Sources/LocalASR/FileAudioChunks.swift
+@@ -26,2 +26 @@
+-    private let overlap: Int
+-    private let minimumTail = 2 * 16_000
++    private let overlap = 2 * 16_000
+@@ -30,3 +28,0 @@
+-        precondition(minimumSeconds > 0 && minimumSeconds <= seconds)
+-        precondition((0...2_000).contains(overlapMilliseconds))
+-        overlap = overlapMilliseconds * 16
+@@ -39 +35 @@
+-            speech: .init(minimumSegment: .seconds(minimumSeconds), relaxAfter: .seconds(seconds)),
++            speech: .init(minimumSegment: .seconds(15), relaxAfter: .seconds(seconds)),
+@@ -45,3 +40,0 @@
+-        precondition(minimumSeconds > 0 && minimumSeconds <= seconds)
+-        precondition((0...2_000).contains(overlapMilliseconds))
+-        overlap = overlapMilliseconds * 16
+@@ -53 +46 @@
+-            speech: .init(minimumSegment: .seconds(minimumSeconds), relaxAfter: .seconds(seconds)),
++            speech: .init(minimumSegment: .seconds(15), relaxAfter: .seconds(seconds)),
+@@ -88 +81 @@
+-            if let first = ready.first, ended || observed >= first.endFrame + max(overlap, minimumTail) {
++            if let first = ready.first, ended || observed >= first.endFrame + overlap {
+@@ -104 +97 @@
+-                    if tail.frameCount < minimumTail, let previous = ready.last {
++                    if tail.frameCount < overlap, let previous = ready.last {

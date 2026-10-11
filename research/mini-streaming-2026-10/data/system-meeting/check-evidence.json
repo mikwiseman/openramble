@@ -1,0 +1,19 @@
+{
+  "utc": "2026-10-11T09:14:32.017892+00:00",
+  "modelIndependentExitCode": 0,
+  "logSHA256": "f1ad542c6a54085281845cfef6a88cbfb554090ae5c83b2760ee6088e02785c3",
+  "scope": "Explicit empty model root. Existing model E2E failures remain separately documented.",
+  "ci": {
+    "runID": 38127911525,
+    "head": "cea8893575bbefb5c9af25c8103725cb57b07d03",
+    "passedJobs": 14,
+    "conclusion": "success"
+  },
+  "counts": {
+    "DictationCore": 659,
+    "LocalASR": 199,
+    "LocalASRSkipped": 32,
+    "RambleCoreFFI": 9,
+    "RustSharedCore": 188
+  }
+}

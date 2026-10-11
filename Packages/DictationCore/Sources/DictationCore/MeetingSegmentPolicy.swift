@@ -35,6 +35,14 @@ public struct MeetingSegmentPolicy: Sendable {
             forcedCutWindow: .seconds(1)
         )
 
+        /// Tapped playback can be quieter than microphone input. Keeping the
+        /// microphone floor unchanged also preserves the echo gate's contract.
+        public static func capture(channel: MeetingChannel) -> Parameters {
+            var parameters = meeting
+            if channel == .system { parameters.speech.speechPeak = 0.005 }
+            return parameters
+        }
+
         public init(
             speech: SpeechSegmenter.Parameters = SpeechSegmenter.Parameters(),
             hardCap: Duration = .seconds(20),
@@ -104,6 +112,10 @@ public struct MeetingSegmentPolicy: Sendable {
         if !heardSpeech, !parameters.preserveQuietAudio, pendingFrames > frames(Self.leadingSilence) {
             segmentStart = end - frames(Self.leadingSilence)
             segmenter.reset()
+            // Its cut offset is relative to segmentStart, including the quiet
+            // prefix kept above. Dropping that prefix from the counter would
+            // move a later pause cut into the last second of spoken audio.
+            _ = segmenter.observe(peak: 0, count: frames(Self.leadingSilence))
             return nil
         }
 

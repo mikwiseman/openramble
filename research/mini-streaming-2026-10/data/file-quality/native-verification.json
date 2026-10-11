@@ -1,0 +1,51 @@
+{
+  "nativeShippingParityPassed": true,
+  "memoryGatePassed": true,
+  "comparisons": [
+    {
+      "fixture": "ru-3540s",
+      "mode": "shipping-file",
+      "exactText": true,
+      "exactWordTimings": true,
+      "validTimingBounds": true,
+      "textSHA256": "608b4f1809379ca455ee8cc3e4deda9990c4e51f35161050517ab4ab7502b738",
+      "processingSeconds": 122.3143725
+    },
+    {
+      "fixture": "en-3540s",
+      "mode": "shipping-file",
+      "exactText": true,
+      "exactWordTimings": true,
+      "validTimingBounds": true,
+      "textSHA256": "08eb4f185df0dc12a528330d3a6c35dc1ecebf3240f3694205104e1d16d70c93",
+      "processingSeconds": 68.327398167
+    },
+    {
+      "fixture": "mixed-3540s",
+      "mode": "shipping-file",
+      "exactText": true,
+      "exactWordTimings": true,
+      "validTimingBounds": true,
+      "textSHA256": "b810574dc2b9e4d7f2cb4c0995cc09ef25ef617433a28593667406fc29a98fdf",
+      "processingSeconds": 68.176868667
+    }
+  ],
+  "failedAttempts": [
+    {
+      "id": "shipping-file-ru-3540s-settled-1-normal-0-native-selected",
+      "exitCode": -15,
+      "hardStop": "build started during measurement"
+    }
+  ],
+  "expectedSHA256": "02deec7ca5430557f9fef1abbb638468ff3404518cc1ac8dc27341af1092fc2d",
+  "identity": {
+    "head": "7dc3f2638b45a859fd232248c2497347719e3525",
+    "binary_sha256": "974ed8a8a582805fd40ac4a519a621267621098ee8fb8e166edda062620e6c14",
+    "runner_sha256": "5a69f85760aee7385ce3f0a3708fccb41a8d942da78d97eb9512a22c85804a91",
+    "harness_sha256": "3b76c4e6d2fc53e4fdb41067fb52f3d369d2936e2a0eec33a60d9c15506485df",
+    "input_manifest_sha256": "903a7170b25ea1a059290bd0ed583a9d6adb0032413de0959fcf2e2c2e1a8460",
+    "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+    "plan_sha256": "8227c886a027438bfc42b5bbaf0383125b7f1369845fe2c6ca4ed75c91cad309"
+  },
+  "scope": "Three shipping-path checks of the fixed selected policy. One pass per language; no new speed estimate."
+}

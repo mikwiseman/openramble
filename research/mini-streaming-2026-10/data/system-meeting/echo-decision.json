@@ -1,0 +1,21 @@
+{
+  "utc": "2026-10-11T09:12:26.068538+00:00",
+  "candidateScope": "system-only",
+  "candidateEchoGatePassed": true,
+  "red": {
+    "tests": 10,
+    "failedAssertions": 2,
+    "logSHA256": "9b7d2095442f4650e6988a90b61e990bd5c5978e5579bdcbebf28af10844c39d"
+  },
+  "green": {
+    "tests": 45,
+    "failures": 0,
+    "includesDefaultCaptureCases": 10,
+    "logSHA256": "863f340c84949c633e0b27e8e3357ade134f1d481d55115bb024e24036628633"
+  },
+  "microphoneSpeechPeak": 0.02,
+  "systemSpeechPeak": 0.005,
+  "explicitCaptureParametersPreserved": true,
+  "heldoutOpened": true,
+  "heldoutRegistration": "heldout-registration.json"
+}

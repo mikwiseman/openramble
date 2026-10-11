@@ -1,0 +1,33 @@
+{
+  "hypothesis": "A fixed 500ms silent suffix restores the expected trailing words in the cached Samantha test",
+  "status": "rejected",
+  "sameOutput": true,
+  "recognizedText": "Please review my pull requests and it.",
+  "expectedText": "Please review my pull request send it",
+  "oneDecodeNoStreamingCuts": true,
+  "defaultPaddingChanged": false,
+  "rows": [
+    {
+      "id": "controller-synthetic-en-original-settled-1-normal-0-original",
+      "inputFrames": 32477,
+      "stopSeconds": 0.076029459,
+      "textSHA256": "31b02870242f95433bb3d1c6e38b04f2f23dcf1824f9a49b6198a6b67fab7d57"
+    },
+    {
+      "id": "controller-synthetic-en-pad500-settled-1-normal-0-pad500",
+      "inputFrames": 40477,
+      "stopSeconds": 0.071339208,
+      "textSHA256": "31b02870242f95433bb3d1c6e38b04f2f23dcf1824f9a49b6198a6b67fab7d57"
+    }
+  ],
+  "identity": {
+    "head": "048cefd20b4ea8ca37f2e4954a48acc3aca473dd",
+    "binary_sha256": "66f8fe8e8fccc44df6f1c426b9fef2c8bbba872f427e767a3ab26958f42d0e4d",
+    "runner_sha256": "d704a359e3863a075f73c30a166ab92fec1ab728ee5cfec60df784183e8d43b2",
+    "harness_sha256": "ab0b65ddc063d3151d18c75da817708f9b567778aa2b996232ac524b5110c6c4",
+    "input_manifest_sha256": "2a8d8e27abc9eef0b6bed611b1ac3b08801109cc6ad69c74db2460d3e3618eef",
+    "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+    "plan_sha256": "763fce7f64a8e3b266cf58acc500bd1c07c4c1f56849da32fa2afeb179d29498"
+  },
+  "scope": "One synthetic phrase, two inputs, one pass per input. Both recognize the same wrong words; this falsifies this fixed-padding remedy on this fixture, not all possible endpoint issues. Timings are diagnostic and not a speed claim."
+}

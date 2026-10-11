@@ -1,0 +1,337 @@
+{
+  "completedRuns": 4,
+  "gates": {
+    "englishGainPassed": true,
+    "russianPreservationPassed": true,
+    "decodeBudgetPassed": true,
+    "memoryGatePassed": true
+  },
+  "nativeHeldoutGatePassed": true,
+  "echoGatePassed": true,
+  "heldoutGatePassed": true,
+  "adoptionApproved": true,
+  "comparisons": [
+    {
+      "fixture": "ru-quiet-heldout",
+      "language": "ru",
+      "audioSeconds": 593.8,
+      "control": {
+        "quality": {
+          "wer": 0.07946336429308566,
+          "deletionRate": 0.021671826625386997,
+          "referenceWords": 969,
+          "substitutions": 50,
+          "deletions": 21,
+          "insertions": 6,
+          "deletionRunsAtLeastFourWords": [
+            {
+              "startWord": 447,
+              "endWord": 454,
+              "text": "своей кандидатуры на пост президента вчера вечером"
+            },
+            {
+              "startWord": 748,
+              "endWord": 753,
+              "text": "кто собирается ехать по высокоширотной"
+            }
+          ]
+        },
+        "normalizedWords": 954,
+        "decodeWork": {
+          "calls": 42,
+          "totalSeconds": 14.529444126,
+          "maxCallSeconds": 0.556541042,
+          "decodedAudioSeconds": 539.42
+        },
+        "submittedFrames": 8630720,
+        "unsubmittedFrames": 870080
+      },
+      "candidate": {
+        "quality": {
+          "wer": 0.06604747162022703,
+          "deletionRate": 0.008255933952528379,
+          "referenceWords": 969,
+          "substitutions": 51,
+          "deletions": 8,
+          "insertions": 5,
+          "deletionRunsAtLeastFourWords": []
+        },
+        "normalizedWords": 966,
+        "decodeWork": {
+          "calls": 43,
+          "totalSeconds": 14.153371625,
+          "maxCallSeconds": 0.577863583,
+          "decodedAudioSeconds": 565.35
+        },
+        "submittedFrames": 9045600,
+        "unsubmittedFrames": 455200
+      },
+      "werDifferencePoints": -1.341589267285863,
+      "deletionDifferencePoints": -1.3415892672858618
+    },
+    {
+      "fixture": "en-quiet-heldout",
+      "language": "en",
+      "audioSeconds": 555.34,
+      "control": {
+        "quality": {
+          "wer": 0.6237623762376238,
+          "deletionRate": 0.6122112211221122,
+          "referenceWords": 1212,
+          "substitutions": 14,
+          "deletions": 742,
+          "insertions": 0,
+          "deletionRunsAtLeastFourWords": [
+            {
+              "startWord": 0,
+              "endWord": 23,
+              "text": "in 2002 goma was destroyed by lava from the nyiragongo volcano which buried most of the town s streets particularly the town centre"
+            },
+            {
+              "startWord": 39,
+              "endWord": 75,
+              "text": "traditional school day swirl the two dry powders together and then with clean wet hands squeeze them into a ball this is called a chemical s ph you can make an indicator using red cabbage juice"
+            },
+            {
+              "startWord": 91,
+              "endWord": 143,
+              "text": "alongside the word sie for you always begin with a capital letter even in the middle of a sentence to the north and within easy reach is the romantic and fascinating town of sintra and which was made famous to foreigners after a glowing account of its splendours recorded by lord byron"
+            },
+            {
+              "startWord": 145,
+              "endWord": 233,
+              "text": "outlying islands credit cards will probably not be accepted although british and united states currency may be taken check with the owners in advance to determine what is an acceptable payment method also between each dynasty was an unstable age of divided provinces the best known of these periods was the three kingdoms epoch taking place for 60 years between the han and the jin dynasty he was also engaged in engraving banknotes for many countries recent examples of his work including the prime ministerial portraits on the"
+            },
+            {
+              "startWord": 240,
+              "endWord": 244,
+              "text": "100 bills ancient cultures"
+            },
+            {
+              "startWord": 249,
+              "endWord": 259,
+              "text": "them for easy access to milk hair meat and skins"
+            },
+            {
+              "startWord": 297,
+              "endWord": 321,
+              "text": "the plitvice lakes national park is heavily forested mainly with beech spruce and fir trees and features a mixture of alpine and mediterranean vegetation"
+            },
+            {
+              "startWord": 340,
+              "endWord": 359,
+              "text": "but after losing the captain s wicket india only made 36 runs loosing 7 wickets to end the innings"
+            },
+            {
+              "startWord": 377,
+              "endWord": 399,
+              "text": "sharing a field trip virtually is also a great way to reflect a on a trip and share experiences with future classes"
+            },
+            {
+              "startWord": 496,
+              "endWord": 523,
+              "text": "nextgen is a system the faa claims would allow aircraft to fly shorter routes and save millions of gallons of fuel each year and cut carbon emissions"
+            },
+            {
+              "startWord": 535,
+              "endWord": 551,
+              "text": "middle order batsmen sachin tendulkar and rahul dravid performed well and made a hundred run partnership"
+            },
+            {
+              "startWord": 577,
+              "endWord": 589,
+              "text": "romanticism had a large element of cultural determinism drawn from writers such"
+            },
+            {
+              "startWord": 590,
+              "endWord": 626,
+              "text": "goethe fichte and schlegel some atoms have unstable nuclei which means that they tend to break apart with little or no nudging rip currents are the returning flow from waves breaking off the beach often at"
+            },
+            {
+              "startWord": 627,
+              "endWord": 677,
+              "text": "reef or similar saint petersburg cruises include time in town cruise passengers are exempted from visa requirements check the terms mass car ownership also leads to a higher incidence of accidents on the roads which leads to the invention of new techniques in healthcare for repairing damaged bodies as a"
+            },
+            {
+              "startWord": 694,
+              "endWord": 702,
+              "text": "huhne has resigned and he will be replaced"
+            },
+            {
+              "startWord": 703,
+              "endWord": 724,
+              "text": "the cabinet by ed davey mp norman lamb mp is expected to take the business minister job davey is vacating in"
+            },
+            {
+              "startWord": 772,
+              "endWord": 776,
+              "text": "usually you always here"
+            },
+            {
+              "startWord": 777,
+              "endWord": 796,
+              "text": "sound of tourists and vendors the story of the sound and light is just like a story book the"
+            },
+            {
+              "startWord": 832,
+              "endWord": 900,
+              "text": "stated that he would return to texas to assess the results of tonight s caucus determine whether there is a path forward for myself in this race but later said that he would remain in the race and compete in the january 21 south carolina primary they have feet with scales and claws they lay eggs and they walk on their two back legs like a t rex"
+            },
+            {
+              "startWord": 951,
+              "endWord": 960,
+              "text": "who were through neglect misfortune or wilful abuse not"
+            },
+            {
+              "startWord": 968,
+              "endWord": 986,
+              "text": "women it is recommended that any women travellers say that they are married regardless of actual marital status"
+            },
+            {
+              "startWord": 1010,
+              "endWord": 1043,
+              "text": "it isn t alone though experimentation and an experiment is a test that is used to eliminate one or more of the possible hypotheses asking questions and making observations also guide scientific research"
+            },
+            {
+              "startWord": 1045,
+              "endWord": 1078,
+              "text": "and the usoc have the same goal making the sport of gymnastics and others as safe as possible for athletes to follow their dreams in a safe positive and empowered environment usa gymnastics"
+            },
+            {
+              "startWord": 1105,
+              "endWord": 1212,
+              "text": "the number of people present was so large that it was not possible for everybody to gain access to the funeral in st peter s square the strategy proved effective cutting off vital military and civilian supplies although this blockade violated generally accepted international law codified by several international agreements of the past two centuries buses depart the inter district bus station across the river throughout the day though most especially those heading to the east and jakar bumthang leave between 06 30 and 07 30 the surface of the moon is made of rocks and dust the outer layer of the moon is called the crust"
+            }
+          ]
+        },
+        "normalizedWords": 470,
+        "decodeWork": {
+          "calls": 22,
+          "totalSeconds": 8.612231044,
+          "maxCallSeconds": 0.753040834,
+          "decodedAudioSeconds": 242.77
+        },
+        "submittedFrames": 3884320,
+        "unsubmittedFrames": 5001120
+      },
+      "candidate": {
+        "quality": {
+          "wer": 0.28135313531353134,
+          "deletionRate": 0.24257425742574257,
+          "referenceWords": 1212,
+          "substitutions": 35,
+          "deletions": 294,
+          "insertions": 12,
+          "deletionRunsAtLeastFourWords": [
+            {
+              "startWord": 19,
+              "endWord": 23,
+              "text": "particularly the town centre"
+            },
+            {
+              "startWord": 66,
+              "endWord": 75,
+              "text": "you can make an indicator using red cabbage juice"
+            },
+            {
+              "startWord": 89,
+              "endWord": 110,
+              "text": "all nouns alongside the word sie for you always begin with a capital letter even in the middle of a sentence"
+            },
+            {
+              "startWord": 137,
+              "endWord": 144,
+              "text": "its splendours recorded by lord byron on"
+            },
+            {
+              "startWord": 188,
+              "endWord": 211,
+              "text": "the best known of these periods was the three kingdoms epoch taking place for 60 years between the han and the jin dynasty"
+            },
+            {
+              "startWord": 496,
+              "endWord": 523,
+              "text": "nextgen is a system the faa claims would allow aircraft to fly shorter routes and save millions of gallons of fuel each year and cut carbon emissions"
+            },
+            {
+              "startWord": 535,
+              "endWord": 540,
+              "text": "middle order batsmen sachin tendulkar"
+            },
+            {
+              "startWord": 594,
+              "endWord": 612,
+              "text": "some atoms have unstable nuclei which means that they tend to break apart with little or no nudging"
+            },
+            {
+              "startWord": 630,
+              "endWord": 675,
+              "text": "saint petersburg cruises include time in town cruise passengers are exempted from visa requirements check the terms mass car ownership also leads to a higher incidence of accidents on the roads which leads to the invention of new techniques in healthcare for repairing damaged bodies"
+            },
+            {
+              "startWord": 712,
+              "endWord": 723,
+              "text": "is expected to take the business minister job davey is vacating"
+            },
+            {
+              "startWord": 772,
+              "endWord": 776,
+              "text": "usually you always here"
+            },
+            {
+              "startWord": 777,
+              "endWord": 796,
+              "text": "sound of tourists and vendors the story of the sound and light is just like a story book the"
+            },
+            {
+              "startWord": 847,
+              "endWord": 900,
+              "text": "determine whether there is a path forward for myself in this race but later said that he would remain in the race and compete in the january 21 south carolina primary they have feet with scales and claws they lay eggs and they walk on their two back legs like a t rex"
+            },
+            {
+              "startWord": 1010,
+              "endWord": 1027,
+              "text": "it isn t alone though experimentation and an experiment is a test that is used to eliminate"
+            },
+            {
+              "startWord": 1154,
+              "endWord": 1160,
+              "text": "agreements of the past two centuries"
+            },
+            {
+              "startWord": 1181,
+              "endWord": 1191,
+              "text": "and jakar bumthang leave between 06 30 and 07 30"
+            }
+          ]
+        },
+        "normalizedWords": 930,
+        "decodeWork": {
+          "calls": 37,
+          "totalSeconds": 14.846980788,
+          "maxCallSeconds": 0.881592708,
+          "decodedAudioSeconds": 425.91
+        },
+        "submittedFrames": 6814560,
+        "unsubmittedFrames": 2070880
+      },
+      "werDifferencePoints": -34.240924092409244,
+      "deletionDifferencePoints": -36.96369636963696
+    }
+  ],
+  "failedAttempts": [],
+  "identity": {
+    "head": "cea8893575bbefb5c9af25c8103725cb57b07d03",
+    "binary_sha256": "18cdd9638d742ccaf577204104db9253be704e0ce815c8ed33207a40af9e9fc2",
+    "runner_sha256": "54bff818d8d63952ca34c01858d3d4c19f3776faa125a192b64f28ffe0b04c21",
+    "harness_sha256": "655507aa328b33785ea2c32c307ecc615a02cfc2f45aa972e92df3bb55885b94",
+    "input_manifest_sha256": "2700e5ab57dae4fba3d3d0a3b3e8f39a828dad1f23b911ba7643aa99b36c89d5",
+    "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+    "plan_sha256": "a1d9b581e3a9fa156bca14f3c62ec0134c09ef552f9f66eb84d484798815a5f3"
+  },
+  "scope": "Two unseen composites, all 50 distinct phrases of each language exactly once, one pass per threshold; fixed development candidate.",
+  "modelIndependentValidationPassed": true,
+  "status": "adopted-on-pr-branch",
+  "candidateScope": "System audio only; microphone remains 0.02 and CrossTalkGate is unchanged.",
+  "productionReleased": false
+}

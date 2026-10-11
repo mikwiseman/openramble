@@ -1,0 +1,28 @@
+{
+  "registeredAt": "2026-10-11T06:50:18.940165+00:00",
+  "status": "prospective analysis of existing measurements; aggregate results already known",
+  "inputSHA256": {
+    "manifest.json": "27b1a6759fe07063b69e1759fd64a039b21fd0fe2bf6a4e9d638dd30bdb98fab",
+    "observations.jsonl": "65b0801a5dd8df52ae662c045d2667a7da3cb4805488c412e53d33101265b6a6",
+    "superwhisper-quality.jsonl": "a85c84c5b5e001cff112dcbf1b2ae203f0cac7ae79528c336346119e988ac672",
+    "products-benchmark.json": "0f2d658a6106f36f3513867307323e0799bcb568e18e7a1c9954aafdc1b6b750"
+  },
+  "scope": "200 original short FLEURS files on M4 Pro; not timing repeats or repeated long composites",
+  "estimand": "sum of word errors / sum of reference words, per language",
+  "resamplingUnit": "normalized reference phrase cluster; retain all recordings for that phrase, same cluster draw for every engine",
+  "replicates": 10000,
+  "seed": 20261011,
+  "interval": "2.5 and 97.5 percentiles, descriptive and unadjusted for multiple comparisons",
+  "comparisons": [
+    "openramble minus handy",
+    "openramble minus whisper",
+    "openramble minus superwhisper_turbo"
+  ],
+  "validation": "reproduce all published aggregate errors and WER before computing intervals",
+  "limitations": [
+    "exploratory uncertainty analysis, no general product or speaker-population significance claim",
+    "cluster handles duplicate reference text but not unknown speaker dependence",
+    "fixed sample contains only 100 recordings per language",
+    "no new inference or candidate tuning"
+  ]
+}

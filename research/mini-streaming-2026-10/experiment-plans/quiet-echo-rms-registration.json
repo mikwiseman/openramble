@@ -1,0 +1,10 @@
+{
+  "registeredAt": "2026-10-11T08:21:48.200348+00:00",
+  "amendmentSHA256": "e3e2fccc5b5817dca7e34c081baf104a565996ebdf72eb643245a9d8f8ffbab5",
+  "testPatchSHA256": "e18d927768a4cb8eee7de22215f5bca4182cc032985020af801cf2a320ce9bb8",
+  "quietCandidateInferenceStarted": false,
+  "candidateEchoTestsRun": false,
+  "originalProtocolUnchanged": true,
+  "newCases": 4,
+  "productionEchoParametersChanged": false
+}

@@ -200,6 +200,111 @@ final class StreamedDictationTests: XCTestCase {
         XCTAssertEqual(inserted.first, "First second and tail together.")
     }
 
+    private actor TailReads {
+        var fullCount = 0
+        var ranges: [[Int]] = []
+        func full() { fullCount += 1 }
+        func tail(_ start: Int, _ total: Int) { ranges.append([start, total]) }
+    }
+
+    func testFileBackedReaderRequestsOnlyTheRequiredSuffix() async {
+        for (seconds, segments, firstFrame, wordCount) in [
+            (480, Array(repeating: 20 * 16_000, count: 23), 460 * 16_000, 24),
+            (360, [340 * 16_000, 19 * 16_000], 340 * 16_000, 2)
+        ] {
+            let samples = [Float](repeating: 0.5, count: seconds * 16_000)
+            let capture = StreamingCapture(samples: samples, segments: segments, fileBacked: true)
+            let inserter = FakeInserter()
+            let reads = TailReads()
+            let controller = DictationController(capture: capture,
+                transcribe: { _ in
+                    XCTFail("the recognized prefix must be reused")
+                    throw ASREngineError.cancelled
+                },
+                transcribeSamples: { chunk in
+                    ASRResult(text: "piece", audioDuration: Double(chunk.count) / 16_000, processingDuration: 0)
+                },
+                readSamples: { _ in await reads.full(); return samples },
+                readTailSamples: { _, start, total in
+                    await reads.tail(start, total)
+                    return Array(samples[start..<total])
+                },
+                inserter: inserter, overlay: FakeOverlay(), sounds: FakeSounds())
+
+            await run(controller)
+
+            let fullCount = await reads.fullCount
+            let ranges = await reads.ranges
+            let inserted = await inserter.insertedTexts
+            XCTAssertEqual(fullCount, 0, "a long capture must not restore its recognized prefix into memory")
+            XCTAssertEqual(ranges, [[firstFrame, samples.count]])
+            XCTAssertEqual(inserted.count, 1)
+            XCTAssertEqual(inserted.first?.split(separator: " ").count, wordCount)
+        }
+    }
+
+    func testTruncatedSuffixDoesNotPublishAPartialTranscript() async {
+        let total = 360 * 16_000
+        let samples = [Float](repeating: 0.5, count: total)
+        let capture = StreamingCapture(samples: samples, segments: [340 * 16_000], fileBacked: true)
+        let inserter = FakeInserter()
+        let controller = DictationController(capture: capture,
+            transcribe: { _ in XCTFail("must not hide an incomplete suffix"); throw ASREngineError.cancelled },
+            transcribeSamples: { _ in ASRResult(text: "prefix", audioDuration: 340, processingDuration: 0) },
+            readTailSamples: { _, start, expected in Array(samples[start..<(expected - 1)]) },
+            inserter: inserter, overlay: FakeOverlay(), sounds: FakeSounds())
+        var failure: ASREngineError?
+        controller.onRecognitionFailure = { failure = $0 as? ASREngineError }
+
+        await run(controller)
+
+        let inserted = await inserter.insertedTexts
+        XCTAssertTrue(inserted.isEmpty)
+        guard case .unsupportedAudioFormat = failure else { return XCTFail("missing technical failure") }
+        XCTAssertEqual(controller.state, .idle)
+    }
+
+    private actor TailGate {
+        var entered = false
+        var pending: CheckedContinuation<Void, Never>?
+        func wait() async {
+            entered = true
+            await withCheckedContinuation { pending = $0 }
+        }
+        func open() { pending?.resume(); pending = nil }
+    }
+
+    func testCancellationDuringSuffixReadDoesNotPublishText() async {
+        let total = 360 * 16_000
+        let samples = [Float](repeating: 0.5, count: total)
+        let capture = StreamingCapture(samples: samples, segments: [340 * 16_000], fileBacked: true)
+        let inserter = FakeInserter()
+        let gate = TailGate()
+        let controller = DictationController(capture: capture,
+            transcribe: { _ in throw ASREngineError.cancelled },
+            transcribeSamples: { _ in ASRResult(text: "prefix", audioDuration: 340, processingDuration: 0) },
+            readTailSamples: { _, start, expected in
+                await gate.wait()
+                return Array(samples[start..<expected])
+            },
+            inserter: inserter, overlay: FakeOverlay(), sounds: FakeSounds())
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        for _ in 0..<100 {
+            if await gate.entered { break }
+            await settle(1)
+        }
+        let entered = await gate.entered
+        controller.cancel()
+        await gate.open()
+        await settle(40)
+        XCTAssertTrue(entered, "the cancellation must happen during an actual suffix read")
+        let inserted = await inserter.insertedTexts
+        XCTAssertTrue(inserted.isEmpty)
+        XCTAssertEqual(controller.state, .idle)
+    }
+
     func testFailedStreamStillRecognizesTheCompleteFile() async {
         let capture = StreamingCapture(samples: [Float](repeating: 0.5, count: 360 * 16_000),
                                        segments: [20 * 16_000], fileBacked: true)
@@ -208,6 +313,7 @@ final class StreamedDictationTests: XCTestCase {
             transcribe: { _ in ASRResult(text: "complete recording.", audioDuration: 360, processingDuration: 1) },
             transcribeSamples: { _ in throw ASREngineError.inferenceFailed("failed segment", code: -7) },
             readSamples: { _ in XCTFail("failed prefix cannot be reused"); return [] },
+            readTailSamples: { _, _, _ in XCTFail("failed prefix cannot use a suffix"); return [] },
             inserter: inserter, overlay: FakeOverlay(), sounds: FakeSounds())
         var fallbackReasons: [DictationFallbackReason] = []
         controller.onRecognitionFallback = { reason, error in

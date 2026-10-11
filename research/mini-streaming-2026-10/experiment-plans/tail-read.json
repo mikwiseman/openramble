@@ -1,0 +1,482 @@
+[
+  {
+    "fixture": "ru-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "ru-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "ru-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 0,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "ru-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 0,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 0,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 0,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "ru-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "ru-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "ru-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 1,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "ru-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 1,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 1,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 1,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "ru-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "ru-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "ru-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 2,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "ru-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 2,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 2,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 2,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 0,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 0,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 0,
+    "variant": "full",
+    "parameters": {
+      "tailRead": false
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "controller",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "cpu10",
+    "repeat": 0,
+    "variant": "tail",
+    "parameters": {
+      "tailRead": true
+    }
+  }
+]

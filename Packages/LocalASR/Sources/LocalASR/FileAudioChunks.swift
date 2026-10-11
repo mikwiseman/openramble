@@ -23,27 +23,34 @@ actor FileAudioChunks {
     private var ready: [MeetingSegmentRef] = []
     private var ended = false
     private let whole: Bool
-    private let overlap = 2 * 16_000
+    private let overlap: Int
+    private let minimumTail = 2 * 16_000
 
-    init(url: URL, seconds: Int = 30) async throws {
+    init(url: URL, seconds: Int = 15, minimumSeconds: Int = 15, overlapMilliseconds: Int = 2_000) async throws {
+        precondition(minimumSeconds > 0 && minimumSeconds <= seconds)
+        precondition((0...2_000).contains(overlapMilliseconds))
+        overlap = overlapMilliseconds * 16
         let stream = try await AudioFileStream(url: url)
         self.stream = stream
         samples = nil
         duration = stream.duration
         whole = duration <= 30
         policy = MeetingSegmentPolicy(channel: .microphone, parameters: .init(
-            speech: .init(minimumSegment: .seconds(15), relaxAfter: .seconds(seconds)),
+            speech: .init(minimumSegment: .seconds(minimumSeconds), relaxAfter: .seconds(seconds)),
             hardCap: .seconds(seconds), forcedCutWindow: .seconds(1), preserveQuietAudio: true
         ))
     }
 
-    init(samples: [Float], seconds: Int = 30) {
+    init(samples: [Float], seconds: Int = 15, minimumSeconds: Int = 15, overlapMilliseconds: Int = 2_000) {
+        precondition(minimumSeconds > 0 && minimumSeconds <= seconds)
+        precondition((0...2_000).contains(overlapMilliseconds))
+        overlap = overlapMilliseconds * 16
         stream = nil
         self.samples = samples
         duration = Double(samples.count) / 16_000
         whole = duration <= 30
         policy = MeetingSegmentPolicy(channel: .microphone, parameters: .init(
-            speech: .init(minimumSegment: .seconds(15), relaxAfter: .seconds(seconds)),
+            speech: .init(minimumSegment: .seconds(minimumSeconds), relaxAfter: .seconds(seconds)),
             hardCap: .seconds(seconds), forcedCutWindow: .seconds(1), preserveQuietAudio: true
         ))
     }
@@ -78,7 +85,7 @@ actor FileAudioChunks {
         while true {
             // Keep a just-cut segment until its right context is available.
             // At EOF this also lets a <2 s tail merge into that segment.
-            if let first = ready.first, ended || observed >= first.endFrame + overlap {
+            if let first = ready.first, ended || observed >= first.endFrame + max(overlap, minimumTail) {
                 ready.removeFirst()
                 let start = max(bufferStart, first.startFrame - overlap)
                 let end = min(observed, first.endFrame + overlap)
@@ -94,7 +101,7 @@ actor FileAudioChunks {
             if part.isEmpty {
                 ended = true
                 if let tail = policy.flush() {
-                    if tail.frameCount < overlap, let previous = ready.last {
+                    if tail.frameCount < minimumTail, let previous = ready.last {
                         ready[ready.count - 1] = MeetingSegmentRef(channel: .microphone,
                             startFrame: previous.startFrame, frameCount: tail.endFrame - previous.startFrame)
                     } else {
@@ -128,7 +135,8 @@ actor FileAudioChunks {
 
 /// Match words only inside the shared audio interval. Repeated words elsewhere
 /// in a conversation are never deduplicated. Without a confident match, the
-/// pause/quiet-frame boundary decides ownership by each word's midpoint.
+/// pause/quiet-frame boundary decides ownership by each word's midpoint,
+/// except when a time gap separates the two predictions and both can be kept.
 struct TimedTranscriptJoiner {
     private(set) var words: [ASRResult.Word] = []
 
@@ -160,6 +168,11 @@ struct TimedTranscriptJoiner {
         }
         if let match {
             words = Array(words.prefix(match.old + 1)) + incoming.dropFirst(match.new + 1)
+        } else if let first = incoming.first, let last = words.last,
+                  first.start - last.end >= 0.6 {
+            // With no shared words and no temporal overlap, the boundary
+            // must not discard recognized context from either side.
+            words += incoming
         } else {
             words = words.filter { ($0.start + $0.end) / 2 < boundary }
                 + incoming.filter { ($0.start + $0.end) / 2 >= boundary }

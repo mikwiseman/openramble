@@ -1,0 +1,134 @@
+{
+  "normalization": "Unicode NFC, lowercase, ё→е, Unicode word tokens, no numeral expansion",
+  "quantiles": "linear interpolation at (n-1)*p",
+  "qualityScope": "Fixed public fixtures; timing repeats are not independent quality examples.",
+  "identities": {
+    "tts-end-context-v1": {
+      "head": "048cefd20b4ea8ca37f2e4954a48acc3aca473dd",
+      "binary_sha256": "66f8fe8e8fccc44df6f1c426b9fef2c8bbba872f427e767a3ab26958f42d0e4d",
+      "runner_sha256": "d704a359e3863a075f73c30a166ab92fec1ab728ee5cfec60df784183e8d43b2",
+      "harness_sha256": "ab0b65ddc063d3151d18c75da817708f9b567778aa2b996232ac524b5110c6c4",
+      "input_manifest_sha256": "2a8d8e27abc9eef0b6bed611b1ac3b08801109cc6ad69c74db2460d3e3618eef",
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+      "plan_sha256": "763fce7f64a8e3b266cf58acc500bd1c07c4c1f56849da32fa2afeb179d29498"
+    }
+  },
+  "completedRuns": 2,
+  "failures": [],
+  "groups": [
+    {
+      "mode": "controller",
+      "fixture": "synthetic-en-original",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.076029459,
+        "p95": 0.076029459,
+        "min": 0.076029459,
+        "max": 0.076029459
+      },
+      "audioSeconds": 2.0298125,
+      "peakRSSBytes": 937394176,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.239749334,
+        "p95": 0.239749334,
+        "min": 0.239749334,
+        "max": 0.239749334
+      },
+      "sampledPeakPhysicalFootprintBytes": 409744,
+      "wer": {
+        "n": 1,
+        "p50": 0.2857142857142857,
+        "p95": 0.2857142857142857,
+        "min": 0.2857142857142857,
+        "max": 0.2857142857142857
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "referenceWords": 7,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-synthetic-en-original-settled-1-normal-0-original"
+      ],
+      "cuts": [
+        0
+      ],
+      "completedBeforeStop": [
+        0
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": false
+    },
+    {
+      "mode": "controller",
+      "fixture": "synthetic-en-pad500",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.071339208,
+        "p95": 0.071339208,
+        "min": 0.071339208,
+        "max": 0.071339208
+      },
+      "audioSeconds": 2.5298125,
+      "peakRSSBytes": 938754048,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.236557167,
+        "p95": 0.236557167,
+        "min": 0.236557167,
+        "max": 0.236557167
+      },
+      "sampledPeakPhysicalFootprintBytes": 819488,
+      "wer": {
+        "n": 1,
+        "p50": 0.2857142857142857,
+        "p95": 0.2857142857142857,
+        "min": 0.2857142857142857,
+        "max": 0.2857142857142857
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "referenceWords": 7,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "controller-synthetic-en-pad500-settled-1-normal-0-pad500"
+      ],
+      "cuts": [
+        0
+      ],
+      "completedBeforeStop": [
+        0
+      ],
+      "maxFeedLatenessSeconds": 0,
+      "fileBacked": false
+    }
+  ],
+  "fileParity": [],
+  "tailParity": []
+}

@@ -1,0 +1,1593 @@
+{
+  "selectedPolicy": {
+    "segmentSeconds": 15,
+    "minimumSegmentSeconds": 15,
+    "overlapMilliseconds": 2000,
+    "preserveGap": true
+  },
+  "qualityGatePassed": true,
+  "repeatParityPassed": true,
+  "memoryGatePassed": true,
+  "heldoutGatePassed": true,
+  "adoptionApproved": true,
+  "remainingGate": null,
+  "comparisons": {
+    "ru": {
+      "control": {
+        "n": 3,
+        "exactNativeRepeatParity": true,
+        "processingSeconds": [
+          98.272431917,
+          101.169597917,
+          96.646259375
+        ],
+        "medianSeconds": 98.272431917,
+        "quality": {
+          "wer": 0.06126878130217028,
+          "deletionRate": 0.005676126878130217,
+          "referenceWords": 5990,
+          "substitutions": 297,
+          "deletions": 34,
+          "insertions": 36,
+          "deletionRunsAtLeastFourWords": []
+        },
+        "peakRSSBytes": [
+          991444992,
+          991690752,
+          990117888
+        ]
+      },
+      "selected": {
+        "n": 3,
+        "exactNativeRepeatParity": true,
+        "processingSeconds": [
+          103.190767417,
+          106.618679166,
+          102.540855834
+        ],
+        "medianSeconds": 103.190767417,
+        "quality": {
+          "wer": 0.05809682804674458,
+          "deletionRate": 0.006010016694490818,
+          "referenceWords": 5990,
+          "substitutions": 296,
+          "deletions": 36,
+          "insertions": 16,
+          "deletionRunsAtLeastFourWords": []
+        },
+        "peakRSSBytes": [
+          976502784,
+          979812352,
+          983269376
+        ]
+      },
+      "werDifferencePoints": -0.3171953255425707,
+      "deletionDifferencePoints": 0.033388981636060105,
+      "medianProcessingChangePercent": 5.0047967716459585
+    },
+    "en": {
+      "control": {
+        "n": 3,
+        "exactNativeRepeatParity": true,
+        "processingSeconds": [
+          95.612140916,
+          97.218367,
+          97.594809208
+        ],
+        "medianSeconds": 97.218367,
+        "quality": {
+          "wer": 0.08125,
+          "deletionRate": 0.0315,
+          "referenceWords": 8000,
+          "substitutions": 291,
+          "deletions": 252,
+          "insertions": 107,
+          "deletionRunsAtLeastFourWords": [
+            {
+              "startWord": 158,
+              "endWord": 164,
+              "text": "he referred to the rumors as"
+            },
+            {
+              "startWord": 376,
+              "endWord": 388,
+              "text": "the two compounds react with one another to form crystals that may"
+            },
+            {
+              "startWord": 1107,
+              "endWord": 1121,
+              "text": "while he was working at the hospital liggins began to investigate premature labor during"
+            },
+            {
+              "startWord": 1282,
+              "endWord": 1288,
+              "text": "he referred to the rumors as"
+            },
+            {
+              "startWord": 1500,
+              "endWord": 1512,
+              "text": "the two compounds react with one another to form crystals that may"
+            },
+            {
+              "startWord": 2231,
+              "endWord": 2245,
+              "text": "while he was working at the hospital liggins began to investigate premature labor during"
+            },
+            {
+              "startWord": 2406,
+              "endWord": 2412,
+              "text": "he referred to the rumors as"
+            },
+            {
+              "startWord": 2624,
+              "endWord": 2636,
+              "text": "the two compounds react with one another to form crystals that may"
+            },
+            {
+              "startWord": 3355,
+              "endWord": 3369,
+              "text": "while he was working at the hospital liggins began to investigate premature labor during"
+            },
+            {
+              "startWord": 3530,
+              "endWord": 3536,
+              "text": "he referred to the rumors as"
+            },
+            {
+              "startWord": 3748,
+              "endWord": 3760,
+              "text": "the two compounds react with one another to form crystals that may"
+            },
+            {
+              "startWord": 4479,
+              "endWord": 4493,
+              "text": "while he was working at the hospital liggins began to investigate premature labor during"
+            },
+            {
+              "startWord": 4654,
+              "endWord": 4660,
+              "text": "he referred to the rumors as"
+            },
+            {
+              "startWord": 4872,
+              "endWord": 4884,
+              "text": "the two compounds react with one another to form crystals that may"
+            },
+            {
+              "startWord": 5603,
+              "endWord": 5617,
+              "text": "while he was working at the hospital liggins began to investigate premature labor during"
+            },
+            {
+              "startWord": 5778,
+              "endWord": 5784,
+              "text": "he referred to the rumors as"
+            },
+            {
+              "startWord": 5996,
+              "endWord": 6008,
+              "text": "the two compounds react with one another to form crystals that may"
+            },
+            {
+              "startWord": 6727,
+              "endWord": 6741,
+              "text": "while he was working at the hospital liggins began to investigate premature labor during"
+            },
+            {
+              "startWord": 6902,
+              "endWord": 6908,
+              "text": "he referred to the rumors as"
+            },
+            {
+              "startWord": 7120,
+              "endWord": 7132,
+              "text": "the two compounds react with one another to form crystals that may"
+            },
+            {
+              "startWord": 7851,
+              "endWord": 7865,
+              "text": "while he was working at the hospital liggins began to investigate premature labor during"
+            }
+          ]
+        },
+        "peakRSSBytes": [
+          992935936,
+          989265920,
+          989200384
+        ]
+      },
+      "selected": {
+        "n": 3,
+        "exactNativeRepeatParity": true,
+        "processingSeconds": [
+          100.03966525,
+          102.290324125,
+          102.54882175
+        ],
+        "medianSeconds": 102.290324125,
+        "quality": {
+          "wer": 0.079875,
+          "deletionRate": 0.01825,
+          "referenceWords": 8000,
+          "substitutions": 355,
+          "deletions": 146,
+          "insertions": 138,
+          "deletionRunsAtLeastFourWords": [
+            {
+              "startWord": 108,
+              "endWord": 132,
+              "text": "envelopes are present at the start of the vote and that no envelopes are added except those of the duly counted and authorized voters"
+            },
+            {
+              "startWord": 539,
+              "endWord": 546,
+              "text": "the pyramid sound and light show is"
+            },
+            {
+              "startWord": 959,
+              "endWord": 964,
+              "text": "they are cooked the schengen"
+            },
+            {
+              "startWord": 1663,
+              "endWord": 1670,
+              "text": "the pyramid sound and light show is"
+            },
+            {
+              "startWord": 2083,
+              "endWord": 2088,
+              "text": "they are cooked the schengen"
+            },
+            {
+              "startWord": 2787,
+              "endWord": 2794,
+              "text": "the pyramid sound and light show is"
+            },
+            {
+              "startWord": 3207,
+              "endWord": 3212,
+              "text": "they are cooked the schengen"
+            },
+            {
+              "startWord": 3911,
+              "endWord": 3918,
+              "text": "the pyramid sound and light show is"
+            },
+            {
+              "startWord": 4331,
+              "endWord": 4336,
+              "text": "they are cooked the schengen"
+            },
+            {
+              "startWord": 5035,
+              "endWord": 5042,
+              "text": "the pyramid sound and light show is"
+            },
+            {
+              "startWord": 5455,
+              "endWord": 5460,
+              "text": "they are cooked the schengen"
+            },
+            {
+              "startWord": 6159,
+              "endWord": 6166,
+              "text": "the pyramid sound and light show is"
+            },
+            {
+              "startWord": 6579,
+              "endWord": 6584,
+              "text": "they are cooked the schengen"
+            },
+            {
+              "startWord": 7283,
+              "endWord": 7290,
+              "text": "the pyramid sound and light show is"
+            },
+            {
+              "startWord": 7703,
+              "endWord": 7708,
+              "text": "they are cooked the schengen"
+            }
+          ]
+        },
+        "peakRSSBytes": [
+          976322560,
+          982007808,
+          975142912
+        ]
+      },
+      "werDifferencePoints": -0.13750000000000012,
+      "deletionDifferencePoints": -1.3250000000000002,
+      "medianProcessingChangePercent": 5.217077062197517
+    },
+    "mixed": {
+      "control": {
+        "n": 3,
+        "exactNativeRepeatParity": true,
+        "processingSeconds": [
+          92.985137541,
+          94.672270458,
+          92.741459
+        ],
+        "medianSeconds": 92.985137541,
+        "quality": {
+          "wer": 0.43874891398783666,
+          "deletionRate": 0.3993628728641761,
+          "referenceWords": 6906,
+          "substitutions": 254,
+          "deletions": 2758,
+          "insertions": 18,
+          "deletionRunsAtLeastFourWords": [
+            {
+              "startWord": 7,
+              "endWord": 40,
+              "text": "europe is a continent that is relatively small but with many independent countries under normal circumstances travelling through multiple countries would mean having to go through visa applications and passport control multiple times"
+            },
+            {
+              "startWord": 57,
+              "endWord": 66,
+              "text": "aerosmith have cancelled their remaining concerts on their tour"
+            },
+            {
+              "startWord": 82,
+              "endWord": 92,
+              "text": "for the springboks it ended a five match losing streak"
+            },
+            {
+              "startWord": 163,
+              "endWord": 187,
+              "text": "while one experimental vaccine appears able to reduce ebola mortality up until now no drugs have been clearly demonstrated suitable for treating existing infection"
+            },
+            {
+              "startWord": 264,
+              "endWord": 290,
+              "text": "э most of the buildings on the edges of the complex have been rebuilt in order to give tourists a better idea of how they originally"
+            },
+            {
+              "startWord": 303,
+              "endWord": 313,
+              "text": "he referred to the rumors as political chatter and silliness"
+            },
+            {
+              "startWord": 373,
+              "endWord": 394,
+              "text": "on some routes the larger companies have their own planes but for other routes and smaller firms there was a problem"
+            },
+            {
+              "startWord": 510,
+              "endWord": 548,
+              "text": "как и во всех южноафриканских национальных парках в этом парке существует ежедневная плата за его охрану и посещение since the foundation of asunción in 1537 paraguay has managed to keep a lot of its indigenous character and identity"
+            },
+            {
+              "startWord": 562,
+              "endWord": 592,
+              "text": "four skiers in the women s sitting group failed to finish their runs and 45 of the 117 total skiers in the giant slalom failed to rank in the race"
+            },
+            {
+              "startWord": 644,
+              "endWord": 666,
+              "text": "the city is also the base to climb the nyiragongo volcano along with some of the cheapest mountain gorilla tracking in africa"
+            },
+            {
+              "startWord": 684,
+              "endWord": 704,
+              "text": "the two compounds react with one another to form crystals that may block kidney function researchers at the university said"
+            },
+            {
+              "startWord": 718,
+              "endWord": 742,
+              "text": "ms is a disease that affects the central nervous system which is made up of the brain the spinal cord and the optic nerve"
+            },
+            {
+              "startWord": 752,
+              "endWord": 770,
+              "text": "вокруг everything in the universe is made of matter all matter is made of tiny particles called atoms"
+            },
+            {
+              "startWord": 816,
+              "endWord": 846,
+              "text": "nothing can be seen other than the clear beautiful sky above and the many surrounding mountains very little of this world can be seen or heard from inside the cave"
+            },
+            {
+              "startWord": 857,
+              "endWord": 875,
+              "text": "to get the best views of hong kong leave the island and head for the kowloon waterfront opposite"
+            },
+            {
+              "startWord": 898,
+              "endWord": 908,
+              "text": "new provisional electoral council cep of nine members yesterday исследования"
+            },
+            {
+              "startWord": 923,
+              "endWord": 946,
+              "text": "resting on the top of one of the mountains north of mecca the cave is completely isolated from the rest of the world"
+            },
+            {
+              "startWord": 965,
+              "endWord": 983,
+              "text": "virtual teams are held to the same standards of excellence as conventional teams but there are subtle differences"
+            },
+            {
+              "startWord": 1130,
+              "endWord": 1155,
+              "text": "только мутации в клетках зародышевой линии могут передаваться далее детям в то время как мутации где то еще могут привести к гибели клеток или раку"
+            },
+            {
+              "startWord": 1181,
+              "endWord": 1195,
+              "text": "каждый является членом общества и использует транспортные системы практически каждый жалуется на эти систем"
+            },
+            {
+              "startWord": 1225,
+              "endWord": 1245,
+              "text": "scientists hope to understand how planets form especially how the earth formed since comets collided with the earth long ago"
+            },
+            {
+              "startWord": 1259,
+              "endWord": 1274,
+              "text": "the smaller the rossby number the less active the star with respect to magnetic reversals"
+            },
+            {
+              "startWord": 1291,
+              "endWord": 1311,
+              "text": "the vehicle itself was taken away from the scene of the accident at approximately 1200 gmt on the same day"
+            },
+            {
+              "startWord": 1333,
+              "endWord": 1351,
+              "text": "if you only go ashore using shipboard excursions you will not need a separate visa as of 2009"
+            },
+            {
+              "startWord": 1373,
+              "endWord": 1396,
+              "text": "the aspect ratio of this format dividing by twelve to obtain the simplest whole number ratio is therefore said to be 3 2"
+            },
+            {
+              "startWord": 1413,
+              "endWord": 1434,
+              "text": "potro had the early advantage in the second set but this too required a tie break after reaching 6 6 апиа"
+            },
+            {
+              "startWord": 1451,
+              "endWord": 1473,
+              "text": "canada s charming bilingual capital and features an array of art galleries and museums that showcase canada s past and present севернее"
+            },
+            {
+              "startWord": 1487,
+              "endWord": 1501,
+              "text": "can only wonder what the keyboard will become when something newer comes along скаффолдинг"
+            },
+            {
+              "startWord": 1526,
+              "endWord": 1559,
+              "text": "he wales basically lied to us from the start first by acting as if this was for legal reasons second by pretending he was listening to us right up to his art deletion"
+            },
+            {
+              "startWord": 1581,
+              "endWord": 1601,
+              "text": "funding the obscenity initiative in fiscal 2005 and specified that the fbi must devote 10 agents to adult pornography карри"
+            },
+            {
+              "startWord": 1614,
+              "endWord": 1638,
+              "text": "finally there are many small cats including loose pet cats that eat the far more numerous small prey like insects rodents lizards and birds"
+            },
+            {
+              "startWord": 1650,
+              "endWord": 1674,
+              "text": "professor pamela ferguson of the university of dundee notes journalists do seem to be walking a dangerous line if publishing photos etc of suspects"
+            },
+            {
+              "startWord": 1685,
+              "endWord": 1707,
+              "text": "the archipelago lies 120 km north of the peninsula the largest is king george island with the settlement of villa las estrellas"
+            },
+            {
+              "startWord": 1731,
+              "endWord": 1761,
+              "text": "the most readily accessible plant resources would have been the proteins accessible in leaves and legumes but these are hard for primates like us to digest unless they are cooked"
+            },
+            {
+              "startWord": 1823,
+              "endWord": 1850,
+              "text": "as a result the process of an organization working together to overcome an obstacle can lead to a new innovative process to serve the customer s need"
+            },
+            {
+              "startWord": 1875,
+              "endWord": 1935,
+              "text": "as light pollution in their heyday was not the kind of problem it is today they are usually located in cities or at campuses easier to reach than those built in modern times но оказавшись в глубоких тропиках лишь в нескольких градусах к северу от экватора вам придется справляться как с жарой постоянно так и с сильным солнцем при безоблачном"
+            },
+            {
+              "startWord": 1937,
+              "endWord": 1954,
+              "text": "between 10 00 11 00 pm mdt a fire was started by the inmates in the yard"
+            },
+            {
+              "startWord": 2010,
+              "endWord": 2018,
+              "text": "одна из бомб взорвалась возле офиса генерал губернатора"
+            },
+            {
+              "startWord": 2080,
+              "endWord": 2094,
+              "text": "уважения europe is a continent that is relatively small but with many independent countries"
+            },
+            {
+              "startWord": 2131,
+              "endWord": 2140,
+              "text": "aerosmith have cancelled their remaining concerts on their tour"
+            },
+            {
+              "startWord": 2156,
+              "endWord": 2166,
+              "text": "for the springboks it ended a five match losing streak"
+            },
+            {
+              "startWord": 2237,
+              "endWord": 2261,
+              "text": "while one experimental vaccine appears able to reduce ebola mortality up until now no drugs have been clearly demonstrated suitable for treating existing infection"
+            },
+            {
+              "startWord": 2338,
+              "endWord": 2364,
+              "text": "э most of the buildings on the edges of the complex have been rebuilt in order to give tourists a better idea of how they originally"
+            },
+            {
+              "startWord": 2377,
+              "endWord": 2387,
+              "text": "he referred to the rumors as political chatter and silliness"
+            },
+            {
+              "startWord": 2447,
+              "endWord": 2468,
+              "text": "on some routes the larger companies have their own planes but for other routes and smaller firms there was a problem"
+            },
+            {
+              "startWord": 2584,
+              "endWord": 2622,
+              "text": "как и во всех южноафриканских национальных парках в этом парке существует ежедневная плата за его охрану и посещение since the foundation of asunción in 1537 paraguay has managed to keep a lot of its indigenous character and identity"
+            },
+            {
+              "startWord": 2636,
+              "endWord": 2666,
+              "text": "four skiers in the women s sitting group failed to finish their runs and 45 of the 117 total skiers in the giant slalom failed to rank in the race"
+            },
+            {
+              "startWord": 2718,
+              "endWord": 2740,
+              "text": "the city is also the base to climb the nyiragongo volcano along with some of the cheapest mountain gorilla tracking in africa"
+            },
+            {
+              "startWord": 2758,
+              "endWord": 2778,
+              "text": "the two compounds react with one another to form crystals that may block kidney function researchers at the university said"
+            },
+            {
+              "startWord": 2792,
+              "endWord": 2816,
+              "text": "ms is a disease that affects the central nervous system which is made up of the brain the spinal cord and the optic nerve"
+            },
+            {
+              "startWord": 2826,
+              "endWord": 2844,
+              "text": "вокруг everything in the universe is made of matter all matter is made of tiny particles called atoms"
+            },
+            {
+              "startWord": 2890,
+              "endWord": 2920,
+              "text": "nothing can be seen other than the clear beautiful sky above and the many surrounding mountains very little of this world can be seen or heard from inside the cave"
+            },
+            {
+              "startWord": 2931,
+              "endWord": 2949,
+              "text": "to get the best views of hong kong leave the island and head for the kowloon waterfront opposite"
+            },
+            {
+              "startWord": 2972,
+              "endWord": 2982,
+              "text": "new provisional electoral council cep of nine members yesterday исследования"
+            },
+            {
+              "startWord": 2997,
+              "endWord": 3020,
+              "text": "resting on the top of one of the mountains north of mecca the cave is completely isolated from the rest of the world"
+            },
+            {
+              "startWord": 3039,
+              "endWord": 3057,
+              "text": "virtual teams are held to the same standards of excellence as conventional teams but there are subtle differences"
+            },
+            {
+              "startWord": 3204,
+              "endWord": 3229,
+              "text": "только мутации в клетках зародышевой линии могут передаваться далее детям в то время как мутации где то еще могут привести к гибели клеток или раку"
+            },
+            {
+              "startWord": 3255,
+              "endWord": 3269,
+              "text": "каждый является членом общества и использует транспортные системы практически каждый жалуется на эти систем"
+            },
+            {
+              "startWord": 3299,
+              "endWord": 3319,
+              "text": "scientists hope to understand how planets form especially how the earth formed since comets collided with the earth long ago"
+            },
+            {
+              "startWord": 3333,
+              "endWord": 3348,
+              "text": "the smaller the rossby number the less active the star with respect to magnetic reversals"
+            },
+            {
+              "startWord": 3365,
+              "endWord": 3385,
+              "text": "the vehicle itself was taken away from the scene of the accident at approximately 1200 gmt on the same day"
+            },
+            {
+              "startWord": 3407,
+              "endWord": 3425,
+              "text": "if you only go ashore using shipboard excursions you will not need a separate visa as of 2009"
+            },
+            {
+              "startWord": 3447,
+              "endWord": 3470,
+              "text": "the aspect ratio of this format dividing by twelve to obtain the simplest whole number ratio is therefore said to be 3 2"
+            },
+            {
+              "startWord": 3487,
+              "endWord": 3508,
+              "text": "potro had the early advantage in the second set but this too required a tie break after reaching 6 6 апиа"
+            },
+            {
+              "startWord": 3525,
+              "endWord": 3547,
+              "text": "canada s charming bilingual capital and features an array of art galleries and museums that showcase canada s past and present севернее"
+            },
+            {
+              "startWord": 3561,
+              "endWord": 3575,
+              "text": "can only wonder what the keyboard will become when something newer comes along скаффолдинг"
+            },
+            {
+              "startWord": 3600,
+              "endWord": 3633,
+              "text": "he wales basically lied to us from the start first by acting as if this was for legal reasons second by pretending he was listening to us right up to his art deletion"
+            },
+            {
+              "startWord": 3655,
+              "endWord": 3675,
+              "text": "funding the obscenity initiative in fiscal 2005 and specified that the fbi must devote 10 agents to adult pornography карри"
+            },
+            {
+              "startWord": 3688,
+              "endWord": 3712,
+              "text": "finally there are many small cats including loose pet cats that eat the far more numerous small prey like insects rodents lizards and birds"
+            },
+            {
+              "startWord": 3724,
+              "endWord": 3748,
+              "text": "professor pamela ferguson of the university of dundee notes journalists do seem to be walking a dangerous line if publishing photos etc of suspects"
+            },
+            {
+              "startWord": 3759,
+              "endWord": 3781,
+              "text": "the archipelago lies 120 km north of the peninsula the largest is king george island with the settlement of villa las estrellas"
+            },
+            {
+              "startWord": 3805,
+              "endWord": 3835,
+              "text": "the most readily accessible plant resources would have been the proteins accessible in leaves and legumes but these are hard for primates like us to digest unless they are cooked"
+            },
+            {
+              "startWord": 3897,
+              "endWord": 3924,
+              "text": "as a result the process of an organization working together to overcome an obstacle can lead to a new innovative process to serve the customer s need"
+            },
+            {
+              "startWord": 3949,
+              "endWord": 4009,
+              "text": "as light pollution in their heyday was not the kind of problem it is today they are usually located in cities or at campuses easier to reach than those built in modern times но оказавшись в глубоких тропиках лишь в нескольких градусах к северу от экватора вам придется справляться как с жарой постоянно так и с сильным солнцем при безоблачном"
+            },
+            {
+              "startWord": 4011,
+              "endWord": 4028,
+              "text": "between 10 00 11 00 pm mdt a fire was started by the inmates in the yard"
+            },
+            {
+              "startWord": 4084,
+              "endWord": 4092,
+              "text": "одна из бомб взорвалась возле офиса генерал губернатора"
+            },
+            {
+              "startWord": 4154,
+              "endWord": 4168,
+              "text": "уважения europe is a continent that is relatively small but with many independent countries"
+            },
+            {
+              "startWord": 4205,
+              "endWord": 4214,
+              "text": "aerosmith have cancelled their remaining concerts on their tour"
+            },
+            {
+              "startWord": 4230,
+              "endWord": 4240,
+              "text": "for the springboks it ended a five match losing streak"
+            },
+            {
+              "startWord": 4311,
+              "endWord": 4335,
+              "text": "while one experimental vaccine appears able to reduce ebola mortality up until now no drugs have been clearly demonstrated suitable for treating existing infection"
+            },
+            {
+              "startWord": 4412,
+              "endWord": 4438,
+              "text": "э most of the buildings on the edges of the complex have been rebuilt in order to give tourists a better idea of how they originally"
+            },
+            {
+              "startWord": 4451,
+              "endWord": 4461,
+              "text": "he referred to the rumors as political chatter and silliness"
+            },
+            {
+              "startWord": 4521,
+              "endWord": 4542,
+              "text": "on some routes the larger companies have their own planes but for other routes and smaller firms there was a problem"
+            },
+            {
+              "startWord": 4658,
+              "endWord": 4696,
+              "text": "как и во всех южноафриканских национальных парках в этом парке существует ежедневная плата за его охрану и посещение since the foundation of asunción in 1537 paraguay has managed to keep a lot of its indigenous character and identity"
+            },
+            {
+              "startWord": 4710,
+              "endWord": 4740,
+              "text": "four skiers in the women s sitting group failed to finish their runs and 45 of the 117 total skiers in the giant slalom failed to rank in the race"
+            },
+            {
+              "startWord": 4792,
+              "endWord": 4814,
+              "text": "the city is also the base to climb the nyiragongo volcano along with some of the cheapest mountain gorilla tracking in africa"
+            },
+            {
+              "startWord": 4832,
+              "endWord": 4852,
+              "text": "the two compounds react with one another to form crystals that may block kidney function researchers at the university said"
+            },
+            {
+              "startWord": 4866,
+              "endWord": 4890,
+              "text": "ms is a disease that affects the central nervous system which is made up of the brain the spinal cord and the optic nerve"
+            },
+            {
+              "startWord": 4900,
+              "endWord": 4918,
+              "text": "вокруг everything in the universe is made of matter all matter is made of tiny particles called atoms"
+            },
+            {
+              "startWord": 4964,
+              "endWord": 4994,
+              "text": "nothing can be seen other than the clear beautiful sky above and the many surrounding mountains very little of this world can be seen or heard from inside the cave"
+            },
+            {
+              "startWord": 5005,
+              "endWord": 5023,
+              "text": "to get the best views of hong kong leave the island and head for the kowloon waterfront opposite"
+            },
+            {
+              "startWord": 5046,
+              "endWord": 5056,
+              "text": "new provisional electoral council cep of nine members yesterday исследования"
+            },
+            {
+              "startWord": 5071,
+              "endWord": 5094,
+              "text": "resting on the top of one of the mountains north of mecca the cave is completely isolated from the rest of the world"
+            },
+            {
+              "startWord": 5113,
+              "endWord": 5131,
+              "text": "virtual teams are held to the same standards of excellence as conventional teams but there are subtle differences"
+            },
+            {
+              "startWord": 5278,
+              "endWord": 5303,
+              "text": "только мутации в клетках зародышевой линии могут передаваться далее детям в то время как мутации где то еще могут привести к гибели клеток или раку"
+            },
+            {
+              "startWord": 5329,
+              "endWord": 5343,
+              "text": "каждый является членом общества и использует транспортные системы практически каждый жалуется на эти систем"
+            },
+            {
+              "startWord": 5373,
+              "endWord": 5393,
+              "text": "scientists hope to understand how planets form especially how the earth formed since comets collided with the earth long ago"
+            },
+            {
+              "startWord": 5407,
+              "endWord": 5422,
+              "text": "the smaller the rossby number the less active the star with respect to magnetic reversals"
+            },
+            {
+              "startWord": 5439,
+              "endWord": 5459,
+              "text": "the vehicle itself was taken away from the scene of the accident at approximately 1200 gmt on the same day"
+            },
+            {
+              "startWord": 5481,
+              "endWord": 5499,
+              "text": "if you only go ashore using shipboard excursions you will not need a separate visa as of 2009"
+            },
+            {
+              "startWord": 5521,
+              "endWord": 5544,
+              "text": "the aspect ratio of this format dividing by twelve to obtain the simplest whole number ratio is therefore said to be 3 2"
+            },
+            {
+              "startWord": 5561,
+              "endWord": 5582,
+              "text": "potro had the early advantage in the second set but this too required a tie break after reaching 6 6 апиа"
+            },
+            {
+              "startWord": 5599,
+              "endWord": 5621,
+              "text": "canada s charming bilingual capital and features an array of art galleries and museums that showcase canada s past and present севернее"
+            },
+            {
+              "startWord": 5635,
+              "endWord": 5649,
+              "text": "can only wonder what the keyboard will become when something newer comes along скаффолдинг"
+            },
+            {
+              "startWord": 5674,
+              "endWord": 5707,
+              "text": "he wales basically lied to us from the start first by acting as if this was for legal reasons second by pretending he was listening to us right up to his art deletion"
+            },
+            {
+              "startWord": 5729,
+              "endWord": 5749,
+              "text": "funding the obscenity initiative in fiscal 2005 and specified that the fbi must devote 10 agents to adult pornography карри"
+            },
+            {
+              "startWord": 5762,
+              "endWord": 5786,
+              "text": "finally there are many small cats including loose pet cats that eat the far more numerous small prey like insects rodents lizards and birds"
+            },
+            {
+              "startWord": 5798,
+              "endWord": 5822,
+              "text": "professor pamela ferguson of the university of dundee notes journalists do seem to be walking a dangerous line if publishing photos etc of suspects"
+            },
+            {
+              "startWord": 5833,
+              "endWord": 5855,
+              "text": "the archipelago lies 120 km north of the peninsula the largest is king george island with the settlement of villa las estrellas"
+            },
+            {
+              "startWord": 5879,
+              "endWord": 5909,
+              "text": "the most readily accessible plant resources would have been the proteins accessible in leaves and legumes but these are hard for primates like us to digest unless they are cooked"
+            },
+            {
+              "startWord": 5971,
+              "endWord": 5998,
+              "text": "as a result the process of an organization working together to overcome an obstacle can lead to a new innovative process to serve the customer s need"
+            },
+            {
+              "startWord": 6023,
+              "endWord": 6083,
+              "text": "as light pollution in their heyday was not the kind of problem it is today they are usually located in cities or at campuses easier to reach than those built in modern times но оказавшись в глубоких тропиках лишь в нескольких градусах к северу от экватора вам придется справляться как с жарой постоянно так и с сильным солнцем при безоблачном"
+            },
+            {
+              "startWord": 6085,
+              "endWord": 6102,
+              "text": "between 10 00 11 00 pm mdt a fire was started by the inmates in the yard"
+            },
+            {
+              "startWord": 6158,
+              "endWord": 6166,
+              "text": "одна из бомб взорвалась возле офиса генерал губернатора"
+            },
+            {
+              "startWord": 6228,
+              "endWord": 6242,
+              "text": "уважения europe is a continent that is relatively small but with many independent countries"
+            },
+            {
+              "startWord": 6279,
+              "endWord": 6288,
+              "text": "aerosmith have cancelled their remaining concerts on their tour"
+            },
+            {
+              "startWord": 6304,
+              "endWord": 6314,
+              "text": "for the springboks it ended a five match losing streak"
+            },
+            {
+              "startWord": 6385,
+              "endWord": 6409,
+              "text": "while one experimental vaccine appears able to reduce ebola mortality up until now no drugs have been clearly demonstrated suitable for treating existing infection"
+            },
+            {
+              "startWord": 6486,
+              "endWord": 6512,
+              "text": "э most of the buildings on the edges of the complex have been rebuilt in order to give tourists a better idea of how they originally"
+            },
+            {
+              "startWord": 6525,
+              "endWord": 6535,
+              "text": "he referred to the rumors as political chatter and silliness"
+            },
+            {
+              "startWord": 6595,
+              "endWord": 6616,
+              "text": "on some routes the larger companies have their own planes but for other routes and smaller firms there was a problem"
+            },
+            {
+              "startWord": 6732,
+              "endWord": 6770,
+              "text": "как и во всех южноафриканских национальных парках в этом парке существует ежедневная плата за его охрану и посещение since the foundation of asunción in 1537 paraguay has managed to keep a lot of its indigenous character and identity"
+            },
+            {
+              "startWord": 6784,
+              "endWord": 6814,
+              "text": "four skiers in the women s sitting group failed to finish their runs and 45 of the 117 total skiers in the giant slalom failed to rank in the race"
+            },
+            {
+              "startWord": 6866,
+              "endWord": 6888,
+              "text": "the city is also the base to climb the nyiragongo volcano along with some of the cheapest mountain gorilla tracking in africa"
+            }
+          ]
+        },
+        "peakRSSBytes": [
+          1013530624,
+          1011023872,
+          1011204096
+        ]
+      },
+      "selected": {
+        "n": 3,
+        "exactNativeRepeatParity": true,
+        "processingSeconds": [
+          100.279967417,
+          97.724985292,
+          99.105969792
+        ],
+        "medianSeconds": 99.105969792,
+        "quality": {
+          "wer": 0.3315957138719954,
+          "deletionRate": 0.2528236316246742,
+          "referenceWords": 6906,
+          "substitutions": 483,
+          "deletions": 1746,
+          "insertions": 61,
+          "deletionRunsAtLeastFourWords": [
+            {
+              "startWord": 7,
+              "endWord": 18,
+              "text": "europe is a continent that is relatively small but with many"
+            },
+            {
+              "startWord": 57,
+              "endWord": 66,
+              "text": "aerosmith have cancelled their remaining concerts on their tour"
+            },
+            {
+              "startWord": 82,
+              "endWord": 92,
+              "text": "for the springboks it ended a five match losing streak"
+            },
+            {
+              "startWord": 163,
+              "endWord": 187,
+              "text": "while one experimental vaccine appears able to reduce ebola mortality up until now no drugs have been clearly demonstrated suitable for treating existing infection"
+            },
+            {
+              "startWord": 303,
+              "endWord": 313,
+              "text": "he referred to the rumors as political chatter and silliness"
+            },
+            {
+              "startWord": 327,
+              "endWord": 338,
+              "text": "everyone participates in society and uses transportation systems almost everyone complains"
+            },
+            {
+              "startWord": 350,
+              "endWord": 373,
+              "text": "лучший способ преуспеть в париже это вести себя наилучшим образом как bien élevé хорошо воспитанный человек это значительно облегчит адаптацию в этом городе"
+            },
+            {
+              "startWord": 538,
+              "endWord": 548,
+              "text": "to keep a lot of its indigenous character and identity"
+            },
+            {
+              "startWord": 625,
+              "endWord": 629,
+              "text": "так же как луна"
+            },
+            {
+              "startWord": 645,
+              "endWord": 667,
+              "text": "city is also the base to climb the nyiragongo volcano along with some of the cheapest mountain gorilla tracking in africa оттава"
+            },
+            {
+              "startWord": 690,
+              "endWord": 704,
+              "text": "another to form crystals that may block kidney function researchers at the university said"
+            },
+            {
+              "startWord": 753,
+              "endWord": 770,
+              "text": "everything in the universe is made of matter all matter is made of tiny particles called atoms"
+            },
+            {
+              "startWord": 823,
+              "endWord": 829,
+              "text": "clear beautiful sky above and the"
+            },
+            {
+              "startWord": 864,
+              "endWord": 875,
+              "text": "kong leave the island and head for the kowloon waterfront opposite"
+            },
+            {
+              "startWord": 897,
+              "endWord": 907,
+              "text": "a new provisional electoral council cep of nine members yesterday"
+            },
+            {
+              "startWord": 965,
+              "endWord": 983,
+              "text": "virtual teams are held to the same standards of excellence as conventional teams but there are subtle differences"
+            },
+            {
+              "startWord": 1130,
+              "endWord": 1155,
+              "text": "только мутации в клетках зародышевой линии могут передаваться далее детям в то время как мутации где то еще могут привести к гибели клеток или раку"
+            },
+            {
+              "startWord": 1182,
+              "endWord": 1188,
+              "text": "является членом общества и использует транспортные"
+            },
+            {
+              "startWord": 1225,
+              "endWord": 1237,
+              "text": "scientists hope to understand how planets form especially how the earth formed"
+            },
+            {
+              "startWord": 1291,
+              "endWord": 1311,
+              "text": "the vehicle itself was taken away from the scene of the accident at approximately 1200 gmt on the same day"
+            },
+            {
+              "startWord": 1335,
+              "endWord": 1342,
+              "text": "only go ashore using shipboard excursions you"
+            },
+            {
+              "startWord": 1374,
+              "endWord": 1382,
+              "text": "aspect ratio of this format dividing by twelve"
+            },
+            {
+              "startWord": 1419,
+              "endWord": 1425,
+              "text": "the second set but this too"
+            },
+            {
+              "startWord": 1449,
+              "endWord": 1472,
+              "text": "ottawa is canada s charming bilingual capital and features an array of art galleries and museums that showcase canada s past and present"
+            },
+            {
+              "startWord": 1487,
+              "endWord": 1501,
+              "text": "can only wonder what the keyboard will become when something newer comes along скаффолдинг"
+            },
+            {
+              "startWord": 1508,
+              "endWord": 1526,
+              "text": "помощи тем кто проходит через новый опыт обучения такой как использование новой компьютерной программы или начало нового проекта"
+            },
+            {
+              "startWord": 1559,
+              "endWord": 1572,
+              "text": "получите новую смесь перемешав два сухих порошка в одной емкости а затем чистыми"
+            },
+            {
+              "startWord": 1580,
+              "endWord": 1601,
+              "text": "began funding the obscenity initiative in fiscal 2005 and specified that the fbi must devote 10 agents to adult pornography карри"
+            },
+            {
+              "startWord": 1614,
+              "endWord": 1638,
+              "text": "finally there are many small cats including loose pet cats that eat the far more numerous small prey like insects rodents lizards and birds"
+            },
+            {
+              "startWord": 1650,
+              "endWord": 1674,
+              "text": "professor pamela ferguson of the university of dundee notes journalists do seem to be walking a dangerous line if publishing photos etc of suspects"
+            },
+            {
+              "startWord": 1685,
+              "endWord": 1707,
+              "text": "the archipelago lies 120 km north of the peninsula the largest is king george island with the settlement of villa las estrellas"
+            },
+            {
+              "startWord": 1787,
+              "endWord": 1799,
+              "text": "the schengen zone however works somewhat like one country in this respect"
+            },
+            {
+              "startWord": 1908,
+              "endWord": 1917,
+              "text": "но оказавшись в глубоких тропиках лишь в нескольких градусах"
+            },
+            {
+              "startWord": 1937,
+              "endWord": 1954,
+              "text": "between 10 00 11 00 pm mdt a fire was started by the inmates in the yard"
+            },
+            {
+              "startWord": 2010,
+              "endWord": 2018,
+              "text": "одна из бомб взорвалась возле офиса генерал губернатора"
+            },
+            {
+              "startWord": 2039,
+              "endWord": 2047,
+              "text": "дюваль который женат и имеет двух совершеннолетних детей"
+            },
+            {
+              "startWord": 2057,
+              "endWord": 2074,
+              "text": "while he was working at the hospital liggins began to investigate premature labor during his spare time"
+            },
+            {
+              "startWord": 2077,
+              "endWord": 2081,
+              "text": "отдали луне дань уважения"
+            },
+            {
+              "startWord": 2131,
+              "endWord": 2140,
+              "text": "aerosmith have cancelled their remaining concerts on their tour"
+            },
+            {
+              "startWord": 2156,
+              "endWord": 2166,
+              "text": "for the springboks it ended a five match losing streak"
+            },
+            {
+              "startWord": 2237,
+              "endWord": 2261,
+              "text": "while one experimental vaccine appears able to reduce ebola mortality up until now no drugs have been clearly demonstrated suitable for treating existing infection"
+            },
+            {
+              "startWord": 2377,
+              "endWord": 2387,
+              "text": "he referred to the rumors as political chatter and silliness"
+            },
+            {
+              "startWord": 2401,
+              "endWord": 2412,
+              "text": "everyone participates in society and uses transportation systems almost everyone complains"
+            },
+            {
+              "startWord": 2424,
+              "endWord": 2447,
+              "text": "лучший способ преуспеть в париже это вести себя наилучшим образом как bien élevé хорошо воспитанный человек это значительно облегчит адаптацию в этом городе"
+            },
+            {
+              "startWord": 2612,
+              "endWord": 2622,
+              "text": "to keep a lot of its indigenous character and identity"
+            },
+            {
+              "startWord": 2699,
+              "endWord": 2703,
+              "text": "так же как луна"
+            },
+            {
+              "startWord": 2719,
+              "endWord": 2741,
+              "text": "city is also the base to climb the nyiragongo volcano along with some of the cheapest mountain gorilla tracking in africa оттава"
+            },
+            {
+              "startWord": 2764,
+              "endWord": 2778,
+              "text": "another to form crystals that may block kidney function researchers at the university said"
+            },
+            {
+              "startWord": 2827,
+              "endWord": 2844,
+              "text": "everything in the universe is made of matter all matter is made of tiny particles called atoms"
+            },
+            {
+              "startWord": 2897,
+              "endWord": 2903,
+              "text": "clear beautiful sky above and the"
+            },
+            {
+              "startWord": 2938,
+              "endWord": 2949,
+              "text": "kong leave the island and head for the kowloon waterfront opposite"
+            },
+            {
+              "startWord": 2971,
+              "endWord": 2981,
+              "text": "a new provisional electoral council cep of nine members yesterday"
+            },
+            {
+              "startWord": 3039,
+              "endWord": 3057,
+              "text": "virtual teams are held to the same standards of excellence as conventional teams but there are subtle differences"
+            },
+            {
+              "startWord": 3204,
+              "endWord": 3229,
+              "text": "только мутации в клетках зародышевой линии могут передаваться далее детям в то время как мутации где то еще могут привести к гибели клеток или раку"
+            },
+            {
+              "startWord": 3256,
+              "endWord": 3262,
+              "text": "является членом общества и использует транспортные"
+            },
+            {
+              "startWord": 3299,
+              "endWord": 3311,
+              "text": "scientists hope to understand how planets form especially how the earth formed"
+            },
+            {
+              "startWord": 3365,
+              "endWord": 3385,
+              "text": "the vehicle itself was taken away from the scene of the accident at approximately 1200 gmt on the same day"
+            },
+            {
+              "startWord": 3409,
+              "endWord": 3416,
+              "text": "only go ashore using shipboard excursions you"
+            },
+            {
+              "startWord": 3448,
+              "endWord": 3456,
+              "text": "aspect ratio of this format dividing by twelve"
+            },
+            {
+              "startWord": 3493,
+              "endWord": 3499,
+              "text": "the second set but this too"
+            },
+            {
+              "startWord": 3523,
+              "endWord": 3546,
+              "text": "ottawa is canada s charming bilingual capital and features an array of art galleries and museums that showcase canada s past and present"
+            },
+            {
+              "startWord": 3561,
+              "endWord": 3575,
+              "text": "can only wonder what the keyboard will become when something newer comes along скаффолдинг"
+            },
+            {
+              "startWord": 3582,
+              "endWord": 3600,
+              "text": "помощи тем кто проходит через новый опыт обучения такой как использование новой компьютерной программы или начало нового проекта"
+            },
+            {
+              "startWord": 3633,
+              "endWord": 3646,
+              "text": "получите новую смесь перемешав два сухих порошка в одной емкости а затем чистыми"
+            },
+            {
+              "startWord": 3654,
+              "endWord": 3675,
+              "text": "began funding the obscenity initiative in fiscal 2005 and specified that the fbi must devote 10 agents to adult pornography карри"
+            },
+            {
+              "startWord": 3688,
+              "endWord": 3712,
+              "text": "finally there are many small cats including loose pet cats that eat the far more numerous small prey like insects rodents lizards and birds"
+            },
+            {
+              "startWord": 3724,
+              "endWord": 3748,
+              "text": "professor pamela ferguson of the university of dundee notes journalists do seem to be walking a dangerous line if publishing photos etc of suspects"
+            },
+            {
+              "startWord": 3759,
+              "endWord": 3781,
+              "text": "the archipelago lies 120 km north of the peninsula the largest is king george island with the settlement of villa las estrellas"
+            },
+            {
+              "startWord": 3861,
+              "endWord": 3873,
+              "text": "the schengen zone however works somewhat like one country in this respect"
+            },
+            {
+              "startWord": 3982,
+              "endWord": 3991,
+              "text": "но оказавшись в глубоких тропиках лишь в нескольких градусах"
+            },
+            {
+              "startWord": 4011,
+              "endWord": 4028,
+              "text": "between 10 00 11 00 pm mdt a fire was started by the inmates in the yard"
+            },
+            {
+              "startWord": 4084,
+              "endWord": 4092,
+              "text": "одна из бомб взорвалась возле офиса генерал губернатора"
+            },
+            {
+              "startWord": 4113,
+              "endWord": 4121,
+              "text": "дюваль который женат и имеет двух совершеннолетних детей"
+            },
+            {
+              "startWord": 4131,
+              "endWord": 4148,
+              "text": "while he was working at the hospital liggins began to investigate premature labor during his spare time"
+            },
+            {
+              "startWord": 4151,
+              "endWord": 4155,
+              "text": "отдали луне дань уважения"
+            },
+            {
+              "startWord": 4205,
+              "endWord": 4214,
+              "text": "aerosmith have cancelled their remaining concerts on their tour"
+            },
+            {
+              "startWord": 4230,
+              "endWord": 4240,
+              "text": "for the springboks it ended a five match losing streak"
+            },
+            {
+              "startWord": 4311,
+              "endWord": 4335,
+              "text": "while one experimental vaccine appears able to reduce ebola mortality up until now no drugs have been clearly demonstrated suitable for treating existing infection"
+            },
+            {
+              "startWord": 4451,
+              "endWord": 4461,
+              "text": "he referred to the rumors as political chatter and silliness"
+            },
+            {
+              "startWord": 4475,
+              "endWord": 4486,
+              "text": "everyone participates in society and uses transportation systems almost everyone complains"
+            },
+            {
+              "startWord": 4498,
+              "endWord": 4521,
+              "text": "лучший способ преуспеть в париже это вести себя наилучшим образом как bien élevé хорошо воспитанный человек это значительно облегчит адаптацию в этом городе"
+            },
+            {
+              "startWord": 4686,
+              "endWord": 4696,
+              "text": "to keep a lot of its indigenous character and identity"
+            },
+            {
+              "startWord": 4773,
+              "endWord": 4777,
+              "text": "так же как луна"
+            },
+            {
+              "startWord": 4793,
+              "endWord": 4815,
+              "text": "city is also the base to climb the nyiragongo volcano along with some of the cheapest mountain gorilla tracking in africa оттава"
+            },
+            {
+              "startWord": 4838,
+              "endWord": 4852,
+              "text": "another to form crystals that may block kidney function researchers at the university said"
+            },
+            {
+              "startWord": 4901,
+              "endWord": 4918,
+              "text": "everything in the universe is made of matter all matter is made of tiny particles called atoms"
+            },
+            {
+              "startWord": 4971,
+              "endWord": 4977,
+              "text": "clear beautiful sky above and the"
+            },
+            {
+              "startWord": 5012,
+              "endWord": 5023,
+              "text": "kong leave the island and head for the kowloon waterfront opposite"
+            },
+            {
+              "startWord": 5045,
+              "endWord": 5055,
+              "text": "a new provisional electoral council cep of nine members yesterday"
+            },
+            {
+              "startWord": 5113,
+              "endWord": 5131,
+              "text": "virtual teams are held to the same standards of excellence as conventional teams but there are subtle differences"
+            },
+            {
+              "startWord": 5278,
+              "endWord": 5303,
+              "text": "только мутации в клетках зародышевой линии могут передаваться далее детям в то время как мутации где то еще могут привести к гибели клеток или раку"
+            },
+            {
+              "startWord": 5330,
+              "endWord": 5336,
+              "text": "является членом общества и использует транспортные"
+            },
+            {
+              "startWord": 5373,
+              "endWord": 5385,
+              "text": "scientists hope to understand how planets form especially how the earth formed"
+            },
+            {
+              "startWord": 5439,
+              "endWord": 5459,
+              "text": "the vehicle itself was taken away from the scene of the accident at approximately 1200 gmt on the same day"
+            },
+            {
+              "startWord": 5483,
+              "endWord": 5490,
+              "text": "only go ashore using shipboard excursions you"
+            },
+            {
+              "startWord": 5522,
+              "endWord": 5530,
+              "text": "aspect ratio of this format dividing by twelve"
+            },
+            {
+              "startWord": 5567,
+              "endWord": 5573,
+              "text": "the second set but this too"
+            },
+            {
+              "startWord": 5597,
+              "endWord": 5620,
+              "text": "ottawa is canada s charming bilingual capital and features an array of art galleries and museums that showcase canada s past and present"
+            },
+            {
+              "startWord": 5635,
+              "endWord": 5649,
+              "text": "can only wonder what the keyboard will become when something newer comes along скаффолдинг"
+            },
+            {
+              "startWord": 5656,
+              "endWord": 5674,
+              "text": "помощи тем кто проходит через новый опыт обучения такой как использование новой компьютерной программы или начало нового проекта"
+            },
+            {
+              "startWord": 5707,
+              "endWord": 5720,
+              "text": "получите новую смесь перемешав два сухих порошка в одной емкости а затем чистыми"
+            },
+            {
+              "startWord": 5728,
+              "endWord": 5749,
+              "text": "began funding the obscenity initiative in fiscal 2005 and specified that the fbi must devote 10 agents to adult pornography карри"
+            },
+            {
+              "startWord": 5762,
+              "endWord": 5786,
+              "text": "finally there are many small cats including loose pet cats that eat the far more numerous small prey like insects rodents lizards and birds"
+            },
+            {
+              "startWord": 5798,
+              "endWord": 5822,
+              "text": "professor pamela ferguson of the university of dundee notes journalists do seem to be walking a dangerous line if publishing photos etc of suspects"
+            },
+            {
+              "startWord": 5833,
+              "endWord": 5855,
+              "text": "the archipelago lies 120 km north of the peninsula the largest is king george island with the settlement of villa las estrellas"
+            },
+            {
+              "startWord": 5935,
+              "endWord": 5947,
+              "text": "the schengen zone however works somewhat like one country in this respect"
+            },
+            {
+              "startWord": 6056,
+              "endWord": 6065,
+              "text": "но оказавшись в глубоких тропиках лишь в нескольких градусах"
+            },
+            {
+              "startWord": 6085,
+              "endWord": 6102,
+              "text": "between 10 00 11 00 pm mdt a fire was started by the inmates in the yard"
+            },
+            {
+              "startWord": 6158,
+              "endWord": 6166,
+              "text": "одна из бомб взорвалась возле офиса генерал губернатора"
+            },
+            {
+              "startWord": 6187,
+              "endWord": 6195,
+              "text": "дюваль который женат и имеет двух совершеннолетних детей"
+            },
+            {
+              "startWord": 6205,
+              "endWord": 6222,
+              "text": "while he was working at the hospital liggins began to investigate premature labor during his spare time"
+            },
+            {
+              "startWord": 6225,
+              "endWord": 6229,
+              "text": "отдали луне дань уважения"
+            },
+            {
+              "startWord": 6279,
+              "endWord": 6288,
+              "text": "aerosmith have cancelled their remaining concerts on their tour"
+            },
+            {
+              "startWord": 6304,
+              "endWord": 6314,
+              "text": "for the springboks it ended a five match losing streak"
+            },
+            {
+              "startWord": 6385,
+              "endWord": 6409,
+              "text": "while one experimental vaccine appears able to reduce ebola mortality up until now no drugs have been clearly demonstrated suitable for treating existing infection"
+            },
+            {
+              "startWord": 6525,
+              "endWord": 6535,
+              "text": "he referred to the rumors as political chatter and silliness"
+            },
+            {
+              "startWord": 6549,
+              "endWord": 6560,
+              "text": "everyone participates in society and uses transportation systems almost everyone complains"
+            },
+            {
+              "startWord": 6572,
+              "endWord": 6595,
+              "text": "лучший способ преуспеть в париже это вести себя наилучшим образом как bien élevé хорошо воспитанный человек это значительно облегчит адаптацию в этом городе"
+            },
+            {
+              "startWord": 6760,
+              "endWord": 6770,
+              "text": "to keep a lot of its indigenous character and identity"
+            },
+            {
+              "startWord": 6847,
+              "endWord": 6851,
+              "text": "так же как луна"
+            },
+            {
+              "startWord": 6867,
+              "endWord": 6889,
+              "text": "city is also the base to climb the nyiragongo volcano along with some of the cheapest mountain gorilla tracking in africa оттава"
+            }
+          ]
+        },
+        "peakRSSBytes": [
+          975290368,
+          975241216,
+          975601664
+        ]
+      },
+      "werDifferencePoints": -10.71532001158413,
+      "deletionDifferencePoints": -14.65392412395019,
+      "medianProcessingChangePercent": 6.582592028001399
+    }
+  },
+  "failedAttempts": 0,
+  "registrationSHA256": "0fcc3940202df007d761e8092cdd09c3717b8a814f7154bf5a081c6679c80357",
+  "replaySHA256": "ac95099d647711cd5e4f4f3b775a524ff97d52ca0eede530f95e04a65d1c7745",
+  "timingScope": "Native cap30 versus cap15 with the unchanged joiner; the gap-preserving quality is a replay on the same native words. Final shipping-path checks are separate.",
+  "scope": "50 distinct heldout phrases per language, repeated into three long composites. Repeated runs are computational replicates, not extra language samples.",
+  "nativeShippingParityPassed": true,
+  "modelIndependentValidationPassed": true,
+  "implementationStatus": "Implemented and verified on the PR branch; not a production release.",
+  "nativeVerification": "native-verification.json"
+}

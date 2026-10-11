@@ -1,0 +1,20 @@
+--- a/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift
++++ b/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift
+@@ -611,7 +611,7 @@
+             directory: directory,
+             microphone: microphone,
+             systemAudio: system,
+-            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2))),
++            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2)), preserveQuietAudio: true),
+             onSegment: { segments.value.append($0) },
+             probe: {}
+         )
+@@ -649,7 +649,7 @@
+             directory: directory,
+             microphone: microphone,
+             systemAudio: system,
+-            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2))),
++            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2)), preserveQuietAudio: true),
+             onSegment: { segments.value.append($0) },
+             probe: {}
+         )

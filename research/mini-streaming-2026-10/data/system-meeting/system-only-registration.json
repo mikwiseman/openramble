@@ -1,0 +1,9 @@
+{
+  "utc": "2026-10-11T08:54:59.170191+00:00",
+  "protocolSHA256": "3733f95940aed9d05b73aff97a746969150526a237ebd6648bf260766e27575c",
+  "quietNativeOutputsInspected": false,
+  "requiresAllExistingNativeDevelopmentGates": true,
+  "fixedSystemSpeechPeak": 0.005,
+  "unchangedMicrophoneSpeechPeak": 0.02,
+  "heldoutSelectionSHA256": "91c79d513cbdac78ffc213e8f75e260385722fe8cb53b9bdc960d4a7b52ff24c"
+}

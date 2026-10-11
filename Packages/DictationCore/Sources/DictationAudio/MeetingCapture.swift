@@ -127,6 +127,8 @@ public actor MeetingCapture {
     ///   - directory: where `audio.wav` and `peaks.bin` go; created if needed.
     ///   - systemAudio: `nil` records the microphone only, deliberately. The
     ///     file still has two channels so the format never changes.
+    ///   - segmentParameters: `nil` selects each channel's capture default;
+    ///     an explicit value applies unchanged to both channels.
     ///   - onLevels: meter updates, about ten a second, from a background queue.
     ///   - onFailure: the recording stopped itself, or one side did. Never
     ///     called for something the caller asked for.
@@ -137,7 +139,7 @@ public actor MeetingCapture {
         directory: URL,
         microphone: (any MeetingAudioSource)?,
         systemAudio: (any MeetingAudioSource)?,
-        segmentParameters: MeetingSegmentPolicy.Parameters = .meeting,
+        segmentParameters: MeetingSegmentPolicy.Parameters? = nil,
         onLevels: @escaping @Sendable (Levels) -> Void = { _ in },
         onSegment: @escaping @Sendable (MeetingSegmentRef) -> Void = { _ in },
         onFailure: @escaping @Sendable (Failure) -> Void = { _ in },
@@ -473,7 +475,6 @@ final class MeetingPipeline: @unchecked Sendable {
     private let activeChannels: Set<MeetingChannel>
     private let onLevels: @Sendable (MeetingCapture.Levels) -> Void
     private let onSegment: @Sendable (MeetingSegmentRef) -> Void
-    private let segmentParameters: MeetingSegmentPolicy.Parameters
     private let freeBytesQuery: @Sendable () -> Int64?
     private let audioSink: (any MeetingAudioBlockSink)?
     var onDiskOrWriteFailure: (@Sendable (Failure) -> Void)?
@@ -504,7 +505,7 @@ final class MeetingPipeline: @unchecked Sendable {
     init(
         writer: MeetingWriter,
         activeChannels: Set<MeetingChannel>,
-        segmentParameters: MeetingSegmentPolicy.Parameters,
+        segmentParameters: MeetingSegmentPolicy.Parameters?,
         onLevels: @escaping @Sendable (MeetingCapture.Levels) -> Void,
         onSegment: @escaping @Sendable (MeetingSegmentRef) -> Void,
         freeBytes: @escaping @Sendable () -> Int64?,
@@ -512,14 +513,14 @@ final class MeetingPipeline: @unchecked Sendable {
     ) {
         self.writer = writer
         self.activeChannels = activeChannels
-        self.segmentParameters = segmentParameters
         self.onLevels = onLevels
         self.onSegment = onSegment
         freeBytesQuery = freeBytes
         self.audioSink = audioSink
         aligner = DualChannelAligner(activeChannels: activeChannels)
         for channel in activeChannels {
-            policies[channel] = MeetingSegmentPolicy(channel: channel, parameters: segmentParameters)
+            policies[channel] = MeetingSegmentPolicy(channel: channel,
+                parameters: segmentParameters ?? .capture(channel: channel))
         }
     }
 

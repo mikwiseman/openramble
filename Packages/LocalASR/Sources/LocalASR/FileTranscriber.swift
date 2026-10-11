@@ -28,7 +28,7 @@ public struct FileTranscriber: Sendable {
     private let segmentSeconds: Int
 
     public init(transcriber: LocalTranscriber, priority: DictationPriority? = nil,
-                segmentSeconds: Int = 30) {
+                segmentSeconds: Int = 15) {
         precondition((15...60).contains(segmentSeconds))
         self.transcriber = transcriber
         self.priority = priority

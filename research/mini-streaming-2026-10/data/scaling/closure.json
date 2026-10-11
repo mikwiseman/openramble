@@ -1,0 +1,26 @@
+{
+  "utc": "2026-10-11T05:39:56.386009+00:00",
+  "successfulRuns": 17,
+  "failedAttempts": 6,
+  "decision": "Close supplementary scaling diagnostic after both2and4model memory gates failed and continuing unrelated builds plus pressure prevented stable completion. Primary301-job matrix is complete. Do not retry this scheduling hypothesis without a new mechanism.",
+  "cancelledRemainder": 7,
+  "successIDs": [
+    "file-ru-3540s-settled-1-normal-0",
+    "file-ru-3540s-settled-2-normal-0",
+    "file-ru-3540s-settled-4-normal-0",
+    "file-en-3540s-settled-1-normal-0",
+    "file-en-3540s-settled-2-normal-0",
+    "file-en-3540s-settled-4-normal-0",
+    "file-mixed-3540s-settled-1-normal-0",
+    "file-mixed-3540s-settled-2-normal-0",
+    "file-mixed-3540s-settled-4-normal-0",
+    "file-ru-3540s-settled-2-normal-1",
+    "file-ru-3540s-settled-1-normal-1",
+    "file-en-3540s-settled-2-normal-1",
+    "file-en-3540s-settled-1-normal-1",
+    "file-mixed-3540s-settled-2-normal-1",
+    "file-mixed-3540s-settled-1-normal-1",
+    "file-ru-3540s-settled-1-normal-2",
+    "file-ru-3540s-settled-2-normal-2"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "checkedDuringPreparation": true,
+  "newUniquePCM": 100,
+  "newUniqueNormalizedPhrases": 100,
+  "overlappingRecordIDs": 0,
+  "overlappingNormalizedReferences": 0,
+  "overlappingWAVHashes": 0,
+  "overlappingPCMPayloadHashes": 0,
+  "comparedAgainst": "All200 original development recordings and100 first-holdout source clips. No claim about model training data.",
+  "preparerSHA256": "dcd635d6dd0fc5fddd725f42509851d7596e67174c68c6b5636d96551ca0507d"
+}

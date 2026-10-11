@@ -1,0 +1,31 @@
+{
+  "source": "macOS say Samantha; existing synthetic E2E phrase",
+  "source_revision": "macOS26.4-25E246; exact cached audio, voice binary not pinned",
+  "source_manifest_sha256": "b9768a0877674f1c588cb23a6120b637ff1bcfafb0fe2e3c1b0117174dc89432",
+  "fixtures": [
+    {
+      "id": "synthetic-en-original",
+      "language": "en",
+      "audio_sha256": "7c23e738086821c75103b3e74ca6d5d35c4cdef61824c1d1ef43f14d16c15a6c",
+      "duration_seconds": 2.0298125,
+      "reference": "Please review my pull request send it",
+      "reference_sha256": "3e96b992554695325c2f884e036a557130ef44907c08eac421f9830ce2e11391",
+      "original_audio_sha256": "b0d44e74fd9b91db9e6f4ddd787764d656ea617936996d64a37b76c0bd6601ea",
+      "original_pcm_sha256": "77e24023fd654fc16d79d906e8476768a6c51461ead96279583dc1af6ffa3da5",
+      "trailingZeroFrames": 0,
+      "role": "synthetic E2E localization; not FLEURS"
+    },
+    {
+      "id": "synthetic-en-pad500",
+      "language": "en",
+      "audio_sha256": "3a82df24b82d419f7128a10fcbf9cbb23f99a895d99cf52a200a7a72331fe41d",
+      "duration_seconds": 2.5298125,
+      "reference": "Please review my pull request send it",
+      "reference_sha256": "3e96b992554695325c2f884e036a557130ef44907c08eac421f9830ce2e11391",
+      "original_audio_sha256": "b0d44e74fd9b91db9e6f4ddd787764d656ea617936996d64a37b76c0bd6601ea",
+      "original_pcm_sha256": "77e24023fd654fc16d79d906e8476768a6c51461ead96279583dc1af6ffa3da5",
+      "trailingZeroFrames": 8000,
+      "role": "synthetic E2E localization; not FLEURS"
+    }
+  ]
+}

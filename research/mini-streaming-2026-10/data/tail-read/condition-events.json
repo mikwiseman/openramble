@@ -1,0 +1,19 @@
+[
+  {
+    "utc": "2026-10-11T08:27:24.787428+00:00",
+    "event": "Resume after an unrelated swift-frontend interrupted CPU10 repeat2 after32successfuljobs",
+    "failedJob": "controller-ru-360s-settled-1-cpu10-2-tail",
+    "failureReason": "build started during measurement",
+    "pressureAtStop": "1",
+    "resourcePreflight": "No active xcodebuild/swift-frontend or booted simulator at follow-up; current memory pressure1, free query52%.",
+    "change": "No user application killed; wait for60continuousquietseconds before same-source resume."
+  },
+  {
+    "utc": "2026-10-11T08:34:35.933195+00:00",
+    "event": "Second unrelated swift-frontend interruption after37 successful jobs; three jobs remain",
+    "failedJob": "controller-ru-3540s-settled-1-cpu10-0-tail",
+    "failureReason": "build started during measurement",
+    "pressureAtStop": "1",
+    "change": "Wait for 60 continuous quiet seconds, now also treating an active xcodebuild driver as compilation; no application killed; same source, binary and runner."
+  }
+]

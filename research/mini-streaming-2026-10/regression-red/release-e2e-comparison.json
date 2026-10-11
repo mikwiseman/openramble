@@ -1,0 +1,73 @@
+{
+  "scope": "System TTS fixtures; separate from FLEURS; one pass per source on this shared desktop",
+  "controls": [
+    {
+      "sourceHEAD": "373f2c294a79daae76b449173c2001589df1cb01",
+      "binarySHA256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+      "target": "original",
+      "configuration": "release",
+      "utc": "2026-10-11T06:11:22Z",
+      "exitCode": 1,
+      "hardStop": null,
+      "tests": [
+        {
+          "case": "DictationEndToEndTests.DictationEndToEndTests testEnglishTrailingSendStaysVerbatimAndNeverPressesReturn",
+          "status": "failed",
+          "seconds": 0.824
+        },
+        {
+          "case": "DictationEndToEndTests.DictationLatencyTests testPathFromReadyFileToInsertedTextStaysUnderASecond",
+          "status": "failed",
+          "seconds": 6.49
+        },
+        {
+          "case": "DictationEndToEndTests.FileQualityTests testNamesNumbersAndMixedLanguageSurviveLongFileBoundaries",
+          "status": "failed",
+          "seconds": 3.079
+        }
+      ],
+      "fileQualityDiagnostic": [
+        "referenceErrors=38 chunkErrors=30 words=109"
+      ],
+      "assertionCategories": [
+        "trailing English send it absent",
+        "latency threshold",
+        "repeated proper name count"
+      ]
+    },
+    {
+      "sourceHEAD": "0932e5f4f4bccb5fbe6d4252257bbd3010baa20d",
+      "binarySHA256": "18a7ff6b8753a3bc28ea2a07718ba82466d73acfb9b108616b52dda69d92fc40",
+      "target": "candidate",
+      "configuration": "release",
+      "utc": "2026-10-11T06:12:59Z",
+      "exitCode": 1,
+      "hardStop": null,
+      "tests": [
+        {
+          "case": "DictationEndToEndTests.DictationEndToEndTests testEnglishTrailingSendStaysVerbatimAndNeverPressesReturn",
+          "status": "failed",
+          "seconds": 0.911
+        },
+        {
+          "case": "DictationEndToEndTests.DictationLatencyTests testPathFromReadyFileToInsertedTextStaysUnderASecond",
+          "status": "failed",
+          "seconds": 8.25
+        },
+        {
+          "case": "DictationEndToEndTests.FileQualityTests testNamesNumbersAndMixedLanguageSurviveLongFileBoundaries",
+          "status": "failed",
+          "seconds": 4.016
+        }
+      ],
+      "fileQualityDiagnostic": [
+        "referenceErrors=38 chunkErrors=30 words=109"
+      ],
+      "assertionCategories": [
+        "trailing English send it absent",
+        "latency threshold",
+        "repeated proper name count"
+      ]
+    }
+  ]
+}

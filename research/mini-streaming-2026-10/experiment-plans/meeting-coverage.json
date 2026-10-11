@@ -1,0 +1,98 @@
+[
+  {
+    "fixture": "ru-60s",
+    "mode": "meeting",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "original",
+    "parameters": {
+      "meetingPreserveQuietAudio": false
+    }
+  },
+  {
+    "fixture": "ru-60s",
+    "mode": "meeting",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "preserve",
+    "parameters": {
+      "meetingPreserveQuietAudio": true
+    }
+  },
+  {
+    "fixture": "en-60s",
+    "mode": "meeting",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "preserve",
+    "parameters": {
+      "meetingPreserveQuietAudio": true
+    }
+  },
+  {
+    "fixture": "en-60s",
+    "mode": "meeting",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "original",
+    "parameters": {
+      "meetingPreserveQuietAudio": false
+    }
+  },
+  {
+    "fixture": "ru-360s",
+    "mode": "meeting",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "original",
+    "parameters": {
+      "meetingPreserveQuietAudio": false
+    }
+  },
+  {
+    "fixture": "ru-360s",
+    "mode": "meeting",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "preserve",
+    "parameters": {
+      "meetingPreserveQuietAudio": true
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "meeting",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "preserve",
+    "parameters": {
+      "meetingPreserveQuietAudio": true
+    }
+  },
+  {
+    "fixture": "en-360s",
+    "mode": "meeting",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "original",
+    "parameters": {
+      "meetingPreserveQuietAudio": false
+    }
+  }
+]

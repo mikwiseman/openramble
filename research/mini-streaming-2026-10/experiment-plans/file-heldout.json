@@ -1,0 +1,254 @@
+[
+  {
+    "fixture": "ru-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "control",
+    "parameters": {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "selected",
+    "parameters": {
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "selected",
+    "parameters": {
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "control",
+    "parameters": {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "mixed-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "control",
+    "parameters": {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "mixed-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "selected",
+    "parameters": {
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "selected",
+    "parameters": {
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "control",
+    "parameters": {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "mixed-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "control",
+    "parameters": {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "mixed-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "selected",
+    "parameters": {
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "selected",
+    "parameters": {
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 1,
+    "variant": "control",
+    "parameters": {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "mixed-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "control",
+    "parameters": {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "mixed-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "selected",
+    "parameters": {
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "selected",
+    "parameters": {
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "ru-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "control",
+    "parameters": {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "control",
+    "parameters": {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 2,
+    "variant": "selected",
+    "parameters": {
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000
+    }
+  }
+]
