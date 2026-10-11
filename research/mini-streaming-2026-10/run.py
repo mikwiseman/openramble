@@ -99,7 +99,7 @@ else:
         assert isinstance(job["repeat"], int) and job["repeat"] >= 0
         assert re.fullmatch(r"[a-zA-Z0-9_-]+", job["variant"])
         parameters = job.get("parameters", {})
-        assert set(parameters) <= {"tailRead", "segmentSeconds", "minimumSegmentSeconds", "meetingPreserveQuietAudio", "overlapMilliseconds", "meetingSpeechPeak"}
+        assert set(parameters) <= {"tailRead", "segmentSeconds", "minimumSegmentSeconds", "meetingPreserveQuietAudio", "overlapMilliseconds", "meetingSpeechPeak", "meetingChannel"}
         assert isinstance(parameters.get("tailRead", False), bool)
         assert parameters.get("segmentSeconds", 30) in (15, 30, 60)
         assert parameters.get("minimumSegmentSeconds", 15) in (4, 15)
@@ -112,6 +112,8 @@ else:
         assert "overlapMilliseconds" not in parameters or job["mode"] == "file"
         assert parameters.get("meetingSpeechPeak", 0.02) in (0.02, 0.005)
         assert "meetingSpeechPeak" not in parameters or job["mode"] == "meeting"
+        assert parameters.get("meetingChannel", "microphone") in ("microphone", "system")
+        assert "meetingChannel" not in parameters or job["mode"] == "meeting"
         assert job["mode"] in ("file", "shipping-file") or job["workers"] == 1
 
 jobs = [job for job in jobs if job["workers"] <= args.max_workers]

@@ -35,6 +35,14 @@ public struct MeetingSegmentPolicy: Sendable {
             forcedCutWindow: .seconds(1)
         )
 
+        /// Tapped playback can be quieter than microphone input. Keeping the
+        /// microphone floor unchanged also preserves the echo gate's contract.
+        public static func capture(channel: MeetingChannel) -> Parameters {
+            var parameters = meeting
+            if channel == .system { parameters.speech.speechPeak = 0.005 }
+            return parameters
+        }
+
         public init(
             speech: SpeechSegmenter.Parameters = SpeechSegmenter.Parameters(),
             hardCap: Duration = .seconds(20),

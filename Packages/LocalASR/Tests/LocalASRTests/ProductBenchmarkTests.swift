@@ -23,6 +23,7 @@ final class ProductBenchmarkTests: XCTestCase {
         let meetingPreserveQuietAudio: Bool?
         let overlapMilliseconds: Int?
         let meetingSpeechPeak: Float?
+        let meetingChannel: String?
     }
 
     func testPublicFixture() async throws {
@@ -37,6 +38,7 @@ final class ProductBenchmarkTests: XCTestCase {
         guard [4, 15].contains(config.minimumSegmentSeconds ?? 15) else { throw BenchError.invalidConfiguration }
         guard [250, 2_000].contains(config.overlapMilliseconds ?? 2_000) else { throw BenchError.invalidConfiguration }
         guard [Float(0.02), Float(0.005)].contains(config.meetingSpeechPeak ?? 0.02) else { throw BenchError.invalidConfiguration }
+        guard ["microphone", "system"].contains(config.meetingChannel ?? "microphone") else { throw BenchError.invalidConfiguration }
         let engines = (0..<config.workers).map { _ in TranscribeCppAdapter() }
         let transcribers = engines.map { LocalTranscriber(engine: $0) }
         let loadStart = ContinuousClock.now
@@ -66,7 +68,9 @@ final class ProductBenchmarkTests: XCTestCase {
             row["minimumSegmentSeconds"] = config.minimumSegmentSeconds ?? 15
             row["meetingPreserveQuietAudio"] = config.meetingPreserveQuietAudio ?? false
             row["overlapMilliseconds"] = config.overlapMilliseconds ?? 2_000
-            row["meetingSpeechPeak"] = config.meetingSpeechPeak ?? 0.02
+            row["meetingChannel"] = config.meetingChannel ?? "microphone"
+            row["meetingSpeechPeak"] = config.meetingSpeechPeak
+                ?? MeetingSegmentPolicy.Parameters.capture(channel: config.meetingChannel == "system" ? .system : .microphone).speech.speechPeak
             row["loadSeconds"] = loadSeconds
             row["runtime"] = TranscribeCppAdapter.runtimeVersion
             row["backend"] = await engines[0].activeBackend
@@ -197,10 +201,11 @@ final class ProductBenchmarkTests: XCTestCase {
         let queue = MeetingTranscriptionQueue(read: { ref in Array(samples[ref.startFrame..<ref.endFrame]) },
             decode: { try await probe.decode($0).text }, awaitTurn: {},
             emit: { ref, result in await output.append(ref, result) })
-        var parameters = MeetingSegmentPolicy.Parameters.meeting
+        let channel: MeetingChannel = config.meetingChannel == "system" ? .system : .microphone
+        var parameters = MeetingSegmentPolicy.Parameters.capture(channel: channel)
         parameters.preserveQuietAudio = config.meetingPreserveQuietAudio ?? false
-        parameters.speech.speechPeak = config.meetingSpeechPeak ?? 0.02
-        var policy = MeetingSegmentPolicy(channel: .microphone, parameters: parameters)
+        parameters.speech.speechPeak = config.meetingSpeechPeak ?? parameters.speech.speechPeak
+        var policy = MeetingSegmentPolicy(channel: channel, parameters: parameters)
         let start = ContinuousClock.now
         for cursor in stride(from: 0, to: samples.count, by: 320) {
             let end = min(cursor + 320, samples.count)
