@@ -1,7 +1,8 @@
 # Reproduce the Mini experiment
 
-The raw evidence uses public FLEURS speech only. No microphone, clipboard or
-user recording is read. Audio and model binaries are not committed.
+The speech baseline uses public FLEURS recordings; follow-ups also include
+explicit synthetic speech, noise and echo fixtures. No microphone, clipboard
+or private user recording is read. Audio and model binaries are not committed.
 
 ## Source revisions matter
 
