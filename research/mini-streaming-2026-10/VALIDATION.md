@@ -43,3 +43,36 @@ restores the retained one-second quiet prefix to the relative segmenter
 counter after leading-silence trimming. It does not change the0.02 speech
 threshold or enable quiet-audio decoding for live capture. Coverage results
 will remain separate from timing adoption claims.
+
+
+## Selected file policy and rejected echo candidates
+
+The fixed 15-second/gap-preserving file policy passed the sealed 50-RU/50-EN
+quality holdout: WER 6.1269→5.8097%, 8.1250→7.9875%, and mixed
+43.8749→33.1596%. All 18 computational repetitions agree exactly within
+cells. These are repeated composites of 100 distinct phrases, not 18 new
+speech samples. Full native FileTranscriber parity is the next gate.
+
+The pure reproduction fails on the old source and passes after the change;
+36 native-word exports also match the frozen selected replay exactly.
+An ordinary debug package run with the installed model still fails the
+pre-existing trailing-English assertion. This has not been hidden by
+weakening it. Model-independent validation uses an explicit empty model root
+and is reported separately from the three prior release E2E failures.
+
+The suffix-read study completed 40 runs with exact final text, samples and
+decode-size parity, zero memory warnings and two preserved compiler aborts.
+Normal long-input median gains are RU 35.665% and EN 6.085%. The registered
+10% gate for both languages fails. The app is not wired to the optional
+research callback.
+
+Preserve-all and global speechPeak=0.005 both fail prospective capture-echo
+falsifiers. The live threshold is unchanged; the registered speech/noise
+map still runs to document the tradeoff. The second speech holdout stays sealed.
+
+The selected-policy model-independent validation passes: 649 DictationCore,
+199 LocalASR (32 explicit skips), 9 Swift FFI and 188 Rust tests. Rust format,
+clippy, conformance, design-token, network and diagnostic checks also pass.
+The driver initially could not find cargo after the two passing Swift suites;
+the remaining checks then ran with the installed rustup and cmake on PATH.
+This tooling recovery does not erase the separate installed-model failure.

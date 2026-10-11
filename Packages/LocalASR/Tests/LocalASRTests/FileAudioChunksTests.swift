@@ -17,9 +17,9 @@ final class FileAudioChunksTests: XCTestCase {
         for fromFile in [false, true] {
             let source: FileAudioChunks
             if fromFile {
-                source = try await FileAudioChunks(url: url, overlapMilliseconds: 250)
+                source = try await FileAudioChunks(url: url, seconds: 30, overlapMilliseconds: 250)
             } else {
-                source = FileAudioChunks(samples: samples, overlapMilliseconds: 250)
+                source = FileAudioChunks(samples: samples, seconds: 30, overlapMilliseconds: 250)
             }
             var end = 0
             var count = 0
@@ -78,7 +78,7 @@ final class FileAudioChunksTests: XCTestCase {
     func testContinuousAudioHasBoundedChunksAndKeepsShortTail() async throws {
         let url = try recording(seconds: 61.13, value: 0.1)
         defer { try? FileManager.default.removeItem(at: url) }
-        let source = try await FileAudioChunks(url: url)
+        let source = try await FileAudioChunks(url: url, seconds: 30)
         var end = 0
         var count = 0
         while let chunk = try await source.next() {

@@ -26,7 +26,7 @@ actor FileAudioChunks {
     private let overlap: Int
     private let minimumTail = 2 * 16_000
 
-    init(url: URL, seconds: Int = 30, minimumSeconds: Int = 15, overlapMilliseconds: Int = 2_000) async throws {
+    init(url: URL, seconds: Int = 15, minimumSeconds: Int = 15, overlapMilliseconds: Int = 2_000) async throws {
         precondition(minimumSeconds > 0 && minimumSeconds <= seconds)
         precondition((0...2_000).contains(overlapMilliseconds))
         overlap = overlapMilliseconds * 16
@@ -41,7 +41,7 @@ actor FileAudioChunks {
         ))
     }
 
-    init(samples: [Float], seconds: Int = 30, minimumSeconds: Int = 15, overlapMilliseconds: Int = 2_000) {
+    init(samples: [Float], seconds: Int = 15, minimumSeconds: Int = 15, overlapMilliseconds: Int = 2_000) {
         precondition(minimumSeconds > 0 && minimumSeconds <= seconds)
         precondition((0...2_000).contains(overlapMilliseconds))
         overlap = overlapMilliseconds * 16
@@ -135,7 +135,8 @@ actor FileAudioChunks {
 
 /// Match words only inside the shared audio interval. Repeated words elsewhere
 /// in a conversation are never deduplicated. Without a confident match, the
-/// pause/quiet-frame boundary decides ownership by each word's midpoint.
+/// pause/quiet-frame boundary decides ownership by each word's midpoint,
+/// except when a time gap separates the two predictions and both can be kept.
 struct TimedTranscriptJoiner {
     private(set) var words: [ASRResult.Word] = []
 
@@ -167,6 +168,11 @@ struct TimedTranscriptJoiner {
         }
         if let match {
             words = Array(words.prefix(match.old + 1)) + incoming.dropFirst(match.new + 1)
+        } else if let first = incoming.first, let last = words.last,
+                  first.start - last.end >= 0.6 {
+            // With no shared words and no temporal overlap, the boundary
+            // must not discard recognized context from either side.
+            words += incoming
         } else {
             words = words.filter { ($0.start + $0.end) / 2 < boundary }
                 + incoming.filter { ($0.start + $0.end) / 2 >= boundary }

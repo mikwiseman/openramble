@@ -22,6 +22,7 @@ final class ProductBenchmarkTests: XCTestCase {
         let minimumSegmentSeconds: Int?
         let meetingPreserveQuietAudio: Bool?
         let overlapMilliseconds: Int?
+        let meetingSpeechPeak: Float?
     }
 
     func testPublicFixture() async throws {
@@ -35,6 +36,7 @@ final class ProductBenchmarkTests: XCTestCase {
         guard [15, 30, 60].contains(config.segmentSeconds ?? 30) else { throw BenchError.invalidConfiguration }
         guard [4, 15].contains(config.minimumSegmentSeconds ?? 15) else { throw BenchError.invalidConfiguration }
         guard [250, 2_000].contains(config.overlapMilliseconds ?? 2_000) else { throw BenchError.invalidConfiguration }
+        guard [Float(0.02), Float(0.005)].contains(config.meetingSpeechPeak ?? 0.02) else { throw BenchError.invalidConfiguration }
         let engines = (0..<config.workers).map { _ in TranscribeCppAdapter() }
         let transcribers = engines.map { LocalTranscriber(engine: $0) }
         let loadStart = ContinuousClock.now
@@ -64,6 +66,7 @@ final class ProductBenchmarkTests: XCTestCase {
             row["minimumSegmentSeconds"] = config.minimumSegmentSeconds ?? 15
             row["meetingPreserveQuietAudio"] = config.meetingPreserveQuietAudio ?? false
             row["overlapMilliseconds"] = config.overlapMilliseconds ?? 2_000
+            row["meetingSpeechPeak"] = config.meetingSpeechPeak ?? 0.02
             row["loadSeconds"] = loadSeconds
             row["runtime"] = TranscribeCppAdapter.runtimeVersion
             row["backend"] = await engines[0].activeBackend
@@ -190,11 +193,13 @@ final class ProductBenchmarkTests: XCTestCase {
     private func meeting(_ config: Configuration, transcriber: LocalTranscriber) async throws -> [String: Any] {
         let samples = try AudioFileReader().samples(from: URL(fileURLWithPath: config.input))
         let output = MeetingOutput()
+        let probe = DecodeProbe(transcriber: transcriber)
         let queue = MeetingTranscriptionQueue(read: { ref in Array(samples[ref.startFrame..<ref.endFrame]) },
-            decode: { try await transcriber.transcribe(samples: $0).text }, awaitTurn: {},
+            decode: { try await probe.decode($0).text }, awaitTurn: {},
             emit: { ref, result in await output.append(ref, result) })
         var parameters = MeetingSegmentPolicy.Parameters.meeting
         parameters.preserveQuietAudio = config.meetingPreserveQuietAudio ?? false
+        parameters.speech.speechPeak = config.meetingSpeechPeak ?? 0.02
         var policy = MeetingSegmentPolicy(channel: .microphone, parameters: parameters)
         let start = ContinuousClock.now
         for cursor in stride(from: 0, to: samples.count, by: 320) {
@@ -231,7 +236,9 @@ final class ProductBenchmarkTests: XCTestCase {
             coveredUntil = row.ref.endFrame
         }
         if coveredUntil < samples.count { gaps.append(gap(coveredUntil, samples.count)) }
+        let calls = await probe.results
         return ["text": rows.map(\.text).joined(separator: " "), "stopSeconds": wall,
+                "calls": calls.map { ["samples": $0.samples, "wallSeconds": $0.wall, "engineSeconds": $0.engine] },
                 "audioSeconds": Double(samples.count) / 16_000, "completedBeforeStop": before,
                 "segments": rows.count, "backlogAfterDrain": await queue.backlog,
                 "submittedFrames": submittedFrames, "unsubmittedFrames": samples.count - submittedFrames,

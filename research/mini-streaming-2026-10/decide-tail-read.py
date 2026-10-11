@@ -49,6 +49,9 @@ result = {'summarySHA256': hashlib.sha256(args.summary.read_bytes()).hexdigest()
           'adoptionApproved': False,
           'remainingGate': 'Require green lifecycle, reader and application wiring checks before adoption.'}
 result['benchmarkGatePassed'] = all(result[key] for key in ('exactParityPassed', 'memoryGatePassed', 'longMedianGatePassed'))
+if not result['benchmarkGatePassed']:
+    result.update(status='rejected', remainingGate=None,
+                  reason='The registered benchmark gate failed. Do not wire the app to the optional research callback.')
 args.out.parent.mkdir(parents=True, exist_ok=True)
 args.out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
 print(json.dumps({key: result[key] for key in ('exactParityPassed', 'memoryGatePassed', 'longMedianGatePassed', 'benchmarkGatePassed')}))

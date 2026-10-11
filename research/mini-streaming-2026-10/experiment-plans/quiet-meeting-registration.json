@@ -1,0 +1,9 @@
+{
+  "registeredAt": "2026-10-11T07:24:23.309253+00:00",
+  "protocolSHA256": "95d63789fc9de7362ea49aa61eafc96ffb107d5c3c75eda5653adba216d7e0ff",
+  "selectedThreshold": 0.005,
+  "baselineThreshold": 0.02,
+  "holdoutSelectionSHA256": "91c79d513cbdac78ffc213e8f75e260385722fe8cb53b9bdc960d4a7b52ff24c",
+  "noCandidateInferenceYet": true,
+  "noNewShippingDefault": true
+}
