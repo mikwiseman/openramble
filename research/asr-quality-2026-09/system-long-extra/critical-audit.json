@@ -1,0 +1,84 @@
+{
+  "scope": "one unique offline parent per language; intended scripts, not independent spoken gold; whole-file alignment, not independently located seam errors",
+  "manifest_sha256": "2e3ad6bae034cad3063479c004a8d2f4e08973a5824606ef352df2fbc1ef365d",
+  "alignment_ties": "exact optimal band; diagonal then deletion then insertion; matches primary S/D/I",
+  "semantic_limits": "Marker matches do not establish complete clause meaning or numeric values; no reference word alignment or lossless-seam guarantee",
+  "fixtures": {
+    "system-long-en-unique": {
+      "language": "en",
+      "status": "ok",
+      "duration_seconds": 1098.8209375,
+      "raw": {
+        "counts": {
+          "substitutions": 31,
+          "deletions": 2,
+          "insertions": 2
+        },
+        "reference_words": 3165,
+        "hypothesis_words": 3165,
+        "longest_consecutive_reference_deletion_words": 1,
+        "negative_marker_instances": 38,
+        "negative_marker_nonmatches": 0,
+        "first_ten_reference_words_retained": true,
+        "last_ten_reference_words_retained": true
+      },
+      "app": {
+        "counts": {
+          "substitutions": 31,
+          "deletions": 2,
+          "insertions": 2
+        },
+        "reference_words": 3165,
+        "hypothesis_words": 3165,
+        "longest_consecutive_reference_deletion_words": 1,
+        "negative_marker_instances": 38,
+        "negative_marker_nonmatches": 0,
+        "first_ten_reference_words_retained": true,
+        "last_ten_reference_words_retained": true
+      },
+      "word_intervals": 3157,
+      "invalid_word_intervals": 0,
+      "reversed_start_intervals": 0,
+      "last_word_end_seconds": 1098.78,
+      "command_emitted": false
+    },
+    "system-long-mixed-unique": {
+      "language": "mixed",
+      "status": "ok",
+      "duration_seconds": 1352.315,
+      "raw": {
+        "counts": {
+          "substitutions": 267,
+          "deletions": 223,
+          "insertions": 41
+        },
+        "reference_words": 3086,
+        "hypothesis_words": 2904,
+        "longest_consecutive_reference_deletion_words": 37,
+        "negative_marker_instances": 62,
+        "negative_marker_nonmatches": 3,
+        "first_ten_reference_words_retained": true,
+        "last_ten_reference_words_retained": false
+      },
+      "app": {
+        "counts": {
+          "substitutions": 267,
+          "deletions": 223,
+          "insertions": 41
+        },
+        "reference_words": 3086,
+        "hypothesis_words": 2904,
+        "longest_consecutive_reference_deletion_words": 37,
+        "negative_marker_instances": 62,
+        "negative_marker_nonmatches": 3,
+        "first_ten_reference_words_retained": true,
+        "last_ten_reference_words_retained": false
+      },
+      "word_intervals": 2898,
+      "invalid_word_intervals": 0,
+      "reversed_start_intervals": 0,
+      "last_word_end_seconds": 1352.28,
+      "command_emitted": false
+    }
+  }
+}

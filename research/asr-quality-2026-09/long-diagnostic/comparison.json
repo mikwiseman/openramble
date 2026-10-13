@@ -1,0 +1,407 @@
+{
+  "baseline": "parakeet",
+  "paired": {
+    "breeze/existing_system_voice_diagnostic/mixed/app": {
+      "independent_groups": 1,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.7522935779816514,
+      "wer_delta_ci95": [
+        0.7522935779816515,
+        0.7522935779816514
+      ]
+    },
+    "breeze/existing_system_voice_diagnostic/mixed/raw": {
+      "independent_groups": 1,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.7247706422018348,
+      "wer_delta_ci95": [
+        0.7247706422018348,
+        0.7247706422018348
+      ]
+    },
+    "turbo/existing_system_voice_diagnostic/mixed/app": {
+      "independent_groups": 1,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.7522935779816514,
+      "wer_delta_ci95": [
+        0.7522935779816515,
+        0.7522935779816514
+      ]
+    },
+    "turbo/existing_system_voice_diagnostic/mixed/raw": {
+      "independent_groups": 1,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.7247706422018348,
+      "wer_delta_ci95": [
+        0.7247706422018348,
+        0.7247706422018348
+      ]
+    }
+  },
+  "reports": {
+    "breeze": {
+      "identity": {
+        "app_settings": {
+          "allow_press_return": false,
+          "personal_dictionary": false,
+          "phonetic_matching": true,
+          "starter_dictionary": true,
+          "trailing_space": false
+        },
+        "asr_binary_sha256": "2f0da41cd64867c7eff87b07fa7cfebb8d25b366bcc50b1787bf9be9ad0566ef",
+        "benchmark_sources": {
+          "Packages/LocalASR/Sources/asr-bench/QualityBenchmark.swift": "07f979e773ae2e9827b8cc2d5a5b9a2ef9aabb5d699a5721467c222fb81a41bf",
+          "core/ramble-text/examples/quality_pipeline.rs": "6a69af3ce102f071084bfa30379b600b384793f5e225739faaed3762f669c839",
+          "scripts/asr-quality.py": "89540eaaf9883e690372b609d0dc461efb704ff8030df3de9cd29d90120c6ca4",
+          "scripts/prepare-asr-quality.py": "91b544e457f1632710323821ad69cc512c2e66700681760804e60a632c5013a1"
+        },
+        "host": {
+          "chip": "Apple M4",
+          "hardware_model": "Mac16,10",
+          "machine": "arm64",
+          "macos": "26.4",
+          "macos_build": "25E246",
+          "memory_bytes": 17179869184,
+          "python": "3.12.13"
+        },
+        "manifest_sha256": "236e2ae15b66211808e17e1476c0fbf35ef78a89142917baf791cf9bff7c6d1c",
+        "model_id": "breeze",
+        "model_revision": "6b7a53cea9265a2cf2b19e37b3ceadeb2927d3ba",
+        "model_sha256": "1650c163cd1623d13b585368ffd87d7e669c5ff23014511e0fa91bb4ce994756",
+        "normalization": "NFC lowercase yo=ye punctuation+whitespace; preserves script and digits",
+        "pipeline_binary_sha256": "a37f0f721b48530f576d70cb5334b8247ea0aabd571b069aca5ce551e9828a2a",
+        "pipeline_sources": {
+          "apps/macos/OpenRamble/System/SettingsDefaults.swift": "6338bdd7eb7ebcb476e7b252d2e377e88e992f6a7d141dd7c5cff4cf71f80d94",
+          "apps/macos/OpenRamble/System/SharedCorePipeline.swift": "ed38d69642d2528a9266cced4f4fd88cbb7776eb436ce358da6bd724eea3d0ee",
+          "core/conformance/fixtures/text/starter-dictionary.json": "14629315103bb784b61672393c8a184c39e90f80c2ff1ba29c9cc6f6aa4f3fb6",
+          "core/ramble-ffi/src/lib.rs": "1900ffca2e20ce0b5176b9fc67bf57684ffea50babd2130a3df41c37ae4cf770",
+          "core/ramble-text/src/pipeline.rs": "700d83d013cd17d5979798f65ea0a16bd440a29be63e8ff55a2c7d06942fd5fe"
+        },
+        "schema_version": 1,
+        "source_commit": "ed1d0fe14bda180e7f6977b664f0d9d14e0455fc",
+        "threads": 4,
+        "timeout_seconds": 300
+      },
+      "loads": [
+        {
+          "backend": "MTL0",
+          "load_seconds": 0.577667792,
+          "memory_scope": "cumulative process high-water mark; fresh process per model",
+          "process_peak_memory_bytes": 2133803008,
+          "recognition_scope": "current LocalTranscriber; default pause-aware long chunks",
+          "runtime": "0.2.3",
+          "schema_version": 1,
+          "threads": 4,
+          "type": "ready",
+          "warmup_seconds": 2.3881507920000002
+        }
+      ],
+      "overall": {
+        "app": {
+          "cer": 1.0,
+          "deletions": 109,
+          "insertions": 0,
+          "reference_units": 109,
+          "substitutions": 0,
+          "wer": 1.0
+        },
+        "examples": 1,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 1,
+        "groups": 1,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 1.0,
+          "deletions": 109,
+          "insertions": 0,
+          "reference_units": 109,
+          "substitutions": 0,
+          "wer": 1.0
+        },
+        "timed_successes": 0,
+        "wall_seconds": null
+      },
+      "process": {
+        "engine_exit_code": 0,
+        "process_peak_memory_bytes": 2133803008,
+        "status": "ok",
+        "type": "complete"
+      },
+      "sets": {
+        "existing_system_voice_diagnostic/mixed": {
+          "app": {
+            "cer": 1.0,
+            "deletions": 109,
+            "insertions": 0,
+            "reference_units": 109,
+            "substitutions": 0,
+            "wer": 1.0
+          },
+          "examples": 1,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 1,
+          "groups": 1,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 1.0,
+            "deletions": 109,
+            "insertions": 0,
+            "reference_units": 109,
+            "substitutions": 0,
+            "wer": 1.0
+          },
+          "timed_successes": 0,
+          "wall_seconds": null
+        }
+      }
+    },
+    "parakeet": {
+      "identity": {
+        "app_settings": {
+          "allow_press_return": false,
+          "personal_dictionary": false,
+          "phonetic_matching": true,
+          "starter_dictionary": true,
+          "trailing_space": false
+        },
+        "asr_binary_sha256": "2f0da41cd64867c7eff87b07fa7cfebb8d25b366bcc50b1787bf9be9ad0566ef",
+        "benchmark_sources": {
+          "Packages/LocalASR/Sources/asr-bench/QualityBenchmark.swift": "07f979e773ae2e9827b8cc2d5a5b9a2ef9aabb5d699a5721467c222fb81a41bf",
+          "core/ramble-text/examples/quality_pipeline.rs": "6a69af3ce102f071084bfa30379b600b384793f5e225739faaed3762f669c839",
+          "scripts/asr-quality.py": "89540eaaf9883e690372b609d0dc461efb704ff8030df3de9cd29d90120c6ca4",
+          "scripts/prepare-asr-quality.py": "91b544e457f1632710323821ad69cc512c2e66700681760804e60a632c5013a1"
+        },
+        "host": {
+          "chip": "Apple M4",
+          "hardware_model": "Mac16,10",
+          "machine": "arm64",
+          "macos": "26.4",
+          "macos_build": "25E246",
+          "memory_bytes": 17179869184,
+          "python": "3.12.13"
+        },
+        "manifest_sha256": "236e2ae15b66211808e17e1476c0fbf35ef78a89142917baf791cf9bff7c6d1c",
+        "model_id": "parakeet",
+        "model_revision": "85ac09ea12fc4b1112fa76810059364bc6adc9de",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+        "normalization": "NFC lowercase yo=ye punctuation+whitespace; preserves script and digits",
+        "pipeline_binary_sha256": "a37f0f721b48530f576d70cb5334b8247ea0aabd571b069aca5ce551e9828a2a",
+        "pipeline_sources": {
+          "apps/macos/OpenRamble/System/SettingsDefaults.swift": "6338bdd7eb7ebcb476e7b252d2e377e88e992f6a7d141dd7c5cff4cf71f80d94",
+          "apps/macos/OpenRamble/System/SharedCorePipeline.swift": "ed38d69642d2528a9266cced4f4fd88cbb7776eb436ce358da6bd724eea3d0ee",
+          "core/conformance/fixtures/text/starter-dictionary.json": "14629315103bb784b61672393c8a184c39e90f80c2ff1ba29c9cc6f6aa4f3fb6",
+          "core/ramble-ffi/src/lib.rs": "1900ffca2e20ce0b5176b9fc67bf57684ffea50babd2130a3df41c37ae4cf770",
+          "core/ramble-text/src/pipeline.rs": "700d83d013cd17d5979798f65ea0a16bd440a29be63e8ff55a2c7d06942fd5fe"
+        },
+        "schema_version": 1,
+        "source_commit": "ed1d0fe14bda180e7f6977b664f0d9d14e0455fc",
+        "threads": 1,
+        "timeout_seconds": 300
+      },
+      "loads": [
+        {
+          "backend": "MTL0",
+          "load_seconds": 0.450127542,
+          "memory_scope": "cumulative process high-water mark; fresh process per model",
+          "process_peak_memory_bytes": 924270592,
+          "recognition_scope": "current LocalTranscriber; default pause-aware long chunks",
+          "runtime": "0.2.3",
+          "schema_version": 1,
+          "threads": 1,
+          "type": "ready",
+          "warmup_seconds": 0.066415709
+        }
+      ],
+      "overall": {
+        "app": {
+          "cer": 0.14069591527987896,
+          "deletions": 8,
+          "insertions": 3,
+          "reference_units": 109,
+          "substitutions": 16,
+          "wer": 0.24770642201834864
+        },
+        "examples": 1,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 1,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.16792738275340394,
+          "deletions": 8,
+          "insertions": 3,
+          "reference_units": 109,
+          "substitutions": 19,
+          "wer": 0.27522935779816515
+        },
+        "timed_successes": 1,
+        "wall_seconds": {
+          "max": 1.295319084,
+          "p50": 1.295319084,
+          "p95": 1.295319084
+        }
+      },
+      "process": {
+        "engine_exit_code": 0,
+        "process_peak_memory_bytes": 950140928,
+        "status": "ok",
+        "type": "complete"
+      },
+      "sets": {
+        "existing_system_voice_diagnostic/mixed": {
+          "app": {
+            "cer": 0.14069591527987896,
+            "deletions": 8,
+            "insertions": 3,
+            "reference_units": 109,
+            "substitutions": 16,
+            "wer": 0.24770642201834864
+          },
+          "examples": 1,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 1,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.16792738275340394,
+            "deletions": 8,
+            "insertions": 3,
+            "reference_units": 109,
+            "substitutions": 19,
+            "wer": 0.27522935779816515
+          },
+          "timed_successes": 1,
+          "wall_seconds": {
+            "max": 1.295319084,
+            "p50": 1.295319084,
+            "p95": 1.295319084
+          }
+        }
+      }
+    },
+    "turbo": {
+      "identity": {
+        "app_settings": {
+          "allow_press_return": false,
+          "personal_dictionary": false,
+          "phonetic_matching": true,
+          "starter_dictionary": true,
+          "trailing_space": false
+        },
+        "asr_binary_sha256": "2f0da41cd64867c7eff87b07fa7cfebb8d25b366bcc50b1787bf9be9ad0566ef",
+        "benchmark_sources": {
+          "Packages/LocalASR/Sources/asr-bench/QualityBenchmark.swift": "07f979e773ae2e9827b8cc2d5a5b9a2ef9aabb5d699a5721467c222fb81a41bf",
+          "core/ramble-text/examples/quality_pipeline.rs": "6a69af3ce102f071084bfa30379b600b384793f5e225739faaed3762f669c839",
+          "scripts/asr-quality.py": "89540eaaf9883e690372b609d0dc461efb704ff8030df3de9cd29d90120c6ca4",
+          "scripts/prepare-asr-quality.py": "91b544e457f1632710323821ad69cc512c2e66700681760804e60a632c5013a1"
+        },
+        "host": {
+          "chip": "Apple M4",
+          "hardware_model": "Mac16,10",
+          "machine": "arm64",
+          "macos": "26.4",
+          "macos_build": "25E246",
+          "memory_bytes": 17179869184,
+          "python": "3.12.13"
+        },
+        "manifest_sha256": "236e2ae15b66211808e17e1476c0fbf35ef78a89142917baf791cf9bff7c6d1c",
+        "model_id": "turbo",
+        "model_revision": "ceea6c8a94a21ab85be244d311e874a39344dbf5",
+        "model_sha256": "b2e30cc286bc9f3aba4db9099fc7403543497c05ce7100d0d83091ddfd25a183",
+        "normalization": "NFC lowercase yo=ye punctuation+whitespace; preserves script and digits",
+        "pipeline_binary_sha256": "a37f0f721b48530f576d70cb5334b8247ea0aabd571b069aca5ce551e9828a2a",
+        "pipeline_sources": {
+          "apps/macos/OpenRamble/System/SettingsDefaults.swift": "6338bdd7eb7ebcb476e7b252d2e377e88e992f6a7d141dd7c5cff4cf71f80d94",
+          "apps/macos/OpenRamble/System/SharedCorePipeline.swift": "ed38d69642d2528a9266cced4f4fd88cbb7776eb436ce358da6bd724eea3d0ee",
+          "core/conformance/fixtures/text/starter-dictionary.json": "14629315103bb784b61672393c8a184c39e90f80c2ff1ba29c9cc6f6aa4f3fb6",
+          "core/ramble-ffi/src/lib.rs": "1900ffca2e20ce0b5176b9fc67bf57684ffea50babd2130a3df41c37ae4cf770",
+          "core/ramble-text/src/pipeline.rs": "700d83d013cd17d5979798f65ea0a16bd440a29be63e8ff55a2c7d06942fd5fe"
+        },
+        "schema_version": 1,
+        "source_commit": "ed1d0fe14bda180e7f6977b664f0d9d14e0455fc",
+        "threads": 4,
+        "timeout_seconds": 300
+      },
+      "loads": [
+        {
+          "backend": "MTL0",
+          "load_seconds": 0.402080958,
+          "memory_scope": "cumulative process high-water mark; fresh process per model",
+          "process_peak_memory_bytes": 1098399744,
+          "recognition_scope": "current LocalTranscriber; default pause-aware long chunks",
+          "runtime": "0.2.3",
+          "schema_version": 1,
+          "threads": 4,
+          "type": "ready",
+          "warmup_seconds": 1.312776666
+        }
+      ],
+      "overall": {
+        "app": {
+          "cer": 1.0,
+          "deletions": 109,
+          "insertions": 0,
+          "reference_units": 109,
+          "substitutions": 0,
+          "wer": 1.0
+        },
+        "examples": 1,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 1,
+        "groups": 1,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 1.0,
+          "deletions": 109,
+          "insertions": 0,
+          "reference_units": 109,
+          "substitutions": 0,
+          "wer": 1.0
+        },
+        "timed_successes": 0,
+        "wall_seconds": null
+      },
+      "process": {
+        "engine_exit_code": 0,
+        "process_peak_memory_bytes": 1098399744,
+        "status": "ok",
+        "type": "complete"
+      },
+      "sets": {
+        "existing_system_voice_diagnostic/mixed": {
+          "app": {
+            "cer": 1.0,
+            "deletions": 109,
+            "insertions": 0,
+            "reference_units": 109,
+            "substitutions": 0,
+            "wer": 1.0
+          },
+          "examples": 1,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 1,
+          "groups": 1,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 1.0,
+            "deletions": 109,
+            "insertions": 0,
+            "reference_units": 109,
+            "substitutions": 0,
+            "wer": 1.0
+          },
+          "timed_successes": 0,
+          "wall_seconds": null
+        }
+      }
+    }
+  }
+}

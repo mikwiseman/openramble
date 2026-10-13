@@ -1,0 +1,25 @@
+{
+  "scope": "one unique offline system RU parent; intended script, not independent spoken gold; whole-file alignment audit, not independently located seam errors",
+  "manifest_sha256": "fbe2635eb8307408a1c3b099bd2eaa9d092b2cf732989c93585b99a0c5fdb158",
+  "duration_seconds": 1463.9223125,
+  "reference_words": 3121,
+  "hypothesis_words": 3116,
+  "raw_counts": {
+    "substitutions": 80,
+    "deletions": 9,
+    "insertions": 4
+  },
+  "alignment_ties": "exact optimal band; diagonal then deletion then insertion; matches primary S/D/I",
+  "longest_consecutive_reference_deletion_words": 1,
+  "negative_marker_instances": 81,
+  "negative_marker_nonmatches": 0,
+  "first_ten_reference_words_retained": true,
+  "last_ten_reference_words_retained": true,
+  "word_intervals": 3113,
+  "invalid_word_intervals": 0,
+  "reversed_start_intervals": 0,
+  "last_word_end_seconds": 1463.86,
+  "remaining_to_audio_end_seconds": 0.062312500000189175,
+  "command_emitted": false,
+  "semantic_limits": "Marker matches alone do not establish preservation of entire negated clauses or numeric values. No provider word alignment or independent spoken gold; no claim that every seam is lossless."
+}

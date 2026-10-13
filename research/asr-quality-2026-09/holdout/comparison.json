@@ -1,0 +1,572 @@
+{
+  "baseline": "parakeet",
+  "paired": {
+    "breeze/fleurs/en/app": {
+      "independent_groups": 350,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": -0.00041177681696520483,
+      "wer_delta_ci95": [
+        -0.0061545284278424,
+        0.0050849270032255044
+      ]
+    },
+    "breeze/fleurs/en/raw": {
+      "independent_groups": 350,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": -0.00041177681696520483,
+      "wer_delta_ci95": [
+        -0.0061545284278424,
+        0.0050849270032255044
+      ]
+    },
+    "breeze/fleurs/ru/app": {
+      "independent_groups": 344,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.011855874950324547,
+      "wer_delta_ci95": [
+        0.004371368180242179,
+        0.02130954316043614
+      ]
+    },
+    "breeze/fleurs/ru/raw": {
+      "independent_groups": 344,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.011855874950324547,
+      "wer_delta_ci95": [
+        0.004371368180242179,
+        0.02130954316043614
+      ]
+    },
+    "turbo/fleurs/en/app": {
+      "independent_groups": 350,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": -0.005147210212065061,
+      "wer_delta_ci95": [
+        -0.009104168008268998,
+        -0.0013691338905744486
+      ]
+    },
+    "turbo/fleurs/en/raw": {
+      "independent_groups": 350,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": -0.005147210212065061,
+      "wer_delta_ci95": [
+        -0.009104168008268998,
+        -0.0013691338905744486
+      ]
+    },
+    "turbo/fleurs/ru/app": {
+      "independent_groups": 344,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": -0.007484435024506558,
+      "wer_delta_ci95": [
+        -0.0144753620463601,
+        0.001883040701840509
+      ]
+    },
+    "turbo/fleurs/ru/raw": {
+      "independent_groups": 344,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": -0.007484435024506558,
+      "wer_delta_ci95": [
+        -0.0144753620463601,
+        0.001883040701840509
+      ]
+    }
+  },
+  "reports": {
+    "breeze": {
+      "identity": {
+        "alignment": {
+          "long_distance_dependency": "3.14.6",
+          "method": "exact DP; exact-distance band for matrices over 1 million cells",
+          "ties": "diagonal then deletion then insertion"
+        },
+        "app_settings": {
+          "allow_press_return": false,
+          "personal_dictionary": false,
+          "phonetic_matching": true,
+          "starter_dictionary": true,
+          "trailing_space": false
+        },
+        "asr_binary_sha256": "3164e3cbe7d7ad346d0e8900d9ef9131544405f09f574a63eb21c8d54badec96",
+        "benchmark_sources": {
+          "Packages/LocalASR/Sources/asr-bench/QualityBenchmark.swift": "890d344d9719d99d974eb41bb853d05c6f6135ca528970d642b68ed7b415e774",
+          "core/ramble-text/examples/quality_pipeline.rs": "6a69af3ce102f071084bfa30379b600b384793f5e225739faaed3762f669c839",
+          "scripts/asr-quality.py": "f48d81291fd2157a63124f75bba297fa1132f2740ba8aceabb56956fa2ae9d86",
+          "scripts/prepare-asr-quality.py": "bbee9aa1cd75f1e55507240689149ae7fa2f734f9526211184d2880022efa0d3",
+          "scripts/quality-alignment.py": "a087ea61dab64ef000a011bc58082240b316d18be057661db8d11cc8b0ed5773"
+        },
+        "host": {
+          "chip": "Apple M4",
+          "hardware_model": "Mac16,10",
+          "machine": "arm64",
+          "macos": "26.4",
+          "macos_build": "25E246",
+          "memory_bytes": 17179869184,
+          "python": "3.14.7"
+        },
+        "manifest_sha256": "4d3a11141dba3254814b8c6e628e1a1e97b6727493eb0757def4a4d6abddf711",
+        "model_id": "breeze",
+        "model_revision": "6b7a53cea9265a2cf2b19e37b3ceadeb2927d3ba",
+        "model_sha256": "1650c163cd1623d13b585368ffd87d7e669c5ff23014511e0fa91bb4ce994756",
+        "normalization": "NFC lowercase yo=ye punctuation+whitespace; preserves script and digits",
+        "pipeline_binary_sha256": "a37f0f721b48530f576d70cb5334b8247ea0aabd571b069aca5ce551e9828a2a",
+        "pipeline_sources": {
+          "apps/macos/OpenRamble/System/SettingsDefaults.swift": "6338bdd7eb7ebcb476e7b252d2e377e88e992f6a7d141dd7c5cff4cf71f80d94",
+          "apps/macos/OpenRamble/System/SharedCorePipeline.swift": "ed38d69642d2528a9266cced4f4fd88cbb7776eb436ce358da6bd724eea3d0ee",
+          "core/conformance/fixtures/text/starter-dictionary.json": "14629315103bb784b61672393c8a184c39e90f80c2ff1ba29c9cc6f6aa4f3fb6",
+          "core/ramble-ffi/src/lib.rs": "1900ffca2e20ce0b5176b9fc67bf57684ffea50babd2130a3df41c37ae4cf770",
+          "core/ramble-text/src/pipeline.rs": "700d83d013cd17d5979798f65ea0a16bd440a29be63e8ff55a2c7d06942fd5fe"
+        },
+        "schema_version": 1,
+        "source_commit": "b7cfc884a1527a6d6c85a5fd9924e4c1568468b0",
+        "threads": 4,
+        "timeout_seconds": 300
+      },
+      "loads": [
+        {
+          "backend": "MTL0",
+          "load_seconds": 0.716401791,
+          "memory_scope": "cumulative process high-water mark; fresh process per model",
+          "process_peak_memory_bytes": 2145583104,
+          "recognition_scope": "current LocalTranscriber; default pause-aware long chunks",
+          "runtime": "0.2.3",
+          "schema_version": 1,
+          "threads": 4,
+          "type": "ready",
+          "warmup_seconds": 2.216654542
+        }
+      ],
+      "overall": {
+        "app": {
+          "cer": 0.031143603521065728,
+          "deletions": 217,
+          "insertions": 240,
+          "reference_units": 29669,
+          "substitutions": 1346,
+          "wer": 0.060770501196535105
+        },
+        "examples": 1422,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 1,
+        "groups": 694,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.031143603521065728,
+          "deletions": 217,
+          "insertions": 240,
+          "reference_units": 29669,
+          "substitutions": 1346,
+          "wer": 0.060770501196535105
+        },
+        "timed_successes": 1421,
+        "wall_seconds": {
+          "max": 3.572676791,
+          "p50": 2.143481708,
+          "p95": 2.7285105830000003
+        }
+      },
+      "process": {
+        "engine_exit_code": 0,
+        "process_peak_memory_bytes": 2185576448,
+        "status": "ok",
+        "type": "complete"
+      },
+      "sets": {
+        "fleurs/en": {
+          "app": {
+            "cer": 0.028707039515068335,
+            "deletions": 94,
+            "insertions": 137,
+            "reference_units": 14571,
+            "substitutions": 555,
+            "wer": 0.05394276302244184
+          },
+          "examples": 647,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 350,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.028707039515068335,
+            "deletions": 94,
+            "insertions": 137,
+            "reference_units": 14571,
+            "substitutions": 555,
+            "wer": 0.05394276302244184
+          },
+          "timed_successes": 647,
+          "wall_seconds": {
+            "max": 2.898953375,
+            "p50": 2.079742834,
+            "p95": 2.3868696410999997
+          }
+        },
+        "fleurs/ru": {
+          "app": {
+            "cer": 0.03300434526279014,
+            "deletions": 123,
+            "insertions": 103,
+            "reference_units": 15098,
+            "substitutions": 791,
+            "wer": 0.06735991522055901
+          },
+          "examples": 775,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 1,
+          "groups": 344,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.03300434526279014,
+            "deletions": 123,
+            "insertions": 103,
+            "reference_units": 15098,
+            "substitutions": 791,
+            "wer": 0.06735991522055901
+          },
+          "timed_successes": 774,
+          "wall_seconds": {
+            "max": 3.572676791,
+            "p50": 2.2428808755,
+            "p95": 2.8479461313499996
+          }
+        }
+      }
+    },
+    "parakeet": {
+      "identity": {
+        "alignment": {
+          "long_distance_dependency": "3.14.6",
+          "method": "exact DP; exact-distance band for matrices over 1 million cells",
+          "ties": "diagonal then deletion then insertion"
+        },
+        "app_settings": {
+          "allow_press_return": false,
+          "personal_dictionary": false,
+          "phonetic_matching": true,
+          "starter_dictionary": true,
+          "trailing_space": false
+        },
+        "asr_binary_sha256": "3164e3cbe7d7ad346d0e8900d9ef9131544405f09f574a63eb21c8d54badec96",
+        "benchmark_sources": {
+          "Packages/LocalASR/Sources/asr-bench/QualityBenchmark.swift": "890d344d9719d99d974eb41bb853d05c6f6135ca528970d642b68ed7b415e774",
+          "core/ramble-text/examples/quality_pipeline.rs": "6a69af3ce102f071084bfa30379b600b384793f5e225739faaed3762f669c839",
+          "scripts/asr-quality.py": "f48d81291fd2157a63124f75bba297fa1132f2740ba8aceabb56956fa2ae9d86",
+          "scripts/prepare-asr-quality.py": "bbee9aa1cd75f1e55507240689149ae7fa2f734f9526211184d2880022efa0d3",
+          "scripts/quality-alignment.py": "a087ea61dab64ef000a011bc58082240b316d18be057661db8d11cc8b0ed5773"
+        },
+        "host": {
+          "chip": "Apple M4",
+          "hardware_model": "Mac16,10",
+          "machine": "arm64",
+          "macos": "26.4",
+          "macos_build": "25E246",
+          "memory_bytes": 17179869184,
+          "python": "3.14.7"
+        },
+        "manifest_sha256": "4d3a11141dba3254814b8c6e628e1a1e97b6727493eb0757def4a4d6abddf711",
+        "model_id": "parakeet",
+        "model_revision": "85ac09ea12fc4b1112fa76810059364bc6adc9de",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+        "normalization": "NFC lowercase yo=ye punctuation+whitespace; preserves script and digits",
+        "pipeline_binary_sha256": "a37f0f721b48530f576d70cb5334b8247ea0aabd571b069aca5ce551e9828a2a",
+        "pipeline_sources": {
+          "apps/macos/OpenRamble/System/SettingsDefaults.swift": "6338bdd7eb7ebcb476e7b252d2e377e88e992f6a7d141dd7c5cff4cf71f80d94",
+          "apps/macos/OpenRamble/System/SharedCorePipeline.swift": "ed38d69642d2528a9266cced4f4fd88cbb7776eb436ce358da6bd724eea3d0ee",
+          "core/conformance/fixtures/text/starter-dictionary.json": "14629315103bb784b61672393c8a184c39e90f80c2ff1ba29c9cc6f6aa4f3fb6",
+          "core/ramble-ffi/src/lib.rs": "1900ffca2e20ce0b5176b9fc67bf57684ffea50babd2130a3df41c37ae4cf770",
+          "core/ramble-text/src/pipeline.rs": "700d83d013cd17d5979798f65ea0a16bd440a29be63e8ff55a2c7d06942fd5fe"
+        },
+        "schema_version": 1,
+        "source_commit": "57b16c3deaac92b81fa83b952fe1480b8fa41d3a",
+        "threads": 1,
+        "timeout_seconds": 300
+      },
+      "loads": [
+        {
+          "backend": "MTL0",
+          "load_seconds": 0.206354,
+          "memory_scope": "cumulative process high-water mark; fresh process per model",
+          "process_peak_memory_bytes": 924385280,
+          "recognition_scope": "current LocalTranscriber; default pause-aware long chunks",
+          "runtime": "0.2.3",
+          "schema_version": 1,
+          "threads": 1,
+          "type": "ready",
+          "warmup_seconds": 0.047671333
+        }
+      ],
+      "overall": {
+        "app": {
+          "cer": 0.01986480296145894,
+          "deletions": 256,
+          "insertions": 121,
+          "reference_units": 29669,
+          "substitutions": 1253,
+          "wer": 0.05493949914051704
+        },
+        "examples": 1422,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 694,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.01986480296145894,
+          "deletions": 256,
+          "insertions": 121,
+          "reference_units": 29669,
+          "substitutions": 1253,
+          "wer": 0.05493949914051704
+        },
+        "timed_successes": 1422,
+        "wall_seconds": {
+          "max": 0.530387833,
+          "p50": 0.14970197950000003,
+          "p95": 0.26242777675
+        }
+      },
+      "process": {
+        "engine_exit_code": 0,
+        "process_peak_memory_bytes": 986349568,
+        "status": "ok",
+        "type": "complete"
+      },
+      "sets": {
+        "fleurs/en": {
+          "app": {
+            "cer": 0.024461028192371476,
+            "deletions": 158,
+            "insertions": 69,
+            "reference_units": 14571,
+            "substitutions": 565,
+            "wer": 0.054354539839407044
+          },
+          "examples": 647,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 350,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.024461028192371476,
+            "deletions": 158,
+            "insertions": 69,
+            "reference_units": 14571,
+            "substitutions": 565,
+            "wer": 0.054354539839407044
+          },
+          "timed_successes": 647,
+          "wall_seconds": {
+            "max": 0.416339291,
+            "p50": 0.138261792,
+            "p95": 0.23461637059999987
+          }
+        },
+        "fleurs/ru": {
+          "app": {
+            "cer": 0.016354783064392864,
+            "deletions": 98,
+            "insertions": 52,
+            "reference_units": 15098,
+            "substitutions": 688,
+            "wer": 0.05550404027023447
+          },
+          "examples": 775,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 344,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.016354783064392864,
+            "deletions": 98,
+            "insertions": 52,
+            "reference_units": 15098,
+            "substitutions": 688,
+            "wer": 0.05550404027023447
+          },
+          "timed_successes": 775,
+          "wall_seconds": {
+            "max": 0.530387833,
+            "p50": 0.161853375,
+            "p95": 0.28617108299999994
+          }
+        }
+      }
+    },
+    "turbo": {
+      "identity": {
+        "alignment": {
+          "long_distance_dependency": "3.14.6",
+          "method": "exact DP; exact-distance band for matrices over 1 million cells",
+          "ties": "diagonal then deletion then insertion"
+        },
+        "app_settings": {
+          "allow_press_return": false,
+          "personal_dictionary": false,
+          "phonetic_matching": true,
+          "starter_dictionary": true,
+          "trailing_space": false
+        },
+        "asr_binary_sha256": "3164e3cbe7d7ad346d0e8900d9ef9131544405f09f574a63eb21c8d54badec96",
+        "benchmark_sources": {
+          "Packages/LocalASR/Sources/asr-bench/QualityBenchmark.swift": "890d344d9719d99d974eb41bb853d05c6f6135ca528970d642b68ed7b415e774",
+          "core/ramble-text/examples/quality_pipeline.rs": "6a69af3ce102f071084bfa30379b600b384793f5e225739faaed3762f669c839",
+          "scripts/asr-quality.py": "f48d81291fd2157a63124f75bba297fa1132f2740ba8aceabb56956fa2ae9d86",
+          "scripts/prepare-asr-quality.py": "bbee9aa1cd75f1e55507240689149ae7fa2f734f9526211184d2880022efa0d3",
+          "scripts/quality-alignment.py": "a087ea61dab64ef000a011bc58082240b316d18be057661db8d11cc8b0ed5773"
+        },
+        "host": {
+          "chip": "Apple M4",
+          "hardware_model": "Mac16,10",
+          "machine": "arm64",
+          "macos": "26.4",
+          "macos_build": "25E246",
+          "memory_bytes": 17179869184,
+          "python": "3.14.7"
+        },
+        "manifest_sha256": "4d3a11141dba3254814b8c6e628e1a1e97b6727493eb0757def4a4d6abddf711",
+        "model_id": "turbo",
+        "model_revision": "ceea6c8a94a21ab85be244d311e874a39344dbf5",
+        "model_sha256": "b2e30cc286bc9f3aba4db9099fc7403543497c05ce7100d0d83091ddfd25a183",
+        "normalization": "NFC lowercase yo=ye punctuation+whitespace; preserves script and digits",
+        "pipeline_binary_sha256": "a37f0f721b48530f576d70cb5334b8247ea0aabd571b069aca5ce551e9828a2a",
+        "pipeline_sources": {
+          "apps/macos/OpenRamble/System/SettingsDefaults.swift": "6338bdd7eb7ebcb476e7b252d2e377e88e992f6a7d141dd7c5cff4cf71f80d94",
+          "apps/macos/OpenRamble/System/SharedCorePipeline.swift": "ed38d69642d2528a9266cced4f4fd88cbb7776eb436ce358da6bd724eea3d0ee",
+          "core/conformance/fixtures/text/starter-dictionary.json": "14629315103bb784b61672393c8a184c39e90f80c2ff1ba29c9cc6f6aa4f3fb6",
+          "core/ramble-ffi/src/lib.rs": "1900ffca2e20ce0b5176b9fc67bf57684ffea50babd2130a3df41c37ae4cf770",
+          "core/ramble-text/src/pipeline.rs": "700d83d013cd17d5979798f65ea0a16bd440a29be63e8ff55a2c7d06942fd5fe"
+        },
+        "schema_version": 1,
+        "source_commit": "57b16c3deaac92b81fa83b952fe1480b8fa41d3a",
+        "threads": 4,
+        "timeout_seconds": 300
+      },
+      "loads": [
+        {
+          "backend": "MTL0",
+          "load_seconds": 0.261324916,
+          "memory_scope": "cumulative process high-water mark; fresh process per model",
+          "process_peak_memory_bytes": 1118208000,
+          "recognition_scope": "current LocalTranscriber; default pause-aware long chunks",
+          "runtime": "0.2.3",
+          "schema_version": 1,
+          "threads": 4,
+          "type": "ready",
+          "warmup_seconds": 1.021914833
+        }
+      ],
+      "overall": {
+        "app": {
+          "cer": 0.019165294474501986,
+          "deletions": 242,
+          "insertions": 140,
+          "reference_units": 29669,
+          "substitutions": 1060,
+          "wer": 0.04860291887154943
+        },
+        "examples": 1422,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 1,
+        "groups": 694,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.019165294474501986,
+          "deletions": 242,
+          "insertions": 140,
+          "reference_units": 29669,
+          "substitutions": 1060,
+          "wer": 0.04860291887154943
+        },
+        "timed_successes": 1421,
+        "wall_seconds": {
+          "max": 1.489253667,
+          "p50": 1.180954292,
+          "p95": 1.299829625
+        }
+      },
+      "process": {
+        "engine_exit_code": 0,
+        "process_peak_memory_bytes": 1150992384,
+        "status": "ok",
+        "type": "complete"
+      },
+      "sets": {
+        "fleurs/en": {
+          "app": {
+            "cer": 0.02233087436381312,
+            "deletions": 113,
+            "insertions": 87,
+            "reference_units": 14571,
+            "substitutions": 517,
+            "wer": 0.04920732962734198
+          },
+          "examples": 647,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 350,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.02233087436381312,
+            "deletions": 113,
+            "insertions": 87,
+            "reference_units": 14571,
+            "substitutions": 517,
+            "wer": 0.04920732962734198
+          },
+          "timed_successes": 647,
+          "wall_seconds": {
+            "max": 1.375397125,
+            "p50": 1.1599907919999999,
+            "p95": 1.2320733293
+          }
+        },
+        "fleurs/ru": {
+          "app": {
+            "cer": 0.016747821909732077,
+            "deletions": 129,
+            "insertions": 53,
+            "reference_units": 15098,
+            "substitutions": 543,
+            "wer": 0.04801960524572791
+          },
+          "examples": 775,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 1,
+          "groups": 344,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.016747821909732077,
+            "deletions": 129,
+            "insertions": 53,
+            "reference_units": 15098,
+            "substitutions": 543,
+            "wer": 0.04801960524572791
+          },
+          "timed_successes": 774,
+          "wall_seconds": {
+            "max": 1.489253667,
+            "p50": 1.206127041,
+            "p95": 1.3365156397
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,505 @@
+{
+  "scope": "Exploratory source-only lexical strata; not semantic equivalence; primary strict WER remains unchanged",
+  "lexemes": [
+    "\u0432\u043e\u0441\u0435\u043c\u043d\u0430\u0434\u0446\u0430\u0442\u044c",
+    "\u0432\u043e\u0441\u0435\u043c\u044c",
+    "\u0432\u043e\u0441\u0435\u043c\u044c\u0434\u0435\u0441\u044f\u0442",
+    "\u0432\u043e\u0441\u0435\u043c\u044c\u0441\u043e\u0442",
+    "\u0434\u0432\u0430",
+    "\u0434\u0432\u0430\u0434\u0446\u0430\u0442\u044c",
+    "\u0434\u0432\u0435",
+    "\u0434\u0432\u0435\u043d\u0430\u0434\u0446\u0430\u0442\u044c",
+    "\u0434\u0432\u0435\u0441\u0442\u0438",
+    "\u0434\u0435\u0432\u044f\u043d\u043e\u0441\u0442\u043e",
+    "\u0434\u0435\u0432\u044f\u0442\u043d\u0430\u0434\u0446\u0430\u0442\u044c",
+    "\u0434\u0435\u0432\u044f\u0442\u044c",
+    "\u0434\u0435\u0432\u044f\u0442\u044c\u0441\u043e\u0442",
+    "\u0434\u0435\u0441\u044f\u0442\u044c",
+    "\u043c\u0438\u043b\u043b\u0438\u0430\u0440\u0434",
+    "\u043c\u0438\u043b\u043b\u0438\u0430\u0440\u0434\u0430",
+    "\u043c\u0438\u043b\u043b\u0438\u0430\u0440\u0434\u043e\u0432",
+    "\u043c\u0438\u043b\u043b\u0438\u043e\u043d",
+    "\u043c\u0438\u043b\u043b\u0438\u043e\u043d\u0430",
+    "\u043c\u0438\u043b\u043b\u0438\u043e\u043d\u043e\u0432",
+    "\u043d\u043e\u043b\u044c",
+    "\u043d\u0443\u043b\u044c",
+    "\u043e\u0434\u0438\u043d",
+    "\u043e\u0434\u0438\u043d\u043d\u0430\u0434\u0446\u0430\u0442\u044c",
+    "\u043e\u0434\u043d\u0430",
+    "\u043e\u0434\u043d\u043e",
+    "\u043f\u043e\u043b\u0442\u043e\u0440\u0430",
+    "\u043f\u043e\u043b\u0442\u043e\u0440\u044b",
+    "\u043f\u044f\u0442\u043d\u0430\u0434\u0446\u0430\u0442\u044c",
+    "\u043f\u044f\u0442\u044c",
+    "\u043f\u044f\u0442\u044c\u0434\u0435\u0441\u044f\u0442",
+    "\u043f\u044f\u0442\u044c\u0441\u043e\u0442",
+    "\u0441\u0435\u043c\u043d\u0430\u0434\u0446\u0430\u0442\u044c",
+    "\u0441\u0435\u043c\u044c",
+    "\u0441\u0435\u043c\u044c\u0434\u0435\u0441\u044f\u0442",
+    "\u0441\u0435\u043c\u044c\u0441\u043e\u0442",
+    "\u0441\u043e\u0440\u043e\u043a",
+    "\u0441\u0442\u043e",
+    "\u0442\u0440\u0438",
+    "\u0442\u0440\u0438\u0434\u0446\u0430\u0442\u044c",
+    "\u0442\u0440\u0438\u043d\u0430\u0434\u0446\u0430\u0442\u044c",
+    "\u0442\u0440\u0438\u0441\u0442\u0430",
+    "\u0442\u044b\u0441\u044f\u0447",
+    "\u0442\u044b\u0441\u044f\u0447\u0430",
+    "\u0442\u044b\u0441\u044f\u0447\u0438",
+    "\u0447\u0435\u0442\u044b\u0440\u0435",
+    "\u0447\u0435\u0442\u044b\u0440\u0435\u0441\u0442\u0430",
+    "\u0447\u0435\u0442\u044b\u0440\u043d\u0430\u0434\u0446\u0430\u0442\u044c",
+    "\u0448\u0435\u0441\u0442\u043d\u0430\u0434\u0446\u0430\u0442\u044c",
+    "\u0448\u0435\u0441\u0442\u044c",
+    "\u0448\u0435\u0441\u0442\u044c\u0434\u0435\u0441\u044f\u0442",
+    "\u0448\u0435\u0441\u0442\u044c\u0441\u043e\u0442"
+  ],
+  "manifest_sha256": "ff58ed1c9ca9790038ea5b5a21d1f2df8fe893e15ed48da5517e96d98e8769b1",
+  "sets": {
+    "golos_crowd_mirror/only_numeric_lexemes": {
+      "parakeet": {
+        "examples": 13,
+        "groups": 13,
+        "failures": 0,
+        "raw": {
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "reference_units": 126,
+          "wer": 0.0,
+          "cer": 0.0
+        },
+        "app": {
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "reference_units": 126,
+          "wer": 0.0,
+          "cer": 0.0
+        },
+        "timed_successes": 13,
+        "wall_seconds": {
+          "p50": 0.143280791,
+          "p95": 0.18713256659999994,
+          "max": 0.215305167
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "turbo": {
+        "examples": 13,
+        "groups": 13,
+        "failures": 0,
+        "raw": {
+          "substitutions": 70,
+          "deletions": 46,
+          "insertions": 0,
+          "reference_units": 126,
+          "wer": 0.9206349206349206,
+          "cer": 0.9373493975903614
+        },
+        "app": {
+          "substitutions": 70,
+          "deletions": 46,
+          "insertions": 0,
+          "reference_units": 126,
+          "wer": 0.9206349206349206,
+          "cer": 0.9373493975903614
+        },
+        "timed_successes": 13,
+        "wall_seconds": {
+          "p50": 1.173057959,
+          "p95": 1.3243687334,
+          "max": 1.345692209
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "breeze": {
+        "examples": 13,
+        "groups": 13,
+        "failures": 0,
+        "raw": {
+          "substitutions": 63,
+          "deletions": 63,
+          "insertions": 0,
+          "reference_units": 126,
+          "wer": 1.0,
+          "cer": 1.0
+        },
+        "app": {
+          "substitutions": 63,
+          "deletions": 63,
+          "insertions": 0,
+          "reference_units": 126,
+          "wer": 1.0,
+          "cer": 1.0
+        },
+        "timed_successes": 13,
+        "wall_seconds": {
+          "p50": 1.461439125,
+          "p95": 1.5256207672,
+          "max": 1.569250042
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      }
+    },
+    "golos_crowd_mirror/some_numeric_lexemes": {
+      "parakeet": {
+        "examples": 89,
+        "groups": 89,
+        "failures": 0,
+        "raw": {
+          "substitutions": 8,
+          "deletions": 2,
+          "insertions": 2,
+          "reference_units": 612,
+          "wer": 0.0196078431372549,
+          "cer": 0.004719600222098834
+        },
+        "app": {
+          "substitutions": 8,
+          "deletions": 2,
+          "insertions": 2,
+          "reference_units": 612,
+          "wer": 0.0196078431372549,
+          "cer": 0.004719600222098834
+        },
+        "timed_successes": 89,
+        "wall_seconds": {
+          "p50": 0.089192334,
+          "p95": 0.162747583,
+          "max": 0.230415625
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "turbo": {
+        "examples": 89,
+        "groups": 89,
+        "failures": 0,
+        "raw": {
+          "substitutions": 144,
+          "deletions": 73,
+          "insertions": 3,
+          "reference_units": 612,
+          "wer": 0.35947712418300654,
+          "cer": 0.34092171016102163
+        },
+        "app": {
+          "substitutions": 144,
+          "deletions": 73,
+          "insertions": 3,
+          "reference_units": 612,
+          "wer": 0.35947712418300654,
+          "cer": 0.34092171016102163
+        },
+        "timed_successes": 89,
+        "wall_seconds": {
+          "p50": 1.210923541,
+          "p95": 1.3909063331999998,
+          "max": 1.607503625
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "breeze": {
+        "examples": 89,
+        "groups": 89,
+        "failures": 0,
+        "raw": {
+          "substitutions": 207,
+          "deletions": 71,
+          "insertions": 15,
+          "reference_units": 612,
+          "wer": 0.47875816993464054,
+          "cer": 0.42420877290394227
+        },
+        "app": {
+          "substitutions": 207,
+          "deletions": 71,
+          "insertions": 15,
+          "reference_units": 612,
+          "wer": 0.47875816993464054,
+          "cer": 0.42420877290394227
+        },
+        "timed_successes": 89,
+        "wall_seconds": {
+          "p50": 1.570872625,
+          "p95": 1.8336919831999992,
+          "max": 3.5483105
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      }
+    },
+    "golos_crowd_mirror/no_numeric_lexemes": {
+      "parakeet": {
+        "examples": 398,
+        "groups": 395,
+        "failures": 0,
+        "raw": {
+          "substitutions": 50,
+          "deletions": 10,
+          "insertions": 10,
+          "reference_units": 1820,
+          "wer": 0.038461538461538464,
+          "cer": 0.007781344227215252
+        },
+        "app": {
+          "substitutions": 50,
+          "deletions": 10,
+          "insertions": 10,
+          "reference_units": 1820,
+          "wer": 0.038461538461538464,
+          "cer": 0.007781344227215252
+        },
+        "timed_successes": 398,
+        "wall_seconds": {
+          "p50": 0.072874938,
+          "p95": 0.12442052055,
+          "max": 0.181769875
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "turbo": {
+        "examples": 398,
+        "groups": 395,
+        "failures": 0,
+        "raw": {
+          "substitutions": 212,
+          "deletions": 24,
+          "insertions": 25,
+          "reference_units": 1820,
+          "wer": 0.1434065934065934,
+          "cer": 0.05583114483026943
+        },
+        "app": {
+          "substitutions": 212,
+          "deletions": 24,
+          "insertions": 25,
+          "reference_units": 1820,
+          "wer": 0.1434065934065934,
+          "cer": 0.05583114483026943
+        },
+        "timed_successes": 398,
+        "wall_seconds": {
+          "p50": 1.1899053755,
+          "p95": 1.3793864857,
+          "max": 1.723101417
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "breeze": {
+        "examples": 398,
+        "groups": 395,
+        "failures": 0,
+        "raw": {
+          "substitutions": 450,
+          "deletions": 41,
+          "insertions": 47,
+          "reference_units": 1820,
+          "wer": 0.2956043956043956,
+          "cer": 0.19249100282073728
+        },
+        "app": {
+          "substitutions": 450,
+          "deletions": 41,
+          "insertions": 47,
+          "reference_units": 1820,
+          "wer": 0.2956043956043956,
+          "cer": 0.19249100282073728
+        },
+        "timed_successes": 398,
+        "wall_seconds": {
+          "p50": 1.5317916875,
+          "p95": 1.721236566,
+          "max": 3.025046959
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      }
+    },
+    "golos_farfield_mirror/some_numeric_lexemes": {
+      "parakeet": {
+        "examples": 10,
+        "groups": 10,
+        "failures": 0,
+        "raw": {
+          "substitutions": 8,
+          "deletions": 0,
+          "insertions": 0,
+          "reference_units": 71,
+          "wer": 0.11267605633802817,
+          "cer": 0.03412073490813648
+        },
+        "app": {
+          "substitutions": 8,
+          "deletions": 0,
+          "insertions": 0,
+          "reference_units": 71,
+          "wer": 0.11267605633802817,
+          "cer": 0.03412073490813648
+        },
+        "timed_successes": 10,
+        "wall_seconds": {
+          "p50": 0.0708724795,
+          "p95": 0.11078916509999999,
+          "max": 0.114160584
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "turbo": {
+        "examples": 10,
+        "groups": 10,
+        "failures": 0,
+        "raw": {
+          "substitutions": 17,
+          "deletions": 8,
+          "insertions": 1,
+          "reference_units": 71,
+          "wer": 0.36619718309859156,
+          "cer": 0.27296587926509186
+        },
+        "app": {
+          "substitutions": 17,
+          "deletions": 8,
+          "insertions": 1,
+          "reference_units": 71,
+          "wer": 0.36619718309859156,
+          "cer": 0.27296587926509186
+        },
+        "timed_successes": 10,
+        "wall_seconds": {
+          "p50": 1.158829521,
+          "p95": 1.4166973332999997,
+          "max": 1.4628208329999999
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "breeze": {
+        "examples": 10,
+        "groups": 10,
+        "failures": 0,
+        "raw": {
+          "substitutions": 33,
+          "deletions": 7,
+          "insertions": 0,
+          "reference_units": 71,
+          "wer": 0.5633802816901409,
+          "cer": 0.49343832020997375
+        },
+        "app": {
+          "substitutions": 33,
+          "deletions": 7,
+          "insertions": 0,
+          "reference_units": 71,
+          "wer": 0.5633802816901409,
+          "cer": 0.49343832020997375
+        },
+        "timed_successes": 10,
+        "wall_seconds": {
+          "p50": 1.564498021,
+          "p95": 2.189366499849999,
+          "max": 2.577936625
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      }
+    },
+    "golos_farfield_mirror/no_numeric_lexemes": {
+      "parakeet": {
+        "examples": 490,
+        "groups": 439,
+        "failures": 0,
+        "raw": {
+          "substitutions": 127,
+          "deletions": 7,
+          "insertions": 15,
+          "reference_units": 2060,
+          "wer": 0.07233009708737864,
+          "cer": 0.022284596410648973
+        },
+        "app": {
+          "substitutions": 127,
+          "deletions": 7,
+          "insertions": 15,
+          "reference_units": 2060,
+          "wer": 0.07233009708737864,
+          "cer": 0.022284596410648973
+        },
+        "timed_successes": 490,
+        "wall_seconds": {
+          "p50": 0.051918583000000004,
+          "p95": 0.08984438504999998,
+          "max": 0.1888035
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "turbo": {
+        "examples": 490,
+        "groups": 439,
+        "failures": 0,
+        "raw": {
+          "substitutions": 345,
+          "deletions": 22,
+          "insertions": 31,
+          "reference_units": 2060,
+          "wer": 0.19320388349514564,
+          "cer": 0.06328144934932381
+        },
+        "app": {
+          "substitutions": 345,
+          "deletions": 22,
+          "insertions": 31,
+          "reference_units": 2060,
+          "wer": 0.19320388349514564,
+          "cer": 0.06328144934932381
+        },
+        "timed_successes": 490,
+        "wall_seconds": {
+          "p50": 1.161704125,
+          "p95": 1.3869777081499999,
+          "max": 1.571017959
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "breeze": {
+        "examples": 490,
+        "groups": 439,
+        "failures": 0,
+        "raw": {
+          "substitutions": 650,
+          "deletions": 26,
+          "insertions": 102,
+          "reference_units": 2060,
+          "wer": 0.37766990291262137,
+          "cer": 0.2310113124096283
+        },
+        "app": {
+          "substitutions": 650,
+          "deletions": 26,
+          "insertions": 102,
+          "reference_units": 2060,
+          "wer": 0.37766990291262137,
+          "cer": 0.2310113124096283
+        },
+        "timed_successes": 490,
+        "wall_seconds": {
+          "p50": 1.5393355414999998,
+          "p95": 1.798557049849999,
+          "max": 2.955563125
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      }
+    }
+  }
+}

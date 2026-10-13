@@ -1,0 +1,361 @@
+{
+  "lexemes": [
+    "восемнадцать",
+    "восемь",
+    "восемьдесят",
+    "восемьсот",
+    "два",
+    "двадцать",
+    "две",
+    "двенадцать",
+    "двести",
+    "девяносто",
+    "девятнадцать",
+    "девять",
+    "девятьсот",
+    "десять",
+    "миллиард",
+    "миллиарда",
+    "миллиардов",
+    "миллион",
+    "миллиона",
+    "миллионов",
+    "ноль",
+    "нуль",
+    "один",
+    "одиннадцать",
+    "одна",
+    "одно",
+    "полтора",
+    "полторы",
+    "пятнадцать",
+    "пять",
+    "пятьдесят",
+    "пятьсот",
+    "семнадцать",
+    "семь",
+    "семьдесят",
+    "семьсот",
+    "сорок",
+    "сто",
+    "три",
+    "тридцать",
+    "тринадцать",
+    "триста",
+    "тысяч",
+    "тысяча",
+    "тысячи",
+    "четыре",
+    "четыреста",
+    "четырнадцать",
+    "шестнадцать",
+    "шесть",
+    "шестьдесят",
+    "шестьсот"
+  ],
+  "scope": "Exploratory source-only lexical strata; not semantic equivalence; primary strict WER remains unchanged",
+  "sets": {
+    "golos_crowd_mirror/no_numeric_lexemes": {
+      "gigaam-e2e-ctc": {
+        "app": {
+          "cer": 0.04172745841844178,
+          "deletions": 27,
+          "insertions": 10,
+          "reference_units": 1820,
+          "substitutions": 130,
+          "wer": 0.09175824175824175
+        },
+        "examples": 398,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 395,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.04172745841844178,
+          "deletions": 27,
+          "insertions": 10,
+          "reference_units": 1820,
+          "substitutions": 130,
+          "wer": 0.09175824175824175
+        },
+        "timed_successes": 398,
+        "wall_seconds": {
+          "max": 0.1005555,
+          "p50": 0.0388335625,
+          "p95": 0.06565012234999998
+        }
+      },
+      "parakeet": {
+        "app": {
+          "cer": 0.007781344227215252,
+          "deletions": 10,
+          "insertions": 10,
+          "reference_units": 1820,
+          "substitutions": 50,
+          "wer": 0.038461538461538464
+        },
+        "examples": 398,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 395,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.007781344227215252,
+          "deletions": 10,
+          "insertions": 10,
+          "reference_units": 1820,
+          "substitutions": 50,
+          "wer": 0.038461538461538464
+        },
+        "timed_successes": 398,
+        "wall_seconds": {
+          "max": 0.195082459,
+          "p50": 0.0756846045,
+          "p95": 0.11683407499999998
+        }
+      }
+    },
+    "golos_crowd_mirror/only_numeric_lexemes": {
+      "gigaam-e2e-ctc": {
+        "app": {
+          "cer": 0.9867469879518073,
+          "deletions": 71,
+          "insertions": 0,
+          "reference_units": 126,
+          "substitutions": 54,
+          "wer": 0.9920634920634921
+        },
+        "examples": 13,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 13,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.9867469879518073,
+          "deletions": 71,
+          "insertions": 0,
+          "reference_units": 126,
+          "substitutions": 54,
+          "wer": 0.9920634920634921
+        },
+        "timed_successes": 13,
+        "wall_seconds": {
+          "max": 0.102453583,
+          "p50": 0.071535791,
+          "p95": 0.10053650859999999
+        }
+      },
+      "parakeet": {
+        "app": {
+          "cer": 0.0,
+          "deletions": 0,
+          "insertions": 0,
+          "reference_units": 126,
+          "substitutions": 0,
+          "wer": 0.0
+        },
+        "examples": 13,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 13,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.0,
+          "deletions": 0,
+          "insertions": 0,
+          "reference_units": 126,
+          "substitutions": 0,
+          "wer": 0.0
+        },
+        "timed_successes": 13,
+        "wall_seconds": {
+          "max": 0.185371167,
+          "p50": 0.151018083,
+          "p95": 0.179724267
+        }
+      }
+    },
+    "golos_crowd_mirror/some_numeric_lexemes": {
+      "gigaam-e2e-ctc": {
+        "app": {
+          "cer": 0.3084397556912826,
+          "deletions": 83,
+          "insertions": 2,
+          "reference_units": 612,
+          "substitutions": 113,
+          "wer": 0.3235294117647059
+        },
+        "examples": 89,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 89,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.3084397556912826,
+          "deletions": 83,
+          "insertions": 2,
+          "reference_units": 612,
+          "substitutions": 113,
+          "wer": 0.3235294117647059
+        },
+        "timed_successes": 89,
+        "wall_seconds": {
+          "max": 0.148019333,
+          "p50": 0.046880292,
+          "p95": 0.08422665859999998
+        }
+      },
+      "parakeet": {
+        "app": {
+          "cer": 0.004719600222098834,
+          "deletions": 2,
+          "insertions": 2,
+          "reference_units": 612,
+          "substitutions": 8,
+          "wer": 0.0196078431372549
+        },
+        "examples": 89,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 89,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.004719600222098834,
+          "deletions": 2,
+          "insertions": 2,
+          "reference_units": 612,
+          "substitutions": 8,
+          "wer": 0.0196078431372549
+        },
+        "timed_successes": 89,
+        "wall_seconds": {
+          "max": 0.251538792,
+          "p50": 0.089530167,
+          "p95": 0.15495919159999993
+        }
+      }
+    },
+    "golos_farfield_mirror/no_numeric_lexemes": {
+      "gigaam-e2e-ctc": {
+        "app": {
+          "cer": 0.020073147911882284,
+          "deletions": 9,
+          "insertions": 4,
+          "reference_units": 2060,
+          "substitutions": 114,
+          "wer": 0.06165048543689321
+        },
+        "examples": 490,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 439,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.020073147911882284,
+          "deletions": 9,
+          "insertions": 4,
+          "reference_units": 2060,
+          "substitutions": 114,
+          "wer": 0.06165048543689321
+        },
+        "timed_successes": 490,
+        "wall_seconds": {
+          "max": 0.108749458,
+          "p50": 0.030329167,
+          "p95": 0.04728422659999999
+        }
+      },
+      "parakeet": {
+        "app": {
+          "cer": 0.022284596410648973,
+          "deletions": 7,
+          "insertions": 15,
+          "reference_units": 2060,
+          "substitutions": 127,
+          "wer": 0.07233009708737864
+        },
+        "examples": 490,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 439,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.022284596410648973,
+          "deletions": 7,
+          "insertions": 15,
+          "reference_units": 2060,
+          "substitutions": 127,
+          "wer": 0.07233009708737864
+        },
+        "timed_successes": 490,
+        "wall_seconds": {
+          "max": 0.209249916,
+          "p50": 0.058087083,
+          "p95": 0.0949753587
+        }
+      }
+    },
+    "golos_farfield_mirror/some_numeric_lexemes": {
+      "gigaam-e2e-ctc": {
+        "app": {
+          "cer": 0.30708661417322836,
+          "deletions": 8,
+          "insertions": 0,
+          "reference_units": 71,
+          "substitutions": 19,
+          "wer": 0.38028169014084506
+        },
+        "examples": 10,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 10,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.30708661417322836,
+          "deletions": 8,
+          "insertions": 0,
+          "reference_units": 71,
+          "substitutions": 19,
+          "wer": 0.38028169014084506
+        },
+        "timed_successes": 10,
+        "wall_seconds": {
+          "max": 0.05460225,
+          "p50": 0.0398844795,
+          "p95": 0.052834931249999995
+        }
+      },
+      "parakeet": {
+        "app": {
+          "cer": 0.03412073490813648,
+          "deletions": 0,
+          "insertions": 0,
+          "reference_units": 71,
+          "substitutions": 8,
+          "wer": 0.11267605633802817
+        },
+        "examples": 10,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 10,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.03412073490813648,
+          "deletions": 0,
+          "insertions": 0,
+          "reference_units": 71,
+          "substitutions": 8,
+          "wer": 0.11267605633802817
+        },
+        "timed_successes": 10,
+        "wall_seconds": {
+          "max": 0.1202775,
+          "p50": 0.08431027099999999,
+          "p95": 0.11783587514999999
+        }
+      }
+    }
+  },
+  "source_manifest_sha256": "ff58ed1c9ca9790038ea5b5a21d1f2df8fe893e15ed48da5517e96d98e8769b1",
+  "subset_manifest_sha256": "01d1f8618bd8ea713f0b0f2fa7c0f20768aedd5b6f95f2b5aea782101c4c929a"
+}
