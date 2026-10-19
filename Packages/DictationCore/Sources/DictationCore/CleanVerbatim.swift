@@ -11,13 +11,15 @@ import Foundation
 ///
 /// Three passes, in this order:
 ///
-/// 1. **Spoken corrections.** "Scratch that." ("Зачеркни это.") as its own
-///    sentence removes the sentence before it; ", scratch that." at the end of
-///    a sentence removes that sentence. Runs first because it reads the commas
-///    the filler pass would otherwise take away.
+/// 1. **Spoken corrections.** "Scratch that" ("Зачеркни это") takes back
+///    what was just said: as its own sentence or opening one, the sentence
+///    before it; at the end of a sentence, or between commas in the middle of
+///    one ("we go Friday, scratch that, we go Monday"), everything before it
+///    in that sentence. The commas are what make it a command rather than the
+///    verb. Runs first because it reads the commas the filler pass removes.
 /// 2. **Fillers.** Words that are hesitation in every language the model
 ///    speaks. "um" is a real word in German and Portuguese, so it goes only
-///    when punctuation sets it apart.
+///    when it carries punctuation of its own ("um," / "um.").
 /// 3. **Stutters.** A short function word said twice in a row with nothing
 ///    between. Doubles that mean something ("very very", "да да", "had had")
 ///    are not on the list.
@@ -51,7 +53,7 @@ enum CleanVerbatim {
     ]
 
     /// A hesitation in English, a word in German ("um fünf") and Portuguese
-    /// ("um carro"). Removed only when punctuation sets it apart.
+    /// ("um carro"). Removed only when it carries punctuation of its own.
     static let guardedFiller = "um"
 
     /// Short function words a speaker repeats while the next word loads.
@@ -157,8 +159,7 @@ extension CleanVerbatim {
             guard !token.isProtected else { return false }
             let word = token.word
             if CleanVerbatim.fillers.contains(word) { return true }
-            guard word == CleanVerbatim.guardedFiller, !token.punctuation.isEmpty else { return false }
-            return index == 0 || !items[index - 1].punctuation.isEmpty
+            return word == CleanVerbatim.guardedFiller && !token.punctuation.isEmpty
         }
 
         /// A filler, as far as a correction is concerned: any hesitation word,
@@ -188,6 +189,11 @@ extension CleanVerbatim {
                 guard let range = nextCorrection() else { break }
                 remove(range)
                 changed = true
+                // Every removal starts at a sentence start, so whatever is
+                // left there now opens a sentence.
+                if range.lowerBound < items.count, !items[range.lowerBound].isProtected {
+                    capitalizeFirstLetter(at: range.lowerBound)
+                }
             }
             return changed
         }
@@ -196,26 +202,47 @@ extension CleanVerbatim {
         private func nextCorrection() -> ClosedRange<Int>? {
             let sentences = sentences
             for (position, sentence) in sentences.enumerated() {
+                let previousStart = position > 0 ? sentences[position - 1].lowerBound : sentence.lowerBound
                 let words = sentence.filter { !isAnyFillerWord(at: $0) }
                 let spoken = words.map { items[$0].isProtected ? items[$0].text : items[$0].word }
 
                 for command in CleanVerbatim.corrections {
                     if spoken == command {
-                        let start = position > 0 ? sentences[position - 1].lowerBound : sentence.lowerBound
-                        return start...sentence.upperBound
+                        return previousStart...sentence.upperBound
                     }
-                    // As a sentence's tail only the two-word forms count: a bare
-                    // "зачеркни" after a comma is as likely an instruction to a reader.
+                    // Inside a longer sentence only the two-word forms count: a
+                    // bare "зачеркни" is as likely an instruction to a reader.
                     guard command.count > 1, spoken.count > command.count,
-                          Array(spoken.suffix(command.count)) == command
+                          let offset = firstOccurrence(of: command, in: spoken)
                     else { continue }
-                    let commandStart = words[words.count - command.count]
-                    if commandStart > sentence.lowerBound, items[commandStart - 1].endsWithComma {
+
+                    let first = words[offset]
+                    let last = words[offset + command.count - 1]
+                    let opens = offset == 0
+                    let closes = offset + command.count == spoken.count
+                    let pauseBefore = first > sentence.lowerBound
+                        && (items[first - 1].endsWithComma || isAnyFillerWord(at: first - 1))
+                    let pauseAfter = items[last].endsWithComma
+
+                    if opens, pauseAfter {
+                        return previousStart...last
+                    }
+                    if closes, pauseBefore {
                         return sentence
+                    }
+                    if !opens, !closes, pauseBefore, pauseAfter {
+                        return sentence.lowerBound...last
                     }
                 }
             }
             return nil
+        }
+
+        private func firstOccurrence(of command: [String], in spoken: [String]) -> Int? {
+            guard spoken.count >= command.count else { return nil }
+            return (0...(spoken.count - command.count)).first {
+                Array(spoken[$0..<($0 + command.count)]) == command
+            }
         }
 
         // MARK: Pass 2: fillers

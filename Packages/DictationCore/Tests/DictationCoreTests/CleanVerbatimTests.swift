@@ -60,6 +60,12 @@ final class CleanVerbatimTests: XCTestCase {
         XCTAssertEqual(CleanVerbatim.clean("So um the build passed."), "So um the build passed.")
     }
 
+    /// The model does not always put a comma before the hesitation; the one
+    /// after it is enough to tell it from German and Portuguese "um".
+    func testRemovesAnUmCarryingItsOwnComma() {
+        XCTAssertEqual(CleanVerbatim.clean("I need you to um, fix it."), "I need you to fix it.")
+    }
+
     // MARK: - Stutters
 
     func testCollapsesARepeatedFunctionWord() {
@@ -109,6 +115,30 @@ final class CleanVerbatimTests: XCTestCase {
         )
     }
 
+    /// What Parakeet actually writes: the command between commas, mid-sentence.
+    func testScratchThatBetweenCommasRemovesWhatCameBeforeItInTheSentence() {
+        XCTAssertEqual(
+            CleanVerbatim.clean("Um, so that the deploy failed, uh, scratch that, the deploy passed."),
+            "The deploy passed."
+        )
+        XCTAssertEqual(
+            CleanVerbatim.clean("This stays. We go Friday, scratch that, we go Monday."),
+            "This stays. We go Monday."
+        )
+        XCTAssertEqual(
+            CleanVerbatim.clean("Встреча в пятницу, зачеркни это, в субботу."),
+            "В субботу."
+        )
+    }
+
+    func testScratchThatOpeningASentenceRemovesThePreviousSentence() {
+        XCTAssertEqual(
+            CleanVerbatim.clean("The deploy failed. Scratch that, it passed."),
+            "It passed."
+        )
+        XCTAssertEqual(CleanVerbatim.clean("Scratch that, it passed."), "It passed.")
+    }
+
     func testScratchThatAtTheStartOrEndHasNothingElseToRemove() {
         XCTAssertEqual(CleanVerbatim.clean("Scratch that. Hello there."), "Hello there.")
         XCTAssertEqual(CleanVerbatim.clean("Ship it on Friday. Scratch that"), "")
@@ -126,6 +156,10 @@ final class CleanVerbatimTests: XCTestCase {
             CleanVerbatim.clean("Please scratch that line from the file."),
             "Please scratch that line from the file."
         )
+        XCTAssertEqual(
+            CleanVerbatim.clean("If it chips, scratch that spot and repaint."),
+            "If it chips, scratch that spot and repaint."
+        )
         XCTAssertEqual(CleanVerbatim.clean("Scratch that itch."), "Scratch that itch.")
         XCTAssertEqual(CleanVerbatim.clean("Зачеркни строку в файле."), "Зачеркни строку в файле.")
     }
@@ -137,6 +171,20 @@ final class CleanVerbatimTests: XCTestCase {
             CleanVerbatim.clean("Um, so the the deploy failed, uh, scratch that. The deploy passed."),
             "The deploy passed."
         )
+    }
+
+    /// Transcripts the shipping model produced from synthesized disfluent
+    /// speech (macOS `say`, OpenRamble 0.32.0 CLI), kept as they came out.
+    func testRealModelOutput() {
+        XCTAssertEqual(
+            CleanVerbatim.clean("We should, um, ship it on Friday. I I think that the tests are green, uh, mostly."),
+            "We should ship it on Friday. I think that the tests are green mostly."
+        )
+        XCTAssertEqual(
+            CleanVerbatim.clean("Uh, I need you to um, fix the login bug, um, and then update the readme."),
+            "I need you to fix the login bug and then update the readme."
+        )
+        XCTAssertEqual(CleanVerbatim.clean("Um 5 Uhr treffen wir uns im Büro."), "Um 5 Uhr treffen wir uns im Büro.")
     }
 
     func testAMeetingTranscriptKeepsSpokenCorrections() {

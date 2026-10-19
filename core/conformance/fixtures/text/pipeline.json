@@ -2885,5 +2885,131 @@
     ],
     "spokenCorrections" : false,
     "text" : "It failed, scratch that. It passed."
+  },
+  {
+    "afterDictionary" : "I need you to um, fix it.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "I need you to um, fix it.",
+    "name" : "clean um carrying its own comma",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "I need you to fix it."
+  },
+  {
+    "afterDictionary" : "This stays. We go Friday, scratch that, we go Monday.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "This stays. We go Friday, scratch that, we go Monday.",
+    "name" : "clean scratch that between commas",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "This stays. We go Monday."
+  },
+  {
+    "afterDictionary" : "The deploy failed. Scratch that, it passed.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "The deploy failed. Scratch that, it passed.",
+    "name" : "clean scratch that opening a sentence",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "It passed."
+  },
+  {
+    "afterDictionary" : "Встреча в пятницу, зачеркни это, в субботу.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Встреча в пятницу, зачеркни это, в субботу.",
+    "name" : "clean russian correction between commas",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "В субботу."
+  },
+  {
+    "afterDictionary" : "If it chips, scratch that spot and repaint.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "If it chips, scratch that spot and repaint.",
+    "name" : "clean scratch that as a verb between commas",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "If it chips, scratch that spot and repaint."
+  },
+  {
+    "afterDictionary" : "Um, so that the deploy failed, uh, scratch that, the deploy passed.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Um, so that the deploy failed, uh, scratch that, the deploy passed.",
+    "name" : "clean real model: scratch that between commas",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "The deploy passed."
+  },
+  {
+    "afterDictionary" : "We should, um, ship it on Friday. I I think that the tests are green, uh, mostly.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "We should, um, ship it on Friday. I I think that the tests are green, uh, mostly.",
+    "name" : "clean real model: fillers and a stutter",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "We should ship it on Friday. I think that the tests are green mostly."
+  },
+  {
+    "afterDictionary" : "Uh, I need you to um, fix the login bug, um, and then update the readme.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Uh, I need you to um, fix the login bug, um, and then update the readme.",
+    "name" : "clean real model: um without a comma before",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "I need you to fix the login bug and then update the readme."
+  },
+  {
+    "afterDictionary" : "Um 5 Uhr treffen wir uns im Büro.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Um 5 Uhr treffen wir uns im Büro.",
+    "name" : "clean real model: german um",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Um 5 Uhr treffen wir uns im Büro."
   }
 ]

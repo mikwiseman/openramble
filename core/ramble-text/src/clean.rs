@@ -9,13 +9,15 @@
 //!
 //! Three passes, in this order:
 //!
-//! 1. **Spoken corrections.** "Scratch that." ("Зачеркни это.") as its own
-//!    sentence removes the sentence before it; ", scratch that." at the end of a
-//!    sentence removes that sentence. Runs first because it reads the commas the
-//!    filler pass would otherwise take away.
+//! 1. **Spoken corrections.** "Scratch that" ("Зачеркни это") takes back what
+//!    was just said: as its own sentence or opening one, the sentence before it;
+//!    at the end of a sentence, or between commas in the middle of one ("we go
+//!    Friday, scratch that, we go Monday"), everything before it in that
+//!    sentence. The commas are what make it a command rather than the verb.
+//!    Runs first because it reads the commas the filler pass removes.
 //! 2. **Fillers.** Words that are hesitation in every language the model speaks.
-//!    "um" is a real word in German and Portuguese, so it goes only when
-//!    punctuation sets it apart.
+//!    "um" is a real word in German and Portuguese, so it goes only when it
+//!    carries punctuation of its own ("um," / "um.").
 //! 3. **Stutters.** A short function word said twice in a row with nothing
 //!    between. Doubles that mean something ("very very", "да да", "had had") are
 //!    not on the list.
@@ -37,7 +39,7 @@ const FILLERS: &[&str] = &[
 ];
 
 /// A hesitation in English, a word in German ("um fünf") and Portuguese
-/// ("um carro"). Removed only when punctuation sets it apart.
+/// ("um carro"). Removed only when it carries punctuation of its own.
 const GUARDED_FILLER: &str = "um";
 
 /// Short function words a speaker repeats while the next word loads.
@@ -69,6 +71,15 @@ pub fn clean(text: &str, spoken_corrections: bool) -> String {
         return text.to_string();
     }
     tokens.rendered()
+}
+
+/// Whether `command` appears in `spoken` starting at `at`.
+fn matches_at(spoken: &[String], command: &[&str], at: usize) -> bool {
+    at + command.len() <= spoken.len()
+        && spoken[at..at + command.len()]
+            .iter()
+            .zip(command.iter())
+            .all(|(a, b)| a == b)
 }
 
 /// One word, or one protected span, with the whitespace in front of it.
@@ -188,10 +199,7 @@ impl Tokens {
         if FILLERS.contains(&word.as_str()) {
             return true;
         }
-        if word != GUARDED_FILLER || token.punctuation().is_empty() {
-            return false;
-        }
-        index == 0 || !self.items[index - 1].punctuation().is_empty()
+        word == GUARDED_FILLER && !token.punctuation().is_empty()
     }
 
     /// A filler, as far as a correction is concerned: any hesitation word,
@@ -228,6 +236,11 @@ impl Tokens {
             };
             self.remove(start, end);
             changed = true;
+            // Every removal starts at a sentence start, so whatever is left
+            // there now opens a sentence.
+            if start < self.items.len() && !self.items[start].protected {
+                self.capitalize_first_letter(start);
+            }
         }
         changed
     }
@@ -236,6 +249,11 @@ impl Tokens {
     fn next_correction(&self) -> Option<(usize, usize)> {
         let sentences = self.sentences();
         for (position, &(start, end)) in sentences.iter().enumerate() {
+            let previous_start = if position > 0 {
+                sentences[position - 1].0
+            } else {
+                start
+            };
             let words: Vec<usize> = (start..=end)
                 .filter(|&index| !self.is_any_filler_word(index))
                 .collect();
@@ -252,28 +270,37 @@ impl Tokens {
                 .collect();
 
             for command in CORRECTIONS {
-                if spoken.len() == command.len()
-                    && spoken.iter().zip(command.iter()).all(|(a, b)| a == b)
-                {
-                    let from = if position > 0 {
-                        sentences[position - 1].0
-                    } else {
-                        start
-                    };
-                    return Some((from, end));
+                if matches_at(&spoken, command, 0) && spoken.len() == command.len() {
+                    return Some((previous_start, end));
                 }
-                // As a sentence's tail only the two-word forms count: a bare
-                // "зачеркни" after a comma is as likely an instruction to a reader.
+                // Inside a longer sentence only the two-word forms count: a
+                // bare "зачеркни" is as likely an instruction to a reader.
                 if command.len() < 2 || spoken.len() <= command.len() {
                     continue;
                 }
-                let tail = &spoken[spoken.len() - command.len()..];
-                if !tail.iter().zip(command.iter()).all(|(a, b)| a == b) {
+                let Some(offset) =
+                    (0..=spoken.len() - command.len()).find(|&at| matches_at(&spoken, command, at))
+                else {
                     continue;
+                };
+
+                let first = words[offset];
+                let last = words[offset + command.len() - 1];
+                let opens = offset == 0;
+                let closes = offset + command.len() == spoken.len();
+                let pause_before = first > start
+                    && (self.items[first - 1].ends_with_comma()
+                        || self.is_any_filler_word(first - 1));
+                let pause_after = self.items[last].ends_with_comma();
+
+                if opens && pause_after {
+                    return Some((previous_start, last));
                 }
-                let command_start = words[words.len() - command.len()];
-                if command_start > start && self.items[command_start - 1].ends_with_comma() {
+                if closes && pause_before {
                     return Some((start, end));
+                }
+                if !opens && !closes && pause_before && pause_after {
+                    return Some((start, last));
                 }
             }
         }
@@ -451,6 +478,26 @@ mod tests {
                 "The deploy passed.",
             ),
             ("Run `swift  test`, uh, now.", "Run `swift  test` now."),
+            ("I need you to um, fix it.", "I need you to fix it."),
+            (
+                "Um, so that the deploy failed, uh, scratch that, the deploy passed.",
+                "The deploy passed.",
+            ),
+            (
+                "This stays. We go Friday, scratch that, we go Monday.",
+                "This stays. We go Monday.",
+            ),
+            ("Встреча в пятницу, зачеркни это, в субботу.", "В субботу."),
+            ("The deploy failed. Scratch that, it passed.", "It passed."),
+            ("Scratch that, it passed.", "It passed."),
+            (
+                "We should, um, ship it on Friday. I I think that the tests are green, uh, mostly.",
+                "We should ship it on Friday. I think that the tests are green mostly.",
+            ),
+            (
+                "Uh, I need you to um, fix the login bug, um, and then update the readme.",
+                "I need you to fix the login bug and then update the readme.",
+            ),
             ("Uh, onTextInserted fired.", "onTextInserted fired."),
         ];
         for (input, expected) in cases {
@@ -474,6 +521,8 @@ mod tests {
             "The, the answer is yes.",
             "Please scratch that line from the file.",
             "Scratch that itch.",
+            "If it chips, scratch that spot and repaint.",
+            "Um 5 Uhr treffen wir uns im Büro.",
             "Зачеркни строку в файле.",
             "Run `uh` now.",
             "Open /tmp/um/file please.",

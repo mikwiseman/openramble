@@ -2087,5 +2087,68 @@
     "phoneticMatching": true,
     "spokenCorrections": false,
     "input": "Uh, it failed, scratch that. It passed."
+  },
+  {
+    "name": "clean um carrying its own comma",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I need you to um, fix it."
+  },
+  {
+    "name": "clean scratch that between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "This stays. We go Friday, scratch that, we go Monday."
+  },
+  {
+    "name": "clean scratch that opening a sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The deploy failed. Scratch that, it passed."
+  },
+  {
+    "name": "clean russian correction between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Встреча в пятницу, зачеркни это, в субботу."
+  },
+  {
+    "name": "clean scratch that as a verb between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "If it chips, scratch that spot and repaint."
+  },
+  {
+    "name": "clean real model: scratch that between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, so that the deploy failed, uh, scratch that, the deploy passed."
+  },
+  {
+    "name": "clean real model: fillers and a stutter",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We should, um, ship it on Friday. I I think that the tests are green, uh, mostly."
+  },
+  {
+    "name": "clean real model: um without a comma before",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh, I need you to um, fix the login bug, um, and then update the readme."
+  },
+  {
+    "name": "clean real model: german um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um 5 Uhr treffen wir uns im Büro."
   }
 ]
