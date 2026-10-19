@@ -17,7 +17,13 @@ import LocalASR
 /// because scoring needs it; the harness, not this tool, decides what of it
 /// may be kept. The process exits on end of input.
 func serve(directory: URL) async throws {
-    let transcriber = LocalTranscriber(engine: TranscribeCppAdapter())
+    let adapter = TranscribeCppAdapter()
+    // A research knob, not an app setting: terms one per line.
+    if let path = ProcessInfo.processInfo.environment["WAI_ASR_VOCABULARY_FILE"] {
+        let terms = try String(contentsOfFile: path, encoding: .utf8).split(whereSeparator: \.isNewline).map(String.init)
+        await adapter.setVocabulary(terms)
+    }
+    let transcriber = LocalTranscriber(engine: adapter)
     let loadStarted = ContinuousClock.now
     try await transcriber.prepare(modelDirectory: directory)
     let loadSeconds = seconds(loadStarted.duration(to: .now))
