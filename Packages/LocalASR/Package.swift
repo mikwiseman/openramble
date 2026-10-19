@@ -24,14 +24,15 @@ let package = Package(
         // to change what it links without the change being visible in a diff.
         //
         // The binary was audited before adoption. Its only Objective-C class
-        // references are Metal types plus NSLock/NSString/NSURL, its only NSURL
-        // selector is `fileURLWithPath:`, and it links Metal, MetalKit,
-        // Accelerate, Foundation and libc++ — no CFNetwork, no sockets, no TLS.
+        // references are Metal types plus NSLock, NSNumber, NSString, NSURL and
+        // the mutable collections, its only NSURL selector is
+        // `fileURLWithPath:`, and it links Metal, MetalKit, Accelerate,
+        // Foundation and libc++ — no CFNetwork, no sockets, no TLS.
         // `scripts/check-network-surface.sh` re-runs that audit on every check.
         .binaryTarget(
             name: "CTranscribe",
-            url: "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.2.3/TranscribeCpp.xcframework.zip",
-            checksum: "944be4d5232f39c99608f676a2ddda2516e0ed3c9fb6db50685ffa8d20a8b9c9"
+            url: "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/TranscribeCpp.xcframework.zip",
+            checksum: "3da069d288b79475adb257e4425c7c00f7026a90d0ef06af2214b7355dcd0453"
         ),
         .target(
             name: "LocalASR",
