@@ -6,7 +6,8 @@ import XCTest
 /// Every case here is one of two promises. Hesitations, stutters and spoken
 /// corrections disappear; nothing the person meant is reworded, reordered or
 /// lost. A false deletion is the worse failure, so the meaning-preservation
-/// cases outnumber the removal ones.
+/// cases outnumber the removal ones. Many of them came from an adversarial
+/// review that tried to make the stage delete something real.
 final class CleanVerbatimTests: XCTestCase {
     // MARK: - Fillers
 
@@ -15,9 +16,14 @@ final class CleanVerbatimTests: XCTestCase {
         XCTAssertEqual(CleanVerbatim.clean("Uh, the build passed."), "The build passed.")
     }
 
-    func testRemovesAFillerSetOffByCommasTogetherWithItsPause() {
-        XCTAssertEqual(CleanVerbatim.clean("We should, um, ship it."), "We should ship it.")
-        XCTAssertEqual(CleanVerbatim.clean("We should, uh, ship it."), "We should ship it.")
+    /// The comma before a hesitation may be grammar ("10, 20, um, 30"), so it
+    /// stays; only the hesitation and its own comma go.
+    func testRemovesAFillerSetOffByCommasAndKeepsTheCommaBeforeIt() {
+        XCTAssertEqual(CleanVerbatim.clean("We should, um, ship it."), "We should, ship it.")
+        XCTAssertEqual(CleanVerbatim.clean("Set the values to 10, 20, um, 30."), "Set the values to 10, 20, 30.")
+        XCTAssertEqual(CleanVerbatim.clean("We need eggs, milk, uh, butter and bread."), "We need eggs, milk, butter and bread.")
+        XCTAssertEqual(CleanVerbatim.clean("Fix the files a.swift, b.swift, uh, c.swift."), "Fix the files a.swift, b.swift, c.swift.")
+        XCTAssertEqual(CleanVerbatim.clean("Купи хлеб, молоко, э, сыр."), "Купи хлеб, молоко, сыр.")
     }
 
     func testRemovesABareFillerThatIsNotAWordAnywhere() {
@@ -32,38 +38,84 @@ final class CleanVerbatimTests: XCTestCase {
     func testAFillerCarryingTheFullStopHandsItToTheWordBefore() {
         XCTAssertEqual(CleanVerbatim.clean("I think, uh."), "I think.")
         XCTAssertEqual(CleanVerbatim.clean("I think uh."), "I think.")
-        XCTAssertEqual(CleanVerbatim.clean("Is it ready, um?"), "Is it ready?")
+        XCTAssertEqual(CleanVerbatim.clean("Is it ready, uh?"), "Is it ready?")
     }
 
     func testRemovesRussianGermanAndFrenchFillers() {
         XCTAssertEqual(CleanVerbatim.clean("Ээ, я думаю, что это работает."), "Я думаю, что это работает.")
-        XCTAssertEqual(CleanVerbatim.clean("Я, э, не уверен."), "Я не уверен.")
-        XCTAssertEqual(CleanVerbatim.clean("Мм, давай завтра."), "Давай завтра.")
+        XCTAssertEqual(CleanVerbatim.clean("Я, э, не уверен."), "Я, не уверен.")
+        XCTAssertEqual(CleanVerbatim.clean("Ммм, давай завтра."), "Давай завтра.")
         XCTAssertEqual(CleanVerbatim.clean("Ähm, ich komme morgen."), "Ich komme morgen.")
         XCTAssertEqual(CleanVerbatim.clean("Euh, je pense que oui."), "Je pense que oui.")
     }
 
     func testATakeThatIsOnlyHesitationBecomesEmpty() {
-        XCTAssertEqual(CleanVerbatim.clean("Um."), "")
+        XCTAssertEqual(CleanVerbatim.clean("Uh."), "")
         XCTAssertEqual(CleanVerbatim.clean("Uh, uh."), "")
     }
 
     // MARK: - "um" is a real word in German and Portuguese
 
     func testKeepsGermanAndPortugueseUm() {
-        XCTAssertEqual(CleanVerbatim.clean("Um fünf Uhr treffen wir uns."), "Um fünf Uhr treffen wir uns.")
-        XCTAssertEqual(CleanVerbatim.clean("Wir gehen um fünf."), "Wir gehen um fünf.")
-        XCTAssertEqual(CleanVerbatim.clean("Eu tenho um carro."), "Eu tenho um carro.")
+        let unchanged = [
+            "Um fünf Uhr treffen wir uns.",
+            "Wir gehen um fünf.",
+            "Eu tenho um carro.",
+            // Separable verbs put "um" right before the punctuation.
+            "Benenne die Funktion um.",
+            "Wir ziehen nächste Woche um.",
+            "Bau die Funktion um, damit sie async ist.",
+            "Wir steigen in Berlin um, dann fahren wir weiter.",
+            "Er dreht sich um.",
+            "Es geht um Geld.",
+            // The Portuguese numeral.
+            "Quero um, não dois.",
+            "Só preciso de um.",
+            "Conta comigo: um, dois, três.",
+            "Um, dois, três, quatro.",
+            "Mais um?",
+        ]
+        for text in unchanged {
+            XCTAssertEqual(CleanVerbatim.clean(text), text, text)
+        }
     }
 
-    func testKeepsAnUmThatIsNotSetOffByPunctuation() {
+    func testAGermanHesitationNextToAGermanUmLeavesTheUm() {
+        XCTAssertEqual(CleanVerbatim.clean("Es geht um, äh, Geld."), "Es geht um, Geld.")
+    }
+
+    func testKeepsAnUmThatIsNotSetOffByItsOwnComma() {
         XCTAssertEqual(CleanVerbatim.clean("So um the build passed."), "So um the build passed.")
+        XCTAssertEqual(CleanVerbatim.clean("Um."), "Um.")
     }
 
     /// The model does not always put a comma before the hesitation; the one
-    /// after it is enough to tell it from German and Portuguese "um".
+    /// after it is enough in a take with no German or Portuguese in it.
     func testRemovesAnUmCarryingItsOwnComma() {
         XCTAssertEqual(CleanVerbatim.clean("I need you to um, fix it."), "I need you to fix it.")
+    }
+
+    // MARK: - Real words that look like fillers
+
+    func testKeepsUnitsLettersAndAcronyms() {
+        let unchanged = [
+            "Use a 3 mm drill bit and a 10 mm bolt.",
+            "The gap is 5 mm, not 6.",
+            "Толщина стенки 5 мм.",
+            "Format the date as dd mm yyyy.",
+            "Слово начинается на э.",
+            "Напиши букву э.",
+            "Отправь эс эм эс.",
+            "We trained an HMM on the data.",
+            "We need an ERM framework.",
+            "Build an MMM for the marketing team.",
+            "Contact HM Revenue and Customs.",
+            "I studied at UH.",
+            "I studied at UM.",
+        ]
+        for text in unchanged {
+            XCTAssertEqual(CleanVerbatim.clean(text), text, text)
+        }
     }
 
     // MARK: - Stutters
@@ -79,11 +131,31 @@ final class CleanVerbatimTests: XCTestCase {
     }
 
     func testKeepsDoublesThatMeanSomething() {
-        XCTAssertEqual(CleanVerbatim.clean("That was very very good."), "That was very very good.")
-        XCTAssertEqual(CleanVerbatim.clean("I had had enough."), "I had had enough.")
-        XCTAssertEqual(CleanVerbatim.clean("I think that that is right."), "I think that that is right.")
-        XCTAssertEqual(CleanVerbatim.clean("Да да, конечно."), "Да да, конечно.")
-        XCTAssertEqual(CleanVerbatim.clean("Так так, посмотрим."), "Так так, посмотрим.")
+        let unchanged = [
+            "That was very very good.",
+            "I had had enough.",
+            "I think that that is right.",
+            "Да да, конечно.",
+            "Так так, посмотрим.",
+            "What the problem is is that the cache is stale.",
+            "What it was was a race condition.",
+            "Log in in Safari and check the cookie.",
+            "Turn the flag on on staging.",
+            "Search for for loops in the codebase.",
+            "The movie was so so.",
+            "Use and and or instead of the symbols.",
+            "My name is Aaron, spelled A A R O N.",
+            "Take him to the OR or the ER.",
+            "Tell IT it is broken.",
+            "Conheço a cidade de A a Z.",
+            "Il y a a priori un problème.",
+            "Najważniejsze to to, że działa.",
+            "Er weiß nicht, was was ist.",
+            "Это это?",
+        ]
+        for text in unchanged {
+            XCTAssertEqual(CleanVerbatim.clean(text), text, text)
+        }
     }
 
     func testKeepsARepeatSeparatedByPunctuation() {
@@ -97,14 +169,6 @@ final class CleanVerbatimTests: XCTestCase {
         XCTAssertEqual(
             CleanVerbatim.clean("The deploy failed. Scratch that. The deploy passed."),
             "The deploy passed."
-        )
-        XCTAssertEqual(
-            CleanVerbatim.clean("Встреча в пятницу. Зачеркни это. Встреча в субботу."),
-            "Встреча в субботу."
-        )
-        XCTAssertEqual(
-            CleanVerbatim.clean("Встреча в пятницу. Зачеркни. Встреча в субботу."),
-            "Встреча в субботу."
         )
     }
 
@@ -125,17 +189,10 @@ final class CleanVerbatimTests: XCTestCase {
             CleanVerbatim.clean("This stays. We go Friday, scratch that, we go Monday."),
             "This stays. We go Monday."
         )
-        XCTAssertEqual(
-            CleanVerbatim.clean("Встреча в пятницу, зачеркни это, в субботу."),
-            "В субботу."
-        )
     }
 
     func testScratchThatOpeningASentenceRemovesThePreviousSentence() {
-        XCTAssertEqual(
-            CleanVerbatim.clean("The deploy failed. Scratch that, it passed."),
-            "It passed."
-        )
+        XCTAssertEqual(CleanVerbatim.clean("The deploy failed. Scratch that, it passed."), "It passed.")
         XCTAssertEqual(CleanVerbatim.clean("Scratch that, it passed."), "It passed.")
     }
 
@@ -151,6 +208,26 @@ final class CleanVerbatimTests: XCTestCase {
         )
     }
 
+    /// A sentence of nothing but hesitation is not what "scratch that" takes back.
+    func testAHesitationSentenceDoesNotAbsorbTheCorrection() {
+        XCTAssertEqual(CleanVerbatim.clean("Ship it. Uh. Scratch that."), "")
+        XCTAssertEqual(CleanVerbatim.clean("Ship it. Um. Scratch that. Ship it Monday."), "Ship it Monday.")
+    }
+
+    func testAbbreviationsAndClosingQuotesDoNotMoveSentenceEdges() {
+        XCTAssertEqual(CleanVerbatim.clean("Meet at 5 p.m. tomorrow. Scratch that. Meet at 6."), "Meet at 6.")
+        XCTAssertEqual(CleanVerbatim.clean("I met Dr. Smith today. Scratch that. I met nobody."), "I met nobody.")
+        XCTAssertEqual(CleanVerbatim.clean("Call Dr. Smith, scratch that, Dr. Jones."), "Dr. Jones.")
+        XCTAssertEqual(
+            CleanVerbatim.clean("He said \"stop.\" Then we left, scratch that, we stayed."),
+            "He said \"stop.\" We stayed."
+        )
+        XCTAssertEqual(
+            CleanVerbatim.clean("The first test failed (it timed out.) We ship Friday, scratch that, we ship Monday."),
+            "The first test failed (it timed out.) We ship Monday."
+        )
+    }
+
     func testScratchInsideASentenceIsAnOrdinaryWord() {
         XCTAssertEqual(
             CleanVerbatim.clean("Please scratch that line from the file."),
@@ -161,7 +238,20 @@ final class CleanVerbatimTests: XCTestCase {
             "If it chips, scratch that spot and repaint."
         )
         XCTAssertEqual(CleanVerbatim.clean("Scratch that itch."), "Scratch that itch.")
-        XCTAssertEqual(CleanVerbatim.clean("Зачеркни строку в файле."), "Зачеркни строку в файле.")
+    }
+
+    /// "Зачеркни" tells a reader to cross something out far more often than it
+    /// takes back what was just said, so Russian has no spoken correction.
+    func testRussianInstructionsToCrossSomethingOutStayText() {
+        let unchanged = [
+            "В третьей строке опечатка. Зачеркни это, а потом перепиши.",
+            "Если в договоре есть пункт про штрафы, зачеркни это.",
+            "Видишь лишнее слово? Зачеркни.",
+            "Зачеркни строку в файле.",
+        ]
+        for text in unchanged {
+            XCTAssertEqual(CleanVerbatim.clean(text), text, text)
+        }
     }
 
     // MARK: - Everything together
@@ -178,14 +268,16 @@ final class CleanVerbatimTests: XCTestCase {
     func testRealModelOutput() {
         XCTAssertEqual(
             CleanVerbatim.clean("We should, um, ship it on Friday. I I think that the tests are green, uh, mostly."),
-            "We should ship it on Friday. I think that the tests are green mostly."
+            "We should, ship it on Friday. I think that the tests are green, mostly."
         )
         XCTAssertEqual(
             CleanVerbatim.clean("Uh, I need you to um, fix the login bug, um, and then update the readme."),
-            "I need you to fix the login bug and then update the readme."
+            "I need you to fix the login bug, and then update the readme."
         )
         XCTAssertEqual(CleanVerbatim.clean("Um 5 Uhr treffen wir uns im Büro."), "Um 5 Uhr treffen wir uns im Büro.")
     }
+
+    // MARK: - Meetings
 
     func testAMeetingTranscriptKeepsSpokenCorrections() {
         XCTAssertEqual(
@@ -198,13 +290,19 @@ final class CleanVerbatimTests: XCTestCase {
         )
     }
 
+    /// In a meeting a one-word reply is something a person said.
+    func testAMeetingKeepsATurnThatIsOnlyAnInterjection() {
+        XCTAssertEqual(CleanVerbatim.clean("Hmm?", spokenCorrections: false), "Hmm?")
+        XCTAssertEqual(CleanVerbatim.clean("Uh.", spokenCorrections: false), "Uh.")
+    }
+
     // MARK: - Protected spans are never touched
 
     func testNeverTouchesProtectedSpans() {
         XCTAssertEqual(CleanVerbatim.clean("Run `uh` now."), "Run `uh` now.")
         XCTAssertEqual(CleanVerbatim.clean("Open /tmp/um/file please."), "Open /tmp/um/file please.")
         XCTAssertEqual(CleanVerbatim.clean("Call AppState AppState twice."), "Call AppState AppState twice.")
-        XCTAssertEqual(CleanVerbatim.clean("Run `swift  test`, uh, now."), "Run `swift  test` now.")
+        XCTAssertEqual(CleanVerbatim.clean("Run `swift  test`, uh, now."), "Run `swift  test`, now.")
     }
 
     func testAFillerBeforeAnIdentifierDoesNotCapitalizeIt() {
@@ -227,12 +325,18 @@ final class CleanVerbatimTests: XCTestCase {
         }
     }
 
+    func testALineBreakSurvivesARemovalNextToIt() {
+        XCTAssertEqual(CleanVerbatim.clean("First paragraph.\n\nUh, second paragraph."), "First paragraph.\n\nSecond paragraph.")
+        XCTAssertEqual(CleanVerbatim.clean("Line one.\nLine two. Scratch that. Line three."), "Line one.\nLine three.")
+    }
+
     func testIsIdempotent() {
         let samples = [
             "Um, so the the deploy failed, uh, scratch that. The deploy passed.",
             "We should, um, ship it.",
             "I I think, uh.",
             "Я, э, не уверен.",
+            "Set the values to 10, 20, um, 30.",
         ]
         for sample in samples {
             let once = CleanVerbatim.clean(sample)
@@ -246,12 +350,28 @@ final class CleanVerbatimTests: XCTestCase {
         let pipeline = TextPipeline(replacements: [
             DictionaryReplacement(spoken: "sentry", written: "Sentry", inflects: false),
         ])
-        XCTAssertEqual(pipeline.process("um, so sentry, uh, is down").text, "So Sentry is down")
+        XCTAssertEqual(pipeline.process("um, so sentry, uh, is down").text, "So Sentry, is down")
     }
 
     func testTheDictionaryCheckpointIsRecordedBeforeCleanup() {
         let run = TextPipeline().run("Uh, the build passed.")
         XCTAssertEqual(run.provenance.afterDictionary, "Uh, the build passed.")
         XCTAssertEqual(run.output.text, "The build passed.")
+    }
+
+    /// A command with nothing left to act on is just words, as when it is
+    /// spoken alone: never an empty insert that reads as "nothing recognized".
+    func testACommandAfterOnlyHesitationIsInsertedAsWords() {
+        let newLine = TextPipeline().process("Uh, new line.")
+        XCTAssertEqual(newLine.text, "New line.")
+        XCTAssertNil(newLine.command)
+
+        let send = TextPipeline(allowPressReturnCommand: true).process("Uh, send it.")
+        XCTAssertEqual(send.text, "Send it.")
+        XCTAssertNil(send.command)
+    }
+
+    func testAHesitationBeforeATrailingCommandGoes() {
+        XCTAssertEqual(TextPipeline().process("We should ship it, um, new line.").text, "We should ship it\n")
     }
 }

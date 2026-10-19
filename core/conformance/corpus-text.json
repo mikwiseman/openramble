@@ -2150,5 +2150,167 @@
     "allowPressReturnCommand": false,
     "phoneticMatching": true,
     "input": "Um 5 Uhr treffen wir uns im Büro."
+  },
+  {
+    "name": "review: german separable verb um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Benenne die Funktion um."
+  },
+  {
+    "name": "review: german um before a comma",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Bau die Funktion um, damit sie async ist."
+  },
+  {
+    "name": "review: portuguese numeral um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Quero um, não dois."
+  },
+  {
+    "name": "review: portuguese counting",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, dois, três, quatro."
+  },
+  {
+    "name": "review: german hesitation next to um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Es geht um, äh, Geld."
+  },
+  {
+    "name": "review: millimetres",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Use a 3 mm drill bit and a 10 mm bolt."
+  },
+  {
+    "name": "review: russian millimetres",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Толщина стенки 5 мм."
+  },
+  {
+    "name": "review: russian letter names",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Слово начинается на э. Отправь эс эм эс."
+  },
+  {
+    "name": "review: acronyms",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We trained an HMM. The ERM team approved it. I studied at UH."
+  },
+  {
+    "name": "review: grammatical doubles",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "What it is is a mess. Log in in Safari. Turn it on on staging. Search for for loops."
+  },
+  {
+    "name": "review: spelled letters and roman numerals",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "My name is Aaron, spelled A A R O N. Tell IT it is broken."
+  },
+  {
+    "name": "review: foreign doubles",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Il y a a priori un problème. Najważniejsze to to, że działa. Это это?"
+  },
+  {
+    "name": "review: list commas stay",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Set the values to 10, 20, um, 30. We need eggs, milk, uh, butter."
+  },
+  {
+    "name": "review: closing quote ends a sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "He said \"stop.\" Then we left, scratch that, we stayed."
+  },
+  {
+    "name": "review: abbreviations",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Meet at 5 p.m. tomorrow. Scratch that. Meet at 6."
+  },
+  {
+    "name": "review: dr between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Call Dr. Smith, scratch that, Dr. Jones."
+  },
+  {
+    "name": "review: russian instruction stays",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "В третьей строке опечатка. Зачеркни это, а потом перепиши."
+  },
+  {
+    "name": "review: hesitation sentence before scratch that",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ship it. Um. Scratch that. Ship it Monday."
+  },
+  {
+    "name": "review: line break survives",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First paragraph.\n\nUh, second paragraph."
+  },
+  {
+    "name": "review: filler then new line",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh, new line."
+  },
+  {
+    "name": "review: filler then send it",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Uh, send it."
+  },
+  {
+    "name": "review: um before new line",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We should ship it, um, new line."
+  },
+  {
+    "name": "review: meeting interjection",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Hmm?",
+    "spokenCorrections": false
   }
 ]

@@ -259,6 +259,30 @@ impl TextPipeline {
         }
     }
 
+    /// Stages 2-8: everything between the command parser and the newline.
+    fn transform(&self, text: &str) -> (String, String) {
+        // Stage 2: the exact pass — before spans exist.
+        let exact = dictionary::apply_exact(&self.replacements, text);
+        // Stage 3: the first span computation, over the result of the exact pass.
+        let spans_after_exact = span::detect(&exact);
+        // Stage 4: phonetic matching outside spans.
+        let after_dictionary = if self.phonetic_matching {
+            phonetic::apply(&self.replacements, &exact, &spans_after_exact)
+        } else {
+            exact
+        };
+
+        // Stage 5: Clean Verbatim — it only deletes, so it cannot write a word
+        // that was not said. `after_dictionary` stays the checkpoint before it.
+        let cleaned = clean::clean(&after_dictionary, self.spoken_corrections);
+
+        // Stage 7: folding typography outside spans.
+        let folded = typography::fold(&cleaned, &span::detect(&cleaned));
+        // Stage 8: the polisher, which recomputes spans itself.
+        let polished = polish::polish(&folded);
+        (after_dictionary, polished)
+    }
+
     pub fn process(&self, recognized: &str) -> Output {
         self.run(recognized).output
     }
@@ -278,25 +302,18 @@ impl TextPipeline {
             };
         }
 
-        // Stage 2: the exact pass — before spans exist.
-        let exact = dictionary::apply_exact(&self.replacements, &parsed.text);
-        // Stage 3: the first span computation, over the result of the exact pass.
-        let spans_after_exact = span::detect(&exact);
-        // Stage 4: phonetic matching outside spans.
-        let after_dictionary = if self.phonetic_matching {
-            phonetic::apply(&self.replacements, &exact, &spans_after_exact)
-        } else {
-            exact
-        };
-
-        // Stage 5: Clean Verbatim — it only deletes, so it cannot write a word
-        // that was not said. `after_dictionary` stays the checkpoint before it.
-        let cleaned = clean::clean(&after_dictionary, self.spoken_corrections);
-
-        // Stage 7: folding typography outside spans.
-        let folded = typography::fold(&cleaned, &span::detect(&cleaned));
-        // Stage 8: the polisher, which recomputes spans itself.
-        let polished = polish::polish(&folded);
+        let mut stages = self.transform(&parsed.text);
+        if stages.1.is_empty() && parsed.command.is_some() {
+            // A command with nothing left to act on is just words, as when it is
+            // spoken alone — never an empty insert that reads as "nothing was
+            // recognized" with the command silently gone.
+            parsed = ParsedCommand {
+                text: recognized.to_string(),
+                command: None,
+            };
+            stages = self.transform(recognized);
+        }
+        let (after_dictionary, polished) = stages;
 
         // Stage 9: materializing the newline — strictly last, or the polisher's
         // trim would cut it off again.

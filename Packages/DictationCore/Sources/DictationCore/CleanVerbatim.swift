@@ -9,28 +9,38 @@ import Foundation
 /// that kind can turn "don't" into "do", this kind cannot, because it has no
 /// way to write a word that was not said.
 ///
+/// A false deletion is the worse failure, so every rule leans towards keeping.
+/// The rules below were shaped by an adversarial review that tried to make the
+/// stage delete something real — German separable verbs, the Portuguese "one",
+/// millimetres, acronyms, grammatical doubles — and each of those is a test.
+///
 /// Three passes, in this order:
 ///
-/// 1. **Spoken corrections.** "Scratch that" ("Зачеркни это") takes back
-///    what was just said: as its own sentence or opening one, the sentence
-///    before it; at the end of a sentence, or between commas in the middle of
-///    one ("we go Friday, scratch that, we go Monday"), everything before it
-///    in that sentence. The commas are what make it a command rather than the
-///    verb. Runs first because it reads the commas the filler pass removes.
-/// 2. **Fillers.** Words that are hesitation in every language the model
-///    speaks. "um" is a real word in German and Portuguese, so it goes only
-///    when it carries punctuation of its own ("um," / "um.").
+/// 1. **Spoken corrections.** "Scratch that" takes back what was just said: as
+///    its own sentence or opening one, the sentence before it; at the end of a
+///    sentence, or between commas in the middle of one ("we go Friday, scratch
+///    that, we go Monday"), everything before it in that sentence. The commas
+///    are what make it a command rather than the verb. English only: the
+///    Russian "зачеркни" is far more often an instruction to a reader. Runs
+///    first because it reads the commas the filler pass removes.
+/// 2. **Fillers.** Words that are hesitation and nothing else. "um" and "э" are
+///    words too (a German particle, the Portuguese "one", a Russian letter), so
+///    they go only when they carry a comma of their own — and "um" never in a
+///    take with German or Portuguese in it. An all-caps token is an acronym,
+///    never a hesitation. The comma before a hesitation stays: it may be
+///    grammar ("10, 20, um, 30").
 /// 3. **Stutters.** A short function word said twice in a row with nothing
-///    between. Doubles that mean something ("very very", "да да", "had had")
-///    are not on the list.
+///    between, from a list of words whose doubles are never grammatical.
 ///
 /// Protected spans are atomic: a span is never a filler, a stutter or a
 /// command, and its text is never edited. Text with nothing to remove comes
-/// back exactly as it went in, whitespace included.
+/// back exactly as it went in, whitespace included, and a line break survives
+/// the removal of whatever followed it.
 ///
 /// Spoken corrections are a dictation command. A meeting transcript turns them
 /// off: there "scratch that" is something a person said, and the sentence
-/// before it may be someone else's.
+/// before it may be someone else's. For the same reason a meeting keeps a turn
+/// that is nothing but an interjection.
 enum CleanVerbatim {
     static func clean(_ text: String, spokenCorrections: Bool = true) -> String {
         var tokens = Tokens(text)
@@ -40,6 +50,7 @@ enum CleanVerbatim {
         let unfilled = tokens.removeFillers()
         let unstuttered = tokens.collapseStutters()
         guard corrected || unfilled || unstuttered else { return text }
+        if !spokenCorrections, tokens.items.isEmpty { return text }
         return tokens.rendered
     }
 
@@ -47,33 +58,48 @@ enum CleanVerbatim {
 
     /// Hesitation in every language Parakeet speaks: none of these is a word.
     static let fillers: Set<String> = [
-        "uh", "uhh", "uhm", "umm", "erm", "hmm", "hm", "mm", "mmm",
-        "э", "ээ", "эээ", "эм", "эмм", "мм", "ммм",
+        "uh", "uhh", "uhm", "umm", "erm", "hmm", "hm", "mmm",
+        "ээ", "эээ", "эмм", "ммм",
         "äh", "ähm", "euh",
     ]
 
-    /// A hesitation in English, a word in German ("um fünf") and Portuguese
-    /// ("um carro"). Removed only when it carries punctuation of its own.
-    static let guardedFiller = "um"
+    /// Hesitations that are also words: "um" (a German particle, the
+    /// Portuguese "one") and "э" (a Russian letter). Removed only when they
+    /// carry a comma of their own.
+    static let guardedFillers: Set<String> = ["um", "э"]
 
-    /// Short function words a speaker repeats while the next word loads.
-    static let stutterWords: Set<String> = [
-        "i", "a", "an", "the", "to", "and", "of", "in", "on", "it", "is", "we", "you",
-        "he", "she", "they", "so", "but", "my", "our", "your", "for", "with", "at",
-        "be", "was", "if", "or",
-        "я", "и", "в", "во", "на", "не", "мы", "ты", "вы", "он", "она", "оно", "они",
-        "это", "а", "но", "с", "к", "у", "по", "за", "из", "от", "до", "о",
+    /// Words that mark a take as German or Portuguese, where "um" is a word.
+    static let umIsAWordMarkers: Set<String> = [
+        "der", "die", "das", "und", "ist", "nicht", "ich", "wir", "sich", "auch",
+        "ein", "eine", "mit", "es", "geht", "dann",
+        "não", "você", "uma", "eu", "quero", "também", "são", "dois", "três", "quatro",
     ]
 
-    /// Spoken corrections, as the words of a whole sentence.
-    static let corrections: [[String]] = [
-        ["scratch", "that"],
-        ["зачеркни", "это"],
-        ["зачеркни"],
+    /// Letters that only German or Portuguese write, among the languages here.
+    static let umIsAWordLetters: Set<Character> = ["ä", "ö", "ü", "ß", "ã", "õ", "ç"]
+
+    /// Short function words whose doubles are never grammatical. Words that do
+    /// double for a reason — "is is", "was was", "in in", "on on", "for for",
+    /// "so so", "that that", "had had", "да да", "это это" — are left out.
+    static let stutterWords: Set<String> = [
+        "i", "the", "we", "you", "he", "she", "they", "my", "our", "your", "but",
+        "of", "it", "with",
+        "я", "мы", "ты", "вы", "он", "она", "оно", "они", "и", "но",
+        "в", "на", "с", "к", "у", "по", "за", "из", "от", "до",
+    ]
+
+    /// Spoken corrections, as consecutive words.
+    static let corrections: [[String]] = [["scratch", "that"]]
+
+    /// Words whose full stop does not end a sentence.
+    static let abbreviations: Set<String> = [
+        "dr", "mr", "mrs", "ms", "st", "vs", "etc", "inc", "ltd", "jr", "sr",
+        "no", "prof", "mt", "fig",
     ]
 
     static let trailingPunctuation: Set<Character> = [",", ".", ";", ":", "!", "?", "…"]
     static let sentenceEnding: Set<Character> = [".", "!", "?", "…"]
+    static let closers: Set<Character> = ["\"", "'", "”", "’", "»", ")", "]"]
 }
 
 // MARK: - Tokens
@@ -96,8 +122,25 @@ extension CleanVerbatim {
             String(text.reversed().prefix(while: { CleanVerbatim.trailingPunctuation.contains($0) }).reversed())
         }
 
-        var endsSentence: Bool { punctuation.contains(where: { CleanVerbatim.sentenceEnding.contains($0) }) }
         var endsWithComma: Bool { text.last == "," }
+
+        /// An acronym: two or more letters, all capitals.
+        var isShouting: Bool {
+            let letters = text.filter(\.isLetter)
+            return letters.count >= 2 && letters.allSatisfy(\.isUppercase)
+        }
+
+        /// Whether this token closes a sentence: a full stop, question mark,
+        /// exclamation or ellipsis, possibly inside a closing quote or bracket,
+        /// and not the full stop of an abbreviation ("Dr.", "p.m.", "J.").
+        var endsSentence: Bool {
+            let unquoted = String(text.reversed().drop(while: { CleanVerbatim.closers.contains($0) }).reversed())
+            guard let last = unquoted.last, CleanVerbatim.sentenceEnding.contains(last) else { return false }
+            guard last == "." else { return true }
+            let stem = String(unquoted.reversed().drop(while: { CleanVerbatim.trailingPunctuation.contains($0) }).reversed())
+            if stem.contains(".") || stem.count == 1 { return false }
+            return !CleanVerbatim.abbreviations.contains(stem.lowercased())
+        }
     }
 
     struct Tokens {
@@ -145,29 +188,45 @@ extension CleanVerbatim {
 
         // MARK: Removal
 
-        /// Remove `range`, keeping the text's leading whitespace where it was.
+        /// Remove `range`. The text's leading whitespace stays where it was,
+        /// and a line break in front of the removed piece survives it.
         mutating func remove(_ range: ClosedRange<Int>) {
             let leading = items[range.lowerBound].separator
             items.removeSubrange(range)
-            if range.lowerBound == 0, !items.isEmpty {
-                items[0].separator = leading
+            guard range.lowerBound < items.count else { return }
+            let next = items[range.lowerBound].separator
+            if range.lowerBound == 0 || (leading.contains("\n") && !next.contains("\n")) {
+                items[range.lowerBound].separator = leading
             }
         }
 
-        private func isFiller(at index: Int) -> Bool {
-            let token = items[index]
-            guard !token.isProtected else { return false }
-            let word = token.word
-            if CleanVerbatim.fillers.contains(word) { return true }
-            return word == CleanVerbatim.guardedFiller && !token.punctuation.isEmpty
+        /// Whether "um" is a word in this take: German or Portuguese in it.
+        private var umIsAWord: Bool {
+            items.contains { token in
+                !token.isProtected && (CleanVerbatim.umIsAWordMarkers.contains(token.word)
+                    || token.text.lowercased().contains(where: { CleanVerbatim.umIsAWordLetters.contains($0) }))
+            }
         }
 
-        /// A filler, as far as a correction is concerned: any hesitation word,
+        private func isFiller(at index: Int, umIsAWord: Bool) -> Bool {
+            let token = items[index]
+            guard !token.isProtected, !token.isShouting else { return false }
+            let word = token.word
+            if CleanVerbatim.fillers.contains(word) { return true }
+            guard CleanVerbatim.guardedFillers.contains(word) else { return false }
+            if word == "um", umIsAWord { return false }
+            if token.endsWithComma { return true }
+            // A dangling "um" a trailing command left behind: "…it, um".
+            return token.punctuation.isEmpty && index == items.count - 1 && index > 0
+                && items[index - 1].endsWithComma
+        }
+
+        /// A hesitation, as far as a correction is concerned: any filler word,
         /// guarded or not, because it can only stand between words here.
         private func isAnyFillerWord(at index: Int) -> Bool {
             let token = items[index]
-            guard !token.isProtected else { return false }
-            return CleanVerbatim.fillers.contains(token.word) || token.word == CleanVerbatim.guardedFiller
+            guard !token.isProtected, !token.isShouting else { return false }
+            return CleanVerbatim.fillers.contains(token.word) || CleanVerbatim.guardedFillers.contains(token.word)
         }
 
         // MARK: Pass 1: corrections
@@ -202,20 +261,11 @@ extension CleanVerbatim {
         private func nextCorrection() -> ClosedRange<Int>? {
             let sentences = sentences
             for (position, sentence) in sentences.enumerated() {
-                let previousStart = position > 0 ? sentences[position - 1].lowerBound : sentence.lowerBound
                 let words = sentence.filter { !isAnyFillerWord(at: $0) }
                 let spoken = words.map { items[$0].isProtected ? items[$0].text : items[$0].word }
 
                 for command in CleanVerbatim.corrections {
-                    if spoken == command {
-                        return previousStart...sentence.upperBound
-                    }
-                    // Inside a longer sentence only the two-word forms count: a
-                    // bare "зачеркни" is as likely an instruction to a reader.
-                    guard command.count > 1, spoken.count > command.count,
-                          let offset = firstOccurrence(of: command, in: spoken)
-                    else { continue }
-
+                    guard let offset = firstOccurrence(of: command, in: spoken) else { continue }
                     let first = words[offset]
                     let last = words[offset + command.count - 1]
                     let opens = offset == 0
@@ -224,8 +274,8 @@ extension CleanVerbatim {
                         && (items[first - 1].endsWithComma || isAnyFillerWord(at: first - 1))
                     let pauseAfter = items[last].endsWithComma
 
-                    if opens, pauseAfter {
-                        return previousStart...last
+                    if opens, closes || pauseAfter {
+                        return previousStart(before: position, in: sentences)...(closes ? sentence.upperBound : last)
                     }
                     if closes, pauseBefore {
                         return sentence
@@ -238,6 +288,17 @@ extension CleanVerbatim {
             return nil
         }
 
+        /// Where the sentence a correction takes back begins. Sentences of
+        /// nothing but hesitation are passed over and go with it.
+        private func previousStart(before position: Int, in sentences: [ClosedRange<Int>]) -> Int {
+            var candidate = position - 1
+            while candidate >= 0, sentences[candidate].allSatisfy({ isAnyFillerWord(at: $0) }) {
+                candidate -= 1
+            }
+            if candidate >= 0 { return sentences[candidate].lowerBound }
+            return sentences[0].lowerBound
+        }
+
         private func firstOccurrence(of command: [String], in spoken: [String]) -> Int? {
             guard spoken.count >= command.count else { return nil }
             return (0...(spoken.count - command.count)).first {
@@ -248,10 +309,11 @@ extension CleanVerbatim {
         // MARK: Pass 2: fillers
 
         mutating func removeFillers() -> Bool {
+            let umIsAWord = umIsAWord
             var changed = false
             var index = 0
             while index < items.count {
-                guard isFiller(at: index) else {
+                guard isFiller(at: index, umIsAWord: umIsAWord) else {
                     index += 1
                     continue
                 }
@@ -268,9 +330,8 @@ extension CleanVerbatim {
                             stripClosingPauses(at: previous)
                             items[previous].text += terminal
                         }
-                    } else if items[previous].endsWithComma,
-                              filler.endsWithComma || isLast {
-                        // The commas around a hesitation mark the pause, not the grammar.
+                    } else if isLast, items[previous].endsWithComma {
+                        // Nothing follows the comma any more.
                         items[previous].text.removeLast()
                         if items[previous].text.isEmpty { removal = previous...index }
                     }
@@ -311,7 +372,9 @@ extension CleanVerbatim {
             while index < items.count {
                 let previous = items[index - 1]
                 let current = items[index]
-                guard !previous.isProtected, !current.isProtected, previous.punctuation.isEmpty,
+                guard !previous.isProtected, !current.isProtected,
+                      !previous.isShouting, !current.isShouting,
+                      previous.punctuation.isEmpty,
                       previous.word == current.word, CleanVerbatim.stutterWords.contains(current.word)
                 else {
                     index += 1

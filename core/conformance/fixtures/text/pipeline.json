@@ -2437,7 +2437,7 @@
     "spans" : [
 
     ],
-    "text" : "We should ship it."
+    "text" : "We should, ship it."
   },
   {
     "afterDictionary" : "Then uh we ship it.",
@@ -2493,7 +2493,7 @@
     "spans" : [
 
     ],
-    "text" : "Is it ready?"
+    "text" : "Is it ready, um?"
   },
   {
     "afterDictionary" : "Ээ, я думаю, что это работает.",
@@ -2521,7 +2521,7 @@
     "spans" : [
 
     ],
-    "text" : "Я не уверен."
+    "text" : "Я, не уверен."
   },
   {
     "afterDictionary" : "Ähm, ich komme morgen. Euh, je pense que oui.",
@@ -2689,7 +2689,7 @@
     "spans" : [
 
     ],
-    "text" : "Встреча в субботу."
+    "text" : "Встреча в пятницу. Зачеркни это. Встреча в субботу."
   },
   {
     "afterDictionary" : "First. Second. Scratch that. Scratch that. Third.",
@@ -2787,7 +2787,7 @@
         "text" : "`swift  test`"
       }
     ],
-    "text" : "Run `swift  test` now."
+    "text" : "Run `swift  test`, now."
   },
   {
     "afterDictionary" : "Uh, onTextInserted fired.",
@@ -2825,7 +2825,7 @@
     "spans" : [
 
     ],
-    "text" : "Ну Sentry упал"
+    "text" : "Ну, Sentry, упал"
   },
   {
     "afterDictionary" : "Uh, first point",
@@ -2940,7 +2940,7 @@
     "spans" : [
 
     ],
-    "text" : "В субботу."
+    "text" : "Встреча в пятницу, зачеркни это, в субботу."
   },
   {
     "afterDictionary" : "If it chips, scratch that spot and repaint.",
@@ -2982,7 +2982,7 @@
     "spans" : [
 
     ],
-    "text" : "We should ship it on Friday. I think that the tests are green mostly."
+    "text" : "We should, ship it on Friday. I think that the tests are green, mostly."
   },
   {
     "afterDictionary" : "Uh, I need you to um, fix the login bug, um, and then update the readme.",
@@ -2996,7 +2996,7 @@
     "spans" : [
 
     ],
-    "text" : "I need you to fix the login bug and then update the readme."
+    "text" : "I need you to fix the login bug, and then update the readme."
   },
   {
     "afterDictionary" : "Um 5 Uhr treffen wir uns im Büro.",
@@ -3011,5 +3011,328 @@
 
     ],
     "text" : "Um 5 Uhr treffen wir uns im Büro."
+  },
+  {
+    "afterDictionary" : "Benenne die Funktion um.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Benenne die Funktion um.",
+    "name" : "review: german separable verb um",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Benenne die Funktion um."
+  },
+  {
+    "afterDictionary" : "Bau die Funktion um, damit sie async ist.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Bau die Funktion um, damit sie async ist.",
+    "name" : "review: german um before a comma",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Bau die Funktion um, damit sie async ist."
+  },
+  {
+    "afterDictionary" : "Quero um, não dois.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Quero um, não dois.",
+    "name" : "review: portuguese numeral um",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Quero um, não dois."
+  },
+  {
+    "afterDictionary" : "Um, dois, três, quatro.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Um, dois, três, quatro.",
+    "name" : "review: portuguese counting",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Um, dois, três, quatro."
+  },
+  {
+    "afterDictionary" : "Es geht um, äh, Geld.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Es geht um, äh, Geld.",
+    "name" : "review: german hesitation next to um",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Es geht um, Geld."
+  },
+  {
+    "afterDictionary" : "Use a 3 mm drill bit and a 10 mm bolt.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Use a 3 mm drill bit and a 10 mm bolt.",
+    "name" : "review: millimetres",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Use a 3 mm drill bit and a 10 mm bolt."
+  },
+  {
+    "afterDictionary" : "Толщина стенки 5 мм.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Толщина стенки 5 мм.",
+    "name" : "review: russian millimetres",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Толщина стенки 5 мм."
+  },
+  {
+    "afterDictionary" : "Слово начинается на э. Отправь эс эм эс.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Слово начинается на э. Отправь эс эм эс.",
+    "name" : "review: russian letter names",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Слово начинается на э. Отправь эс эм эс."
+  },
+  {
+    "afterDictionary" : "We trained an HMM. The ERM team approved it. I studied at UH.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "We trained an HMM. The ERM team approved it. I studied at UH.",
+    "name" : "review: acronyms",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "We trained an HMM. The ERM team approved it. I studied at UH."
+  },
+  {
+    "afterDictionary" : "What it is is a mess. Log in in Safari. Turn it on on staging. Search for for loops.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "What it is is a mess. Log in in Safari. Turn it on on staging. Search for for loops.",
+    "name" : "review: grammatical doubles",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "What it is is a mess. Log in in Safari. Turn it on on staging. Search for for loops."
+  },
+  {
+    "afterDictionary" : "My name is Aaron, spelled A A R O N. Tell IT it is broken.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "My name is Aaron, spelled A A R O N. Tell IT it is broken.",
+    "name" : "review: spelled letters and roman numerals",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "My name is Aaron, spelled A A R O N. Tell IT it is broken."
+  },
+  {
+    "afterDictionary" : "Il y a a priori un problème. Najważniejsze to to, że działa. Это это?",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Il y a a priori un problème. Najważniejsze to to, że działa. Это это?",
+    "name" : "review: foreign doubles",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Il y a a priori un problème. Najważniejsze to to, że działa. Это это?"
+  },
+  {
+    "afterDictionary" : "Set the values to 10, 20, um, 30. We need eggs, milk, uh, butter.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Set the values to 10, 20, um, 30. We need eggs, milk, uh, butter.",
+    "name" : "review: list commas stay",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Set the values to 10, 20, 30. We need eggs, milk, butter."
+  },
+  {
+    "afterDictionary" : "He said \"stop.\" Then we left, scratch that, we stayed.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "He said \"stop.\" Then we left, scratch that, we stayed.",
+    "name" : "review: closing quote ends a sentence",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "He said \"stop.\" We stayed."
+  },
+  {
+    "afterDictionary" : "Meet at 5 p.m. tomorrow. Scratch that. Meet at 6.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Meet at 5 p.m. tomorrow. Scratch that. Meet at 6.",
+    "name" : "review: abbreviations",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Meet at 6."
+  },
+  {
+    "afterDictionary" : "Call Dr. Smith, scratch that, Dr. Jones.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Call Dr. Smith, scratch that, Dr. Jones.",
+    "name" : "review: dr between commas",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Dr. Jones."
+  },
+  {
+    "afterDictionary" : "В третьей строке опечатка. Зачеркни это, а потом перепиши.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "В третьей строке опечатка. Зачеркни это, а потом перепиши.",
+    "name" : "review: russian instruction stays",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "В третьей строке опечатка. Зачеркни это, а потом перепиши."
+  },
+  {
+    "afterDictionary" : "Ship it. Um. Scratch that. Ship it Monday.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Ship it. Um. Scratch that. Ship it Monday.",
+    "name" : "review: hesitation sentence before scratch that",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Ship it Monday."
+  },
+  {
+    "afterDictionary" : "First paragraph.\n\nUh, second paragraph.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "First paragraph.\n\nUh, second paragraph.",
+    "name" : "review: line break survives",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "First paragraph.\n\nSecond paragraph."
+  },
+  {
+    "afterDictionary" : "Uh, new line.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Uh, new line.",
+    "name" : "review: filler then new line",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "New line."
+  },
+  {
+    "afterDictionary" : "Uh, send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Uh, send it.",
+    "name" : "review: filler then send it",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Send it."
+  },
+  {
+    "afterDictionary" : "We should ship it, um",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "We should ship it, um, new line.",
+    "name" : "review: um before new line",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "We should ship it\n"
+  },
+  {
+    "afterDictionary" : "Hmm?",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Hmm?",
+    "name" : "review: meeting interjection",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "spokenCorrections" : false,
+    "text" : "Hmm?"
   }
 ]
