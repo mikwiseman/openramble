@@ -33,6 +33,8 @@ func usage() -> Never {
       file-benchmark <15|30|60> <file>...  measure the one-model file pipeline
       batch-benchmark <15|30|60> <1|2|4|8> <1|2 models> <file>
                              experimental batching and independent models
+      serve                  load once, then answer JSON requests on stdin
+                             (the scorecard's warm lane)
 
     Environment:
       WAI_MODELS_ROOT        install root (Application Support by default)
@@ -150,6 +152,9 @@ guard let command = arguments.first else { usage() }
 let operands = Array(arguments.dropFirst())
 
 switch command {
+case "serve":
+    try await serve(directory: resolveEngineDirectory())
+
 case "batch-benchmark":
     try await benchmarkBatch(operands, directory: resolveEngineDirectory())
 

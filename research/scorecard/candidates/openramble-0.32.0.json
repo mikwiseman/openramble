@@ -1,0 +1,24 @@
+{
+  "label": "OpenRamble 0.32.0",
+  "summary": "Parakeet v3 Q8, transcribe.cpp 0.2.3",
+  "order": 1,
+  "model": {
+    "name": "parakeet-tdt-0.6b-v3 Q8_0",
+    "path": "models/parakeet-tdt-0.6b-v3-Q8_0/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+    "source": "https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/blob/85ac09ea12fc4b1112fa76810059364bc6adc9de/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "license": "CC-BY-4.0"
+  },
+  "runtime": "transcribe.cpp 0.2.3, upstream prebuilt XCFramework (SwiftPM checksum 944be4d5…), Metal, one decoder thread",
+  "process": {
+    "kind": "openramble-cli",
+    "executable": "apps/OpenRamble-0.32.0/OpenRamble.app/Contents/MacOS/openramble-cli",
+    "sha256": "23c28d797eee6defa82a09646d6cd456115fb8b0f99fab7794e74d9228fc5ea5",
+    "source": "Official signed DMG: https://github.com/mikwiseman/openramble/releases/download/v0.32.0/OpenRamble-0.32.0.dmg"
+  },
+  "warm": {
+    "kind": "asr-bench",
+    "commit": "3c5aaf93c30d94a21203c7501ada28b2c0dc199a",
+    "note": "LocalASR and DictationCore at the 0.32.0 source commit; the asr-bench tool target is today's."
+  }
+}

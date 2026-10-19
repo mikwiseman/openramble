@@ -49,6 +49,11 @@ jobs:
           python3 -m py_compile scripts/benchmark-local-asr.py scripts/tests/test_benchmark_local_asr.py
           python3 -m unittest scripts.tests.test_benchmark_local_asr
 
+      - name: Scorecard measures
+        run: |
+          python3 -m py_compile scripts/scorecard/scorecard.py scripts/tests/test_scorecard.py
+          python3 -m unittest scripts.tests.test_scorecard
+
   app:
     name: Application build
     runs-on: macos-26

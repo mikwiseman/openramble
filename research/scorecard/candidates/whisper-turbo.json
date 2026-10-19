@@ -1,0 +1,19 @@
+{
+  "label": "whisper.cpp Turbo",
+  "summary": "large-v3-turbo F16, whisper.cpp 1.9.5",
+  "order": 9,
+  "model": {
+    "name": "Whisper large-v3-turbo F16",
+    "path": "models/whisper-large-v3-turbo/ggml-large-v3-turbo.bin",
+    "sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+    "source": "https://huggingface.co/ggerganov/whisper.cpp/blob/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo.bin",
+    "license": "MIT"
+  },
+  "runtime": "whisper.cpp v1.9.5 (d1be6fde11ac6e0407606b4e42fe72d34add8037), cmake -DGGML_METAL=ON Release; defaults: Metal, flash attention, 4 CPU threads, beam and best-of 5, language auto",
+  "process": {
+    "kind": "whisper-cli",
+    "executable": "src/whisper.cpp/build/bin/whisper-cli",
+    "source": "git clone --branch v1.9.5 https://github.com/ggml-org/whisper.cpp; cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_METAL=ON; cmake --build build -j4 --target whisper-cli"
+  },
+  "warm": null
+}
