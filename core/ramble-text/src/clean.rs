@@ -28,6 +28,10 @@
 //!    ("It's a, uh, a leak"). Repeated until nothing changes.
 //! 3. **Stutters.** A short function word said twice in a row, from a list of
 //!    words whose doubles are never grammatical ("the the", "я я", "I, I").
+//! 4. **"New paragraph"** ("Новый абзац"), set apart by punctuation, becomes a
+//!    paragraph break — in prose apps only. In a terminal a newline can run a
+//!    command, so verbatim apps keep the words. Last, so a hesitation after the
+//!    command is already gone and cannot take the break with it.
 //!
 //! Protected spans and every name the person's own dictionary wrote are never
 //! touched. A removal capitalizes what follows only when the removed piece
@@ -39,6 +43,16 @@
 use std::collections::HashSet;
 
 use crate::span;
+
+/// Where the text is going. Prose apps get paragraph breaks; verbatim apps
+/// (terminals, editors, anything unknown) never receive a newline they did not
+/// ask for. Ported from `PromptMode` in `PromptMode.swift`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PromptMode {
+    #[default]
+    Verbatim,
+    Prose,
+}
 
 /// Hesitation in every language Parakeet speaks: none of these is a word.
 const FILLERS: &[&str] = &[
@@ -524,6 +538,9 @@ const CORRECTION_LEAD_INS: &[&str] = &[
     "ah", "oh", "okay", "ok", "so", "well", "sorry", "no", "actually", "wait", "oops",
 ];
 
+/// Spoken paragraph breaks, as consecutive words.
+const PARAGRAPH_COMMANDS: &[&[&str]] = &[&["new", "paragraph"], &["новый", "абзац"]];
+
 /// Titles whose full stop does not end a sentence, written exactly so: "MR."
 /// is a merge request and "ms." milliseconds.
 const TITLES: &[&str] = &["Dr", "Mr", "Mrs", "Ms", "Prof"];
@@ -573,7 +590,12 @@ fn has_line_break(text: &str) -> bool {
 
 /// Remove hesitations, stutters and — when `spoken_corrections` — spoken
 /// corrections. Words in `protected_words` (lowercased) are never touched.
-pub fn clean(text: &str, spoken_corrections: bool, protected_words: &HashSet<String>) -> String {
+pub fn clean(
+    text: &str,
+    spoken_corrections: bool,
+    protected_words: &HashSet<String>,
+    mode: PromptMode,
+) -> String {
     let mut tokens = Tokens::new(text, protected_words);
     if tokens.items.is_empty() {
         return text.to_string();
@@ -605,7 +627,8 @@ pub fn clean(text: &str, spoken_corrections: bool, protected_words: &HashSet<Str
         tokens.items.clear();
         unfilled = true;
     }
-    if !(corrected || unfilled || unstuttered) {
+    let broken = mode == PromptMode::Prose && tokens.apply_paragraph_commands();
+    if !(corrected || unfilled || unstuttered || broken) {
         return text.to_string();
     }
     if !spoken_corrections && tokens.items.is_empty() {
@@ -1759,6 +1782,67 @@ impl<'a> Tokens<'a> {
         self.items[index].text = capitalized;
     }
 
+    // Pass 4: paragraph commands
+
+    fn apply_paragraph_commands(&mut self) -> bool {
+        let mut changed = false;
+        let mut index = 0;
+        while index < self.items.len() {
+            let Some(length) = self.paragraph_command_length(index) else {
+                index += 1;
+                continue;
+            };
+            let last = index + length - 1;
+            let has_before = index > 0;
+            let has_after = last + 1 < self.items.len();
+
+            if has_before && !self.items[index - 1].protected && !self.ends_sentence(index - 1) {
+                self.strip_closing_pauses(index - 1);
+                self.items[index - 1].text.push('.');
+            }
+            self.remove(index, last);
+            if has_before && has_after {
+                self.items[index].separator = "\n\n".to_string();
+            }
+            if index < self.items.len() && !self.items[index].protected {
+                self.capitalize_first_letter(index);
+            }
+            changed = true;
+        }
+        changed
+    }
+
+    /// How many tokens a paragraph command starting at `index` spans, when
+    /// punctuation sets it apart: "…point. New paragraph. Second…" is a command,
+    /// "added a new paragraph about…" is a sentence.
+    fn paragraph_command_length(&self, index: usize) -> Option<usize> {
+        for command in PARAGRAPH_COMMANDS {
+            let last = index + command.len() - 1;
+            if last >= self.items.len() {
+                continue;
+            }
+            let tokens = &self.items[index..=last];
+            let matches = tokens.iter().all(|token| !token.protected)
+                && tokens
+                    .iter()
+                    .zip(command.iter())
+                    .all(|(token, word)| token.word() == *word)
+                && tokens[..tokens.len() - 1]
+                    .iter()
+                    .all(|token| token.punctuation().is_empty());
+            if !matches {
+                continue;
+            }
+            let apart_before = index == 0 || !self.items[index - 1].punctuation().is_empty();
+            let apart_after =
+                last == self.items.len() - 1 || !self.items[last].punctuation().is_empty();
+            if apart_before && apart_after {
+                return Some(command.len());
+            }
+        }
+        None
+    }
+
     // Pass 3: stutters
 
     /// A repeat across a comma with no hesitation between: "It, it crashes",
@@ -1904,11 +1988,11 @@ impl<'a> Tokens<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{clean, protected_words};
+    use super::{clean, protected_words, PromptMode};
     use std::collections::HashSet;
 
     fn plain(text: &str) -> String {
-        clean(text, true, &HashSet::new())
+        clean(text, true, &HashSet::new(), PromptMode::Verbatim)
     }
 
     /// The same cases as `CleanVerbatimTests.swift`. The conformance fixtures
@@ -2019,11 +2103,11 @@ mod tests {
     fn dictionary_words_are_kept() {
         let words = protected_words(["The The", "Hmm Labs"]);
         assert_eq!(
-            clean("I love The The band.", true, &words),
+            clean("I love The The band.", true, &words, PromptMode::Verbatim),
             "I love The The band."
         );
         assert_eq!(
-            clean("I work at Hmm Labs.", true, &words),
+            clean("I work at Hmm Labs.", true, &words, PromptMode::Verbatim),
             "I work at Hmm Labs."
         );
     }
@@ -2035,11 +2119,12 @@ mod tests {
             clean(
                 "Um, the deploy failed. Scratch that. It passed.",
                 false,
-                &none
+                &none,
+                PromptMode::Verbatim
             ),
             "The deploy failed. Scratch that. It passed."
         );
-        assert_eq!(clean("Hmm?", false, &none), "Hmm?");
+        assert_eq!(clean("Hmm?", false, &none, PromptMode::Verbatim), "Hmm?");
     }
 
     /// Review round 3: every case a skeptic reproduced, as in
@@ -2650,6 +2735,43 @@ mod tests {
             assert_eq!(plain(input), expected, "input: {input:?}");
             assert_eq!(plain(&plain(input)), expected, "idempotent: {input:?}");
         }
+    }
+
+    #[test]
+    fn new_paragraph_breaks_prose_and_stays_words_in_verbatim_apps() {
+        let prose = [
+            (
+                "First point. New paragraph. Second point.",
+                "First point.\n\nSecond point.",
+            ),
+            (
+                "First point, new paragraph, second point.",
+                "First point.\n\nSecond point.",
+            ),
+            (
+                "Первый пункт. Новый абзац. Второй пункт.",
+                "Первый пункт.\n\nВторой пункт.",
+            ),
+            (
+                "First point. New paragraph. Um, second point.",
+                "First point.\n\nSecond point.",
+            ),
+            ("New paragraph. Hello there.", "Hello there."),
+            ("Hello there. New paragraph.", "Hello there."),
+            (
+                "I added a new paragraph about pricing.",
+                "I added a new paragraph about pricing.",
+            ),
+        ];
+        for (input, expected) in prose {
+            assert_eq!(
+                clean(input, true, &HashSet::new(), PromptMode::Prose),
+                expected,
+                "input: {input:?}"
+            );
+        }
+        let text = "First point. New paragraph. Second point.";
+        assert_eq!(plain(text), text);
     }
 
     #[test]

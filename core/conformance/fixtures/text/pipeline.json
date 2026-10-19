@@ -470,9 +470,8 @@
     "text" : "Привет отправь."
   },
   {
-    "afterDictionary" : "привет",
+    "afterDictionary" : "привет отправь",
     "allowPressReturnCommand" : true,
-    "command" : "pressReturn",
     "dictionary" : [
 
     ],
@@ -482,7 +481,7 @@
     "spans" : [
 
     ],
-    "text" : "Привет"
+    "text" : "Привет отправь"
   },
   {
     "afterDictionary" : "отправь это завтра",
@@ -569,9 +568,8 @@
     "text" : "First line\n"
   },
   {
-    "afterDictionary" : "текст",
+    "afterDictionary" : "текст энтер",
     "allowPressReturnCommand" : true,
-    "command" : "pressReturn",
     "dictionary" : [
 
     ],
@@ -581,12 +579,11 @@
     "spans" : [
 
     ],
-    "text" : "Текст"
+    "text" : "Текст энтер"
   },
   {
-    "afterDictionary" : "some text",
+    "afterDictionary" : "some text press enter",
     "allowPressReturnCommand" : true,
-    "command" : "pressReturn",
     "dictionary" : [
 
     ],
@@ -596,12 +593,11 @@
     "spans" : [
 
     ],
-    "text" : "Some text"
+    "text" : "Some text press enter"
   },
   {
-    "afterDictionary" : "some text",
+    "afterDictionary" : "some text send it",
     "allowPressReturnCommand" : true,
-    "command" : "pressReturn",
     "dictionary" : [
 
     ],
@@ -611,12 +607,11 @@
     "spans" : [
 
     ],
-    "text" : "Some text"
+    "text" : "Some text send it"
   },
   {
-    "afterDictionary" : "текст",
+    "afterDictionary" : "текст , отправь",
     "allowPressReturnCommand" : true,
-    "command" : "pressReturn",
     "dictionary" : [
 
     ],
@@ -626,7 +621,7 @@
     "spans" : [
 
     ],
-    "text" : "Текст"
+    "text" : "Текст, отправь"
   },
   {
     "afterDictionary" : "сделай release",
@@ -2241,9 +2236,8 @@
     "text" : "Ошибка в Sentry, смотри TextPipeline.Output и `git   log`"
   },
   {
-    "afterDictionary" : "сделай release",
+    "afterDictionary" : "сделай release отправь",
     "allowPressReturnCommand" : true,
-    "command" : "pressReturn",
     "dictionary" : [
       {
         "allowsPhoneticMatching" : true,
@@ -2294,7 +2288,7 @@
     "spans" : [
 
     ],
-    "text" : "Сделай release"
+    "text" : "Сделай release отправь"
   },
   {
     "afterDictionary" : "сделай release",
@@ -7272,5 +7266,203 @@
 
     ],
     "text" : "Use the format dd, mmm."
+  },
+  {
+    "afterDictionary" : "First point. New paragraph. Second point.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "First point. New paragraph. Second point.",
+    "mode" : "prose",
+    "name" : "prose new paragraph as its own sentence",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "First point.\n\nSecond point."
+  },
+  {
+    "afterDictionary" : "First point, new paragraph, second point.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "First point, new paragraph, second point.",
+    "mode" : "prose",
+    "name" : "prose new paragraph between commas",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "First point.\n\nSecond point."
+  },
+  {
+    "afterDictionary" : "Первый пункт. Новый абзац. Второй пункт.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Первый пункт. Новый абзац. Второй пункт.",
+    "mode" : "prose",
+    "name" : "prose russian new paragraph",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Первый пункт.\n\nВторой пункт."
+  },
+  {
+    "afterDictionary" : "First point. New paragraph. Um, second point.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "First point. New paragraph. Um, second point.",
+    "mode" : "prose",
+    "name" : "prose new paragraph after a filler",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "First point.\n\nSecond point."
+  },
+  {
+    "afterDictionary" : "I added a new paragraph about pricing.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "I added a new paragraph about pricing.",
+    "mode" : "prose",
+    "name" : "prose new paragraph inside a sentence stays text",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "I added a new paragraph about pricing."
+  },
+  {
+    "afterDictionary" : "First point. New paragraph. Second point.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "First point. New paragraph. Second point.",
+    "mode" : "verbatim",
+    "name" : "verbatim new paragraph stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "First point. New paragraph. Second point."
+  },
+  {
+    "afterDictionary" : "Ship it.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "Ship it. Send it.",
+    "name" : "send it as its own sentence",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Ship it."
+  },
+  {
+    "afterDictionary" : "and then we send it",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "and then we send it",
+    "name" : "send it mid-thought stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "And then we send it"
+  },
+  {
+    "afterDictionary" : "Review the doc, send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Review the doc, send it.",
+    "name" : "send it after a comma stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Review the doc, send it."
+  },
+  {
+    "afterDictionary" : "Привет.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "Привет. Отправь.",
+    "name" : "command-send-standalone",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Привет."
+  },
+  {
+    "afterDictionary" : "Текст.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "Текст. Энтер.",
+    "name" : "command-enter-standalone",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Текст."
+  },
+  {
+    "afterDictionary" : "Some text.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "Some text. Press enter.",
+    "name" : "command-press-enter-standalone",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Some text."
+  },
+  {
+    "afterDictionary" : "Сделай release.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : true,
+        "inflects" : true,
+        "spoken" : "релиз",
+        "written" : "release"
+      }
+    ],
+    "input" : "Сделай релиз. Отправь.",
+    "name" : "dictionary-then-standalone-command",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Сделай release."
   }
 ]
