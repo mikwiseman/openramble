@@ -555,6 +555,13 @@ def build_asr_bench(spec) -> Path:
     return binary
 
 
+def vocabulary_env(spec):
+    """Terms a candidate's engine is given, one per line, from a file in the repository."""
+    if not spec.get('vocabulary'):
+        return {}
+    return {'WAI_ASR_VOCABULARY_FILE': str(REPO / spec['vocabulary'])}
+
+
 def snapshot():
     return {'at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
             'thermal': subprocess.run(['pmset', '-g', 'therm'], capture_output=True, text=True).stdout.strip(),
@@ -639,7 +646,7 @@ class Serve:
         self.raw.mkdir(parents=True, exist_ok=True)
         self.errpath = self.raw / f'{label}.stderr'
         self.timeout = timeout
-        env = {**os.environ, 'WAI_ASR_MODEL_DIR': str(model_path(spec).parent)}
+        env = {**os.environ, 'WAI_ASR_MODEL_DIR': str(model_path(spec).parent), **vocabulary_env(spec)}
         started = time.perf_counter()
         self.process = subprocess.Popen(['/usr/bin/time', '-l', '/usr/bin/sandbox-exec', '-p', PROFILE,
                                          str(build_asr_bench(spec)), 'serve'],
@@ -715,6 +722,7 @@ def run_process(spec, fixture, label, mode='dictation', timeout=7200):
     elif kind == 'asr-bench':
         argv = [str(build_asr_bench(spec)), 'serve']
         env['WAI_ASR_MODEL_DIR'] = str(model_path(spec).parent)
+        env.update(vocabulary_env(spec))
         stdin_payload = json.dumps({'id': '1', 'path': fixture['path'], 'mode': mode}) + '\n'
     else:
         raise ValueError(f'unknown process runner {kind}')
