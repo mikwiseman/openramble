@@ -69,6 +69,19 @@ public actor TranscribeCppAdapter: BatchASREngineAdapting {
     private let backend: Backend
     private let threadCount: Int32
 
+    /// Words the decoder leans toward, in priority order.
+    ///
+    /// Passed to the runtime as `transcribe_run_params.vocabulary`, which
+    /// biases the greedy decoder toward these spellings while it decodes
+    /// rather than repairing text afterwards. A runtime that cannot use them
+    /// warns once per run and recognizes exactly as without them, so an empty
+    /// or ignored list never changes a transcript.
+    private var vocabulary: [String] = []
+
+    public func setVocabulary(_ terms: [String]) {
+        vocabulary = terms.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+    }
+
     /// Where inference runs.
     ///
     /// Pinned rather than automatic, deliberately. The previous engine let the
@@ -303,6 +316,7 @@ public actor TranscribeCppAdapter: BatchASREngineAdapting {
         // is not `Sendable`.
         let timestampKind = params.timestamps
         let task = params.task
+        let vocabulary = vocabulary
         let cancellation = NativeCancellation()
         let outcome: EngineOutcome = await withTaskCancellationHandler {
             await Self.runOnEngineThread(engine: engine) { session in
@@ -317,7 +331,9 @@ public actor TranscribeCppAdapter: BatchASREngineAdapting {
                 params.task = task
                 params.timestamps = timestampKind
                 let runtimeStarted = ContinuousClock.now
-                let status = transcribe_run(session, samples, Int32(samples.count), &params)
+                let status = Self.withVocabulary(vocabulary, in: &params) { params in
+                    transcribe_run(session, samples, Int32(samples.count), &params)
+                }
                 let runtimeDuration = runtimeStarted.duration(to: .now)
                 guard status == TRANSCRIBE_OK else { return .failure(status, runtimeDuration) }
                 // Copied before returning: past this block the pointer may be
@@ -392,6 +408,7 @@ public actor TranscribeCppAdapter: BatchASREngineAdapting {
                 samples + [Float](repeating: 0, count: Self.minimumEngineSamples - samples.count)
         }
         let cancellation = NativeCancellation(shouldYield: shouldYield)
+        let vocabulary = vocabulary
         let started = ContinuousClock.now
         let results: [Result<ASRResult, ASREngineError>] = await withTaskCancellationHandler {
             await Self.runOnEngineThread(engine: engine) { session in
@@ -406,7 +423,9 @@ public actor TranscribeCppAdapter: BatchASREngineAdapting {
                 params.timestamps = timestamps ? TRANSCRIBE_TIMESTAMPS_TOKEN : TRANSCRIBE_TIMESTAMPS_NONE
                 let runtimeStarted = ContinuousClock.now
                 let status = Self.withBuffers(padded) { pointers in
-                    transcribe_run_batch(session, pointers, padded.map { Int32($0.count) }, Int32(padded.count), &params)
+                    Self.withVocabulary(vocabulary, in: &params) { params in
+                        transcribe_run_batch(session, pointers, padded.map { Int32($0.count) }, Int32(padded.count), &params)
+                    }
                 }
                 let elapsed = runtimeStarted.duration(to: .now).seconds
                 guard status == TRANSCRIBE_OK || status == TRANSCRIBE_ERR_ABORTED else {
@@ -433,6 +452,30 @@ public actor TranscribeCppAdapter: BatchASREngineAdapting {
         }
         try Task.checkCancellation()
         return results
+    }
+
+    /// Point `params` at C copies of the terms for the length of one call.
+    ///
+    /// The runtime copies what it needs before the call returns, so the
+    /// strings are freed right after it.
+    private static func withVocabulary<T>(
+        _ terms: [String],
+        in params: inout transcribe_run_params,
+        _ work: (inout transcribe_run_params) -> T
+    ) -> T {
+        guard !terms.isEmpty else { return work(&params) }
+        let copies = terms.map { strdup($0) }
+        defer { copies.forEach { free($0) } }
+        let pointers = copies.map { UnsafePointer<CChar>($0) }
+        return pointers.withUnsafeBufferPointer { buffer in
+            params.vocabulary = buffer.baseAddress
+            params.n_vocabulary = Int32(buffer.count)
+            defer {
+                params.vocabulary = nil
+                params.n_vocabulary = 0
+            }
+            return work(&params)
+        }
     }
 
     private static func withBuffers<T>(
