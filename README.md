@@ -179,6 +179,16 @@ Application Support directory automatically. The bundle identifier remains
 - Hold the configured hotkey, speak, and release it to insert text.
 - Double-press the hotkey to record without holding it; press again to stop.
 - Press Escape while recording to cancel.
+- Hesitations and stutters disappear on their own: "um", "uh", "э", a
+  "the the" said while the next word loads. The cleanup only ever deletes —
+  it never rewords, reorders or adds a word, so it cannot change what you
+  meant. "um" is a real word in German and Portuguese, so it is removed only
+  when commas set it apart; doubles that mean something, such as "very very"
+  or "да да", stay.
+- Say "Scratch that." ("Зачеркни это.") as its own sentence to remove the
+  sentence before it, or end a sentence with ", scratch that" to remove that
+  sentence. Meeting transcripts drop hesitations too but keep "scratch that",
+  because in a meeting it is something a person said.
 - Use “Copy Last as Spoken” to copy the raw recognition result before
   dictionary replacements and typography cleanup. The item appears when that
   raw text differs from what was inserted.

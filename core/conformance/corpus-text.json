@@ -1861,5 +1861,231 @@
     "allowPressReturnCommand": false,
     "phoneticMatching": true,
     "input": "смотри “TextPipeline.Output” тут"
+  },
+  {
+    "name": "clean leading filler",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, so the build passed."
+  },
+  {
+    "name": "clean filler set off by commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We should, um, ship it."
+  },
+  {
+    "name": "clean bare filler",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Then uh we ship it."
+  },
+  {
+    "name": "clean filler at an inner sentence start",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Done. Uh, the next one."
+  },
+  {
+    "name": "clean filler carrying the full stop",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I think, uh."
+  },
+  {
+    "name": "clean filler carrying a question mark",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Is it ready, um?"
+  },
+  {
+    "name": "clean russian filler",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ээ, я думаю, что это работает."
+  },
+  {
+    "name": "clean russian filler between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Я, э, не уверен."
+  },
+  {
+    "name": "clean german and french fillers",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ähm, ich komme morgen. Euh, je pense que oui."
+  },
+  {
+    "name": "clean only hesitation",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh, uh."
+  },
+  {
+    "name": "clean keeps german um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um fünf Uhr treffen wir uns."
+  },
+  {
+    "name": "clean keeps portuguese um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Eu tenho um carro."
+  },
+  {
+    "name": "clean keeps an um without punctuation",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "So um the build passed."
+  },
+  {
+    "name": "clean stutters",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I I think the the build passed."
+  },
+  {
+    "name": "clean russian stutters",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Я я думаю, что и и это тоже."
+  },
+  {
+    "name": "clean keeps meaningful doubles",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "That was very very good. I had had enough. Да да, конечно."
+  },
+  {
+    "name": "clean keeps a punctuated repeat",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "No, no, no."
+  },
+  {
+    "name": "clean scratch that sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The deploy failed. Scratch that. The deploy passed."
+  },
+  {
+    "name": "clean scratch that tail",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "So the deploy failed, scratch that. The deploy passed."
+  },
+  {
+    "name": "clean russian correction",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Встреча в пятницу. Зачеркни это. Встреча в субботу."
+  },
+  {
+    "name": "clean repeated corrections",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First. Second. Scratch that. Scratch that. Third."
+  },
+  {
+    "name": "clean scratch inside a sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Please scratch that line from the file."
+  },
+  {
+    "name": "clean the messy take",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, so the the deploy failed, uh, scratch that. The deploy passed."
+  },
+  {
+    "name": "clean never touches spans",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Run `uh` now, open /tmp/um/file, call AppState AppState."
+  },
+  {
+    "name": "clean filler after a backtick span",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Run `swift  test`, uh, now."
+  },
+  {
+    "name": "clean filler before an identifier",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh, onTextInserted fired."
+  },
+  {
+    "name": "clean with the dictionary",
+    "dictionary": [
+      {
+        "spoken": "сентри",
+        "written": "Sentry",
+        "inflects": false,
+        "allowsPhoneticMatching": true
+      }
+    ],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "ну, э, сентри, э, упал"
+  },
+  {
+    "name": "clean then the trailing new line",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh, first point new line"
+  },
+  {
+    "name": "clean then send it",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Uh, ship it. Send it."
+  },
+  {
+    "name": "clean meeting keeps a scratch that sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "spokenCorrections": false,
+    "input": "Um, the deploy failed. Scratch that. It passed."
+  },
+  {
+    "name": "clean meeting keeps a scratch that tail",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "spokenCorrections": false,
+    "input": "Uh, it failed, scratch that. It passed."
   }
 ]

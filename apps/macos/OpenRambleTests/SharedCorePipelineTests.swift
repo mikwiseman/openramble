@@ -48,11 +48,13 @@ final class SharedCorePipelineTests: XCTestCase {
             let swift = TextPipeline(
                 replacements: replacements,
                 allowPressReturnCommand: testCase.allowPressReturnCommand,
-                phoneticMatching: testCase.phoneticMatching
+                phoneticMatching: testCase.phoneticMatching,
+                spokenCorrections: testCase.spokenCorrections ?? true
             ).run(testCase.input)
             let shared = SharedCorePipeline(
                 replacements: replacements,
-                allowPressReturnCommand: testCase.allowPressReturnCommand
+                allowPressReturnCommand: testCase.allowPressReturnCommand,
+                spokenCorrections: testCase.spokenCorrections ?? true
             ).run(testCase.input)
 
             // Phonetic matching is always on in the shared path, so the two
@@ -99,6 +101,7 @@ final class SharedCorePipelineTests: XCTestCase {
         let dictionary: [Entry]
         let allowPressReturnCommand: Bool
         let phoneticMatching: Bool
+        let spokenCorrections: Bool?
         let input: String
     }
 
