@@ -305,7 +305,9 @@ public final class DictationController {
     private let overlayDispatcher: DictationOverlayDispatcher
     private let soundDispatcher: DictationSoundDispatcher
     private let recordingRecovery: any RecordingRecoveryStoring
-    private let pipeline: () -> any TextProcessing
+    /// Built per take, for the app the words are going to: a terminal gets
+    /// verbatim text and may honour "Send it.", a mail window gets paragraphs.
+    private let pipeline: (TargetApplication?) -> any TextProcessing
     /// Session hours. A separate dependence for exactly the same reason as
     /// microphone.
     private let now: @Sendable () -> Date
@@ -411,7 +413,7 @@ public final class DictationController {
         overlay: any OverlayPresenting,
         sounds: any Sounding,
         recordingRecovery: any RecordingRecoveryStoring = DiscardingRecordingRecovery(),
-        pipeline: @escaping () -> any TextProcessing = { TextPipeline() },
+        pipeline: @escaping (TargetApplication?) -> any TextProcessing = { _ in TextPipeline() },
         now: @escaping @Sendable () -> Date = { Date() },
         monotonicNow: @escaping @Sendable () -> ContinuousClock.Instant = { .now },
         transcriptionDeadline: @escaping @Sendable (TimeInterval) -> Duration = TranscriptionDeadline.deadline(forAudioDuration:),
@@ -1402,7 +1404,7 @@ public final class DictationController {
             return
         }
 
-        let run = pipeline().run(recognized.text)
+        let run = pipeline(insertionTarget).run(recognized.text)
         let processed = run.output
         if processed.text.isEmpty, !recognized.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             // Words were heard and every one was taken back: "Scratch that."

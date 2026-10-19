@@ -1313,8 +1313,8 @@ public final class AppState: ObservableObject {
                 overlay: overlay,
                 sounds: sounds,
                 recordingRecovery: recordingRecovery,
-                pipeline: { [weak self] in
-                    self?.makePipeline() ?? TextPipeline()
+                pipeline: { [weak self] target in
+                    self?.makePipeline(for: target) ?? TextPipeline()
                 },
                 prepareForTranscription: makePrepareForTranscription(
                     engineDirectory: engineDirectory
@@ -4416,7 +4416,15 @@ public final class AppState: ObservableObject {
     /// There were two paths, and they were already diverging - the replay was losing `output.command`.
     /// Generic assembly makes "both paths are the same" a property of the code, not something that
     /// must be remembered when ruling one of two places.
-    private func makePipeline(spokenCorrections: Bool = true) -> any TextProcessing {
+    ///
+    /// `target` is where the words are going. Prose apps get paragraph breaks;
+    /// terminals get verbatim text and may honour a spoken "Send it."; an
+    /// unknown app is treated as verbatim. Without a target (meetings, a
+    /// re-recognized take) the text is verbatim and nothing is ever pressed.
+    private func makePipeline(
+        for target: TargetApplication? = nil,
+        spokenCorrections: Bool = true
+    ) -> any TextProcessing {
         // Safe built-in technical vocabulary is part of recognition, not a
         // hidden setup chore. Personal entries win when they use the same
         // heard spelling.
@@ -4429,7 +4437,10 @@ public final class AppState: ObservableObject {
         TrailingSpacePipeline(
             wrapped: SharedCorePipeline(
                 replacements: StarterDictionary.missing(from: replacements) + replacements,
-                spokenCorrections: spokenCorrections
+                allowPressReturnCommand: target != nil
+                    && PromptModePolicy.category(for: target) == .terminal,
+                spokenCorrections: spokenCorrections,
+                mode: PromptModePolicy().mode(for: target)
             ),
             appendsSpace: appendsTrailingSpace
         )

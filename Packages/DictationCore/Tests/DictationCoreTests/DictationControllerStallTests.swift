@@ -174,12 +174,12 @@ final class DictationControllerStallTests: XCTestCase {
         let controller = DictationController(
             capture: FileCapture(directory: takes),
             transcribe: { _ in
-                ASRResult(text: "message \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}", audioDuration: 2, processingDuration: 0.01)
+                ASRResult(text: "message. \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}", audioDuration: 2, processingDuration: 0.01)
             },
             inserter: inserter,
             overlay: NullOverlay(),
             sounds: NullSounds(),
-            pipeline: { TextPipeline(allowPressReturnCommand: true) },
+            pipeline: { _ in TextPipeline(allowPressReturnCommand: true) },
             returnDeadline: .milliseconds(50)
         )
         var notices: [DictationNotice] = []
@@ -195,7 +195,7 @@ final class DictationControllerStallTests: XCTestCase {
 
         XCTAssertEqual(controller.state, .idle)
         let insertedTexts = await inserter.insertedTexts
-        XCTAssertEqual(insertedTexts, ["Message"])
+        XCTAssertEqual(insertedTexts, ["Message."])
         XCTAssertNil(controller.pendingRecovery, "the text itself already landed")
         XCTAssertTrue(notices.contains { $0.message.contains("pressing Return failed") })
     }

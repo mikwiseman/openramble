@@ -140,7 +140,7 @@ class EndToEndScenario: XCTestCase {
             inserter: inserter,
             overlay: overlay,
             sounds: sounds,
-            pipeline: { TextPipeline(replacements: replacements) }
+            pipeline: { _ in TextPipeline(replacements: replacements) }
         )
     }
 

@@ -83,7 +83,7 @@ final class StreamedDictationTests: XCTestCase {
             inserter: inserter,
             overlay: FakeOverlay(),
             sounds: FakeSounds(),
-            pipeline: { TextPipeline() }
+            pipeline: { _ in TextPipeline() }
         )
     }
 

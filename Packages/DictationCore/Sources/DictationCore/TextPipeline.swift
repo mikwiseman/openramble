@@ -150,17 +150,30 @@ public struct TextPipeline: Sendable, TextProcessing {
     /// "Scratch that" removes a sentence when dictating; a meeting transcript
     /// keeps what was said. See `CleanVerbatim`.
     private let spokenCorrections: Bool
+    /// Where the text is going. Prose apps get paragraph breaks; verbatim apps
+    /// (terminals, editors, anything unknown) never receive a newline they did
+    /// not ask for. See `PromptModePolicy`.
+    private let mode: PromptMode
 
     public init(
         replacements: [DictionaryReplacement] = [],
         allowPressReturnCommand: Bool = false,
         phoneticMatching: Bool = true,
-        spokenCorrections: Bool = true
+        spokenCorrections: Bool = true,
+        mode: PromptMode = .verbatim
     ) {
         self.replacements = replacements
         self.allowPressReturnCommand = allowPressReturnCommand
         self.phoneticMatching = phoneticMatching
         self.spokenCorrections = spokenCorrections
+        self.mode = mode
+    }
+
+    /// Whether `text` closes with a full stop, question mark, exclamation or
+    /// ellipsis — what makes a trailing command its own sentence.
+    static func endsSentence(_ text: String) -> Bool {
+        guard let last = text.last else { return false }
+        return CleanVerbatim.sentenceEnding.contains(last)
     }
 
     /// Stages 2-8: everything between the command parser and the newline.
@@ -179,7 +192,8 @@ public struct TextPipeline: Sendable, TextProcessing {
         let cleaned = CleanVerbatim.clean(
             afterDictionary,
             spokenCorrections: spokenCorrections,
-            protectedWords: CleanVerbatim.protectedWords(from: replacements)
+            protectedWords: CleanVerbatim.protectedWords(from: replacements),
+            mode: mode
         )
 
         // Stage 7: collapsing typography outside of spans.
@@ -203,10 +217,12 @@ public struct TextPipeline: Sendable, TextProcessing {
     /// does not exist in the product.
     public func run(_ recognized: String) -> Run {
         var parsed = TrailingCommandParser.parse(recognized)
-        // In safe beta, the Send/Return voice command is disabled: one false
-        // trigger irreversibly submits the message or form. The parser itself
-        // remains separately testable for possible explicit mode later.
-        if parsed.command == .pressReturn, !allowPressReturnCommand {
+        // Return is pressed only where the caller allows it (terminals) and
+        // only for a command said as its own final sentence: "…first. Send it."
+        // One false trigger submits irreversibly, so "…and then we send it"
+        // mid-thought stays words.
+        if parsed.command == .pressReturn,
+           !allowPressReturnCommand || !Self.endsSentence(parsed.text) {
             parsed = TrailingCommandParser.Result(text: recognized, command: nil)
         }
 

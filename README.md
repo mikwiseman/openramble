@@ -195,6 +195,14 @@ Application Support directory automatically. The bundle identifier remains
   but what you took back, nothing is inserted and OpenRamble says so. Meeting
   transcripts drop hesitations too but keep "scratch that" and one-word
   replies, because in a meeting they are something a person said.
+- OpenRamble knows where the words are going. In prose apps (Mail, Notes,
+  Slack, browsers, documents) say "New paragraph." ("Новый абзац.") to break
+  the text. Terminals, code editors and apps it does not recognize get
+  verbatim text and never receive a newline you did not ask for.
+- In a terminal, end a take with "Send it." ("Отправь.") as its own sentence
+  to press Return after the text, so a prompt to Claude Code or Codex goes out
+  hands-free. Said mid-sentence ("…and then we send it") it stays words, and
+  no other app ever gets a Return it did not ask for.
 - Use “Copy Last as Spoken” to copy the raw recognition result before
   dictionary replacements and typography cleanup. The item appears when that
   raw text differs from what was inserted.

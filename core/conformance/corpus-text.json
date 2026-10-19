@@ -2670,5 +2670,109 @@
     "allowPressReturnCommand": false,
     "phoneticMatching": true,
     "input": "Ship it, um uh, now"
+  },
+  {
+    "name": "prose new paragraph as its own sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First point. New paragraph. Second point.",
+    "mode": "prose"
+  },
+  {
+    "name": "prose new paragraph between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First point, new paragraph, second point.",
+    "mode": "prose"
+  },
+  {
+    "name": "prose russian new paragraph",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Первый пункт. Новый абзац. Второй пункт.",
+    "mode": "prose"
+  },
+  {
+    "name": "prose new paragraph after a filler",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First point. New paragraph. Um, second point.",
+    "mode": "prose"
+  },
+  {
+    "name": "prose new paragraph inside a sentence stays text",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I added a new paragraph about pricing.",
+    "mode": "prose"
+  },
+  {
+    "name": "verbatim new paragraph stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First point. New paragraph. Second point.",
+    "mode": "verbatim"
+  },
+  {
+    "name": "send it as its own sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Ship it. Send it."
+  },
+  {
+    "name": "send it mid-thought stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "and then we send it"
+  },
+  {
+    "name": "send it after a comma stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Review the doc, send it."
+  },
+  {
+    "name": "command-send-standalone",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Привет. Отправь."
+  },
+  {
+    "name": "command-enter-standalone",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Текст. Энтер."
+  },
+  {
+    "name": "command-press-enter-standalone",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Some text. Press enter."
+  },
+  {
+    "name": "dictionary-then-standalone-command",
+    "dictionary": [
+      {
+        "spoken": "релиз",
+        "written": "release",
+        "inflects": true,
+        "allowsPhoneticMatching": true
+      }
+    ],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Сделай релиз. Отправь."
   }
 ]

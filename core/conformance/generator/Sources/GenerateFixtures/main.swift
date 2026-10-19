@@ -13,6 +13,8 @@ struct Case: Codable {
     var phoneticMatching = true
     /// Absent means on, as in the shipping dictation path.
     var spokenCorrections: Bool?
+    /// "prose" or "verbatim"; absent means verbatim, the safe default.
+    var mode: String?
     let input: String
 
     struct Entry: Codable {
@@ -29,6 +31,7 @@ struct Fixture: Codable {
     let allowPressReturnCommand: Bool
     let phoneticMatching: Bool
     let spokenCorrections: Bool?
+    let mode: String?
     let input: String
     let text: String
     let command: String?
@@ -65,7 +68,8 @@ let fixtures: [Fixture] = cases.map { testCase in
         replacements: replacements,
         allowPressReturnCommand: testCase.allowPressReturnCommand,
         phoneticMatching: testCase.phoneticMatching,
-        spokenCorrections: testCase.spokenCorrections ?? true
+        spokenCorrections: testCase.spokenCorrections ?? true,
+        mode: testCase.mode.flatMap(PromptMode.init(rawValue:)) ?? .verbatim
     )
     let run = pipeline.run(testCase.input)
     return Fixture(
@@ -74,6 +78,7 @@ let fixtures: [Fixture] = cases.map { testCase in
         allowPressReturnCommand: testCase.allowPressReturnCommand,
         phoneticMatching: testCase.phoneticMatching,
         spokenCorrections: testCase.spokenCorrections,
+        mode: testCase.mode,
         input: testCase.input,
         text: run.output.text,
         command: run.output.command?.rawValue,

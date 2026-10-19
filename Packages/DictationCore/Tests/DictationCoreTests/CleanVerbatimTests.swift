@@ -422,6 +422,61 @@ final class CleanVerbatimTests: XCTestCase {
         XCTAssertEqual(CleanVerbatim.clean("Uh.", spokenCorrections: false), "Uh.")
     }
 
+    // MARK: - "New paragraph" (prose apps only)
+
+    func testNewParagraphBreaksTheTextInProse() {
+        XCTAssertEqual(
+            CleanVerbatim.clean("First point. New paragraph. Second point.", mode: .prose),
+            "First point.\n\nSecond point."
+        )
+        XCTAssertEqual(
+            CleanVerbatim.clean("First point, new paragraph, second point.", mode: .prose),
+            "First point.\n\nSecond point."
+        )
+        XCTAssertEqual(
+            CleanVerbatim.clean("Первый пункт. Новый абзац. Второй пункт.", mode: .prose),
+            "Первый пункт.\n\nВторой пункт."
+        )
+    }
+
+    func testNewParagraphAfterAFillerStillBreaks() {
+        XCTAssertEqual(
+            CleanVerbatim.clean("First point. New paragraph. Um, second point.", mode: .prose),
+            "First point.\n\nSecond point."
+        )
+    }
+
+    func testNewParagraphAtTheEdgesHasNothingToSeparate() {
+        XCTAssertEqual(CleanVerbatim.clean("New paragraph. Hello there.", mode: .prose), "Hello there.")
+        XCTAssertEqual(CleanVerbatim.clean("Hello there. New paragraph.", mode: .prose), "Hello there.")
+    }
+
+    func testNewParagraphIsTextWhenItIsPartOfASentence() {
+        XCTAssertEqual(
+            CleanVerbatim.clean("I added a new paragraph about pricing.", mode: .prose),
+            "I added a new paragraph about pricing."
+        )
+    }
+
+    /// A newline in a terminal can run a command, so verbatim apps keep the words.
+    func testNewParagraphStaysWordsInVerbatimApps() {
+        XCTAssertEqual(
+            CleanVerbatim.clean("First point. New paragraph. Second point.", mode: .verbatim),
+            "First point. New paragraph. Second point."
+        )
+        XCTAssertEqual(
+            CleanVerbatim.clean("First point. New paragraph. Second point."),
+            "First point. New paragraph. Second point."
+        )
+    }
+
+    func testAParagraphBreakSurvivesThePolisher() {
+        XCTAssertEqual(
+            TextPipeline(mode: .prose).process("first point. new paragraph. second point").text,
+            "First point.\n\nSecond point"
+        )
+    }
+
     // MARK: - Protected spans are never touched
 
     func testNeverTouchesProtectedSpans() {
@@ -530,7 +585,7 @@ final class TakenBackDictationTests: XCTestCase {
             inserter: inserter,
             overlay: overlay,
             sounds: sounds,
-            pipeline: { TextPipeline() }
+            pipeline: { _ in TextPipeline() }
         )
         var archived: [String] = []
         controller.onTakeFinished = { text, _ in archived.append(text) }
