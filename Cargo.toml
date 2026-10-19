@@ -30,3 +30,11 @@ unsafe_code = "deny"
 
 [workspace.lints.clippy]
 all = { level = "deny", priority = -1 }
+
+# Xcode 27's `strip` writes proc-macro dylibs that dyld refuses to load
+# ("mis-aligned LINKEDIT string pool"), so a release build cannot load
+# serde_derive and fails before compiling anything of ours. Proc macros and
+# build scripts run on the build machine and are never shipped; only they
+# skip stripping. Shipped artifacts are stripped exactly as before.
+[profile.release.build-override]
+strip = false
