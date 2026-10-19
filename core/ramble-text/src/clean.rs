@@ -63,6 +63,13 @@ const STUTTER_WORDS: &[&str] = &[
 /// Spoken corrections, as consecutive words.
 const CORRECTIONS: &[&[&str]] = &[&["scratch", "that"]];
 
+/// Words people lead a correction with: "Sorry, scratch that". Before the
+/// command they do not stop it from opening the sentence. "ah" is here because
+/// the model writes a spoken "uh" that way.
+const CORRECTION_LEAD_INS: &[&str] = &[
+    "ah", "oh", "okay", "ok", "so", "well", "sorry", "no", "actually", "wait", "oops",
+];
+
 /// Words whose full stop does not end a sentence.
 const ABBREVIATIONS: &[&str] = &[
     "dr", "mr", "mrs", "ms", "st", "vs", "etc", "inc", "ltd", "jr", "sr", "no", "prof", "mt", "fig",
@@ -347,7 +354,9 @@ impl Tokens {
 
                 let first = words[offset];
                 let last = words[offset + command.len() - 1];
-                let opens = offset == 0;
+                let opens = spoken[..offset]
+                    .iter()
+                    .all(|word| CORRECTION_LEAD_INS.contains(&word.as_str()));
                 let closes = offset + command.len() == spoken.len();
                 let pause_before = first > start
                     && (self.items[first - 1].ends_with_comma()
@@ -587,6 +596,19 @@ mod tests {
             ),
             ("Run `swift  test`, uh, now.", "Run `swift  test`, now."),
             ("Uh, onTextInserted fired.", "onTextInserted fired."),
+            (
+                "Um, so that the deploy failed. Ah, scratch that, the deploy passed.",
+                "The deploy passed.",
+            ),
+            (
+                "We meet on Friday. Sorry, scratch that, we meet on Monday.",
+                "We meet on Monday.",
+            ),
+            ("Ship it today. No, scratch that.", ""),
+            (
+                "Ah, I need you to um, fix the login bug, um, and then update the readme.",
+                "Ah, I need you to fix the login bug, and then update the readme.",
+            ),
             (
                 "First paragraph.\n\nUh, second paragraph.",
                 "First paragraph.\n\nSecond paragraph.",

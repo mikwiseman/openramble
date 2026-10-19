@@ -2312,5 +2312,54 @@
     "phoneticMatching": true,
     "input": "Hmm?",
     "spokenCorrections": false
+  },
+  {
+    "name": "clean real model (Samantha) h1",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ah, I need you to um, fix the login bug, um, and then update the readme."
+  },
+  {
+    "name": "clean real model (Samantha) h2",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Don't deploy on Friday, run the migration on staging first and tell me if it fails."
+  },
+  {
+    "name": "clean real model (Samantha) h3",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We should, um, ship it on Friday. I I think that the tests are green, uh, mostly."
+  },
+  {
+    "name": "clean real model (Samantha) h4",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, so that the deploy failed. Ah, scratch that, the deploy passed."
+  },
+  {
+    "name": "clean real model (Samantha) h5",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Can you look at the pull request today? I left two comments on the parser."
+  },
+  {
+    "name": "clean real model (Samantha) h6",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Let's move the launch to Sunday and post on Hacker News first."
+  },
+  {
+    "name": "clean sorry scratch that",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We meet on Friday. Sorry, scratch that, we meet on Monday."
   }
 ]

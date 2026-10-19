@@ -208,6 +208,20 @@ final class CleanVerbatimTests: XCTestCase {
         )
     }
 
+    /// "Ah, scratch that" — Parakeet writes a spoken "uh" as "Ah" — still opens
+    /// the sentence, and so do the words people lead a correction with.
+    func testALeadInBeforeScratchThatStillOpensTheSentence() {
+        XCTAssertEqual(
+            CleanVerbatim.clean("Um, so that the deploy failed. Ah, scratch that, the deploy passed."),
+            "The deploy passed."
+        )
+        XCTAssertEqual(
+            CleanVerbatim.clean("We meet on Friday. Sorry, scratch that, we meet on Monday."),
+            "We meet on Monday."
+        )
+        XCTAssertEqual(CleanVerbatim.clean("Ship it today. No, scratch that."), "")
+    }
+
     /// A sentence of nothing but hesitation is not what "scratch that" takes back.
     func testAHesitationSentenceDoesNotAbsorbTheCorrection() {
         XCTAssertEqual(CleanVerbatim.clean("Ship it. Uh. Scratch that."), "")
@@ -275,6 +289,11 @@ final class CleanVerbatimTests: XCTestCase {
             "I need you to fix the login bug, and then update the readme."
         )
         XCTAssertEqual(CleanVerbatim.clean("Um 5 Uhr treffen wir uns im Büro."), "Um 5 Uhr treffen wir uns im Büro.")
+        // Another voice: the model wrote the spoken "uh" as "Ah", a word.
+        XCTAssertEqual(
+            CleanVerbatim.clean("Ah, I need you to um, fix the login bug, um, and then update the readme."),
+            "Ah, I need you to fix the login bug, and then update the readme."
+        )
     }
 
     // MARK: - Meetings

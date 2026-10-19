@@ -91,6 +91,13 @@ enum CleanVerbatim {
     /// Spoken corrections, as consecutive words.
     static let corrections: [[String]] = [["scratch", "that"]]
 
+    /// Words people lead a correction with: "Sorry, scratch that". Before the
+    /// command they do not stop it from opening the sentence. "ah" is here
+    /// because the model writes a spoken "uh" that way.
+    static let correctionLeadIns: Set<String> = [
+        "ah", "oh", "okay", "ok", "so", "well", "sorry", "no", "actually", "wait", "oops",
+    ]
+
     /// Words whose full stop does not end a sentence.
     static let abbreviations: Set<String> = [
         "dr", "mr", "mrs", "ms", "st", "vs", "etc", "inc", "ltd", "jr", "sr",
@@ -268,7 +275,7 @@ extension CleanVerbatim {
                     guard let offset = firstOccurrence(of: command, in: spoken) else { continue }
                     let first = words[offset]
                     let last = words[offset + command.count - 1]
-                    let opens = offset == 0
+                    let opens = spoken[..<offset].allSatisfy { CleanVerbatim.correctionLeadIns.contains($0) }
                     let closes = offset + command.count == spoken.count
                     let pauseBefore = first > sentence.lowerBound
                         && (items[first - 1].endsWithComma || isAnyFillerWord(at: first - 1))

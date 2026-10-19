@@ -3334,5 +3334,103 @@
     ],
     "spokenCorrections" : false,
     "text" : "Hmm?"
+  },
+  {
+    "afterDictionary" : "Ah, I need you to um, fix the login bug, um, and then update the readme.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Ah, I need you to um, fix the login bug, um, and then update the readme.",
+    "name" : "clean real model (Samantha) h1",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Ah, I need you to fix the login bug, and then update the readme."
+  },
+  {
+    "afterDictionary" : "Don't deploy on Friday, run the migration on staging first and tell me if it fails.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Don't deploy on Friday, run the migration on staging first and tell me if it fails.",
+    "name" : "clean real model (Samantha) h2",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Don't deploy on Friday, run the migration on staging first and tell me if it fails."
+  },
+  {
+    "afterDictionary" : "We should, um, ship it on Friday. I I think that the tests are green, uh, mostly.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "We should, um, ship it on Friday. I I think that the tests are green, uh, mostly.",
+    "name" : "clean real model (Samantha) h3",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "We should, ship it on Friday. I think that the tests are green, mostly."
+  },
+  {
+    "afterDictionary" : "Um, so that the deploy failed. Ah, scratch that, the deploy passed.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Um, so that the deploy failed. Ah, scratch that, the deploy passed.",
+    "name" : "clean real model (Samantha) h4",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "The deploy passed."
+  },
+  {
+    "afterDictionary" : "Can you look at the pull request today? I left two comments on the parser.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Can you look at the pull request today? I left two comments on the parser.",
+    "name" : "clean real model (Samantha) h5",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Can you look at the pull request today? I left two comments on the parser."
+  },
+  {
+    "afterDictionary" : "Let's move the launch to Sunday and post on Hacker News first.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Let's move the launch to Sunday and post on Hacker News first.",
+    "name" : "clean real model (Samantha) h6",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Let's move the launch to Sunday and post on Hacker News first."
+  },
+  {
+    "afterDictionary" : "We meet on Friday. Sorry, scratch that, we meet on Monday.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "We meet on Friday. Sorry, scratch that, we meet on Monday.",
+    "name" : "clean sorry scratch that",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "We meet on Monday."
   }
 ]
