@@ -352,6 +352,40 @@ def generated_fixtures(fleurs):
     return fixtures
 
 
+def fleurs_full():
+    """Every FLEURS test utterance in English and Russian, for decisions that need more speech.
+
+    Read from the same pinned archives the frozen selection came from; the
+    archive hashes were checked when those were first downloaded.
+    """
+    import csv
+    import tarfile
+    fixtures = []
+    for locale in ('en_us', 'ru_ru'):
+        folder = ROOT / 'corpus' / locale
+        rows = list(csv.reader((folder / 'test.tsv').open(), delimiter='\t'))
+        source, target = folder / 'source-full', folder / 'pcm16-full'
+        target.mkdir(parents=True, exist_ok=True)
+        if not source.exists():
+            source.mkdir()
+            with tarfile.open(folder / 'test.tar.gz', 'r|gz') as tar:
+                for entry in tar:
+                    if entry.isfile() and entry.name.endswith('.wav'):
+                        with tar.extractfile(entry) as data, (source / Path(entry.name).name).open('wb') as out:
+                            out.write(data.read())
+        for row in rows:
+            wav = target / row[1]
+            if not wav.exists():
+                subprocess.run(['afconvert', '-f', 'WAVE', '-d', 'LEI16', '-r', '16000', '-c', '1',
+                                str(source / row[1]), str(wav)], check=True, capture_output=True)
+            with wave.open(str(wav)) as w:
+                frames = w.getnframes()
+            fixtures.append({'id': f"full-{locale}-{row[0]}-{row[1][:-4]}", 'language': locale[:2], 'path': str(wav),
+                             'audio_sha256': digest(wav), 'duration_seconds': frames / 16000,
+                             'reference': row[2], 'reference_sha256': hashlib.sha256(row[2].encode()).hexdigest()})
+    return fixtures
+
+
 def langbug_fixtures():
     """Mik's preserved wrong-language corpus: English speech, private, never committed."""
     base = PRIVATE / 'lang-bug'
@@ -408,12 +442,21 @@ def prepare(freeze=False):
     elif json.loads(committed.read_text())['fixtures'] != public['fixtures']:
         sys.exit('Generated fixtures differ from research/scorecard/fixtures.json; refusing to measure them.')
 
+    full = fleurs_full()
+    identity = [{'id': f['id'], 'audio_sha256': f['audio_sha256'], 'reference_sha256': f['reference_sha256']} for f in full]
+    frozen_full = RESEARCH / 'fleurs-full.json.gz'
+    if freeze or not frozen_full.exists():
+        with gzip.open(frozen_full, 'wt', compresslevel=9) as f:
+            json.dump({'source': 'google/fleurs test, en_us and ru_ru, every utterance', 'fixtures': identity}, f)
+    elif json.loads(gzip.open(frozen_full, 'rt').read())['fixtures'] != identity:
+        sys.exit('The full FLEURS test set differs from research/scorecard/fleurs-full.json.gz.')
+
     langbug = langbug_fixtures() if (PRIVATE / 'lang-bug').exists() else []
-    document = {'fleurs': local['fixtures'], 'hour': local['long_fixtures'] + local_long, 'generated': generated,
+    document = {'fleurs': local['fixtures'], 'fleurs_full': full, 'hour': local['long_fixtures'] + local_long, 'generated': generated,
                 'langbug': langbug, 'hooks': hook_fixtures(),
                 'langbug_identity': hashlib.sha256('\n'.join(f['audio_sha256'] for f in langbug).encode()).hexdigest()}
     (ROOT / 'scorecard-inputs.json').write_text(json.dumps(document, ensure_ascii=False, indent=1) + '\n')
-    print(f"inputs ready: {len(document['fleurs'])} FLEURS, {len(document['hour'])} hour composites, "
+    print(f"inputs ready: {len(document['fleurs'])} FLEURS, {len(full)} full FLEURS, {len(document['hour'])} hour composites, "
           f"{len(generated)} generated, {len(langbug)} private language clips, {sum(map(len, document['hooks'].values()))} hook clips")
     return document
 
@@ -802,7 +845,7 @@ def speed_warm(specs, data, repeats=10):
                                                   'candidate_count': len(specs), 'max_rss_bytes': rss, **quiet, **serve.ready})
 
 
-SUITES = ('fleurs', 'noise', 'takes', 'langbug', 'hooks', 'hour', 'speed-process', 'speed-warm')
+SUITES = ('fleurs', 'fleurs-full', 'noise', 'takes', 'langbug', 'hooks', 'hour', 'speed-process', 'speed-warm')
 
 
 def wait_for_lane(patience=3600):
@@ -840,6 +883,8 @@ def run(names, suites):
             for spec in specs:
                 if suite == 'fleurs':
                     recognize_all(spec, 'fleurs', data['fleurs'])
+                elif suite == 'fleurs-full':
+                    recognize_all(spec, 'fleurs-full', data['fleurs_full'])
                 elif suite == 'noise':
                     recognize_all(spec, 'noise', [f for f in data['generated'] if f['suite'] == 'noise'])
                 elif suite == 'takes':
@@ -889,26 +934,18 @@ def host():
 def score(name):
     spec = candidate(name)
     data = inputs()
-    by_id = {f['id']: f for f in data['fleurs'] + data['hour'] + data['generated'] + data['langbug']}
+    by_id = {f['id']: f for f in data['fleurs'] + data['fleurs_full'] + data['hour'] + data['generated'] + data['langbug']}
     for rows in data['hooks'].values():
         by_id.update({r['id']: r for r in rows})
     result = {'schema': SCHEMA, 'candidate': {k: v for k, v in spec.items()}, 'scored_at': snapshot()['at'],
               'sessions': observations(name, 'sessions'), 'metrics': {}, 'hooks': {}, 'evidence': {}}
     metrics = result['metrics']
 
-    fleurs = observations(name, 'fleurs')
-    if fleurs:
-        accuracy = {}
-        for language in ('en', 'ru'):
-            rows = [r for r in fleurs if by_id[r['fixture']]['language'] == language]
-            pairs = [(by_id[r['fixture']]['reference'], r['text'] if r['ok'] else '') for r in rows]
-            flips = [wrong_script(*script_counts(t), language) for _, t in pairs]
-            accuracy[language] = {'wer': wer_counts(pairs), **punctuation_and_case(pairs),
-                                  'wrong_script': {'decodes': len(flips), 'wrong': sum(f is True for f in flips),
-                                                   'empty': sum(f is None for f in flips)},
-                                  'failures': sum(not r['ok'] for r in rows)}
-        metrics['fleurs'] = accuracy
-        metrics['latency_fleurs_idle'] = latency_buckets(fleurs, by_id)
+    for suite, key in (('fleurs', 'fleurs'), ('fleurs-full', 'fleurs_full')):
+        rows = observations(name, suite)
+        if rows:
+            metrics[key] = fleurs_accuracy(rows, by_id)
+            metrics[f'latency_{key}_idle'] = latency_buckets(rows, by_id)
     takes = observations(name, 'takes')
     if takes:
         metrics['long_takes'] = {r['fixture']: {'audio_seconds': by_id[r['fixture']]['duration_seconds'],
@@ -985,6 +1022,53 @@ def score(name):
     return result
 
 
+def fleurs_accuracy(rows, by_id):
+    accuracy = {}
+    for language in ('en', 'ru'):
+        subset = [r for r in rows if by_id[r['fixture']]['language'] == language]
+        pairs = [(by_id[r['fixture']]['reference'], r['text'] if r['ok'] else '') for r in subset]
+        flips = [wrong_script(*script_counts(t), language) for _, t in pairs]
+        accuracy[language] = {'wer': wer_counts(pairs), **punctuation_and_case(pairs),
+                              'wrong_script': {'decodes': len(flips), 'wrong': sum(f is True for f in flips),
+                                               'empty': sum(f is None for f in flips)},
+                              'failures': sum(not r['ok'] for r in subset)}
+    words = sum(accuracy[x]['wer']['reference_words'] for x in ('en', 'ru'))
+    errors = sum(accuracy[x]['wer']['wer'] * accuracy[x]['wer']['reference_words'] for x in ('en', 'ru'))
+    accuracy['pooled_wer'] = errors / words if words else None
+    return accuracy
+
+
+def paired_bootstrap(base_name, cand_name, suite='fleurs-full', samples=10000):
+    """WER difference (candidate minus baseline) with a 95% interval, resampling utterances."""
+    import jiwer
+    data = inputs()
+    by_id = {f['id']: f for f in data['fleurs'] + data['fleurs_full']}
+    texts = [{r['fixture']: (r['text'] if r['ok'] else '') for r in observations(n, suite)} for n in (base_name, cand_name)]
+    shared = sorted(texts[0].keys() & texts[1].keys())
+    out = {'suite': suite, 'utterances': len(shared), 'baseline': base_name, 'candidate': cand_name, 'seed': SEED}
+    for language in ('en', 'ru', 'pooled'):
+        ids = [k for k in shared if language == 'pooled' or by_id[k]['language'] == language]
+        per = []
+        for k in ids:
+            ref = norm(by_id[k]['reference'])
+            a, b = (jiwer.process_words(ref, norm(t[k])) for t in texts)
+            words = a.hits + a.substitutions + a.deletions
+            per.append((words, a.substitutions + a.deletions + a.insertions, b.substitutions + b.deletions + b.insertions))
+        words = sum(p[0] for p in per)
+        delta = (sum(p[2] for p in per) - sum(p[1] for p in per)) / words
+        rng = random.Random(SEED)
+        draws = []
+        for _ in range(samples):
+            pick = [per[rng.randrange(len(per))] for _ in per]
+            w = sum(p[0] for p in pick)
+            draws.append((sum(p[2] for p in pick) - sum(p[1] for p in pick)) / w)
+        out[language] = {'utterances': len(ids), 'reference_words': words, 'baseline_wer': sum(p[1] for p in per) / words,
+                         'candidate_wer': sum(p[2] for p in per) / words, 'difference': delta,
+                         'ci95': [pct(draws, 0.025), pct(draws, 0.975)],
+                         'utterances_better': sum(p[2] < p[1] for p in per), 'utterances_worse': sum(p[2] > p[1] for p in per)}
+    return out
+
+
 def latency_buckets(rows, by_id):
     rows = [r for r in rows if r.get('ok') and r.get('wall_seconds') is not None]
 
@@ -1054,6 +1138,8 @@ GATES = [
     # (label, path, worse-if, absolute tolerance, relative tolerance)
     ('WER EN', ('fleurs', 'en', 'wer', 'wer'), 'higher', 0.0025, 0),
     ('WER RU', ('fleurs', 'ru', 'wer', 'wer'), 'higher', 0.0025, 0),
+    ('WER full FLEURS EN', ('fleurs_full', 'en', 'wer', 'wer'), 'higher', 0.0025, 0),
+    ('WER full FLEURS RU', ('fleurs_full', 'ru', 'wer', 'wer'), 'higher', 0.0025, 0),
     ('Punctuation F1 EN', ('fleurs', 'en', 'punctuation', 'micro_f1'), 'lower', 0.01, 0),
     ('Punctuation F1 RU', ('fleurs', 'ru', 'punctuation', 'micro_f1'), 'lower', 0.01, 0),
     ('Capitalization F1 EN', ('fleurs', 'en', 'capitalization', 'f1'), 'lower', 0.01, 0),
@@ -1114,6 +1200,7 @@ ROWS = [
     # family, label, path, unit, better, target
     ('Accuracy', 'WER, FLEURS English', ('fleurs', 'en', 'wer', 'wer'), '%', 'lower', '≤ Whisper Turbo'),
     ('Accuracy', 'WER, FLEURS Russian', ('fleurs', 'ru', 'wer', 'wer'), '%', 'lower', '≤ Whisper Turbo'),
+    ('Accuracy', 'WER, all FLEURS test, EN + RU', ('fleurs_full', 'pooled_wer'), '%', 'lower', ''),
     ('Accuracy', 'Punctuation F1, English', ('fleurs', 'en', 'punctuation', 'micro_f1'), '%', 'higher', 'best local'),
     ('Accuracy', 'Punctuation F1, Russian', ('fleurs', 'ru', 'punctuation', 'micro_f1'), '%', 'higher', 'best local'),
     ('Accuracy', 'Question marks F1, English', ('fleurs', 'en', 'punctuation', 'question', 'f1'), '%', 'higher', ''),
@@ -1178,6 +1265,7 @@ def cell(metrics, path, unit):
 
 def render_html():
     results = [json.loads(p.read_text()) for p in sorted((RESEARCH / 'results').glob('*.json'))]
+    results = [r for r in results if r['candidate'].get('index', True)]
     results.sort(key=lambda r: r['candidate'].get('order', 99))
     head = ''.join(f"<th><span>{html.escape(r['candidate']['label'])}</span><small>{html.escape(r['candidate'].get('summary', ''))}</small></th>"
                    for r in results)
@@ -1252,6 +1340,10 @@ def main():
     p = sub.add_parser('compare')
     p.add_argument('baseline')
     p.add_argument('candidate')
+    p = sub.add_parser('paired')
+    p.add_argument('baseline')
+    p.add_argument('candidate')
+    p.add_argument('--suite', default='fleurs-full', choices=('fleurs', 'fleurs-full'))
     a = parser.parse_args()
     if a.command == 'prepare':
         prepare(a.freeze)
@@ -1263,6 +1355,8 @@ def main():
         render_html()
     elif a.command == 'compare':
         sys.exit(1 if compare(a.baseline, a.candidate) else 0)
+    elif a.command == 'paired':
+        print(json.dumps(paired_bootstrap(a.baseline, a.candidate, a.suite), indent=1))
 
 
 if __name__ == '__main__':

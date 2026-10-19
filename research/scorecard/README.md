@@ -27,6 +27,7 @@ Each suite is a set of inputs, and each metric is computed from one suite.
 | Family | Metric | Suite and method |
 |---|---|---|
 | Accuracy | WER, English and Russian | 100 FLEURS test files per language, the October 9 selection. Words are lowercased, ё becomes е, punctuation is removed, numerals are not expanded. |
+| Accuracy | WER on all FLEURS test speech | Every English and Russian FLEURS test utterance, 1,422 in all and 4.3 hours, for decisions that need more speech than the frozen subsets. The 200 frozen files are part of it with identical audio. Its hashes are in `fleurs-full.json.gz`. `scorecard.py paired` gives a WER difference between two candidates with a 95% interval from a paired bootstrap over utterances. |
 | Accuracy | Punctuation F1 for commas, periods and question marks | The same files, scored against the FLEURS raw transcriptions, which keep their punctuation. See "Punctuation and capitalization" below. |
 | Accuracy | Capitalization F1 | The same files. A word counts as capitalized when its first letter is uppercase. |
 | Accuracy | WER on long dictation takes | Six takes of 33 to 129 seconds, built from whole FLEURS utterances with 0.5 seconds of silence between them, recognized through the same call a finished dictation reaches. |

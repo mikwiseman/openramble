@@ -1,0 +1,21 @@
+{
+  "label": "v3, runtime 0.2.3 (A)",
+  "summary": "A/A control: the 0.32.0 engine through asr-bench",
+  "order": 2,
+  "index": false,
+  "model": {
+    "name": "parakeet-tdt-0.6b-v3 Q8_0",
+    "path": "models/parakeet-tdt-0.6b-v3-Q8_0/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+    "source": "https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/blob/85ac09ea12fc4b1112fa76810059364bc6adc9de/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "license": "CC-BY-4.0"
+  },
+  "runtime": "transcribe.cpp 0.2.3, upstream prebuilt XCFramework (SwiftPM checksum 944be4d5…), Metal, one decoder thread",
+  "process": {
+    "kind": "asr-bench"
+  },
+  "warm": {
+    "kind": "asr-bench",
+    "commit": "3c5aaf93c30d94a21203c7501ada28b2c0dc199a"
+  }
+}

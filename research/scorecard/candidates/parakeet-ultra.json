@@ -1,0 +1,20 @@
+{
+  "label": "Parakeet Ultra",
+  "summary": "Q8, transcribe.cpp 0.4.0",
+  "order": 4,
+  "model": {
+    "name": "parakeet-ultra Q8_0 (Moondream post-trained v3)",
+    "path": "models/parakeet-ultra-Q8_0/parakeet-ultra-Q8_0.gguf",
+    "sha256": "007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59",
+    "source": "https://huggingface.co/handy-computer/parakeet-ultra-gguf/blob/a1539be1b849ea7463b88343e5277b373d0c4ea9/parakeet-ultra-Q8_0.gguf (from moondream/parakeet-ultra 73175eb)",
+    "license": "CC-BY-4.0"
+  },
+  "runtime": "transcribe.cpp 0.4.0, upstream prebuilt XCFramework (SwiftPM checksum 3da069d2…), Metal, one decoder thread, no language hint",
+  "process": {
+    "kind": "asr-bench"
+  },
+  "warm": {
+    "kind": "asr-bench",
+    "commit": "59e03557bdf265ada6a1521e26c11372707734e8"
+  }
+}
