@@ -612,13 +612,17 @@ public struct DictationNotice: Sendable, Equatable {
     /// land; "nothing was recognized" is mere info whose words did NOT.
     /// A person watching their editor needs the ear only for the second.
     public let wordsDidNotLand: Bool
+    /// Why a failure happened, for the local journal. The message is for the
+    /// person and never reaches the journal; this case name is all it keeps.
+    public let reason: DictationFailureReason?
 
     public init(
         kind: Kind,
         message: String,
         recoverableText: String? = nil,
         recoveryAudio: URL? = nil,
-        wordsDidNotLand: Bool? = nil
+        wordsDidNotLand: Bool? = nil,
+        reason: DictationFailureReason? = nil
     ) {
         self.kind = kind
         self.message = message
@@ -627,6 +631,33 @@ public struct DictationNotice: Sendable, Equatable {
         // Failures lose the words by definition; anything else says so
         // explicitly at the site that knows.
         self.wordsDidNotLand = wordsDidNotLand ?? (kind == .failure)
+        self.reason = reason
+    }
+}
+
+/// Why a failure notice was shown.
+///
+/// An allowlist: the journal stores the case name, never the message, which
+/// can carry an error description, a path or dictated words. The first group
+/// are takes the controller gave up on; the rest are everything else the app
+/// reports as a failure.
+public enum DictationFailureReason: String, Codable, Sendable {
+    case microphoneStartTimedOut, silentInput, captureFailed, captureInterrupted, recordingInterrupted
+    case stopTimedOut, recordingFinishTimedOut, modelNotReady, transcriptionStalled, recognitionFailed
+
+    case modelLoad
+    case accessibilityRevoked, microphoneRevoked, accessibilityRepair, relaunch
+    case recordingStart, recordingPause, recordingResume, recordingFiling, recordingFailed
+    case retranscription, clipboard, export, fileOperation, storage, dictionary
+}
+
+extension DictationError {
+    /// The journal's name for this failure.
+    var failureReason: DictationFailureReason {
+        switch self {
+        case .capture: .captureFailed
+        case .recognition: .recognitionFailed
+        }
     }
 }
 

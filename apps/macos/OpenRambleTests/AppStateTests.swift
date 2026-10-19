@@ -697,6 +697,64 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(state.fullModelDownloadMegabytes, 740)
     }
 
+    /// The download button is drawn before the disk has been read. Its first
+    /// number has to come from the manifest too, or a retired model's size
+    /// flashes on the setup screen before the real one replaces it.
+    func testTheFirstDownloadSizeShownIsTheManifests() {
+        let state = makeState()
+
+        XCTAssertEqual(state.remainingDownloadMegabytes, 740)
+    }
+
+    // MARK: - Failure journal
+
+    /// Why each shown failure happened, as the journal recorded it.
+    private func journaledFailureReasons(_ state: AppState) -> [String?] {
+        state.diagnostics.snapshot().data.split(separator: 10).compactMap { line in
+            guard let entry = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any],
+                  entry["event"] as? String == "dictationFailed" else { return nil }
+            return .some(entry["failureReason"] as? String)
+        }
+    }
+
+    /// A failure is journaled by a case name. The sentence the person read
+    /// never is: messages carry error descriptions, and those carry paths.
+    func testAFailureNoticeIsJournaledByReasonAndNeverByMessage() {
+        let state = makeState()
+
+        permissions.accessibilityGranted = false
+        state.refreshPermissions()
+
+        XCTAssertEqual(state.lastNotice?.kind, .failure)
+        XCTAssertEqual(journaledFailureReasons(state), ["accessibilityRevoked"])
+        let journal = String(decoding: state.diagnostics.snapshot().data, as: UTF8.self)
+        XCTAssertFalse(journal.contains("System Settings"), "the message itself stays out of the journal")
+    }
+
+    /// A take the controller gave up on carries its cause from the controller
+    /// into the journal; the error text never enters.
+    func testAFailedTakeIsJournaledWithTheControllersReason() async throws {
+        try installModelMarker()
+        harness.transcription.error = ASREngineError.inferenceFailed("PRIVATE_CANARY", code: -3)
+        let state = makeState()
+        await state.refreshModelState()
+        monitor.onPress?()
+        for _ in 0..<40 where state.dictationState != .listening {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        monitor.onRelease?()
+        for _ in 0..<200 where state.lastNotice?.kind != .failure {
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertEqual(state.lastNotice?.kind, .failure)
+        XCTAssertEqual(journaledFailureReasons(state), ["recognitionFailed"])
+        let journal = String(decoding: state.diagnostics.snapshot().data, as: UTF8.self)
+        XCTAssertFalse(journal.contains("PRIVATE_CANARY"))
+    }
+
     func testScenario026() async throws {
         // The model files are intact, but Core ML does not pick them up. Inspection of the disk is like this
         //cannot see the state: it will say “ready” again.

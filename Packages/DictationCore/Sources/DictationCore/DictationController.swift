@@ -743,7 +743,8 @@ public final class DictationController {
         let notice = DictationNotice(
             kind: .failure,
             message: L10n.tr("Starting the microphone took too long. Dictation was stopped."),
-            wordsDidNotLand: true
+            wordsDidNotLand: true,
+            reason: .microphoneStartTimedOut
         )
         await report(notice, session: session, allowCancellation: true)
         await cleanup(session: session)
@@ -1006,7 +1007,8 @@ public final class DictationController {
             let notice = DictationNotice(
                 kind: .failure,
                 message: L10n.tr("Stopping the recording took too long. The local take will be checked for automatic recovery."),
-                wordsDidNotLand: true
+                wordsDidNotLand: true,
+                reason: .stopTimedOut
             )
             await report(notice, session: session)
             await cleanup(session: session)
@@ -1051,7 +1053,8 @@ public final class DictationController {
             case .reportSilentInput:
                 let notice = DictationNotice(
                     kind: .failure,
-                    message: L10n.tr("The microphone recorded nothing — check that the right input device is selected and not muted.")
+                    message: L10n.tr("The microphone recorded nothing — check that the right input device is selected and not muted."),
+                    reason: .silentInput
                 )
                 await report(notice, session: session)
                 await cleanup(session: session)
@@ -1238,7 +1241,8 @@ public final class DictationController {
             let notice = DictationNotice(
                 kind: .failure,
                 message: L10n.tr("Finishing the local recording took too long. The unfinished file will be checked for automatic recovery."),
-                wordsDidNotLand: true
+                wordsDidNotLand: true,
+                reason: .recordingFinishTimedOut
             )
             await report(notice, session: session)
             await cleanup(session: session)
@@ -1265,7 +1269,8 @@ public final class DictationController {
             let notice = DictationNotice(
                 kind: .failure,
                 message: L10n.tr("The speech model is still getting ready; this take was not discarded.") + suffix,
-                recoveryAudio: saved
+                recoveryAudio: saved,
+                reason: .modelNotReady
             )
             await report(notice, session: session)
             await cleanup(session: session)
@@ -1291,7 +1296,8 @@ public final class DictationController {
             let notice = DictationNotice(
                 kind: .failure,
                 message: L10n.tr("Transcribing took too long and was stopped.") + suffix,
-                recoveryAudio: saved
+                recoveryAudio: saved,
+                reason: .transcriptionStalled
             )
             await report(notice, session: session)
             await cleanup(session: session)
@@ -1319,7 +1325,8 @@ public final class DictationController {
             let notice = DictationNotice(
                 kind: .failure,
                 message: DictationError.recognition(String(describing: error)).userMessage + suffix,
-                recoveryAudio: saved
+                recoveryAudio: saved,
+                reason: .recognitionFailed
             )
             await report(notice, session: session)
             await cleanup(session: session)
@@ -1652,7 +1659,7 @@ public final class DictationController {
         cancellationRequested = true
         currentDisposition?.keepInBackground()
         markStopRequested()
-        let notice = DictationNotice(kind: .failure, message: message)
+        let notice = DictationNotice(kind: .failure, message: message, reason: .captureInterrupted)
         let recordingURL = activeRecordingURL
         let task = Task { [weak self] in
             guard let self else { return }
@@ -1684,7 +1691,7 @@ public final class DictationController {
             cancellationRequested = true
             currentDisposition?.keepInBackground()
             markStopRequested()
-            let notice = DictationNotice(kind: .failure, message: message)
+            let notice = DictationNotice(kind: .failure, message: message, reason: .recordingInterrupted)
             let recordingURL = activeRecordingURL
             let task = Task { [weak self] in
                 guard let self else { return }
@@ -1759,7 +1766,7 @@ public final class DictationController {
                 // device hiccup leaves a "recording for retry" whose retry can
                 // only ever produce an empty result.
                 await self.discard(recording.url, session: session)
-                notice = DictationNotice(kind: .failure, message: message)
+                notice = DictationNotice(kind: .failure, message: message, reason: .recordingInterrupted)
             } else {
                 var saved: URL?
                 var suffix = L10n.tr(" The recording couldn't be kept.")
@@ -1779,7 +1786,8 @@ public final class DictationController {
                 notice = DictationNotice(
                     kind: .failure,
                     message: message + suffix,
-                    recoveryAudio: saved
+                    recoveryAudio: saved,
+                    reason: .recordingInterrupted
                 )
             }
             await self.report(notice, session: session)
@@ -1808,7 +1816,7 @@ public final class DictationController {
         // the message would fall on top of the one that is going now.
         guard isCurrent(session), !cancellationRequested else { return }
 
-        let notice = DictationNotice(kind: .failure, message: error.userMessage)
+        let notice = DictationNotice(kind: .failure, message: error.userMessage, reason: error.failureReason)
         await report(notice, session: session)
         await cleanup(session: session)
     }

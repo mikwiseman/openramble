@@ -5,10 +5,11 @@ import Sparkle
 /// Application updates.
 ///
 /// Sparkle is the second and last place in the product that can go online.
-/// Therefore, everything here is arranged so that she remains silent until she is asked.
+/// Scheduled checks are on by default and can be turned off in Settings;
+/// downloading and installing an update always waits for a click.
 ///
-/// Settings, without which the promise of “network only at your command” would be
-/// not true, they are in Info.plist (see `apps/macos/project.yml`):
+/// The settings that keep this promise are in Info.plist (see
+/// `apps/macos/project.yml`):
 ///
 /// - `SUEnableAutomaticChecks = true` — the app looks for updates on its own.
 /// The key is set explicitly rather than left absent: without it Sparkle asks
