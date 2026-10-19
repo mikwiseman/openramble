@@ -30,6 +30,7 @@ Each suite is a set of inputs, and each metric is computed from one suite.
 | Accuracy | WER on all FLEURS test speech | Every English and Russian FLEURS test utterance, 1,422 in all and 4.3 hours, for decisions that need more speech than the frozen subsets. The 200 frozen files are part of it with identical audio. Its hashes are in `fleurs-full.json.gz`. `scorecard.py paired` gives a WER difference between two candidates with a 95% interval from a paired bootstrap over utterances. |
 | Accuracy | Punctuation F1 for commas, periods and question marks | The same files, scored against the FLEURS raw transcriptions, which keep their punctuation. See "Punctuation and capitalization" below. |
 | Accuracy | Capitalization F1 | The same files. A word counts as capitalized when its first letter is uppercase. |
+| Accuracy | Term recall | Seventy sentences in `research/term-biasing-2026-10/corpus.json`, read by the Mac's own voices: English sentences with rare product and tool names, and Russian sentences where English developer terms are said the Russian way. A term counts when its written form appears in the output as whole words. The speech is synthetic, so this measures the engine's handling of rare words, not real speakers; the `term-recall` hook below is for real takes. Even rows are a dev half for tuning, odd rows a test half for gates. |
 | Accuracy | WER on long dictation takes | Six takes of 33 to 129 seconds, built from whole FLEURS utterances with 0.5 seconds of silence between them, recognized through the same call a finished dictation reaches. |
 | Robustness | Wrong-script rate | A decode is in the wrong script when most of its letters belong to the other alphabet, e.g. English speech written in Cyrillic. Measured on the 200 FLEURS files and on Mik's private English takes in `~/.openramble/lang-bug` (199 clips, including the 79-point boundary sweep). |
 | Robustness | Words invented on silence and noise | Eleven generated clips with no speech: digital silence, white, pink and brown noise, mains hum and clicks, 2 to 45 seconds. Every word recognized there is invented. Bracketed annotations such as `[BLANK_AUDIO]` are counted apart, because products built on Whisper remove them. |
@@ -42,8 +43,10 @@ Each suite is a set of inputs, and each metric is computed from one suite.
 Speed is measured on a shared desktop, so a timed block starts only when two
 one-second samples show at least 85% of the CPUs idle and no other recognition
 process is running. The idle share is stored with every timed observation.
-Several candidates given to one command are interleaved block by block in
-balanced order, which is the only fair way to compare their speed. Numbers
+Several candidates given to one command are interleaved block by block. The
+order rotates separately within quiet and loaded blocks, so every candidate
+takes every position equally often in each condition, which is the only fair
+way to compare their speed. Numbers
 from separate runs carry the drift of the machine between those runs.
 
 ## Punctuation and capitalization
@@ -66,6 +69,8 @@ A candidate is a JSON file in `candidates/`. Its fields are listed here:
 - `model.path` and `model.sha256` name the model file under the scorecard root and pin it.
 - `process` names the command-line program for the whole-process lane: `openramble-cli`, `whisper-cli` or `asr-bench`.
 - `warm` names the source commit whose `LocalASR` and `DictationCore` the warm lane is built from. The `asr-bench` tool target is always today's, so an old build can answer the scorecard's requests without any change to what it measures.
+- `warm.xcframework_zip` and `warm.xcframework_sha256` replace the pinned runtime download with a runtime built from source by `scripts/build-transcribe-xcframework.sh`, which builds transcribe.cpp's macOS slice from a clean checkout with upstream's own scripts and runs the same binary audit as `scripts/check-network-surface.sh`.
+- `index: false` keeps a control candidate out of the HTML page; its results are still written.
 
 A candidate without a `warm` lane is measured through its process lane only.
 For `whisper-cli` that means its accuracy, script and noise numbers come from

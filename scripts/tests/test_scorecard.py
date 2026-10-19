@@ -52,6 +52,16 @@ class TextMeasures(unittest.TestCase):
     def test_load_blocks_alternate_abba(self):
         self.assertEqual(scorecard.conditions(6), ['quiet', 'load', 'load', 'quiet', 'quiet', 'load'])
 
+    def test_every_candidate_takes_every_position_in_each_condition(self):
+        for count, blocks in ((2, 12), (5, 20), (6, 12)):
+            seen = {}
+            for block, condition in enumerate(scorecard.conditions(blocks)):
+                for position, candidate in enumerate(scorecard.order(block, count)):
+                    key = (condition, candidate, position)
+                    seen[key] = seen.get(key, 0) + 1
+            self.assertEqual(len(seen), 2 * count * count, (count, blocks))
+            self.assertEqual(len(set(seen.values())), 1, (count, blocks))
+
 
 @unittest.skipUnless(HAVE_JIWER, 'jiwer 4.0.0 scores WER; run through scripts/scorecard.sh or uv')
 class Scoring(unittest.TestCase):

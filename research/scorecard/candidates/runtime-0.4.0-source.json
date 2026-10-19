@@ -1,0 +1,23 @@
+{
+  "label": "v3, runtime 0.4.0 built here",
+  "summary": "transcribe.cpp v0.4.0 (f1dcd158) built by scripts/build-transcribe-xcframework.sh",
+  "order": 6,
+  "model": {
+    "name": "parakeet-tdt-0.6b-v3 Q8_0",
+    "path": "models/parakeet-tdt-0.6b-v3-Q8_0/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+    "source": "https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/blob/85ac09ea12fc4b1112fa76810059364bc6adc9de/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "license": "CC-BY-4.0"
+  },
+  "runtime": "transcribe.cpp 0.4.0 built from the v0.4.0 tag, commit f1dcd15858c4bbba87ca97862b4e448b2cf15b8f, macOS slice, SwiftPM checksum 7712e577…; Metal, one decoder thread",
+  "process": {
+    "kind": "asr-bench"
+  },
+  "warm": {
+    "kind": "asr-bench",
+    "commit": "59e03557bdf265ada6a1521e26c11372707734e8",
+    "xcframework_zip": "builds/xcframework-v0.4.0/TranscribeCpp-v0.4.0.xcframework.zip",
+    "xcframework_sha256": "7712e5775f1d4321fdd216a2d89145f8b7656822967b4f4c880500ca738abaad"
+  },
+  "index": false
+}

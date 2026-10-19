@@ -22,7 +22,6 @@ import datetime
 import gzip
 import hashlib
 import html
-import itertools
 import json
 import math
 import os
@@ -386,6 +385,41 @@ def fleurs_full():
     return fixtures
 
 
+TERMS = REPO / 'research/term-biasing-2026-10'
+
+
+def term_fixtures(freeze=False):
+    """Synthetic term sentences read by the Mac's own voices. Public, so text is kept."""
+    corpus = json.loads((TERMS / 'corpus.json').read_text())
+    voices = corpus['voices']
+    fixtures, counters = [], collections.Counter()
+    for index, row in enumerate(corpus['rows']):
+        language = row['language']
+        voice = voices[language][counters[language] % len(voices[language])]
+        counters[language] += 1
+        path = ROOT / 'corpus/terms' / f'{index:03d}-{language}-{voice}.wav'
+        if not path.exists():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(['say', '-v', voice, '-o', str(path), '--file-format=WAVE', '--data-format=LEI16@16000',
+                            row['spoken']], check=True)
+        with wave.open(str(path)) as w:
+            duration = w.getnframes() / w.getframerate()
+        fixtures.append({'id': f'term-{index:03d}', 'language': language, 'voice': voice,
+                         'split': 'dev' if index % 2 == 0 else 'test', 'path': str(path),
+                         'audio_sha256': digest(path), 'duration_seconds': duration,
+                         'reference': row.get('reference', row['spoken']), 'terms': row['terms']})
+    frozen = TERMS / 'fixtures.json'
+    public = [{k: v for k, v in f.items() if k != 'path'} for f in fixtures]
+    if freeze or not frozen.exists():
+        frozen.write_text(json.dumps({'note': 'Hashes of the synthetic speech on the Mac that generated it; another macOS '
+                                              'voice build may produce different audio, and then the suite refuses to run.',
+                                      'macos': platform.mac_ver()[0], 'fixtures': public}, ensure_ascii=False, indent=1) + '\n')
+    elif json.loads(frozen.read_text())['fixtures'] != public:
+        print('  term sentences differ from research/term-biasing-2026-10/fixtures.json; the terms suite is disabled')
+        return []
+    return fixtures
+
+
 def langbug_fixtures():
     """Mik's preserved wrong-language corpus: English speech, private, never committed."""
     base = PRIVATE / 'lang-bug'
@@ -452,7 +486,8 @@ def prepare(freeze=False):
         sys.exit('The full FLEURS test set differs from research/scorecard/fleurs-full.json.gz.')
 
     langbug = langbug_fixtures() if (PRIVATE / 'lang-bug').exists() else []
-    document = {'fleurs': local['fixtures'], 'fleurs_full': full, 'hour': local['long_fixtures'] + local_long, 'generated': generated,
+    terms = term_fixtures(freeze) if shutil.which('say') else []
+    document = {'terms': terms, 'fleurs': local['fixtures'], 'fleurs_full': full, 'hour': local['long_fixtures'] + local_long, 'generated': generated,
                 'langbug': langbug, 'hooks': hook_fixtures(),
                 'langbug_identity': hashlib.sha256('\n'.join(f['audio_sha256'] for f in langbug).encode()).hexdigest()}
     (ROOT / 'scorecard-inputs.json').write_text(json.dumps(document, ensure_ascii=False, indent=1) + '\n')
@@ -491,7 +526,8 @@ def build_asr_bench(spec) -> Path:
     """
     warm = spec['warm']
     commit = subprocess.check_output(['git', '-C', str(REPO), 'rev-parse', warm['commit']], text=True).strip()
-    tree = ROOT / 'builds' / commit
+    runtime = at_root(warm['xcframework_zip']) if warm.get('xcframework_zip') else None
+    tree = ROOT / 'builds' / (commit + (f'-{digest(runtime)[:12]}' if runtime else ''))
     binary = tree / 'Packages/LocalASR/.build/release/asr-bench'
     tool = REPO / 'Packages/LocalASR/Sources/asr-bench'
     stamp = hashlib.sha256(b''.join(p.read_bytes() for p in sorted(tool.glob('*.swift')))).hexdigest()
@@ -501,6 +537,15 @@ def build_asr_bench(spec) -> Path:
         tree.mkdir(parents=True, exist_ok=True)
         archive = subprocess.run(['git', '-C', str(REPO), 'archive', commit, 'Packages'], check=True, capture_output=True).stdout
         subprocess.run(['tar', '-x', '-C', str(tree)], input=archive, check=True)
+        if runtime:
+            # A runtime built from source replaces the pinned download; nothing else changes.
+            subprocess.run(['unzip', '-q', str(runtime), '-d', str(tree / 'Packages/LocalASR')], check=True)
+            manifest = tree / 'Packages/LocalASR/Package.swift'
+            text, count = re.subn(r'\.binaryTarget\(\s*name: "CTranscribe",\s*url: "[^"]+",\s*checksum: "[0-9a-f]+"\s*\)',
+                                  '.binaryTarget(name: "CTranscribe", path: "TranscribeCpp.xcframework")', manifest.read_text())
+            if count != 1:
+                sys.exit('Could not replace the runtime pin in Package.swift')
+            manifest.write_text(text)
     target = tree / 'Packages/LocalASR/Sources/asr-bench'
     shutil.rmtree(target)
     shutil.copytree(tool, target)
@@ -782,6 +827,19 @@ def speed_files(fleurs):
     return files
 
 
+def order(block, count):
+    """Candidate order for one block: a rotation, reversed every other cycle.
+
+    Rotations advance separately within quiet and loaded blocks, so in each
+    condition every candidate takes every position equally often and position
+    effects do not favor anyone.
+    """
+    condition = conditions(block + 1)[-1]
+    k = conditions(block).count(condition)
+    base = [(i + k) % count for i in range(count)]
+    return base[::-1] if (k // count) % 2 else base
+
+
 def conditions(blocks):
     """Quiet/load blocks in ABBA order, so drift is not confounded with load."""
     return [('quiet', 'load', 'load', 'quiet')[i % 4] for i in range(blocks)]
@@ -789,7 +847,6 @@ def conditions(blocks):
 
 def speed_process(specs, data, repeats=6):
     files = speed_files(data['fleurs'])
-    orders = list(itertools.permutations(range(len(specs))))
     done = set.intersection(*({(r['block'], r['fixture']) for r in observations(s['id'], 'speed-process')
                                if r['candidate_count'] == len(specs)} for s in specs))
     for block, condition in enumerate(conditions(repeats * 2)):
@@ -798,13 +855,13 @@ def speed_process(specs, data, repeats=6):
         print(f'speed-process block {block} {condition}', flush=True)
         quiet = wait_for_quiet()
         with pressure(os.cpu_count() if condition == 'load' else 0):
+            sequence = order(block, len(specs))
             for f in files:
-                order = orders[block % len(orders)]
-                for index in order:
+                for index in sequence:
                     spec = specs[index]
                     row = run_process(spec, f, f'speed-{block}-{f["id"]}')
                     row.update({'fixture': f['id'], 'runner': 'process', 'condition': condition, 'block': block,
-                                'order': [specs[i]['id'] for i in order], 'candidate_count': len(specs), **quiet})
+                                'order': [specs[i]['id'] for i in sequence], 'candidate_count': len(specs), **quiet})
                     record(spec['id'], 'speed-process', row)
 
 
@@ -813,7 +870,6 @@ def speed_warm(specs, data, repeats=10):
     if not specs:
         return
     files = speed_files(data['fleurs']) + [f for f in data['generated'] if f['suite'] == 'takes']
-    orders = list(itertools.permutations(range(len(specs))))
     done = set.intersection(*({r['block'] for r in observations(s['id'], 'speed-warm')
                                if r['candidate_count'] == len(specs) and r['fixture'] == '_ready'} for s in specs))
     rng = random.Random(SEED)
@@ -825,7 +881,7 @@ def speed_warm(specs, data, repeats=10):
         print(f'speed-warm block {block} {condition}', flush=True)
         quiet = wait_for_quiet()
         with pressure(os.cpu_count() if condition == 'load' else 0):
-            for index in orders[block % len(orders)]:
+            for index in order(block, len(specs)):
                 spec = specs[index]
                 serve = Serve(spec, f'speed-warm-{block}')
                 first = True
@@ -845,7 +901,7 @@ def speed_warm(specs, data, repeats=10):
                                                   'candidate_count': len(specs), 'max_rss_bytes': rss, **quiet, **serve.ready})
 
 
-SUITES = ('fleurs', 'fleurs-full', 'noise', 'takes', 'langbug', 'hooks', 'hour', 'speed-process', 'speed-warm')
+SUITES = ('fleurs', 'fleurs-full', 'terms', 'noise', 'takes', 'langbug', 'hooks', 'hour', 'speed-process', 'speed-warm')
 
 
 def wait_for_lane(patience=3600):
@@ -871,6 +927,9 @@ def run(names, suites):
             target = model_path(spec) if check == 'model' else at_root(entry['executable']) if entry.get('executable') else None
             if target and entry.get('sha256') and digest(target) != entry['sha256']:
                 sys.exit(f"{spec['id']}: {target} does not match its pinned SHA-256")
+        warm = spec.get('warm') or {}
+        if warm.get('xcframework_zip') and digest(at_root(warm['xcframework_zip'])) != warm.get('xcframework_sha256'):
+            sys.exit(f"{spec['id']}: the source-built runtime does not match its pinned SHA-256")
         session = {'started': snapshot(), 'suites': suites, 'host': host(),
                    'installed_app_running': bool(subprocess.run(['pgrep', '-x', 'OpenRamble'], capture_output=True).stdout)}
         record(spec['id'], 'sessions', session)
@@ -885,6 +944,8 @@ def run(names, suites):
                     recognize_all(spec, 'fleurs', data['fleurs'])
                 elif suite == 'fleurs-full':
                     recognize_all(spec, 'fleurs-full', data['fleurs_full'])
+                elif suite == 'terms' and data.get('terms'):
+                    recognize_all(spec, 'terms', data['terms'])
                 elif suite == 'noise':
                     recognize_all(spec, 'noise', [f for f in data['generated'] if f['suite'] == 'noise'])
                 elif suite == 'takes':
@@ -934,7 +995,8 @@ def host():
 def score(name):
     spec = candidate(name)
     data = inputs()
-    by_id = {f['id']: f for f in data['fleurs'] + data['fleurs_full'] + data['hour'] + data['generated'] + data['langbug']}
+    by_id = {f['id']: f for f in data['fleurs'] + data['fleurs_full'] + data.get('terms', []) + data['hour']
+             + data['generated'] + data['langbug']}
     for rows in data['hooks'].values():
         by_id.update({r['id']: r for r in rows})
     result = {'schema': SCHEMA, 'candidate': {k: v for k, v in spec.items()}, 'scored_at': snapshot()['at'],
@@ -946,6 +1008,16 @@ def score(name):
         if rows:
             metrics[key] = fleurs_accuracy(rows, by_id)
             metrics[f'latency_{key}_idle'] = latency_buckets(rows, by_id)
+    term_rows = observations(name, 'terms')
+    if term_rows:
+        metrics['terms'] = {}
+        for language in ('en', 'ru'):
+            for split in ('dev', 'test', 'all'):
+                rows = [r for r in term_rows if by_id[r['fixture']]['language'] == language
+                        and split in ('all', by_id[r['fixture']]['split'])]
+                metrics['terms'][f'{language}_{split}'] = {
+                    **term_recall([{'text': r['text'], 'terms': by_id[r['fixture']]['terms']} for r in rows]),
+                    'wer': wer_counts([(by_id[r['fixture']]['reference'], r['text']) for r in rows])}
     takes = observations(name, 'takes')
     if takes:
         metrics['long_takes'] = {r['fixture']: {'audio_seconds': by_id[r['fixture']]['duration_seconds'],
@@ -1011,7 +1083,7 @@ def score(name):
     out = RESEARCH / 'results'
     out.mkdir(parents=True, exist_ok=True)
     (out / f'{name}.json').write_text(json.dumps(result, ensure_ascii=False, indent=1) + '\n')
-    public = [r for suite in ('fleurs', 'noise', 'takes', 'hour', 'speed-process', 'speed-warm')
+    public = [r for suite in ('fleurs', 'fleurs-full', 'terms', 'noise', 'takes', 'hour', 'speed-process', 'speed-warm')
               for r in ({**x, 'suite': suite} for x in observations(name, suite))]
     with gzip.open(out / f'{name}.observations.jsonl.gz', 'wt', compresslevel=9) as f:
         for row in public:
@@ -1198,15 +1270,17 @@ def fmt(value):
 
 ROWS = [
     # family, label, path, unit, better, target
-    ('Accuracy', 'WER, FLEURS English', ('fleurs', 'en', 'wer', 'wer'), '%', 'lower', '≤ Whisper Turbo'),
-    ('Accuracy', 'WER, FLEURS Russian', ('fleurs', 'ru', 'wer', 'wer'), '%', 'lower', '≤ Whisper Turbo'),
+    ('Accuracy', 'WER, FLEURS English, frozen 100', ('fleurs', 'en', 'wer', 'wer'), '%', 'lower', '≤ Whisper Turbo'),
+    ('Accuracy', 'WER, FLEURS Russian, frozen 100', ('fleurs', 'ru', 'wer', 'wer'), '%', 'lower', '≤ Whisper Turbo'),
     ('Accuracy', 'WER, all FLEURS test, EN + RU', ('fleurs_full', 'pooled_wer'), '%', 'lower', ''),
     ('Accuracy', 'Punctuation F1, English', ('fleurs', 'en', 'punctuation', 'micro_f1'), '%', 'higher', 'best local'),
     ('Accuracy', 'Punctuation F1, Russian', ('fleurs', 'ru', 'punctuation', 'micro_f1'), '%', 'higher', 'best local'),
-    ('Accuracy', 'Question marks F1, English', ('fleurs', 'en', 'punctuation', 'question', 'f1'), '%', 'higher', ''),
+    ('Accuracy', 'Question marks F1, all FLEURS EN', ('fleurs_full', 'en', 'punctuation', 'question', 'f1'), '%', 'higher', ''),
     ('Accuracy', 'Capitalization F1, English', ('fleurs', 'en', 'capitalization', 'f1'), '%', 'higher', 'best local'),
     ('Accuracy', 'Capitalization F1, Russian', ('fleurs', 'ru', 'capitalization', 'f1'), '%', 'higher', 'best local'),
-    ('Accuracy', 'WER, 30–120 s dictation takes', ('long_takes',), '%', 'lower', ''),
+    ('Accuracy', 'WER, dictation takes of 33 to 129 s', ('long_takes',), '%', 'lower', ''),
+    ('Accuracy', 'Term recall, English (synthetic voices)', ('terms', 'en_all', 'recall'), '%', 'higher', '≥ 95% after one teach'),
+    ('Accuracy', 'Term recall, Russian with English terms', ('terms', 'ru_all', 'recall'), '%', 'higher', '≥ 95% after one teach'),
     ('Robustness', 'Wrong script, private English takes', ('wrong_script_private', 'total'), 'ratio', 'lower', '≤ 0.1%'),
     ('Robustness', 'Wrong script, boundary sweep (79)', ('wrong_script_private', 'sweep'), 'ratio', 'lower', ''),
     ('Robustness', 'Wrong script, FLEURS (200)', ('fleurs',), 'script', 'lower', '0'),
@@ -1261,6 +1335,33 @@ def cell(metrics, path, unit):
     if unit == 'MB':
         return f'{value / 1e6:.0f} MB', value
     return str(value), value
+
+
+def markdown_table(names):
+    """The scorecard rows as a Markdown table, for reports."""
+    results = [json.loads((RESEARCH / 'results' / f'{n}.json').read_text()) for n in names]
+    lines = ['| | ' + ' | '.join(r['candidate']['label'] for r in results) + ' | Target |',
+             '|---|' + '---:|' * len(results) + '---|']
+    for _, label, path, unit, _, target in ROWS:
+        cells = [cell(r['metrics'], path, unit)[0] for r in results]
+        if all(c == '—' for c in cells):
+            continue
+        lines.append(f'| {label} | ' + ' | '.join(cells) + f' | {target} |')
+    return '\n'.join(lines)
+
+
+def transcript_diff(base_name, cand_name, suite):
+    """Utterances whose normalized transcripts differ between two candidates."""
+    data = inputs()
+    by_id = {f['id']: f for f in data['fleurs'] + data['fleurs_full'] + data['generated'] + data['hour']}
+    a = {r['fixture']: r.get('text', '') for r in observations(base_name, suite)}
+    b = {r['fixture']: r.get('text', '') for r in observations(cand_name, suite)}
+    shared = sorted(a.keys() & b.keys())
+    differing = [{'fixture': k, 'reference': by_id[k]['reference'] if k in by_id else None,
+                  base_name: a[k], cand_name: b[k], 'exact_text_differs': a[k] != b[k]}
+                 for k in shared if norm(a[k]) != norm(b[k])]
+    return {'suite': suite, 'compared': len(shared), 'normalized_identical': len(shared) - len(differing),
+            'exact_identical': sum(a[k] == b[k] for k in shared), 'differing': differing}
 
 
 def render_html():
@@ -1340,6 +1441,12 @@ def main():
     p = sub.add_parser('compare')
     p.add_argument('baseline')
     p.add_argument('candidate')
+    p = sub.add_parser('table')
+    p.add_argument('candidates', nargs='+')
+    p = sub.add_parser('diff')
+    p.add_argument('baseline')
+    p.add_argument('candidate')
+    p.add_argument('--suite', default='fleurs-full')
     p = sub.add_parser('paired')
     p.add_argument('baseline')
     p.add_argument('candidate')
@@ -1355,6 +1462,10 @@ def main():
         render_html()
     elif a.command == 'compare':
         sys.exit(1 if compare(a.baseline, a.candidate) else 0)
+    elif a.command == 'table':
+        print(markdown_table(a.candidates))
+    elif a.command == 'diff':
+        print(json.dumps(transcript_diff(a.baseline, a.candidate, a.suite), ensure_ascii=False, indent=1))
     elif a.command == 'paired':
         print(json.dumps(paired_bootstrap(a.baseline, a.candidate, a.suite), indent=1))
 
