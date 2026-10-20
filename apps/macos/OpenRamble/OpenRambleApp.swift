@@ -44,6 +44,12 @@ struct OpenRambleApp: App {
     @AppStorage("onboardingCompleted") private var onboardingCompleted = false
     @Environment(\.openWindow) private var openWindow
 
+    init() {
+        // Before anything is drawn: the first window already speaks the Mac's
+        // language, without asking on the Welcome screen.
+        L10n.shared.followTheMacUntilChosen()
+    }
+
     var body: some Scene {
         // The adaptor creates the delegate before any scene exists, so it
         // cannot be handed the state at construction.

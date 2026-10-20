@@ -133,11 +133,6 @@ struct OnboardingView: View {
 
     private var welcome: some View {
         VStack(spacing: 16) {
-            HStack {
-                Spacer()
-                LanguagePicker()
-                    .fixedSize()
-            }
             Spacer(minLength: 0)
 
             // The product crest is the app icon itself — the same mark the
