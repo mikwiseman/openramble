@@ -475,6 +475,8 @@ final class AppHarness {
     let overlay = FakeOverlay()
     let capture: FakeCapture
     var captureMemoryLimit: (@Sendable (DictationSessionID) -> Void)?
+    /// What the application gave the capture to report a broken take with.
+    var captureFailure: (@Sendable (DictationSessionID, AudioCaptureError) -> Void)?
     let meetingCapture = FakeMeetingCapture()
     let screenCapture = FakeScreenRecordingCapture()
     let announcer = FakeAnnouncer()
@@ -600,7 +602,8 @@ final class AppHarness {
                 // through the speakers of whoever runs the suite — once per
                 // failure path, across hundreds of tests.
                 makeSounds: { [sounds] _ in sounds },
-                makeCapture: { [weak self, capture] _, _, _, memoryLimit, _ in
+                makeCapture: { [weak self, capture] _, failure, _, memoryLimit, _ in
+                    self?.captureFailure = failure
                     self?.captureMemoryLimit = memoryLimit
                     return capture
                 },

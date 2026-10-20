@@ -1170,6 +1170,16 @@ public final class AppState: ObservableObject {
                     // stopping is not possible: the person speaks into emptiness, and the reason
                     // must be shown exactly.
                     Task { @MainActor in
+                        // The microphone itself went away: what was recorded
+                        // until then is sound, and is kept for Retry.
+                        if error == .deviceDisconnected {
+                            self?.diagnostics.record(.audioConfigurationChanged)
+                            self?.controller?.preserveActiveRecording(
+                                session: session,
+                                reason: Self.captureFailureMessage(error)
+                            )
+                            return
+                        }
                         self?.diagnostics.record(.audioCaptureFailed, errorCode: (error as NSError).code)
                         self?.controller?.interrupt(
                             session: session,
@@ -1605,6 +1615,8 @@ public final class AppState: ObservableObject {
             return L10n.tr("Couldn't record audio: %@", String(describing: detail))
         case .notRecording:
             return L10n.tr("Recording stopped unexpectedly.")
+        case .deviceDisconnected:
+            return L10n.tr("The microphone or audio device was disconnected. Dictation stopped.")
         }
     }
 
@@ -1986,7 +1998,6 @@ public final class AppState: ObservableObject {
     private func observeSystemEvents() {
         observe(workspaceNotifications, NSWorkspace.willSleepNotification) { $0.handleSleep() }
         observe(workspaceNotifications, NSWorkspace.didWakeNotification) { $0.handleWake() }
-        observe(notifications, .AVAudioEngineConfigurationChange) { $0.handleAudioConfigurationChange() }
         observe(notifications, NSApplication.didBecomeActiveNotification) {
             $0.handleApplicationBecameActive()
         }
@@ -2364,19 +2375,6 @@ public final class AppState: ObservableObject {
               !isRecyclingEngine
         else { return }
         pingEngine(deadline: .seconds(10))
-    }
-
-    /// The audio device changed mid-recording.
-    ///
-    /// The headphones were taken out, the monitor and microphone were turned off - the engine remains
-    /// launched, but frames no longer arrive to it. Man speaks in
-    /// silence and learns about it only by the empty result.
-    private func handleAudioConfigurationChange() {
-        diagnostics.record(.audioConfigurationChanged)
-        guard dictationState == .listening else { return }
-        controller?.preserveActiveRecording(
-            reason: L10n.tr("The microphone or audio device was disconnected. Dictation stopped.")
-        )
     }
 
     /// Say what was waiting for the end of the session.

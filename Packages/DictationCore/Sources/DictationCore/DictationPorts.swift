@@ -423,6 +423,10 @@ public enum AudioCaptureError: Error, Sendable, Equatable {
     case diskFull
     case writeFailed(String)
     case notRecording
+    /// The microphone disappeared or changed its format under a running take.
+    /// Carries no detail on purpose: the application shows its own localized
+    /// sentence and keeps the take, exactly as for an engine route change.
+    case deviceDisconnected
 }
 
 // MARK: - Insert text

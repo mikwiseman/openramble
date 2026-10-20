@@ -1812,6 +1812,13 @@ public final class DictationController {
         state = .transcribing
     }
 
+    /// The microphone of one take disappeared. Token-scoped like `interrupt`:
+    /// the report hops threads, and a late one must not end the next take.
+    public func preserveActiveRecording(session: DictationSessionID, reason message: String) {
+        guard isCurrent(session) else { return }
+        preserveActiveRecording(reason: message)
+    }
+
     /// System permission or device disappeared while recording.
     /// Close the WAV and save it for an explicit Retry/Delete without trying
     /// recognize or insert into an already untrusted system state.
