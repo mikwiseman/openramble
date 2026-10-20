@@ -1449,9 +1449,10 @@ public final class AppState: ObservableObject {
                 )
             }
             controller.onTakeFinished = { [weak self] text, audio in
-                // Counted, never described: a take kept with no words.
-                if text.isEmpty { self?.diagnostics.record(.dictationUnrecognized) }
-                self?.archive(text: text, audio: audio)
+                guard let self, self.archive(text: text, audio: audio), text.isEmpty else { return }
+                // Counted, never described: a take kept with no words, once
+                // History really holds it.
+                self.diagnostics.record(.dictationUnrecognized)
             }
             controller.microphoneName = { AudioInputDevices.recordingName(of: microphone) }
             controller.onDictationCompleted = { [weak self] provenance in
@@ -1720,17 +1721,20 @@ public final class AppState: ObservableObject {
 
     // MARK: - Verbatim text of the last dictation
 
-    /// Keep a finished take: its text, and a copy of its audio.
+    /// Keep a finished take: its text, and a copy of its audio. Returns
+    /// whether History took it.
     ///
     /// Failures here are reported rather than swallowed. A history that
     /// silently stops recording looks exactly like a history of someone who
     /// stopped dictating.
-    private func archive(text: String, audio: URL) {
-        guard let historyStore else { return }
+    private func archive(text: String, audio: URL) -> Bool {
+        guard let historyStore else { return false }
         do {
             history = try historyStore.record(text: text, audio: audio, limit: historyLimit)
+            return true
         } catch {
             engineLog.error("history entry not written")
+            return false
         }
     }
 

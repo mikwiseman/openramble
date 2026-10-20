@@ -65,9 +65,12 @@ final class DictationHistoryStoreTests: XCTestCase {
     }
 
     /// Without its audio a wordless take is nothing at all, and is not kept.
+    /// When the copy fails the store says so: the take was handed over to be
+    /// kept, and quietly keeping nothing would look exactly like keeping it.
     func testATakeWithNoWordsWhoseAudioIsGoneIsNotKept() throws {
         let missing = directory.appending(path: "gone.wav", directoryHint: .notDirectory)
-        XCTAssertTrue(try store.record(text: "", audio: missing, limit: 5).isEmpty)
+        XCTAssertThrowsError(try store.record(text: "", audio: missing, limit: 5))
+        XCTAssertTrue(store.load().isEmpty)
         XCTAssertTrue(try store.record(text: "", audio: nil, limit: 5).isEmpty)
     }
 

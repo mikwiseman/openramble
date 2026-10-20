@@ -112,7 +112,8 @@ public struct DictationHistoryStore: Sendable {
     ///
     /// Empty text is a take the model found no words in. It is kept for its
     /// audio, to be played and recognized again, so without the audio there
-    /// is nothing to keep.
+    /// is nothing to keep, and an audio copy that fails is thrown rather than
+    /// quietly kept as nothing.
     @discardableResult
     public func record(
         text: String,
@@ -129,12 +130,13 @@ public struct DictationHistoryStore: Sendable {
         if let audio {
             let name = "\(UUID().uuidString).wav"
             let destination = directory.appending(path: name, directoryHint: .notDirectory)
-            // A missing or unreadable take must not cost the person the text.
-            if (try? fileManager.copyItem(at: audio, to: destination)) != nil {
+            do {
+                try fileManager.copyItem(at: audio, to: destination)
                 storedName = name
+            } catch where !trimmedText.isEmpty {
+                // A missing or unreadable take must not cost the person the text.
             }
         }
-        guard !trimmedText.isEmpty || storedName != nil else { return load() }
 
         var entries = load()
         entries.insert(
