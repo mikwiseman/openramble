@@ -212,8 +212,8 @@ Recent Dictations — instead.
 
 **Both**
 
-- About 490 MB for the recognition model, plus temporary space while it is
-  downloaded and verified
+- About 490 MB for the recognition model on macOS and 740 MB on Windows and
+  Linux, plus temporary space while it is downloaded and verified
 
 Model files are downloaded from pinned revisions and verified against committed
 SHA-256 checksums before installation.
