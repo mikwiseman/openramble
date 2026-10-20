@@ -1568,11 +1568,9 @@ final class RecordingEngineShutdownContainment: @unchecked Sendable {
 
     func submit(
         reservation: RecordingEngineShutdownReservation,
-        engine: AVAudioEngine,
-        input: AVAudioInputNode
+        microphone: any CaptureInput
     ) {
-        let job = RecordingEngineShutdownJob(engine: engine, input: input)
-        submit(reservation: reservation) { job.run() }
+        submit(reservation: reservation) { microphone.stop() }
     }
 
     func submit(
@@ -1595,9 +1593,9 @@ final class RecordingEngineShutdownContainment: @unchecked Sendable {
 
     /// The one thread in this package allowed to block.
     ///
-    /// `job.operation()` is `engine.stop()` + `input.removeTap(onBus:)`, and
-    /// the comment above this class says what those do: they may block inside
-    /// AVFAudio. This used to run in `Task.detached`, which puts it on Swift's
+    /// `job.operation()` is the microphone's `stop()` (an I/O proc stop, or
+    /// the engine's `stop()` + `removeTap(onBus:)`), and the comment above
+    /// this class says what those do: they may block inside Core Audio. This used to run in `Task.detached`, which puts it on Swift's
     /// cooperative pool — the pool that has one thread per core and that Swift
     /// documents you must never block, because a blocked thread is not yielded,
     /// it is simply gone.
@@ -1637,36 +1635,21 @@ final class RecordingEngineShutdownContainment: @unchecked Sendable {
     }
 }
 
-private final class RecordingEngineShutdownJob: @unchecked Sendable {
-    private let engine: AVAudioEngine
-    private let input: AVAudioInputNode
-
-    init(engine: AVAudioEngine, input: AVAudioInputNode) {
-        self.engine = engine
-        self.input = input
-    }
-
-    func run() {
-        engine.stop()
-        input.removeTap(onBus: 0)
-    }
-}
-
-/// AVAudioEngine is not declared Sendable, but this wrapper has one strict
-/// owner: the detached start operation. No stop/removeTap call is permitted
-/// until `run()` returns and the exact shutdown lease is claimed.
+/// The start has one strict owner: the detached start operation. No stop
+/// is permitted until `run()` returns and the exact shutdown lease is claimed.
 private final class RecordingEngineStartJob: @unchecked Sendable {
-    private let engine: AVAudioEngine
+    private let microphone: any CaptureInput
 
-    init(engine: AVAudioEngine) {
-        self.engine = engine
+    init(microphone: any CaptureInput) {
+        self.microphone = microphone
     }
 
     func run() -> Result<Void, AudioCaptureError> {
         do {
-            engine.prepare()
-            try engine.start()
+            try microphone.start()
             return .success(())
+        } catch let error as AudioCaptureError {
+            return .failure(error)
         } catch {
             return .failure(.engineUnavailable(error.localizedDescription))
         }
@@ -1678,20 +1661,17 @@ private final class RecordingEngineStartJob: @unchecked Sendable {
 /// start transfers the same lease into normal freeze/abort teardown.
 private final class RecordingEngineShutdownLease: @unchecked Sendable {
     private let lock = NSLock()
-    private let engine: AVAudioEngine
-    private let input: AVAudioInputNode
+    private let microphone: any CaptureInput
     private let containment: RecordingEngineShutdownContainment
     private var reservation: RecordingEngineShutdownReservation?
 
     init(
         reservation: RecordingEngineShutdownReservation,
-        engine: AVAudioEngine,
-        input: AVAudioInputNode,
+        microphone: any CaptureInput,
         containment: RecordingEngineShutdownContainment = .shared
     ) {
         self.reservation = reservation
-        self.engine = engine
-        self.input = input
+        self.microphone = microphone
         self.containment = containment
     }
 
@@ -1701,7 +1681,7 @@ private final class RecordingEngineShutdownLease: @unchecked Sendable {
             return reservation
         }
         guard let claimed else { return }
-        containment.submit(reservation: claimed, engine: engine, input: input)
+        containment.submit(reservation: claimed, microphone: microphone)
     }
 }
 
@@ -2049,7 +2029,7 @@ private final class RecordingContext: @unchecked Sendable {
 private struct RecordingPendingStart {
     let reservation: RecordingEngineStartReservation
     let context: RecordingContext
-    let engine: AVAudioEngine
+    let microphone: any CaptureInput
 }
 
 /// Pure identity predicate shared with the concurrency regression test. URL
@@ -2521,10 +2501,10 @@ private func scheduleCancelledFreezePreservation(
 
 /// Record from a microphone to a file.
 ///
-/// The engine rises at the moment the key is pressed and turns off immediately after recording:
+/// The microphone opens at the moment the key is pressed and turns off immediately after recording:
 /// the promise “the recording indicator is off while we are not listening” depends on this.
-/// The price for this is a delay in the cold start, so the start is done as much as possible
-/// short, and the confirmation sound plays only after the first frame arrived.
+/// The price for this is a delay in the cold start, so the start does nothing but open the
+/// device: a HAL I/O proc, live in ~45 ms, where an AVAudioEngine graph took ~200 ms.
 public actor MicrophoneCapture: AudioCapturing {
     public typealias ConverterFactory = @Sendable (AVAudioFormat, AVAudioFormat) -> AVAudioConverter?
     private let logger = Logger(subsystem: "is.waiwai.dictation", category: "capture")
@@ -2533,7 +2513,7 @@ public actor MicrophoneCapture: AudioCapturing {
     private let directory: URL
     private let sampleRate: Double = 16_000
 
-    private var engine: AVAudioEngine?
+    private var microphone: (any CaptureInput)?
     private var converter: AVAudioConverter?
     private var activeContext: RecordingContext?
     /// A generation whose synchronous AVFAudio start call is executing on the
@@ -2588,31 +2568,8 @@ public actor MicrophoneCapture: AudioCapturing {
     /// Which microphone to record through, or `nil` for whatever the system
     /// calls default.
     private let preferredInputDeviceID: AudioDeviceID?
-
-    /// Ask the engine's input unit to use one particular device.
-    ///
-    /// Refuses loudly rather than recording from the wrong microphone. Someone
-    /// who chose a headset and silently got the laptop lid instead would only
-    /// find out from the transcript, which is far too late.
-    private func selectInputDevice(_ id: AudioDeviceID, on input: AVAudioInputNode) throws {
-        guard let unit = input.audioUnit else {
-            throw AudioCaptureError.engineUnavailable("no input unit to choose a microphone on")
-        }
-        var deviceID = id
-        let status = AudioUnitSetProperty(
-            unit,
-            kAudioOutputUnitProperty_CurrentDevice,
-            kAudioUnitScope_Global,
-            0,
-            &deviceID,
-            UInt32(MemoryLayout<AudioDeviceID>.size)
-        )
-        guard status == noErr else {
-            throw AudioCaptureError.engineUnavailable(
-                "the chosen microphone didn't accept the recording (\(status))"
-            )
-        }
-    }
+    /// Opens the microphone for one take, at the key-down and never earlier.
+    private let openInput: CaptureInputOpener
 
     public init(
         directory: URL,
@@ -2622,6 +2579,27 @@ public actor MicrophoneCapture: AudioCapturing {
         converterFactory: @escaping ConverterFactory = { AVAudioConverter(from: $0, to: $1) },
         preferredInputDeviceID: AudioDeviceID? = nil
     ) {
+        self.init(
+            directory: directory,
+            onFailure: onFailure,
+            onSamples: onSamples,
+            onMemoryLimitReached: onMemoryLimitReached,
+            converterFactory: converterFactory,
+            preferredInputDeviceID: preferredInputDeviceID,
+            openInput: CaptureInputs.open
+        )
+    }
+
+    init(
+        directory: URL,
+        onFailure: @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void = { _, _ in },
+        onSamples: @escaping @Sendable ([Float]) -> Void = { _ in },
+        onMemoryLimitReached: @escaping @Sendable (DictationSessionID) -> Void = { _ in },
+        converterFactory: @escaping ConverterFactory = { AVAudioConverter(from: $0, to: $1) },
+        preferredInputDeviceID: AudioDeviceID? = nil,
+        openInput: @escaping CaptureInputOpener
+    ) {
+        self.openInput = openInput
         self.preferredInputDeviceID = preferredInputDeviceID
         self.directory = directory
         failureObserver = CoalescingCaptureFailureObserver(consume: onFailure)
@@ -2646,7 +2624,7 @@ public actor MicrophoneCapture: AudioCapturing {
     /// stopping and interrupting the recording goes through and wakes up those waiting.
     public func waitForFirstFrame() async -> Bool {
         if firstBufferAt != nil { return true }
-        guard engine != nil || pendingStart != nil else { return false }
+        guard microphone != nil || pendingStart != nil else { return false }
         return await withCheckedContinuation { continuation in
             firstFrameWaiters.append(continuation)
         }
@@ -2701,12 +2679,12 @@ public actor MicrophoneCapture: AudioCapturing {
               disposition.state == .active else {
             throw CancellationError()
         }
-        if engine != nil || activeContext != nil || pendingStart != nil {
+        if microphone != nil || activeContext != nil || pendingStart != nil {
             guard detachSupersededRecordingForAdmission(requestedSession: session) else {
                 throw AudioCaptureError.engineUnavailable("recording is already in progress")
             }
         }
-        guard engine == nil, activeContext == nil, pendingStart == nil else {
+        guard microphone == nil, activeContext == nil, pendingStart == nil else {
             throw AudioCaptureError.engineUnavailable("recording is already in progress")
         }
         guard let startReservation = RecordingEngineStartContainment.shared.reserve() else {
@@ -2736,15 +2714,8 @@ public actor MicrophoneCapture: AudioCapturing {
         )
         disposition.register([url])
 
-        let engine = AVAudioEngine()
-        let input = engine.inputNode
-        // Point the engine at the chosen microphone before anything reads a
-        // format from it. After that the node has already negotiated with a
-        // device and changing it is ignored.
-        if let preferredInputDeviceID {
-            try selectInputDevice(preferredInputDeviceID, on: input)
-        }
-        let inputFormat = input.outputFormat(forBus: 0)
+        let microphone = try openInput(preferredInputDeviceID)
+        let inputFormat = microphone.format
 
         guard inputFormat.sampleRate > 0 else {
             throw AudioCaptureError.engineUnavailable("microphone unavailable")
@@ -2788,8 +2759,7 @@ public actor MicrophoneCapture: AudioCapturing {
         )
         let shutdownLease = RecordingEngineShutdownLease(
             reservation: shutdownReservation,
-            engine: engine,
-            input: input
+            microphone: microphone
         )
 
         let sessionID = UUID()
@@ -2820,13 +2790,13 @@ public actor MicrophoneCapture: AudioCapturing {
         pendingStart = RecordingPendingStart(
             reservation: startReservation,
             context: context,
-            engine: engine
+            microphone: microphone
         )
         timingSessionID = context.id
         self.converter = converter
 
         let sampleObserver = sampleObserver
-        input.installTap(onBus: 0, bufferSize: 2048, format: inputFormat) { [weak self] buffer, when in
+        microphone.install { [weak self] buffer, when in
             let sampleTime = when.isSampleTimeValid ? when.sampleTime : nil
             guard let frame = pcm.beginFrame(sampleTime: sampleTime) else { return }
             defer { pcm.endFrame() }
@@ -2929,6 +2899,10 @@ public actor MicrophoneCapture: AudioCapturing {
                 )
                 let sink = FrameSink()
                 let enqueue = sink.start(
+                    // An I/O proc delivers ~94 cycles a second where the
+                    // engine tap delivered ~10, so the queue holds ten times
+                    // as many frames to absorb the same ~6 s of disk stall.
+                    capacity: FrameSink.defaultCapacity * 10,
                     onOverflow: { disk.queueOverflowed() },
                     consume: { disk.append($0) }
                 )
@@ -2951,7 +2925,7 @@ public actor MicrophoneCapture: AudioCapturing {
             diskAttachment.openFailed()
         }
 
-        let startJob = RecordingEngineStartJob(engine: engine)
+        let startJob = RecordingEngineStartJob(microphone: microphone)
         startWasSubmitted = true
         let startOutcome = await RecordingEngineStartContainment.shared.start(
             reservation: startReservation,
@@ -2993,7 +2967,7 @@ public actor MicrophoneCapture: AudioCapturing {
             }
             pendingStart = nil
             activeContext = context
-            self.engine = engine
+            self.microphone = microphone
             return url
 
         case let .failed(error):
@@ -3107,7 +3081,7 @@ public actor MicrophoneCapture: AudioCapturing {
             )
         }
 
-        guard let oldEngine = engine, let context = activeContext else { return false }
+        guard let oldMicrophone = microphone, let context = activeContext else { return false }
         let decision = recordingAdmissionDecision(
             activeSession: context.session,
             activeDisposition: context.disposition.state,
@@ -3121,12 +3095,12 @@ public actor MicrophoneCapture: AudioCapturing {
         wakeFirstFrameWaiters(arrived: false)
         context.pcm.closeAdmission()
         context.conversionSequencer.cancelPending()
-        engine = nil
+        microphone = nil
         converter = nil
         activeContext = nil
         legacyBufferedSamples = nil
         let pipeline = context.diskAttachment.takePipeline()
-        _ = oldEngine // Context's lease retains the exact adopted generation.
+        _ = oldMicrophone // Context's lease retains the exact adopted generation.
         context.shutdownLease.schedule()
 
         switch decision {
@@ -3242,7 +3216,7 @@ public actor MicrophoneCapture: AudioCapturing {
         expectedSession: DictationSessionID?,
         expectedURL: URL?
     ) async throws -> CapturedRecording {
-        guard engine != nil, let context = activeContext else {
+        guard microphone != nil, let context = activeContext else {
             throw AudioCaptureError.notRecording
         }
         guard captureRequestMatches(
@@ -3262,7 +3236,7 @@ public actor MicrophoneCapture: AudioCapturing {
         // that abandoned generation is contained off-actor so N+1 can start.
         context.pcm.closeAdmission()
         context.conversionSequencer.cancelPending()
-        self.engine = nil
+        self.microphone = nil
         self.converter = nil
         activeContext = nil
         context.shutdownLease.schedule()
@@ -3348,7 +3322,7 @@ public actor MicrophoneCapture: AudioCapturing {
             return
         }
 
-        guard engine != nil, let context = activeContext,
+        guard microphone != nil, let context = activeContext,
               captureRequestMatches(
                   activeSession: context.session,
                   activeURL: context.url,
@@ -3363,7 +3337,7 @@ public actor MicrophoneCapture: AudioCapturing {
         wakeFirstFrameWaiters(arrived: false)
         context.pcm.closeAdmission()
         context.conversionSequencer.cancelPending()
-        self.engine = nil
+        self.microphone = nil
         self.converter = nil
         activeContext = nil
         legacyBufferedSamples = nil
@@ -3459,7 +3433,7 @@ public actor MicrophoneCapture: AudioCapturing {
         context?.pcm.closeAdmission()
         context?.conversionSequencer.cancelPending()
         activeContext = nil
-        engine = nil
+        microphone = nil
         converter = nil
         context?.pcm.discard()
         context?.freezeRecoveryLease.release()
