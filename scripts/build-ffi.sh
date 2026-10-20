@@ -33,6 +33,12 @@ export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
 export MACOSX_DEPLOYMENT_TARGET=14.0
 export TRANSCRIBE_CMAKE_ARGS="-DGGML_NATIVE=OFF -DCMAKE_OSX_SYSROOT=\"$SDKROOT\" -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET"
 
+# Leave host proc-macros and build scripts unstripped. At a 14.0 floor the
+# linker writes chained fixups, and rustc's strip pass (rust-objcopy) then
+# misaligns the string table, which macOS 27.0.1 refuses to load
+# ("mis-aligned LINKEDIT string pool"). The shipped library is not affected.
+export CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_STRIP=false
+
 echo "→ Building the core for Apple Silicon and Intel"
 rustup target add aarch64-apple-darwin x86_64-apple-darwin
 for target in aarch64-apple-darwin x86_64-apple-darwin; do
