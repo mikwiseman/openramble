@@ -75,6 +75,17 @@ final class RecordingCleanupTests: XCTestCase {
         }
     }
 
+    /// Deleting a take finishes after the controller is idle, so a test waits
+    /// for the outcome it asserts, not for a moment. Under heavy load a fixed
+    /// wait passed before the delete did.
+    private func eventually(timeout: Duration = .seconds(10), _ condition: () -> Bool) async {
+        let deadline = ContinuousClock.now + timeout
+        while !condition(), ContinuousClock.now < deadline {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
     private func audioArtifacts(in entries: [URL]) -> [URL] {
         entries.filter {
             $0.pathExtension.lowercased() == "wav"
@@ -121,6 +132,7 @@ final class RecordingCleanupTests: XCTestCase {
         controller.stop()
         await settle()
 
+        await eventually { (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil))?.isEmpty ?? true }
         let leftovers = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
         XCTAssertTrue(leftovers.isEmpty, "\u{041F}\u{043E}\u{0441}\u{043B}\u{0435} \u{0432}\u{0441}\u{0442}\u{0430}\u{0432}\u{043A}\u{0438} \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{0433}\u{043E}\u{043B}\u{043E}\u{0441}\u{0430} \u{0434}\u{043E}\u{043B}\u{0436}\u{043D}\u{0430} \u{0431}\u{044B}\u{0442}\u{044C} \u{0443}\u{0434}\u{0430}\u{043B}\u{0435}\u{043D}\u{0430}: \(leftovers)")
     }
@@ -157,6 +169,7 @@ final class RecordingCleanupTests: XCTestCase {
         controller.stop()
         await settle()
 
+        await eventually { (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil))?.isEmpty ?? true }
         let leftovers = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
         XCTAssertTrue(leftovers.isEmpty, "\u{041F}\u{043E}\u{0441}\u{043B}\u{0435} \u{043D}\u{0435}\u{0443}\u{0434}\u{0430}\u{0447}\u{043D}\u{043E}\u{0439} \u{0432}\u{0441}\u{0442}\u{0430}\u{0432}\u{043A}\u{0438} \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{0443}\u{0434}\u{0430}\u{043B}\u{044F}\u{0435}\u{0442}\u{0441}\u{044F}: \(leftovers)")
     }
@@ -170,6 +183,7 @@ final class RecordingCleanupTests: XCTestCase {
         controller.cancel()
         await settle()
 
+        await eventually { audioArtifacts(in: (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []).isEmpty }
         let leftovers = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
         XCTAssertTrue(
             audioArtifacts(in: leftovers).isEmpty,
@@ -189,6 +203,7 @@ final class RecordingCleanupTests: XCTestCase {
         controller.stop()
         await settle()
 
+        await eventually { (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil))?.isEmpty ?? true }
         let leftovers = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
         XCTAssertTrue(leftovers.isEmpty, "\u{0421}\u{043B}\u{0438}\u{0448}\u{043A}\u{043E}\u{043C} \u{043A}\u{043E}\u{0440}\u{043E}\u{0442}\u{043A}\u{0430}\u{044F} \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{0442}\u{043E}\u{0436}\u{0435} \u{0443}\u{0434}\u{0430}\u{043B}\u{044F}\u{0435}\u{0442}\u{0441}\u{044F}: \(leftovers)")
     }
@@ -236,6 +251,7 @@ final class RecordingCleanupTests: XCTestCase {
             .filter { $0.pathExtension == "wav" } ?? []
         XCTAssertTrue(saved.isEmpty, "\u{041E}\u{0442}\u{043C}\u{0435}\u{043D}\u{0451}\u{043D}\u{043D}\u{0430}\u{044F} \u{0434}\u{0438}\u{043A}\u{0442}\u{043E}\u{0432}\u{043A}\u{0430} \u{043D}\u{0435} \u{0441}\u{043E}\u{0445}\u{0440}\u{0430}\u{043D}\u{044F}\u{0435}\u{0442}\u{0441}\u{044F} \u{0434}\u{043B}\u{044F} Retry: \(saved)")
 
+        await eventually { ((try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []).allSatisfy { $0.pathExtension != "wav" } }
         let takes = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
             .filter { $0.pathExtension == "wav" }
         XCTAssertTrue(takes.isEmpty, "\u{041E}\u{0442}\u{043C}\u{0435}\u{043D}\u{0451}\u{043D}\u{043D}\u{0430}\u{044F} \u{0434}\u{0438}\u{043A}\u{0442}\u{043E}\u{0432}\u{043A}\u{0430} \u{043D}\u{0435} \u{043E}\u{0441}\u{0442}\u{0430}\u{0432}\u{043B}\u{044F}\u{0435}\u{0442} \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{0432} Takes: \(takes)")
@@ -292,6 +308,7 @@ final class RecordingCleanupTests: XCTestCase {
         }
         await settle()
 
+        await eventually { ((try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []).allSatisfy { $0.pathExtension != "wav" } }
         let takes = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
             .filter { $0.pathExtension == "wav" }
         XCTAssertTrue(takes.isEmpty, "\u{041E}\u{0442}\u{043C}\u{0435}\u{043D}\u{0451}\u{043D}\u{043D}\u{0430}\u{044F} \u{0434}\u{0438}\u{043A}\u{0442}\u{043E}\u{0432}\u{043A}\u{0430} \u{043D}\u{0435} \u{043E}\u{0441}\u{0442}\u{0430}\u{0432}\u{043B}\u{044F}\u{0435}\u{0442} \u{0437}\u{0430}\u{043F}\u{0438}\u{0441}\u{044C} \u{0432} Takes: \(takes)")
@@ -346,6 +363,7 @@ final class RecordingCleanupTests: XCTestCase {
         let saved = (try? FileManager.default.contentsOfDirectory(at: recovered, includingPropertiesForKeys: nil))?
             .filter { $0.pathExtension == "wav" } ?? []
         XCTAssertTrue(saved.isEmpty, "A fragment below the minimum is not saved: \(saved)")
+        await eventually { ((try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []).allSatisfy { $0.pathExtension != "wav" } }
         let takes = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
             .filter { $0.pathExtension == "wav" }
         XCTAssertTrue(takes.isEmpty, "And it does not stay in Takes either: \(takes)")
@@ -389,6 +407,7 @@ final class RecordingCleanupTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(5))
         }
 
+        await eventually { audioArtifacts(in: (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []).isEmpty }
         let leftovers = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
         XCTAssertTrue(
             audioArtifacts(in: leftovers).isEmpty,
