@@ -395,7 +395,13 @@ public final class AppState: ObservableObject {
             case .preparing: diagnostics.record(.dictationPreparing)
             case .listening: diagnostics.record(.dictationListening)
             case .transcribing: diagnostics.record(.dictationTranscribing)
-            case .inserting: diagnostics.record(.dictationInserting)
+            case .inserting:
+                diagnostics.record(.dictationInserting)
+                // The paste's target reads the text from our main thread. The
+                // last take's edit watch reads a field from that same thread,
+                // synchronously, inside the target: while one waits on the
+                // other, both stall. The new paste ends that watch anyway.
+                editWatcher.cancel()
             }
         }
     }
