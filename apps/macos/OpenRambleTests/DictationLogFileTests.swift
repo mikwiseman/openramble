@@ -104,6 +104,27 @@ final class DictationLogFileTests: XCTestCase {
         XCTAssertNil(DictationLogFile.milliseconds(.nan))
     }
 
+    func testFailureReasonIsACaseNameThatSurvivesExport() throws {
+        let log = DictationLogFile(directory: root, enabled: true)
+        log.record(.dictationFailed, failureReason: .microphoneRevoked)
+        log.record(.dictationFailed)
+        let saved = log.snapshot()
+        let lines = saved.data.split(separator: 10).map { String(decoding: $0, as: UTF8.self) }
+        XCTAssertFalse(saved.incomplete)
+        XCTAssertEqual(lines.count, 2)
+        XCTAssertTrue(lines[0].contains("\"failureReason\":\"microphoneRevoked\""))
+        XCTAssertFalse(lines[1].contains("failureReason"), "an older line without one still exports")
+
+        // A value outside the allowlist cannot be smuggled in through the file.
+        let file = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil).first)
+        let tampered = try String(contentsOf: file, encoding: .utf8)
+            .replacingOccurrences(of: "microphoneRevoked", with: "PRIVATE_CANARY")
+        try Data(tampered.utf8).write(to: file)
+        let reread = log.snapshot()
+        XCTAssertTrue(reread.incomplete)
+        XCTAssertFalse(String(decoding: reread.data, as: UTF8.self).contains("PRIVATE_CANARY"))
+    }
+
     func testFailureStageAndRecoveredStreamErrorStayPrivateAndSurviveExport() throws {
         let log = DictationLogFile(directory: root, enabled: true)
         log.record(.dictationStageFailed, milliseconds: 10001, stage: .captureFreeze, timedOut: true)

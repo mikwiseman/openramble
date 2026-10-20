@@ -92,7 +92,7 @@ final class ModelStatusTests: XCTestCase {
         )
         XCTAssertEqual(working.title, "Preparing the model")
         XCTAssertEqual(working.tone, .neutral)
-        XCTAssertEqual(working.progressLabel, "Step 1 of 3 · Loading the recognizer… 7 s")
+        XCTAssertEqual(working.progressLabel, "Step 1 of 2 · Loading the recognizer… 7 s")
         XCTAssertEqual(working.progress ?? -1, 0, accuracy: 0.001)
 
         // Nothing running: the card must not narrate work that does not exist.
