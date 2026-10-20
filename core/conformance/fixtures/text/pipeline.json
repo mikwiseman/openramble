@@ -2437,7 +2437,7 @@
     "spans" : [
 
     ],
-    "text" : "We should, ship it."
+    "text" : "We should ship it."
   },
   {
     "afterDictionary" : "Then uh we ship it.",
@@ -2521,7 +2521,7 @@
     "spans" : [
 
     ],
-    "text" : "Я, не уверен."
+    "text" : "Я не уверен."
   },
   {
     "afterDictionary" : "Ähm, ich komme morgen. Euh, je pense que oui.",
@@ -2787,7 +2787,7 @@
         "text" : "`swift  test`"
       }
     ],
-    "text" : "Run `swift  test`, now."
+    "text" : "Run `swift  test` now."
   },
   {
     "afterDictionary" : "Uh, onTextInserted fired.",
@@ -2825,7 +2825,7 @@
     "spans" : [
 
     ],
-    "text" : "Ну, Sentry, упал"
+    "text" : "Ну Sentry упал"
   },
   {
     "afterDictionary" : "Uh, first point",
@@ -2982,7 +2982,7 @@
     "spans" : [
 
     ],
-    "text" : "We should, ship it on Friday. I think that the tests are green, mostly."
+    "text" : "We should ship it on Friday. I think that the tests are green mostly."
   },
   {
     "afterDictionary" : "Uh, I need you to um, fix the login bug, um, and then update the readme.",
@@ -2996,7 +2996,7 @@
     "spans" : [
 
     ],
-    "text" : "I need you to fix the login bug, and then update the readme."
+    "text" : "I need you to fix the login bug and then update the readme."
   },
   {
     "afterDictionary" : "Um 5 Uhr treffen wir uns im Büro.",
@@ -3080,7 +3080,7 @@
     "spans" : [
 
     ],
-    "text" : "Es geht um, Geld."
+    "text" : "Es geht um Geld."
   },
   {
     "afterDictionary" : "Use a 3 mm drill bit and a 10 mm bolt.",
@@ -3220,7 +3220,7 @@
     "spans" : [
 
     ],
-    "text" : "Meet at 6."
+    "text" : "Meet at 5 p.m. Meet at 6."
   },
   {
     "afterDictionary" : "Call Dr. Smith, scratch that, Dr. Jones.",
@@ -3347,7 +3347,7 @@
     "spans" : [
 
     ],
-    "text" : "Ah, I need you to fix the login bug, and then update the readme."
+    "text" : "Ah, I need you to fix the login bug and then update the readme."
   },
   {
     "afterDictionary" : "Don't deploy on Friday, run the migration on staging first and tell me if it fails.",
@@ -3375,7 +3375,7 @@
     "spans" : [
 
     ],
-    "text" : "We should, ship it on Friday. I think that the tests are green, mostly."
+    "text" : "We should ship it on Friday. I think that the tests are green mostly."
   },
   {
     "afterDictionary" : "Um, so that the deploy failed. Ah, scratch that, the deploy passed.",
@@ -3432,5 +3432,604 @@
 
     ],
     "text" : "We meet on Monday."
+  },
+  {
+    "afterDictionary" : "Set the values to 10, 20, um, 30.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Set the values to 10, 20, um, 30.",
+    "name" : "clean list keeps its commas",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Set the values to 10, 20, 30."
+  },
+  {
+    "afterDictionary" : "Set it to 10, um, 30.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Set it to 10, um, 30.",
+    "name" : "clean list of two numbers",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Set it to 10, 30."
+  },
+  {
+    "afterDictionary" : "Купи хлеб, молоко, э, сыр.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Купи хлеб, молоко, э, сыр.",
+    "name" : "clean russian list",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Купи хлеб, молоко, сыр."
+  },
+  {
+    "afterDictionary" : "Мы, э, думаем, что, ээ, надо подождать.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Мы, э, думаем, что, ээ, надо подождать.",
+    "name" : "clean comma before a grammar word",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Мы думаем, что надо подождать."
+  },
+  {
+    "afterDictionary" : "Don't, uh, deploy on Friday.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Don't, uh, deploy on Friday.",
+    "name" : "clean don't deploy",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Don't deploy on Friday."
+  },
+  {
+    "afterDictionary" : "Uh , the build passed.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Uh , the build passed.",
+    "name" : "clean detached punctuation",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "The build passed."
+  },
+  {
+    "afterDictionary" : "Ship it , uh , now",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Ship it , uh , now",
+    "name" : "clean detached commas around a filler",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Ship it now"
+  },
+  {
+    "afterDictionary" : "Uh huh, ship it.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Uh huh, ship it.",
+    "name" : "clean keeps uh huh",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Uh huh, ship it."
+  },
+  {
+    "afterDictionary" : "Uh oh, the deploy failed.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Uh oh, the deploy failed.",
+    "name" : "clean keeps uh oh",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Uh oh, the deploy failed."
+  },
+  {
+    "afterDictionary" : "Mm hmm, sounds good.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Mm hmm, sounds good.",
+    "name" : "clean keeps mm hmm",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Mm hmm, sounds good."
+  },
+  {
+    "afterDictionary" : "We trained an HMM on the data.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "We trained an HMM on the data.",
+    "name" : "clean keeps an acronym",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "We trained an HMM on the data."
+  },
+  {
+    "afterDictionary" : "Um, I studied at MIT.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Um, I studied at MIT.",
+    "name" : "clean removes before an acronym",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "I studied at MIT."
+  },
+  {
+    "afterDictionary" : "Use a 3 mm drill bit and a 10 mm bolt.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Use a 3 mm drill bit and a 10 mm bolt.",
+    "name" : "clean keeps a millimetre",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Use a 3 mm drill bit and a 10 mm bolt."
+  },
+  {
+    "afterDictionary" : "Format the date as dd mmm yyyy.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Format the date as dd mmm yyyy.",
+    "name" : "clean keeps a date format",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Format the date as dd mmm yyyy."
+  },
+  {
+    "afterDictionary" : "Гласные: а, о, у, э, ы.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Гласные: а, о, у, э, ы.",
+    "name" : "clean keeps russian vowels",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Гласные: а, о, у, э, ы."
+  },
+  {
+    "afterDictionary" : "Quantos? Um, por favor.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Quantos? Um, por favor.",
+    "name" : "clean keeps portuguese um with markers",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Quantos? Um, por favor."
+  },
+  {
+    "afterDictionary" : "Dreh dich um, bitte.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Dreh dich um, bitte.",
+    "name" : "clean keeps german um in a command",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Dreh dich um, bitte."
+  },
+  {
+    "afterDictionary" : "Ljudski um, kao i tijelo, treba odmor.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Ljudski um, kao i tijelo, treba odmor.",
+    "name" : "clean keeps croatian um",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Ljudski um, kao i tijelo, treba odmor."
+  },
+  {
+    "afterDictionary" : "Es geht um, äh, Geld.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Es geht um, äh, Geld.",
+    "name" : "clean german filler next to um",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Es geht um Geld."
+  },
+  {
+    "afterDictionary" : "Um, the battery will die soon.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Um, the battery will die soon.",
+    "name" : "clean removes um despite a lookalike",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "The battery will die soon."
+  },
+  {
+    "afterDictionary" : "I, I really think so.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "I, I really think so.",
+    "name" : "clean opening pronoun stutter",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "I really think so."
+  },
+  {
+    "afterDictionary" : "Я, я думаю.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Я, я думаю.",
+    "name" : "clean russian opening stutter",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Я думаю."
+  },
+  {
+    "afterDictionary" : "The, the answer is yes.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "The, the answer is yes.",
+    "name" : "clean article stutter with a comma",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "The answer is yes."
+  },
+  {
+    "afterDictionary" : "I told you you were right.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "I told you you were right.",
+    "name" : "clean keeps a repeated pronoun",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "I told you you were right."
+  },
+  {
+    "afterDictionary" : "When I saw it it was broken.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "When I saw it it was broken.",
+    "name" : "clean keeps it it",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "When I saw it it was broken."
+  },
+  {
+    "afterDictionary" : "Zmienne i i j są indeksami.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Zmienne i i j są indeksami.",
+    "name" : "clean keeps polish i i",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Zmienne i i j są indeksami."
+  },
+  {
+    "afterDictionary" : "My my, how you have grown.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "My my, how you have grown.",
+    "name" : "clean keeps my my",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "My my, how you have grown."
+  },
+  {
+    "afterDictionary" : "Read the\nthe report",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Read the\nthe report",
+    "name" : "clean keeps a double across a line",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Read the\nthe report"
+  },
+  {
+    "afterDictionary" : "No, no, no.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "No, no, no.",
+    "name" : "clean keeps no no no",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "No, no, no."
+  },
+  {
+    "afterDictionary" : "Meet at 3 p.m. Bring snacks. Scratch that. Bring drinks.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Meet at 3 p.m. Bring snacks. Scratch that. Bring drinks.",
+    "name" : "clean a time keeps its sentence",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Meet at 3 p.m. Bring drinks."
+  },
+  {
+    "afterDictionary" : "Are we shipping today? No. Scratch that. Yes.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Are we shipping today? No. Scratch that. Yes.",
+    "name" : "clean a question keeps its answer",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Are we shipping today? Yes."
+  },
+  {
+    "afterDictionary" : "We meet at 5. Scratch that. We meet at 6.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "We meet at 5. Scratch that. We meet at 6.",
+    "name" : "clean a number ends a sentence",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "We meet at 6."
+  },
+  {
+    "afterDictionary" : "I met Dr. Smith today. Scratch that. I met nobody.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "I met Dr. Smith today. Scratch that. I met nobody.",
+    "name" : "clean a title does not end a sentence",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "I met nobody."
+  },
+  {
+    "afterDictionary" : "Can we ship? No. Uh, not yet.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Can we ship? No. Uh, not yet.",
+    "name" : "clean capitalizes after a short sentence",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Can we ship? No. Not yet."
+  },
+  {
+    "afterDictionary" : "He said no. Uh. Then he left.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "He said no. Uh. Then he left.",
+    "name" : "clean a lone filler sentence",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "He said no. Then he left."
+  },
+  {
+    "afterDictionary" : "I will scratch that off the list, scratch that, I will keep it.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "I will scratch that off the list, scratch that, I will keep it.",
+    "name" : "clean every scratch that",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "I will keep it."
+  },
+  {
+    "afterDictionary" : "First paragraph.\r\n\r\nUh, second paragraph.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "First paragraph.\r\n\r\nUh, second paragraph.",
+    "name" : "clean crlf paragraphs",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "First paragraph.\r\n\r\nSecond paragraph."
+  },
+  {
+    "afterDictionary" : "I love The The band.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "the the",
+        "written" : "The The"
+      }
+    ],
+    "input" : "I love The The band.",
+    "name" : "clean dictionary words are kept",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "I love The The band."
+  },
+  {
+    "afterDictionary" : "I work at Hmm Labs.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "hmm labs",
+        "written" : "Hmm Labs"
+      }
+    ],
+    "input" : "I work at Hmm Labs.",
+    "name" : "clean dictionary filler words are kept",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "I work at Hmm Labs."
+  },
+  {
+    "afterDictionary" : "Hmm?",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Hmm?",
+    "name" : "clean meeting keeps an interjection",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "spokenCorrections" : false,
+    "text" : "Hmm?"
+  },
+  {
+    "afterDictionary" : "Ship it, um",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Ship it, um",
+    "name" : "clean dangling um",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Ship it"
+  },
+  {
+    "afterDictionary" : "Ship it, um uh, now",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Ship it, um uh, now",
+    "name" : "clean two fillers in a row",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Ship it now"
   }
 ]

@@ -654,6 +654,8 @@
 "The speech model is still getting ready; this take was not discarded." = "The speech model is still getting ready; this take was not discarded.";
 "Transcribing took too long and was stopped." = "Transcribing took too long and was stopped.";
 "Nothing was recognized — nothing was inserted." = "Nothing was recognized — nothing was inserted.";
+"Everything was taken back — nothing was inserted." = "Everything was taken back — nothing was inserted.";
+"Nothing new was recognized — the text was kept." = "Nothing new was recognized — the text was kept.";
 "Insertion couldn't be confirmed in time. The text is saved in the menu and may already have been pasted." = "Insertion couldn't be confirmed in time. The text is saved in the menu and may already have been pasted.";
 "The text was inserted, but pressing Return failed." = "The text was inserted, but pressing Return failed.";
 "Text not inserted: secure input is active. Your text is saved in the menu." = "Text not inserted: secure input is active. Your text is saved in the menu.";

@@ -1775,6 +1775,15 @@ public final class AppState: ObservableObject {
                 let text = self?.makePipeline().run(result.text).output.text ?? result.text
                 await MainActor.run {
                     guard let self, let store = self.historyStore else { return }
+                    // An empty run keeps the words already there rather than
+                    // blanking a record of something the person said.
+                    guard !text.isEmpty else {
+                        self.notify(DictationNotice(
+                            kind: .info,
+                            message: L10n.tr("Nothing new was recognized — the text was kept.")
+                        ))
+                        return
+                    }
                     self.history = (try? store.replaceText(text, for: entry)) ?? self.history
                 }
             } catch {

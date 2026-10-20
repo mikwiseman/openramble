@@ -2361,5 +2361,314 @@
     "allowPressReturnCommand": false,
     "phoneticMatching": true,
     "input": "We meet on Friday. Sorry, scratch that, we meet on Monday."
+  },
+  {
+    "name": "clean list keeps its commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Set the values to 10, 20, um, 30."
+  },
+  {
+    "name": "clean list of two numbers",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Set it to 10, um, 30."
+  },
+  {
+    "name": "clean russian list",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Купи хлеб, молоко, э, сыр."
+  },
+  {
+    "name": "clean comma before a grammar word",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Мы, э, думаем, что, ээ, надо подождать."
+  },
+  {
+    "name": "clean don't deploy",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Don't, uh, deploy on Friday."
+  },
+  {
+    "name": "clean detached punctuation",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh , the build passed."
+  },
+  {
+    "name": "clean detached commas around a filler",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ship it , uh , now"
+  },
+  {
+    "name": "clean keeps uh huh",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh huh, ship it."
+  },
+  {
+    "name": "clean keeps uh oh",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh oh, the deploy failed."
+  },
+  {
+    "name": "clean keeps mm hmm",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Mm hmm, sounds good."
+  },
+  {
+    "name": "clean keeps an acronym",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We trained an HMM on the data."
+  },
+  {
+    "name": "clean removes before an acronym",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, I studied at MIT."
+  },
+  {
+    "name": "clean keeps a millimetre",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Use a 3 mm drill bit and a 10 mm bolt."
+  },
+  {
+    "name": "clean keeps a date format",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Format the date as dd mmm yyyy."
+  },
+  {
+    "name": "clean keeps russian vowels",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Гласные: а, о, у, э, ы."
+  },
+  {
+    "name": "clean keeps portuguese um with markers",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Quantos? Um, por favor."
+  },
+  {
+    "name": "clean keeps german um in a command",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Dreh dich um, bitte."
+  },
+  {
+    "name": "clean keeps croatian um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ljudski um, kao i tijelo, treba odmor."
+  },
+  {
+    "name": "clean german filler next to um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Es geht um, äh, Geld."
+  },
+  {
+    "name": "clean removes um despite a lookalike",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, the battery will die soon."
+  },
+  {
+    "name": "clean opening pronoun stutter",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I, I really think so."
+  },
+  {
+    "name": "clean russian opening stutter",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Я, я думаю."
+  },
+  {
+    "name": "clean article stutter with a comma",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The, the answer is yes."
+  },
+  {
+    "name": "clean keeps a repeated pronoun",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I told you you were right."
+  },
+  {
+    "name": "clean keeps it it",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "When I saw it it was broken."
+  },
+  {
+    "name": "clean keeps polish i i",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Zmienne i i j są indeksami."
+  },
+  {
+    "name": "clean keeps my my",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "My my, how you have grown."
+  },
+  {
+    "name": "clean keeps a double across a line",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Read the\nthe report"
+  },
+  {
+    "name": "clean keeps no no no",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "No, no, no."
+  },
+  {
+    "name": "clean a time keeps its sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Meet at 3 p.m. Bring snacks. Scratch that. Bring drinks."
+  },
+  {
+    "name": "clean a question keeps its answer",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Are we shipping today? No. Scratch that. Yes."
+  },
+  {
+    "name": "clean a number ends a sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We meet at 5. Scratch that. We meet at 6."
+  },
+  {
+    "name": "clean a title does not end a sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I met Dr. Smith today. Scratch that. I met nobody."
+  },
+  {
+    "name": "clean capitalizes after a short sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Can we ship? No. Uh, not yet."
+  },
+  {
+    "name": "clean a lone filler sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "He said no. Uh. Then he left."
+  },
+  {
+    "name": "clean every scratch that",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I will scratch that off the list, scratch that, I will keep it."
+  },
+  {
+    "name": "clean crlf paragraphs",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First paragraph.\r\n\r\nUh, second paragraph."
+  },
+  {
+    "name": "clean dictionary words are kept",
+    "dictionary": [
+      {
+        "spoken": "the the",
+        "written": "The The",
+        "inflects": false,
+        "allowsPhoneticMatching": false
+      }
+    ],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I love The The band."
+  },
+  {
+    "name": "clean dictionary filler words are kept",
+    "dictionary": [
+      {
+        "spoken": "hmm labs",
+        "written": "Hmm Labs",
+        "inflects": false,
+        "allowsPhoneticMatching": false
+      }
+    ],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I work at Hmm Labs."
+  },
+  {
+    "name": "clean meeting keeps an interjection",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "spokenCorrections": false,
+    "input": "Hmm?"
+  },
+  {
+    "name": "clean dangling um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ship it, um"
+  },
+  {
+    "name": "clean two fillers in a row",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ship it, um uh, now"
   }
 ]

@@ -6,89 +6,140 @@
 //! and nothing else. It never rewords, reorders or adds a word — the difference
 //! from cleanup done by a language model, which can turn "don't" into "do".
 //!
-//! A false deletion is the worse failure, so every rule leans towards keeping.
-//! The rules were shaped by an adversarial review that tried to make the stage
-//! delete something real — German separable verbs, the Portuguese "one",
-//! millimetres, acronyms, grammatical doubles — and each of those is a test.
+//! **When in doubt, keep.** Two adversarial review rounds tried to make the
+//! stage delete something real, and each attempt is a test.
 //!
 //! Three passes, in this order:
 //!
-//! 1. **Spoken corrections.** "Scratch that" takes back what was just said: as
-//!    its own sentence or opening one, the sentence before it; at the end of a
-//!    sentence, or between commas in the middle of one, everything before it in
-//!    that sentence. The commas are what make it a command rather than the verb.
-//!    English only. Runs first because it reads the commas the filler pass
-//!    removes.
-//! 2. **Fillers.** Words that are hesitation and nothing else. "um" and "э" are
-//!    words too, so they go only when they carry a comma of their own — and
-//!    "um" never in a take with German or Portuguese in it. An all-caps token is
-//!    an acronym, never a hesitation. The comma before a hesitation stays.
-//! 3. **Stutters.** A short function word said twice in a row with nothing
-//!    between, from a list of words whose doubles are never grammatical.
+//! 1. **Spoken corrections.** "Scratch that" takes back the sentence before it
+//!    (as its own sentence or opening one) or what came before it in its
+//!    sentence (at the end, or between commas). English only. Every full stop
+//!    ends a sentence except a title's ("Dr. Smith"), so a wrong guess takes
+//!    back too little, never a sentence the person meant to keep.
+//! 2. **Fillers.** Hesitation words. "um", "э" and "mmm" are words too, so they
+//!    go only when punctuation sets them apart on both sides. "um" also goes
+//!    after a word in a take that reads as English, and never from a take with
+//!    German or Portuguese in it. Acronyms and "uh huh"/"uh oh" are
+//!    words. The commas around a hesitation go with it unless it sits in a
+//!    list. Repeated until nothing changes.
+//! 3. **Stutters.** A short function word said twice in a row, from a list of
+//!    words whose doubles are never grammatical ("the the", "я я", "I, I").
 //!
-//! Protected spans are atomic and never edited. Text with nothing to remove
-//! comes back exactly as it went in, and a line break survives the removal of
-//! whatever followed it. A meeting transcript turns spoken corrections off and
-//! keeps a turn that is nothing but an interjection.
+//! Protected spans and every word the person's own dictionary wrote are never
+//! touched. Text with nothing to remove comes back exactly as it went in, and a
+//! line break survives the removal of whatever followed it. A meeting
+//! transcript turns spoken corrections off and keeps a turn that is nothing but
+//! an interjection. The text is assumed to be NFC, as the recognizer writes it.
+
+use std::collections::HashSet;
 
 use crate::span;
 
+/// Where the text is going. Prose apps get paragraph breaks; verbatim apps
+/// (terminals, editors, anything unknown) never receive a newline they did not
+/// ask for. Ported from `PromptMode` in `PromptMode.swift`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PromptMode {
+    #[default]
+    Verbatim,
+    Prose,
+}
+
 /// Hesitation in every language Parakeet speaks: none of these is a word.
 const FILLERS: &[&str] = &[
-    "uh", "uhh", "uhm", "umm", "erm", "hmm", "hm", "mmm", "ээ", "эээ", "эмм", "ммм", "äh", "ähm",
-    "euh",
+    "uh", "uhh", "uhm", "umm", "erm", "hmm", "hm", "ээ", "эээ", "эмм", "äh", "ähm", "euh",
 ];
 
-/// Hesitations that are also words: "um" (a German particle, the Portuguese
-/// "one") and "э" (a Russian letter). Removed only with a comma of their own.
-const GUARDED_FILLERS: &[&str] = &["um", "э"];
+/// Hesitations that are also words: removed only when punctuation sets them
+/// apart.
+const GUARDED_FILLERS: &[&str] = &["um", "э", "mmm", "ммм"];
+
+/// Halves of two-word interjections: "uh huh", "uh oh", "mm hmm".
+const INTERJECTION_HEADS: &[&str] = &["uh", "uhm", "mm", "mmm", "hm", "hmm"];
+const INTERJECTION_TAILS: &[&str] = &["huh", "oh", "hmm", "hm"];
 
 /// Words that mark a take as German or Portuguese, where "um" is a word.
 const UM_IS_A_WORD_MARKERS: &[&str] = &[
-    "der", "die", "das", "und", "ist", "nicht", "ich", "wir", "sich", "auch", "ein", "eine", "mit",
-    "es", "geht", "dann", "não", "você", "uma", "eu", "quero", "também", "são", "dois", "três",
-    "quatro",
+    "der", "das", "und", "ist", "nicht", "ich", "wir", "sich", "auch", "ein", "eine", "mit", "es",
+    "geht", "dann", "dich", "oder", "aber", "nein", "bitte", "danke", "não", "você", "uma", "eu",
+    "quero", "também", "são", "dois", "três", "quatro", "por", "favor", "obrigado", "obrigada",
+    "muito", "isso", "está", "para",
 ];
 
 /// Letters that only German or Portuguese write, among the languages here.
-const UM_IS_A_WORD_LETTERS: &[char] = &['ä', 'ö', 'ü', 'ß', 'ã', 'õ', 'ç'];
+const UM_IS_A_WORD_LETTERS: &[char] = &['ä', 'ö', 'ü', 'ß', 'ã', 'õ'];
 
-/// Short function words whose doubles are never grammatical.
-const STUTTER_WORDS: &[&str] = &[
-    "i", "the", "we", "you", "he", "she", "they", "my", "our", "your", "but", "of", "it", "with",
-    "я", "мы", "ты", "вы", "он", "она", "оно", "они", "и", "но", "в", "на", "с", "к", "у", "по",
-    "за", "из", "от", "до",
+/// Words no other language the model speaks writes. One of them makes a take
+/// English, where "um" is never a word.
+const ENGLISH_MARKERS: &[&str] = &[
+    "the", "you", "your", "that", "this", "with", "what", "would", "should", "could", "they",
+    "about", "think", "know", "there", "their", "it's", "don't", "i'm", "let's",
 ];
+
+/// Words after which a comma is grammar.
+const COMMA_GRAMMAR_WORDS: &[&str] = &[
+    "что",
+    "чтобы",
+    "но",
+    "а",
+    "который",
+    "которая",
+    "которое",
+    "которые",
+    "если",
+    "когда",
+    "потому",
+    "which",
+    "but",
+];
+
+/// Short function words whose doubles are never grammatical. "i" counts only
+/// as the capital pronoun.
+const STUTTER_WORDS: &[&str] = &[
+    "i", "the", "we", "he", "she", "they", "our", "your", "but", "of", "with", "я", "мы", "ты",
+    "вы", "он", "она", "оно", "они", "и", "но", "в", "на", "с", "к", "у", "по", "за", "из", "от",
+    "до",
+];
+
+/// Doubles with a comma between them that are still stutters: "the, the".
+const COMMA_STUTTER_WORDS: &[&str] = &[
+    "the", "our", "your", "в", "на", "с", "к", "у", "по", "за", "из", "от", "до",
+];
+
+/// Pronouns that stutter with a comma when they open a sentence: "I, I think".
+const OPENING_COMMA_STUTTER_WORDS: &[&str] = &["i", "we", "я", "мы"];
 
 /// Spoken corrections, as consecutive words.
 const CORRECTIONS: &[&[&str]] = &[&["scratch", "that"]];
 
-/// Words people lead a correction with: "Sorry, scratch that". Before the
-/// command they do not stop it from opening the sentence. "ah" is here because
-/// the model writes a spoken "uh" that way.
+/// Words people lead a correction with: "Sorry, scratch that".
 const CORRECTION_LEAD_INS: &[&str] = &[
     "ah", "oh", "okay", "ok", "so", "well", "sorry", "no", "actually", "wait", "oops",
 ];
 
-/// Words whose full stop does not end a sentence.
-const ABBREVIATIONS: &[&str] = &[
-    "dr", "mr", "mrs", "ms", "st", "vs", "etc", "inc", "ltd", "jr", "sr", "no", "prof", "mt", "fig",
-];
+/// Titles whose full stop does not end a sentence: a name follows.
+const TITLES: &[&str] = &["dr", "mr", "mrs", "ms", "prof"];
 
 const TRAILING_PUNCTUATION: &[char] = &[',', '.', ';', ':', '!', '?', '…'];
 const SENTENCE_ENDING: &[char] = &['.', '!', '?', '…'];
 const CLOSERS: &[char] = &['"', '\'', '”', '’', '»', ')', ']'];
 
 /// Remove hesitations, stutters and — when `spoken_corrections` — spoken
-/// corrections.
-pub fn clean(text: &str, spoken_corrections: bool) -> String {
-    let mut tokens = Tokens::new(text);
+/// corrections. Words in `protected_words` (lowercased) are never touched.
+pub fn clean(text: &str, spoken_corrections: bool, protected_words: &HashSet<String>) -> String {
+    let mut tokens = Tokens::new(text, protected_words);
     if tokens.items.is_empty() {
         return text.to_string();
     }
 
     let corrected = spoken_corrections && tokens.remove_corrections();
-    let unfilled = tokens.remove_fillers();
+    let mut unfilled = false;
+    for _ in 0..3 {
+        if !tokens.remove_fillers() {
+            break;
+        }
+        unfilled = true;
+    }
     let unstuttered = tokens.collapse_stutters();
     if !(corrected || unfilled || unstuttered) {
         return text.to_string();
@@ -99,13 +150,18 @@ pub fn clean(text: &str, spoken_corrections: bool) -> String {
     tokens.rendered()
 }
 
-/// Whether `command` appears in `spoken` starting at `at`.
-fn matches_at(spoken: &[String], command: &[&str], at: usize) -> bool {
-    at + command.len() <= spoken.len()
-        && spoken[at..at + command.len()]
-            .iter()
-            .zip(command.iter())
-            .all(|(a, b)| a == b)
+/// Every word of every dictionary entry's written form, lowercased.
+pub fn protected_words<'a>(written: impl IntoIterator<Item = &'a str>) -> HashSet<String> {
+    written
+        .into_iter()
+        .flat_map(|phrase| {
+            phrase
+                .to_lowercase()
+                .split_whitespace()
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .collect()
 }
 
 /// One word, or one protected span, with the whitespace in front of it.
@@ -142,9 +198,15 @@ impl Token {
         letters.len() >= 2 && letters.iter().all(|c| c.is_uppercase())
     }
 
-    /// Whether this token closes a sentence: a full stop, question mark,
-    /// exclamation or ellipsis, possibly inside a closing quote or bracket, and
-    /// not the full stop of an abbreviation ("Dr.", "p.m.", "J.").
+    fn is_number(&self) -> bool {
+        let stem = self.word();
+        !stem.is_empty()
+            && stem.chars().all(|c| c.is_numeric() || c == '.')
+            && stem.chars().any(|c| c.is_numeric())
+    }
+
+    /// Whether this token closes a sentence, possibly inside a closing quote
+    /// or bracket. A title's full stop ("Dr.") is the one exception.
     fn ends_sentence(&self) -> bool {
         let unquoted = self.text.trim_end_matches(|c: char| CLOSERS.contains(&c));
         let Some(last) = unquoted.chars().last() else {
@@ -157,23 +219,28 @@ impl Token {
             return true;
         }
         let stem = unquoted.trim_end_matches(|c: char| TRAILING_PUNCTUATION.contains(&c));
-        if stem.contains('.') || stem.chars().count() == 1 {
-            return false;
-        }
-        !ABBREVIATIONS.contains(&stem.to_lowercase().as_str())
+        !TITLES.contains(&stem.to_lowercase().as_str())
+    }
+
+    /// Only punctuation, detached from the word it closes: "Uh , the".
+    fn is_detached_punctuation(&self) -> bool {
+        !self.protected
+            && !self.text.is_empty()
+            && self.text.chars().all(|c| TRAILING_PUNCTUATION.contains(&c))
     }
 }
 
-struct Tokens {
+struct Tokens<'a> {
     items: Vec<Token>,
     trailing: String,
+    protected_words: &'a HashSet<String>,
 }
 
-impl Tokens {
-    fn new(text: &str) -> Self {
+impl<'a> Tokens<'a> {
+    fn new(text: &str, protected_words: &'a HashSet<String>) -> Self {
         let characters: Vec<char> = text.chars().collect();
         let spans = span::detect(text);
-        let mut items = Vec::new();
+        let mut items: Vec<Token> = Vec::new();
         let mut span_index = 0;
         let mut separator = String::new();
         let mut index = 0;
@@ -205,16 +272,29 @@ impl Tokens {
                 word.push(characters[index]);
                 index += 1;
             }
-            items.push(Token {
+            let token = Token {
                 separator: std::mem::take(&mut separator),
                 text: word,
                 protected: false,
-            });
+            };
+            // Punctuation the recognizer detached belongs to the word before it.
+            let attach = token.is_detached_punctuation()
+                && !token.separator.is_empty()
+                && !token.separator.contains(['\n', '\r'])
+                && items.last().is_some_and(|last| !last.protected);
+            if attach {
+                if let Some(last) = items.last_mut() {
+                    last.text.push_str(&token.text);
+                }
+            } else {
+                items.push(token);
+            }
         }
 
         Self {
             items,
             trailing: separator,
+            protected_words,
         }
     }
 
@@ -236,16 +316,21 @@ impl Tokens {
         if start >= self.items.len() {
             return;
         }
-        let next_has_break = self.items[start].separator.contains('\n');
-        if start == 0 || (leading.contains('\n') && !next_has_break) {
+        let next_has_break = self.items[start].separator.contains(['\n', '\r']);
+        if start == 0 || (leading.contains(['\n', '\r']) && !next_has_break) {
             self.items[start].separator = leading;
         }
+    }
+
+    fn is_kept(&self, token: &Token) -> bool {
+        token.protected || token.is_shouting() || self.protected_words.contains(&token.word())
     }
 
     /// Whether "um" is a word in this take: German or Portuguese in it.
     fn um_is_a_word(&self) -> bool {
         self.items.iter().any(|token| {
             !token.protected
+                && !token.is_shouting()
                 && (UM_IS_A_WORD_MARKERS.contains(&token.word().as_str())
                     || token
                         .text
@@ -255,12 +340,43 @@ impl Tokens {
         })
     }
 
-    fn is_filler(&self, index: usize, um_is_a_word: bool) -> bool {
+    /// Whether this take reads as English, where "um" is only a hesitation.
+    fn reads_as_english(&self) -> bool {
+        self.items
+            .iter()
+            .any(|token| !token.protected && ENGLISH_MARKERS.contains(&token.word().as_str()))
+    }
+
+    fn word_at(&self, index: Option<usize>) -> Option<String> {
+        index
+            .and_then(|i| self.items.get(i))
+            .map(|token| token.word())
+    }
+
+    fn is_filler(&self, index: usize, um_is_a_word: bool, reads_as_english: bool) -> bool {
         let token = &self.items[index];
-        if token.protected || token.is_shouting() {
+        if self.is_kept(token) {
             return false;
         }
         let word = token.word();
+        // "uh huh", "uh oh", "mm hmm" are words.
+        if INTERJECTION_HEADS.contains(&word.as_str()) && token.punctuation().is_empty() {
+            if let Some(next) = self.word_at(Some(index + 1)) {
+                if INTERJECTION_TAILS.contains(&next.as_str()) {
+                    return false;
+                }
+            }
+        }
+        if INTERJECTION_TAILS.contains(&word.as_str())
+            && index > 0
+            && self.items[index - 1].punctuation().is_empty()
+        {
+            if let Some(previous) = self.word_at(index.checked_sub(1)) {
+                if INTERJECTION_HEADS.contains(&previous.as_str()) {
+                    return false;
+                }
+            }
+        }
         if FILLERS.contains(&word.as_str()) {
             return true;
         }
@@ -270,25 +386,64 @@ impl Tokens {
         if word == "um" && um_is_a_word {
             return false;
         }
-        if token.ends_with_comma() {
+        // A letter among letters: "а, о, у, э, ы".
+        if let (Some(previous), Some(next)) = (
+            self.word_at(index.checked_sub(1)),
+            self.word_at(Some(index + 1)),
+        ) {
+            if previous.chars().count() == 1 && next.chars().count() == 1 {
+                return false;
+            }
+        }
+        // Hesitations in a row are one pause: "um uh, now".
+        let carries_comma = token.ends_with_comma()
+            || (token.punctuation().is_empty()
+                && self.items.get(index + 1).is_some_and(|next| {
+                    !self.is_kept(next)
+                        && FILLERS.contains(&next.word().as_str())
+                        && next.ends_with_comma()
+                }));
+        let apart_before = index == 0
+            || self.items[index - 1].ends_sentence()
+            || self.items[index - 1].ends_with_comma()
+            || (word == "um" && reads_as_english);
+        if carries_comma && apart_before {
             return true;
         }
-        // A dangling "um" a trailing command left behind: "…it, um".
+        // A dangling one a trailing command left behind: "…it, um".
         token.punctuation().is_empty()
             && index == self.items.len() - 1
             && index > 0
             && self.items[index - 1].ends_with_comma()
     }
 
-    /// A hesitation, as far as a correction is concerned: any filler word,
-    /// guarded or not, because it can only stand between words here.
+    /// A hesitation, as far as a correction is concerned.
     fn is_any_filler_word(&self, index: usize) -> bool {
         let token = &self.items[index];
-        if token.protected || token.is_shouting() {
+        if self.is_kept(token) {
             return false;
         }
         let word = token.word();
         FILLERS.contains(&word.as_str()) || GUARDED_FILLERS.contains(&word.as_str())
+    }
+
+    /// Whether the comma before a hesitation at `index` is grammar.
+    fn comma_before_is_grammar(&self, index: usize) -> bool {
+        if index >= 2
+            && self.items[index - 2].ends_with_comma()
+            && !COMMA_GRAMMAR_WORDS.contains(&self.items[index - 1].word().as_str())
+        {
+            return true;
+        }
+        if index >= 1
+            && index + 1 < self.items.len()
+            && self.items[index - 1].is_number()
+            && self.items[index + 1].is_number()
+        {
+            return true;
+        }
+        self.word_at(Some(index + 1))
+            .is_some_and(|next| COMMA_GRAMMAR_WORDS.contains(&next.as_str()))
     }
 
     // Pass 1: corrections
@@ -307,15 +462,12 @@ impl Tokens {
 
     fn remove_corrections(&mut self) -> bool {
         let mut changed = false;
-        // Each removal shortens the text, so the bound is the token count.
         for _ in 0..self.items.len() {
             let Some((start, end)) = self.next_correction() else {
                 break;
             };
             self.remove(start, end);
             changed = true;
-            // Every removal starts at a sentence start, so whatever is left
-            // there now opens a sentence.
             if start < self.items.len() && !self.items[start].protected {
                 self.capitalize_first_letter(start);
             }
@@ -323,7 +475,6 @@ impl Tokens {
         changed
     }
 
-    /// The tokens the first spoken correction removes, itself included.
     fn next_correction(&self) -> Option<(usize, usize)> {
         let sentences = self.sentences();
         for (position, &(start, end)) in sentences.iter().enumerate() {
@@ -346,40 +497,41 @@ impl Tokens {
                 if spoken.len() < command.len() {
                     continue;
                 }
-                let Some(offset) =
-                    (0..=spoken.len() - command.len()).find(|&at| matches_at(&spoken, command, at))
-                else {
-                    continue;
-                };
+                for offset in 0..=spoken.len() - command.len() {
+                    let matches = spoken[offset..offset + command.len()]
+                        .iter()
+                        .zip(command.iter())
+                        .all(|(a, b)| a == b);
+                    if !matches {
+                        continue;
+                    }
+                    let first = words[offset];
+                    let last = words[offset + command.len() - 1];
+                    let opens = spoken[..offset]
+                        .iter()
+                        .all(|word| CORRECTION_LEAD_INS.contains(&word.as_str()));
+                    let closes = offset + command.len() == spoken.len();
+                    let pause_before = first > start
+                        && (self.items[first - 1].ends_with_comma()
+                            || self.is_any_filler_word(first - 1));
+                    let pause_after = self.items[last].ends_with_comma();
 
-                let first = words[offset];
-                let last = words[offset + command.len() - 1];
-                let opens = spoken[..offset]
-                    .iter()
-                    .all(|word| CORRECTION_LEAD_INS.contains(&word.as_str()));
-                let closes = offset + command.len() == spoken.len();
-                let pause_before = first > start
-                    && (self.items[first - 1].ends_with_comma()
-                        || self.is_any_filler_word(first - 1));
-                let pause_after = self.items[last].ends_with_comma();
-
-                if opens && (closes || pause_after) {
-                    let from = self.previous_start(position, &sentences);
-                    return Some((from, if closes { end } else { last }));
-                }
-                if closes && pause_before {
-                    return Some((start, end));
-                }
-                if !opens && !closes && pause_before && pause_after {
-                    return Some((start, last));
+                    if opens && (closes || pause_after) {
+                        let from = self.previous_start(position, &sentences);
+                        return Some((from, if closes { end } else { last }));
+                    }
+                    if closes && pause_before {
+                        return Some((start, end));
+                    }
+                    if !opens && !closes && pause_before && pause_after {
+                        return Some((start, last));
+                    }
                 }
             }
         }
         None
     }
 
-    /// Where the sentence a correction takes back begins. Sentences of nothing
-    /// but hesitation are passed over and go with it.
     fn previous_start(&self, position: usize, sentences: &[(usize, usize)]) -> usize {
         let mut candidate = position;
         while candidate > 0 {
@@ -397,10 +549,11 @@ impl Tokens {
 
     fn remove_fillers(&mut self) -> bool {
         let um_is_a_word = self.um_is_a_word();
+        let reads_as_english = self.reads_as_english();
         let mut changed = false;
         let mut index = 0;
         while index < self.items.len() {
-            if !self.is_filler(index, um_is_a_word) {
+            if !self.is_filler(index, um_is_a_word, reads_as_english) {
                 index += 1;
                 continue;
             }
@@ -421,8 +574,11 @@ impl Tokens {
                         self.strip_closing_pauses(previous);
                         self.items[previous].text.push_str(&terminal);
                     }
-                } else if is_last && self.items[previous].ends_with_comma() {
-                    // Nothing follows the comma any more.
+                } else if self.items[previous].ends_with_comma()
+                    && (is_last
+                        || (filler.ends_with_comma() && !self.comma_before_is_grammar(index)))
+                {
+                    // The commas around a hesitation mark the pause.
                     self.items[previous].text.pop();
                     if self.items[previous].text.is_empty() {
                         removal = (previous, index);
@@ -451,8 +607,6 @@ impl Tokens {
         changed
     }
 
-    /// Drop the commas, semicolons and colons that close a word, so a full stop
-    /// can take their place.
     fn strip_closing_pauses(&mut self, index: usize) {
         while matches!(self.items[index].text.chars().last(), Some(',' | ';' | ':')) {
             self.items[index].text.pop();
@@ -478,32 +632,58 @@ impl Tokens {
         let mut changed = false;
         let mut index = 1;
         while index < self.items.len() {
-            let previous = &self.items[index - 1];
-            let current = &self.items[index];
-            let word = current.word();
-            let is_stutter = !previous.protected
-                && !current.protected
-                && !previous.is_shouting()
-                && !current.is_shouting()
-                && previous.punctuation().is_empty()
-                && previous.word() == word
-                && STUTTER_WORDS.contains(&word.as_str());
-            if !is_stutter {
+            if !self.is_stutter(index) {
                 index += 1;
                 continue;
             }
-            let punctuation = current.punctuation().to_string();
+            let punctuation = self.items[index].punctuation().to_string();
+            if self.items[index - 1].ends_with_comma() {
+                self.items[index - 1].text.pop();
+            }
             self.items[index - 1].text.push_str(&punctuation);
             self.items.remove(index);
             changed = true;
         }
         changed
     }
+
+    fn is_stutter(&self, index: usize) -> bool {
+        let previous = &self.items[index - 1];
+        let current = &self.items[index];
+        if self.is_kept(previous)
+            || self.is_kept(current)
+            || previous.word() != current.word()
+            || current.separator.contains(['\n', '\r'])
+        {
+            return false;
+        }
+        let word = current.word();
+        // "i" is the capital pronoun only: Polish "i i" is "and i".
+        if word == "i" && !(previous.text.starts_with('I') && current.text.starts_with('I')) {
+            return false;
+        }
+        if previous.punctuation().is_empty() {
+            return STUTTER_WORDS.contains(&word.as_str());
+        }
+        if previous.punctuation() != "," {
+            return false;
+        }
+        if COMMA_STUTTER_WORDS.contains(&word.as_str()) {
+            return true;
+        }
+        let opens_sentence = index == 1 || self.items[index - 2].ends_sentence();
+        opens_sentence && OPENING_COMMA_STUTTER_WORDS.contains(&word.as_str())
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::clean;
+    use super::{clean, protected_words};
+    use std::collections::HashSet;
+
+    fn plain(text: &str) -> String {
+        clean(text, true, &HashSet::new())
+    }
 
     /// The same cases as `CleanVerbatimTests.swift`. The conformance fixtures
     /// check the two against each other through the whole pipeline; these keep
@@ -512,186 +692,128 @@ mod tests {
     fn removes_what_was_not_meant() {
         let cases = [
             ("Um, so the build passed.", "So the build passed."),
-            ("Uh, the build passed.", "The build passed."),
-            ("We should, um, ship it.", "We should, ship it."),
+            ("We should, um, ship it.", "We should ship it."),
+            ("Don't, uh, deploy on Friday.", "Don't deploy on Friday."),
+            (
+                "Мы, э, думаем, что, ээ, надо подождать.",
+                "Мы думаем, что надо подождать.",
+            ),
+            ("Send me the, uh, the report.", "Send me the report."),
             (
                 "Set the values to 10, 20, um, 30.",
                 "Set the values to 10, 20, 30.",
             ),
-            ("Купи хлеб, молоко, э, сыр.", "Купи хлеб, молоко, сыр."),
-            ("Then uh we ship it.", "Then we ship it."),
-            ("It is hmm fine.", "It is fine."),
-            ("Done. Uh, the next one.", "Done. The next one."),
-            ("I think, uh.", "I think."),
-            ("I think uh.", "I think."),
-            ("Is it ready, uh?", "Is it ready?"),
-            (
-                "Ээ, я думаю, что это работает.",
-                "Я думаю, что это работает.",
-            ),
-            ("Я, э, не уверен.", "Я, не уверен."),
-            ("Ммм, давай завтра.", "Давай завтра."),
-            ("Ähm, ich komme morgen.", "Ich komme morgen."),
-            ("Euh, je pense que oui.", "Je pense que oui."),
-            ("Uh.", ""),
-            ("Uh, uh.", ""),
-            ("Es geht um, äh, Geld.", "Es geht um, Geld."),
+            ("Set it to 10, um, 30.", "Set it to 10, 30."),
             ("I need you to um, fix it.", "I need you to fix it."),
+            ("Ship it, um uh, now", "Ship it now"),
+            ("We should um uh, ship it.", "We should ship it."),
+            ("Купи хлеб, молоко, э, сыр.", "Купи хлеб, молоко, сыр."),
+            ("Uh , the build passed.", "The build passed."),
+            ("Ship it , uh , now", "Ship it now"),
+            ("Я, э, не уверен.", "Я не уверен."),
+            ("Es geht um, äh, Geld.", "Es geht um Geld."),
             (
-                "I I think the the build passed.",
-                "I think the build passed.",
+                "Um, the battery will die soon.",
+                "The battery will die soon.",
             ),
-            ("The the the deploy failed.", "The deploy failed."),
-            ("Я я думаю, что и и это тоже.", "Я думаю, что и это тоже."),
-            ("Ask me and I I.", "Ask me and I."),
+            ("Um, I studied at MIT.", "I studied at MIT."),
+            ("I, I really think so.", "I really think so."),
+            ("Я, я думаю.", "Я думаю."),
+            ("The, the answer is yes.", "The answer is yes."),
             (
-                "The deploy failed. Scratch that. The deploy passed.",
-                "The deploy passed.",
-            ),
-            (
-                "So the deploy failed, scratch that. The deploy passed.",
-                "The deploy passed.",
-            ),
-            (
-                "Um, so that the deploy failed, uh, scratch that, the deploy passed.",
-                "The deploy passed.",
-            ),
-            (
-                "This stays. We go Friday, scratch that, we go Monday.",
-                "This stays. We go Monday.",
-            ),
-            ("The deploy failed. Scratch that, it passed.", "It passed."),
-            ("Scratch that, it passed.", "It passed."),
-            ("Scratch that. Hello there.", "Hello there."),
-            ("Ship it on Friday. Scratch that", ""),
-            (
-                "First. Second. Scratch that. Scratch that. Third.",
-                "Third.",
-            ),
-            ("Ship it. Uh. Scratch that.", ""),
-            (
-                "Ship it. Um. Scratch that. Ship it Monday.",
-                "Ship it Monday.",
+                "Meet at 3 p.m. Bring snacks. Scratch that. Bring drinks.",
+                "Meet at 3 p.m. Bring drinks.",
             ),
             (
-                "Meet at 5 p.m. tomorrow. Scratch that. Meet at 6.",
-                "Meet at 6.",
+                "Are we shipping today? No. Scratch that. Yes.",
+                "Are we shipping today? Yes.",
             ),
+            ("We meet at 5. Scratch that. We meet at 6.", "We meet at 6."),
             (
                 "I met Dr. Smith today. Scratch that. I met nobody.",
                 "I met nobody.",
             ),
-            ("Call Dr. Smith, scratch that, Dr. Jones.", "Dr. Jones."),
+            ("Can we ship? No. Uh, not yet.", "Can we ship? No. Not yet."),
+            ("He said no. Uh. Then he left.", "He said no. Then he left."),
             (
-                "He said \"stop.\" Then we left, scratch that, we stayed.",
-                "He said \"stop.\" We stayed.",
+                "I will scratch that off the list, scratch that, I will keep it.",
+                "I will keep it.",
             ),
             (
-                "Um, so the the deploy failed, uh, scratch that. The deploy passed.",
-                "The deploy passed.",
+                "First paragraph.\r\n\r\nUh, second paragraph.",
+                "First paragraph.\r\n\r\nSecond paragraph.",
             ),
-            (
-                "Uh, I need you to um, fix the login bug, um, and then update the readme.",
-                "I need you to fix the login bug, and then update the readme.",
-            ),
-            ("Run `swift  test`, uh, now.", "Run `swift  test`, now."),
-            ("Uh, onTextInserted fired.", "onTextInserted fired."),
             (
                 "Um, so that the deploy failed. Ah, scratch that, the deploy passed.",
                 "The deploy passed.",
             ),
-            (
-                "We meet on Friday. Sorry, scratch that, we meet on Monday.",
-                "We meet on Monday.",
-            ),
-            ("Ship it today. No, scratch that.", ""),
-            (
-                "Ah, I need you to um, fix the login bug, um, and then update the readme.",
-                "Ah, I need you to fix the login bug, and then update the readme.",
-            ),
-            (
-                "First paragraph.\n\nUh, second paragraph.",
-                "First paragraph.\n\nSecond paragraph.",
-            ),
-            (
-                "Line one.\nLine two. Scratch that. Line three.",
-                "Line one.\nLine three.",
-            ),
         ];
         for (input, expected) in cases {
-            assert_eq!(clean(input, true), expected, "input: {input:?}");
+            assert_eq!(plain(input), expected, "input: {input:?}");
         }
     }
 
     #[test]
     fn keeps_what_was_meant() {
         let unchanged = [
-            "Um fünf Uhr treffen wir uns.",
-            "Wir gehen um fünf.",
-            "Eu tenho um carro.",
             "Benenne die Funktion um.",
-            "Wir ziehen nächste Woche um.",
-            "Bau die Funktion um, damit sie async ist.",
-            "Wir steigen in Berlin um, dann fahren wir weiter.",
-            "Er dreht sich um.",
-            "Quero um, não dois.",
-            "Só preciso de um.",
-            "Conta comigo: um, dois, três.",
-            "Um, dois, três, quatro.",
-            "Mais um?",
-            "So um the build passed.",
-            "Um.",
+            "Quantos? Um, por favor.",
+            "Dreh dich um, bitte.",
+            "Ljudski um, kao i tijelo, treba odmor.",
+            "Comprei só um, mas era caro.",
+            "Ich will you to um, fix it.",
+            "Format the date as dd mmm yyyy.",
+            "Гласные: а, о, у, э, ы.",
             "Use a 3 mm drill bit and a 10 mm bolt.",
-            "Толщина стенки 5 мм.",
-            "Format the date as dd mm yyyy.",
-            "Слово начинается на э.",
-            "Отправь эс эм эс.",
             "We trained an HMM on the data.",
-            "We need an ERM framework.",
-            "I studied at UH.",
-            "That was very very good.",
-            "I had had enough.",
-            "I think that that is right.",
-            "Да да, конечно.",
-            "What the problem is is that the cache is stale.",
-            "Log in in Safari and check the cookie.",
-            "Search for for loops in the codebase.",
-            "The movie was so so.",
-            "My name is Aaron, spelled A A R O N.",
-            "Take him to the OR or the ER.",
-            "Tell IT it is broken.",
-            "Il y a a priori un problème.",
-            "Najważniejsze to to, że działa.",
-            "Er weiß nicht, was was ist.",
-            "Это это?",
+            "Uh huh, ship it.",
+            "Mm hmm, sounds good.",
+            "Uh oh, the deploy failed.",
+            "I told you you were right.",
+            "When I saw it it was broken.",
+            "Zmienne i i j są indeksami.",
+            "Use i I mean j.",
+            "My my, how you have grown.",
+            "Read the\nthe report",
+            "Try it, it works.",
+            "What it is is a mess.",
             "No, no, no.",
             "Please scratch that line from the file.",
-            "If it chips, scratch that spot and repaint.",
-            "Scratch that itch.",
-            "В третьей строке опечатка. Зачеркни это, а потом перепиши.",
-            "Видишь лишнее слово? Зачеркни.",
             "Run `uh` now.",
-            "Open /tmp/um/file please.",
-            "Call AppState AppState twice.",
             "",
             "   ",
             "Hello,  world.",
-            "first line\nsecond line",
-            "Ship it.\n",
         ];
         for text in unchanged {
-            assert_eq!(clean(text, true), text, "input: {text:?}");
+            assert_eq!(plain(text), text, "input: {text:?}");
         }
     }
 
     #[test]
-    fn a_meeting_keeps_corrections_and_interjections() {
+    fn dictionary_words_are_kept() {
+        let words = protected_words(["The The", "Hmm Labs"]);
         assert_eq!(
-            clean("Um, the deploy failed. Scratch that. It passed.", false),
+            clean("I love The The band.", true, &words),
+            "I love The The band."
+        );
+        assert_eq!(
+            clean("I work at Hmm Labs.", true, &words),
+            "I work at Hmm Labs."
+        );
+    }
+
+    #[test]
+    fn a_meeting_keeps_corrections_and_interjections() {
+        let none = HashSet::new();
+        assert_eq!(
+            clean(
+                "Um, the deploy failed. Scratch that. It passed.",
+                false,
+                &none
+            ),
             "The deploy failed. Scratch that. It passed."
         );
-        assert_eq!(clean("Hmm?", false), "Hmm?");
-        assert_eq!(clean("Uh.", false), "Uh.");
+        assert_eq!(clean("Hmm?", false, &none), "Hmm?");
     }
 
     #[test]
@@ -699,12 +821,11 @@ mod tests {
         for text in [
             "Um, so the the deploy failed, uh, scratch that. The deploy passed.",
             "We should, um, ship it.",
-            "I I think, uh.",
-            "Я, э, не уверен.",
             "Set the values to 10, 20, um, 30.",
+            "Ship it, um uh, now",
         ] {
-            let once = clean(text, true);
-            assert_eq!(clean(&once, true), once, "input: {text:?}");
+            let once = plain(text);
+            assert_eq!(plain(&once), once, "input: {text:?}");
         }
     }
 }

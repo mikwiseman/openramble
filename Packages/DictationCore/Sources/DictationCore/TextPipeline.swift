@@ -176,7 +176,11 @@ public struct TextPipeline: Sendable, TextProcessing {
 
         // Stage 5: Clean Verbatim - only deletes, so it cannot write a word
         // that was not said. `afterDictionary` stays the checkpoint before it.
-        let cleaned = CleanVerbatim.clean(afterDictionary, spokenCorrections: spokenCorrections)
+        let cleaned = CleanVerbatim.clean(
+            afterDictionary,
+            spokenCorrections: spokenCorrections,
+            protectedWords: CleanVerbatim.protectedWords(from: replacements)
+        )
 
         // Stage 7: collapsing typography outside of spans.
         let folded = TypographyFold.fold(

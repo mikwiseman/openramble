@@ -274,7 +274,12 @@ impl TextPipeline {
 
         // Stage 5: Clean Verbatim — it only deletes, so it cannot write a word
         // that was not said. `after_dictionary` stays the checkpoint before it.
-        let cleaned = clean::clean(&after_dictionary, self.spoken_corrections);
+        let protected = clean::protected_words(
+            self.replacements
+                .iter()
+                .map(|replacement| replacement.written.as_str()),
+        );
+        let cleaned = clean::clean(&after_dictionary, self.spoken_corrections, &protected);
 
         // Stage 7: folding typography outside spans.
         let folded = typography::fold(&cleaned, &span::detect(&cleaned));

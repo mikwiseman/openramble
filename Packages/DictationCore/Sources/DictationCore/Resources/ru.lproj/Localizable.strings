@@ -654,6 +654,8 @@
 "The speech model is still getting ready; this take was not discarded." = "Речевая модель ещё готовится. Эта запись сохранена.";
 "Transcribing took too long and was stopped." = "Распознавание заняло слишком много времени и остановлено.";
 "Nothing was recognized — nothing was inserted." = "Речь не распознана — текст не вставлен.";
+"Everything was taken back — nothing was inserted." = "Всё сказанное отменено — текст не вставлен.";
+"Nothing new was recognized — the text was kept." = "Ничего нового не распознано — текст сохранён.";
 "Insertion couldn't be confirmed in time. The text is saved in the menu and may already have been pasted." = "Не удалось вовремя подтвердить вставку. Текст сохранён в меню и, возможно, уже вставлен.";
 "The text was inserted, but pressing Return failed." = "Текст вставлен, но нажать Return не удалось.";
 "Text not inserted: secure input is active. Your text is saved in the menu." = "Текст не вставлен: включён защищённый ввод. Ваш текст сохранён в меню.";

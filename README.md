@@ -182,15 +182,19 @@ Application Support directory automatically. The bundle identifier remains
 - Hesitations and stutters disappear on their own: "uh", "ээ", "ähm", a
   "the the" said while the next word loads. The cleanup only ever deletes —
   it never rewords, reorders or adds a word. When a word could be real it
-  stays: "um" and "э" go only with a comma of their own and "um" never in a
-  German or Portuguese take, acronyms such as HMM stay, "mm" stays a
-  millimetre, and doubles that mean something ("what it is is", "log in in",
-  "very very", "да да") stay.
+  stays: "um" and "э" go only when commas set them apart (an English "to um,
+  fix" too) and "um" never from a German or Portuguese take, acronyms such
+  as HMM stay, "mm" stays a millimetre, words from your dictionary stay, and
+  doubles that mean something ("what it is is", "log in in", "very very",
+  "да да") stay. The commas around a hesitation go with it unless it sits in
+  a list: "10, 20, um, 30" becomes "10, 20, 30".
 - Say "Scratch that." as its own sentence to remove the sentence before it,
   or end a sentence with ", scratch that" (or put it between commas) to remove
-  what came before it in that sentence. Meeting transcripts drop hesitations
-  too but keep "scratch that" and one-word replies, because in a meeting they
-  are something a person said.
+  what came before it in that sentence. When it is unclear where a sentence
+  ended, it takes back too little rather than too much. If a take is nothing
+  but what you took back, nothing is inserted and OpenRamble says so. Meeting
+  transcripts drop hesitations too but keep "scratch that" and one-word
+  replies, because in a meeting they are something a person said.
 - Use “Copy Last as Spoken” to copy the raw recognition result before
   dictionary replacements and typography cleanup. The item appears when that
   raw text differs from what was inserted.
