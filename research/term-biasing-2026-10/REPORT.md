@@ -35,6 +35,7 @@ test, built by `scripts/build-transcribe-xcframework.sh`.
 | FLEURS utterances changed | | not counted | 62 | 16 |
 | Words invented on noise | 0 | 18 | 0 | 0 |
 | Gate (rules 1 to 4) | | failed rules 2 and 4 | passed | passed |
+| Rule 5: warm p50 with terms, idle / under load | | | | +0.5% / +1.5% |
 
 With no terms, all three runtimes give transcripts identical to upstream
 transcribe.cpp 0.4.0 on all 1,422 FLEURS utterances.
@@ -62,12 +63,17 @@ found at most 2 of 34 terms. For Russian, the app's text dictionary remains the
 tool. The speech is synthetic, so real takes may behave differently; the
 `term-recall` hook in the scorecard is for consented recordings.
 
+Rule 5 was measured for H4c in an interleaved warm run of the same runtime with
+and without the 60 terms: p50 327.8 against 326.3 ms idle and 428.1 against
+421.9 ms under load, within the 5% limit. **H4c passes all five rules and is
+adopted.**
+
 ## Still open
 
-- Rule 5: warm p50 with the vocabulary active against the control, in an
-  interleaved speed run.
-- The app wiring that hands the person's dictionary to
-  `TranscribeCppAdapter.setVocabulary`, and a runtime build that ships it,
-  which needs Mik's approval for a fork or an upstream merge.
+- The app wiring that hands the person's own dictionary to
+  `TranscribeCppAdapter.setVocabulary` is written on this branch and has a
+  unit test; it has not been compiled with the full app yet.
+- A runtime build that ships it needs Mik's approval for a fork release or an
+  upstream merge.
 - The draft upstream pull request is in [UPSTREAM_PR.md](UPSTREAM_PR.md); it
   is not opened.
