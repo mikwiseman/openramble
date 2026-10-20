@@ -556,10 +556,11 @@ def build_asr_bench(spec) -> Path:
 
 
 def vocabulary_env(spec):
-    """Terms a candidate's engine is given, one per line, from a file in the repository."""
-    if not spec.get('vocabulary'):
-        return {}
-    return {'WAI_ASR_VOCABULARY_FILE': str(REPO / spec['vocabulary'])}
+    """What a candidate's engine is given besides audio: its terms and its runtime switches."""
+    env = {str(k): str(v) for k, v in (spec.get('env') or {}).items()}
+    if spec.get('vocabulary'):
+        env['WAI_ASR_VOCABULARY_FILE'] = str(REPO / spec['vocabulary'])
+    return env
 
 
 def snapshot():
