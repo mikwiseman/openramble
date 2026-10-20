@@ -7524,5 +7524,103 @@
 
     ],
     "text" : "Ship it.\n\nSend it."
+  },
+  {
+    "afterDictionary" : "add the key to .env and restart.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "add the key to .env and restart.",
+    "name" : "dotfile env",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Add the key to .env and restart."
+  },
+  {
+    "afterDictionary" : "open .zshrc",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "open .zshrc",
+    "name" : "dotfile zshrc",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Open .zshrc"
+  },
+  {
+    "afterDictionary" : "it is listed in .gitignore",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "it is listed in .gitignore",
+    "name" : "dotfile gitignore",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "It is listed in .gitignore"
+  },
+  {
+    "afterDictionary" : "delete the .DS_Store files.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "delete the .DS_Store files.",
+    "name" : "dotfile ds store",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Delete the .DS_Store files."
+  },
+  {
+    "afterDictionary" : "we moved from .NET to Go.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "we moved from .NET to Go.",
+    "name" : "dot net",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "We moved from .NET to Go."
+  },
+  {
+    "afterDictionary" : "convert the .png files to .webp",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "convert the .png files to .webp",
+    "name" : "file extensions",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Convert the .png files to .webp"
+  },
+  {
+    "afterDictionary" : "it works .",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "it works .",
+    "name" : "stray space before a full stop",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "It works."
   }
 ]

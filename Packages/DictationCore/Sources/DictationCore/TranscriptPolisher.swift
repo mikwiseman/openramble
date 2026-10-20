@@ -137,6 +137,17 @@ public enum TranscriptPolisher {
 
             let character = characters[index]
 
+            // A dot with a space before it and a letter or digit right after
+            // opens a word — ".gitignore", ".env", ".NET" — and is not the end
+            // of the word before it. Kept as written.
+            if character == ".", index > 0, characters[index - 1] == " ",
+               let next = index + 1 < characters.count ? characters[index + 1] : nil,
+               next.isLetter || next.isNumber {
+                result.append(character)
+                index += 1
+                continue
+            }
+
             if closing.contains(character) {
                 // The space before the punctuation mark is a recognition artifact.
                 while result.last == " " { result.removeLast() }
