@@ -17,6 +17,10 @@ pub enum Outcome {
     /// The key was brushed and nothing was said. Nothing is shown: the person
     /// changed their mind, and an error would only alarm them.
     DroppedSilently,
+    /// Words were heard and cleanup took every one back ("Scratch that." on
+    /// its own). Nothing was inserted, and the take is in History with what was
+    /// heard. Worth saying, but not as a failure.
+    TakenBack,
     /// The key was held but the microphone gave nothing. Worth saying — the
     /// input is muted, dead, or held by another application.
     SilentInput,
@@ -39,6 +43,7 @@ mod tests {
     fn every_outcome_is_distinguishable() {
         assert_ne!(Outcome::Inserted, Outcome::Truncated);
         assert_ne!(Outcome::DroppedSilently, Outcome::SilentInput);
+        assert_ne!(Outcome::DroppedSilently, Outcome::TakenBack);
         assert_ne!(Outcome::Failed("a".into()), Outcome::Failed("b".into()));
     }
 }

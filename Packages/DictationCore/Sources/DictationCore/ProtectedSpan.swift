@@ -104,7 +104,7 @@ enum ProtectedSpanDetector {
 
         var cursor = openEnd
         while cursor < characters.count {
-            if characters[cursor] == "\n" { return nil }
+            if characters[cursor].unicodeScalars.contains("\n") { return nil }
             guard characters[cursor] == "`" else { cursor += 1; continue }
 
             var closeEnd = cursor

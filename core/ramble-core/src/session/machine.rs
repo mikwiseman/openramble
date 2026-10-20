@@ -30,8 +30,11 @@ pub enum Event {
     CaptureFailed,
     /// Recording stopped; this much audio was collected.
     CaptureFinished { recorded: Duration, truncated: bool },
-    /// Recognition produced text.
-    Transcribed { is_empty: bool },
+    /// Recognition finished. `heard` is whether the recogniser returned any
+    /// words; `is_empty` is whether anything is left to insert once the text
+    /// pipeline has run. Both are needed: "Scratch that." on its own is heard
+    /// and leaves nothing, which is not the same as silence.
+    Transcribed { heard: bool, is_empty: bool },
     /// Recognition failed.
     TranscriptionFailed,
     /// The text reached the other application.
@@ -59,6 +62,11 @@ pub enum Effect {
     ReportTruncated,
     /// Tell them it failed.
     ReportFailure,
+    /// Every word heard was taken back: "Scratch that." on its own, or nothing
+    /// but hesitation. Keep the take with what was heard, so a take-back the
+    /// person did not mean can be undone, and tell them nothing was inserted.
+    /// It is not a failure and must not sound like one.
+    ReportTakenBack,
 }
 
 /// The session.
@@ -118,7 +126,7 @@ impl SessionMachine {
                 recorded,
                 truncated,
             } => self.capture_finished(recorded, truncated),
-            Event::Transcribed { is_empty } => self.transcribed(is_empty),
+            Event::Transcribed { heard, is_empty } => self.transcribed(heard, is_empty),
             Event::TranscriptionFailed => self.finish(vec![Effect::ReportFailure]),
             Event::Inserted => self.finish(Vec::new()),
             Event::InsertionFailed => self.finish(vec![Effect::ReportFailure]),
@@ -185,9 +193,14 @@ impl SessionMachine {
         effects
     }
 
-    fn transcribed(&mut self, is_empty: bool) -> Vec<Effect> {
+    fn transcribed(&mut self, heard: bool, is_empty: bool) -> Vec<Effect> {
         if self.cancelled || self.state != DictationState::Transcribing {
             return self.finish(Vec::new());
+        }
+        if is_empty && heard {
+            // Words were heard and cleanup took every one back. Saying nothing
+            // would lose them; calling it an error would be wrong.
+            return self.finish(vec![Effect::ReportTakenBack]);
         }
         if is_empty {
             // Nothing was said. Silence is the honest answer; an error would
@@ -257,7 +270,13 @@ mod tests {
             vec![Effect::Transcribe]
         );
         assert_eq!(
-            machine.handle(Event::Transcribed { is_empty: false }, true),
+            machine.handle(
+                Event::Transcribed {
+                    heard: true,
+                    is_empty: false
+                },
+                true
+            ),
             vec![Effect::InsertText]
         );
         assert_eq!(machine.handle(Event::Inserted, true), vec![]);
@@ -364,7 +383,13 @@ mod tests {
             },
             true,
         );
-        machine.handle(Event::Transcribed { is_empty: false }, true);
+        machine.handle(
+            Event::Transcribed {
+                heard: true,
+                is_empty: false,
+            },
+            true,
+        );
         assert_eq!(machine.state(), DictationState::Inserting);
         assert_eq!(machine.handle(Event::CancelRequested, true), vec![]);
         assert_eq!(machine.state(), DictationState::Inserting);
@@ -384,10 +409,51 @@ mod tests {
             true,
         );
         assert_eq!(
-            machine.handle(Event::Transcribed { is_empty: true }, true),
+            machine.handle(
+                Event::Transcribed {
+                    heard: false,
+                    is_empty: true
+                },
+                true
+            ),
             vec![Effect::FinishSilently]
         );
         assert_eq!(machine.state(), DictationState::Idle);
+    }
+
+    /// "Scratch that." on its own, or nothing but hesitation: words were heard
+    /// and cleanup took every one back. That is neither silence nor a failure.
+    /// The take is kept with what was heard and the person is told, as on the
+    /// Mac.
+    #[test]
+    fn words_that_were_all_taken_back_are_kept_and_reported() {
+        let mut machine = SessionMachine::new();
+        machine.handle(Event::Pressed, true);
+        machine.handle(Event::CaptureStarted, true);
+        machine.handle(Event::Released { held: seconds(3.0) }, true);
+        machine.handle(
+            Event::CaptureFinished {
+                recorded: seconds(3.0),
+                truncated: false,
+            },
+            true,
+        );
+        assert_eq!(
+            machine.handle(
+                Event::Transcribed {
+                    heard: true,
+                    is_empty: true
+                },
+                true
+            ),
+            vec![Effect::ReportTakenBack]
+        );
+        assert_eq!(machine.state(), DictationState::Idle);
+        // And the next dictation can still start.
+        assert_eq!(
+            machine.handle(Event::Pressed, true),
+            vec![Effect::StartCapture]
+        );
     }
 
     #[test]
@@ -441,7 +507,13 @@ mod tests {
                 },
                 true,
             );
-            machine.handle(Event::Transcribed { is_empty: false }, true);
+            machine.handle(
+                Event::Transcribed {
+                    heard: true,
+                    is_empty: false,
+                },
+                true,
+            );
             machine.handle(ending, true);
             assert_eq!(machine.state(), DictationState::Idle, "{ending:?}");
             assert!(!machine.is_capturing(), "{ending:?}");

@@ -15,10 +15,18 @@ import RambleCore
 struct SharedCorePipeline: TextProcessing {
     let replacements: [DictionaryReplacement]
     let allowPressReturnCommand: Bool
+    /// "Scratch that" removes a sentence when dictating; a meeting transcript
+    /// keeps what was said.
+    let spokenCorrections: Bool
 
-    init(replacements: [DictionaryReplacement], allowPressReturnCommand: Bool = false) {
+    init(
+        replacements: [DictionaryReplacement],
+        allowPressReturnCommand: Bool = false,
+        spokenCorrections: Bool = true
+    ) {
         self.replacements = replacements
         self.allowPressReturnCommand = allowPressReturnCommand
+        self.spokenCorrections = spokenCorrections
     }
 
     func run(_ recognized: String) -> TextPipeline.Run {
@@ -35,7 +43,8 @@ struct SharedCorePipeline: TextProcessing {
                 )
             },
             allowPressReturnCommand: allowPressReturnCommand,
-            phoneticMatching: true
+            phoneticMatching: true,
+            spokenCorrections: spokenCorrections
         )
 
         return TextPipeline.Run(

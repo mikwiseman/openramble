@@ -1784,6 +1784,18 @@ public final class AppState: ObservableObject {
                 let text = self?.makePipeline().run(result.text).output.text ?? result.text
                 await MainActor.run {
                     guard let self, let store = self.historyStore else { return }
+                    // An empty run keeps the words already there rather than
+                    // blanking a record of something the person said.
+                    guard !text.isEmpty else {
+                        let heard = !result.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        self.notify(DictationNotice(
+                            kind: .info,
+                            message: heard
+                                ? L10n.tr("Nothing left after cleanup — the text was kept.")
+                                : L10n.tr("Nothing new was recognized — the text was kept.")
+                        ))
+                        return
+                    }
                     self.history = (try? store.replaceText(text, for: entry)) ?? self.history
                 }
             } catch {
@@ -3388,7 +3400,9 @@ public final class AppState: ObservableObject {
         transcribingRecordingID = id
         let incompleteAudio = directory.appending(path: MeetingWriter.audioFileName, directoryHint: .notDirectory)
         let transcriber = self.transcriber
-        let pipeline = makePipeline()
+        // Fillers go, as in dictation; "scratch that" stays, because in a
+        // meeting it is something a person said about their own words.
+        let pipeline = makePipeline(spokenCorrections: false)
         let arbiter = engineArbiter
         transcriptionQueue = MeetingTranscriptionQueue(
             read: { segment in
@@ -4423,7 +4437,7 @@ public final class AppState: ObservableObject {
     /// There were two paths, and they were already diverging - the replay was losing `output.command`.
     /// Generic assembly makes "both paths are the same" a property of the code, not something that
     /// must be remembered when ruling one of two places.
-    private func makePipeline() -> any TextProcessing {
+    private func makePipeline(spokenCorrections: Bool = true) -> any TextProcessing {
         // Safe built-in technical vocabulary is part of recognition, not a
         // hidden setup chore. Personal entries win when they use the same
         // heard spelling.
@@ -4435,7 +4449,8 @@ public final class AppState: ObservableObject {
         // corpus.
         TrailingSpacePipeline(
             wrapped: SharedCorePipeline(
-                replacements: StarterDictionary.missing(from: replacements) + replacements
+                replacements: StarterDictionary.missing(from: replacements) + replacements,
+                spokenCorrections: spokenCorrections
             ),
             appendsSpace: appendsTrailingSpace
         )

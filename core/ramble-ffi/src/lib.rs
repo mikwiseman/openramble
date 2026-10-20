@@ -437,11 +437,13 @@ pub fn process_text(
     replacements: Vec<FfiReplacement>,
     allow_press_return_command: bool,
     phonetic_matching: bool,
+    spoken_corrections: bool,
 ) -> FfiTextResult {
     let pipeline = TextPipeline {
         replacements: replacements.into_iter().map(Into::into).collect(),
         allow_press_return_command,
         phonetic_matching,
+        spoken_corrections,
     };
     let run = pipeline.run(&recognized);
     FfiTextResult {
@@ -513,6 +515,7 @@ mod tests {
             "  \u{0441}\u{043C}\u{043E}\u{0442}\u{0440}\u{0438} TextPipeline.Output  ".to_string(),
             Vec::new(),
             false,
+            true,
             true,
         );
         assert_eq!(

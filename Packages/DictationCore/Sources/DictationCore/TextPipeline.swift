@@ -99,15 +99,15 @@ public protocol TextProcessing: Sendable {
 /// | 2 | dictionary: exact pass | literal dictionary entries, with cases |
 /// | 3 | span detection | first calculation of protected pieces |
 /// | 4 | dictionary: phonetic selection | guesses - only outside of spans |
-/// | 5 | *(language model cleaning)* | **reserved**, no stage in this wave |
+/// | 5 | Clean Verbatim | deletes hesitations, stutters, spoken corrections - never rewords; spans are atomic |
 /// | 6 | *(snippets)* | **reserved**, no stage in this wave |
 /// | 7 | typography-fold | 12 characters, no spans |
 /// | 8 | polisher | spaces, punctuation, first letter - outside of spans |
 /// | 9 | materialize `.newLine` | strictly last: polisher trims `\n` |
 ///
-/// Stages 5 and 6 are reserved **comment, not code**: a stub that
-/// does nothing - a ceremony, not a contract. When they appear they stand up
-/// between 4 and 7, and the span gate will pick them up itself.
+/// Stage 6 is reserved as a **comment, not code**: a stub that does nothing -
+/// a ceremony, not a contract. When it appears it stands between 5 and 7, and
+/// the span gate will pick it up itself.
 ///
 /// The key to the entire protection model: **exact replacement comes before spans at all
 /// exist**. This is the rule “the clear will of a person is higher than the protection of span” -
@@ -147,15 +147,48 @@ public struct TextPipeline: Sendable, TextProcessing {
     /// Phonetic selection switch - exists for the purpose of measuring “is it necessary
     /// it’s generally on top of the acoustic prompt” (WAI_EVAL_PIPELINE=exact).
     private let phoneticMatching: Bool
+    /// "Scratch that" removes a sentence when dictating; a meeting transcript
+    /// keeps what was said. See `CleanVerbatim`.
+    private let spokenCorrections: Bool
 
     public init(
         replacements: [DictionaryReplacement] = [],
         allowPressReturnCommand: Bool = false,
-        phoneticMatching: Bool = true
+        phoneticMatching: Bool = true,
+        spokenCorrections: Bool = true
     ) {
         self.replacements = replacements
         self.allowPressReturnCommand = allowPressReturnCommand
         self.phoneticMatching = phoneticMatching
+        self.spokenCorrections = spokenCorrections
+    }
+
+    /// Stages 2-8: everything between the command parser and the newline.
+    private func transform(_ text: String) -> (afterDictionary: String, polished: String) {
+        // Stage 2: exact pass - before spans exist.
+        let exact = DictionaryReplacements.applyExact(replacements, to: text)
+        // Stage 3: the first calculation of spans is based on the result of exact replacements.
+        let spansAfterExact = ProtectedSpanDetector.detect(in: exact)
+        // Stage 4: phonetic selection outside of spans.
+        let afterDictionary = phoneticMatching
+            ? DictionaryReplacements.applyPhonetic(replacements, to: exact, protecting: spansAfterExact)
+            : exact
+
+        // Stage 5: Clean Verbatim - only deletes, so it cannot write a word
+        // that was not said. `afterDictionary` stays the checkpoint before it.
+        let cleaned = CleanVerbatim.clean(
+            afterDictionary,
+            spokenCorrections: spokenCorrections,
+            protectedWords: CleanVerbatim.protectedWords(from: replacements)
+        )
+
+        // Stage 7: collapsing typography outside of spans.
+        let folded = TypographyFold.fold(
+            cleaned,
+            protecting: ProtectedSpanDetector.detect(in: cleaned)
+        )
+        // Stage 8: polisher (recalculates spans itself).
+        return (afterDictionary, TranscriptPolisher.polish(folded))
     }
 
     public func process(_ recognized: String) -> Output {
@@ -177,22 +210,16 @@ public struct TextPipeline: Sendable, TextProcessing {
             parsed = TrailingCommandParser.Result(text: recognized, command: nil)
         }
 
-        // Stage 2: exact pass - before spans exist.
-        let exact = DictionaryReplacements.applyExact(replacements, to: parsed.text)
-        // Stage 3: the first calculation of spans is based on the result of exact replacements.
-        let spansAfterExact = ProtectedSpanDetector.detect(in: exact)
-        // Stage 4: phonetic selection outside of spans.
-        let afterDictionary = phoneticMatching
-            ? DictionaryReplacements.applyPhonetic(replacements, to: exact, protecting: spansAfterExact)
-            : exact
-
-        // Stage 7: collapsing typography outside of spans.
-        let folded = TypographyFold.fold(
-            afterDictionary,
-            protecting: ProtectedSpanDetector.detect(in: afterDictionary)
-        )
-        // Stage 8: polisher (recalculates spans itself).
-        let polished = TranscriptPolisher.polish(folded)
+        var stages = transform(parsed.text)
+        if stages.polished.isEmpty, parsed.command != nil {
+            // A command with nothing left to act on is just words, as when it
+            // is spoken alone — never an empty insert that reads as "nothing
+            // was recognized" with the command silently gone.
+            parsed = TrailingCommandParser.Result(text: recognized, command: nil)
+            stages = transform(recognized)
+        }
+        let afterDictionary = stages.afterDictionary
+        let polished = stages.polished
 
         // Stage 9: materialization of the “new line” - strictly the last one, otherwise
         // the polisher will cut off the transfer with its trim.

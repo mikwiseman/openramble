@@ -12,21 +12,22 @@
 //! | 2 | dictionary: exact pass | literal entries, with case endings |
 //! | 3 | span detection | the first computation of protected pieces |
 //! | 4 | dictionary: phonetic pass | guesses — outside spans only |
-//! | 5 | *(language-model cleanup)* | **reserved**, no stage in this wave |
+//! | 5 | Clean Verbatim | deletes hesitations, stutters, spoken corrections — never rewords; spans are atomic |
 //! | 6 | *(snippets)* | **reserved**, no stage in this wave |
 //! | 7 | typography fold | twelve characters, outside spans |
 //! | 8 | polisher | spaces, punctuation, first letter — outside spans |
 //! | 9 | materialize the newline | strictly last: the polisher trims `\n` |
 //!
-//! Stages 5 and 6 are reserved as a **comment, not code**: a stub that does
-//! nothing is ceremony, not a contract. When they arrive they stand between 4
-//! and 7, and the span gate will pick them up on its own.
+//! Stage 6 is reserved as a **comment, not code**: a stub that does nothing is
+//! ceremony, not a contract. When it arrives it stands between 5 and 7, and the
+//! span gate will pick it up on its own.
 //!
 //! The key to the whole protection model: **the exact pass runs before spans
 //! exist at all**. That is the rule "a person's stated will outranks span
 //! protection" — no separate precedence rule needs writing, because the order
 //! *is* the rule.
 
+use crate::clean;
 use crate::dictionary::{self, DictionaryReplacement};
 use crate::phonetic;
 use crate::polish;
@@ -234,6 +235,9 @@ pub struct TextPipeline {
     /// Phonetic matching switch — exists so "is it worth anything on top of the
     /// acoustic prompt" can be measured.
     pub phonetic_matching: bool,
+    /// "Scratch that" removes a sentence when dictating; a meeting transcript
+    /// keeps what was said. See [`crate::clean`].
+    pub spoken_corrections: bool,
 }
 
 impl Default for TextPipeline {
@@ -242,6 +246,7 @@ impl Default for TextPipeline {
             replacements: Vec::new(),
             allow_press_return_command: false,
             phonetic_matching: true,
+            spoken_corrections: true,
         }
     }
 }
@@ -252,6 +257,35 @@ impl TextPipeline {
             replacements,
             ..Default::default()
         }
+    }
+
+    /// Stages 2-8: everything between the command parser and the newline.
+    fn transform(&self, text: &str) -> (String, String) {
+        // Stage 2: the exact pass — before spans exist.
+        let exact = dictionary::apply_exact(&self.replacements, text);
+        // Stage 3: the first span computation, over the result of the exact pass.
+        let spans_after_exact = span::detect(&exact);
+        // Stage 4: phonetic matching outside spans.
+        let after_dictionary = if self.phonetic_matching {
+            phonetic::apply(&self.replacements, &exact, &spans_after_exact)
+        } else {
+            exact
+        };
+
+        // Stage 5: Clean Verbatim — it only deletes, so it cannot write a word
+        // that was not said. `after_dictionary` stays the checkpoint before it.
+        let protected = clean::protected_words(
+            self.replacements
+                .iter()
+                .map(|replacement| replacement.written.as_str()),
+        );
+        let cleaned = clean::clean(&after_dictionary, self.spoken_corrections, &protected);
+
+        // Stage 7: folding typography outside spans.
+        let folded = typography::fold(&cleaned, &span::detect(&cleaned));
+        // Stage 8: the polisher, which recomputes spans itself.
+        let polished = polish::polish(&folded);
+        (after_dictionary, polished)
     }
 
     pub fn process(&self, recognized: &str) -> Output {
@@ -273,21 +307,18 @@ impl TextPipeline {
             };
         }
 
-        // Stage 2: the exact pass — before spans exist.
-        let exact = dictionary::apply_exact(&self.replacements, &parsed.text);
-        // Stage 3: the first span computation, over the result of the exact pass.
-        let spans_after_exact = span::detect(&exact);
-        // Stage 4: phonetic matching outside spans.
-        let after_dictionary = if self.phonetic_matching {
-            phonetic::apply(&self.replacements, &exact, &spans_after_exact)
-        } else {
-            exact
-        };
-
-        // Stage 7: folding typography outside spans.
-        let folded = typography::fold(&after_dictionary, &span::detect(&after_dictionary));
-        // Stage 8: the polisher, which recomputes spans itself.
-        let polished = polish::polish(&folded);
+        let mut stages = self.transform(&parsed.text);
+        if stages.1.is_empty() && parsed.command.is_some() {
+            // A command with nothing left to act on is just words, as when it is
+            // spoken alone — never an empty insert that reads as "nothing was
+            // recognized" with the command silently gone.
+            parsed = ParsedCommand {
+                text: recognized.to_string(),
+                command: None,
+            };
+            stages = self.transform(recognized);
+        }
+        let (after_dictionary, polished) = stages;
 
         // Stage 9: materializing the newline — strictly last, or the polisher's
         // trim would cut it off again.

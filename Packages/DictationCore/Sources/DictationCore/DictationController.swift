@@ -1411,6 +1411,22 @@ public final class DictationController {
 
         let run = pipeline().run(recognized.text)
         let processed = run.output
+        if processed.text.isEmpty, !recognized.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            // Words were heard and cleanup left nothing: a take that was only a
+            // correction or only hesitation. That is not a failure, so no alarm
+            // — and the take stays in History with what was heard, so a
+            // take-back the person did not mean can be undone.
+            onTakeFinished?(recognized.text, recording.url)
+            await discard(recording.url, session: session)
+            let notice = DictationNotice(
+                kind: .info,
+                message: L10n.tr("Nothing left to insert after cleanup."),
+                wordsDidNotLand: false
+            )
+            await report(notice, session: session)
+            await cleanup(session: session)
+            return
+        }
         guard !processed.text.isEmpty else {
             // An empty result is not an error: the person could remain silent, speak
             // too quiet or using the wrong microphone. But one cannot remain silent in response:
