@@ -47,6 +47,11 @@ public actor LocalTranscriber {
 
     public var isPrepared: Bool { loadedDirectory != nil }
 
+    /// Hand the person's taught words to the engine; see `ASREngineAdapting`.
+    public func setVocabulary(_ terms: [String]) async {
+        await engine.setVocabulary(terms)
+    }
+
     /// Is a recognition or load running right now?
     public var isBusy: Bool { activeOperations > 0 || loadTask != nil }
 

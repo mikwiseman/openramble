@@ -146,4 +146,12 @@ public protocol ASREngineAdapting: Sendable {
 
     /// Free up memory under the model.
     func unload() async
+
+    /// Words the person taught, which the engine may lean toward while it
+    /// decodes. An engine without such a mechanism ignores them.
+    func setVocabulary(_ terms: [String]) async
+}
+
+extension ASREngineAdapting {
+    public func setVocabulary(_ terms: [String]) async {}
 }

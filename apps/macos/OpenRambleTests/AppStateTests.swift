@@ -1943,3 +1943,15 @@ final class RecoveredFileTests: XCTestCase {
         XCTAssertEqual(state.recentDictations.first?.text, "Ping test")
     }
 }
+
+final class VocabularyTermsTests: XCTestCase {
+    func testOnlyTaughtWordsThatMayBoostReachTheDecoderOnce() {
+        let terms = AppState.vocabularyTerms(from: [
+            DictionaryReplacement(spoken: "кубернетис", written: "Kubernetes"),
+            DictionaryReplacement(spoken: "кубер", written: "Kubernetes"),
+            DictionaryReplacement(spoken: "коммит", written: "commit", noAcousticBoost: true),
+            DictionaryReplacement(spoken: "опен рэмбл", written: "OpenRamble"),
+        ])
+        XCTAssertEqual(terms, ["Kubernetes", "OpenRamble"])
+    }
+}

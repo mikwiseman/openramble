@@ -869,7 +869,9 @@ public final class AppState: ObservableObject {
 
     /// Replacement dictionary. Changes only through the methods below: direct write bypassed
     /// would check that the dictionary can be saved at all.
-    @Published public private(set) var replacements: [DictionaryReplacement]
+    @Published public private(set) var replacements: [DictionaryReplacement] {
+        didSet { publishVocabulary() }
+    }
 
     private enum Keys {
         static let hotkey = "hotkey"
@@ -1483,6 +1485,9 @@ public final class AppState: ObservableObject {
         observeSystemEvents()
         refreshPermissions()
         scheduleLegacyCleanup()
+        // Observers do not run in an initializer; the loaded dictionary still
+        // has to reach the engine.
+        publishVocabulary()
         Task {
             await startEngineReadinessMonitoring()
             await startRecordingRecoveryMaintenance()
@@ -4405,6 +4410,26 @@ public final class AppState: ObservableObject {
     /// There were two paths, and they were already diverging - the replay was losing `output.command`.
     /// Generic assembly makes "both paths are the same" a property of the code, not something that
     /// must be remembered when ruling one of two places.
+    /// The written forms of the person's own dictionary, for the decoder.
+    ///
+    /// Only what the person taught: the built-in starter set is Russian
+    /// spellings of English terms, which biasing toward the Latin form does not
+    /// fix (measured, research/term-biasing-2026-10), and someone who never
+    /// teaches a word should decode exactly as before. Entries marked
+    /// `noAcousticBoost` stay text-only, as they always have.
+    static func vocabularyTerms(from replacements: [DictionaryReplacement]) -> [String] {
+        var seen = Set<String>()
+        return replacements
+            .filter { !$0.noAcousticBoost }
+            .map(\.written)
+            .filter { !$0.isEmpty && seen.insert($0).inserted }
+    }
+
+    private func publishVocabulary() {
+        let terms = Self.vocabularyTerms(from: replacements)
+        Task { [transcriber] in await transcriber?.setVocabulary(terms) }
+    }
+
     private func makePipeline() -> any TextProcessing {
         // Safe built-in technical vocabulary is part of recognition, not a
         // hidden setup chore. Personal entries win when they use the same

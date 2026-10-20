@@ -29,12 +29,15 @@ public protocol DictationRecognizing: Sendable {
     func warmUpInference() async throws
     func unload() async
     func unloadIfIdle() async -> Bool
+    func setVocabulary(_ terms: [String]) async
 }
 
 extension DictationRecognizing {
     public func readinessChanges() async -> AsyncStream<Bool> {
         AsyncStream { $0.finish() }
     }
+
+    public func setVocabulary(_ terms: [String]) async {}
 }
 
 extension LocalTranscriber: DictationRecognizing {}
