@@ -169,7 +169,8 @@ struct HotkeyGestureMachine {
     /// that arrives later lands in the middle of speech - a brushed key, a
     /// reflex - and ending the take on it would throw away everything said so
     /// far. Past this window the key is ignored and the take finishes at the
-    /// release like any other.
+    /// release like any other. Ignored by the take, not swallowed: the front
+    /// app still receives the chord (⌘A, ⌘↓) and acts on it before the paste.
     static let shortcutWindow: TimeInterval = 0.8
 
     private(set) var isHeld = false
