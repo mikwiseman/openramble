@@ -52,7 +52,6 @@
 "Apple's built-in dictation" = "Apple's built-in dictation";
 "Ask on start" = "Ask on start";
 "Attempts to insert the saved text into the current field" = "Attempts to insert the saved text into the current field";
-"Audio" = "Audio";
 "Automatic audio recovery was disabled after a storage failure. " = "Automatic audio recovery was disabled after a storage failure. ";
 "Back" = "Back";
 "Behavior" = "Behavior";
@@ -370,6 +369,7 @@
 "Recognize this recording again" = "Recognize this recording again";
 "Recognition" = "Recognition";
 "Record" = "Record";
+"Record Screen…" = "Record Screen…";
 "Recording" = "Recording";
 "Recording Details" = "Recording Details";
 "Recording Details…" = "Recording Details…";
@@ -387,7 +387,6 @@
 "Recording stopped, waiting for the speech model to load" = "Recording stopped, waiting for the speech model to load";
 "Recording stopped: it could no longer be written. Everything up to that moment was kept." = "Recording stopped: it could no longer be written. Everything up to that moment was kept.";
 "Recording stopped: this Mac ran out of space. Everything up to that moment was kept." = "Recording stopped: this Mac ran out of space. Everything up to that moment was kept.";
-"Recording type" = "Recording type";
 "Recording what you hear needs macOS 14.2 or later. Dictation and voice notes are unaffected." = "Recording what you hear needs macOS 14.2 or later. Dictation and voice notes are unaffected.";
 "Recording what you hear needs macOS 14.2 or later. Everything else works." = "Recording what you hear needs macOS 14.2 or later. Everything else works.";
 "Recording — %@" = "Recording — %@";
@@ -396,7 +395,6 @@
 "Recording, paused" = "Recording, paused";
 "Recordings" = "Recordings";
 "Recordings…" = "Recordings…";
-"Records this display" = "Records this display";
 "Records you and the other side" = "Records you and the other side";
 "Records you and the other side until you stop" = "Records you and the other side until you stop";
 "Records your microphone until you stop" = "Records your microphone until you stop";
@@ -439,7 +437,6 @@
 "Saving Report…" = "Saving Report…";
 "Saving recording…" = "Saving recording…";
 "Saving…" = "Saving…";
-"Screen" = "Screen";
 "Screen Recording Settings" = "Screen Recording Settings";
 "Screen recording" = "Screen recording";
 "Screen recording stopped: %@" = "Screen recording stopped: %@";

@@ -52,7 +52,6 @@
 "Apple's built-in dictation" = "встроенную диктовку Apple";
 "Ask on start" = "Запрос при запуске";
 "Attempts to insert the saved text into the current field" = "Пробует вставить сохранённый текст в текущее поле";
-"Audio" = "Аудио";
 "Automatic audio recovery was disabled after a storage failure. " = "Автоматическое восстановление звука отключено после ошибки хранилища. ";
 "Back" = "Назад";
 "Behavior" = "Поведение";
@@ -370,6 +369,7 @@
 "Recognize this recording again" = "Распознать эту запись ещё раз";
 "Recognition" = "Распознавание";
 "Record" = "Записать";
+"Record Screen…" = "Записать экран…";
 "Recording" = "Запись";
 "Recording Details" = "Сведения о записи";
 "Recording Details…" = "Сведения о записи…";
@@ -387,7 +387,6 @@
 "Recording stopped, waiting for the speech model to load" = "Запись остановлена, ожидание загрузки речевой модели";
 "Recording stopped: it could no longer be written. Everything up to that moment was kept." = "Запись остановлена: не удалось продолжить сохранение. Всё, что удалось записать, сохранено.";
 "Recording stopped: this Mac ran out of space. Everything up to that moment was kept." = "Запись остановлена: на Mac закончилось место. Всё, что удалось записать, сохранено.";
-"Recording type" = "Тип записи";
 "Recording what you hear needs macOS 14.2 or later. Dictation and voice notes are unaffected." = "Для записи системного звука нужна macOS 14.2 или новее. Диктовка и голосовые заметки доступны.";
 "Recording what you hear needs macOS 14.2 or later. Everything else works." = "Для записи системного звука нужна macOS 14.2 или новее. Остальные функции доступны.";
 "Recording — %@" = "Запись — %@";
@@ -396,7 +395,6 @@
 "Recording, paused" = "Запись на паузе";
 "Recordings" = "Записи";
 "Recordings…" = "Записи…";
-"Records this display" = "Записывает этот экран";
 "Records you and the other side" = "Записывает вас и собеседников";
 "Records you and the other side until you stop" = "Записывает вас и собеседников до остановки";
 "Records your microphone until you stop" = "Записывает микрофон до остановки";
@@ -439,7 +437,6 @@
 "Saving Report…" = "Сохранение отчёта…";
 "Saving recording…" = "Сохранение записи…";
 "Saving…" = "Сохранение…";
-"Screen" = "Экран";
 "Screen Recording Settings" = "Настройки записи экрана";
 "Screen recording" = "Запись экрана";
 "Screen recording stopped: %@" = "Запись экрана остановлена: %@";

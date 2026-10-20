@@ -548,10 +548,6 @@ public final class AppState: ObservableObject {
     @Published public private(set) var liveLevels = MeetingCapture.Levels.silent
     /// The recording that most recently ended — the window selects it.
     @Published public private(set) var lastFinishedRecordingID: UUID?
-    /// The compact selector beside the Record button. Audio remains the
-    /// default so the existing meeting shortcut never unexpectedly captures a
-    /// display.
-    @Published public var recordingCaptureKind: RecordingCaptureKind = .audio
     public static let screenRecordingOptionsKey = "screenRecordingOptions"
     @Published public var screenRecordingOptions: ScreenRecordingOptions {
         didSet {
