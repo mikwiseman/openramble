@@ -339,11 +339,28 @@ during that block; the medians are unaffected by them.
 Decision: both rules fail, so Ultra Q4_K_M does not go to the desktop app.
 H13b asks whether the quantization is the cause.
 
+## H13b result
+
+Same design, Ultra Q8_0 against v3 Q8_0 (`cpu-models-q8.json`). Median per
+input: idle, 1,276 ms for v3 and 1,305 ms for Ultra (1.02 times); under load,
+2,100 ms and 2,164 ms (1.03 times). Per input the ratio is 1.00 to 1.04 idle
+and 0.89 to 1.07 under load, with no outliers.
+
+Decision: both rules pass. The slowdown in H13 comes from the Q4_K_M
+quantization on the CPU backend, not from Ultra. The desktop app ships Ultra
+Q8_0 (740 MB) from its own manifest, and the Mac ships Q4_K_M (486 MB).
+
+Intel Macs also run the Mac app on the CPU backend, so they get Q4_K_M with
+the same likely cost. That was not measured on an Intel CPU, and it is listed
+below as an open question rather than decided here.
+
 ## Proposed next hypotheses
 
 - **H8c.** The decoder's joint output layer and LSTM weights in the model's
   Q8_0 together, against the same 30% decoder rule.
 - **H10b.** Four encoder threads and one decoder thread on the CPU backend.
+- **H14.** Intel Macs: Ultra Q4_K_M against Q8_0 on an Intel CPU. If Q4_K_M is
+  as slow there as on the Apple CPU backend (H13), Intel Macs take Q8_0.
 - **H12.** The encoder is now the larger share. Test a cached encoder graph
   per input length (the runtime rebuilds and re-allocates the graph on every
   run) as the cheap step, then an ANE encoder only with a never-slower gate,

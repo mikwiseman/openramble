@@ -59,7 +59,7 @@ English clips, v3 writes 20 decodes in Cyrillic, 17 of them in the 79-point
 boundary sweep of one recording; Ultra writes none, and its transcripts there
 are ordinary English (median 14 words, no Cyrillic letter at all).
 
-Decision: Parakeet Ultra passes the WER rule and all seven gates and is recommended (`decide.py` writes `decision.json`). The follow-up H11 then compared Ultra's smaller quantizations against its Q8_0: Q5_K_M (550 MB) and Q4_K_M (486 MB) both stay within the preregistered +0.20 pp bound, invent nothing and keep warm p95 within 3%, so the recommended download is **Parakeet Ultra Q4_K_M, 486 MB**, a third smaller than today's 740 MB.
+Decision: Parakeet Ultra passes the WER rule and all seven gates and is recommended (`decide.py` writes `decision.json`). The follow-up H11 then compared Ultra's smaller quantizations against its Q8_0: Q5_K_M (550 MB) and Q4_K_M (486 MB) both stay within the preregistered +0.20 pp bound, invent nothing and keep warm p95 within 3%, so the recommended download is **Parakeet Ultra Q4_K_M, 486 MB**, a third smaller than today's 740 MB. On the CPU backend, which the Windows and Linux app uses, Q4_K_M is 1.29 times slower than v3 (H13), while Ultra Q8_0 is within 3% of v3 (H13b). So Windows and Linux get **Ultra Q8_0, 740 MB**, from their own manifest. Intel Macs also run on the CPU backend and are an open question (H14).
 
 ## What adopting a model means for people
 
