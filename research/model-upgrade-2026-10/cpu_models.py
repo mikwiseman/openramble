@@ -27,6 +27,7 @@ def main():
         listing = Path(work) / 'files.list'
         listing.write_text(''.join(f['path'] + '\n' for f in files))
         for block, condition in enumerate(sc.conditions(BLOCKS)):
+            sc.wait_for_lane()
             quiet = sc.wait_for_quiet()
             order = ('v3', 'ultra') if block % 2 == 0 else ('ultra', 'v3')
             print(f'block {block} {condition} {order}', flush=True)
