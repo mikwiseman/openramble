@@ -16,12 +16,17 @@ final class FirstBuffer: @unchecked Sendable {
     private var arrived: UInt64?
     private var captured: UInt64?
     private var live: UInt64?
+    /// Every sample, placed by its own input host time, for the level curve.
+    private var chunks: [(host: UInt64, samples: [Float])] = []
+    private var rate: Double = 0
 
     /// `capturedAt` is the input host time of `samples[0]`.
     func offer(capturedAt: UInt64, rate: Double, samples: UnsafeBufferPointer<Float>) {
         let now = mach_absolute_time()
         lock.lock()
         defer { lock.unlock() }
+        chunks.append((capturedAt, Array(samples)))
+        self.rate = rate
         if arrived == nil {
             arrived = now
             captured = capturedAt
@@ -36,6 +41,43 @@ final class FirstBuffer: @unchecked Sendable {
         defer { lock.unlock() }
         return (arrived, captured, live)
     }
+
+    /// Room level in 10 ms windows after `origin`, against the level the
+    /// stream settles at 400-550 ms. Nothing captured counts as -200 dB.
+    /// No sound is played: the room's own noise is the signal, so a stretch
+    /// of digital silence after the first samples shows as a deep hole.
+    func levels(after origin: UInt64) -> [Double] {
+        lock.lock()
+        let chunks = self.chunks
+        let rate = self.rate
+        lock.unlock()
+        guard rate > 0 else { return [] }
+        let span = Int(0.550 * rate)
+        var timeline = [Float](repeating: 0, count: span)
+        var filled = [Bool](repeating: false, count: span)
+        for chunk in chunks {
+            let start = Int((seconds(from: origin, to: chunk.host) * rate).rounded())
+            for (i, x) in chunk.samples.enumerated() where start + i >= 0 && start + i < span {
+                timeline[start + i] = x
+                filled[start + i] = true
+            }
+        }
+        let window = Int(0.010 * rate)
+        func level(_ a: Int, _ b: Int) -> Double {
+            let slice = (a..<b).filter { filled[$0] }
+            guard !slice.isEmpty else { return -200 }
+            let r = (slice.reduce(0.0) { $0 + Double(timeline[$1]) * Double(timeline[$1]) } / Double(slice.count)).squareRoot()
+            return r > 0 ? 20 * log10(r) : -200
+        }
+        let settled = level(Int(0.400 * rate), span)
+        return stride(from: 0, to: span - window, by: window).map { level($0, $0 + window) - settled }
+    }
+}
+
+/// The first window after which the level stays within `threshold` dB.
+func settled(_ levels: [Double], within threshold: Double) -> Double {
+    guard let last = levels.prefix(40).lastIndex(where: { $0 < -threshold }) else { return 0 }
+    return Double(last + 1) * 10
 }
 
 func engineStart(device: AudioDeviceID?) throws -> [String: Any] {
@@ -92,6 +134,9 @@ func engineStart(device: AudioDeviceID?) throws -> [String: Any] {
         "first_live_ms": ms(seen.live),
         "running_at_rest": runningAtRest != 0,
         "running_before_start": runningBeforeStart != 0,
+        "level_db": first.levels(after: called),
+        "settled_20db_ms": settled(first.levels(after: called), within: 20),
+        "settled_10db_ms": settled(first.levels(after: called), within: 10),
     ]
 }
 
@@ -128,6 +173,9 @@ func halStart(device: AudioDeviceID) throws -> [String: Any] {
         "path": "hal",
         "running_at_rest": busyAtRest,
         "input_node_ms": ms(made),
+        "level_db": first.levels(after: called),
+        "settled_20db_ms": settled(first.levels(after: called), within: 20),
+        "settled_10db_ms": settled(first.levels(after: called), within: 10),
         "start_return_ms": ms(started),
         "first_callback_ms": ms(seen.arrived),
         "first_sample_ms": ms(seen.captured),

@@ -611,6 +611,7 @@ struct Options {
     var silentTrials = 10
     var breakdownTrials = 0
     var profileTrials = 0
+    var roomTrials = 0
     var paths = ["avaudioengine", "hal", "avaudioengine-lingering", "prebuilt-prepared", "prebuilt-unprepared", "auhal"]
     var seed: UInt64 = 20_261_020
 
@@ -635,6 +636,7 @@ struct Options {
             case "--seed": seed = UInt64(try value(flag)) ?? seed
             case "--breakdown": breakdownTrials = Int(try value(flag)) ?? 0
             case "--profile": profileTrials = Int(try value(flag)) ?? 0
+            case "--room": roomTrials = Int(try value(flag)) ?? 0
             case "--paths": paths = try value(flag).split(separator: ",").map(String.init)
             default: throw HarnessError("unknown flag \(flag)")
             }
@@ -674,6 +676,33 @@ func main() async throws {
         return try FileHandle(forWritingTo: URL(fileURLWithPath: outPath))
     }()
     defer { try? handle.close() }
+
+    if options.roomTrials > 0 {
+        let takeDirectory = FileManager.default.temporaryDirectory
+            .appending(path: "first-word-room-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: takeDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: takeDirectory) }
+        let capture = MicrophoneCapture(directory: takeDirectory, preferredInputDeviceID: explicit?.id)
+        var last = host(mach_absolute_time(), plus: -10)
+        var index = 0
+        for _ in 0..<options.roomTrials {
+            for gap in options.gaps {
+                await waitUntil(host(last, plus: gap))
+                var row = try await runRoom(
+                    gap: gap, index: index, capture: capture,
+                    takeDirectory: takeDirectory, probedDevice: tested.id
+                )
+                last = mach_absolute_time()
+                row["device_class"] = tested.deviceClass
+                try record(row, to: handle)
+                index += 1
+                FileHandle.standardError.write(Data(
+                    "\(index) gap=\(gap) start_return=\(String(format: "%.1f", row["start_return_ms"] as! Double)) settled_20db=\(row["settled_20db_ms"]!)\n".utf8
+                ))
+            }
+        }
+        return
+    }
 
     if options.breakdownTrials > 0 {
         try breakdown(

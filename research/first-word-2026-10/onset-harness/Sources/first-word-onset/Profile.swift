@@ -119,3 +119,50 @@ func runProfile(
     row["settled_3db_ms"] = settled(3)
     return row
 }
+
+/// The same question with no sound at all: one second of the room through
+/// `MicrophoneCapture`, its level in 10 ms windows from the take's first
+/// sample. The take's first sample was captured when `startRecording`
+/// returned, within ~2 ms on the engine path (research/first-word-2026-10),
+/// so the curve is placed on the key-down timeline by that offset.
+func runRoom(
+    gap: Double,
+    index: Int,
+    capture: MicrophoneCapture,
+    takeDirectory: URL,
+    probedDevice: AudioDeviceID
+) async throws -> [String: Any] {
+    let busyAtRest = deviceIsRunning(probedDevice)
+    let called = mach_absolute_time()
+    let session = DictationSessionID()
+    let url = try await capture.startRecording(session: session, disposition: RecordingDisposition())
+    let returned = mach_absolute_time()
+    await waitUntil(host(called, plus: 1.000))
+    let recording = try await capture.freezeRecording(session: session, expectedURL: url)
+    _ = try? await recording.durableURL()
+    for file in (try? FileManager.default.contentsOfDirectory(at: takeDirectory, includingPropertiesForKeys: nil)) ?? [] {
+        try? FileManager.default.removeItem(at: file)
+    }
+    let x = recording.samples ?? []
+    func level(_ a: Int, _ b: Int) -> Double {
+        guard a >= 0, b <= x.count, b > a else { return -200 }
+        let r = rms(x[a..<b])
+        return r > 0 ? 20 * log10(r) : -200
+    }
+    let settledLevel = level(6_400, 9_600)
+    let windows = stride(from: 0, to: 8_000, by: 160).map { level($0, $0 + 160) - settledLevel }
+    let startReturn = seconds(from: called, to: returned) * 1000
+    return [
+        "kind": "room",
+        "trial": index,
+        "gap_s": gap,
+        "device_busy_at_rest": busyAtRest,
+        "start_return_ms": startReturn,
+        "first_frame_ms": recording.startupLatency.map(milliseconds) ?? -1,
+        "level_db_from_first_sample": windows,
+        "settled_20db_after_first_sample_ms": settled(windows, within: 20),
+        "settled_10db_after_first_sample_ms": settled(windows, within: 10),
+        "settled_20db_ms": startReturn + settled(windows, within: 20),
+        "load_1m": loadAverage(),
+    ]
+}

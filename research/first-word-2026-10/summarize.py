@@ -26,12 +26,12 @@ def gap_label(gap):
 
 
 def main(paths):
-    runs, trials, breakdown, profiles = [], [], [], []
+    runs, trials, breakdown, profiles, rooms = [], [], [], [], []
     for path in paths:
         with open(path) as handle:
             for line in handle:
                 row = json.loads(line)
-                {"run": runs, "trial": trials, "breakdown": breakdown, "profile": profiles}[row["kind"]].append(row)
+                {"run": runs, "trial": trials, "breakdown": breakdown, "profile": profiles, "room": rooms}[row["kind"]].append(row)
 
     for run in runs:
         if "calibration_scores" not in run and run.get("mode") != "profile":
@@ -134,6 +134,30 @@ def main(paths):
     if profiles:
         summarize_profiles(profiles)
 
+    if rooms:
+        busy = [r for r in rooms if r.get("device_busy_at_rest")]
+        rows = [r for r in rooms if not r.get("device_busy_at_rest")]
+        print("### Room level through MicrophoneCapture, no sound played")
+        print()
+        if busy:
+            print(f"{len(busy)} takes found the microphone already running in another process and are left out.")
+            print()
+        print("| Start | Takes | startRecording returns p50 | Take's first sample to room level within 20 dB, p50 / p90 | Key-down to room level within 20 dB, p50 / p90 |")
+        print("|---|---|---|---|---|")
+        for gap in sorted({r["gap_s"] for r in rows}):
+            g = [r for r in rows if r["gap_s"] == gap]
+            a = [r["settled_20db_after_first_sample_ms"] for r in g]
+            b = [r["settled_20db_ms"] for r in g]
+            print(f"| {gap_label(gap)} | {len(g)} | {fmt(quantile([r['start_return_ms'] for r in g], .5))} ms | "
+                  f"{fmt(quantile(a, .5))} / {fmt(quantile(a, .9))} ms | {fmt(quantile(b, .5))} / {fmt(quantile(b, .9))} ms |")
+        print()
+        print("Median level against the settled room level, 20 ms windows from the take's first sample (dB):")
+        print()
+        print("| " + " | ".join(str(t) for t in range(0, 300, 20)) + " |")
+        print("|" + "---|" * 15)
+        print("| " + " | ".join(fmt(statistics.median(r["level_db_from_first_sample"][t // 10] for r in rows)) for t in range(0, 300, 20)) + " |")
+        print()
+
     if breakdown:
         # A start is cold only if nothing else held the device open. The
         # lingering path holds it open on purpose, so it is never excluded.
@@ -151,6 +175,8 @@ def main(paths):
             ("start_return_ms", "start returns"),
             ("first_live_ms", "first live sample"),
             ("first_callback_ms", "first callback"),
+            ("settled_20db_ms", "room level within 20 dB"),
+            ("settled_10db_ms", "within 10 dB"),
         ]
         groups = defaultdict(list)
         for row in cold:
