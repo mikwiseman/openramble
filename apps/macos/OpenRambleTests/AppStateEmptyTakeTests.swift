@@ -58,6 +58,25 @@ final class AppStateEmptyTakeTests: XCTestCase {
         XCTAssertTrue(journal.contains("dictationUnrecognized"), "the kept take is counted, numbers only")
     }
 
+    /// The journal counts a wordless take only once History holds it, so the
+    /// count can be checked against the rows rather than proving itself.
+    func testAWordlessTakeHistoryCouldNotStoreIsNotCounted() async throws {
+        await harness.capture.setBufferedSamples(quiet + [0.1] + quiet)
+        let history = try AppPaths(root: harness.root).support()
+            .appending(path: "History", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: history, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: history.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: history.path) }
+        let state = harness.makeState()
+
+        try await dictate(state)
+
+        XCTAssertTrue(state.history.isEmpty)
+        XCTAssertEqual(state.lastNotice?.message, "Nothing was recognized — nothing was inserted.")
+        let journal = String(decoding: state.diagnostics.snapshot().data, as: UTF8.self)
+        XCTAssertFalse(journal.contains("dictationUnrecognized"), "counted a row that does not exist")
+    }
+
     /// The name is the microphone the capture was built with: the one chosen
     /// when the app started, or the system default.
     func testSilenceNamesTheMicrophoneTheCaptureRecordsFrom() async throws {

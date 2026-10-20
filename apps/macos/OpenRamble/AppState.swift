@@ -1458,9 +1458,13 @@ public final class AppState: ObservableObject {
                 )
             }
             controller.onTakeFinished = { [weak self] text, audio, target in
-                // Counted, never described: a take kept with no words.
-                if text.isEmpty { self?.diagnostics.record(.dictationUnrecognized) }
-                self?.archive(text: text, audio: audio, appCategory: PromptModePolicy.category(for: target))
+                guard let self,
+                      self.archive(text: text, audio: audio, appCategory: PromptModePolicy.category(for: target)),
+                      text.isEmpty
+                else { return }
+                // Counted, never described: a take kept with no words, once
+                // History really holds it.
+                self.diagnostics.record(.dictationUnrecognized)
             }
             controller.amendTakeNotice = { [weak self] notice in
                 self?.takeEndingNotice(notice) ?? notice
@@ -1736,13 +1740,14 @@ public final class AppState: ObservableObject {
 
     // MARK: - Verbatim text of the last dictation
 
-    /// Keep a finished take: its text, and a copy of its audio.
+    /// Keep a finished take: its text, and a copy of its audio. Returns
+    /// whether History took it.
     ///
     /// Failures here are reported rather than swallowed. A history that
     /// silently stops recording looks exactly like a history of someone who
     /// stopped dictating.
-    private func archive(text: String, audio: URL, appCategory: ApplicationCategory) {
-        guard let historyStore else { return }
+    private func archive(text: String, audio: URL, appCategory: ApplicationCategory) -> Bool {
+        guard let historyStore else { return false }
         do {
             history = try historyStore.record(
                 text: text, audio: audio, limit: historyLimit, appCategory: appCategory
@@ -1758,9 +1763,11 @@ public final class AppState: ObservableObject {
             if recoveredEntryID == nil, let recoveredText {
                 recoveredEntryID = historyEntryID(holding: recoveredText)
             }
+            return true
         } catch {
             engineLog.error("history entry not written")
             takeNotKept = true
+            return false
         }
     }
 
