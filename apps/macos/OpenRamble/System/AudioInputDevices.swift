@@ -56,6 +56,10 @@ public enum AudioInputDevices {
     /// The name of the microphone a capture built with `id` records from:
     /// that device, or the system's default input when `id` is `nil`.
     ///
+    /// With `nil` the default is read as the take ends, so a default that
+    /// switched mid-take (a headset connecting) names the new device. That is
+    /// rare, and the capture does not yet report the device it actually bound.
+    ///
     /// Read by id - one or two property reads - rather than through
     /// `available()`, which walks every device's stream configuration. The
     /// caller is the end of a take that heard only silence, which is exactly

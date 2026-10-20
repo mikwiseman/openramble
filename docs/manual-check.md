@@ -42,7 +42,8 @@ for the check.
    input volume to zero and hold the key for 2 s: the orange panel names the
    microphone and History gains nothing. Restore the volume, hold the key and
    tap the desk once without speaking: History shows "Nothing recognized" with
-   Play and Recognise again, and no Copy.
+   Play, the ↻ button ("Recognise this recording again") and Delete, and no
+   Copy.
 8. Switch focus during transcription and verify insertion returns to the field
    where dictation began. Cover rich text, a multiline field, an empty field, a
    secure field, and a destination that rejects paste.
