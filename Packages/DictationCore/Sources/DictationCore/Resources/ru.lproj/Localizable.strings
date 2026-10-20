@@ -560,6 +560,7 @@
 "This Mac restricts camera access. Turn off the bubble to record your screen." = "На этом Mac доступ к камере ограничен. Отключите кружок с камерой для записи экрана.";
 "This build has no public update-signing key (SUPublicEDKey). Updates are disabled: without it there is no way to verify them." = "В этой сборке нет открытого ключа проверки обновлений (SUPublicEDKey). Обновления отключены: без ключа невозможно проверить их подлинность.";
 "This copy of OpenRamble does not contain the command-line tool." = "В этой копии OpenRamble нет инструмента командной строки.";
+"This dictation couldn't be saved to History." = "Не удалось сохранить эту диктовку в истории.";
 "This recording was interrupted before it could be transcribed." = "Запись прервалась до начала расшифровки.";
 "Today" = "Сегодня";
 "Top" = "Вверху";

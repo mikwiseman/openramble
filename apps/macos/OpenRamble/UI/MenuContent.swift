@@ -88,16 +88,12 @@ struct MenuContent: View {
 
         case .recentDictations:
             Menu(L10n.tr("Recent Dictations")) {
-                ForEach(Array(state.recentDictations.enumerated()), id: \.element.id) { index, dictation in
+                // History itself, so the Keep limit and Delete All hold here.
+                ForEach(state.recentDictations) { entry in
                     Button {
-                        state.copyRecentDictation(dictation)
+                        state.copyHistoryEntry(entry)
                     } label: {
-                        // The copy key belongs on the first row, because the
-                        // first row is the last dictation — the one the key
-                        // copies. Written into the title rather than set as a
-                        // real shortcut: this is a held modifier, and
-                        // `keyboardShortcut` cannot express one.
-                        Text(dictation.menuTitle)
+                        Text(entry.menuTitle)
                     }
                 }
             }
@@ -245,5 +241,16 @@ struct MenuContent: View {
                 }
             }
         }
+    }
+}
+
+private extension HistoryEntry {
+    /// One line, short enough for a menu.
+    var menuTitle: String {
+        let singleLine = text
+            .split(whereSeparator: \.isWhitespace)
+            .joined(separator: " ")
+        guard singleLine.count > 56 else { return singleLine }
+        return String(singleLine.prefix(55)) + "…"
     }
 }

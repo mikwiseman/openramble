@@ -1847,12 +1847,12 @@ final class RecoveredFileTests: XCTestCase {
         XCTAssertEqual(state.recoveredText, "Ping test")
     }
 
-    /// Failed-insert words join Recent Dictations at failure time.
+    /// Failed-insert words join History, and so the menu, at failure time.
     ///
     /// The single recovery slot is overwritten by the next failure; without
-    /// this copy the first failure's words would silently vanish. This is
-    /// also why the menu needs no Copy/Delete items for saved text: the words
-    /// are copyable from Recent Dictations like any other dictation.
+    /// this the first failure's words would silently vanish. This is also why
+    /// the menu needs no Copy/Delete items for saved text: the words are
+    /// copyable from Recent Dictations like any other dictation.
     func testScenario055() async throws {
         try harness.installModelMarker()
         let state = harness.makeState()
@@ -1865,6 +1865,7 @@ final class RecoveredFileTests: XCTestCase {
         await settle()
 
         XCTAssertEqual(state.recoveredText, "Ping test")
+        XCTAssertEqual(state.history.map(\.text), ["Ping test"])
         XCTAssertEqual(state.recentDictations.map(\.text), ["Ping test"])
     }
 
@@ -1886,7 +1887,7 @@ final class RecoveredFileTests: XCTestCase {
 
         XCTAssertEqual(state.recoveredText, "Ping test", "the words stay recoverable")
         XCTAssertEqual(
-            state.recentDictations.map(\.text), ["Ping test"],
+            state.history.map(\.text), ["Ping test"],
             "repeat failures of the same words keep one history entry"
         )
     }
@@ -1910,7 +1911,7 @@ final class RecoveredFileTests: XCTestCase {
 
         XCTAssertNil(state.recoveredText)
         XCTAssertEqual(
-            state.recentDictations.map(\.text), ["Ping test"],
+            state.history.map(\.text), ["Ping test"],
             "the words entered history at failure time; success must not append again"
         )
         XCTAssertNil(
@@ -1999,5 +2000,83 @@ final class RecoveredFileTests: XCTestCase {
 
         XCTAssertNil(state.recoveredText)
         XCTAssertEqual(state.recentDictations.first?.text, "Ping test")
+    }
+
+    // MARK: - One history
+
+    private func dictate(_ state: AppState) async {
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+    }
+
+    /// The menu lists History, so the Keep limit is the menu's limit too. It
+    /// used to keep its own eight in memory whatever Keep said.
+    func testTheMenuListsHistoryWithinTheKeepLimit() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        state.historyLimit = 5
+
+        for _ in 0..<8 { await dictate(state) }
+
+        XCTAssertEqual(state.history.count, 5)
+        XCTAssertEqual(state.recentDictations.map(\.id), state.history.map(\.id))
+    }
+
+    func testDeletingARowRemovesItFromTheMenu() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        await dictate(state)
+        await dictate(state)
+        let doomed = try XCTUnwrap(state.history.first)
+
+        state.deleteHistoryEntry(doomed)
+
+        XCTAssertFalse(state.recentDictations.contains { $0.id == doomed.id })
+        XCTAssertEqual(state.recentDictations.count, 1)
+    }
+
+    /// "Delete All" means every copy of what was said: the menu, Copy Last
+    /// and the failed-insertion slot, not just the History window.
+    func testDeleteAllForgetsEveryCopy() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        await dictate(state)
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        await dictate(state)
+        XCTAssertNotNil(state.lastDictation)
+        XCTAssertNotNil(state.recoveredText)
+        XCTAssertFalse(state.recentDictations.isEmpty)
+
+        state.clearHistory()
+
+        XCTAssertTrue(state.history.isEmpty)
+        XCTAssertTrue(state.recentDictations.isEmpty)
+        XCTAssertNil(state.lastDictation, "Copy Last must have nothing left to copy")
+        XCTAssertNil(state.recoveredText, "Insert Last must have nothing left to insert")
+    }
+
+    /// A history that silently stops recording looks exactly like a history
+    /// of someone who stopped dictating.
+    func testAHistoryWriteFailureIsShown() async throws {
+        try harness.installModelMarker()
+        // A file where the History folder should be: every write fails.
+        let support = try AppPaths(root: harness.root).support()
+        FileManager.default.createFile(atPath: support.appending(path: "History").path, contents: Data())
+        let state = harness.makeState()
+        await state.refreshModelState()
+
+        await dictate(state)
+
+        let notice = try XCTUnwrap(state.lastNotice)
+        XCTAssertEqual(notice.kind, .warning)
+        XCTAssertEqual(notice.message, "This dictation couldn't be saved to History.")
+        XCTAssertFalse(notice.wordsDidNotLand, "the words reached the field; only the record of them failed")
+        let shown = await harness.overlay.notices
+        XCTAssertTrue(shown.contains { $0.message == notice.message })
     }
 }

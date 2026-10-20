@@ -504,26 +504,12 @@ public final class AppState: ObservableObject {
     }
     @Published public private(set) var lastDictation: LastDictation?
 
-    /// A short, in-memory list for quick copying from the menu. Nothing is
-    /// persisted, so quitting the app clears the history.
-    public struct RecentDictation: Identifiable, Equatable {
-        public let id: UUID
-        public let text: String
-
-        init(id: UUID = UUID(), text: String) {
-            self.id = id
-            self.text = text
-        }
-
-        var menuTitle: String {
-            let singleLine = text
-                .split(whereSeparator: \.isWhitespace)
-                .joined(separator: " ")
-            guard singleLine.count > 56 else { return singleLine }
-            return String(singleLine.prefix(55)) + "…"
-        }
-    }
-    @Published public private(set) var recentDictations: [RecentDictation] = []
+    /// What the menu offers to copy: the newest of History, nothing else.
+    ///
+    /// Read from History rather than kept beside it. A second list in memory
+    /// ignored the Keep limit and survived "Delete All", which made both of
+    /// History's promises false.
+    public var recentDictations: [HistoryEntry] { Array(history.prefix(8)) }
 
     // MARK: - Recordings
 
@@ -1365,13 +1351,11 @@ public final class AppState: ObservableObject {
                 if notice.recoveryAudio != nil {
                     self?.refreshRecoveredRecordingCount()
                 }
+                // The words reach History through `onTakeFinished` whether or
+                // not they landed, so a later failure overwriting this slot
+                // loses nothing.
                 if let text = notice.recoverableText {
                     self?.recoveredText = text
-                    // The words also join Recent Dictations at failure time:
-                    // the single recovery slot is overwritten by the next
-                    // failure, and without this copy the first failure's words
-                    // would silently vanish from the person's reach.
-                    self?.rememberFailedInsertion(text)
                 }
                 // The kernel explained itself. Your own explanation on top of his words would be
                 // worse than silence: the session has one reason for ending, not two.
@@ -1738,6 +1722,14 @@ public final class AppState: ObservableObject {
             history = try historyStore.record(text: text, audio: audio, limit: historyLimit)
         } catch {
             engineLog.error("history entry not written")
+            notify(
+                DictationNotice(
+                    kind: .warning,
+                    message: L10n.tr("This dictation couldn't be saved to History."),
+                    wordsDidNotLand: false,
+                    reason: .storage
+                )
+            )
         }
     }
 
@@ -1827,10 +1819,15 @@ public final class AppState: ObservableObject {
         history = (try? historyStore.delete(entry)) ?? history
     }
 
+    /// Delete every copy of what was said: History, and the two in-memory
+    /// slots behind Copy Last and Insert Last. A "Delete All" that left the
+    /// last dictation one click away would not be one.
     public func clearHistory() {
         guard let historyStore else { return }
         try? historyStore.deleteAll()
         history = []
+        lastDictation = nil
+        recoveredText = nil
     }
 
     /// Put a stored transcript back on the clipboard.
@@ -1851,36 +1848,6 @@ public final class AppState: ObservableObject {
         guard !trimmed.isEmpty else { return }
         successfulDictationCount += 1
         recoveredText = nil
-        prependRecentDictation(trimmed)
-    }
-
-    /// Words that failed to insert enter the history immediately.
-    ///
-    /// Idempotent across repeated failures of the same text: retrying the
-    /// insertion and failing again must not fill the history with copies.
-    private func rememberFailedInsertion(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, recentDictations.first?.text != trimmed else { return }
-        prependRecentDictation(trimmed)
-    }
-
-    private func prependRecentDictation(_ trimmed: String) {
-        recentDictations.insert(RecentDictation(text: trimmed), at: 0)
-        if recentDictations.count > 8 {
-            recentDictations.removeLast(recentDictations.count - 8)
-        }
-    }
-
-    /// Copy a completed dictation without opening another window or writing
-    /// history to disk. Successful copies stay quiet; the menu action itself is
-    /// sufficient feedback.
-    public func copyRecentDictation(_ dictation: RecentDictation) {
-        guard recentDictations.contains(where: { $0.id == dictation.id }) else { return }
-        do {
-            try HostOnlyPasteboard().copyHostOnly(dictation.text)
-        } catch {
-            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation."), reason: .clipboard))
-        }
     }
 
     /// Put the last dictation back on the clipboard.
@@ -1926,7 +1893,7 @@ public final class AppState: ObservableObject {
                 try await withTranscriptionDeadline(recoveryInsertionDeadline) {
                     try await inserter.insert(recoveredText, into: target)
                 }
-                // The words already joined Recent Dictations at failure time;
+                // The words already joined History at failure time;
                 // appending again here would duplicate them. The provenance
                 // slot is cleared too: it still holds the PREVIOUS dictation,
                 // and after inserting recovered words neither "Copy Last
