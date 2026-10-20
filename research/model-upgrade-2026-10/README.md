@@ -61,6 +61,19 @@ are ordinary English (median 14 words, no Cyrillic letter at all).
 
 Decision: Parakeet Ultra passes the WER rule and all seven gates and is recommended (`decide.py` writes `decision.json`). The follow-up H11 then compared Ultra's smaller quantizations against its Q8_0: Q5_K_M (550 MB) and Q4_K_M (486 MB) both stay within the preregistered +0.20 pp bound, invent nothing and keep warm p95 within 3%, so the recommended download is **Parakeet Ultra Q4_K_M, 486 MB**, a third smaller than today's 740 MB. On the CPU backend, which the Windows and Linux app uses, Q4_K_M is 1.29 times slower than v3 (H13), while Ultra Q8_0 is within 3% of v3 (H13b). So Windows and Linux get **Ultra Q8_0, 740 MB**, from their own manifest. Intel Macs also run on the CPU backend and are an open question (H14).
 
+## The runtime after 0.4.0
+
+Upstream main (`db678a03`) serves the weights straight from the model file on
+Apple silicon (upstream #195). With Ultra Q4_K_M that cuts the app's memory
+footprint after load from 753 MB to 269 MB and the model load from 0.19 s to
+0.11 s, with all 1,422 FLEURS transcripts and all five hour transcripts
+identical and no slower speed (H15). Measured with v3, two end-to-end tests
+fail, because upstream #199 runs v3 with local attention on takes over 20.5 s;
+with Ultra, main adds no test failure (H15b). So main is adopted together with
+Ultra, once there is a published binary to pin. Running the end-to-end suite
+with Ultra for the first time also found three failures that Ultra has under
+either runtime, listed in HYPOTHESES.md and on #79.
+
 ## What adopting a model means for people
 
 Ultra is a drop-in for v3 in the runtime, but it is a new 486 MB download.
