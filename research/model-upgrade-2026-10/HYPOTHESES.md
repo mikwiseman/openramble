@@ -261,6 +261,18 @@ order within them:
 If either fails, the desktop app keeps v3 through its own manifest, and the
 Mac switches alone.
 
+## H13b. Ultra Q8_0 on the CPU backend
+
+Preregistered on 20 October 2026 after the H13 result and before this
+measurement. Ultra and v3 share the architecture, so H13's slowdown should come
+from the Q4_K_M quantization, not the model. Ultra Q8_0 (740 MB, the file the
+bake-off scored) replaces v3 Q8_0 on the desktop app under the same two rules
+as H13: Ultra's median per-input time on the CPU backend is at most 1.10 times
+v3's, idle and under load, in the same 12-block design.
+
+If it passes, the desktop app ships Ultra Q8_0 from its own manifest while the
+Mac ships Q4_K_M. If it fails, the desktop app keeps v3.
+
 ## Live text needs partials at least every 300 ms
 
 Recorded on 20 October 2026 as a gate for any future live-text feature, not
@@ -313,6 +325,19 @@ interleaved warm run their p95 stays within 3% of Q8_0 in every bucket.
 
 Decision: both pass; under the rule the smaller file is chosen, so the
 recommended download is Parakeet Ultra Q4_K_M, 486 MB instead of 740 MB.
+
+## H13 result
+
+Measured with transcribe.cpp 0.4.0 on the CPU backend, one thread, the six
+speed inputs, 12 alternating blocks (`cpu-models.json`). Median per input:
+idle, v3 Q8_0 1,327 ms and Ultra Q4_K_M 1,705 ms (1.29 times); under the
+14-process load, 2,305 ms and 2,998 ms (1.30 times). Every one of the six
+inputs is 1.2 to 1.4 times slower with Ultra Q4_K_M in both conditions. Three
+samples in block 6 took 213 to 1,451 seconds, which fits the Mac sleeping
+during that block; the medians are unaffected by them.
+
+Decision: both rules fail, so Ultra Q4_K_M does not go to the desktop app.
+H13b asks whether the quantization is the cause.
 
 ## Proposed next hypotheses
 

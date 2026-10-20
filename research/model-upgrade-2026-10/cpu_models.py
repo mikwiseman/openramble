@@ -1,12 +1,13 @@
 """H13: Ultra Q4_K_M against v3 Q8_0 on the CPU backend, one thread, idle and under load.
 
-    uv run --with jiwer==4.0.0 python research/model-upgrade-2026-10/cpu_models.py <transcribe-cli> <v3.gguf> <ultra.gguf>
+    uv run --with jiwer==4.0.0 python research/model-upgrade-2026-10/cpu_models.py <transcribe-cli> <v3.gguf> <ultra.gguf> [out.json]
 
 The same design as cpu_threads.py with the two models in place of the two
 thread counts: one CLI process per model per block, network denied, blocks
 alternate quiet and loaded in ABBA order and the model order alternates within
 them. The time per input is the runtime's own mel + encode + decode
-milliseconds. Results go to cpu-models.json next to this file.
+milliseconds. Results go to cpu-models.json next to this file, or to the
+file named by the optional fourth argument (H13b: cpu-models-q8.json).
 """
 import json
 import os
@@ -20,6 +21,7 @@ from cpu_threads import BLOCKS, HERE, recognize, sc
 
 def main():
     cli, v3, ultra = sys.argv[1], sys.argv[2], sys.argv[3]
+    out = sys.argv[4] if len(sys.argv) > 4 else 'cpu-models.json'
     models = {'v3': v3, 'ultra': ultra}
     files = sc.speed_files(sc.inputs()['fleurs'])
     rows = []
@@ -45,7 +47,7 @@ def main():
     verdict = {'1_idle_ratio_at_most_1.10': ratio['quiet'] <= 1.10, '2_load_ratio_at_most_1.10': ratio['load'] <= 1.10}
     report = {'cli': cli, 'model_sha256': {m: sc.digest(Path(p)) for m, p in models.items()}, 'backend': 'cpu',
               'threads': 1, 'median_ms': summary, 'ultra_over_v3': ratio, 'verdict': verdict, 'rows': rows}
-    (HERE / 'cpu-models.json').write_text(json.dumps(report, indent=1) + '\n')
+    (HERE / out).write_text(json.dumps(report, indent=1) + '\n')
     print(json.dumps({'median_ms': summary, 'ultra_over_v3': ratio, 'verdict': verdict}, indent=1))
 
 
