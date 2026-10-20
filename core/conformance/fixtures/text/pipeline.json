@@ -4223,5 +4223,65 @@
 
     ],
     "text" : "Сделай release."
+  },
+  {
+    "afterDictionary" : "The tests are green.\n\nNext, we ship.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "The tests are green. Next, we ship.",
+    "mode" : "prose",
+    "name" : "paragraph mark in prose",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "The tests are green.\n\nNext, we ship."
+  },
+  {
+    "afterDictionary" : "The tests are green. Next, we ship.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "The tests are green. Next, we ship.",
+    "mode" : "verbatim",
+    "name" : "paragraph mark in a terminal",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "The tests are green. Next, we ship."
+  },
+  {
+    "afterDictionary" : "First point.\n\nUm, second point.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "First point. Um, second point.",
+    "mode" : "prose",
+    "name" : "paragraph mark before a filler in prose",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "First point.\n\nSecond point."
+  },
+  {
+    "afterDictionary" : "Ship it.\n\nSend it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Ship it. Send it.",
+    "mode" : "prose",
+    "name" : "paragraph mark and send it",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Ship it.\n\nSend it."
   }
 ]

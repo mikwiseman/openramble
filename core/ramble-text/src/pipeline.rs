@@ -137,10 +137,14 @@ pub fn parse_trailing_command(text: &str) -> ParsedCommand {
     }
 }
 
+/// Marks a paragraph in recognized text: U+2029 PARAGRAPH SEPARATOR.
+pub const PARAGRAPH_MARK: char = '\u{2029}';
+
 /// Whether `text` closes with a full stop, question mark, exclamation or
 /// ellipsis — what makes a trailing command its own sentence.
 fn ends_sentence(text: &str) -> bool {
-    text.chars()
+    text.trim_end()
+        .chars()
         .last()
         .is_some_and(|c| matches!(c, '.' | '!' | '?' | '…'))
 }
@@ -315,6 +319,18 @@ impl TextPipeline {
     /// There is one path: `process` calls `run` and discards the record, so a
     /// "branch without provenance" does not exist in the product.
     pub fn run(&self, recognized: &str) -> Run {
+        // Stage 0: a paragraph mark (U+2029, set where a long pause followed a
+        // sentence) is a blank line where prose is going and a plain space
+        // everywhere else.
+        let marked = recognized.replace(
+            PARAGRAPH_MARK,
+            if self.mode == clean::PromptMode::Prose {
+                "\n\n"
+            } else {
+                " "
+            },
+        );
+        let recognized = marked.as_str();
         let mut parsed = parse_trailing_command(recognized);
         // Return is pressed only where the caller allows it (terminals) and only
         // for a command said as its own final sentence: "…first. Send it." One

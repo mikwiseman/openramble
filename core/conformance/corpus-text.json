@@ -2774,5 +2774,37 @@
     "allowPressReturnCommand": true,
     "phoneticMatching": true,
     "input": "Сделай релиз. Отправь."
+  },
+  {
+    "name": "paragraph mark in prose",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "mode": "prose",
+    "input": "The tests are green. Next, we ship."
+  },
+  {
+    "name": "paragraph mark in a terminal",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "mode": "verbatim",
+    "input": "The tests are green. Next, we ship."
+  },
+  {
+    "name": "paragraph mark before a filler in prose",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "mode": "prose",
+    "input": "First point. Um, second point."
+  },
+  {
+    "name": "paragraph mark and send it",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "mode": "prose",
+    "input": "Ship it. Send it."
   }
 ]
