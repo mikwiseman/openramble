@@ -1,10 +1,13 @@
 # Draft upstream pull request: parakeet vocabulary through phrase boosting
 
 Target: `handy-computer/transcribe.cpp`, branch `main`.
-Status: draft. Not opened. Opening it needs Mik's approval.
-Commits on top of `main` in the local checkout: `38e6f165`, `cc00dde6`,
-`28e509ff` and `00aab60d`, to be squashed into one. The same change on top of
-`v0.4.0` is `34a8b356`, which is what OpenRamble measured.
+Status: opened on 20 October 2026 as
+https://github.com/handy-computer/transcribe.cpp/pull/221 from
+`mikwiseman/transcribe.cpp`, branch `parakeet-phrase-boosting`: one commit,
+`eaa797b1`, on top of upstream `9f102d1a`. The same change on top of `v0.4.0`,
+which is what OpenRamble measured, is branch `openramble/v0.4.0-phrase-boosting`
+(`34a8b356`) in the same fork. The opened description is the text below plus a
+test section and a measurement table.
 
 ## Title
 

@@ -73,7 +73,8 @@ adopted.**
 - The app wiring that hands the person's own dictionary to
   `TranscribeCppAdapter.setVocabulary` is written on this branch and has a
   unit test; it has not been compiled with the full app yet.
-- A runtime build that ships it needs Mik's approval for a fork release or an
-  upstream merge.
-- The draft upstream pull request is in [UPSTREAM_PR.md](UPSTREAM_PR.md); it
-  is not opened.
+- The upstream pull request is open as
+  [handy-computer/transcribe.cpp#221](https://github.com/handy-computer/transcribe.cpp/pull/221)
+  (see [UPSTREAM_PR.md](UPSTREAM_PR.md)). OpenRamble ships it once upstream
+  merges it into a release, or from a release of the
+  `mikwiseman/transcribe.cpp` fork.
