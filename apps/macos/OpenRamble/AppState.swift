@@ -420,7 +420,9 @@ public final class AppState: ObservableObject {
     @Published public private(set) var microphoneGranted = false
     @Published public private(set) var lastNotice: DictationNotice? {
         didSet {
-            if lastNotice?.kind == .failure { diagnostics.record(.dictationFailed) }
+            if lastNotice?.kind == .failure {
+                diagnostics.record(.dictationFailed, failureReason: lastNotice?.reason)
+            }
             if lastNotice?.kind == .warning { diagnostics.record(.dictationWarning) }
         }
     }
@@ -461,7 +463,9 @@ public final class AppState: ObservableObject {
     /// Whether the current model has a GitHub release mirror besides Hugging Face.
     public private(set) var modelHasMirror = true
     /// How much the installation button will download: the full volume or additional volume after the update.
-    @Published public private(set) var remainingDownloadMegabytes = 586
+    /// Published from the bundled manifest as soon as it is read, before any
+    /// view can draw the button.
+    @Published public private(set) var remainingDownloadMegabytes = 0
     /// What a fresh start costs: both models, from nothing.
     ///
     /// The delete confirmation asks a different question from the download
@@ -1265,6 +1269,7 @@ public final class AppState: ObservableObject {
                 previousStore = ModelStore(manifest: previousManifest, layout: previousLayout, downloader: modelDownloader)
                 previousEngineDirectory = previousLayout.engineDirectory
             }
+            publishRemainingDownload(main: modelState)
 
             let historyStore = DictationHistoryStore(
                 directory: try paths.support()
@@ -1500,7 +1505,8 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .failure,
-                    message: L10n.tr("Couldn't prepare the app's working folders: %@", String(describing: error.localizedDescription))
+                    message: L10n.tr("Couldn't prepare the app's working folders: %@", String(describing: error.localizedDescription)),
+                    reason: .storage
                 )
             )
         }
@@ -1648,7 +1654,8 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .failure,
-                    message: L10n.tr("Couldn't prepare recording recovery: %@", String(describing: error.localizedDescription))
+                    message: L10n.tr("Couldn't prepare recording recovery: %@", String(describing: error.localizedDescription)),
+                    reason: .storage
                 )
             )
         }
@@ -1684,7 +1691,8 @@ public final class AppState: ObservableObject {
                         kind: .failure,
                         message: L10n.tr("Automatic audio recovery was disabled after a storage failure. ")
                             + L10n.tr("Open Recording Support Files from the menu: ambiguous recordings ")
-                            + L10n.tr("were left untouched, not deleted or imported.")
+                            + L10n.tr("were left untouched, not deleted or imported."),
+                        reason: .storage
                     )
                 )
             }
@@ -1732,7 +1740,8 @@ public final class AppState: ObservableObject {
             notify(
                 DictationNotice(
                     kind: .failure,
-                    message: L10n.tr("Couldn't reveal recovered recordings: %@", String(describing: error.localizedDescription))
+                    message: L10n.tr("Couldn't reveal recovered recordings: %@", String(describing: error.localizedDescription)),
+                    reason: .fileOperation
                 )
             )
         }
@@ -1808,7 +1817,8 @@ public final class AppState: ObservableObject {
                     self?.notify(
                         DictationNotice(
                             kind: .failure,
-                            message: L10n.tr("Couldn't recognise that recording again.")
+                            message: L10n.tr("Couldn't recognize that recording again."),
+                            reason: .retranscription
                         )
                     )
                 }
@@ -1842,7 +1852,7 @@ public final class AppState: ObservableObject {
         do {
             try HostOnlyPasteboard().copyHostOnly(entry.text)
         } catch {
-            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation.")))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation."), reason: .clipboard))
         }
     }
 
@@ -1879,7 +1889,7 @@ public final class AppState: ObservableObject {
         do {
             try HostOnlyPasteboard().copyHostOnly(dictation.text)
         } catch {
-            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation.")))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation."), reason: .clipboard))
         }
     }
 
@@ -1898,7 +1908,7 @@ public final class AppState: ObservableObject {
             try HostOnlyPasteboard().copyHostOnly(text)
             notify(DictationNotice(kind: .info, message: L10n.tr("Copied — to this Mac only.")))
         } catch {
-            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation.")))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation."), reason: .clipboard))
         }
     }
 
@@ -2639,7 +2649,7 @@ public final class AppState: ObservableObject {
             try meetingStore.write(metadata, incomplete: true)
         } catch {
             rescheduleIdleUnload()
-            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't start screen recording: %@", String(describing: error.localizedDescription))))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't start screen recording: %@", String(describing: error.localizedDescription)), reason: .recordingStart))
             return
         }
 
@@ -2726,7 +2736,7 @@ public final class AppState: ObservableObject {
                         self.refreshScreenRecordingPermissions()
                         self.notify(DictationNotice(kind: .warning, message: permissionMessage))
                     } else {
-                        self.notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't start screen recording: %@", String(describing: error.localizedDescription))))
+                        self.notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't start screen recording: %@", String(describing: error.localizedDescription)), reason: .recordingStart))
                     }
                 }
             }
@@ -2811,7 +2821,8 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: L10n.tr("Couldn't relaunch OpenRamble: %@", String(describing: error.localizedDescription))
+                        message: L10n.tr("Couldn't relaunch OpenRamble: %@", String(describing: error.localizedDescription)),
+                        reason: .relaunch
                     )
                 )
             }
@@ -2883,7 +2894,7 @@ public final class AppState: ObservableObject {
             do {
                 try await accessibilityManager.relaunchApplication()
             } catch {
-                notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't relaunch OpenRamble: %@", String(describing: error.localizedDescription))))
+                notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't relaunch OpenRamble: %@", String(describing: error.localizedDescription)), reason: .relaunch))
             }
         }
     }
@@ -2938,7 +2949,7 @@ public final class AppState: ObservableObject {
             try meetingStore.write(metadata, incomplete: true)
         } catch {
             rescheduleIdleUnload()
-            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't start recording: %@", String(describing: error.localizedDescription))))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't start recording: %@", String(describing: error.localizedDescription)), reason: .recordingStart))
             return
         }
         let capture = makeMeetingCapture(
@@ -2987,7 +2998,7 @@ public final class AppState: ObservableObject {
                     // Nothing was recorded: the directory prepared for it is
                     // not a recording anyone wants back.
                     try? FileManager.default.removeItem(at: directory)
-                    self.notify(DictationNotice(kind: .failure, message: Self.recordingStartFailureMessage(error)))
+                    self.notify(DictationNotice(kind: .failure, message: Self.recordingStartFailureMessage(error), reason: .recordingStart))
                 }
             }
         }
@@ -3034,7 +3045,8 @@ public final class AppState: ObservableObject {
                 } catch {
                     self.notify(DictationNotice(
                         kind: .failure,
-                        message: L10n.tr("The recording ended but couldn't be filed: %@", String(describing: error.localizedDescription))
+                        message: L10n.tr("The recording ended but couldn't be filed: %@", String(describing: error.localizedDescription)),
+                        reason: .recordingFiling
                     ))
                 }
                 self.meetingCapture = nil
@@ -3104,7 +3116,8 @@ public final class AppState: ObservableObject {
                 } catch {
                     self.notify(DictationNotice(
                         kind: .failure,
-                        message: L10n.tr("The recording ended but couldn't be filed: %@", String(describing: error.localizedDescription))
+                        message: L10n.tr("The recording ended but couldn't be filed: %@", String(describing: error.localizedDescription)),
+                        reason: .recordingFiling
                     ))
                 }
                 self.meetingCapture = nil
@@ -3157,7 +3170,7 @@ public final class AppState: ObservableObject {
                 }
             } catch {
                 await MainActor.run {
-                    self?.notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't pause the recording.")))
+                    self?.notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't pause the recording."), reason: .recordingPause))
                 }
             }
         }
@@ -3180,7 +3193,7 @@ public final class AppState: ObservableObject {
                 }
             } catch {
                 await MainActor.run {
-                    self?.notify(DictationNotice(kind: .failure, message: Self.recordingStartFailureMessage(error)))
+                    self?.notify(DictationNotice(kind: .failure, message: Self.recordingStartFailureMessage(error), reason: .recordingResume))
                 }
             }
         }
@@ -3227,7 +3240,7 @@ public final class AppState: ObservableObject {
             try meetingStore.rename(id, title: title)
             reloadRecordings()
         } catch {
-            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't rename the recording.")))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't rename the recording."), reason: .fileOperation))
         }
     }
 
@@ -3246,7 +3259,7 @@ public final class AppState: ObservableObject {
             }
             reloadRecordings()
         } catch {
-            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't move the recording to the Trash.")))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't move the recording to the Trash."), reason: .fileOperation))
         }
     }
 
@@ -3279,7 +3292,7 @@ public final class AppState: ObservableObject {
         do {
             try HostOnlyPasteboard().copyHostOnly(MeetingTranscriptFormatter.plainText(utterances))
         } catch {
-            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the transcript.")))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the transcript."), reason: .clipboard))
         }
     }
 
@@ -3318,7 +3331,7 @@ public final class AppState: ObservableObject {
         do {
             try markdown.write(to: url, atomically: true, encoding: .utf8)
         } catch {
-            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't save the transcript.")))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't save the transcript."), reason: .export))
         }
     }
 
@@ -3340,7 +3353,7 @@ public final class AppState: ObservableObject {
             } catch {
                 await MainActor.run {
                     self?.audioExportProgress = nil
-                    self?.notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't save the audio.")))
+                    self?.notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't save the audio."), reason: .export))
                 }
             }
         }
@@ -3362,7 +3375,7 @@ public final class AppState: ObservableObject {
                     try FileManager.default.copyItem(at: source, to: destination)
                 }.value
             } catch {
-                self?.notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't save the video.")))
+                self?.notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't save the video."), reason: .export))
             }
         }
     }
@@ -3563,7 +3576,7 @@ public final class AppState: ObservableObject {
                 message: L10n.tr("The other side isn't being recorded (%@). Only your microphone is.", String(describing: Self.describe(reason)))
             ))
         case .notIdle, .notRecording, .cannotCreateDirectory:
-            notify(DictationNotice(kind: .failure, message: L10n.tr("Recording failed: %@", String(describing: failure))))
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Recording failed: %@", String(describing: failure)), reason: .recordingFailed))
         }
     }
 
@@ -3785,7 +3798,8 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: L10n.tr("Accessibility access was revoked. Open System Settings.")
+                        message: L10n.tr("Accessibility access was revoked. Open System Settings."),
+                        reason: .accessibilityRevoked
                     )
                 )
             }
@@ -3798,7 +3812,8 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: L10n.tr("Microphone access was revoked. The app may need a relaunch.")
+                        message: L10n.tr("Microphone access was revoked. The app may need a relaunch."),
+                        reason: .microphoneRevoked
                     )
                 )
             }
@@ -3875,7 +3890,8 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: L10n.tr("Couldn't relaunch OpenRamble: %@", String(describing: error.localizedDescription))
+                        message: L10n.tr("Couldn't relaunch OpenRamble: %@", String(describing: error.localizedDescription)),
+                        reason: .relaunch
                     )
                 )
             }
@@ -3903,7 +3919,8 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: L10n.tr("Couldn't repair Accessibility access: %@", String(describing: error.localizedDescription))
+                        message: L10n.tr("Couldn't repair Accessibility access: %@", String(describing: error.localizedDescription)),
+                        reason: .accessibilityRepair
                     )
                 )
             }
@@ -4184,7 +4201,7 @@ public final class AppState: ObservableObject {
             return false
         case .retryable:
             // A dead pipe, a worker watchdog, a Mac momentarily busy with the
-            // 586 MB it just wrote. The files are fine; wait longer and retry.
+            // model it just wrote. The files are fine; wait longer and retry.
             return true
         case .skipped:
             // Nothing happened: a cancelled request, a fenced generation, a
@@ -4302,7 +4319,8 @@ public final class AppState: ObservableObject {
                     DictationNotice(
                         kind: .failure,
                         message: L10n.tr("The model didn't load. An explicit repair will redownload ")
-                            + L10n.tr("%@ MB.", String(describing: remainingDownloadMegabytes))
+                            + L10n.tr("%@ MB.", String(describing: remainingDownloadMegabytes)),
+                        reason: .modelLoad
                     )
                 )
                 return .repairRequired(detail)
@@ -4329,7 +4347,7 @@ public final class AppState: ObservableObject {
     /// Keep preparing until it works. There is nothing else to do.
     ///
     /// The files are verified; only the worker generation failed, and the
-    /// commonest reason is a Mac momentarily busy with the 586 MB it just
+    /// commonest reason is a Mac momentarily busy with the model it just
     /// wrote. A budget of attempts turned that into a permanent "give up"
     /// state with a button, on the very first run — the app now simply waits
     /// longer between attempts and stays honestly "preparing" throughout, so
@@ -4620,7 +4638,8 @@ public final class AppState: ObservableObject {
                 DictationNotice(
                     kind: .failure,
                     message: (error as? LocalizedError)?.errorDescription
-                        ?? L10n.tr("The dictionary file couldn't be read.")
+                        ?? L10n.tr("The dictionary file couldn't be read."),
+                    reason: .dictionary
                 )
             )
             return
@@ -4649,7 +4668,7 @@ public final class AppState: ObservableObject {
     /// The file dialogs live in the view; their failures surface through the
     /// same channel as every other notice.
     public func reportDictionaryFileProblem(_ message: String) {
-        notify(DictationNotice(kind: .failure, message: message))
+        notify(DictationNotice(kind: .failure, message: message, reason: .dictionary))
     }
 
     private func importSummary(added: Int, updated: Int) -> String {
@@ -4683,7 +4702,8 @@ public final class AppState: ObservableObject {
                 notify(
                     DictationNotice(
                         kind: .failure,
-                        message: L10n.tr("The dictionary wasn't saved: %@", String(describing: error.localizedDescription))
+                        message: L10n.tr("The dictionary wasn't saved: %@", String(describing: error.localizedDescription)),
+                        reason: .dictionary
                     )
                 )
                 return

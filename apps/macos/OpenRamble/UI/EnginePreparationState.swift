@@ -2,16 +2,16 @@ import Foundation
 
 /// What to show while the engine is preparing for the first dictation.
 ///
-/// The first launch after installation was silent for 12–15 seconds: macOS compiles the model
-/// under the Neural Engine, and all this time the person did not understand whether something was broken.
+/// The first launch after installation is a wait of several seconds while macOS builds the
+/// model's GPU code for this Mac, and a silent wait reads as something broken.
 ///
-/// **No invented percentage, ever.** There is no ANE compilation progress signal — neither the
-/// system nor the library exposes one — so a smoothly filling bar would be fiction, and fictional
-/// progress is worse than honest silence: it promises a deadline nobody knows.
+/// **No invented percentage, ever.** Neither the system nor the runtime reports progress inside
+/// that build, so a smoothly filling bar would be fiction, and fictional progress is worse than
+/// honest silence: it promises a deadline nobody knows.
 ///
-/// What is real is the sequence. Preparation is three genuine milestones — the recognizer, the term
-/// booster, and a real warm-up inference — and each one completing is a fact the app observes. So the
-/// bar advances by completed steps and stands still inside a step, next to seconds that keep moving.
+/// What is real is the sequence. Preparation is two genuine milestones — loading the recognizer
+/// and a real warm-up inference — and each one completing is a fact the app observes. So the bar
+/// advances by completed steps and stands still inside a step, next to seconds that keep moving.
 /// A person sees where they are without being told a number that was made up.
 ///
 /// Engine failure is not included here intentionally: it already has an owner -
@@ -21,13 +21,12 @@ public struct EnginePreparationState: Equatable {
     public enum Phase: Equatable {
         case idle
         case loadingRecognizer
-        case loadingVocabulary
         case warmingUp
         case ready
     }
 
-    /// How many milestones preparation has. Shown as "Step N of 3".
-    public static let stepCount = 3
+    /// How many milestones preparation has. Shown as "Step N of 2".
+    public static let stepCount = 2
 
     public let phase: Phase
     public let elapsed: TimeInterval
@@ -41,8 +40,7 @@ public struct EnginePreparationState: Equatable {
         switch phase {
         case .idle: return 1
         case .loadingRecognizer: return 1
-        case .loadingVocabulary: return 2
-        case .warmingUp: return 3
+        case .warmingUp: return 2
         case .ready: return Self.stepCount
         }
     }
@@ -65,12 +63,6 @@ public struct EnginePreparationState: Equatable {
                 detail: L10n.tr("macOS is compiling the model for this Mac. Up to about ")
                     + L10n.tr("20 seconds the first time after install, a fraction of a second ")
                     + L10n.tr("afterwards.")
-            )
-        case .loadingVocabulary:
-            return EnginePreparationState(
-                phase: phase, elapsed: elapsed,
-                title: L10n.tr("Loading the term booster… %@ s", String(describing: seconds)),
-                detail: L10n.tr("A second, smaller model. Same one-time compile.")
             )
         case .warmingUp:
             return EnginePreparationState(

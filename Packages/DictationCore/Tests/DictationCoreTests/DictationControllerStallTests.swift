@@ -131,6 +131,7 @@ final class DictationControllerStallTests: XCTestCase {
 
         let notice = try XCTUnwrap(notices.last)
         XCTAssertEqual(notice.kind, .failure)
+        XCTAssertEqual(notice.reason, .transcriptionStalled)
         XCTAssertTrue(notice.message.contains("took too long"), notice.message)
         XCTAssertNotNil(notice.recoveryAudio, "the words must survive the stall")
         let kept = try FileManager.default.contentsOfDirectory(atPath: recovered.path)

@@ -1,3 +1,4 @@
+import AppKit
 import DictationCore
 import LocalASR
 import SwiftUI
@@ -130,17 +131,14 @@ struct OnboardingView: View {
             }
             Spacer(minLength: 0)
 
-            // The product crest. A plain system symbol in an accent circle —
-            // like macOS's own setup assistants; deliberately no glass here:
-            // Liquid Glass is the control layer, not content decoration.
-            ZStack {
-                Circle()
-                    .fill(Color.accentColor.gradient)
-                    .frame(width: 76, height: 76)
-                heroGlyph
-            }
-            .shadow(color: Color.accentColor.opacity(0.30), radius: 16, y: 6)
-            .accessibilityHidden(true)
+            // The product crest is the app icon itself — the same mark the
+            // person just dragged into Applications and will find in the menu
+            // bar. Deliberately no glass here: Liquid Glass is the control
+            // layer, not content decoration.
+            Image(nsImage: NSApplication.shared.applicationIconImage)
+                .resizable()
+                .frame(width: 96, height: 96)
+                .accessibilityHidden(true)
 
             Text(L10n.tr("Dictation that stays on your Mac"))
                 .font(.largeTitle.bold())
@@ -164,7 +162,7 @@ struct OnboardingView: View {
                 OnboardingFeatureRow(
                     // An open lock reads as “unprotected” — the opposite.
                     symbol: "hand.raised",
-                    title: L10n.tr("Nothing leaves this Mac"),
+                    title: L10n.tr("Your voice and text never leave your Mac"),
                     text: L10n.tr("No accounts, no analytics, no automatic reports. The code is open — you can check.")
                 )
                 OnboardingFeatureRow(
@@ -181,20 +179,6 @@ struct OnboardingView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// The microphone on the crest breathes — barely, like an invitation to
-    /// speak. Reduce Motion and macOS 14 get a calm static symbol.
-    @ViewBuilder
-    private var heroGlyph: some View {
-        let glyph = Image(systemName: "mic.fill")
-            .font(.system(size: 34, weight: .medium))
-            .foregroundStyle(.white)
-        if #available(macOS 15.0, *), !reduceMotion {
-            glyph.symbolEffect(.breathe, options: .repeat(.continuous))
-        } else {
-            glyph
-        }
-    }
-
     private var setup: some View {
         VStack(alignment: .leading, spacing: 20) {
             OnboardingStepHeader(
@@ -204,8 +188,8 @@ struct OnboardingView: View {
             )
 
             VStack(spacing: 10) {
-                // The model goes first: the 586 MB download runs while the
-                // person makes the System Settings round-trips below it.
+                // The model goes first: its download runs while the person
+                // makes the System Settings round-trips below it.
                 VStack(alignment: .leading, spacing: 8) {
                     Label(L10n.tr("Speech model"), systemImage: "waveform")
                         .font(.headline)
@@ -249,9 +233,10 @@ struct OnboardingView: View {
                 .font(.caption)
             }
 
-            Text(L10n.tr("Input Monitoring is not needed. Accessibility is used only for the dictation key and for inserting finished text."))
+            Text(L10n.tr("Accessibility is used only to notice your dictation key and insert finished text. Other keystrokes are never logged or stored. Input Monitoring is not needed."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
         }

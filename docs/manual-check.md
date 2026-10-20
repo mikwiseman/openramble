@@ -11,8 +11,8 @@ for the check.
    appears, fits without clipping, and can be completed using only the keyboard.
 2. Grant Microphone and Accessibility access. Confirm the state refreshes after
    returning from System Settings and the app never requests Input Monitoring.
-3. Download both models, cancel and resume once, then restart the app. Confirm
-   both remain ready and recognition still works with Wi-Fi off.
+3. Download the model, cancel and resume once, then restart the app. Confirm
+   it remains ready and recognition still works with Wi-Fi off.
 4. Check onboarding, every Settings tab, the menu, permission errors, model
    progress/errors, an empty/populated dictionary, and the recovery menu in
    light and dark appearances at the smallest supported display scale. Repeat

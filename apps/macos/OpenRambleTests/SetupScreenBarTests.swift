@@ -307,7 +307,7 @@ final class SetupScreenBarTests: XCTestCase {
         )
         XCTAssertEqual(
             preparing.setupLine,
-            "Preparing the model — Step 1 of 3 · Loading the recognizer… 1 s"
+            "Preparing the model — Step 1 of 2 · Loading the recognizer… 1 s"
         )
 
         // Everything the person must act on still has its line and its button.

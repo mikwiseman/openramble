@@ -8,7 +8,7 @@ final class EnginePreparationStateTests: XCTestCase {
         for phase in [
             EnginePreparationState.Phase.idle,
             .loadingRecognizer,
-            .loadingVocabulary,
+            .warmingUp,
             .ready,
         ] {
             let state = EnginePreparationState.make(phase: phase, elapsed: 7)
@@ -24,8 +24,8 @@ final class EnginePreparationStateTests: XCTestCase {
             "Loading the recognizer… 14 s"
         )
         XCTAssertEqual(
-            EnginePreparationState.make(phase: .loadingVocabulary, elapsed: 3).title,
-            "Loading the term booster… 3 s"
+            EnginePreparationState.make(phase: .warmingUp, elapsed: 3).title,
+            "Warming up recognition… 3 s"
         )
     }
 
@@ -38,7 +38,7 @@ final class EnginePreparationStateTests: XCTestCase {
     /// Engine failure is not included here: it already has an owner -
     /// `ModelStatus.repairRequired`. The second type would disagree with the first about the same thing.
     func testScenario010() {
-        let phases: [EnginePreparationState.Phase] = [.idle, .loadingRecognizer, .loadingVocabulary, .ready]
+        let phases: [EnginePreparationState.Phase] = [.idle, .loadingRecognizer, .warmingUp, .ready]
         for phase in phases {
             let state = EnginePreparationState.make(phase: phase, elapsed: 1)
             XCTAssertFalse(state.title.lowercased().contains("fail"), "\(phase)")
@@ -73,21 +73,21 @@ final class EnginePreparationWiringTests: XCTestCase {
             isEngineReady: false,
             isPreparingEngine: true
         )
-        XCTAssertEqual(status.progressLabel, "Step 1 of 3 · Loading the recognizer… 9 s")
+        XCTAssertEqual(status.progressLabel, "Step 1 of 2 · Loading the recognizer… 9 s")
     }
 
-    /// The second model is a separate phase: merging them into one line means
-    /// show “a little more” when new work has started.
+    /// The warm-up is the step after loading, and the count names only steps
+    /// that run: a counter that jumps from 1 to 3 reads as a skipped stage.
     func testScenario013() {
         let status = ModelStatus.make(
             state: .ready(directory: URL(fileURLWithPath: "/tmp")),
-            preparation: .make(phase: .loadingVocabulary, elapsed: 2),
+            preparation: .make(phase: .warmingUp, elapsed: 2),
             place: .settings,
             isEngineReady: false,
             isPreparingEngine: true
         )
-        XCTAssertEqual(status.progressLabel, "Step 2 of 3 · Loading the term booster… 2 s")
-        XCTAssertEqual(status.progress ?? -1, 1.0 / 3.0, accuracy: 0.001)
+        XCTAssertEqual(status.progressLabel, "Step 2 of 2 · Warming up recognition… 2 s")
+        XCTAssertEqual(status.progress ?? -1, 1.0 / 2.0, accuracy: 0.001)
     }
 
     /// The preparation is over - there is no line at all.

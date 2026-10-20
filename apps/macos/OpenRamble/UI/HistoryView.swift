@@ -184,8 +184,8 @@ private struct HistoryRow: View {
                     }
                     .buttonStyle(.borderless)
                     .disabled(isRetranscribing)
-                    .help(L10n.tr("Recognise this recording again"))
-                    .accessibilityLabel(L10n.tr("Recognise this recording again"))
+                    .help(L10n.tr("Recognize this recording again"))
+                    .accessibilityLabel(L10n.tr("Recognize this recording again"))
                 }
 
                 Button(action: onCopy) {

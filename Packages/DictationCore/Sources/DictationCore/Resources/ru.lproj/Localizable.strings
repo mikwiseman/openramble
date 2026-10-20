@@ -21,7 +21,6 @@
 "A quiet tone when the text didn't reach the field or nothing was recognized. A dictation that works stays silent." = "Тихий сигнал, если текст не вставлен или речь не распознана. Успешная диктовка проходит без звука.";
 "A recording is already running." = "Запись уже идёт.";
 "A recording was recovered after an interruption." = "Запись восстановлена после прерывания.";
-"A second, smaller model. Same one-time compile." = "Вторая, меньшая модель. Такая же однократная подготовка.";
 "About" = "О приложении";
 "Accessibility" = "Универсальный доступ";
 "Accessibility access" = "к функциям Универсального доступа";
@@ -101,7 +100,7 @@
 "Couldn't prepare recording recovery: %@" = "Не удалось подготовить восстановление записей: %@";
 "Couldn't prepare the app's working folders: %@" = "Не удалось подготовить рабочие папки приложения: %@";
 "Couldn't put the files in place: %@" = "Не удалось разместить файлы: %@";
-"Couldn't recognise that recording again." = "Не удалось повторно распознать эту запись.";
+"Couldn't recognize that recording again." = "Не удалось повторно распознать эту запись.";
 "Couldn't record audio: %@" = "Не удалось записать звук: %@";
 "Couldn't record audio: no free disk space." = "Не удалось записать звук: на диске нет места.";
 "Couldn't record the other side: %@." = "Не удалось записать собеседников: %@.";
@@ -175,7 +174,7 @@
 "Finish the current recording first — relaunching now would end it." = "Сначала завершите текущую запись — перезапуск остановит её.";
 "Finished dictations appear here with their audio." = "Завершённые диктовки появляются здесь вместе со звуком.";
 "Finished text is pasted through the clipboard; its previous contents are restored shortly afterward." = "Готовый текст вставляется через буфер обмена. Его прежнее содержимое вскоре восстанавливается.";
-"FluidAudio is licensed under Apache 2.0. Sparkle is licensed under MIT." = "FluidAudio распространяется по лицензии Apache 2.0, Sparkle — MIT.";
+"Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT." = "Распознавание речи работает на transcribe.cpp от CJ Pais и команды Handy, лицензия MIT. Sparkle распространяется по лицензии MIT.";
 "Follow the system, or keep this app light or dark on its own" = "Следовать системе или выбрать светлую либо тёмную тему для приложения";
 "For dictating in runs, so the next phrase does not arrive welded to the last word." = "При диктовке по частям следующая фраза не будет склеиваться с предыдущей.";
 "Frees the speech model's memory after this much idle time. It reloads under your voice at the next dictation." = "Освобождает память модели после указанного времени бездействия. При следующей диктовке модель загрузится, пока вы говорите.";
@@ -204,7 +203,7 @@
 "Imported %@." = "Импортировано: %@.";
 "Import…" = "Импорт…";
 "Include" = "Включить в запись";
-"Input Monitoring is not needed. Accessibility is used only for the dictation key and for inserting finished text." = "Мониторинг ввода не нужен. Универсальный доступ используется только для клавиши диктовки и вставки готового текста.";
+"Accessibility is used only to notice your dictation key and insert finished text. Other keystrokes are never logged or stored. Input Monitoring is not needed." = "Универсальный доступ нужен только для клавиши диктовки и вставки готового текста. Остальные нажатия клавиш нигде не записываются и не сохраняются. Мониторинг ввода не нужен.";
 "Insert Last Dictation" = "Вставить последнюю диктовку";
 "Inserting…" = "Вставка…";
 "Insertion couldn't be confirmed in time. The text stays in the menu and may already have been pasted." = "Не удалось вовремя подтвердить вставку. Текст остаётся в меню и, возможно, уже вставлен.";
@@ -243,7 +242,6 @@
 "Listening…" = "Слушаю…";
 "Live camera bubble preview" = "Предпросмотр камеры";
 "Loading the recognizer… %@ s" = "Загрузка распознавания… %@ с";
-"Loading the term booster… %@ s" = "Загрузка словарной модели… %@ с";
 "Mac audio" = "Звук Mac";
 "Make sure pressing 🌐 is not assigned to anything in the system: System Settings → Keyboard → “Press 🌐 key”. Otherwise dictation will fire together with the system action. %@" = "Убедитесь, что клавише 🌐 не назначено системное действие: Системные настройки → Клавиатура → «При нажатии клавиши 🌐». Иначе оно будет срабатывать вместе с диктовкой. %@";
 "Meeting" = "Встреча";
@@ -296,7 +294,7 @@
 "Nothing dictated yet." = "Диктовок пока нет.";
 "Nothing is arriving from what this Mac plays. Either System Audio Recording isn't allowed for OpenRamble, or this output is one macOS can't record — Bluetooth and AirPlay are. If you've just allowed it, relaunch OpenRamble." = "Системный звук не поступает. Возможно, OpenRamble не разрешена запись системного звука или macOS не может записать этот выход, например Bluetooth или AirPlay. Если вы только что дали разрешение, перезапустите OpenRamble.";
 "Nothing is arriving from your microphone. Another app may have exclusive access, or this input is silent. The other side is still being recorded." = "Звук микрофона не поступает. Возможно, его монопольно использует другое приложение или выбранный вход молчит. Звук собеседников по-прежнему записывается.";
-"Nothing leaves this Mac" = "Ничего не покидает этот Mac";
+"Your voice and text never leave your Mac" = "Голос и текст никогда не покидают ваш Mac";
 "Nothing to import — every phrase in the file is already in the dictionary." = "Импортировать нечего — все фразы из файла уже есть в словаре.";
 "Nothing to import." = "Импортировать нечего.";
 "Nothing to transcribe" = "Нечего расшифровывать";
@@ -336,7 +334,7 @@
 "Opens the folder holding the kept audio" = "Открывает папку с сохранённым звуком";
 "Opens the folder with downloaded models and any recordings kept after a failure" = "Открывает папку с моделями и записями, сохранёнными после сбоя";
 "Others" = "Собеседники";
-"Parakeet TDT 0.6B v3 and Parakeet TDT-CTC 110M © NVIDIA, licensed under CC BY 4.0. Core ML conversions by FluidInference." = "Parakeet TDT 0.6B v3 и Parakeet TDT-CTC 110M © NVIDIA, лицензия CC BY 4.0. Конвертация в Core ML — FluidInference.";
+"Parakeet Ultra © Moondream and Parakeet TDT 0.6B v3 © NVIDIA, licensed under CC BY 4.0. GGUF conversions by handy-computer." = "Parakeet Ultra © Moondream и Parakeet TDT 0.6B v3 © NVIDIA, лицензия CC BY 4.0. Конвертация в GGUF — handy-computer.";
 "Pause" = "Пауза";
 "Pause Recording" = "Приостановить запись";
 "Pause recording" = "Приостановить запись";
@@ -364,14 +362,14 @@
 "Press this shortcut to start or stop a recording" = "Эта комбинация начинает или останавливает запись";
 "Pressing 🌐 already triggers %@ — dictation and that action will fire together. To change this: System Settings → Keyboard → “Press 🌐 key”. %@" = "Нажатие 🌐 уже вызывает %@. Диктовка и это действие сработают вместе. Изменить назначение можно в Системных настройках → Клавиатура → «При нажатии клавиши 🌐». %@";
 "Privacy" = "Приватность";
-"Private dictation for your Mac" = "Личная диктовка для вашего Mac";
+"Private dictation and recording for your Mac" = "Личная диктовка и запись для вашего Mac";
 "Quit OpenRamble" = "Выйти из OpenRamble";
 "Reads back the field it pasted into, to learn words you fix by hand" = "Читает поле после вставки, чтобы запомнить слова, которые вы исправили вручную";
 "Ready to dictate" = "Можно диктовать";
 "Ready to record" = "Можно начинать запись";
 "Ready — hold %@ and speak" = "Готово — удерживайте %@ и говорите";
 "Recent Dictations" = "Последние диктовки";
-"Recognise this recording again" = "Распознать эту запись ещё раз";
+"Recognize this recording again" = "Распознать эту запись ещё раз";
 "Recognition" = "Распознавание";
 "Record" = "Записать";
 "Recording" = "Запись";

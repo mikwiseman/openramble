@@ -316,7 +316,7 @@ fi
 for resource in \
   LICENSE NOTICE THIRD_PARTY_LICENSES.md model-manifest.json \
   Sparkle-LICENSE.txt Parakeet-CC-BY-4.0.txt \
-  transcribe-cpp-MIT.txt ggml-MIT.txt miniz-MIT.txt
+  transcribe-cpp-MIT.txt ggml-MIT.txt miniz-MIT.txt silero-vad-MIT.txt
 do
   [[ -s "$APP/Contents/Resources/$resource" ]] || {
     echo "No required resource: $resource" >&2

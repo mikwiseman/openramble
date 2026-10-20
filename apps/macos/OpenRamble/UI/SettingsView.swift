@@ -778,7 +778,7 @@ private struct AboutView: View {
                         Text("OpenRamble")
                             .font(.title2.bold())
                             .accessibilityAddTraits(.isHeader)
-                        Text(L10n.tr("Private dictation for your Mac"))
+                        Text(L10n.tr("Private dictation and recording for your Mac"))
                             .foregroundStyle(.secondary)
                         Text(version)
                             .font(.caption.monospacedDigit())
@@ -877,8 +877,8 @@ private struct AboutView: View {
             Section(L10n.tr("Credits")) {
                 DisclosureGroup(L10n.tr("Model and library credits"), isExpanded: $showsCredits) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(L10n.tr("Parakeet TDT 0.6B v3 and Parakeet TDT-CTC 110M © NVIDIA, licensed under CC BY 4.0. Core ML conversions by FluidInference."))
-                        Text(L10n.tr("FluidAudio is licensed under Apache 2.0. Sparkle is licensed under MIT."))
+                        Text(L10n.tr("Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT."))
+                        Text(L10n.tr("Parakeet Ultra © Moondream and Parakeet TDT 0.6B v3 © NVIDIA, licensed under CC BY 4.0. GGUF conversions by handy-computer."))
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
