@@ -417,6 +417,10 @@ public final class AppState: ObservableObject {
     }
     @Published public private(set) var accessibilityGranted = false
     @Published public private(set) var accessibilityState: AccessibilityPermissionState = .denied
+    /// The person came back from System Settings and the app is still not
+    /// trusted. Only then is "Already on? Repair" offered: macOS may show the
+    /// switch on for a stale entry that does not match this build.
+    @Published public private(set) var accessibilityReturnedWithoutGrant = false
     @Published public private(set) var microphoneGranted = false
     @Published public private(set) var lastNotice: DictationNotice? {
         didSet {
@@ -878,10 +882,6 @@ public final class AppState: ObservableObject {
         /// macOS global setup: what pressing 🌐 does.
         static let fnUsage = "AppleFnUsageType"
     }
-
-    /// The marker survives relaunch. If the new process is still not trusted,
-    /// There is no point in repeating the restart - an explicit repair of the old TCC record is needed.
-    static let accessibilityRelaunchPendingKey = "accessibilityRelaunchPending"
 
     private let defaults: UserDefaults
     let diagnostics: DictationLogFile
@@ -1940,9 +1940,12 @@ public final class AppState: ObservableObject {
     private func handleApplicationBecameActive() {
         let wasWaitingForSettings = accessibilityState == .waitingForSettings
         refreshPermissions()
-        if wasWaitingForSettings, !accessibilityGranted,
-           accessibilityState != .repairRequired {
-            accessibilityState = .restartRequired
+        // Back without the grant. Nothing to relaunch: the grant is read live
+        // and the window comes back by itself once it is on. A relaunch here
+        // used to throw away the model download in progress. What is left is
+        // the rare stale system entry, so "Already on? Repair" appears now.
+        if wasWaitingForSettings, !accessibilityGranted, !accessibilityReturnedWithoutGrant {
+            accessibilityReturnedWithoutGrant = true
         }
         if isScreenRecordingSetupPresented {
             // Returning from Privacy & Security is the only reliable signal
@@ -3711,18 +3714,20 @@ public final class AppState: ObservableObject {
         if microphone != microphoneGranted { microphoneGranted = microphone }
 
         if accessibility {
+            // The person turned it on in the System Settings window we opened.
+            // Bring ours back, as the microphone grant does: they should not
+            // have to find the setup window behind System Settings.
+            if !previousAccessibility, accessibilityState == .waitingForSettings {
+                activateApplication()
+            }
             // Assignments are guarded: `@Published` does not deduplicate, and
             // an unconditional write here re-rendered the whole menu bar scene
             // on every poll tick — a permanent one-hertz UI heartbeat at rest.
             if accessibilityState != .granted { accessibilityState = .granted }
-            if defaults.bool(forKey: Self.accessibilityRelaunchPendingKey) {
-                defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
-            }
-        } else if defaults.bool(forKey: Self.accessibilityRelaunchPendingKey) {
-            accessibilityState = .repairRequired
+            if accessibilityReturnedWithoutGrant { accessibilityReturnedWithoutGrant = false }
         } else {
             switch accessibilityState {
-            case .waitingForSettings, .restartRequired, .repairRequired, .repairing, .failed:
+            case .waitingForSettings, .repairing, .failed:
                 break
             case .denied, .granted:
                 accessibilityState = .denied
@@ -3838,25 +3843,6 @@ public final class AppState: ObservableObject {
         accessibilityManager.revealApplication()
     }
 
-    public func restartForAccessibility() {
-        defaults.set(true, forKey: Self.accessibilityRelaunchPendingKey)
-        Task {
-            do {
-                try await accessibilityManager.relaunchApplication()
-            } catch {
-                defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
-                accessibilityState = .failed(error.localizedDescription)
-                notify(
-                    DictationNotice(
-                        kind: .failure,
-                        message: L10n.tr("Couldn't relaunch OpenRamble: %@", String(describing: error.localizedDescription)),
-                        reason: .relaunch
-                    )
-                )
-            }
-        }
-    }
-
     /// Called only after a separate confirmation in the UI: the command deletes
     /// Accessibility records of exactly this bundle id will require access to be granted
     /// again. There is no automatic reset upon startup or request.
@@ -3866,14 +3852,10 @@ public final class AppState: ObservableObject {
         Task {
             do {
                 try await accessibilityManager.resetAccess()
-                // After reset, the lack of grant is expected: the new process must
-                // show the normal "Give" button again instead of getting into a loop
-                // "repair required". Pending only applies to restarts
-                // without reset, which was supposed to pick up the already enabled grant.
-                defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
+                // After reset, the lack of grant is expected: the new process
+                // shows the normal "Grant" button again.
                 try await accessibilityManager.relaunchApplication()
             } catch {
-                defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
                 accessibilityState = .failed(error.localizedDescription)
                 notify(
                     DictationNotice(

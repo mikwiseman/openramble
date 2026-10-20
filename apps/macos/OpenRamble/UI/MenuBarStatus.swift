@@ -98,7 +98,7 @@ enum MenuBarStatus {
     ) -> Bool {
         if !microphoneGranted { return true }
         switch accessibilityState {
-        case .denied, .waitingForSettings, .restartRequired, .repairRequired, .failed:
+        case .denied, .waitingForSettings, .failed:
             return true
         case .repairing, .granted:
             break

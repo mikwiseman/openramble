@@ -11,6 +11,13 @@ enum OnboardingStep: Int, CaseIterable, Sendable {
     case setup
     case tryIt
 
+    /// Where the window opens. A relaunch mid-setup — a repair, a crash, a
+    /// quit — resumes at setup instead of replaying the pitch; a grant is the
+    /// evidence, because it survives the relaunch and only setup produces one.
+    static func first(microphoneGranted: Bool, accessibilityGranted: Bool) -> OnboardingStep {
+        microphoneGranted || accessibilityGranted ? .setup : .welcome
+    }
+
     var next: OnboardingStep? { OnboardingStep(rawValue: rawValue + 1) }
     var previous: OnboardingStep? { OnboardingStep(rawValue: rawValue - 1) }
 

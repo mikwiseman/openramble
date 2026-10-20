@@ -190,8 +190,6 @@ public struct SystemPermissions: PermissionReading {
 public enum AccessibilityPermissionState: Sendable, Equatable {
     case denied
     case waitingForSettings
-    case restartRequired
-    case repairRequired
     case repairing
     case failed(String)
     case granted

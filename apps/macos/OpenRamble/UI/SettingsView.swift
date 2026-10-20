@@ -318,6 +318,14 @@ private struct GeneralSettings: View {
                         }
                     }
                 }
+                if AccessibilityRepairLink.isShown(
+                    state: state.accessibilityState,
+                    returnedWithoutGrant: state.accessibilityReturnedWithoutGrant
+                ) {
+                    AccessibilityRepairLinkButton(modelState: state.modelState) {
+                        showAccessibilityRepairConfirmation = true
+                    }
+                }
                 PermissionRow(
                     status: PermissionStatus(
                         title: L10n.tr("Microphone"),
@@ -356,12 +364,8 @@ private struct GeneralSettings: View {
     }
 
     private var needsAccessibilityRepair: Bool {
-        switch state.accessibilityState {
-        case .repairRequired, .failed:
-            true
-        default:
-            false
-        }
+        if case .failed = state.accessibilityState { return true }
+        return false
     }
 
     private func performAccessibilityAction() {
@@ -370,13 +374,33 @@ private struct GeneralSettings: View {
             state.requestAccessibility()
         case .waitingForSettings:
             state.openAccessibilitySettings()
-        case .restartRequired:
-            state.restartForAccessibility()
-        case .repairRequired, .failed:
+        case .failed:
             showAccessibilityRepairConfirmation = true
         case .repairing, .granted:
             break
         }
+    }
+}
+
+/// The secondary way out beside the Accessibility row; see
+/// `AccessibilityRepairLink`. A link, not a button: the primary action is
+/// still to turn the switch on in System Settings.
+struct AccessibilityRepairLinkButton: View {
+    let modelState: ModelState
+    let action: () -> Void
+
+    var body: some View {
+        let enabled = AccessibilityRepairLink.isEnabled(modelState: modelState)
+        Button(L10n.tr("Already on? Repair"), action: action)
+            .buttonStyle(.link)
+            .font(.caption)
+            .disabled(!enabled)
+            .help(enabled ? "" : L10n.tr("Available once the model has downloaded."))
+            .accessibilityHint(
+                enabled
+                    ? L10n.tr("Removes OpenRamble's old Accessibility entry and relaunches the app.")
+                    : L10n.tr("Available once the model has downloaded.")
+            )
     }
 }
 

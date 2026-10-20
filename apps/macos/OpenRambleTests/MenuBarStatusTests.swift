@@ -405,8 +405,6 @@ final class SetupAttentionTests: XCTestCase {
     func testScenario041() {
         XCTAssertTrue(needsAction(accessibility: .denied))
         XCTAssertTrue(needsAction(accessibility: .waitingForSettings))
-        XCTAssertTrue(needsAction(accessibility: .restartRequired))
-        XCTAssertTrue(needsAction(accessibility: .repairRequired))
         XCTAssertTrue(needsAction(accessibility: .failed("boom")))
         XCTAssertFalse(needsAction(accessibility: .repairing), "repair is running — nothing to click")
     }

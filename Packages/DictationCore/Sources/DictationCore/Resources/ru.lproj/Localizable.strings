@@ -10,6 +10,8 @@
 "%@ is already %@." = "%@ уже назначено действию «%@».";
 "%@ min" = "%@ мин";
 "%@ of %@" = "%@ из %@";
+"Already on? Repair" = "Уже включено? Восстановить";
+"Available once the model has downloaded." = "Станет доступно, когда модель загрузится.";
 "Position %@ of %@" = "Позиция: %@; длительность: %@";
 "%@ of %@ MB" = "%@ из %@ МБ";
 "%@ percent" = "%@ процентов";
@@ -48,7 +50,6 @@
 "Allow screen recording" = "Разрешите запись экрана";
 "Allow the microphone to record." = "Разрешите доступ к микрофону для записи.";
 "Also copy dictations to the clipboard" = "Копировать диктовки в буфер обмена";
-"App relaunch required" = "Нужен перезапуск приложения";
 "Appearance" = "Оформление";
 "Apple's built-in dictation" = "встроенную диктовку Apple";
 "Ask on start" = "Запрос при запуске";
@@ -174,6 +175,7 @@
 "Finish the current recording first — relaunching now would end it." = "Сначала завершите текущую запись — перезапуск остановит её.";
 "Finished dictations appear here with their audio." = "Завершённые диктовки появляются здесь вместе со звуком.";
 "Finished text is pasted through the clipboard; its previous contents are restored shortly afterward." = "Готовый текст вставляется через буфер обмена. Его прежнее содержимое вскоре восстанавливается.";
+"Removes OpenRamble's old Accessibility entry and relaunches the app." = "Удаляет старую запись OpenRamble в Универсальном доступе и перезапускает приложение.";
 "Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT." = "Распознавание речи работает на transcribe.cpp от CJ Pais и команды Handy, лицензия MIT. Sparkle распространяется по лицензии MIT.";
 "Follow the system, or keep this app light or dark on its own" = "Следовать системе или выбрать светлую либо тёмную тему для приложения";
 "For dictating in runs, so the next phrase does not arrive welded to the last word." = "При диктовке по частям следующая фраза не будет склеиваться с предыдущей.";
@@ -195,7 +197,6 @@
 "Hold a key, speak, let go — the text appears at your cursor. In any app." = "Удерживайте клавишу, говорите, отпустите — текст появится у курсора. В любом приложении.";
 "Hold the dictation key to speak, or double-press for hands-free dictation. Press once more to finish. Record starts and stops a recording from any app; choose a shortcut that your other apps don't use. ⌘R opens Recordings while OpenRamble is active." = "Удерживайте клавишу, пока говорите, или нажмите дважды для диктовки без удержания. Нажмите ещё раз для завершения. Комбинация записи работает из любого приложения — выберите свободную. ⌘R открывает «Записи», когда OpenRamble активно.";
 "How many dictations to keep, with their audio" = "Сколько диктовок хранить вместе со звуком";
-"If OpenRamble is already turned on, relaunch the app so macOS applies the access to the new process." = "Если OpenRamble уже включён, перезапустите приложение, чтобы macOS применила разрешение.";
 "If access is enabled in Settings and Retry still fails, quit and reopen OpenRamble once." = "Если доступ разрешён в Настройках, но повторная попытка не помогает, закройте и снова откройте OpenRamble.";
 "If your terminal says 'command not found', add this line to your shell startup file, such as ~/.zshrc, then open a new terminal:" = "Если терминал пишет «command not found», добавьте эту строку в файл настроек оболочки, например ~/.zshrc, и откройте новый терминал:";
 "Immediately" = "Сразу";
@@ -409,10 +410,8 @@
 "Recovered after an interruption. Everything recorded up to that moment was kept." = "Восстановлено после прерывания. Всё, что удалось записать, сохранено.";
 "Redownload Model — %@ MB" = "Скачать модель заново — %@ МБ";
 "Reinstall command-line tool" = "Переустановить инструмент командной строки";
-"Relaunch" = "Перезапустить";
 "Relaunch OpenRamble" = "Перезапустить OpenRamble";
 "Relaunch so macOS applies the permission to the new process" = "Перезапустите приложение, чтобы macOS применила разрешение";
-"Relaunch to Apply Access" = "Перезапустить для применения доступа";
 "Removing the old entry and relaunching OpenRamble." = "Удаление старого разрешения и перезапуск OpenRamble.";
 "Rename" = "Переименовать";
 "Rename…" = "Переименовать…";
@@ -548,7 +547,6 @@
 "The rest of this recording is being transcribed. The audio is complete." = "Остаток записи ещё расшифровывается. Звук сохранён полностью.";
 "The speech model isn't ready yet." = "Речевая модель ещё не готова.";
 "The system did not report the Application Support location" = "Система не сообщила путь к Application Support";
-"The system permission entry needs repair" = "Системное разрешение нужно восстановить";
 "The text still couldn't be inserted — it stays in the menu." = "Текст по-прежнему не удалось вставить. Он остаётся в меню.";
 "The text was inserted, but the previous clipboard couldn't be restored." = "Текст вставлен, но прежнее содержимое буфера обмена не удалось восстановить.";
 "The transcript can't be saved. The recording continues." = "Не удаётся сохранить расшифровку. Запись продолжается.";
@@ -626,7 +624,6 @@
 "input source switching" = "переключение источника ввода";
 "macOS is compiling the model for this Mac. This happens once." = "macOS подготавливает модель для этого Mac. Это происходит один раз.";
 "macOS is compiling the model for this Mac. Up to about " = "macOS подготавливает модель для этого Mac. До ";
-"macOS keeps an old or duplicate entry for OpenRamble. Remove just that entry and grant access again." = "В macOS осталась старая или повторная запись OpenRamble. Удалите только её и выдайте разрешение заново.";
 "macOS will remove only OpenRamble's Accessibility entries. After the relaunch you will need to grant access again." = "macOS удалит только разрешения Универсального доступа для OpenRamble. После перезапуска их нужно будет выдать заново.";
 "other side via %@" = "собеседники через %@";
 "recognition model: %@" = "модель распознавания: %@";

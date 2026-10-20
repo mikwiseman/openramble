@@ -79,6 +79,15 @@ final class OnboardingStepTests: XCTestCase {
         XCTAssertEqual(OnboardingStep.tryIt.progressAccessibilityLabel, "Step 3 of 3")
     }
 
+    /// A relaunch mid-setup — a repair, a crash, a quit — resumes at the
+    /// setup step rather than replaying the pitch. A grant is the evidence:
+    /// it survives the relaunch, and only setup produces one.
+    func testSetupResumesWhereItWasLeft() {
+        XCTAssertEqual(OnboardingStep.first(microphoneGranted: false, accessibilityGranted: false), .welcome)
+        XCTAssertEqual(OnboardingStep.first(microphoneGranted: true, accessibilityGranted: false), .setup)
+        XCTAssertEqual(OnboardingStep.first(microphoneGranted: false, accessibilityGranted: true), .setup)
+    }
+
     // MARK: - Who lets in next
 
     func testScenario005() {

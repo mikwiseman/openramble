@@ -246,52 +246,73 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(state.accessibilityState, .waitingForSettings)
     }
 
+    /// Coming back from System Settings without the grant is not a reason to
+    /// relaunch. A relaunch threw away the 740 MB download, which cannot
+    /// resume across launches, and then often led to a second one for repair.
+    /// The grant is read live; the person just has not turned it on yet.
     func testScenario004() async {
         permissions.accessibilityGranted = false
         let state = makeState()
         state.requestAccessibility()
+        XCTAssertFalse(state.accessibilityReturnedWithoutGrant)
 
         harness.notifications.post(name: NSApplication.didBecomeActiveNotification, object: nil)
-        await Task.yield()
+        for _ in 0..<5 { await Task.yield() }
 
-        XCTAssertEqual(state.accessibilityState, .restartRequired)
+        XCTAssertEqual(state.accessibilityState, .waitingForSettings)
+        XCTAssertTrue(
+            state.accessibilityReturnedWithoutGrant,
+            "the one quiet way out, Repair, is offered only now"
+        )
+        XCTAssertEqual(accessibilityManager.relaunchCount, 0)
     }
 
-    func testScenario005() async {
+    /// The toggle turned on in System Settings brings the window back, as the
+    /// microphone grant already does: one fewer window to hunt for.
+    func testTheAccessibilityGrantBringsTheWindowBackOnce() {
+        permissions.accessibilityGranted = false
+        let state = makeState()
+        state.requestAccessibility()
+
+        permissions.accessibilityGranted = true
+        state.refreshPermissions()
+        state.refreshPermissions()
+
+        XCTAssertEqual(state.accessibilityState, .granted)
+        XCTAssertEqual(harness.microphonePermissionFlow.activationCount, 1)
+        XCTAssertFalse(state.accessibilityReturnedWithoutGrant)
+        XCTAssertEqual(accessibilityManager.relaunchCount, 0, "a live grant needs no relaunch")
+    }
+
+    /// Only a grant the person went to System Settings for raises the app.
+    func testAGrantNobodyAskedForDoesNotRaiseTheApp() {
         permissions.accessibilityGranted = false
         let state = makeState()
 
-        state.restartForAccessibility()
-        await Task.yield()
+        permissions.accessibilityGranted = true
+        state.refreshPermissions()
 
-        XCTAssertEqual(accessibilityManager.relaunchCount, 1)
-        XCTAssertTrue(defaults.bool(forKey: AppState.accessibilityRelaunchPendingKey))
+        XCTAssertEqual(state.accessibilityState, .granted)
+        XCTAssertEqual(harness.microphonePermissionFlow.activationCount, 0)
     }
 
+    /// Older versions left a relaunch marker behind. It no longer means
+    /// anything, so it must not trap a new launch in a repair state.
     func testScenario006() {
         permissions.accessibilityGranted = false
-        defaults.set(true, forKey: AppState.accessibilityRelaunchPendingKey)
+        defaults.set(true, forKey: "accessibilityRelaunchPending")
 
         let state = makeState()
 
-        XCTAssertEqual(state.accessibilityState, .repairRequired)
+        XCTAssertEqual(state.accessibilityState, .denied)
         XCTAssertEqual(accessibilityManager.resetCount, 0)
     }
 
-    func testScenario007() {
-        permissions.accessibilityGranted = true
-        defaults.set(true, forKey: AppState.accessibilityRelaunchPendingKey)
-
-        let state = makeState()
-
-        XCTAssertEqual(state.accessibilityState, .granted)
-        XCTAssertFalse(defaults.bool(forKey: AppState.accessibilityRelaunchPendingKey))
-    }
-
+    /// "Already on? Repair": remove this app's stale entry and relaunch, once.
     func testScenario008() async {
         permissions.accessibilityGranted = false
-        defaults.set(true, forKey: AppState.accessibilityRelaunchPendingKey)
         let state = makeState()
+        state.requestAccessibility()
         XCTAssertEqual(accessibilityManager.resetCount, 0)
 
         state.repairAccessibility()
@@ -301,7 +322,6 @@ final class AppStateTests: XCTestCase {
 
         XCTAssertEqual(accessibilityManager.resetCount, 1)
         XCTAssertEqual(accessibilityManager.relaunchCount, 1)
-        XCTAssertFalse(defaults.bool(forKey: AppState.accessibilityRelaunchPendingKey))
     }
 
     func testMicrophoneGrantReturnsFocusToOpenRamble() async throws {

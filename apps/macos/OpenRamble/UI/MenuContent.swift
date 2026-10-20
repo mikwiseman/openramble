@@ -196,9 +196,7 @@ struct MenuContent: View {
                 Button(L10n.tr("Grant Accessibility Access")) { state.requestAccessibility() }
             case .waitingForSettings:
                 Button(L10n.tr("Open Accessibility Settings")) { state.openAccessibilitySettings() }
-            case .restartRequired:
-                Button(L10n.tr("Relaunch to Apply Access")) { state.restartForAccessibility() }
-            case .repairRequired, .failed:
+            case .failed:
                 Text(L10n.tr("Accessibility access needs repair"))
             case .repairing:
                 Text(L10n.tr("Repairing Accessibility access…"))

@@ -10,6 +10,8 @@
 "%@ is already %@." = "%@ is already %@.";
 "%@ min" = "%@ min";
 "%@ of %@" = "%@ of %@";
+"Already on? Repair" = "Already on? Repair";
+"Available once the model has downloaded." = "Available once the model has downloaded.";
 "Position %@ of %@" = "%@ of %@";
 "%@ of %@ MB" = "%@ of %@ MB";
 "%@ percent" = "%@ percent";
@@ -48,7 +50,6 @@
 "Allow screen recording" = "Allow screen recording";
 "Allow the microphone to record." = "Allow the microphone to record.";
 "Also copy dictations to the clipboard" = "Also copy dictations to the clipboard";
-"App relaunch required" = "App relaunch required";
 "Appearance" = "Appearance";
 "Apple's built-in dictation" = "Apple's built-in dictation";
 "Ask on start" = "Ask on start";
@@ -174,6 +175,7 @@
 "Finish the current recording first — relaunching now would end it." = "Finish the current recording first — relaunching now would end it.";
 "Finished dictations appear here with their audio." = "Finished dictations appear here with their audio.";
 "Finished text is pasted through the clipboard; its previous contents are restored shortly afterward." = "Finished text is pasted through the clipboard; its previous contents are restored shortly afterward.";
+"Removes OpenRamble's old Accessibility entry and relaunches the app." = "Removes OpenRamble's old Accessibility entry and relaunches the app.";
 "Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT." = "Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT.";
 "Follow the system, or keep this app light or dark on its own" = "Follow the system, or keep this app light or dark on its own";
 "For dictating in runs, so the next phrase does not arrive welded to the last word." = "For dictating in runs, so the next phrase does not arrive welded to the last word.";
@@ -195,7 +197,6 @@
 "Hold a key, speak, let go — the text appears at your cursor. In any app." = "Hold a key, speak, let go — the text appears at your cursor. In any app.";
 "Hold the dictation key to speak, or double-press for hands-free dictation. Press once more to finish. Record starts and stops a recording from any app; choose a shortcut that your other apps don't use. ⌘R opens Recordings while OpenRamble is active." = "Hold the dictation key to speak, or double-press for hands-free dictation. Press once more to finish. Record starts and stops a recording from any app; choose a shortcut that your other apps don't use. ⌘R opens Recordings while OpenRamble is active.";
 "How many dictations to keep, with their audio" = "How many dictations to keep, with their audio";
-"If OpenRamble is already turned on, relaunch the app so macOS applies the access to the new process." = "If OpenRamble is already turned on, relaunch the app so macOS applies the access to the new process.";
 "If access is enabled in Settings and Retry still fails, quit and reopen OpenRamble once." = "If access is enabled in Settings and Retry still fails, quit and reopen OpenRamble once.";
 "If your terminal says 'command not found', add this line to your shell startup file, such as ~/.zshrc, then open a new terminal:" = "If your terminal says 'command not found', add this line to your shell startup file, such as ~/.zshrc, then open a new terminal:";
 "Immediately" = "Immediately";
@@ -409,10 +410,8 @@
 "Recovered after an interruption. Everything recorded up to that moment was kept." = "Recovered after an interruption. Everything recorded up to that moment was kept.";
 "Redownload Model — %@ MB" = "Redownload Model — %@ MB";
 "Reinstall command-line tool" = "Reinstall command-line tool";
-"Relaunch" = "Relaunch";
 "Relaunch OpenRamble" = "Relaunch OpenRamble";
 "Relaunch so macOS applies the permission to the new process" = "Relaunch so macOS applies the permission to the new process";
-"Relaunch to Apply Access" = "Relaunch to Apply Access";
 "Removing the old entry and relaunching OpenRamble." = "Removing the old entry and relaunching OpenRamble.";
 "Rename" = "Rename";
 "Rename…" = "Rename…";
@@ -548,7 +547,6 @@
 "The rest of this recording is being transcribed. The audio is complete." = "The rest of this recording is being transcribed. The audio is complete.";
 "The speech model isn't ready yet." = "The speech model isn't ready yet.";
 "The system did not report the Application Support location" = "The system did not report the Application Support location";
-"The system permission entry needs repair" = "The system permission entry needs repair";
 "The text still couldn't be inserted — it stays in the menu." = "The text still couldn't be inserted — it stays in the menu.";
 "The text was inserted, but the previous clipboard couldn't be restored." = "The text was inserted, but the previous clipboard couldn't be restored.";
 "The transcript can't be saved. The recording continues." = "The transcript can't be saved. The recording continues.";
@@ -626,7 +624,6 @@
 "input source switching" = "input source switching";
 "macOS is compiling the model for this Mac. This happens once." = "macOS is compiling the model for this Mac. This happens once.";
 "macOS is compiling the model for this Mac. Up to about " = "macOS is compiling the model for this Mac. Up to about ";
-"macOS keeps an old or duplicate entry for OpenRamble. Remove just that entry and grant access again." = "macOS keeps an old or duplicate entry for OpenRamble. Remove just that entry and grant access again.";
 "macOS will remove only OpenRamble's Accessibility entries. After the relaunch you will need to grant access again." = "macOS will remove only OpenRamble's Accessibility entries. After the relaunch you will need to grant access again.";
 "other side via %@" = "other side via %@";
 "recognition model: %@" = "recognition model: %@";
