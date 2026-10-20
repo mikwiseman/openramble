@@ -240,6 +240,27 @@ quantization replaces Q8_0 (740 MB) when, against Ultra Q8_0 on runtime 0.4.0:
 
 If both pass, the smaller file is chosen.
 
+## H13. Ultra Q4_K_M on the CPU backend (Windows and Linux)
+
+Preregistered on 20 October 2026 before this measurement. The desktop app for
+Windows and Linux compiles in the same `model-manifest.json` as the Mac, so
+switching the Mac to Ultra Q4_K_M switches the desktop app too. The desktop
+app runs on the CPU backend with one session thread, where every speed number
+above (all on Metal) says nothing. No desktop build has shipped yet, so there
+is no installed v3 to migrate.
+
+Ultra Q4_K_M replaces v3 Q8_0 on the desktop app when, with transcribe.cpp
+0.4.0 on the CPU backend, one thread, the six speed inputs, in 12 blocks that
+alternate quiet and the 14-process load in ABBA order and alternate the model
+order within them:
+
+1. Idle, Ultra's median per-input time (mel + encode + decode) is at most 1.10
+   times v3's.
+2. Under load, the same ratio is at most 1.10.
+
+If either fails, the desktop app keeps v3 through its own manifest, and the
+Mac switches alone.
+
 ## Live text needs partials at least every 300 ms
 
 Recorded on 20 October 2026 as a gate for any future live-text feature, not
