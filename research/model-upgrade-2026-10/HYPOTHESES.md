@@ -314,6 +314,27 @@ A cold page cache needs `sudo purge` and is not measured; a first dictation
 after the OS has evicted the pages reads them from disk, and that cost is
 reported as a limit, not gated.
 
+## H15b. Upstream main with the model #79 ships
+
+Preregistered on 20 October 2026 after the H15 result. H15 failed only rule 7,
+and the cause is upstream #199, not the memory mapping: since #199,
+transcribe.cpp runs full-attention Parakeet checkpoints, v3 among them, with
+`[256,256]` local attention on clips longer than 20.5 s, so v3's long-input
+transcripts change. Ultra's transcripts did not change in any H15 suite.
+
+The same runtime (`db678a03`) is adopted together with #79 when:
+
+1. Rules 1 to 6 and 8 of H15 hold for Ultra Q4_K_M. They were measured in H15
+   and are not run again.
+2. On the #79 branch, whose bundled manifest is Ultra Q4_K_M, the LocalASR
+   unit and end-to-end suites with Ultra installed have no failure under
+   `main` that they do not have under 0.4.0.
+3. v3 serves people only until their Ultra download verifies. Its long-input
+   change under `main` is not gated, because it is NVIDIA's documented
+   long-audio mode and upstream measured it better on v3's English mid-length
+   speech (TED 3.19 to 2.35% WER) and worse on French. It is stated in the
+   #79 pull request instead.
+
 ## Live text needs partials at least every 300 ms
 
 Recorded on 20 October 2026 as a gate for any future live-text feature, not
@@ -394,6 +415,45 @@ Q8_0 (740 MB) from its own manifest, and the Mac ships Q4_K_M (486 MB).
 Intel Macs also run the Mac app on the CPU backend, so they get Q4_K_M with
 the same likely cost. That was not measured on an Intel CPU, and it is listed
 below as an open question rather than decided here.
+
+## H15 result
+
+Measured with Ultra Q4_K_M on transcribe.cpp 0.4.0 and on upstream main at
+`db678a03` (`h15.json`; speed, load and memory from an interleaved run tagged
+`h15`):
+
+| Rule | 0.4.0 | main | Verdict |
+|---|---:|---:|---|
+| 1. FLEURS transcripts identical; pooled WER | | 1,422 of 1,422; +0.00 pp | pass |
+| 2. Wrong script / invented words | 0 / 0 | 0 / 0 | pass |
+| 3. Hour-file deleted words, English / Russian | 2.71% / 0.85% | the same; all 5 hour transcripts identical | pass |
+| 4. Warm p50 / p95 idle | 366 / 1,732 ms | 346 / 1,701 ms | pass |
+| 4. Warm p50 / p95 under load | 406 / 2,032 ms | 394 / 2,019 ms | pass |
+| 4. Whole-process p50 idle | 0.402 s | 0.291 s | pass |
+| 5. Footprint after load / peak | 753 / 842 MB | 269 / 352 MB | pass |
+| 6. Model load, warm file cache | 0.191 s | 0.106 s | pass |
+| 7. Unit / end-to-end tests | 163 run, 7 skipped, 0 failed / 21 run, 3 skipped, 0 failed | the same unit result / 2 end-to-end tests fail | **fail** |
+| 7. Binary audit | | passes | |
+| 8. No in-place rewrite of a model file | | holds; all writers use staging and directory renames | pass |
+
+Rule 7's two failures are in `FileQualityTests`, which run the installed model,
+v3 on this Mac. They assert that the app's chunked file path is never worse
+than one whole-file pass. Under main the whole-file pass improved (455-word
+file: 22 errors to 13; mixed file: 39 to 33) while the chunked path stayed the
+same or improved (19/20/16 to 19/15/13 at 15/30/60 s chunks), so the
+comparison now fails. The mixed file also writes "Мари Иванова" for "Мария
+Иванова" twice, where 0.4.0 wrote it right. The cause is #199: since it,
+full-attention checkpoints such as v3 run local attention on clips longer
+than 20.5 s, which changes v3's long-input output. Ultra's output did not
+change anywhere in H15.
+
+Not gated: the English hour file took 52.3 s on main against 46.5 s on 0.4.0,
+and the Russian one 47.5 against 45.7 s, each from a single run that was not
+interleaved. A first recognition after the OS evicts the mapped pages reads
+them from disk again; that was not measured (it needs `sudo purge`).
+
+Decision: under the preregistered rules H15 fails and main is not adopted as
+measured. H15b asks the narrower question with the model #79 ships.
 
 ## Proposed next hypotheses
 

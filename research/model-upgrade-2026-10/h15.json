@@ -1,0 +1,96 @@
+{
+ "baseline": "parakeet-ultra-q4km",
+ "candidate": "runtime-main-ultra-q4km",
+ "rules": [
+  {
+   "rule": "1. >= 99% identical and pooled WER within +-0.10 pp",
+   "values": {
+    "identical": "1422/1422",
+    "pooled_pp": 0.0,
+    "ci95_pp": [
+     0.0,
+     0.0
+    ]
+   },
+   "pass": true
+  },
+  {
+   "rule": "2. wrong script and invented words not more",
+   "values": {
+    "wrong": [
+     0,
+     0
+    ],
+    "invented": [
+     0,
+     0
+    ]
+   },
+   "pass": true
+  },
+  {
+   "rule": "3. hour deleted words within 0.2 pp",
+   "values": {
+    "en-3540s": [
+     0.02708279597627031,
+     0.02708279597627031
+    ],
+    "ru-3540s": [
+     0.008468595624558928,
+     0.008468595624558928
+    ]
+   },
+   "pass": true
+  },
+  {
+   "rule": "4. warm p50/p95 within 5% + 2 ms; process p50 within 10%",
+   "values": {
+    "warm quiet p50 ms": [
+     365.9,
+     346.4
+    ],
+    "warm quiet p95 ms": [
+     1731.6,
+     1701.2
+    ],
+    "warm load p50 ms": [
+     405.8,
+     394.4
+    ],
+    "warm load p95 ms": [
+     2032.4,
+     2019.0
+    ],
+    "process quiet p50 s": [
+     0.402,
+     0.291
+    ]
+   },
+   "pass": true
+  },
+  {
+   "rule": "5. footprint after load at least 300 MB lower; peak footprint not higher",
+   "values": {
+    "after load MB": [
+     753,
+     269
+    ],
+    "peak MB": [
+     842,
+     352
+    ]
+   },
+   "pass": true
+  },
+  {
+   "rule": "6. warm-cache model load not more than 10% slower",
+   "values": {
+    "load p50 s": [
+     0.191,
+     0.106
+    ]
+   },
+   "pass": true
+  }
+ ]
+}
