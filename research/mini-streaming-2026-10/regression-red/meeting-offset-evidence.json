@@ -1,0 +1,11 @@
+{
+  "redSourceHEAD": "0932e5f4f4bccb5fbe6d4252257bbd3010baa20d",
+  "command": "swift test --package-path Packages/DictationCore --filter MeetingSegmentPolicyTests/testLeadingSilenceDoesNotShiftAPauseCutIntoSpokenAudio",
+  "redExitCode": 1,
+  "redAssertionFailures": 1,
+  "observedCutEndFrame": 261600,
+  "minimumExpectedEndFrame": 272000,
+  "sampleRate": 16000,
+  "greenModelIndependentCheckExitCode": 0,
+  "testFileSHA256": "de44751519cdbbcf900c3386d90569c5383da01bf00149ae23a8d366e11c05ad"
+}

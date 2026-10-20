@@ -1,0 +1,56 @@
+[
+  {
+    "fixture": "ru-quiet-heldout",
+    "mode": "meeting",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "threshold020",
+    "parameters": {
+      "meetingSpeechPeak": 0.02,
+      "meetingPreserveQuietAudio": false,
+      "meetingChannel": "system"
+    }
+  },
+  {
+    "fixture": "ru-quiet-heldout",
+    "mode": "meeting",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "threshold005",
+    "parameters": {
+      "meetingPreserveQuietAudio": false,
+      "meetingChannel": "system"
+    }
+  },
+  {
+    "fixture": "en-quiet-heldout",
+    "mode": "meeting",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "threshold005",
+    "parameters": {
+      "meetingPreserveQuietAudio": false,
+      "meetingChannel": "system"
+    }
+  },
+  {
+    "fixture": "en-quiet-heldout",
+    "mode": "meeting",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "threshold020",
+    "parameters": {
+      "meetingSpeechPeak": 0.02,
+      "meetingPreserveQuietAudio": false,
+      "meetingChannel": "system"
+    }
+  }
+]

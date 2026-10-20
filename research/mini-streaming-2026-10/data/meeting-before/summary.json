@@ -1,0 +1,656 @@
+{
+  "normalization": "Unicode NFC, lowercase, ё→е, Unicode word tokens, no numeral expansion",
+  "quantiles": "linear interpolation at (n-1)*p",
+  "qualityScope": "Fixed public fixtures; timing repeats are not independent quality examples.",
+  "identities": {
+    "meeting-coverage-v1": {
+      "head": "0932e5f4f4bccb5fbe6d4252257bbd3010baa20d",
+      "binary_sha256": "18a7ff6b8753a3bc28ea2a07718ba82466d73acfb9b108616b52dda69d92fc40",
+      "runner_sha256": "d704a359e3863a075f73c30a166ab92fec1ab728ee5cfec60df784183e8d43b2",
+      "harness_sha256": "ab0b65ddc063d3151d18c75da817708f9b567778aa2b996232ac524b5110c6c4",
+      "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+      "plan_sha256": "f775a6dd674e477f30091c109961d6860638de97be0d02b9bb81ce66569128bc"
+    }
+  },
+  "completedRuns": 8,
+  "failures": [
+    {
+      "run": "meeting-coverage-v1",
+      "id": "meeting-ru-360s-settled-1-normal-0-preserve",
+      "exitCode": -15,
+      "hardStop": "build started during measurement",
+      "samples": [
+        {
+          "seconds": 0.028528791008284315,
+          "level": "1",
+          "memory": {
+            "residentBytes": 14385152,
+            "physicalFootprintBytes": 2998728
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0707409160095267,
+          "level": "1",
+          "memory": {
+            "residentBytes": 973520896,
+            "physicalFootprintBytes": 980075936
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.106969125015894,
+          "level": "1",
+          "memory": {
+            "residentBytes": 973897728,
+            "physicalFootprintBytes": 980321696
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.1521982499980368,
+          "level": "1",
+          "memory": {
+            "residentBytes": 975388672,
+            "physicalFootprintBytes": 981812640
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.20372975000646,
+          "level": "1",
+          "memory": {
+            "residentBytes": 862617600,
+            "physicalFootprintBytes": 980649400
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.245165666012326,
+          "level": "1",
+          "memory": {
+            "residentBytes": 879443968,
+            "physicalFootprintBytes": 990348728
+          },
+          "builds": [
+            "swift-frontend"
+          ]
+        }
+      ],
+      "utc": "2026-10-11T06:13:33Z",
+      "identity": {
+        "head": "0932e5f4f4bccb5fbe6d4252257bbd3010baa20d",
+        "binary_sha256": "18a7ff6b8753a3bc28ea2a07718ba82466d73acfb9b108616b52dda69d92fc40",
+        "runner_sha256": "d704a359e3863a075f73c30a166ab92fec1ab728ee5cfec60df784183e8d43b2",
+        "harness_sha256": "ab0b65ddc063d3151d18c75da817708f9b567778aa2b996232ac524b5110c6c4",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+        "plan_sha256": "f775a6dd674e477f30091c109961d6860638de97be0d02b9bb81ce66569128bc"
+      }
+    },
+    {
+      "run": "meeting-coverage-v1",
+      "id": "meeting-en-360s-settled-1-normal-0-preserve",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.029704124986892566,
+          "level": "1",
+          "memory": {
+            "residentBytes": 4014080,
+            "physicalFootprintBytes": 1261904
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0602309170062654,
+          "level": "1",
+          "memory": {
+            "residentBytes": 977469440,
+            "physicalFootprintBytes": 984057272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.105675875005545,
+          "level": "1",
+          "memory": {
+            "residentBytes": 970227712,
+            "physicalFootprintBytes": 990840272
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.1677808749955148,
+          "level": "1",
+          "memory": {
+            "residentBytes": 958906368,
+            "physicalFootprintBytes": 993510864
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.205405458982568,
+          "level": "2",
+          "memory": {
+            "residentBytes": 935968768,
+            "physicalFootprintBytes": 992921040
+          },
+          "builds": []
+        }
+      ],
+      "utc": "2026-10-11T06:14:42Z",
+      "identity": {
+        "head": "0932e5f4f4bccb5fbe6d4252257bbd3010baa20d",
+        "binary_sha256": "18a7ff6b8753a3bc28ea2a07718ba82466d73acfb9b108616b52dda69d92fc40",
+        "runner_sha256": "d704a359e3863a075f73c30a166ab92fec1ab728ee5cfec60df784183e8d43b2",
+        "harness_sha256": "ab0b65ddc063d3151d18c75da817708f9b567778aa2b996232ac524b5110c6c4",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+        "plan_sha256": "f775a6dd674e477f30091c109961d6860638de97be0d02b9bb81ce66569128bc"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "mode": "meeting",
+      "fixture": "en-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 1.5e-05,
+        "p95": 1.5e-05,
+        "min": 1.5e-05,
+        "max": 1.5e-05
+      },
+      "audioSeconds": 361.24,
+      "peakRSSBytes": 985006080,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.23638175,
+        "p95": 0.23638175,
+        "min": 0.23638175,
+        "max": 0.23638175
+      },
+      "sampledPeakPhysicalFootprintBytes": 988644792,
+      "wer": {
+        "n": 1,
+        "p50": 0.7170050761421319,
+        "p95": 0.7170050761421319,
+        "min": 0.7170050761421319,
+        "max": 0.7170050761421319
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.7068527918781726,
+        "p95": 0.7068527918781726,
+        "min": 0.7068527918781726,
+        "max": 0.7068527918781726
+      },
+      "referenceWords": 788,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-en-360s-settled-1-normal-0-original"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 2112640.0,
+        "p95": 2112640.0,
+        "min": 2112640,
+        "max": 2112640
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 3667200.0,
+        "p95": 3667200.0,
+        "min": 3667200,
+        "max": 3667200
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "en-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": true,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.13458075,
+        "p95": 0.13458075,
+        "min": 0.13458075,
+        "max": 0.13458075
+      },
+      "audioSeconds": 361.24,
+      "peakRSSBytes": 991838208,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.2721015,
+        "p95": 0.2721015,
+        "min": 0.2721015,
+        "max": 0.2721015
+      },
+      "sampledPeakPhysicalFootprintBytes": 995935720,
+      "wer": {
+        "n": 1,
+        "p50": 0.08756345177664974,
+        "p95": 0.08756345177664974,
+        "min": 0.08756345177664974,
+        "max": 0.08756345177664974
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.030456852791878174,
+        "p95": 0.030456852791878174,
+        "min": 0.030456852791878174,
+        "max": 0.030456852791878174
+      },
+      "referenceWords": 788,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-en-360s-settled-1-normal-0-preserve"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 5779840.0,
+        "p95": 5779840.0,
+        "min": 5779840,
+        "max": 5779840
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "en-60s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 1.6125e-05,
+        "p95": 1.6125e-05,
+        "min": 1.6125e-05,
+        "max": 1.6125e-05
+      },
+      "audioSeconds": 61.92,
+      "peakRSSBytes": 949927936,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.244795333,
+        "p95": 0.244795333,
+        "min": 0.244795333,
+        "max": 0.244795333
+      },
+      "sampledPeakPhysicalFootprintBytes": 955254176,
+      "wer": {
+        "n": 1,
+        "p50": 0.6535433070866141,
+        "p95": 0.6535433070866141,
+        "min": 0.6535433070866141,
+        "max": 0.6535433070866141
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.6535433070866141,
+        "p95": 0.6535433070866141,
+        "min": 0.6535433070866141,
+        "max": 0.6535433070866141
+      },
+      "referenceWords": 127,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-en-60s-settled-1-normal-0-original"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 362560.0,
+        "p95": 362560.0,
+        "min": 362560,
+        "max": 362560
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 628160.0,
+        "p95": 628160.0,
+        "min": 628160,
+        "max": 628160
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "en-60s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": true,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.198986708,
+        "p95": 0.198986708,
+        "min": 0.198986708,
+        "max": 0.198986708
+      },
+      "audioSeconds": 61.92,
+      "peakRSSBytes": 967278592,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.240855833,
+        "p95": 0.240855833,
+        "min": 0.240855833,
+        "max": 0.240855833
+      },
+      "sampledPeakPhysicalFootprintBytes": 967017864,
+      "wer": {
+        "n": 1,
+        "p50": 0.08661417322834646,
+        "p95": 0.08661417322834646,
+        "min": 0.08661417322834646,
+        "max": 0.08661417322834646
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "referenceWords": 127,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-en-60s-settled-1-normal-0-preserve"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 990720.0,
+        "p95": 990720.0,
+        "min": 990720,
+        "max": 990720
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "ru-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.139988709,
+        "p95": 0.139988709,
+        "min": 0.139988709,
+        "max": 0.139988709
+      },
+      "audioSeconds": 369.66,
+      "peakRSSBytes": 992706560,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.235425666,
+        "p95": 0.235425666,
+        "min": 0.235425666,
+        "max": 0.235425666
+      },
+      "sampledPeakPhysicalFootprintBytes": 991626680,
+      "wer": {
+        "n": 1,
+        "p50": 0.21489001692047377,
+        "p95": 0.21489001692047377,
+        "min": 0.21489001692047377,
+        "max": 0.21489001692047377
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.17766497461928935,
+        "p95": 0.17766497461928935,
+        "min": 0.17766497461928935,
+        "max": 0.17766497461928935
+      },
+      "referenceWords": 591,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-ru-360s-settled-1-normal-0-original"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 4371040.0,
+        "p95": 4371040.0,
+        "min": 4371040,
+        "max": 4371040
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 1543520.0,
+        "p95": 1543520.0,
+        "min": 1543520,
+        "max": 1543520
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "ru-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": true,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.328768125,
+        "p95": 0.328768125,
+        "min": 0.328768125,
+        "max": 0.328768125
+      },
+      "audioSeconds": 369.66,
+      "peakRSSBytes": 987840512,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.283217458,
+        "p95": 0.283217458,
+        "min": 0.283217458,
+        "max": 0.283217458
+      },
+      "sampledPeakPhysicalFootprintBytes": 991528352,
+      "wer": {
+        "n": 1,
+        "p50": 0.08629441624365482,
+        "p95": 0.08629441624365482,
+        "min": 0.08629441624365482,
+        "max": 0.08629441624365482
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.015228426395939087,
+        "p95": 0.015228426395939087,
+        "min": 0.015228426395939087,
+        "max": 0.015228426395939087
+      },
+      "referenceWords": 591,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-ru-360s-settled-1-normal-0-preserve"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 5914560.0,
+        "p95": 5914560.0,
+        "min": 5914560,
+        "max": 5914560
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "ru-60s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.200148333,
+        "p95": 0.200148333,
+        "min": 0.200148333,
+        "max": 0.200148333
+      },
+      "audioSeconds": 66.24,
+      "peakRSSBytes": 947011584,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.23939375,
+        "p95": 0.23939375,
+        "min": 0.23939375,
+        "max": 0.23939375
+      },
+      "sampledPeakPhysicalFootprintBytes": 949765512,
+      "wer": {
+        "n": 1,
+        "p50": 0.06306306306306306,
+        "p95": 0.06306306306306306,
+        "min": 0.06306306306306306,
+        "max": 0.06306306306306306
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.05405405405405406,
+        "p95": 0.05405405405405406,
+        "min": 0.05405405405405406,
+        "max": 0.05405405405405406
+      },
+      "referenceWords": 111,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-ru-60s-settled-1-normal-0-original"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 898400.0,
+        "p95": 898400.0,
+        "min": 898400,
+        "max": 898400
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 161440.0,
+        "p95": 161440.0,
+        "min": 161440,
+        "max": 161440
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "ru-60s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": true,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.261346375,
+        "p95": 0.261346375,
+        "min": 0.261346375,
+        "max": 0.261346375
+      },
+      "audioSeconds": 66.24,
+      "peakRSSBytes": 948043776,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.2479125,
+        "p95": 0.2479125,
+        "min": 0.2479125,
+        "max": 0.2479125
+      },
+      "sampledPeakPhysicalFootprintBytes": 951584112,
+      "wer": {
+        "n": 1,
+        "p50": 0.018018018018018018,
+        "p95": 0.018018018018018018,
+        "min": 0.018018018018018018,
+        "max": 0.018018018018018018
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.018018018018018018,
+        "p95": 0.018018018018018018,
+        "min": 0.018018018018018018,
+        "max": 0.018018018018018018
+      },
+      "referenceWords": 111,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-ru-60s-settled-1-normal-0-preserve"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 1059840.0,
+        "p95": 1059840.0,
+        "min": 1059840,
+        "max": 1059840
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    }
+  ],
+  "fileParity": [],
+  "tailParity": []
+}

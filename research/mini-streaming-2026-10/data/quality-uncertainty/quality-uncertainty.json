@@ -1,0 +1,423 @@
+{
+  "schemaVersion": 1,
+  "method": {
+    "registeredAt": "2026-10-11T06:50:18.940165+00:00",
+    "status": "prospective analysis of existing measurements; aggregate results already known",
+    "inputSHA256": {
+      "manifest.json": "27b1a6759fe07063b69e1759fd64a039b21fd0fe2bf6a4e9d638dd30bdb98fab",
+      "observations.jsonl": "65b0801a5dd8df52ae662c045d2667a7da3cb4805488c412e53d33101265b6a6",
+      "superwhisper-quality.jsonl": "a85c84c5b5e001cff112dcbf1b2ae203f0cac7ae79528c336346119e988ac672",
+      "products-benchmark.json": "0f2d658a6106f36f3513867307323e0799bcb568e18e7a1c9954aafdc1b6b750"
+    },
+    "scope": "200 original short FLEURS files on M4 Pro; not timing repeats or repeated long composites",
+    "estimand": "sum of word errors / sum of reference words, per language",
+    "resamplingUnit": "normalized reference phrase cluster; retain all recordings for that phrase, same cluster draw for every engine",
+    "replicates": 10000,
+    "seed": 20261011,
+    "interval": "2.5 and 97.5 percentiles, descriptive and unadjusted for multiple comparisons",
+    "comparisons": [
+      "openramble minus handy",
+      "openramble minus whisper",
+      "openramble minus superwhisper_turbo"
+    ],
+    "validation": "reproduce all published aggregate errors and WER before computing intervals",
+    "limitations": [
+      "exploratory uncertainty analysis, no general product or speaker-population significance claim",
+      "cluster handles duplicate reference text but not unknown speaker dependence",
+      "fixed sample contains only 100 recordings per language",
+      "no new inference or candidate tuning"
+    ]
+  },
+  "aggregateReproductionPassed": true,
+  "normalization": "Unicode NFC, lowercase, ё→е, alphanumeric tokens, punctuation omitted; numerals not expanded",
+  "languageResults": {
+    "ru": {
+      "recordings": 100,
+      "referenceClusters": 88,
+      "clusterSizes": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        3
+      ],
+      "referenceWords": 1882,
+      "products": {
+        "openramble": {
+          "n": 100,
+          "wer": 0.05951115834218916,
+          "reference_words": 1882,
+          "substitutions": 88,
+          "deletions": 17,
+          "insertions": 7,
+          "failures": 0,
+          "phraseCluster95PercentileInterval": [
+            0.044532402725162575,
+            0.07587783684895802
+          ],
+          "zeroErrorRecordings": 47
+        },
+        "handy": {
+          "n": 100,
+          "wer": 0.05951115834218916,
+          "reference_words": 1882,
+          "substitutions": 88,
+          "deletions": 17,
+          "insertions": 7,
+          "failures": 0,
+          "phraseCluster95PercentileInterval": [
+            0.044532402725162575,
+            0.07587783684895802
+          ],
+          "zeroErrorRecordings": 47
+        },
+        "whisper": {
+          "n": 100,
+          "wer": 0.05154091392136025,
+          "reference_words": 1882,
+          "substitutions": 79,
+          "deletions": 11,
+          "insertions": 7,
+          "failures": 0,
+          "phraseCluster95PercentileInterval": [
+            0.03857840052579324,
+            0.06516241506481578
+          ],
+          "zeroErrorRecordings": 50
+        },
+        "superwhisper_turbo": {
+          "n": 100,
+          "wer": 0.05419766206163656,
+          "reference_words": 1882,
+          "substitutions": 80,
+          "deletions": 10,
+          "insertions": 12,
+          "failures": 0,
+          "phraseCluster95PercentileInterval": [
+            0.04006410256410257,
+            0.06838964664638157
+          ],
+          "zeroErrorRecordings": 52
+        }
+      },
+      "pairedDifferences": {
+        "handy": {
+          "direction": "OpenRamble minus comparator; negative means fewer errors for OpenRamble",
+          "werDifferencePercentagePoints": 0.0,
+          "phraseCluster95PercentileIntervalPercentagePoints": [
+            0.0,
+            0.0
+          ],
+          "openrambleFewerErrorsRecordings": 0,
+          "equalErrorCountRecordings": 100,
+          "openrambleMoreErrorsRecordings": 0,
+          "identicalNormalizedOutputRecordings": 100
+        },
+        "whisper": {
+          "direction": "OpenRamble minus comparator; negative means fewer errors for OpenRamble",
+          "werDifferencePercentagePoints": 0.7970244420828908,
+          "phraseCluster95PercentileIntervalPercentagePoints": [
+            -0.10724436831649485,
+            1.839836011446181
+          ],
+          "openrambleFewerErrorsRecordings": 14,
+          "equalErrorCountRecordings": 65,
+          "openrambleMoreErrorsRecordings": 21,
+          "identicalNormalizedOutputRecordings": 52
+        },
+        "superwhisper_turbo": {
+          "direction": "OpenRamble minus comparator; negative means fewer errors for OpenRamble",
+          "werDifferencePercentagePoints": 0.5313496280552603,
+          "phraseCluster95PercentileIntervalPercentagePoints": [
+            -0.6320387683022334,
+            1.7985768088953094
+          ],
+          "openrambleFewerErrorsRecordings": 18,
+          "equalErrorCountRecordings": 62,
+          "openrambleMoreErrorsRecordings": 20,
+          "identicalNormalizedOutputRecordings": 52
+        }
+      }
+    },
+    "en": {
+      "recordings": 100,
+      "referenceClusters": 94,
+      "clusterSizes": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "referenceWords": 2138,
+      "products": {
+        "openramble": {
+          "n": 100,
+          "wer": 0.055659494855004675,
+          "reference_words": 2138,
+          "substitutions": 90,
+          "deletions": 22,
+          "insertions": 7,
+          "failures": 0,
+          "phraseCluster95PercentileInterval": [
+            0.04075497736315354,
+            0.07195677857975245
+          ],
+          "zeroErrorRecordings": 46
+        },
+        "handy": {
+          "n": 100,
+          "wer": 0.055659494855004675,
+          "reference_words": 2138,
+          "substitutions": 90,
+          "deletions": 22,
+          "insertions": 7,
+          "failures": 0,
+          "phraseCluster95PercentileInterval": [
+            0.04075497736315354,
+            0.07195677857975245
+          ],
+          "zeroErrorRecordings": 46
+        },
+        "whisper": {
+          "n": 100,
+          "wer": 0.0509822263797942,
+          "reference_words": 2138,
+          "substitutions": 79,
+          "deletions": 18,
+          "insertions": 12,
+          "failures": 0,
+          "phraseCluster95PercentileInterval": [
+            0.03822567121537451,
+            0.06455983491677622
+          ],
+          "zeroErrorRecordings": 48
+        },
+        "superwhisper_turbo": {
+          "n": 100,
+          "wer": 0.05940130963517306,
+          "reference_words": 2138,
+          "substitutions": 82,
+          "deletions": 31,
+          "insertions": 14,
+          "failures": 0,
+          "phraseCluster95PercentileInterval": [
+            0.045387899756632946,
+            0.07362542797352463
+          ],
+          "zeroErrorRecordings": 44
+        }
+      },
+      "pairedDifferences": {
+        "handy": {
+          "direction": "OpenRamble minus comparator; negative means fewer errors for OpenRamble",
+          "werDifferencePercentagePoints": 0.0,
+          "phraseCluster95PercentileIntervalPercentagePoints": [
+            0.0,
+            0.0
+          ],
+          "openrambleFewerErrorsRecordings": 0,
+          "equalErrorCountRecordings": 100,
+          "openrambleMoreErrorsRecordings": 0,
+          "identicalNormalizedOutputRecordings": 100
+        },
+        "whisper": {
+          "direction": "OpenRamble minus comparator; negative means fewer errors for OpenRamble",
+          "werDifferencePercentagePoints": 0.4677268475210473,
+          "phraseCluster95PercentileIntervalPercentagePoints": [
+            -0.3365628013500484,
+            1.343164641387546
+          ],
+          "openrambleFewerErrorsRecordings": 12,
+          "equalErrorCountRecordings": 69,
+          "openrambleMoreErrorsRecordings": 19,
+          "identicalNormalizedOutputRecordings": 56
+        },
+        "superwhisper_turbo": {
+          "direction": "OpenRamble minus comparator; negative means fewer errors for OpenRamble",
+          "werDifferencePercentagePoints": -0.37418147801683843,
+          "phraseCluster95PercentileIntervalPercentagePoints": [
+            -1.3705722955855197,
+            0.6121510076120893
+          ],
+          "openrambleFewerErrorsRecordings": 22,
+          "equalErrorCountRecordings": 62,
+          "openrambleMoreErrorsRecordings": 16,
+          "identicalNormalizedOutputRecordings": 51
+        }
+      }
+    }
+  }
+}

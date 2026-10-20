@@ -1,0 +1,150 @@
+{
+  "utc": "2026-10-11T08:50:59.298804+00:00",
+  "modelIndependentExitCode": 1,
+  "modelIndependentLogSHA256": "0f4cde7a169f3c33f1741289d5d0ace5904ec1d33a10d58587cfa82c03664042",
+  "scope": "Explicit empty WAI_MODELS_ROOT; model skips do not count as inference validation.",
+  "ordinaryCheckExitCode": 1,
+  "ordinaryCheckKnownFailure": "The final spoken English words must survive; the same assertion failed on the original control.",
+  "ordinaryLogSHA256": "0f30e2a32f22a29a9683d95dd8491ff91e5d417d2e9a4ac67f302e5524ddc80e",
+  "remainingChecks": [
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--check"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "-p",
+        "ramble-core",
+        "-p",
+        "ramble-text",
+        "-p",
+        "ramble-model",
+        "-p",
+        "ramble-audio",
+        "-p",
+        "ramble-history",
+        "--all-targets",
+        "--all-features",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "ramble-core",
+        "-p",
+        "ramble-text",
+        "-p",
+        "ramble-model",
+        "-p",
+        "ramble-audio",
+        "-p",
+        "ramble-history",
+        "--all-features"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "./scripts/generate-tokens.py",
+        "--check"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "./scripts/build-ffi.sh"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "swift",
+        "test",
+        "--package-path",
+        "Packages/RambleCoreFFI"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "swift",
+        "build",
+        "--package-path",
+        "core/conformance/generator"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "core/conformance/generator/.build/debug/GenerateFixtures",
+        "core/conformance/corpus-text.json",
+        "core/conformance/fixtures/text/pipeline.json"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "--",
+        "core/conformance/fixtures"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "ramble-text",
+        "--test",
+        "conformance"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "./scripts/check-network-surface.sh"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "./scripts/check-diagnostics-surface.sh"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "remainingChecksPassed": true,
+  "remainingLogSHA256": "5c03ac468f9f33424b4f8b46b97443db1c88cc035f0a9790e2f30646e967e632",
+  "packageTestsPassed": true,
+  "originalDriverStoppedBecause": "cargo was outside PATH after the two passing Swift package suites; remaining checks rerun with installed rustup and cmake paths",
+  "modelIndependentValidationPassed": true,
+  "counts": {
+    "DictationCore": 649,
+    "LocalASR": 199,
+    "LocalASRSkipped": 32,
+    "RambleCoreFFI": 9,
+    "RustSharedCore": 188
+  },
+  "ci": {
+    "runID": 38126347494,
+    "head": "7dc3f2638b45a859fd232248c2497347719e3525",
+    "passedJobs": 14,
+    "conclusion": "success"
+  }
+}

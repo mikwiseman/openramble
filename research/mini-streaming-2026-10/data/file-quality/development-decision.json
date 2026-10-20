@@ -1,0 +1,450 @@
+{
+  "developmentGatePassed": true,
+  "selectedPolicy": {
+    "segmentSeconds": 15,
+    "minimumSegmentSeconds": 15,
+    "overlapMilliseconds": 2000,
+    "preserveGap": true
+  },
+  "adoptionApproved": false,
+  "requiresHeldout": true,
+  "replaySHA256": [
+    "ce0bca9f3bd2a391753679d96a6bbad682052222f5463159ae5e21306b0f6ad6",
+    "5a0f20ec9f3456bc2d986485dcdd3fe6c6016073f2dae46c88acd5a762a5eca8",
+    "ef54325a9eb309b2aacfce25c4a81f76ba6479439a4761966f81b5610c143ff4"
+  ],
+  "policies": [
+    {
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "preserveGap": false,
+      "developmentGatePassed": true,
+      "comparisons": {
+        "ru": {
+          "controlWER": 0.06492589978828511,
+          "candidateWER": 0.06157374735356387,
+          "werDifferencePoints": -0.3352152434721242,
+          "controlDeletionRate": 0.0171136203246295,
+          "candidateDeletionRate": 0.010409315455187015,
+          "deletionDifferencePoints": -0.6704304869442484,
+          "changedSeams": 0
+        },
+        "en": {
+          "controlWER": 0.09762703120969822,
+          "candidateWER": 0.08795460407531597,
+          "werDifferencePoints": -0.9672427134382253,
+          "controlDeletionRate": 0.04797523858653598,
+          "candidateDeletionRate": 0.03675522311065257,
+          "deletionDifferencePoints": -1.1220015475883416,
+          "changedSeams": 0
+        },
+        "mixed": {
+          "controlWER": 0.3906674720628209,
+          "candidateWER": 0.36061612805798854,
+          "werDifferencePoints": -3.0051344004832337,
+          "controlDeletionRate": 0.33796436122017515,
+          "candidateDeletionRate": 0.29855028692237995,
+          "deletionDifferencePoints": -3.94140742977952,
+          "changedSeams": 0
+        }
+      }
+    },
+    {
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "preserveGap": true,
+      "developmentGatePassed": true,
+      "comparisons": {
+        "ru": {
+          "controlWER": 0.06492589978828511,
+          "candidateWER": 0.06157374735356387,
+          "werDifferencePoints": -0.3352152434721242,
+          "controlDeletionRate": 0.0171136203246295,
+          "candidateDeletionRate": 0.010409315455187015,
+          "deletionDifferencePoints": -0.6704304869442484,
+          "changedSeams": 18
+        },
+        "en": {
+          "controlWER": 0.09762703120969822,
+          "candidateWER": 0.07415527469693062,
+          "werDifferencePoints": -2.34717565127676,
+          "controlDeletionRate": 0.04797523858653598,
+          "candidateDeletionRate": 0.02089244261026567,
+          "deletionDifferencePoints": -2.7082795976270315,
+          "changedSeams": 38
+        },
+        "mixed": {
+          "controlWER": 0.3906674720628209,
+          "candidateWER": 0.3242222893385684,
+          "werDifferencePoints": -6.644518272425248,
+          "controlDeletionRate": 0.33796436122017515,
+          "candidateDeletionRate": 0.25732407127755963,
+          "deletionDifferencePoints": -8.064028994261552,
+          "changedSeams": 127
+        }
+      }
+    },
+    {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "overlapMilliseconds": 250,
+      "preserveGap": false,
+      "developmentGatePassed": false,
+      "comparisons": {
+        "ru": {
+          "controlWER": 0.06492589978828511,
+          "candidateWER": 0.08839096683133381,
+          "werDifferencePoints": 2.3465067043048697,
+          "controlDeletionRate": 0.0171136203246295,
+          "candidateDeletionRate": 0.012702893436838392,
+          "deletionDifferencePoints": -0.4410726887791108,
+          "changedSeams": 0
+        },
+        "en": {
+          "controlWER": 0.09762703120969822,
+          "candidateWER": 0.10059324219757544,
+          "werDifferencePoints": 0.29662109878772214,
+          "controlDeletionRate": 0.04797523858653598,
+          "candidateDeletionRate": 0.03856074284240392,
+          "deletionDifferencePoints": -0.9414495744132063,
+          "changedSeams": 0
+        },
+        "mixed": {
+          "controlWER": 0.3906674720628209,
+          "candidateWER": 0.28057988523104804,
+          "werDifferencePoints": -11.008758683177284,
+          "controlDeletionRate": 0.33796436122017515,
+          "candidateDeletionRate": 0.21836303231652068,
+          "deletionDifferencePoints": -11.960132890365447,
+          "changedSeams": 0
+        }
+      }
+    },
+    {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "overlapMilliseconds": 250,
+      "preserveGap": true,
+      "developmentGatePassed": false,
+      "comparisons": {
+        "ru": {
+          "controlWER": 0.06492589978828511,
+          "candidateWER": 0.08786167960479888,
+          "werDifferencePoints": 2.293577981651376,
+          "controlDeletionRate": 0.0171136203246295,
+          "candidateDeletionRate": 0.011644318983768526,
+          "deletionDifferencePoints": -0.5469301340860975,
+          "changedSeams": 270
+        },
+        "en": {
+          "controlWER": 0.09762703120969822,
+          "candidateWER": 0.09981944802682487,
+          "werDifferencePoints": 0.21924168171266467,
+          "controlDeletionRate": 0.04797523858653598,
+          "candidateDeletionRate": 0.03778694867165334,
+          "deletionDifferencePoints": -1.0188289914882644,
+          "changedSeams": 105
+        },
+        "mixed": {
+          "controlWER": 0.3906674720628209,
+          "candidateWER": 0.2802778616732105,
+          "werDifferencePoints": -11.038961038961038,
+          "controlDeletionRate": 0.33796436122017515,
+          "candidateDeletionRate": 0.2173059498640894,
+          "deletionDifferencePoints": -12.065841135608574,
+          "changedSeams": 214
+        }
+      }
+    },
+    {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "overlapMilliseconds": 2000,
+      "preserveGap": false,
+      "developmentGatePassed": false,
+      "comparisons": {
+        "ru": {
+          "controlWER": 0.06492589978828511,
+          "candidateWER": 0.07462949894142555,
+          "werDifferencePoints": 0.9703599153140439,
+          "controlDeletionRate": 0.0171136203246295,
+          "candidateDeletionRate": 0.019054340155257588,
+          "deletionDifferencePoints": 0.19407198306280876,
+          "changedSeams": 0
+        },
+        "en": {
+          "controlWER": 0.09762703120969822,
+          "candidateWER": 0.08627805003868971,
+          "werDifferencePoints": -1.1348981171008508,
+          "controlDeletionRate": 0.04797523858653598,
+          "candidateDeletionRate": 0.03443384059840082,
+          "deletionDifferencePoints": -1.354139798813516,
+          "changedSeams": 0
+        },
+        "mixed": {
+          "controlWER": 0.3906674720628209,
+          "candidateWER": 0.36016309272123226,
+          "werDifferencePoints": -3.050437934158862,
+          "controlDeletionRate": 0.33796436122017515,
+          "candidateDeletionRate": 0.30262760495318636,
+          "deletionDifferencePoints": -3.533675626698879,
+          "changedSeams": 0
+        }
+      }
+    },
+    {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4,
+      "overlapMilliseconds": 2000,
+      "preserveGap": true,
+      "developmentGatePassed": false,
+      "comparisons": {
+        "ru": {
+          "controlWER": 0.06492589978828511,
+          "candidateWER": 0.07198306280875089,
+          "werDifferencePoints": 0.7057163020465773,
+          "controlDeletionRate": 0.0171136203246295,
+          "candidateDeletionRate": 0.016407904022582923,
+          "deletionDifferencePoints": -0.07057163020465773,
+          "changedSeams": 30
+        },
+        "en": {
+          "controlWER": 0.09762703120969822,
+          "candidateWER": 0.08627805003868971,
+          "werDifferencePoints": -1.1348981171008508,
+          "controlDeletionRate": 0.04797523858653598,
+          "candidateDeletionRate": 0.03443384059840082,
+          "deletionDifferencePoints": -1.354139798813516,
+          "changedSeams": 4
+        },
+        "mixed": {
+          "controlWER": 0.3906674720628209,
+          "candidateWER": 0.34793113862881303,
+          "werDifferencePoints": -4.2736333434007845,
+          "controlDeletionRate": 0.33796436122017515,
+          "candidateDeletionRate": 0.2894895801872546,
+          "deletionDifferencePoints": -4.847478103292052,
+          "changedSeams": 88
+        }
+      }
+    },
+    {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 250,
+      "preserveGap": false,
+      "developmentGatePassed": true,
+      "comparisons": {
+        "ru": {
+          "controlWER": 0.06492589978828511,
+          "candidateWER": 0.06774876499647142,
+          "werDifferencePoints": 0.2822865208186309,
+          "controlDeletionRate": 0.0171136203246295,
+          "candidateDeletionRate": 0.013232180663373325,
+          "deletionDifferencePoints": -0.3881439661256175,
+          "changedSeams": 0
+        },
+        "en": {
+          "controlWER": 0.09762703120969822,
+          "candidateWER": 0.09981944802682487,
+          "werDifferencePoints": 0.21924168171266467,
+          "controlDeletionRate": 0.04797523858653598,
+          "candidateDeletionRate": 0.04126902244003095,
+          "deletionDifferencePoints": -0.6706216146505031,
+          "changedSeams": 0
+        },
+        "mixed": {
+          "controlWER": 0.3906674720628209,
+          "candidateWER": 0.3273935366958623,
+          "werDifferencePoints": -6.327393536695858,
+          "controlDeletionRate": 0.33796436122017515,
+          "candidateDeletionRate": 0.27167019027484146,
+          "deletionDifferencePoints": -6.629417094533369,
+          "changedSeams": 0
+        }
+      }
+    },
+    {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 250,
+      "preserveGap": true,
+      "developmentGatePassed": true,
+      "comparisons": {
+        "ru": {
+          "controlWER": 0.06492589978828511,
+          "candidateWER": 0.06616090331686662,
+          "werDifferencePoints": 0.12350035285815103,
+          "controlDeletionRate": 0.0171136203246295,
+          "candidateDeletionRate": 0.011115031757233593,
+          "deletionDifferencePoints": -0.5998588567395907,
+          "changedSeams": 177
+        },
+        "en": {
+          "controlWER": 0.09762703120969822,
+          "candidateWER": 0.09904565385607428,
+          "werDifferencePoints": 0.14186226463760582,
+          "controlDeletionRate": 0.04797523858653598,
+          "candidateDeletionRate": 0.039979365488779985,
+          "deletionDifferencePoints": -0.7995873097755999,
+          "changedSeams": 67
+        },
+        "mixed": {
+          "controlWER": 0.3906674720628209,
+          "candidateWER": 0.32648746602234974,
+          "werDifferencePoints": -6.418000604047114,
+          "controlDeletionRate": 0.33796436122017515,
+          "candidateDeletionRate": 0.2704620960434914,
+          "deletionDifferencePoints": -6.750226517668373,
+          "changedSeams": 173
+        }
+      }
+    },
+    {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "preserveGap": false,
+      "developmentGatePassed": false,
+      "comparisons": {
+        "ru": {
+          "controlWER": 0.06492589978828511,
+          "candidateWER": 0.06492589978828511,
+          "werDifferencePoints": 0.0,
+          "controlDeletionRate": 0.0171136203246295,
+          "candidateDeletionRate": 0.0171136203246295,
+          "deletionDifferencePoints": 0.0,
+          "changedSeams": 0
+        },
+        "en": {
+          "controlWER": 0.09762703120969822,
+          "candidateWER": 0.09762703120969822,
+          "werDifferencePoints": 0.0,
+          "controlDeletionRate": 0.04797523858653598,
+          "candidateDeletionRate": 0.04797523858653598,
+          "deletionDifferencePoints": 0.0,
+          "changedSeams": 0
+        },
+        "mixed": {
+          "controlWER": 0.3906674720628209,
+          "candidateWER": 0.3906674720628209,
+          "werDifferencePoints": 0.0,
+          "controlDeletionRate": 0.33796436122017515,
+          "candidateDeletionRate": 0.33796436122017515,
+          "deletionDifferencePoints": 0.0,
+          "changedSeams": 0
+        }
+      }
+    },
+    {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "preserveGap": true,
+      "developmentGatePassed": false,
+      "comparisons": {
+        "ru": {
+          "controlWER": 0.06492589978828511,
+          "candidateWER": 0.06227946365561045,
+          "werDifferencePoints": -0.2646436132674665,
+          "controlDeletionRate": 0.0171136203246295,
+          "candidateDeletionRate": 0.014467184191954835,
+          "deletionDifferencePoints": -0.2646436132674665,
+          "changedSeams": 25
+        },
+        "en": {
+          "controlWER": 0.09762703120969822,
+          "candidateWER": 0.09259736909981944,
+          "werDifferencePoints": -0.5029662109878776,
+          "controlDeletionRate": 0.04797523858653598,
+          "candidateDeletionRate": 0.04204281661078153,
+          "deletionDifferencePoints": -0.5932421975754449,
+          "changedSeams": 12
+        },
+        "mixed": {
+          "controlWER": 0.3906674720628209,
+          "candidateWER": 0.3743581999395953,
+          "werDifferencePoints": -1.6309272123225582,
+          "controlDeletionRate": 0.33796436122017515,
+          "candidateDeletionRate": 0.31803080640289944,
+          "deletionDifferencePoints": -1.9933554817275712,
+          "changedSeams": 89
+        }
+      }
+    },
+    {
+      "segmentSeconds": 60,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "preserveGap": false,
+      "developmentGatePassed": false,
+      "comparisons": {
+        "ru": {
+          "controlWER": 0.06492589978828511,
+          "candidateWER": 0.06386732533521525,
+          "werDifferencePoints": -0.1058574453069866,
+          "controlDeletionRate": 0.0171136203246295,
+          "candidateDeletionRate": 0.015525758645024701,
+          "deletionDifferencePoints": -0.1587861679604799,
+          "changedSeams": 0
+        },
+        "en": {
+          "controlWER": 0.09762703120969822,
+          "candidateWER": 0.22981686871292237,
+          "werDifferencePoints": 13.218983750322415,
+          "controlDeletionRate": 0.04797523858653598,
+          "candidateDeletionRate": 0.1881609491875161,
+          "deletionDifferencePoints": 14.018571060098012,
+          "changedSeams": 0
+        },
+        "mixed": {
+          "controlWER": 0.3906674720628209,
+          "candidateWER": 0.3988221081244337,
+          "werDifferencePoints": 0.8154636061612819,
+          "controlDeletionRate": 0.33796436122017515,
+          "candidateDeletionRate": 0.3427967381455754,
+          "deletionDifferencePoints": 0.4832376925400228,
+          "changedSeams": 0
+        }
+      }
+    },
+    {
+      "segmentSeconds": 60,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "preserveGap": true,
+      "developmentGatePassed": false,
+      "comparisons": {
+        "ru": {
+          "controlWER": 0.06492589978828511,
+          "candidateWER": 0.06227946365561045,
+          "werDifferencePoints": -0.2646436132674665,
+          "controlDeletionRate": 0.0171136203246295,
+          "candidateDeletionRate": 0.013937896965419902,
+          "deletionDifferencePoints": -0.3175723359209598,
+          "changedSeams": 22
+        },
+        "en": {
+          "controlWER": 0.09762703120969822,
+          "candidateWER": 0.21988651018828992,
+          "werDifferencePoints": 12.22594789785917,
+          "controlDeletionRate": 0.04797523858653598,
+          "candidateDeletionRate": 0.17590920815063193,
+          "deletionDifferencePoints": 12.793396956409595,
+          "changedSeams": 26
+        },
+        "mixed": {
+          "controlWER": 0.3906674720628209,
+          "candidateWER": 0.38311688311688313,
+          "werDifferencePoints": -0.7550588945937742,
+          "controlDeletionRate": 0.33796436122017515,
+          "candidateDeletionRate": 0.32407127755964965,
+          "deletionDifferencePoints": -1.3893083660525496,
+          "changedSeams": 85
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+[
+  {
+    "utc": "2026-10-11T08:57:04.734944+00:00",
+    "event": "First native shipping verification interrupted by unrelated swift-frontend after72.425seconds",
+    "memoryPressureAtStop": "1",
+    "sourceAndBinaryChanged": false,
+    "action": "Retain failed attempt, wait for a quiet minute, resume exact same identity. No other active task interrupted."
+  }
+]

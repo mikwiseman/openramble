@@ -1,0 +1,575 @@
+{
+  "normalization": "Unicode NFC, lowercase, ё→е, Unicode word tokens, no numeral expansion",
+  "quantiles": "linear interpolation at (n-1)*p",
+  "qualityScope": "Fixed public fixtures; timing repeats are not independent quality examples.",
+  "identities": {
+    "file-heldout-v1": {
+      "head": "048cefd20b4ea8ca37f2e4954a48acc3aca473dd",
+      "binary_sha256": "66f8fe8e8fccc44df6f1c426b9fef2c8bbba872f427e767a3ab26958f42d0e4d",
+      "runner_sha256": "d704a359e3863a075f73c30a166ab92fec1ab728ee5cfec60df784183e8d43b2",
+      "harness_sha256": "ab0b65ddc063d3151d18c75da817708f9b567778aa2b996232ac524b5110c6c4",
+      "input_manifest_sha256": "903a7170b25ea1a059290bd0ed583a9d6adb0032413de0959fcf2e2c2e1a8460",
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+      "plan_sha256": "8b41322c1dd99486134b4f6c4c18a322823bf39c9e0a04ee27ce27bfaf154c04"
+    }
+  },
+  "completedRuns": 18,
+  "failures": [],
+  "groups": [
+    {
+      "mode": "file",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 102.290324125,
+        "p95": 102.5229719875,
+        "min": 100.03966525,
+        "max": 102.54882175
+      },
+      "audioSeconds": 3547.92,
+      "peakRSSBytes": 982007808,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.24642075,
+        "p95": 0.2929540872,
+        "min": 0.230315,
+        "max": 0.298124458
+      },
+      "sampledPeakPhysicalFootprintBytes": 986088888,
+      "wer": {
+        "n": 3,
+        "p50": 0.099375,
+        "p95": 0.099375,
+        "min": 0.099375,
+        "max": 0.099375
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.039625,
+        "p95": 0.039625,
+        "min": 0.039625,
+        "max": 0.039625
+      },
+      "referenceWords": 8000,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-en-3540s-settled-1-normal-0-selected",
+        "file-en-3540s-settled-1-normal-1-selected",
+        "file-en-3540s-settled-1-normal-2-selected"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 97.218367,
+        "p95": 97.5571649872,
+        "min": 95.612140916,
+        "max": 97.594809208
+      },
+      "audioSeconds": 3547.92,
+      "peakRSSBytes": 992935936,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.232445667,
+        "p95": 0.2429183667,
+        "min": 0.226870208,
+        "max": 0.244082
+      },
+      "sampledPeakPhysicalFootprintBytes": 995313080,
+      "wer": {
+        "n": 3,
+        "p50": 0.08125,
+        "p95": 0.08125,
+        "min": 0.08125,
+        "max": 0.08125
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.0315,
+        "p95": 0.0315,
+        "min": 0.0315,
+        "max": 0.0315
+      },
+      "referenceWords": 8000,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-en-3540s-settled-1-normal-0-control",
+        "file-en-3540s-settled-1-normal-1-control",
+        "file-en-3540s-settled-1-normal-2-control"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "mixed-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 99.105969792,
+        "p95": 100.1625676545,
+        "min": 97.724985292,
+        "max": 100.279967417
+      },
+      "audioSeconds": 3543.24,
+      "peakRSSBytes": 975601664,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.238821625,
+        "p95": 0.2454553747,
+        "min": 0.2365635,
+        "max": 0.246192458
+      },
+      "sampledPeakPhysicalFootprintBytes": 979453320,
+      "wer": {
+        "n": 3,
+        "p50": 0.350709527946713,
+        "p95": 0.350709527946713,
+        "min": 0.350709527946713,
+        "max": 0.350709527946713
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.2758470894874023,
+        "p95": 0.2758470894874023,
+        "min": 0.2758470894874023,
+        "max": 0.2758470894874023
+      },
+      "referenceWords": 6906,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-mixed-3540s-settled-1-normal-0-selected",
+        "file-mixed-3540s-settled-1-normal-1-selected",
+        "file-mixed-3540s-settled-1-normal-2-selected"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "mixed-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 92.985137541,
+        "p95": 94.5035571663,
+        "min": 92.741459,
+        "max": 94.672270458
+      },
+      "audioSeconds": 3543.24,
+      "peakRSSBytes": 1013530624,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.273753458,
+        "p95": 0.5951983202,
+        "min": 0.257251042,
+        "max": 0.630914416
+      },
+      "sampledPeakPhysicalFootprintBytes": 1015727568,
+      "wer": {
+        "n": 3,
+        "p50": 0.43874891398783666,
+        "p95": 0.43874891398783666,
+        "min": 0.43874891398783666,
+        "max": 0.43874891398783666
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.3993628728641761,
+        "p95": 0.3993628728641761,
+        "min": 0.3993628728641761,
+        "max": 0.3993628728641761
+      },
+      "referenceWords": 6906,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-mixed-3540s-settled-1-normal-0-control",
+        "file-mixed-3540s-settled-1-normal-1-control",
+        "file-mixed-3540s-settled-1-normal-2-control"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 103.190767417,
+        "p95": 106.2758879911,
+        "min": 102.540855834,
+        "max": 106.618679166
+      },
+      "audioSeconds": 3550.16,
+      "peakRSSBytes": 983269376,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.242100958,
+        "p95": 0.2518304089,
+        "min": 0.232038125,
+        "max": 0.252911459
+      },
+      "sampledPeakPhysicalFootprintBytes": 987153872,
+      "wer": {
+        "n": 3,
+        "p50": 0.058597662771285475,
+        "p95": 0.058597662771285475,
+        "min": 0.058597662771285475,
+        "max": 0.058597662771285475
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.00651085141903172,
+        "p95": 0.00651085141903172,
+        "min": 0.00651085141903172,
+        "max": 0.00651085141903172
+      },
+      "referenceWords": 5990,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-ru-3540s-settled-1-normal-0-selected",
+        "file-ru-3540s-settled-1-normal-1-selected",
+        "file-ru-3540s-settled-1-normal-2-selected"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 3,
+        "p50": 98.272431917,
+        "p95": 100.879881317,
+        "min": 96.646259375,
+        "max": 101.169597917
+      },
+      "audioSeconds": 3550.16,
+      "peakRSSBytes": 991690752,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.237294917,
+        "p95": 0.243202292,
+        "min": 0.2335965,
+        "max": 0.243858667
+      },
+      "sampledPeakPhysicalFootprintBytes": 996885920,
+      "wer": {
+        "n": 3,
+        "p50": 0.06126878130217028,
+        "p95": 0.06126878130217028,
+        "min": 0.06126878130217028,
+        "max": 0.06126878130217028
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.005676126878130217,
+        "p95": 0.005676126878130217,
+        "min": 0.005676126878130217,
+        "max": 0.005676126878130217
+      },
+      "referenceWords": 5990,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-ru-3540s-settled-1-normal-0-control",
+        "file-ru-3540s-settled-1-normal-1-control",
+        "file-ru-3540s-settled-1-normal-2-control"
+      ]
+    }
+  ],
+  "fileParity": [
+    {
+      "fixture": "en-3540s",
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-en-3540s-settled-1-normal-0-selected",
+      "baseline": "file-en-3540s-settled-1-normal-0-selected",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 257,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-en-3540s-settled-1-normal-1-selected",
+      "baseline": "file-en-3540s-settled-1-normal-0-selected",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 257,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-en-3540s-settled-1-normal-2-selected",
+      "baseline": "file-en-3540s-settled-1-normal-0-selected",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 257,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-en-3540s-settled-1-normal-0-control",
+      "baseline": "file-en-3540s-settled-1-normal-0-control",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 157,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-en-3540s-settled-1-normal-1-control",
+      "baseline": "file-en-3540s-settled-1-normal-0-control",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 157,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-en-3540s-settled-1-normal-2-control",
+      "baseline": "file-en-3540s-settled-1-normal-0-control",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 157,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-mixed-3540s-settled-1-normal-0-selected",
+      "baseline": "file-mixed-3540s-settled-1-normal-0-selected",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 262,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-mixed-3540s-settled-1-normal-1-selected",
+      "baseline": "file-mixed-3540s-settled-1-normal-0-selected",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 262,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-mixed-3540s-settled-1-normal-2-selected",
+      "baseline": "file-mixed-3540s-settled-1-normal-0-selected",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 262,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-mixed-3540s-settled-1-normal-0-control",
+      "baseline": "file-mixed-3540s-settled-1-normal-0-control",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 198,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-mixed-3540s-settled-1-normal-1-control",
+      "baseline": "file-mixed-3540s-settled-1-normal-0-control",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 198,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-mixed-3540s-settled-1-normal-2-control",
+      "baseline": "file-mixed-3540s-settled-1-normal-0-control",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 198,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-ru-3540s-settled-1-normal-0-selected",
+      "baseline": "file-ru-3540s-settled-1-normal-0-selected",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 250,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-ru-3540s-settled-1-normal-1-selected",
+      "baseline": "file-ru-3540s-settled-1-normal-0-selected",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 250,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "segmentSeconds": 15,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-ru-3540s-settled-1-normal-2-selected",
+      "baseline": "file-ru-3540s-settled-1-normal-0-selected",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 250,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-ru-3540s-settled-1-normal-0-control",
+      "baseline": "file-ru-3540s-settled-1-normal-0-control",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 190,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-ru-3540s-settled-1-normal-1-control",
+      "baseline": "file-ru-3540s-settled-1-normal-0-control",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 190,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "overlapMilliseconds": 2000,
+      "id": "file-ru-3540s-settled-1-normal-2-control",
+      "baseline": "file-ru-3540s-settled-1-normal-0-control",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 190,
+      "chunkBoundariesAndText": true
+    }
+  ],
+  "tailParity": []
+}

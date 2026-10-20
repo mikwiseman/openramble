@@ -1,0 +1,22 @@
+{
+  "registeredUTC": "2026-10-11T07:33:03.205116+00:00",
+  "developmentDecisionSHA256": "cf781d0c502f620c957244c549c061416c32ab6dd3ed1aed79df8ed6414b55be",
+  "selectionSHA256": "6bdb237b31e1fdd75ff61b4d2c14c2d17d72235eb3479868f64702fcaa69968e",
+  "planSHA256": "8b41322c1dd99486134b4f6c4c18a322823bf39c9e0a04ee27ce27bfaf154c04",
+  "selectedPolicy": {
+    "segmentSeconds": 15,
+    "minimumSegmentSeconds": 15,
+    "overlapMilliseconds": 2000,
+    "preserveGap": true
+  },
+  "qualityGates": {
+    "mixedWERImprovementPointsAtLeast": 2,
+    "monoWERRegressionPointsAtMost": 0.5,
+    "monoDeletionRegressionPointsAtMost": 0.5
+  },
+  "repeatGates": "Exact words, text and chunk boundaries across each three-repeat native cell; exact unchanged-joiner replay in every row.",
+  "resourceGate": "No new memory-pressure failure. Compiler interruptions stay visible and may resume only after a quiet gate.",
+  "timingScope": "Three observations per cell; report medians and all values, no tail-percentile or speed-winner claim. Quality acceptance does not imply a speed improvement.",
+  "nativeGate": "No adoption before failing/green regression tests, native candidate agreement with frozen replay and lifecycle checks.",
+  "selectionLock": "One fixed candidate only. A failed heldout gate rejects this candidate; do not pick another policy on these outputs."
+}

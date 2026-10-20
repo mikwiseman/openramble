@@ -1,0 +1,52 @@
+{
+  "registeredBeforeExecution": true,
+  "candidateEchoGatePassed": false,
+  "preserveAllRejected": true,
+  "preserveAllTests": {
+    "executed": 2,
+    "failed": 2
+  },
+  "thresholdTests": {
+    "executed": 8,
+    "passed": 6,
+    "failed": 2
+  },
+  "cases": [
+    {
+      "test": "testAnEchoThatStartsAfterSilenceIsNotSegmentedAsYouEitherCurrentThresholdSparseEcho",
+      "passed": true
+    },
+    {
+      "test": "testAnEchoThatStartsAfterSilenceIsNotSegmentedAsYouEitherLowerThreshold",
+      "passed": true
+    },
+    {
+      "test": "testAnEchoThatStartsAfterSilenceIsNotSegmentedAsYouEitherLowerThresholdQuietEcho",
+      "passed": true
+    },
+    {
+      "test": "testAnEchoThatStartsAfterSilenceIsNotSegmentedAsYouEitherLowerThresholdSparseEcho",
+      "passed": false
+    },
+    {
+      "test": "testTheOtherSideLeakingIntoTheMicrophoneIsNotSegmentedAsYouCurrentThresholdSparseEcho",
+      "passed": true
+    },
+    {
+      "test": "testTheOtherSideLeakingIntoTheMicrophoneIsNotSegmentedAsYouLowerThreshold",
+      "passed": true
+    },
+    {
+      "test": "testTheOtherSideLeakingIntoTheMicrophoneIsNotSegmentedAsYouLowerThresholdQuietEcho",
+      "passed": true
+    },
+    {
+      "test": "testTheOtherSideLeakingIntoTheMicrophoneIsNotSegmentedAsYouLowerThresholdSparseEcho",
+      "passed": false
+    }
+  ],
+  "liveDefaultChanged": false,
+  "secondHoldoutOpened": true,
+  "scope": "Synthetic capture fixtures; not recordings of real rooms.",
+  "openedForCandidate": "system-only after its independent echo/default gate; the global candidate remains rejected"
+}

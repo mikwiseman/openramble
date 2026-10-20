@@ -1,0 +1,99 @@
+--- a/Packages/DictationCore/Sources/DictationCore/DictationController.swift
++++ b/Packages/DictationCore/Sources/DictationCore/DictationController.swift
+@@ -286,4 +285,0 @@
+-    /// Read a suffix without restoring the recognized prefix into memory.
+-    /// Arguments are URL, first frame and expected total frames at 16 kHz.
+-    /// The reader must validate the complete file length before returning.
+-    private let readTailSamples: (@Sendable (URL, Int, Int) async throws -> [Float])?
+@@ -305 +301 @@
+-    private nonisolated static let minimumTailSamples = 2 * sampleRate
++    private static let minimumTailSamples = 2 * sampleRate
+@@ -441 +436,0 @@
+-        self.readTailSamples = readTailSamples
+@@ -942 +936,0 @@
+-        sampleOffset: Int = 0,
+@@ -946 +940,4 @@
+-        guard sampleOffset >= 0, samples.count <= Int.max - sampleOffset else {
++        guard consumedSamples >= 0, consumedSamples <= samples.count,
++              texts.count == segmentSampleCounts.count,
++              segmentSampleCounts.allSatisfy({ $0 > 0 }),
++              segmentSampleCounts.reduce(0, +) == consumedSamples else {
+@@ -949,5 +945,0 @@
+-        let tailStart = try streamedTailStart(texts: texts, segmentSampleCounts: segmentSampleCounts,
+-            consumedSamples: consumedSamples, totalSamples: samples.count + sampleOffset)
+-        guard sampleOffset <= tailStart else {
+-            throw ASREngineError.unsupportedAudioFormat("incomplete streamed recording")
+-        }
+@@ -955 +947,5 @@
+-        if tailStart < consumedSamples {
++        var tailStart = min(max(0, consumedSamples), samples.count)
++
++        if samples.count - tailStart < minimumTailSamples,
++           pieces.count == segmentSampleCounts.count,
++           let last = segmentSampleCounts.last {
+@@ -956,0 +953 @@
++            tailStart = max(0, tailStart - last)
+@@ -961 +958 @@
+-        let tail = Array(samples[(tailStart - sampleOffset)...])
++        let tail = Array(samples[tailStart...])
+@@ -981 +978 @@
+-            audioDuration: Double(samples.count + sampleOffset) / Double(sampleRate),
++            audioDuration: Double(samples.count) / Double(sampleRate),
+@@ -986,14 +982,0 @@
+-    }
+-
+-    private nonisolated static func streamedTailStart(texts: [String], segmentSampleCounts: [Int],
+-                                          consumedSamples: Int, totalSamples: Int) throws -> Int {
+-        guard consumedSamples >= 0, consumedSamples <= totalSamples,
+-              texts.count == segmentSampleCounts.count,
+-              segmentSampleCounts.allSatisfy({ $0 > 0 }),
+-              segmentSampleCounts.reduce(0, +) == consumedSamples else {
+-            throw ASREngineError.unsupportedAudioFormat("incomplete streamed recording")
+-        }
+-        if totalSamples - consumedSamples < minimumTailSamples, let last = segmentSampleCounts.last {
+-            return consumedSamples - last
+-        }
+-        return consumedSamples
+@@ -1169 +1152 @@
+-                [transcribe, transcribeSamples, readSamples, readTailSamples, streamed, consumedSamples] in
++                [transcribe, transcribeSamples, readSamples, streamed, consumedSamples] in
+@@ -1218,2 +1201 @@
+-                    // local WAV and reuse the same prefix/tail join. A range
+-                    // reader avoids restoring the recognized prefix at Stop.
++                    // complete local WAV and reuse the same prefix/tail join.
+@@ -1221,3 +1203,2 @@
+-                    if let transcribeSamples,
+-                       case let .recognized(texts) = outcome, !texts.isEmpty,
+-                       readTailSamples != nil || readSamples != nil {
++                    if let transcribeSamples, let readSamples,
++                       case let .recognized(texts) = outcome, !texts.isEmpty {
+@@ -1225,19 +1206 @@
+-                        let sampleCounts = streamed?.submittedSampleCounts ?? []
+-                        let samples: [Float]
+-                        let sampleOffset: Int
+-                        if let readTailSamples {
+-                            let expected = recording.duration * Double(Self.sampleRate)
+-                            guard expected.isFinite, expected > 0, expected < Double(Int.max) else {
+-                                throw ASREngineError.unsupportedAudioFormat("invalid file-backed duration")
+-                            }
+-                            let totalSamples = Int(expected.rounded())
+-                            sampleOffset = try Self.streamedTailStart(texts: texts,
+-                                segmentSampleCounts: sampleCounts, consumedSamples: consumedSamples,
+-                                totalSamples: totalSamples)
+-                            samples = try await readTailSamples(url, sampleOffset, totalSamples)
+-                        } else if let readSamples {
+-                            sampleOffset = 0
+-                            samples = try await readSamples(url)
+-                        } else {
+-                            throw ASREngineError.unsupportedAudioFormat("no file-backed reader")
+-                        }
++                        let samples = try await readSamples(url)
+@@ -1246,2 +1209 @@
+-                        guard abs(Double(samples.count) + Double(sampleOffset)
+-                            - recording.duration * Double(Self.sampleRate)) < 1 else {
++                        guard abs(Double(samples.count) - recording.duration * Double(Self.sampleRate)) < 1 else {
+@@ -1252 +1214 @@
+-                            segmentSampleCounts: sampleCounts,
++                            segmentSampleCounts: streamed?.submittedSampleCounts ?? [],
+@@ -1255 +1216,0 @@
+-                            sampleOffset: sampleOffset,

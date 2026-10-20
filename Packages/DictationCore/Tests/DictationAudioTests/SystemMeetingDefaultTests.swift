@@ -1,0 +1,110 @@
+import DictationCore
+import Foundation
+import XCTest
+@testable import DictationAudio
+
+final class SystemMeetingDefaultTests: XCTestCase {
+    func testQuietSystemAudioIsSubmittedByDefault() async throws {
+        let refs = try await capture(system: signal(peak: 0.006))
+        XCTAssertEqual(refs.map(\.channel), [.system])
+    }
+
+    func testQuietMicrophoneKeepsItsExistingThreshold() async throws {
+        let refs = try await capture(microphone: signal(peak: 0.006))
+        XCTAssertTrue(refs.isEmpty)
+    }
+
+    func testLoudIndependentMicrophoneStillProducesASegment() async throws {
+        let refs = try await capture(microphone: signal(peak: 0.1, seed: 97))
+        XCTAssertEqual(refs.map(\.channel), [.microphone])
+    }
+
+    func testIndependentMicrophoneAndQuietSystemBothSurvive() async throws {
+        let refs = try await capture(microphone: signal(peak: 0.1, seed: 97),
+                                     system: signal(peak: 0.006))
+        XCTAssertEqual(Set(refs.map(\.channel)), [.microphone, .system])
+    }
+
+    func testExplicitCaptureThresholdStillAppliesToSystemAudio() async throws {
+        let refs = try await capture(system: signal(peak: 0.006), parameters: .meeting)
+        XCTAssertTrue(refs.isEmpty)
+    }
+
+    func testExplicitLowThresholdStillAppliesToMicrophone() async throws {
+        var parameters = MeetingSegmentPolicy.Parameters.meeting
+        parameters.speech.speechPeak = 0.005
+        let refs = try await capture(microphone: signal(peak: 0.006), parameters: parameters)
+        XCTAssertEqual(refs.map(\.channel), [.microphone])
+    }
+
+    func testDefaultCaptureSuppressesOrdinaryEcho() async throws {
+        try await checkEcho(sparse: false, leadingSilence: false)
+    }
+
+    func testDefaultCaptureSuppressesOrdinaryEchoAfterSilence() async throws {
+        try await checkEcho(sparse: false, leadingSilence: true)
+    }
+
+    func testDefaultCaptureSuppressesSparseEcho() async throws {
+        try await checkEcho(sparse: true, leadingSilence: false)
+    }
+
+    func testDefaultCaptureSuppressesSparseEchoAfterSilence() async throws {
+        try await checkEcho(sparse: true, leadingSilence: true)
+    }
+
+    private func checkEcho(sparse: Bool, leadingSilence: Bool) async throws {
+        let system = signal(peak: sparse ? 0.03 : 0.3, sparse: sparse)
+        let microphone: [Float] = system.indices.map { $0 < 480 ? 0 : system[$0 - 480] * 0.5 }
+        let refs = try await capture(microphone: microphone, system: system,
+                                     leadingSilence: leadingSilence)
+        XCTAssertEqual(refs.map(\.channel), [.system])
+    }
+
+    private func signal(peak: Float, seed: UInt64 = 42, sparse: Bool = false) -> [Float] {
+        var state = seed
+        return (0..<48_000).map { frame in
+            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            let value = (Float(state >> 40) / Float(1 << 24) * 2 - 1) * peak
+            return sparse && frame % 1_600 >= 80 ? 0 : value
+        }
+    }
+
+    private func capture(microphone micSamples: [Float]? = nil, system systemSamples: [Float]? = nil,
+                         parameters: MeetingSegmentPolicy.Parameters? = nil,
+                         leadingSilence: Bool = false) async throws -> [MeetingSegmentRef] {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "system-policy-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let microphone = micSamples == nil ? nil : ScriptedAudioSource()
+        let system = systemSamples == nil ? nil : ScriptedAudioSource()
+        let refs = UncheckedBox<[MeetingSegmentRef]>([])
+        let capture: MeetingCapture
+        if let parameters {
+            capture = MeetingCapture(directory: directory, microphone: microphone, systemAudio: system,
+                segmentParameters: parameters, onSegment: { refs.value.append($0) }, probe: {})
+        } else {
+            capture = MeetingCapture(directory: directory, microphone: microphone, systemAudio: system,
+                onSegment: { refs.value.append($0) }, probe: {})
+        }
+        try await capture.start()
+        let silence = [Float](repeating: 0, count: 1_600)
+        if leadingSilence {
+            for _ in 0..<10 {
+                microphone?.deliver(silence)
+                system?.deliver(silence)
+            }
+        }
+        let block = leadingSilence ? 512 : 1_600
+        for start in stride(from: 0, to: 48_000, by: block) {
+            let range = start..<min(start + block, 48_000)
+            if let micSamples { microphone?.deliver(Array(micSamples[range])) }
+            if let systemSamples { system?.deliver(Array(systemSamples[range])) }
+        }
+        for _ in 0..<10 {
+            microphone?.deliver(silence)
+            system?.deliver(silence)
+        }
+        _ = try await capture.stop()
+        return refs.value
+    }
+}

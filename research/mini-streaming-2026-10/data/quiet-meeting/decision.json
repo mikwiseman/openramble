@@ -1,0 +1,513 @@
+{
+  "completedRuns": 18,
+  "gates": {
+    "englishGainPassed": true,
+    "russianPreservationPassed": true,
+    "negativeInputsPassed": true,
+    "decodeBudgetPassed": true,
+    "memoryGatePassed": true
+  },
+  "nativeDevelopmentGatePassed": true,
+  "echoGatePassed": false,
+  "heldoutGatePassed": null,
+  "adoptionApproved": false,
+  "comparisons": [
+    {
+      "fixture": "ru-60s",
+      "language": "ru",
+      "audioSeconds": 66.24,
+      "control": {
+        "quality": {
+          "wer": 0.018018018018018018,
+          "deletionRate": 0.018018018018018018,
+          "referenceWords": 111,
+          "substitutions": 0,
+          "deletions": 2,
+          "insertions": 0,
+          "deletionRunsAtLeastFourWords": []
+        },
+        "normalizedWords": 109,
+        "decodeWork": {
+          "calls": 6,
+          "totalSeconds": 0.911810708,
+          "maxCallSeconds": 0.177022375,
+          "decodedAudioSeconds": 60.37
+        },
+        "submittedFrames": 965920,
+        "unsubmittedFrames": 93920
+      },
+      "candidate": {
+        "quality": {
+          "wer": 0.018018018018018018,
+          "deletionRate": 0.018018018018018018,
+          "referenceWords": 111,
+          "substitutions": 0,
+          "deletions": 2,
+          "insertions": 0,
+          "deletionRunsAtLeastFourWords": []
+        },
+        "normalizedWords": 109,
+        "decodeWork": {
+          "calls": 6,
+          "totalSeconds": 0.956328541,
+          "maxCallSeconds": 0.196595125,
+          "decodedAudioSeconds": 63.53
+        },
+        "submittedFrames": 1016480,
+        "unsubmittedFrames": 43360
+      },
+      "werDifferencePoints": 0.0,
+      "deletionDifferencePoints": 0.0
+    },
+    {
+      "fixture": "en-60s",
+      "language": "en",
+      "audioSeconds": 61.92,
+      "control": {
+        "quality": {
+          "wer": 0.6535433070866141,
+          "deletionRate": 0.6535433070866141,
+          "referenceWords": 127,
+          "substitutions": 0,
+          "deletions": 83,
+          "insertions": 0,
+          "deletionRunsAtLeastFourWords": [
+            {
+              "startWord": 18,
+              "endWord": 76,
+              "text": "built by the egyptians in the third century bce the great pyramid is one of many large pyramid structures built to honor dead pharaoh in some areas boiling water for a minute is enough in others several minutes are needed with kundalini yoga the kundalini energy enlightenment energy is awakened through yoga postures breathing exercises mantras and visualizations"
+            },
+            {
+              "startWord": 103,
+              "endWord": 127,
+              "text": "the document according to the leak will refer to the borders dispute which palestine wants based on the borders before the 1967 mideast war"
+            }
+          ]
+        },
+        "normalizedWords": 44,
+        "decodeWork": {
+          "calls": 2,
+          "totalSeconds": 0.341003792,
+          "maxCallSeconds": 0.1906435,
+          "decodedAudioSeconds": 23.66
+        },
+        "submittedFrames": 378560,
+        "unsubmittedFrames": 612160
+      },
+      "candidate": {
+        "quality": {
+          "wer": 0.4881889763779528,
+          "deletionRate": 0.41732283464566927,
+          "referenceWords": 127,
+          "substitutions": 9,
+          "deletions": 53,
+          "insertions": 0,
+          "deletionRunsAtLeastFourWords": [
+            {
+              "startWord": 18,
+              "endWord": 22,
+              "text": "built by the egyptians"
+            },
+            {
+              "startWord": 23,
+              "endWord": 43,
+              "text": "the third century bce the great pyramid is one of many large pyramid structures built to honor dead pharaoh in"
+            },
+            {
+              "startWord": 80,
+              "endWord": 104,
+              "text": "most effective place for the main subject is at the intersection of lines dividing the image into thirds vertically and horizontally see example the"
+            }
+          ]
+        },
+        "normalizedWords": 74,
+        "decodeWork": {
+          "calls": 4,
+          "totalSeconds": 0.691940416,
+          "maxCallSeconds": 0.250519541,
+          "decodedAudioSeconds": 49.69
+        },
+        "submittedFrames": 795040,
+        "unsubmittedFrames": 195680
+      },
+      "werDifferencePoints": -16.535433070866134,
+      "deletionDifferencePoints": -23.622047244094485
+    },
+    {
+      "fixture": "ru-360s",
+      "language": "ru",
+      "audioSeconds": 369.66,
+      "control": {
+        "quality": {
+          "wer": 0.18781725888324874,
+          "deletionRate": 0.13705583756345177,
+          "referenceWords": 591,
+          "substitutions": 27,
+          "deletions": 81,
+          "insertions": 3,
+          "deletionRunsAtLeastFourWords": [
+            {
+              "startWord": 222,
+              "endWord": 265,
+              "text": "займет принадлежащий дейви пост министра по делам бизнеса цивилизация это отдельная культура носителями которой является достаточно большая группа людей живущих и работающих вместе общество либеральная критика усилий по восстановлению сосредоточивалась на том что контракты на восстановительные работы отдавались предположительно имеющим связи с правительством"
+            },
+            {
+              "startWord": 324,
+              "endWord": 339,
+              "text": "они вернулись в париж в карете окруженные толпой людей которые выкрикивали угрозы королю и королеве"
+            },
+            {
+              "startWord": 355,
+              "endWord": 371,
+              "text": "когда лиггинс работал в больнице в свободное от работы время он начал расследовать случаи преждевременных родов"
+            }
+          ]
+        },
+        "normalizedWords": 513,
+        "decodeWork": {
+          "calls": 25,
+          "totalSeconds": 4.522288543,
+          "maxCallSeconds": 0.302528208,
+          "decodedAudioSeconds": 293.66
+        },
+        "submittedFrames": 4698560,
+        "unsubmittedFrames": 1216000
+      },
+      "candidate": {
+        "quality": {
+          "wer": 0.06091370558375635,
+          "deletionRate": 0.01353637901861252,
+          "referenceWords": 591,
+          "substitutions": 25,
+          "deletions": 8,
+          "insertions": 3,
+          "deletionRunsAtLeastFourWords": []
+        },
+        "normalizedWords": 586,
+        "decodeWork": {
+          "calls": 28,
+          "totalSeconds": 5.326765876,
+          "maxCallSeconds": 0.313098542,
+          "decodedAudioSeconds": 351.71
+        },
+        "submittedFrames": 5627360,
+        "unsubmittedFrames": 287200
+      },
+      "werDifferencePoints": -12.690355329949238,
+      "deletionDifferencePoints": -12.351945854483926
+    },
+    {
+      "fixture": "en-360s",
+      "language": "en",
+      "audioSeconds": 361.24,
+      "control": {
+        "quality": {
+          "wer": 0.7043147208121827,
+          "deletionRate": 0.6941624365482234,
+          "referenceWords": 788,
+          "substitutions": 8,
+          "deletions": 547,
+          "insertions": 0,
+          "deletionRunsAtLeastFourWords": [
+            {
+              "startWord": 18,
+              "endWord": 76,
+              "text": "built by the egyptians in the third century bce the great pyramid is one of many large pyramid structures built to honor dead pharaoh in some areas boiling water for a minute is enough in others several minutes are needed with kundalini yoga the kundalini energy enlightenment energy is awakened through yoga postures breathing exercises mantras and visualizations"
+            },
+            {
+              "startWord": 105,
+              "endWord": 227,
+              "text": "according to the leak will refer to the borders dispute which palestine wants based on the borders before the 1967 mideast war ironing damp clothes can help them dry many hotels have an iron and ironing board available for loan even if one is not present in the room also after the revolution occupations were open to all male applicants allowing the most ambitious and successful to succeed muhammad was deeply interested in matters beyond this mundane life he used to frequent a cave that became known as hira on the mountain of noor light for contemplation if you have watched the movie national treasure you may think a treasure map was written on the back of the declaration of independence scotturb"
+            },
+            {
+              "startWord": 270,
+              "endWord": 396,
+              "text": "prides are made up of one to three related adult males along with as many as thirty females and cubs prior to the arrival of troops haiti had not encountered problems related to the disease since the 1800s their disciplined defence ball handling skills and excellent team work made them stand out and it was clear that this was the team to beat the capital of moldova is chişinău the local language is romanian but russian is widely used they usually have special food drink and entertainment offers to keep guests in a good mood and keep them at the premise the vertical clearance under the bridge is 15 meters construction was completed in august 2011 it didn t open to traffic until march 2017 if"
+            },
+            {
+              "startWord": 397,
+              "endWord": 520,
+              "text": "want to be close to the action you re going to have to get in early to get a camping site close to the music according to japan s nuclear agency radioactive caesium and iodine has been identified at the plant some people thought he was right but many people believed the opposite that the solar system moved around the earth including the sun and even the other stars but being placed in the high tropics just a few degrees north of equator you will need to deal with both heat always and strong sun when the sky is clear more rarely last week meti announced that apple had informed it of 34 additional overheating incidents which the company called non serious you"
+            },
+            {
+              "startWord": 541,
+              "endWord": 559,
+              "text": "cuomo 53 began his governorship earlier this year and signed a bill last month legalizing same sex marriage"
+            },
+            {
+              "startWord": 679,
+              "endWord": 711,
+              "text": "large areas further north are quite sparsely populated and some is nearly uninhabited wilderness a search of the internet for hostile environment course will probably provide the address of a local company"
+            },
+            {
+              "startWord": 723,
+              "endWord": 788,
+              "text": "the announcement was made after trump had a phone conversation with turkish president recep tayyip erdoğan aristotle a philosopher theorised that everything is made up of a mixture of one or more of four elements they were earth water air and fire if you re not used to driving on country roads keep your wits about you steep grades narrow lanes and sharp curves predominate"
+            }
+          ]
+        },
+        "normalizedWords": 241,
+        "decodeWork": {
+          "calls": 12,
+          "totalSeconds": 1.906187124,
+          "maxCallSeconds": 0.282995958,
+          "decodedAudioSeconds": 137.47
+        },
+        "submittedFrames": 2199520,
+        "unsubmittedFrames": 3580320
+      },
+      "candidate": {
+        "quality": {
+          "wer": 0.35786802030456855,
+          "deletionRate": 0.30583756345177665,
+          "referenceWords": 788,
+          "substitutions": 37,
+          "deletions": 241,
+          "insertions": 4,
+          "deletionRunsAtLeastFourWords": [
+            {
+              "startWord": 18,
+              "endWord": 22,
+              "text": "built by the egyptians"
+            },
+            {
+              "startWord": 23,
+              "endWord": 43,
+              "text": "the third century bce the great pyramid is one of many large pyramid structures built to honor dead pharaoh in"
+            },
+            {
+              "startWord": 80,
+              "endWord": 104,
+              "text": "most effective place for the main subject is at the intersection of lines dividing the image into thirds vertically and horizontally see example the"
+            },
+            {
+              "startWord": 154,
+              "endWord": 197,
+              "text": "also after the revolution occupations were open to all male applicants allowing the most ambitious and successful to succeed muhammad was deeply interested in matters beyond this mundane life he used to frequent a cave that became known as hira on the mountain"
+            },
+            {
+              "startWord": 270,
+              "endWord": 290,
+              "text": "prides are made up of one to three related adult males along with as many as thirty females and cubs"
+            },
+            {
+              "startWord": 354,
+              "endWord": 369,
+              "text": "drink and entertainment offers to keep guests in a good mood and keep them at"
+            },
+            {
+              "startWord": 394,
+              "endWord": 398,
+              "text": "2017 if you want"
+            },
+            {
+              "startWord": 430,
+              "endWord": 438,
+              "text": "and iodine has been identified at the plant"
+            },
+            {
+              "startWord": 455,
+              "endWord": 466,
+              "text": "around the earth including the sun and even the other stars"
+            },
+            {
+              "startWord": 497,
+              "endWord": 519,
+              "text": "more rarely last week meti announced that apple had informed it of 34 additional overheating incidents which the company called non serious"
+            },
+            {
+              "startWord": 551,
+              "endWord": 559,
+              "text": "a bill last month legalizing same sex marriage"
+            },
+            {
+              "startWord": 693,
+              "endWord": 711,
+              "text": "a search of the internet for hostile environment course will probably provide the address of a local company"
+            },
+            {
+              "startWord": 723,
+              "endWord": 739,
+              "text": "the announcement was made after trump had a phone conversation with turkish president recep tayyip erdoğan"
+            },
+            {
+              "startWord": 780,
+              "endWord": 788,
+              "text": "steep grades narrow lanes and sharp curves predominate"
+            }
+          ]
+        },
+        "normalizedWords": 551,
+        "decodeWork": {
+          "calls": 27,
+          "totalSeconds": 4.10171812,
+          "maxCallSeconds": 0.288940541,
+          "decodedAudioSeconds": 282.29
+        },
+        "submittedFrames": 4516640,
+        "unsubmittedFrames": 1263200
+      },
+      "werDifferencePoints": -34.64467005076142,
+      "deletionDifferencePoints": -38.83248730964468
+    },
+    {
+      "fixture": "negative-silence",
+      "language": "none",
+      "audioSeconds": 20,
+      "control": {
+        "quality": null,
+        "normalizedWords": 0,
+        "decodeWork": {
+          "calls": 0,
+          "totalSeconds": 0,
+          "maxCallSeconds": 0,
+          "decodedAudioSeconds": 0.0
+        },
+        "submittedFrames": 0,
+        "unsubmittedFrames": 320000
+      },
+      "candidate": {
+        "quality": null,
+        "normalizedWords": 0,
+        "decodeWork": {
+          "calls": 0,
+          "totalSeconds": 0,
+          "maxCallSeconds": 0,
+          "decodedAudioSeconds": 0.0
+        },
+        "submittedFrames": 0,
+        "unsubmittedFrames": 320000
+      }
+    },
+    {
+      "fixture": "negative-uniform003",
+      "language": "none",
+      "audioSeconds": 20,
+      "control": {
+        "quality": null,
+        "normalizedWords": 0,
+        "decodeWork": {
+          "calls": 0,
+          "totalSeconds": 0,
+          "maxCallSeconds": 0,
+          "decodedAudioSeconds": 0.0
+        },
+        "submittedFrames": 0,
+        "unsubmittedFrames": 320000
+      },
+      "candidate": {
+        "quality": null,
+        "normalizedWords": 0,
+        "decodeWork": {
+          "calls": 0,
+          "totalSeconds": 0,
+          "maxCallSeconds": 0,
+          "decodedAudioSeconds": 0.0
+        },
+        "submittedFrames": 0,
+        "unsubmittedFrames": 320000
+      }
+    },
+    {
+      "fixture": "negative-uniform010",
+      "language": "none",
+      "audioSeconds": 20,
+      "control": {
+        "quality": null,
+        "normalizedWords": 0,
+        "decodeWork": {
+          "calls": 0,
+          "totalSeconds": 0,
+          "maxCallSeconds": 0,
+          "decodedAudioSeconds": 0.0
+        },
+        "submittedFrames": 0,
+        "unsubmittedFrames": 320000
+      },
+      "candidate": {
+        "quality": null,
+        "normalizedWords": 0,
+        "decodeWork": {
+          "calls": 2,
+          "totalSeconds": 0.285181792,
+          "maxCallSeconds": 0.245986625,
+          "decodedAudioSeconds": 20.0
+        },
+        "submittedFrames": 320000,
+        "unsubmittedFrames": 0
+      }
+    },
+    {
+      "fixture": "negative-sine50hz",
+      "language": "none",
+      "audioSeconds": 20,
+      "control": {
+        "quality": null,
+        "normalizedWords": 0,
+        "decodeWork": {
+          "calls": 0,
+          "totalSeconds": 0,
+          "maxCallSeconds": 0,
+          "decodedAudioSeconds": 0.0
+        },
+        "submittedFrames": 0,
+        "unsubmittedFrames": 320000
+      },
+      "candidate": {
+        "quality": null,
+        "normalizedWords": 0,
+        "decodeWork": {
+          "calls": 1,
+          "totalSeconds": 0.235276959,
+          "maxCallSeconds": 0.235276959,
+          "decodedAudioSeconds": 20.0
+        },
+        "submittedFrames": 320000,
+        "unsubmittedFrames": 0
+      }
+    },
+    {
+      "fixture": "negative-clicks1ms",
+      "language": "none",
+      "audioSeconds": 20,
+      "control": {
+        "quality": null,
+        "normalizedWords": 0,
+        "decodeWork": {
+          "calls": 2,
+          "totalSeconds": 0.252464375,
+          "maxCallSeconds": 0.127515458,
+          "decodedAudioSeconds": 18.52
+        },
+        "submittedFrames": 296320,
+        "unsubmittedFrames": 23680
+      },
+      "candidate": {
+        "quality": null,
+        "normalizedWords": 0,
+        "decodeWork": {
+          "calls": 2,
+          "totalSeconds": 0.252328875,
+          "maxCallSeconds": 0.131807334,
+          "decodedAudioSeconds": 18.52
+        },
+        "submittedFrames": 296320,
+        "unsubmittedFrames": 23680
+      }
+    }
+  ],
+  "failedAttempts": [],
+  "identity": {
+    "head": "7dc3f2638b45a859fd232248c2497347719e3525",
+    "binary_sha256": "974ed8a8a582805fd40ac4a519a621267621098ee8fb8e166edda062620e6c14",
+    "runner_sha256": "5a69f85760aee7385ce3f0a3708fccb41a8d942da78d97eb9512a22c85804a91",
+    "harness_sha256": "3b76c4e6d2fc53e4fdb41067fb52f3d369d2936e2a0eec33a60d9c15506485df",
+    "input_manifest_sha256": "4036ae8c29355fedcc36728e657d20da34e05fae4059130177a151fc0bbb06da",
+    "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+    "plan_sha256": "6a7c3b649775d75693b17aa6e772ee378446eab34a50145ee0ba0c10f0de7c53"
+  },
+  "scope": "Four fixed public speech composites and five synthetic negatives, one pass per threshold; separate echo tests and disjoint validation required.",
+  "status": "rejected",
+  "heldoutStatus": "Not opened for the failed global threshold candidate.",
+  "rejectionReason": "The low-peak threshold emits microphone echo on both registered sparse echo fixtures."
+}

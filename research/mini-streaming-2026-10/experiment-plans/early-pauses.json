@@ -1,0 +1,41 @@
+[
+  {
+    "fixture": "ru-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "pause4",
+    "parameters": {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4
+    }
+  },
+  {
+    "fixture": "en-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "pause4",
+    "parameters": {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4
+    }
+  },
+  {
+    "fixture": "mixed-3540s",
+    "mode": "file",
+    "pacing": "settled",
+    "workers": 1,
+    "condition": "normal",
+    "repeat": 0,
+    "variant": "pause4",
+    "parameters": {
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 4
+    }
+  }
+]

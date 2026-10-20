@@ -1,0 +1,18 @@
+{
+  "utc": "2026-10-11T08:45:32.867927+00:00",
+  "originalSource": "048cefd20b4ea8ca37f2e4954a48acc3aca473dd",
+  "red": {
+    "tests": 6,
+    "failedTests": 3,
+    "failedAssertions": 9,
+    "logSHA256": "2c26b9229c917623600402b94826c0e93510f1d76d6a7f84604c297dc33feaf5"
+  },
+  "green": {
+    "tests": 13,
+    "failures": 0,
+    "nativeReplayCases": 36,
+    "replaySHA256": "720452030c129fde77fb61c06b7740494f1ee2c12994db9a13b15d6e2924ef27",
+    "logSHA256": "644da0b9f759145c30f12bed250b96b8bb8c5cabaf0aa8078297d1bfba4b52ee"
+  },
+  "remainingGate": "Three full shipping FileTranscriber checks and package suites; no release from these experiments."
+}

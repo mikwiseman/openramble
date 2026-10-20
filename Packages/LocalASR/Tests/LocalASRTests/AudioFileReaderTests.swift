@@ -32,7 +32,8 @@ final class AudioFileReaderTests: XCTestCase {
         seconds: Double,
         sampleRate: Double,
         channels: AVAudioChannelCount,
-        name: String = "take"
+        name: String = "take",
+        integerPCM: Bool = false
     ) throws -> URL {
         let url = directory.appending(path: "\(name)-\(UUID().uuidString).wav", directoryHint: .notDirectory)
         let format = try XCTUnwrap(
@@ -46,7 +47,12 @@ final class AudioFileReaderTests: XCTestCase {
         let frames = AVAudioFrameCount(sampleRate * seconds)
 
         try autoreleasepool {
-            let file = try AVAudioFile(forWriting: url, settings: format.settings)
+            var settings = format.settings
+            if integerPCM {
+                settings[AVLinearPCMIsFloatKey] = false
+                settings[AVLinearPCMBitDepthKey] = 16
+            }
+            let file = try AVAudioFile(forWriting: url, settings: settings)
             let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames))
             buffer.frameLength = frames
             for channel in 0..<Int(channels) {
@@ -83,6 +89,61 @@ final class AudioFileReaderTests: XCTestCase {
         let expected = try reader.samples(from: url)
         let actual = try await reader.samplesOnDiskQueue(from: url)
         XCTAssertEqual(actual, expected)
+    }
+
+    func testTailSeekPreservesEverySampleAcrossReadBoundaries() async throws {
+        let url = try writeWAV(seconds: 4.013, sampleRate: 16_000, channels: 1)
+        let whole = try reader.samples(from: url)
+        let cursor = try AudioFileReader.Cursor(url: url)
+        XCTAssertTrue(try cursor.seekCanonical(to: 32_001, totalFrames: whole.count),
+                      "the canonical capture must exercise the seek path")
+        for start in [0, 1, 16_383, 32_001, whole.count - 1, whole.count] {
+            let tail = try await reader.tailSamplesOnDiskQueue(from: url,
+                startingAt: start, totalFrames: whole.count)
+            XCTAssertEqual(tail, Array(whole[start...]), "suffix starts at frame \(start)")
+        }
+    }
+
+    func testConvertedTailKeepsTheOriginalResamplerState() async throws {
+        let url = try writeWAV(seconds: 4.013, sampleRate: 44_100, channels: 2)
+        let whole = try reader.samples(from: url)
+        let start = 15_321
+        let cursor = try AudioFileReader.Cursor(url: url)
+        XCTAssertFalse(try cursor.seekCanonical(to: start, totalFrames: whole.count),
+                       "seeking must never reset the resampler at a new boundary")
+        let tail = try await reader.tailSamplesOnDiskQueue(from: url,
+            startingAt: start, totalFrames: whole.count)
+        XCTAssertEqual(tail, Array(whole[start...]))
+    }
+
+    func testIntegerPCMTailMatchesTheCompleteRead() async throws {
+        let url = try writeWAV(seconds: 4.013, sampleRate: 16_000, channels: 1, integerPCM: true)
+        let whole = try reader.samples(from: url)
+        let start = 31_337
+        let cursor = try AudioFileReader.Cursor(url: url)
+        XCTAssertTrue(try cursor.seekCanonical(to: start, totalFrames: whole.count))
+        let tail = try await reader.tailSamplesOnDiskQueue(from: url,
+            startingAt: start, totalFrames: whole.count)
+        XCTAssertEqual(tail, Array(whole[start...]))
+    }
+
+    func testTailRejectsAChangedFileLengthEvenWhenTheRequestedRangeExists() throws {
+        let url = try writeWAV(seconds: 2, sampleRate: 16_000, channels: 1)
+        for total in [31_999, 32_001] {
+            XCTAssertThrowsError(try reader.tailSamples(from: url, startingAt: 16_000, totalFrames: total)) {
+                XCTAssertEqual($0 as? AudioFileReader.Failure,
+                               .conversionFailed("incomplete file-backed recording"))
+            }
+        }
+    }
+
+    func testTailRejectsInvalidFrameRanges() throws {
+        let url = try writeWAV(seconds: 2, sampleRate: 16_000, channels: 1)
+        for (start, total) in [(-1, 32_000), (32_001, 32_000), (0, 0)] {
+            XCTAssertThrowsError(try reader.tailSamples(from: url, startingAt: start, totalFrames: total)) {
+                XCTAssertEqual($0 as? AudioFileReader.Failure, .conversionFailed("invalid tail frame range"))
+            }
+        }
     }
 
     func testBoundedStereoReadsPreserveTheResampledTail() async throws {

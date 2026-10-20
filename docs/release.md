@@ -30,6 +30,13 @@ launches both CLI architectures and requires offline recognition from each.
 Rosetta verifies Intel executable compatibility, not native Intel performance
 or microphone behavior. Intel support remains experimental pending those checks.
 
+On macOS 26.4 and later, deliberately running the x86_64 CLI through Rosetta
+may produce Apple's future-compatibility warning for OpenRamble. A universal
+bundle can still run natively on Apple Silicon. Preserve both architecture
+checks; record the actual executable and launch architecture before treating
+the warning as a native-app defect. See
+[the Rosetta warning investigation](macos-rosetta-warning.md).
+
 Run once on a trusted Mac:
 
 ```bash

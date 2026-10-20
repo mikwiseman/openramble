@@ -1,0 +1,1957 @@
+{
+  "normalization": "Unicode NFC, lowercase, ё→е, Unicode word tokens, no numeral expansion",
+  "quantiles": "linear interpolation at (n-1)*p",
+  "qualityScope": "Fixed public fixtures; timing repeats are not independent quality examples.",
+  "identities": {
+    "files-v4": {
+      "head": "373f2c294a79daae76b449173c2001589df1cb01",
+      "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+      "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+      "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+      "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+    }
+  },
+  "completedRuns": 17,
+  "failures": [
+    {
+      "run": "files-v4",
+      "id": "file-ru-3540s-settled-4-normal-1",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.023795750021236017,
+          "level": "1",
+          "memory": {
+            "residentBytes": 11894784,
+            "physicalFootprintBytes": 2064792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.058058082999196,
+          "level": "1",
+          "memory": {
+            "residentBytes": 3384180736,
+            "physicalFootprintBytes": 3392130144
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.0926055000163615,
+          "level": "1",
+          "memory": {
+            "residentBytes": 3452813312,
+            "physicalFootprintBytes": 3461516600
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.128301292017568,
+          "level": "1",
+          "memory": {
+            "residentBytes": 3460956160,
+            "physicalFootprintBytes": 3469430144
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.1771672920149285,
+          "level": "1",
+          "memory": {
+            "residentBytes": 3502915584,
+            "physicalFootprintBytes": 3511127424
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.224679167004069,
+          "level": "1",
+          "memory": {
+            "residentBytes": 3500572672,
+            "physicalFootprintBytes": 3508850048
+          },
+          "builds": []
+        },
+        {
+          "seconds": 6.284637375007151,
+          "level": "1",
+          "memory": {
+            "residentBytes": 3330162688,
+            "physicalFootprintBytes": 3511012736
+          },
+          "builds": []
+        },
+        {
+          "seconds": 7.354611625021789,
+          "level": "1",
+          "memory": {
+            "residentBytes": 3346464768,
+            "physicalFootprintBytes": 3523579288
+          },
+          "builds": []
+        },
+        {
+          "seconds": 8.392078458011383,
+          "level": "1",
+          "memory": {
+            "residentBytes": 3359981568,
+            "physicalFootprintBytes": 3526446488
+          },
+          "builds": []
+        },
+        {
+          "seconds": 9.434673500014469,
+          "level": "2",
+          "memory": {
+            "residentBytes": 3370221568,
+            "physicalFootprintBytes": 3534081456
+          },
+          "builds": []
+        }
+      ],
+      "utc": "2026-10-11T05:05:44Z",
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "files-v4",
+      "id": "file-ru-3540s-settled-2-normal-2",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.030718832975253463,
+          "level": "1",
+          "memory": {
+            "residentBytes": 2162688,
+            "physicalFootprintBytes": 458920
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.065033124992624,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1751744512,
+            "physicalFootprintBytes": 1758906336
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.097793458000524,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1798832128,
+            "physicalFootprintBytes": 1805862976
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.151978332985891,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1805713408,
+            "physicalFootprintBytes": 1812695104
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.197286082984647,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1814773760,
+            "physicalFootprintBytes": 1821771864
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.22710974997608,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1818198016,
+            "physicalFootprintBytes": 1825097816
+          },
+          "builds": []
+        },
+        {
+          "seconds": 6.271719624986872,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1819590656,
+            "physicalFootprintBytes": 1826523224
+          },
+          "builds": []
+        },
+        {
+          "seconds": 7.300462207989767,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1820016640,
+            "physicalFootprintBytes": 1826916440
+          },
+          "builds": []
+        },
+        {
+          "seconds": 8.35782195799402,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1820901376,
+            "physicalFootprintBytes": 1827801176
+          },
+          "builds": []
+        },
+        {
+          "seconds": 9.393036082998151,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1820000256,
+            "physicalFootprintBytes": 1826818136
+          },
+          "builds": []
+        },
+        {
+          "seconds": 10.433854290982708,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1823670272,
+            "physicalFootprintBytes": 1830488152
+          },
+          "builds": []
+        },
+        {
+          "seconds": 11.464323832973605,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1822572544,
+            "physicalFootprintBytes": 1829390424
+          },
+          "builds": []
+        },
+        {
+          "seconds": 12.513425499986624,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1833844736,
+            "physicalFootprintBytes": 1840662616
+          },
+          "builds": []
+        },
+        {
+          "seconds": 13.574655832984718,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1835663360,
+            "physicalFootprintBytes": 1842481240
+          },
+          "builds": []
+        },
+        {
+          "seconds": 14.623431582993362,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1841758208,
+            "physicalFootprintBytes": 1848576088
+          },
+          "builds": []
+        },
+        {
+          "seconds": 15.655606665997766,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1844838400,
+            "physicalFootprintBytes": 1851689096
+          },
+          "builds": []
+        },
+        {
+          "seconds": 16.69680099998368,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1841659904,
+            "physicalFootprintBytes": 1848510600
+          },
+          "builds": []
+        },
+        {
+          "seconds": 17.73860733298352,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1836826624,
+            "physicalFootprintBytes": 1843677320
+          },
+          "builds": []
+        },
+        {
+          "seconds": 18.77332691597985,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1842184192,
+            "physicalFootprintBytes": 1849034888
+          },
+          "builds": []
+        },
+        {
+          "seconds": 19.818110707972664,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1845297152,
+            "physicalFootprintBytes": 1852147848
+          },
+          "builds": []
+        },
+        {
+          "seconds": 20.858839082997292,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1845903360,
+            "physicalFootprintBytes": 1852754056
+          },
+          "builds": []
+        },
+        {
+          "seconds": 21.89939162498922,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1844903936,
+            "physicalFootprintBytes": 1851754632
+          },
+          "builds": []
+        },
+        {
+          "seconds": 22.937565124972025,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1845673984,
+            "physicalFootprintBytes": 1852524680
+          },
+          "builds": []
+        },
+        {
+          "seconds": 23.990890124987345,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1846870016,
+            "physicalFootprintBytes": 1853720712
+          },
+          "builds": []
+        },
+        {
+          "seconds": 25.02261912499671,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1845526528,
+            "physicalFootprintBytes": 1852377224
+          },
+          "builds": []
+        },
+        {
+          "seconds": 26.058497624995653,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1844592640,
+            "physicalFootprintBytes": 1851443336
+          },
+          "builds": []
+        },
+        {
+          "seconds": 27.087966124992818,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1840627712,
+            "physicalFootprintBytes": 1847478408
+          },
+          "builds": []
+        },
+        {
+          "seconds": 28.127280540997162,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1846870016,
+            "physicalFootprintBytes": 1853720712
+          },
+          "builds": []
+        },
+        {
+          "seconds": 29.180596124992007,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1843478528,
+            "physicalFootprintBytes": 1850329224
+          },
+          "builds": []
+        },
+        {
+          "seconds": 30.218581624998478,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1842233344,
+            "physicalFootprintBytes": 1849084040
+          },
+          "builds": []
+        },
+        {
+          "seconds": 31.27159849999589,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1845985280,
+            "physicalFootprintBytes": 1852835976
+          },
+          "builds": []
+        },
+        {
+          "seconds": 32.31074108299799,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1838563328,
+            "physicalFootprintBytes": 1845414024
+          },
+          "builds": []
+        },
+        {
+          "seconds": 33.349280874972465,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1843347456,
+            "physicalFootprintBytes": 1850198152
+          },
+          "builds": []
+        },
+        {
+          "seconds": 34.38571212498937,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1838874624,
+            "physicalFootprintBytes": 1845725320
+          },
+          "builds": []
+        },
+        {
+          "seconds": 35.42844145797426,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1846460416,
+            "physicalFootprintBytes": 1853311112
+          },
+          "builds": []
+        },
+        {
+          "seconds": 36.46831466598087,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1847230464,
+            "physicalFootprintBytes": 1854081160
+          },
+          "builds": []
+        },
+        {
+          "seconds": 37.504177332972176,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1846788096,
+            "physicalFootprintBytes": 1853638792
+          },
+          "builds": []
+        },
+        {
+          "seconds": 38.54848516598577,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1848164352,
+            "physicalFootprintBytes": 1855015048
+          },
+          "builds": []
+        },
+        {
+          "seconds": 39.60360662499443,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1846935552,
+            "physicalFootprintBytes": 1853786248
+          },
+          "builds": []
+        },
+        {
+          "seconds": 40.650750582979526,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1845739520,
+            "physicalFootprintBytes": 1852590216
+          },
+          "builds": []
+        },
+        {
+          "seconds": 41.68714783299947,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1841758208,
+            "physicalFootprintBytes": 1848608904
+          },
+          "builds": []
+        },
+        {
+          "seconds": 42.722976874996675,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1845460992,
+            "physicalFootprintBytes": 1852311688
+          },
+          "builds": []
+        },
+        {
+          "seconds": 43.77860716599389,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1845673984,
+            "physicalFootprintBytes": 1852524680
+          },
+          "builds": []
+        },
+        {
+          "seconds": 44.81359079098911,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1844363264,
+            "physicalFootprintBytes": 1851213960
+          },
+          "builds": []
+        },
+        {
+          "seconds": 45.86165724997409,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1844985856,
+            "physicalFootprintBytes": 1851836552
+          },
+          "builds": []
+        },
+        {
+          "seconds": 46.90323245798936,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1839316992,
+            "physicalFootprintBytes": 1846167688
+          },
+          "builds": []
+        },
+        {
+          "seconds": 47.93517499999143,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1844510720,
+            "physicalFootprintBytes": 1851361416
+          },
+          "builds": []
+        },
+        {
+          "seconds": 48.97217124997405,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1847083008,
+            "physicalFootprintBytes": 1853933704
+          },
+          "builds": []
+        },
+        {
+          "seconds": 50.000101540994365,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1845264384,
+            "physicalFootprintBytes": 1852115080
+          },
+          "builds": []
+        },
+        {
+          "seconds": 51.04047779098619,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1847312384,
+            "physicalFootprintBytes": 1854163080
+          },
+          "builds": []
+        },
+        {
+          "seconds": 52.072830249991966,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1846984704,
+            "physicalFootprintBytes": 1853835400
+          },
+          "builds": []
+        },
+        {
+          "seconds": 53.1038382909901,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1845313536,
+            "physicalFootprintBytes": 1852164232
+          },
+          "builds": []
+        },
+        {
+          "seconds": 54.13902299999609,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1840496640,
+            "physicalFootprintBytes": 1847347336
+          },
+          "builds": []
+        },
+        {
+          "seconds": 55.16965799999889,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1695645696,
+            "physicalFootprintBytes": 1856505992
+          },
+          "builds": []
+        },
+        {
+          "seconds": 56.205159332981566,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1711423488,
+            "physicalFootprintBytes": 1851885704
+          },
+          "builds": []
+        },
+        {
+          "seconds": 57.24592033299268,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1710735360,
+            "physicalFootprintBytes": 1846282376
+          },
+          "builds": []
+        },
+        {
+          "seconds": 58.27687033297843,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1725595648,
+            "physicalFootprintBytes": 1850837128
+          },
+          "builds": []
+        },
+        {
+          "seconds": 59.32374833297217,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1721810944,
+            "physicalFootprintBytes": 1844578440
+          },
+          "builds": []
+        },
+        {
+          "seconds": 60.35157895798329,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1728937984,
+            "physicalFootprintBytes": 1850607752
+          },
+          "builds": []
+        },
+        {
+          "seconds": 61.387446040986106,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1725415424,
+            "physicalFootprintBytes": 1846642824
+          },
+          "builds": []
+        },
+        {
+          "seconds": 62.420767957984935,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1731969024,
+            "physicalFootprintBytes": 1851934856
+          },
+          "builds": []
+        },
+        {
+          "seconds": 63.452347707992885,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1743339520,
+            "physicalFootprintBytes": 1853868168
+          },
+          "builds": []
+        },
+        {
+          "seconds": 64.50089899997693,
+          "level": "2",
+          "memory": {
+            "residentBytes": 1745960960,
+            "physicalFootprintBytes": 1855244424
+          },
+          "builds": []
+        }
+      ],
+      "utc": "2026-10-11T05:18:00Z",
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "files-v4",
+      "id": "file-ru-3540s-settled-2-normal-2",
+      "exitCode": -15,
+      "hardStop": "build started during measurement",
+      "samples": [
+        {
+          "seconds": 0.030833583005005494,
+          "level": "1",
+          "memory": {
+            "residentBytes": 2850816,
+            "physicalFootprintBytes": 868688
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0656483749917243,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1776959488,
+            "physicalFootprintBytes": 1795016744
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.0983057499979623,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1787871232,
+            "physicalFootprintBytes": 1805633576
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.169175582996104,
+          "level": "1",
+          "memory": {
+            "residentBytes": 1784102912,
+            "physicalFootprintBytes": 1813547048
+          },
+          "builds": [
+            "clang"
+          ]
+        }
+      ],
+      "utc": "2026-10-11T05:23:41Z",
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "files-v4",
+      "id": "file-en-3540s-settled-1-normal-2",
+      "exitCode": -15,
+      "hardStop": "build started during measurement",
+      "samples": [
+        {
+          "seconds": 0.02366158299264498,
+          "level": "1",
+          "memory": {
+            "residentBytes": 6225920,
+            "physicalFootprintBytes": 1261904
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.052458457998,
+          "level": "1",
+          "memory": {
+            "residentBytes": 958644224,
+            "physicalFootprintBytes": 965051760
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.081351083004847,
+          "level": "1",
+          "memory": {
+            "residentBytes": 961462272,
+            "physicalFootprintBytes": 967722352
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.1108067909954116,
+          "level": "1",
+          "memory": {
+            "residentBytes": 967016448,
+            "physicalFootprintBytes": 973292936
+          },
+          "builds": [
+            "swift-frontend"
+          ]
+        }
+      ],
+      "utc": "2026-10-11T05:28:43Z",
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "files-v4",
+      "id": "file-en-3540s-settled-1-normal-2",
+      "exitCode": -15,
+      "hardStop": "build started during measurement",
+      "samples": [
+        {
+          "seconds": 0.02355745798558928,
+          "level": "1",
+          "memory": {
+            "residentBytes": 573440,
+            "physicalFootprintBytes": 245904
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0659812079975381,
+          "level": "1",
+          "memory": {
+            "residentBytes": 958726144,
+            "physicalFootprintBytes": 965166448
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.09384633298032,
+          "level": "1",
+          "memory": {
+            "residentBytes": 963035136,
+            "physicalFootprintBytes": 969327984
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.1270459159859456,
+          "level": "1",
+          "memory": {
+            "residentBytes": 967786496,
+            "physicalFootprintBytes": 974079344
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.160264082980575,
+          "level": "1",
+          "memory": {
+            "residentBytes": 976191488,
+            "physicalFootprintBytes": 982500744
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.19206929099164,
+          "level": "1",
+          "memory": {
+            "residentBytes": 966131712,
+            "physicalFootprintBytes": 972440968
+          },
+          "builds": []
+        },
+        {
+          "seconds": 6.223133499996038,
+          "level": "1",
+          "memory": {
+            "residentBytes": 973963264,
+            "physicalFootprintBytes": 980272520
+          },
+          "builds": []
+        },
+        {
+          "seconds": 7.249122124980204,
+          "level": "1",
+          "memory": {
+            "residentBytes": 984367104,
+            "physicalFootprintBytes": 990676360
+          },
+          "builds": []
+        },
+        {
+          "seconds": 8.281934749975335,
+          "level": "1",
+          "memory": {
+            "residentBytes": 979599360,
+            "physicalFootprintBytes": 985925024
+          },
+          "builds": []
+        },
+        {
+          "seconds": 9.31484508299036,
+          "level": "1",
+          "memory": {
+            "residentBytes": 986497024,
+            "physicalFootprintBytes": 992822688
+          },
+          "builds": []
+        },
+        {
+          "seconds": 10.348351207998348,
+          "level": "1",
+          "memory": {
+            "residentBytes": 986300416,
+            "physicalFootprintBytes": 992626080
+          },
+          "builds": []
+        },
+        {
+          "seconds": 11.376933040999575,
+          "level": "1",
+          "memory": {
+            "residentBytes": 994377728,
+            "physicalFootprintBytes": 1000719800
+          },
+          "builds": []
+        },
+        {
+          "seconds": 12.40405387498322,
+          "level": "1",
+          "memory": {
+            "residentBytes": 994312192,
+            "physicalFootprintBytes": 1000654264
+          },
+          "builds": []
+        },
+        {
+          "seconds": 13.427032749983482,
+          "level": "1",
+          "memory": {
+            "residentBytes": 994394112,
+            "physicalFootprintBytes": 1000637880
+          },
+          "builds": []
+        },
+        {
+          "seconds": 14.45447079098085,
+          "level": "1",
+          "memory": {
+            "residentBytes": 989495296,
+            "physicalFootprintBytes": 995739064
+          },
+          "builds": []
+        },
+        {
+          "seconds": 15.478991874988424,
+          "level": "1",
+          "memory": {
+            "residentBytes": 994361344,
+            "physicalFootprintBytes": 1000605112
+          },
+          "builds": []
+        },
+        {
+          "seconds": 16.50658449999173,
+          "level": "1",
+          "memory": {
+            "residentBytes": 989233152,
+            "physicalFootprintBytes": 995476920
+          },
+          "builds": []
+        },
+        {
+          "seconds": 17.534051499998895,
+          "level": "1",
+          "memory": {
+            "residentBytes": 994459648,
+            "physicalFootprintBytes": 1000703416
+          },
+          "builds": []
+        },
+        {
+          "seconds": 18.56406637499458,
+          "level": "1",
+          "memory": {
+            "residentBytes": 995426304,
+            "physicalFootprintBytes": 1001670072
+          },
+          "builds": []
+        },
+        {
+          "seconds": 19.591686999978265,
+          "level": "1",
+          "memory": {
+            "residentBytes": 993116160,
+            "physicalFootprintBytes": 999359928
+          },
+          "builds": []
+        },
+        {
+          "seconds": 20.62439191597514,
+          "level": "1",
+          "memory": {
+            "residentBytes": 995442688,
+            "physicalFootprintBytes": 1001670072
+          },
+          "builds": []
+        },
+        {
+          "seconds": 21.65766616599285,
+          "level": "1",
+          "memory": {
+            "residentBytes": 995196928,
+            "physicalFootprintBytes": 1001424312
+          },
+          "builds": []
+        },
+        {
+          "seconds": 22.690990957984468,
+          "level": "1",
+          "memory": {
+            "residentBytes": 990969856,
+            "physicalFootprintBytes": 997197240
+          },
+          "builds": []
+        },
+        {
+          "seconds": 23.72712799999863,
+          "level": "1",
+          "memory": {
+            "residentBytes": 992215040,
+            "physicalFootprintBytes": 998442424
+          },
+          "builds": []
+        },
+        {
+          "seconds": 24.755376207991503,
+          "level": "1",
+          "memory": {
+            "residentBytes": 994557952,
+            "physicalFootprintBytes": 1000785336
+          },
+          "builds": []
+        },
+        {
+          "seconds": 25.78257237499929,
+          "level": "1",
+          "memory": {
+            "residentBytes": 988037120,
+            "physicalFootprintBytes": 994264504
+          },
+          "builds": []
+        },
+        {
+          "seconds": 26.81606462498894,
+          "level": "1",
+          "memory": {
+            "residentBytes": 995508224,
+            "physicalFootprintBytes": 1001735608
+          },
+          "builds": []
+        },
+        {
+          "seconds": 27.848673000000417,
+          "level": "1",
+          "memory": {
+            "residentBytes": 995262464,
+            "physicalFootprintBytes": 1001539000
+          },
+          "builds": []
+        },
+        {
+          "seconds": 28.881063290988095,
+          "level": "1",
+          "memory": {
+            "residentBytes": 994639872,
+            "physicalFootprintBytes": 1000916408
+          },
+          "builds": []
+        },
+        {
+          "seconds": 29.914229290996445,
+          "level": "1",
+          "memory": {
+            "residentBytes": 994525184,
+            "physicalFootprintBytes": 1000801720
+          },
+          "builds": []
+        },
+        {
+          "seconds": 30.939622499980032,
+          "level": "1",
+          "memory": {
+            "residentBytes": 994492416,
+            "physicalFootprintBytes": 1000768952
+          },
+          "builds": []
+        },
+        {
+          "seconds": 31.97062808298506,
+          "level": "1",
+          "memory": {
+            "residentBytes": 989593600,
+            "physicalFootprintBytes": 995870136
+          },
+          "builds": []
+        },
+        {
+          "seconds": 33.00409883298562,
+          "level": "1",
+          "memory": {
+            "residentBytes": 994410496,
+            "physicalFootprintBytes": 1000752568
+          },
+          "builds": []
+        },
+        {
+          "seconds": 34.036985207989346,
+          "level": "1",
+          "memory": {
+            "residentBytes": 989216768,
+            "physicalFootprintBytes": 995542456
+          },
+          "builds": []
+        },
+        {
+          "seconds": 35.06936608298565,
+          "level": "1",
+          "memory": {
+            "residentBytes": 994541568,
+            "physicalFootprintBytes": 1000867256
+          },
+          "builds": [
+            "swift-frontend"
+          ]
+        }
+      ],
+      "utc": "2026-10-11T05:31:01Z",
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    },
+    {
+      "run": "files-v4",
+      "id": "file-en-3540s-settled-1-normal-2",
+      "exitCode": -15,
+      "hardStop": "build started during measurement",
+      "samples": [
+        {
+          "seconds": 0.02335383399622515,
+          "level": "1",
+          "memory": {
+            "residentBytes": 557056,
+            "physicalFootprintBytes": 262312
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0550831250147894,
+          "level": "1",
+          "memory": {
+            "residentBytes": 960593920,
+            "physicalFootprintBytes": 967050632
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.0873501249880064,
+          "level": "1",
+          "memory": {
+            "residentBytes": 963067904,
+            "physicalFootprintBytes": 969377160
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.1225682090152986,
+          "level": "1",
+          "memory": {
+            "residentBytes": 968851456,
+            "physicalFootprintBytes": 975177120
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.157507750001969,
+          "level": "1",
+          "memory": {
+            "residentBytes": 977256448,
+            "physicalFootprintBytes": 983598520
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.188632792007411,
+          "level": "1",
+          "memory": {
+            "residentBytes": 973062144,
+            "physicalFootprintBytes": 979404216
+          },
+          "builds": []
+        },
+        {
+          "seconds": 6.219217584002763,
+          "level": "1",
+          "memory": {
+            "residentBytes": 974323712,
+            "physicalFootprintBytes": 980665784
+          },
+          "builds": []
+        },
+        {
+          "seconds": 7.258218792005209,
+          "level": "1",
+          "memory": {
+            "residentBytes": 985382912,
+            "physicalFootprintBytes": 991724984
+          },
+          "builds": []
+        },
+        {
+          "seconds": 8.424085959006334,
+          "level": "1",
+          "memory": {
+            "residentBytes": 989790208,
+            "physicalFootprintBytes": 996132280
+          },
+          "builds": []
+        },
+        {
+          "seconds": 9.633412166993367,
+          "level": "1",
+          "memory": {
+            "residentBytes": 991821824,
+            "physicalFootprintBytes": 998163896
+          },
+          "builds": []
+        },
+        {
+          "seconds": 11.181549041997641,
+          "level": "1",
+          "memory": {
+            "residentBytes": 991952896,
+            "physicalFootprintBytes": 998294968
+          },
+          "builds": []
+        },
+        {
+          "seconds": 12.242964584002038,
+          "level": "1",
+          "memory": {
+            "residentBytes": 993132544,
+            "physicalFootprintBytes": 999474616
+          },
+          "builds": []
+        },
+        {
+          "seconds": 13.453622917004395,
+          "level": "1",
+          "memory": {
+            "residentBytes": 890060800,
+            "physicalFootprintBytes": 997311928
+          },
+          "builds": []
+        },
+        {
+          "seconds": 14.539394291990902,
+          "level": "1",
+          "memory": {
+            "residentBytes": 891502592,
+            "physicalFootprintBytes": 993052088
+          },
+          "builds": []
+        },
+        {
+          "seconds": 15.62651908400585,
+          "level": "1",
+          "memory": {
+            "residentBytes": 906002432,
+            "physicalFootprintBytes": 1006355920
+          },
+          "builds": []
+        },
+        {
+          "seconds": 16.788235167012317,
+          "level": "1",
+          "memory": {
+            "residentBytes": 909279232,
+            "physicalFootprintBytes": 1007060432
+          },
+          "builds": []
+        },
+        {
+          "seconds": 17.8789838340017,
+          "level": "1",
+          "memory": {
+            "residentBytes": 903380992,
+            "physicalFootprintBytes": 1002292688
+          },
+          "builds": []
+        },
+        {
+          "seconds": 18.95374262498808,
+          "level": "1",
+          "memory": {
+            "residentBytes": 907706368,
+            "physicalFootprintBytes": 1007044048
+          },
+          "builds": []
+        },
+        {
+          "seconds": 20.02703745898907,
+          "level": "1",
+          "memory": {
+            "residentBytes": 907902976,
+            "physicalFootprintBytes": 1005569488
+          },
+          "builds": []
+        },
+        {
+          "seconds": 21.49078354201629,
+          "level": "1",
+          "memory": {
+            "residentBytes": 911147008,
+            "physicalFootprintBytes": 1007928784
+          },
+          "builds": []
+        },
+        {
+          "seconds": 22.53486008400796,
+          "level": "1",
+          "memory": {
+            "residentBytes": 920109056,
+            "physicalFootprintBytes": 1010386408
+          },
+          "builds": []
+        },
+        {
+          "seconds": 23.64701962500112,
+          "level": "1",
+          "memory": {
+            "residentBytes": 920977408,
+            "physicalFootprintBytes": 1009419728
+          },
+          "builds": [
+            "clang",
+            "swiftc"
+          ]
+        }
+      ],
+      "utc": "2026-10-11T05:32:53Z",
+      "identity": {
+        "head": "373f2c294a79daae76b449173c2001589df1cb01",
+        "binary_sha256": "5655b028e257e04ec090aecb6d89b22179865fbe039ad73766d1bbfb25c43d73",
+        "runner_sha256": "08267b85f979fe5ee852c65459cea09dca5f1108501424290b9fe0d963b99f20",
+        "harness_sha256": "cbaa8329d7c8263fe5c5a2809c3e99036ee91664839448561212ec48ec1bab27",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "mode": "file",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 2,
+        "p50": 74.247303125,
+        "p95": 82.213505975,
+        "min": 65.395966625,
+        "max": 83.098639625
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 1000472576,
+      "loadSeconds": {
+        "n": 2,
+        "p50": 0.5841533955,
+        "p95": 0.61844678895,
+        "min": 0.546049625,
+        "max": 0.622257166
+      },
+      "sampledPeakPhysicalFootprintBytes": 1004733880,
+      "wer": {
+        "n": 2,
+        "p50": 0.09762703120969822,
+        "p95": 0.09762703120969822,
+        "min": 0.09762703120969822,
+        "max": 0.09762703120969822
+      },
+      "deletionRate": {
+        "n": 2,
+        "p50": 0.04797523858653598,
+        "p95": 0.04797523858653598,
+        "min": 0.04797523858653598,
+        "max": 0.04797523858653598
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-en-3540s-settled-1-normal-0",
+        "file-en-3540s-settled-1-normal-1"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 2,
+      "condition": "normal",
+      "seconds": {
+        "n": 2,
+        "p50": 65.898799896,
+        "p95": 73.42422949019999,
+        "min": 57.537211458,
+        "max": 74.260388334
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 1860993024,
+      "loadSeconds": {
+        "n": 2,
+        "p50": 0.5962596250000001,
+        "p95": 0.8043241747000001,
+        "min": 0.365076792,
+        "max": 0.827442458
+      },
+      "sampledPeakPhysicalFootprintBytes": 1860339848,
+      "wer": {
+        "n": 2,
+        "p50": 0.09762703120969822,
+        "p95": 0.09762703120969822,
+        "min": 0.09762703120969822,
+        "max": 0.09762703120969822
+      },
+      "deletionRate": {
+        "n": 2,
+        "p50": 0.04797523858653598,
+        "p95": 0.04797523858653598,
+        "min": 0.04797523858653598,
+        "max": 0.04797523858653598
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-en-3540s-settled-2-normal-0",
+        "file-en-3540s-settled-2-normal-1"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "en-3540s",
+      "pacing": "settled",
+      "workers": 4,
+      "condition": "normal",
+      "seconds": {
+        "n": 1,
+        "p50": 51.81515075,
+        "p95": 51.81515075,
+        "min": 51.81515075,
+        "max": 51.81515075
+      },
+      "audioSeconds": 3546.8,
+      "peakRSSBytes": 3486171136,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.722372,
+        "p95": 0.722372,
+        "min": 0.722372,
+        "max": 0.722372
+      },
+      "sampledPeakPhysicalFootprintBytes": 3573714400,
+      "wer": {
+        "n": 1,
+        "p50": 0.09762703120969822,
+        "p95": 0.09762703120969822,
+        "min": 0.09762703120969822,
+        "max": 0.09762703120969822
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.04797523858653598,
+        "p95": 0.04797523858653598,
+        "min": 0.04797523858653598,
+        "max": 0.04797523858653598
+      },
+      "referenceWords": 7754,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-en-3540s-settled-4-normal-0"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "mixed-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 2,
+        "p50": 72.908682062,
+        "p95": 80.6249991056,
+        "min": 64.334996458,
+        "max": 81.482367666
+      },
+      "audioSeconds": 3543.3,
+      "peakRSSBytes": 992182272,
+      "loadSeconds": {
+        "n": 2,
+        "p50": 0.513977833,
+        "p95": 0.6075756955,
+        "min": 0.409980208,
+        "max": 0.617975458
+      },
+      "sampledPeakPhysicalFootprintBytes": 994444728,
+      "wer": {
+        "n": 2,
+        "p50": 0.3906674720628209,
+        "p95": 0.3906674720628209,
+        "min": 0.3906674720628209,
+        "max": 0.3906674720628209
+      },
+      "deletionRate": {
+        "n": 2,
+        "p50": 0.33796436122017515,
+        "p95": 0.33796436122017515,
+        "min": 0.33796436122017515,
+        "max": 0.33796436122017515
+      },
+      "referenceWords": 6622,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-mixed-3540s-settled-1-normal-0",
+        "file-mixed-3540s-settled-1-normal-1"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "mixed-3540s",
+      "pacing": "settled",
+      "workers": 2,
+      "condition": "normal",
+      "seconds": {
+        "n": 2,
+        "p50": 63.378182958,
+        "p95": 69.4323300705,
+        "min": 56.651352833,
+        "max": 70.105013083
+      },
+      "audioSeconds": 3543.3,
+      "peakRSSBytes": 1871216640,
+      "loadSeconds": {
+        "n": 2,
+        "p50": 0.6088299795000001,
+        "p95": 0.8308932610499999,
+        "min": 0.362093,
+        "max": 0.855566959
+      },
+      "sampledPeakPhysicalFootprintBytes": 1872578672,
+      "wer": {
+        "n": 2,
+        "p50": 0.3906674720628209,
+        "p95": 0.3906674720628209,
+        "min": 0.3906674720628209,
+        "max": 0.3906674720628209
+      },
+      "deletionRate": {
+        "n": 2,
+        "p50": 0.33796436122017515,
+        "p95": 0.33796436122017515,
+        "min": 0.33796436122017515,
+        "max": 0.33796436122017515
+      },
+      "referenceWords": 6622,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-mixed-3540s-settled-2-normal-0",
+        "file-mixed-3540s-settled-2-normal-1"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "mixed-3540s",
+      "pacing": "settled",
+      "workers": 4,
+      "condition": "normal",
+      "seconds": {
+        "n": 1,
+        "p50": 50.070324625,
+        "p95": 50.070324625,
+        "min": 50.070324625,
+        "max": 50.070324625
+      },
+      "audioSeconds": 3543.3,
+      "peakRSSBytes": 3574775808,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.705733958,
+        "p95": 0.705733958,
+        "min": 0.705733958,
+        "max": 0.705733958
+      },
+      "sampledPeakPhysicalFootprintBytes": 3579006456,
+      "wer": {
+        "n": 1,
+        "p50": 0.3906674720628209,
+        "p95": 0.3906674720628209,
+        "min": 0.3906674720628209,
+        "max": 0.3906674720628209
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.33796436122017515,
+        "p95": 0.33796436122017515,
+        "min": 0.33796436122017515,
+        "max": 0.33796436122017515
+      },
+      "referenceWords": 6622,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-mixed-3540s-settled-4-normal-0"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "seconds": {
+        "n": 3,
+        "p50": 86.637079042,
+        "p95": 90.4740302545,
+        "min": 66.9395835,
+        "max": 90.900358167
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 1014202368,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.224716583,
+        "p95": 0.2518767452,
+        "min": 0.191686584,
+        "max": 0.254894541
+      },
+      "sampledPeakPhysicalFootprintBytes": 1015760312,
+      "wer": {
+        "n": 3,
+        "p50": 0.06492589978828511,
+        "p95": 0.06492589978828511,
+        "min": 0.06492589978828511,
+        "max": 0.06492589978828511
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.0171136203246295,
+        "p95": 0.0171136203246295,
+        "min": 0.0171136203246295,
+        "max": 0.0171136203246295
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-ru-3540s-settled-1-normal-0",
+        "file-ru-3540s-settled-1-normal-1",
+        "file-ru-3540s-settled-1-normal-2"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 2,
+      "condition": "normal",
+      "seconds": {
+        "n": 3,
+        "p50": 58.248662458,
+        "p95": 59.041006295799995,
+        "min": 58.172604917,
+        "max": 59.1290445
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 1854046208,
+      "loadSeconds": {
+        "n": 3,
+        "p50": 0.39489425,
+        "p95": 0.5420350628,
+        "min": 0.366244709,
+        "max": 0.558384042
+      },
+      "sampledPeakPhysicalFootprintBytes": 1863272608,
+      "wer": {
+        "n": 3,
+        "p50": 0.06492589978828511,
+        "p95": 0.06492589978828511,
+        "min": 0.06492589978828511,
+        "max": 0.06492589978828511
+      },
+      "deletionRate": {
+        "n": 3,
+        "p50": 0.0171136203246295,
+        "p95": 0.0171136203246295,
+        "min": 0.0171136203246295,
+        "max": 0.0171136203246295
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-ru-3540s-settled-2-normal-0",
+        "file-ru-3540s-settled-2-normal-1",
+        "file-ru-3540s-settled-2-normal-2"
+      ]
+    },
+    {
+      "mode": "file",
+      "fixture": "ru-3540s",
+      "pacing": "settled",
+      "workers": 4,
+      "condition": "normal",
+      "seconds": {
+        "n": 1,
+        "p50": 52.567960166,
+        "p95": 52.567960166,
+        "min": 52.567960166,
+        "max": 52.567960166
+      },
+      "audioSeconds": 3550.1,
+      "peakRSSBytes": 3436625920,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 1.056588292,
+        "p95": 1.056588292,
+        "min": 1.056588292,
+        "max": 1.056588292
+      },
+      "sampledPeakPhysicalFootprintBytes": 3561967000,
+      "wer": {
+        "n": 1,
+        "p50": 0.06492589978828511,
+        "p95": 0.06492589978828511,
+        "min": 0.06492589978828511,
+        "max": 0.06492589978828511
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.0171136203246295,
+        "p95": 0.0171136203246295,
+        "min": 0.0171136203246295,
+        "max": 0.0171136203246295
+      },
+      "referenceWords": 5668,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "file-ru-3540s-settled-4-normal-0"
+      ]
+    }
+  ],
+  "fileParity": [
+    {
+      "fixture": "en-3540s",
+      "id": "file-en-3540s-settled-1-normal-0",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "id": "file-en-3540s-settled-2-normal-0",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "id": "file-en-3540s-settled-4-normal-0",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "id": "file-en-3540s-settled-2-normal-1",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "en-3540s",
+      "id": "file-en-3540s-settled-1-normal-1",
+      "baseline": "file-en-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 160,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "id": "file-mixed-3540s-settled-1-normal-0",
+      "baseline": "file-mixed-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 206,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "id": "file-mixed-3540s-settled-2-normal-0",
+      "baseline": "file-mixed-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 206,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "id": "file-mixed-3540s-settled-4-normal-0",
+      "baseline": "file-mixed-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 206,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "id": "file-mixed-3540s-settled-2-normal-1",
+      "baseline": "file-mixed-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 206,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "mixed-3540s",
+      "id": "file-mixed-3540s-settled-1-normal-1",
+      "baseline": "file-mixed-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 206,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-1-normal-0",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-2-normal-0",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-4-normal-0",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-2-normal-1",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-1-normal-1",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-1-normal-2",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    },
+    {
+      "fixture": "ru-3540s",
+      "id": "file-ru-3540s-settled-2-normal-2",
+      "baseline": "file-ru-3540s-settled-1-normal-0",
+      "exactText": true,
+      "normalizedText": true,
+      "exactWordTimings": true,
+      "validWordTimings": true,
+      "chunkCount": 205,
+      "chunkBoundariesAndText": true
+    }
+  ]
+}

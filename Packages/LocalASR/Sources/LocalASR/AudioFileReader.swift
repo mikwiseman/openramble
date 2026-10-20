@@ -35,6 +35,44 @@ public struct AudioFileReader: Sendable {
         return samples
     }
 
+    /// File-backed captures already contain mono 16 kHz audio. Seek past the
+    /// recognized prefix instead of allocating the whole recording at Stop.
+    /// Validate the full length as well as the suffix so a truncated WAV can
+    /// never be accepted as a complete dictation. Converted inputs retain the
+    /// full sequential converter path, including its resampling state.
+    public func tailSamplesOnDiskQueue(from url: URL, startingAt firstFrame: Int,
+                                       totalFrames: Int) async throws -> [Float] {
+        try Task.checkCancellation()
+        let samples = try await LocalTranscriber.onDisk {
+            try self.tailSamples(from: url, startingAt: firstFrame, totalFrames: totalFrames)
+        }
+        try Task.checkCancellation()
+        return samples
+    }
+
+    func tailSamples(from url: URL, startingAt firstFrame: Int, totalFrames: Int) throws -> [Float] {
+        guard totalFrames > 0, firstFrame >= 0, firstFrame <= totalFrames else {
+            throw Failure.conversionFailed("invalid tail frame range")
+        }
+        let cursor = try Cursor(url: url)
+        var observed = try cursor.seekCanonical(to: firstFrame, totalFrames: totalFrames) ? firstFrame : 0
+        var result: [Float] = []
+        while true {
+            try Task.checkCancellation()
+            let part = try cursor.read(frames: 16_384)
+            if part.isEmpty { break }
+            let end = observed + part.count
+            if end > firstFrame {
+                result.append(contentsOf: part[max(0, firstFrame - observed)...])
+            }
+            observed = end
+        }
+        guard observed == totalFrames, result.count == totalFrames - firstFrame else {
+            throw Failure.conversionFailed("incomplete file-backed recording")
+        }
+        return result
+    }
+
     /// Either local to one synchronous call or owned by AudioFileStream and
     /// accessed exclusively on LocalTranscriber's serial disk queue.
     final class Cursor: @unchecked Sendable {
@@ -74,6 +112,21 @@ public struct AudioFileReader: Sendable {
                 converter.downmix = true
                 self.converter = converter
             }
+        }
+
+        /// A converter or compressed decoder must see its original prefix.
+        /// Only canonical PCM can be skipped without changing output samples.
+        func seekCanonical(to frame: Int, totalFrames: Int) throws -> Bool {
+            guard converter == nil,
+                  file.fileFormat.streamDescription.pointee.mFormatID == kAudioFormatLinearPCM else { return false }
+            guard file.length == Int64(totalFrames) else {
+                throw Failure.conversionFailed("incomplete file-backed recording")
+            }
+            file.framePosition = Int64(frame)
+            guard file.framePosition == Int64(frame) else {
+                throw Failure.conversionFailed("couldn't seek to the recorded tail")
+            }
+            return true
         }
 
         func read(frames: Int) throws -> [Float] {

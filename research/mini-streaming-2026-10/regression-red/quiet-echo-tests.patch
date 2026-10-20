@@ -1,0 +1,354 @@
+--- a/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift
++++ b/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift
+@@ -685,3 +685,351 @@
+         XCTAssertEqual(segments.value.map(\.channel), [.system], "the leak did not become a You paragraph")
+     }
+ }
++
++extension MeetingCaptureTests {
++    /// The speakers leaking into the microphone are not the person speaking:
++    /// the other side's sentence is one segment on its own channel, not two.
++    func testTheOtherSideLeakingIntoTheMicrophoneIsNotSegmentedAsYouLowerThreshold() async throws {
++        let microphone = ScriptedAudioSource()
++        let system = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory,
++            microphone: microphone,
++            systemAudio: system,
++            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2), speechPeak: 0.005)),
++            onSegment: { segments.value.append($0) },
++            probe: {}
++        )
++        try await capture.start()
++        // Three seconds of the other side, leaking into the microphone at
++        // half the level and 30 ms late — well above the speech floor on its
++        // own, and a copy of the other side rather than a voice of its own.
++        var state: UInt64 = 42
++        let speech: [Float] = (0..<48_000).map { _ in
++            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
++            return (Float(state >> 40) / Float(1 << 24) * 2 - 1) * 0.3
++        }
++        let echo: [Float] = (0..<48_000).map { $0 < 480 ? 0 : speech[$0 - 480] * 0.5 }
++        for block in 0..<30 {
++            let range = (block * 1_600)..<((block + 1) * 1_600)
++            microphone.deliver(Array(echo[range]))
++            system.deliver(Array(speech[range]))
++        }
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        _ = try await capture.stop()
++        XCTAssertEqual(segments.value.map(\.channel), [.system], "the leak did not become a You paragraph")
++    }
++
++    /// Every remote sentence starts after silence, and the gate can only
++    /// match once some of it has been heard: the frames before that must
++    /// still be told silence, or the sentence comes back as a paragraph.
++    func testAnEchoThatStartsAfterSilenceIsNotSegmentedAsYouEitherLowerThreshold() async throws {
++        let microphone = ScriptedAudioSource()
++        let system = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory,
++            microphone: microphone,
++            systemAudio: system,
++            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2), speechPeak: 0.005)),
++            onSegment: { segments.value.append($0) },
++            probe: {}
++        )
++        try await capture.start()
++        // Three seconds of the other side, leaking into the microphone at
++        // half the level and 30 ms late — well above the speech floor on its
++        // own, and a copy of the other side rather than a voice of its own.
++        var state: UInt64 = 42
++        let speech: [Float] = (0..<48_000).map { _ in
++            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
++            return (Float(state >> 40) / Float(1 << 24) * 2 - 1) * 0.3
++        }
++        let echo: [Float] = (0..<48_000).map { $0 < 480 ? 0 : speech[$0 - 480] * 0.5 }
++        // A second of nothing first, then the leak in the small blocks real
++        // sources deliver: the first of them arrive before there is anything
++        // to match against, and used to slip through.
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        var start = 0
++        while start < 48_000 {
++            let range = start..<min(start + 512, 48_000)
++            microphone.deliver(Array(echo[range]))
++            system.deliver(Array(speech[range]))
++            start = range.upperBound
++        }
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        _ = try await capture.stop()
++        XCTAssertEqual(segments.value.map(\.channel), [.system], "the leak did not become a You paragraph")
++    }
++}
++
++extension MeetingCaptureTests {
++    /// The speakers leaking into the microphone are not the person speaking:
++    /// the other side's sentence is one segment on its own channel, not two.
++    func testTheOtherSideLeakingIntoTheMicrophoneIsNotSegmentedAsYouLowerThresholdQuietEcho() async throws {
++        let microphone = ScriptedAudioSource()
++        let system = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory,
++            microphone: microphone,
++            systemAudio: system,
++            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2), speechPeak: 0.005)),
++            onSegment: { segments.value.append($0) },
++            probe: {}
++        )
++        try await capture.start()
++        // Three seconds of the other side, leaking into the microphone at
++        // half the level and 30 ms late — well above the speech floor on its
++        // own, and a copy of the other side rather than a voice of its own.
++        var state: UInt64 = 42
++        let speech: [Float] = (0..<48_000).map { _ in
++            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
++            return (Float(state >> 40) / Float(1 << 24) * 2 - 1) * 0.03
++        }
++        let echo: [Float] = (0..<48_000).map { $0 < 480 ? 0 : speech[$0 - 480] * 0.5 }
++        for block in 0..<30 {
++            let range = (block * 1_600)..<((block + 1) * 1_600)
++            microphone.deliver(Array(echo[range]))
++            system.deliver(Array(speech[range]))
++        }
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        _ = try await capture.stop()
++        XCTAssertEqual(segments.value.map(\.channel), [.system], "the leak did not become a You paragraph")
++    }
++
++    /// Every remote sentence starts after silence, and the gate can only
++    /// match once some of it has been heard: the frames before that must
++    /// still be told silence, or the sentence comes back as a paragraph.
++    func testAnEchoThatStartsAfterSilenceIsNotSegmentedAsYouEitherLowerThresholdQuietEcho() async throws {
++        let microphone = ScriptedAudioSource()
++        let system = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory,
++            microphone: microphone,
++            systemAudio: system,
++            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2), speechPeak: 0.005)),
++            onSegment: { segments.value.append($0) },
++            probe: {}
++        )
++        try await capture.start()
++        // Three seconds of the other side, leaking into the microphone at
++        // half the level and 30 ms late — well above the speech floor on its
++        // own, and a copy of the other side rather than a voice of its own.
++        var state: UInt64 = 42
++        let speech: [Float] = (0..<48_000).map { _ in
++            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
++            return (Float(state >> 40) / Float(1 << 24) * 2 - 1) * 0.03
++        }
++        let echo: [Float] = (0..<48_000).map { $0 < 480 ? 0 : speech[$0 - 480] * 0.5 }
++        // A second of nothing first, then the leak in the small blocks real
++        // sources deliver: the first of them arrive before there is anything
++        // to match against, and used to slip through.
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        var start = 0
++        while start < 48_000 {
++            let range = start..<min(start + 512, 48_000)
++            microphone.deliver(Array(echo[range]))
++            system.deliver(Array(speech[range]))
++            start = range.upperBound
++        }
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        _ = try await capture.stop()
++        XCTAssertEqual(segments.value.map(\.channel), [.system], "the leak did not become a You paragraph")
++    }
++}
++
++extension MeetingCaptureTests {
++    /// The speakers leaking into the microphone are not the person speaking:
++    /// the other side's sentence is one segment on its own channel, not two.
++    func testTheOtherSideLeakingIntoTheMicrophoneIsNotSegmentedAsYouCurrentThresholdSparseEcho() async throws {
++        let microphone = ScriptedAudioSource()
++        let system = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory,
++            microphone: microphone,
++            systemAudio: system,
++            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2), speechPeak: 0.02)),
++            onSegment: { segments.value.append($0) },
++            probe: {}
++        )
++        try await capture.start()
++        // Three seconds of the other side, leaking into the microphone at
++        // half the level and 30 ms late — well above the speech floor on its
++        // own, and a copy of the other side rather than a voice of its own.
++        var state: UInt64 = 42
++        let speech: [Float] = (0..<48_000).map { frame in
++            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
++            let sample = (Float(state >> 40) / Float(1 << 24) * 2 - 1) * 0.03
++            return frame % 1_600 < 80 ? sample : 0
++        }
++        let echo: [Float] = (0..<48_000).map { $0 < 480 ? 0 : speech[$0 - 480] * 0.5 }
++        for block in 0..<30 {
++            let range = (block * 1_600)..<((block + 1) * 1_600)
++            microphone.deliver(Array(echo[range]))
++            system.deliver(Array(speech[range]))
++        }
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        _ = try await capture.stop()
++        XCTAssertEqual(segments.value.map(\.channel), [.system], "the leak did not become a You paragraph")
++    }
++
++    /// Every remote sentence starts after silence, and the gate can only
++    /// match once some of it has been heard: the frames before that must
++    /// still be told silence, or the sentence comes back as a paragraph.
++    func testAnEchoThatStartsAfterSilenceIsNotSegmentedAsYouEitherCurrentThresholdSparseEcho() async throws {
++        let microphone = ScriptedAudioSource()
++        let system = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory,
++            microphone: microphone,
++            systemAudio: system,
++            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2), speechPeak: 0.02)),
++            onSegment: { segments.value.append($0) },
++            probe: {}
++        )
++        try await capture.start()
++        // Three seconds of the other side, leaking into the microphone at
++        // half the level and 30 ms late — well above the speech floor on its
++        // own, and a copy of the other side rather than a voice of its own.
++        var state: UInt64 = 42
++        let speech: [Float] = (0..<48_000).map { frame in
++            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
++            let sample = (Float(state >> 40) / Float(1 << 24) * 2 - 1) * 0.03
++            return frame % 1_600 < 80 ? sample : 0
++        }
++        let echo: [Float] = (0..<48_000).map { $0 < 480 ? 0 : speech[$0 - 480] * 0.5 }
++        // A second of nothing first, then the leak in the small blocks real
++        // sources deliver: the first of them arrive before there is anything
++        // to match against, and used to slip through.
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        var start = 0
++        while start < 48_000 {
++            let range = start..<min(start + 512, 48_000)
++            microphone.deliver(Array(echo[range]))
++            system.deliver(Array(speech[range]))
++            start = range.upperBound
++        }
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        _ = try await capture.stop()
++        XCTAssertEqual(segments.value.map(\.channel), [.system], "the leak did not become a You paragraph")
++    }
++}
++
++extension MeetingCaptureTests {
++    /// The speakers leaking into the microphone are not the person speaking:
++    /// the other side's sentence is one segment on its own channel, not two.
++    func testTheOtherSideLeakingIntoTheMicrophoneIsNotSegmentedAsYouLowerThresholdSparseEcho() async throws {
++        let microphone = ScriptedAudioSource()
++        let system = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory,
++            microphone: microphone,
++            systemAudio: system,
++            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2), speechPeak: 0.005)),
++            onSegment: { segments.value.append($0) },
++            probe: {}
++        )
++        try await capture.start()
++        // Three seconds of the other side, leaking into the microphone at
++        // half the level and 30 ms late — well above the speech floor on its
++        // own, and a copy of the other side rather than a voice of its own.
++        var state: UInt64 = 42
++        let speech: [Float] = (0..<48_000).map { frame in
++            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
++            let sample = (Float(state >> 40) / Float(1 << 24) * 2 - 1) * 0.03
++            return frame % 1_600 < 80 ? sample : 0
++        }
++        let echo: [Float] = (0..<48_000).map { $0 < 480 ? 0 : speech[$0 - 480] * 0.5 }
++        for block in 0..<30 {
++            let range = (block * 1_600)..<((block + 1) * 1_600)
++            microphone.deliver(Array(echo[range]))
++            system.deliver(Array(speech[range]))
++        }
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        _ = try await capture.stop()
++        XCTAssertEqual(segments.value.map(\.channel), [.system], "the leak did not become a You paragraph")
++    }
++
++    /// Every remote sentence starts after silence, and the gate can only
++    /// match once some of it has been heard: the frames before that must
++    /// still be told silence, or the sentence comes back as a paragraph.
++    func testAnEchoThatStartsAfterSilenceIsNotSegmentedAsYouEitherLowerThresholdSparseEcho() async throws {
++        let microphone = ScriptedAudioSource()
++        let system = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory,
++            microphone: microphone,
++            systemAudio: system,
++            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2), speechPeak: 0.005)),
++            onSegment: { segments.value.append($0) },
++            probe: {}
++        )
++        try await capture.start()
++        // Three seconds of the other side, leaking into the microphone at
++        // half the level and 30 ms late — well above the speech floor on its
++        // own, and a copy of the other side rather than a voice of its own.
++        var state: UInt64 = 42
++        let speech: [Float] = (0..<48_000).map { frame in
++            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
++            let sample = (Float(state >> 40) / Float(1 << 24) * 2 - 1) * 0.03
++            return frame % 1_600 < 80 ? sample : 0
++        }
++        let echo: [Float] = (0..<48_000).map { $0 < 480 ? 0 : speech[$0 - 480] * 0.5 }
++        // A second of nothing first, then the leak in the small blocks real
++        // sources deliver: the first of them arrive before there is anything
++        // to match against, and used to slip through.
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        var start = 0
++        while start < 48_000 {
++            let range = start..<min(start + 512, 48_000)
++            microphone.deliver(Array(echo[range]))
++            system.deliver(Array(speech[range]))
++            start = range.upperBound
++        }
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        _ = try await capture.stop()
++        XCTAssertEqual(segments.value.map(\.channel), [.system], "the leak did not become a You paragraph")
++    }
++}

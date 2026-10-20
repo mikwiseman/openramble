@@ -1,0 +1,139 @@
+--- /dev/null
++++ b/Packages/LocalASR/Tests/LocalASRTests/TimedTranscriptGapTests.swift
+@@ -0,0 +1,57 @@
++import XCTest
++import DictationCore
++@testable import LocalASR
++
++/// Prospective reproductions for the frozen gap-only join hypothesis.
++/// Apply only if the native-word audit and held-out quality gate justify it.
++final class TimedTranscriptGapTests: XCTestCase {
++    private func result(_ words: [(String, Double, Double)]) -> ASRResult {
++        ASRResult(text: words.map(\.0).joined(separator: " "),
++            words: words.map { .init(text: $0.0, start: $0.1, end: $0.2) },
++            audioDuration: 40, processingDuration: 0)
++    }
++
++    func testNoMatchKeepsRecognizedContextAcrossATimeGap() throws {
++        var joiner = TimedTranscriptJoiner()
++        try joiner.append(result([("Я", 19, 19.1), ("сказал", 19.2, 19.5), ("привет", 20.1, 20.3)]),
++            chunk: .init(samples: [], startFrame: 0, boundaryFrame: 0, endFrame: 20 * 16_000), duration: 40)
++        // The new chunk starts two seconds before the cut. Its first word is
++        // at 21.1 s on the original timeline, with no overlapping prediction.
++        try joiner.append(result([("и", 3.1, 3.2), ("ушёл", 3.3, 3.7)]),
++            chunk: .init(samples: [], startFrame: 18 * 16_000,
++                         boundaryFrame: 20 * 16_000, endFrame: 40 * 16_000), duration: 40)
++        XCTAssertEqual(joiner.words.map(\.text), ["Я", "сказал", "привет", "и", "ушёл"])
++        XCTAssertEqual(joiner.words.map(\.start), [19, 19.2, 20.1, 21.1, 21.3])
++    }
++
++    func testOverlappingNoMatchStillUsesTheCutBoundary() throws {
++        var joiner = TimedTranscriptJoiner()
++        try joiner.append(result([("Я", 19, 19.1), ("ошибка", 20.1, 20.3)]),
++            chunk: .init(samples: [], startFrame: 0, boundaryFrame: 0, endFrame: 20 * 16_000), duration: 40)
++        try joiner.append(result([("ответил", 2.1, 2.3), ("ему", 2.4, 2.7)]),
++            chunk: .init(samples: [], startFrame: 18 * 16_000,
++                         boundaryFrame: 20 * 16_000, endFrame: 40 * 16_000), duration: 40)
++        XCTAssertEqual(joiner.words.map(\.text), ["Я", "ответил", "ему"])
++    }
++
++    func testRepeatedWordsAtDifferentTimesAreNotDeduplicated() throws {
++        var joiner = TimedTranscriptJoiner()
++        try joiner.append(result([("да", 18.8, 19), ("да", 19.1, 19.3)]),
++            chunk: .init(samples: [], startFrame: 0, boundaryFrame: 0, endFrame: 20 * 16_000), duration: 40)
++        try joiner.append(result([("да", 3, 3.2), ("да", 3.3, 3.5)]),
++            chunk: .init(samples: [], startFrame: 18 * 16_000,
++                         boundaryFrame: 20 * 16_000, endFrame: 40 * 16_000), duration: 40)
++        XCTAssertEqual(joiner.words.map(\.text), ["да", "да", "да", "да"])
++        XCTAssertEqual(joiner.words.map(\.start), [18.8, 19.1, 21, 21.3])
++    }
++
++    func testEmptyIncomingResultKeepsExistingBoundaryBehavior() throws {
++        var joiner = TimedTranscriptJoiner()
++        try joiner.append(result([("слово", 19, 19.2), ("контекст", 20.1, 20.3)]),
++            chunk: .init(samples: [], startFrame: 0, boundaryFrame: 0, endFrame: 20 * 16_000), duration: 40)
++        try joiner.append(result([]),
++            chunk: .init(samples: [], startFrame: 18 * 16_000,
++                         boundaryFrame: 20 * 16_000, endFrame: 40 * 16_000), duration: 40)
++        XCTAssertEqual(joiner.words.map(\.text), ["слово"])
++    }
++}
+--- /dev/null
++++ b/Packages/LocalASR/Tests/LocalASRTests/FileDefaultPolicyTests.swift
+@@ -0,0 +1,76 @@
++import AVFoundation
++import DictationCore
++import XCTest
++@testable import LocalASR
++
++final class FileDefaultPolicyTests: XCTestCase {
++    func testLongImportUsesFifteenSecondOwnershipAndKeepsTheSmallTail() async throws {
++        let samples = [Float](repeating: 0.1, count: 31 * 16_000 + 2_080)
++        let url = try recording(samples)
++        defer { try? FileManager.default.removeItem(at: url) }
++        for fromFile in [false, true] {
++            let chunks = fromFile ? try await FileAudioChunks(url: url) : FileAudioChunks(samples: samples)
++            var rows: [FileAudioChunk] = []
++            while let next = try await chunks.next() { rows.append(next) }
++            XCTAssertEqual(rows.count, 2, "15s and the remaining 16.13s, with the tiny final tail merged")
++            XCTAssertEqual(rows.first?.boundaryFrame, 0)
++            XCTAssertEqual(rows.first?.endFrame, 15 * 16_000)
++            XCTAssertEqual(rows.last?.boundaryFrame, 15 * 16_000)
++            XCTAssertEqual(rows.last?.endFrame, samples.count)
++            for row in rows {
++                XCTAssertEqual(row.samples, Array(samples[row.startFrame..<min(samples.count, row.endFrame + 2 * 16_000)]))
++            }
++        }
++    }
++
++    func testPublicFileTranscriberUsesTheSelectedDefault() async throws {
++        let samples = [Float](repeating: 0.1, count: 31 * 16_000 + 2_080)
++        let url = try recording(samples)
++        defer { try? FileManager.default.removeItem(at: url) }
++        let engine = SizesEngine()
++        let transcriber = LocalTranscriber(engine: engine)
++        try await transcriber.prepare(modelDirectory: url.deletingLastPathComponent())
++        let outputs = Outputs()
++        try await FileTranscriber(transcriber: transcriber).transcribe(files: [url]) { _, result in
++            await outputs.append(result)
++        }
++        let sizes = await engine.sizes
++        let results = await outputs.values
++        XCTAssertEqual(sizes, [17 * 16_000, samples.count - 13 * 16_000])
++        XCTAssertEqual(results.count, 1)
++        XCTAssertEqual(try results.first?.get().duration, Double(samples.count) / 16_000)
++    }
++
++    private func recording(_ samples: [Float]) throws -> URL {
++        let url = FileManager.default.temporaryDirectory.appending(path: "default-cuts-\(UUID()).wav")
++        let format = try XCTUnwrap(AVAudioFormat(commonFormat: .pcmFormatFloat32,
++            sampleRate: 16_000, channels: 1, interleaved: false))
++        let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format,
++            frameCapacity: AVAudioFrameCount(samples.count)))
++        buffer.frameLength = AVAudioFrameCount(samples.count)
++        for (index, sample) in samples.enumerated() { buffer.floatChannelData![0][index] = sample }
++        try AVAudioFile(forWriting: url, settings: format.settings).write(from: buffer)
++        return url
++    }
++
++    private actor Outputs {
++        var values: [Result<FileTranscript, Error>] = []
++        func append(_ value: Result<FileTranscript, Error>) { values.append(value) }
++    }
++
++    private actor SizesEngine: BatchASREngineAdapting {
++        var sizes: [Int] = []
++        func loadModels(from directory: URL) async throws {}
++        func unload() async {}
++        func transcribe(samples: [Float]) async throws -> ASRResult { result(samples) }
++        func transcribe(batch: [[Float]], timestamps: Bool,
++                        shouldYield: @escaping @Sendable () -> Bool) async throws -> [Result<ASRResult, ASREngineError>] {
++            sizes.append(contentsOf: batch.map(\.count))
++            return batch.map { .success(result($0)) }
++        }
++        private func result(_ samples: [Float]) -> ASRResult {
++            ASRResult(text: "word", words: [.init(text: "word", start: 1, end: 1.2)],
++                      audioDuration: Double(samples.count) / 16_000, processingDuration: 0)
++        }
++    }
++}

@@ -1,0 +1,609 @@
+{
+  "normalization": "Unicode NFC, lowercase, ё→е, Unicode word tokens, no numeral expansion",
+  "quantiles": "linear interpolation at (n-1)*p",
+  "qualityScope": "Fixed public fixtures; timing repeats are not independent quality examples.",
+  "identities": {
+    "meeting-coverage-v2": {
+      "head": "048cefd20b4ea8ca37f2e4954a48acc3aca473dd",
+      "binary_sha256": "66f8fe8e8fccc44df6f1c426b9fef2c8bbba872f427e767a3ab26958f42d0e4d",
+      "runner_sha256": "d704a359e3863a075f73c30a166ab92fec1ab728ee5cfec60df784183e8d43b2",
+      "harness_sha256": "ab0b65ddc063d3151d18c75da817708f9b567778aa2b996232ac524b5110c6c4",
+      "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+      "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+      "plan_sha256": "f775a6dd674e477f30091c109961d6860638de97be0d02b9bb81ce66569128bc"
+    }
+  },
+  "completedRuns": 8,
+  "failures": [
+    {
+      "run": "meeting-coverage-v2",
+      "id": "meeting-ru-360s-settled-1-normal-0-original",
+      "exitCode": -15,
+      "hardStop": "memory pressure",
+      "samples": [
+        {
+          "seconds": 0.028793208999559283,
+          "level": "1",
+          "memory": {
+            "residentBytes": 10567680,
+            "physicalFootprintBytes": 1769856
+          },
+          "builds": []
+        },
+        {
+          "seconds": 1.0677449170034379,
+          "level": "1",
+          "memory": {
+            "residentBytes": 973488128,
+            "physicalFootprintBytes": 979994016
+          },
+          "builds": []
+        },
+        {
+          "seconds": 2.0995392089826055,
+          "level": "1",
+          "memory": {
+            "residentBytes": 981467136,
+            "physicalFootprintBytes": 987841952
+          },
+          "builds": []
+        },
+        {
+          "seconds": 3.136089749983512,
+          "level": "1",
+          "memory": {
+            "residentBytes": 989691904,
+            "physicalFootprintBytes": 996083128
+          },
+          "builds": []
+        },
+        {
+          "seconds": 4.203780416981317,
+          "level": "1",
+          "memory": {
+            "residentBytes": 935329792,
+            "physicalFootprintBytes": 995820984
+          },
+          "builds": []
+        },
+        {
+          "seconds": 5.241085291985655,
+          "level": "1",
+          "memory": {
+            "residentBytes": 908853248,
+            "physicalFootprintBytes": 995542456
+          },
+          "builds": []
+        },
+        {
+          "seconds": 6.29846287498367,
+          "level": "1",
+          "memory": {
+            "residentBytes": 915062784,
+            "physicalFootprintBytes": 997475768
+          },
+          "builds": []
+        },
+        {
+          "seconds": 7.359606499987422,
+          "level": "2",
+          "memory": {
+            "residentBytes": 919306240,
+            "physicalFootprintBytes": 996656568
+          },
+          "builds": []
+        }
+      ],
+      "utc": "2026-10-11T06:27:03Z",
+      "identity": {
+        "head": "048cefd20b4ea8ca37f2e4954a48acc3aca473dd",
+        "binary_sha256": "66f8fe8e8fccc44df6f1c426b9fef2c8bbba872f427e767a3ab26958f42d0e4d",
+        "runner_sha256": "d704a359e3863a075f73c30a166ab92fec1ab728ee5cfec60df784183e8d43b2",
+        "harness_sha256": "ab0b65ddc063d3151d18c75da817708f9b567778aa2b996232ac524b5110c6c4",
+        "input_manifest_sha256": "548bb243c3f5d5830f4c1bdca12406603bd6aabadd3ed2c04c033e35622cbef9",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+        "plan_sha256": "f775a6dd674e477f30091c109961d6860638de97be0d02b9bb81ce66569128bc"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "mode": "meeting",
+      "fixture": "en-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 1.4208e-05,
+        "p95": 1.4208e-05,
+        "min": 1.4208e-05,
+        "max": 1.4208e-05
+      },
+      "audioSeconds": 361.24,
+      "peakRSSBytes": 987578368,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.227529791,
+        "p95": 0.227529791,
+        "min": 0.227529791,
+        "max": 0.227529791
+      },
+      "sampledPeakPhysicalFootprintBytes": 991544736,
+      "wer": {
+        "n": 1,
+        "p50": 0.7043147208121827,
+        "p95": 0.7043147208121827,
+        "min": 0.7043147208121827,
+        "max": 0.7043147208121827
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.6941624365482234,
+        "p95": 0.6941624365482234,
+        "min": 0.6941624365482234,
+        "max": 0.6941624365482234
+      },
+      "referenceWords": 788,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-en-360s-settled-1-normal-0-original"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 2199520.0,
+        "p95": 2199520.0,
+        "min": 2199520,
+        "max": 2199520
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 3580320.0,
+        "p95": 3580320.0,
+        "min": 3580320,
+        "max": 3580320
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "en-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": true,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.102938334,
+        "p95": 0.102938334,
+        "min": 0.102938334,
+        "max": 0.102938334
+      },
+      "audioSeconds": 361.24,
+      "peakRSSBytes": 991248384,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.230258084,
+        "p95": 0.230258084,
+        "min": 0.230258084,
+        "max": 0.230258084
+      },
+      "sampledPeakPhysicalFootprintBytes": 994919864,
+      "wer": {
+        "n": 1,
+        "p50": 0.08756345177664974,
+        "p95": 0.08756345177664974,
+        "min": 0.08756345177664974,
+        "max": 0.08756345177664974
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.030456852791878174,
+        "p95": 0.030456852791878174,
+        "min": 0.030456852791878174,
+        "max": 0.030456852791878174
+      },
+      "referenceWords": 788,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-en-360s-settled-1-normal-0-preserve"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 5779840.0,
+        "p95": 5779840.0,
+        "min": 5779840,
+        "max": 5779840
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "en-60s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 1.8375e-05,
+        "p95": 1.8375e-05,
+        "min": 1.8375e-05,
+        "max": 1.8375e-05
+      },
+      "audioSeconds": 61.92,
+      "peakRSSBytes": 947830784,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.26113525,
+        "p95": 0.26113525,
+        "min": 0.26113525,
+        "max": 0.26113525
+      },
+      "sampledPeakPhysicalFootprintBytes": 952993136,
+      "wer": {
+        "n": 1,
+        "p50": 0.6535433070866141,
+        "p95": 0.6535433070866141,
+        "min": 0.6535433070866141,
+        "max": 0.6535433070866141
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.6535433070866141,
+        "p95": 0.6535433070866141,
+        "min": 0.6535433070866141,
+        "max": 0.6535433070866141
+      },
+      "referenceWords": 127,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-en-60s-settled-1-normal-0-original"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 378560.0,
+        "p95": 378560.0,
+        "min": 378560,
+        "max": 378560
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 612160.0,
+        "p95": 612160.0,
+        "min": 612160,
+        "max": 612160
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "en-60s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": true,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.201049375,
+        "p95": 0.201049375,
+        "min": 0.201049375,
+        "max": 0.201049375
+      },
+      "audioSeconds": 61.92,
+      "peakRSSBytes": 966819840,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.252904792,
+        "p95": 0.252904792,
+        "min": 0.252904792,
+        "max": 0.252904792
+      },
+      "sampledPeakPhysicalFootprintBytes": 967755168,
+      "wer": {
+        "n": 1,
+        "p50": 0.08661417322834646,
+        "p95": 0.08661417322834646,
+        "min": 0.08661417322834646,
+        "max": 0.08661417322834646
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "referenceWords": 127,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-en-60s-settled-1-normal-0-preserve"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 990720.0,
+        "p95": 990720.0,
+        "min": 990720,
+        "max": 990720
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "ru-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.099785917,
+        "p95": 0.099785917,
+        "min": 0.099785917,
+        "max": 0.099785917
+      },
+      "audioSeconds": 369.66,
+      "peakRSSBytes": 992772096,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.259362666,
+        "p95": 0.259362666,
+        "min": 0.259362666,
+        "max": 0.259362666
+      },
+      "sampledPeakPhysicalFootprintBytes": 990660024,
+      "wer": {
+        "n": 1,
+        "p50": 0.18781725888324874,
+        "p95": 0.18781725888324874,
+        "min": 0.18781725888324874,
+        "max": 0.18781725888324874
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.13705583756345177,
+        "p95": 0.13705583756345177,
+        "min": 0.13705583756345177,
+        "max": 0.13705583756345177
+      },
+      "referenceWords": 591,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-ru-360s-settled-1-normal-0-original"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 4698560.0,
+        "p95": 4698560.0,
+        "min": 4698560,
+        "max": 4698560
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 1216000.0,
+        "p95": 1216000.0,
+        "min": 1216000,
+        "max": 1216000
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "ru-360s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": true,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.056220916,
+        "p95": 0.056220916,
+        "min": 0.056220916,
+        "max": 0.056220916
+      },
+      "audioSeconds": 369.66,
+      "peakRSSBytes": 984842240,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.229088333,
+        "p95": 0.229088333,
+        "min": 0.229088333,
+        "max": 0.229088333
+      },
+      "sampledPeakPhysicalFootprintBytes": 989054368,
+      "wer": {
+        "n": 1,
+        "p50": 0.08629441624365482,
+        "p95": 0.08629441624365482,
+        "min": 0.08629441624365482,
+        "max": 0.08629441624365482
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.015228426395939087,
+        "p95": 0.015228426395939087,
+        "min": 0.015228426395939087,
+        "max": 0.015228426395939087
+      },
+      "referenceWords": 591,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-ru-360s-settled-1-normal-0-preserve"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 5914560.0,
+        "p95": 5914560.0,
+        "min": 5914560,
+        "max": 5914560
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "ru-60s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": false,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.205312875,
+        "p95": 0.205312875,
+        "min": 0.205312875,
+        "max": 0.205312875
+      },
+      "audioSeconds": 66.24,
+      "peakRSSBytes": 937836544,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.869498792,
+        "p95": 0.869498792,
+        "min": 0.869498792,
+        "max": 0.869498792
+      },
+      "sampledPeakPhysicalFootprintBytes": 953583008,
+      "wer": {
+        "n": 1,
+        "p50": 0.018018018018018018,
+        "p95": 0.018018018018018018,
+        "min": 0.018018018018018018,
+        "max": 0.018018018018018018
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.018018018018018018,
+        "p95": 0.018018018018018018,
+        "min": 0.018018018018018018,
+        "max": 0.018018018018018018
+      },
+      "referenceWords": 111,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-ru-60s-settled-1-normal-0-original"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 965920.0,
+        "p95": 965920.0,
+        "min": 965920,
+        "max": 965920
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 93920.0,
+        "p95": 93920.0,
+        "min": 93920,
+        "max": 93920
+      }
+    },
+    {
+      "mode": "meeting",
+      "fixture": "ru-60s",
+      "pacing": "settled",
+      "workers": 1,
+      "condition": "normal",
+      "segmentSeconds": 30,
+      "minimumSegmentSeconds": 15,
+      "tailRead": false,
+      "meetingPreserveQuietAudio": true,
+      "overlapMilliseconds": 2000,
+      "seconds": {
+        "n": 1,
+        "p50": 0.252698042,
+        "p95": 0.252698042,
+        "min": 0.252698042,
+        "max": 0.252698042
+      },
+      "audioSeconds": 66.24,
+      "peakRSSBytes": 951681024,
+      "loadSeconds": {
+        "n": 1,
+        "p50": 0.259095125,
+        "p95": 0.259095125,
+        "min": 0.259095125,
+        "max": 0.259095125
+      },
+      "sampledPeakPhysicalFootprintBytes": 955270536,
+      "wer": {
+        "n": 1,
+        "p50": 0.018018018018018018,
+        "p95": 0.018018018018018018,
+        "min": 0.018018018018018018,
+        "max": 0.018018018018018018
+      },
+      "deletionRate": {
+        "n": 1,
+        "p50": 0.018018018018018018,
+        "p95": 0.018018018018018018,
+        "min": 0.018018018018018018,
+        "max": 0.018018018018018018
+      },
+      "referenceWords": 111,
+      "distinctNormalizedOutputs": 1,
+      "ids": [
+        "meeting-ru-60s-settled-1-normal-0-preserve"
+      ],
+      "submittedFrames": {
+        "n": 1,
+        "p50": 1059840.0,
+        "p95": 1059840.0,
+        "min": 1059840,
+        "max": 1059840
+      },
+      "unsubmittedFrames": {
+        "n": 1,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    }
+  ],
+  "fileParity": [],
+  "tailParity": []
+}
