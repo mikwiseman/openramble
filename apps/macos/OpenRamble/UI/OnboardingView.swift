@@ -267,7 +267,8 @@ struct OnboardingView: View {
             place: .onboarding,
             downloadMegabytes: state.remainingDownloadMegabytes,
             isEngineReady: state.isEngineReady,
-            isPreparingEngine: state.isPreparingEngine
+            isPreparingEngine: state.isPreparingEngine,
+            hasMirror: state.modelHasMirror
         )
     }
 

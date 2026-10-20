@@ -337,7 +337,6 @@
 "Opens the folder with downloaded models and any recordings kept after a failure" = "Opens the folder with downloaded models and any recordings kept after a failure";
 "Others" = "Others";
 "Parakeet TDT 0.6B v3 and Parakeet TDT-CTC 110M © NVIDIA, licensed under CC BY 4.0. Core ML conversions by FluidInference." = "Parakeet TDT 0.6B v3 and Parakeet TDT-CTC 110M © NVIDIA, licensed under CC BY 4.0. Core ML conversions by FluidInference.";
-"Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings." = "Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings.";
 "Pause" = "Pause";
 "Pause Recording" = "Pause Recording";
 "Pause recording" = "Pause recording";
@@ -694,3 +693,12 @@
 "hour.many" = "hours";
 "OpenRamble recovered %@ unfinished recording after an interrupted session. Open Recovered Recordings from the menu to review or delete the audio; retention is limited to seven days." = "OpenRamble recovered %@ unfinished recording after an interrupted session. Open Recovered Recordings from the menu to review or delete the audio; retention is limited to seven days.";
 "OpenRamble recovered %@ unfinished recordings after an interrupted session. Open Recovered Recordings from the menu to review or delete the audio; retention is limited to seven days." = "OpenRamble recovered %@ unfinished recordings after an interrupted session. Open Recovered Recordings from the menu to review or delete the audio; retention is limited to seven days.";
+"Downloading Parakeet Ultra…" = "Downloading Parakeet Ultra…";
+"Dictation keeps using the current model until the new one is ready." = "Dictation keeps using the current model until the new one is ready.";
+"Checking Parakeet Ultra…" = "Checking Parakeet Ultra…";
+"Parakeet Ultra didn't download" = "Parakeet Ultra didn't download";
+"Dictation keeps using the current model. Nothing was changed." = "Dictation keeps using the current model. Nothing was changed.";
+"Parakeet Ultra is available" = "Parakeet Ultra is available";
+"A newer version of the same model with fewer recognition mistakes in English and Russian. Dictation keeps working while it downloads, and the current model is removed once Ultra is ready." = "A newer version of the same model with fewer recognition mistakes in English and Russian. Dictation keeps working while it downloads, and the current model is removed once Ultra is ready.";
+"The speech model runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings." = "The speech model runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings.";
+"%@ MB from Hugging Face. After verification, recognition works without the network." = "%@ MB from Hugging Face. After verification, recognition works without the network.";

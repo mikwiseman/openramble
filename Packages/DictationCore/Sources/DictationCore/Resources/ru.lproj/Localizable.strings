@@ -337,7 +337,6 @@
 "Opens the folder with downloaded models and any recordings kept after a failure" = "Открывает папку с моделями и записями, сохранёнными после сбоя";
 "Others" = "Собеседники";
 "Parakeet TDT 0.6B v3 and Parakeet TDT-CTC 110M © NVIDIA, licensed under CC BY 4.0. Core ML conversions by FluidInference." = "Parakeet TDT 0.6B v3 и Parakeet TDT-CTC 110M © NVIDIA, лицензия CC BY 4.0. Конвертация в Core ML — FluidInference.";
-"Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings." = "Parakeet TDT 0.6B v3 работает целиком на этом Mac. После загрузки и проверки распознавание доступно без интернета — звук никогда не загружается в облако. При техническом сбое или прерывании звук сохраняется для восстановления и удаляется в течение семи дней. Прерванные диктовки появляются в истории вместе с остальными.";
 "Pause" = "Пауза";
 "Pause Recording" = "Приостановить запись";
 "Pause recording" = "Приостановить запись";
@@ -694,3 +693,12 @@
 "hour.many" = "часов";
 "OpenRamble recovered %@ unfinished recording after an interrupted session. Open Recovered Recordings from the menu to review or delete the audio; retention is limited to seven days." = "Восстановлено незавершённых записей: %@. Откройте «Восстановленные записи» в меню, чтобы прослушать или удалить звук. Срок хранения — до семи дней.";
 "OpenRamble recovered %@ unfinished recordings after an interrupted session. Open Recovered Recordings from the menu to review or delete the audio; retention is limited to seven days." = "Восстановлено незавершённых записей: %@. Откройте «Восстановленные записи» в меню, чтобы прослушать или удалить звук. Срок хранения — до семи дней.";
+"Downloading Parakeet Ultra…" = "Загружается Parakeet Ultra…";
+"Dictation keeps using the current model until the new one is ready." = "Пока новая модель не готова, диктовка работает на текущей.";
+"Checking Parakeet Ultra…" = "Проверяется Parakeet Ultra…";
+"Parakeet Ultra didn't download" = "Parakeet Ultra не загрузилась";
+"Dictation keeps using the current model. Nothing was changed." = "Диктовка работает на текущей модели. Ничего не изменилось.";
+"Parakeet Ultra is available" = "Доступна Parakeet Ultra";
+"A newer version of the same model with fewer recognition mistakes in English and Russian. Dictation keeps working while it downloads, and the current model is removed once Ultra is ready." = "Новая версия той же модели, которая реже ошибается в английском и русском. Пока она загружается, диктовка работает, а текущая модель удаляется, когда Ultra готова.";
+"The speech model runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings." = "Модель речи работает целиком на этом Mac. После загрузки и проверки распознавание доступно без интернета — звук никогда не загружается в облако. При техническом сбое или прерывании звук сохраняется для восстановления и удаляется в течение семи дней. Прерванные диктовки появляются в истории вместе с остальными.";
+"%@ MB from Hugging Face. After verification, recognition works without the network." = "%@ МБ с Hugging Face. После проверки распознавание работает без интернета.";

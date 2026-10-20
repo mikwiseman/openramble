@@ -670,6 +670,18 @@ final class AppHarness {
         try installMarker(for: try ModelManifest.bundled())
     }
 
+    /// A Mac updated from the release before: only the model the current one replaced.
+    func installPreviousModelMarker() throws {
+        guard let previous = try ModelManifest.bundledPrevious() else { throw CocoaError(.fileNoSuchFile) }
+        try installMarker(for: previous)
+    }
+
+    /// Where the previous model would be installed under this harness.
+    func previousModelDirectory() throws -> URL {
+        guard let manifest = try ModelManifest.bundledPrevious() else { throw CocoaError(.fileNoSuchFile) }
+        return try ModelInstallLayout(manifest: manifest, root: try AppPaths(root: root).models()).modelDirectory
+    }
+
     private func installMarker(for manifest: ModelManifest) throws {
         let paths = AppPaths(root: root)
         let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())

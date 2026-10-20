@@ -429,7 +429,8 @@ private struct RecognitionSettings: View {
                         place: .settings,
                         downloadMegabytes: state.remainingDownloadMegabytes,
                         isEngineReady: state.isEngineReady,
-                        isPreparingEngine: state.isPreparingEngine
+                        isPreparingEngine: state.isPreparingEngine,
+                        hasMirror: state.modelHasMirror
                     ),
                     install: state.installModel,
                     cancel: state.cancelModelInstall,
@@ -445,7 +446,18 @@ private struct RecognitionSettings: View {
             } header: {
                 Text(L10n.tr("Speech model"))
             } footer: {
-                Text(L10n.tr("Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings."))
+                Text(L10n.tr("The speech model runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings."))
+            }
+
+            if let upgrade = state.upgradeState {
+                Section {
+                    ModelStatusView(
+                        status: ModelStatus.upgrade(state: upgrade, downloadMegabytes: state.remainingDownloadMegabytes),
+                        install: state.installModel,
+                        cancel: state.cancelModelInstall,
+                        delete: {}
+                    )
+                }
             }
 
         }

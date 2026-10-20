@@ -11,5 +11,9 @@
       "byteCount": 740363168,
       "sha256": "007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59"
     }
-  ]
+  ],
+  "mirror": {
+    "repository": "mikwiseman/openramble",
+    "releaseTag": "models-a1539be1"
+  }
 }
