@@ -77,7 +77,7 @@ Recognition never uses the network. The following maintenance actions can:
 
 | Action | Destination | Data visible to the service |
 |---|---|---|
-| Download a model | Hugging Face CDN, with a GitHub Releases fallback | IP address and download request |
+| Download a model | GitHub Releases, with the Hugging Face CDN as a fallback | IP address and download request |
 | Check for updates | GitHub Pages | IP address and app version |
 | Download an update | GitHub Releases | IP address and download request |
 
@@ -179,9 +179,6 @@ Application Support directory automatically. The bundle identifier remains
 - Hold the configured hotkey, speak, and release it to insert text.
 - Double-press the hotkey to record without holding it; press again to stop.
 - Press Escape while recording to cancel.
-- Use “Copy Last as Spoken” to copy the raw recognition result before
-  dictionary replacements and typography cleanup. The item appears when that
-  raw text differs from what was inserted.
 - Dictation continues beyond five minutes, using a local audio file to keep
   memory bounded. If disk storage is unavailable, OpenRamble preserves and
   transcribes the audio still held in memory and explains why recording stopped.
@@ -303,6 +300,14 @@ the separate name `OpenRambleDev` and bundle identifier
 - [Release process](docs/release.md)
 - [Benchmark methodology](docs/benchmarks.md)
 - [Model lifecycle](docs/model-lifecycle.md)
+
+## Credits
+
+Recognition runs on [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp)
+by CJ Pais and the [Handy](https://handy.computer) team, with NVIDIA's
+[Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3)
+(CC BY 4.0) in handy-computer's
+[GGUF conversion](https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf).
 
 ## License
 

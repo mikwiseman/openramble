@@ -30,6 +30,7 @@ final class DictationLogFile: @unchecked Sendable {
         let stage: DictationFailureStage?
         let timedOut: Bool?
         let fallbackReason: DictationFallbackReason?
+        let failureReason: DictationFailureReason?
     }
 
     struct Recognition: Codable, Sendable {
@@ -102,7 +103,7 @@ final class DictationLogFile: @unchecked Sendable {
     func record(_ event: DiagnosticEvent, milliseconds: Int? = nil, errorCode: Int? = nil,
                 recognition: Recognition? = nil, stage: DictationFailureStage? = nil,
                 timedOut: Bool? = nil, fallbackReason: DictationFallbackReason? = nil,
-                at time: Date = Date()) {
+                failureReason: DictationFailureReason? = nil, at time: Date = Date()) {
         queue.async {
             guard self.enabled else { return }
             do {
@@ -111,7 +112,8 @@ final class DictationLogFile: @unchecked Sendable {
                                             attributes: [.posixPermissions: 0o700])
                 let entry = Entry(time: time, event: event, version: self.version, build: self.build,
                                   milliseconds: milliseconds, errorCode: errorCode, recognition: recognition,
-                                  stage: stage, timedOut: timedOut, fallbackReason: fallbackReason)
+                                  stage: stage, timedOut: timedOut, fallbackReason: fallbackReason,
+                                  failureReason: failureReason)
                 var data = try Self.encoder().encode(entry)
                 data.append(10)
                 let url = self.directory.appending(path: "events-\(Self.day(time)).jsonl")

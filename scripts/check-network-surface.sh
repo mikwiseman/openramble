@@ -2,9 +2,15 @@
 # Tests the core promise of the product: the network is only used where
 # this is declared to the user.
 #
-# Exactly two places are allowed:
+# Exactly two places may reach the network:
 # • ModelDownloading.swift — downloading a model using a button
-# • Sparkle wrapper - checking for updates with user consent
+# • SparkleUpdater.swift — update checks (on by default, can be turned off)
+#   and update downloads, which always need a click
+#
+# A third file is allowlisted without being a network place:
+# LocalRecordingAsset.swift is the one spelling of `AVURLAsset(` in the app,
+# and it refuses anything but a local file URL, so playing a recording can
+# never turn into a fetch.
 #
 # Everything else is a violation. The list of characters is wider than the obvious URLSession:
 # You can download data from Foundation in a good dozen ways, and each of them
@@ -84,10 +90,9 @@ done < <(grep -rnE "$FORBIDDEN_PASTEBOARD" "${SHIPPING_PATHS[@]}" 2>/dev/null \
   | grep -vE ':[0-9]+: *//' \
   || true)
 
-# Updates must remain silent until enabled. This is not cosmetics:
-# without SUEnableAutomaticChecks=false Sparkle will ask itself on the second launch
-# permission and will enable checks by default - the application will go online without
-# commands, and the promise on the main page will become untrue.
+# Updates must behave exactly as README describes. This is not cosmetics: a
+# missing or flipped key changes when the app goes online, and the promise on
+# the main page becomes untrue.
 echo "Checking update settings..."
 PROJECT_YML="apps/macos/project.yml"
 # What the gate defends is what README promises, and that promise changed:

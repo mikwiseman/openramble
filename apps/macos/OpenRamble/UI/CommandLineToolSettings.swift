@@ -26,8 +26,10 @@ struct CommandLineToolSettings: View {
                     .textSelection(.enabled)
             }
             if let failure {
+                // Red belongs to the live microphone alone; a failure that
+                // waits for the person wears attention.
                 Text(failure)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(StatusColorRole.attention.color)
                     .textSelection(.enabled)
             }
         } header: {

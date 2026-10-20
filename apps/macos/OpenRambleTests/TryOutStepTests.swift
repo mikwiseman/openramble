@@ -173,7 +173,7 @@ final class TryOutStepTests: XCTestCase {
         XCTAssertEqual(screen.footer, firstLoad)
         XCTAssertEqual(
             screen.statusLine,
-            "Preparing the model — Step 1 of 3 · \(state.enginePreparation.title)",
+            "Preparing the model — Step 1 of 2 · \(state.enginePreparation.title)",
             "the step shows the same live milestone the setup screen shows"
         )
 
