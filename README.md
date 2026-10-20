@@ -212,7 +212,7 @@ Recent Dictations — instead.
 
 **Both**
 
-- About 740 MB for the recognition model, plus temporary space while it is
+- About 490 MB for the recognition model, plus temporary space while it is
   downloaded and verified
 
 Model files are downloaded from pinned revisions and verified against committed

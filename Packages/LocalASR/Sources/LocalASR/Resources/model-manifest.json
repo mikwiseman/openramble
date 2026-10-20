@@ -3,13 +3,13 @@
   "repository": "handy-computer/parakeet-ultra-gguf",
   "revision": "a1539be1b849ea7463b88343e5277b373d0c4ea9",
   "runtimeVersion": "transcribe.cpp 0.4.0",
-  "quantization": "Q8_0",
+  "quantization": "Q4_K_M",
   "license": "CC-BY-4.0",
   "files": [
     {
-      "path": "parakeet-ultra-Q8_0.gguf",
-      "byteCount": 740363168,
-      "sha256": "007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59"
+      "path": "parakeet-ultra-Q4_K_M.gguf",
+      "byteCount": 486280096,
+      "sha256": "c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9"
     }
   ],
   "mirror": {

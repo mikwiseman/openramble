@@ -694,7 +694,7 @@ final class AppStateTests: XCTestCase {
         await state.refreshModelState()
 
         XCTAssertEqual(state.remainingDownloadMegabytes, 0, "nothing is missing from disk")
-        XCTAssertEqual(state.fullModelDownloadMegabytes, 740)
+        XCTAssertEqual(state.fullModelDownloadMegabytes, 486)
     }
 
     func testScenario026() async throws {

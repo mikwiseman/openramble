@@ -27,7 +27,7 @@ final class ModelUpgradeTests: XCTestCase {
 
         XCTAssertTrue(state.modelState.isReady, "the model already on disk keeps dictation working")
         XCTAssertEqual(state.upgradeState, .notInstalled, "the new model is offered, not imposed")
-        XCTAssertEqual(state.remainingDownloadMegabytes, 740, "the offer names the new model's size")
+        XCTAssertEqual(state.remainingDownloadMegabytes, 486, "the offer names the new model's size")
     }
 
     func testAFreshMacIsAskedForUltraAndNoUpgradeIsShown() async throws {
@@ -94,11 +94,11 @@ final class ModelUpgradeTests: XCTestCase {
     }
 
     func testTheUpgradeCardSaysDictationKeepsWorking() {
-        let offer = ModelStatus.upgrade(state: .notInstalled, downloadMegabytes: 740)
+        let offer = ModelStatus.upgrade(state: .notInstalled, downloadMegabytes: 486)
         XCTAssertEqual(offer.actions, [.install])
-        XCTAssertEqual(offer.title(for: .install), "Download Model — 740 MB")
+        XCTAssertEqual(offer.title(for: .install), "Download Model — 486 MB")
 
-        let failed = ModelStatus.upgrade(state: .failed(.download("offline")), downloadMegabytes: 740)
+        let failed = ModelStatus.upgrade(state: .failed(.download("offline")), downloadMegabytes: 486)
         XCTAssertEqual(failed.actions, [.retry])
         XCTAssertEqual(failed.tone, .failure)
         XCTAssertTrue(failed.detail?.contains("current model") == true)

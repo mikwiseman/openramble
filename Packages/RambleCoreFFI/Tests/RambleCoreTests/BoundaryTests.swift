@@ -131,7 +131,7 @@ final class StoreBoundaryTests: XCTestCase {
             FileManager.default.fileExists(atPath: report.engineDirectory),
             "the recogniser directory does not exist: \(report.engineDirectory)"
         )
-        XCTAssertEqual(report.totalByteCount, 739_508_576)
+        XCTAssertEqual(report.totalByteCount, 486_280_096)
     }
 
     func testHistoryWrittenBySwiftReadsThroughTheBoundary() throws {
