@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import Combine
 import DictationCore
 import Darwin
 import LocalASR
@@ -316,16 +317,26 @@ final class AppStateIdleTests: XCTestCase {
         state.installModel()
         try await waitFor("download has started") { self.harness.downloader.hasStarted }
 
+        // The install's last act publishes how much is still to download, just
+        // after its final state, so whatever the screen holds at that instant is
+        // the install's verdict. A fixed sleep used to guess at that instant; a
+        // slow CI runner once found the download still in progress.
+        var verdict: ModelState?
+        let installEnded = state.$remainingDownloadMegabytes.dropFirst().first().sink { _ in
+            verdict = state.modelState
+        }
+        defer { installEnded.cancel() }
+
         // A permanent failure, deliberately: transient ones are retried now, and
         // a retried download is still a download — it must not flash "failed"
         // between attempts. 404 is not retried, so it surfaces immediately, and
         // that is what this test is about: the failure stays on screen instead
         // of silently resetting to "not installed".
         harness.downloader.release(throwing: .httpStatus(404))
-        try await Task.sleep(for: .milliseconds(100))
+        try await waitFor("install finished") { verdict != nil }
 
-        guard case let .failed(.download(detail)) = state.modelState else {
-            XCTFail("download error did not remain visible: \(state.modelState)")
+        guard case let .failed(.download(detail)) = verdict else {
+            XCTFail("download error did not remain visible: \(String(describing: verdict))")
             return
         }
         XCTAssertTrue(detail.contains("404"), "the reason must reach the user: \(detail)")
