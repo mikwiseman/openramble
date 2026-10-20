@@ -1602,7 +1602,8 @@ final class RecordingEngineShutdownContainment: @unchecked Sendable {
     ///
     /// `job.operation()` is the microphone's `stop()` (an I/O proc stop, or
     /// the engine's `stop()` + `removeTap(onBus:)`), and the comment above
-    /// this class says what those do: they may block inside Core Audio. This used to run in `Task.detached`, which puts it on Swift's
+    /// this class says what those do: they may block inside Core Audio. This
+    /// used to run in `Task.detached`, which puts it on Swift's
     /// cooperative pool — the pool that has one thread per core and that Swift
     /// documents you must never block, because a blocked thread is not yielded,
     /// it is simply gone.

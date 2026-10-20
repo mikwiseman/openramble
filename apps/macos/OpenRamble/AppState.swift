@@ -2091,15 +2091,13 @@ public final class AppState: ObservableObject {
     /// Internal, not private: the residency pin drives the exact press hook.
     func warmEngineUnderVoice() {
         guard transcriber != nil, !isRecyclingEngine else { return }
-        // Residency gave the memory back: the press starts the FULL reload —
-        // weights — in parallel with the recording. The
+        // Residency gave the memory back: the listening take starts the FULL
+        // reload — weights — in parallel with the recording. The
         // single-flight transcriber coalesces this with the transcription
         // path's own prepare, and the preparation UI narrates honestly if
         // the reload outlasts the speech.
         guard isEngineReady else {
-            // Same single-flight path the key-down trigger takes; by the time
-            // this runs the reload is usually already riding under the voice.
-            rewarmEngineIfCold(trigger: .keyDown)
+            rewarmEngineIfCold(trigger: .listening)
             return
         }
         // A ready engine needs nothing further. There used to be a "ping" here
@@ -2295,13 +2293,13 @@ public final class AppState: ObservableObject {
 
     /// What woke the engine back up.
     enum RewarmTrigger: String {
-        case keyDown
+        /// A take found the engine resting, once its microphone was open.
+        case listening
         case appActivation
     }
 
-    /// The earliest reload triggers: they fire before any readiness guard can
-    /// swallow the press. Single-flight through `warmUpEngine`'s shared task;
-    /// calling on every press is safe and free when warm.
+    /// The reload triggers. Single-flight through `warmUpEngine`'s shared
+    /// task; calling on every take is safe and free when warm.
     ///
     /// There used to be a memory-pressure tier in this condition, deciding
     /// whether waking was polite right now. It is gone with the rest of the

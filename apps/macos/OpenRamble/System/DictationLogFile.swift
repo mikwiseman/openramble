@@ -259,7 +259,6 @@ final class LevelUpdateGate: @unchecked Sendable {
     }
 }
 
-
 extension DictationLogFile.Recognition {
     /// A finished take's numbers, and nothing of the take itself. `nil` for a
     /// report built without its breakdown, as the journal always did.
