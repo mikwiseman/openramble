@@ -394,6 +394,7 @@
 "Recording what you hear needs macOS 14.2 or later. Dictation and voice notes are unaffected." = "Recording what you hear needs macOS 14.2 or later. Dictation and voice notes are unaffected.";
 "Recording what you hear needs macOS 14.2 or later. Everything else works." = "Recording what you hear needs macOS 14.2 or later. Everything else works.";
 "Recording — %@" = "Recording — %@";
+"Recording hands-free, %@. Press %@ to finish." = "Recording hands-free, %@. Press %@ to finish.";
 "Recording, %@." = "Recording, %@.";
 "Recording, paused" = "Recording, paused";
 "Recordings" = "Recordings";

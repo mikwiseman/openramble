@@ -11,14 +11,16 @@ final class OverlayContentTests: XCTestCase {
         notice: DictationNotice? = nil,
         elapsed: TimeInterval = 0,
         isWaitingForEngine: Bool = false,
-        hasLingered: Bool = false
+        hasLingered: Bool = false,
+        handsFreeFinishKey: String? = nil
     ) -> OverlayContent {
         OverlayContent.make(
             state: state,
             notice: notice,
             elapsed: elapsed,
             isWaitingForEngine: isWaitingForEngine,
-            hasLingered: hasLingered
+            hasLingered: hasLingered,
+            handsFreeFinishKey: handsFreeFinishKey
         )
     }
 
@@ -94,6 +96,40 @@ final class OverlayContentTests: XCTestCase {
             XCTAssertNil(content(state).tone)
         }
     }
+
+    // MARK: - Hands-free
+
+    /// The key is up and the microphone is still live. A red lock where the
+    /// dot was says so — the locked-recording sign people know from voice
+    /// messages — and red keeps its one meaning. Nothing new to fit beside
+    /// the waveform, nothing spoken into the open microphone: the way out is
+    /// in the label VoiceOver reads on demand.
+    func testHandsFreeIsARedLockWithTheWayOutInTheLabel() {
+        let handsFree = content(.listening, elapsed: 3, handsFreeFinishKey: "Right Command")
+
+        XCTAssertEqual(handsFree.mark, .handsFree)
+        XCTAssertEqual(OverlayContent.Mark.handsFree.colorRole, .recording)
+        XCTAssertNil(handsFree.title)
+        XCTAssertEqual(handsFree.panelWidth, 244)
+        XCTAssertEqual(
+            handsFree.accessibilityLabel,
+            "Recording hands-free, 3 seconds. Press Right Command to finish."
+        )
+        XCTAssertEqual(handsFree.voice, .cue, "never words while the microphone is open")
+    }
+
+    /// Holding the key looks exactly as it always did.
+    func testHoldingTheKeyIsUnchanged() {
+        XCTAssertEqual(content(.listening, elapsed: 3).mark, .recording)
+        XCTAssertEqual(content(.listening, elapsed: 3).accessibilityLabel, "Recording, 3 seconds.")
+        XCTAssertEqual(
+            content(.preparing, handsFreeFinishKey: "Right Command").mark,
+            .starting,
+            "not live yet, so not locked yet"
+        )
+    }
+
+    // MARK: - Seconds
 
     /// "5 s" VoiceOver reads as "5 es".
     func testScenario005() {

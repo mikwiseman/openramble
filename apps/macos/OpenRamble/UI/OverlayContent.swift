@@ -47,13 +47,16 @@ struct OverlayContent: Equatable {
         case starting
         /// Red: the microphone is capturing.
         case recording
+        /// A red lock: capturing with the key let go, until it is pressed
+        /// again — the locked-recording sign of voice messages.
+        case handsFree
         /// Blue: the microphone is closed and the words are being worked on.
         case working
 
         var colorRole: StatusColorRole? {
             switch self {
             case .starting: return nil
-            case .recording: return .recording
+            case .recording, .handsFree: return .recording
             case .working: return .processing
             }
         }
@@ -90,13 +93,17 @@ struct OverlayContent: Equatable {
     /// How long a state lasts before it earns a title or a spoken word.
     static let titleDelay: Duration = .milliseconds(500)
 
-    /// - Parameter hasLingered: the state has outlasted `titleDelay`.
+    /// - Parameters:
+    ///   - hasLingered: the state has outlasted `titleDelay`.
+    ///   - handsFreeFinishKey: the key that ends a hands-free take, while one
+    ///     runs; `nil` while the key is held.
     static func make(
         state: DictationState,
         notice: DictationNotice?,
         elapsed: TimeInterval,
         isWaitingForEngine: Bool = false,
-        hasLingered: Bool = false
+        hasLingered: Bool = false,
+        handsFreeFinishKey: String? = nil
     ) -> OverlayContent {
         // The message is more important than the state: it is shown instead.
         if let notice {
@@ -131,6 +138,19 @@ struct OverlayContent: Equatable {
 
         case .listening:
             let seconds = spokenSeconds(elapsed)
+            if let handsFreeFinishKey {
+                return OverlayContent(
+                    mark: .handsFree,
+                    // The way out lives here, read on demand: said aloud it
+                    // would be said into the open microphone.
+                    accessibilityLabel: L10n.tr(
+                        "Recording hands-free, %@. Press %@ to finish.",
+                        String(describing: seconds),
+                        handsFreeFinishKey
+                    ),
+                    voice: .cue
+                )
+            }
             return OverlayContent(
                 mark: .recording,
                 accessibilityLabel: L10n.tr("Recording, %@.", String(describing: seconds)),

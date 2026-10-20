@@ -226,6 +226,40 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(announcer.cues, 1)
     }
 
+    // MARK: - Hands-free
+
+    /// Going hands-free is one more tone for VoiceOver and a lock on screen.
+    func testHandsFreeIsASecondToneAndALock() {
+        model.show(.listening, elapsed: 0)
+
+        model.setHandsFree(finishKey: "Right Command")
+
+        XCTAssertEqual(model.content.mark, .handsFree)
+        XCTAssertEqual(model.content.panelWidth, 244)
+        XCTAssertEqual(announcer.cues, 2)
+        XCTAssertEqual(announcer.messages, [])
+    }
+
+    func testHandsFreeBelongsToOneTake() {
+        model.show(.listening, elapsed: 0)
+        model.setHandsFree(finishKey: "Right Command")
+        model.hide()
+
+        model.show(.listening, elapsed: 0)
+
+        XCTAssertEqual(model.content.mark, .recording)
+    }
+
+    func testLeavingHandsFreeUnlocks() {
+        model.show(.listening, elapsed: 0)
+        model.setHandsFree(finishKey: "Right Command")
+
+        model.setHandsFree(finishKey: nil)
+
+        XCTAssertEqual(model.content.mark, .recording)
+        XCTAssertEqual(announcer.cues, 2, "unlocking is not news; the take ending is")
+    }
+
     // MARK: - One shape per take
 
     /// Preparing, listening and transcribing are one panel: only the mark's

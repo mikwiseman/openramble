@@ -1382,6 +1382,10 @@ public final class AppState: ObservableObject {
                 // “stop”, not “start a new dictation”.
                 self?.hotkeyMonitor.isHandsFreeActive = active
                 self?.isHandsFreeActive = active
+                // The panel shows a lock: the key is up and the microphone is
+                // still live, which is otherwise indistinguishable from holding.
+                (self?.overlay as? any HandsFreePresenting)?
+                    .setHandsFree(finishKey: active ? self?.hotkey.title : nil)
             }
             controller.onTranscriptionStall = { [weak self] in
                 // Recognition blew its deadline: the engine is presumed wedged

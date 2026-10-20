@@ -394,6 +394,7 @@
 "Recording what you hear needs macOS 14.2 or later. Dictation and voice notes are unaffected." = "Для записи системного звука нужна macOS 14.2 или новее. Диктовка и голосовые заметки доступны.";
 "Recording what you hear needs macOS 14.2 or later. Everything else works." = "Для записи системного звука нужна macOS 14.2 или новее. Остальные функции доступны.";
 "Recording — %@" = "Запись — %@";
+"Recording hands-free, %@. Press %@ to finish." = "Запись без удержания клавиши, %@. Нажмите %@, чтобы закончить.";
 "Recording, %@." = "Запись, %@.";
 "Recording, paused" = "Запись на паузе";
 "Recordings" = "Записи";
