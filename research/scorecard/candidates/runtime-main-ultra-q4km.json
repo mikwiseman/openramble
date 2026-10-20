@@ -1,0 +1,23 @@
+{
+  "label": "Ultra Q4_K_M, upstream main (mmap)",
+  "summary": "transcribe.cpp main at db678a03, weights served from the model file (#195)",
+  "order": 15,
+  "model": {
+    "name": "parakeet-ultra Q4_K_M",
+    "path": "models/parakeet-ultra-Q4_K_M/parakeet-ultra-Q4_K_M.gguf",
+    "sha256": "c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9",
+    "source": "https://huggingface.co/handy-computer/parakeet-ultra-gguf/blob/a1539be1b849ea7463b88343e5277b373d0c4ea9/parakeet-ultra-Q4_K_M.gguf",
+    "license": "CC-BY-4.0"
+  },
+  "runtime": "transcribe.cpp built from upstream main, commit db678a031cf4c524bcab2c45a0dc6a7813106e4a (v0.4.0-14), macOS slice, by scripts/build-transcribe-xcframework.sh, SwiftPM checksum 8386fc1a…; Metal, one decoder thread, weights memory-mapped",
+  "process": {
+    "kind": "asr-bench"
+  },
+  "warm": {
+    "kind": "asr-bench",
+    "commit": "627716536c487d67d138fd47693fa0d19bc69b5e",
+    "xcframework_zip": "builds/xcframework-main-db678a03/TranscribeCpp-v0.4.0-14-gdb678a03.xcframework.zip",
+    "xcframework_sha256": "8386fc1a1ce3ed4d4b8f9dd0fb0b4baaf7c9ab7899ec473b11b6f137f4832c6c"
+  },
+  "index": false
+}
