@@ -24,7 +24,23 @@ final class CopyHotkeyTests: XCTestCase {
     func testScenario001() {
         let state = harness.makeState()
         XCTAssertNil(state.copyShortcut)
-        XCTAssertFalse(state.copiesToClipboard)
+    }
+
+    /// "Also copy dictations to the clipboard" is gone: the clipboard holds a
+    /// dictation only for the paste. The ways to get one back on purpose —
+    /// Copy Last with its shortcut, and Recent Dictations — both hold it.
+    func testEveryDictationStaysOneCopyAway() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+
+        XCTAssertEqual(state.lastDictation?.insertedText, "Ping test", "Copy Last and its shortcut")
+        XCTAssertEqual(state.recentDictations.first?.text, "Ping test", "Recent Dictations")
     }
 
     /// A plain key would fire in the middle of a word, and Shift with a letter

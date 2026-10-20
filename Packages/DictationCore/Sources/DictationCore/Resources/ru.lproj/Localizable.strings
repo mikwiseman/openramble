@@ -49,7 +49,6 @@
 "Allow microphone access" = "Разрешите доступ к микрофону";
 "Allow screen recording" = "Разрешите запись экрана";
 "Allow the microphone to record." = "Разрешите доступ к микрофону для записи.";
-"Also copy dictations to the clipboard" = "Копировать диктовки в буфер обмена";
 "Apple's built-in dictation" = "встроенную диктовку Apple";
 "Ask on start" = "Запрос при запуске";
 "Attempts to insert the saved text into the current field" = "Пробует вставить сохранённый текст в текущее поле";
@@ -230,7 +229,6 @@
 "Learned %@ replacements from your edit." = "Из ваших исправлений добавлено замен: %@.";
 "Learned 1 replacement for future dictations." = "Добавлена одна замена для будущих диктовок.";
 "Learned 1 replacement from your edit." = "Из вашего исправления добавлена одна замена.";
-"Leaves each finished dictation on the clipboard of this Mac. Off by default — the clipboard is shared with everything else running here." = "Оставляет готовую диктовку в буфере обмена этого Mac. По умолчанию выключено: буфер доступен другим приложениям.";
 "Left Command" = "Левый Command";
 "Left Control" = "Левый Control";
 "Left Option" = "Левый Option";

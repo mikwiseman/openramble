@@ -12,7 +12,6 @@ public enum SettingsDefaults {
     public static let copyShortcut: KeyCombination? = nil
     public static let recordingShortcut: KeyCombination? = .controlCommandR
     public static let soundsEnabled = true
-    public static let copiesToClipboard = false
     public static let appendsTrailingSpace = false
     public static let launchAtLogin = false
     public static let overlayPlacement: DictationOverlayPlacement = .top

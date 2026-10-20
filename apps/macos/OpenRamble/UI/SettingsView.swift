@@ -183,19 +183,6 @@ private struct GeneralSettings: View {
                         .accessibilityHint(L10n.tr("Starts OpenRamble automatically when you log in"))
                 }
                 SettingRow(
-                    title: L10n.tr("Also copy dictations to the clipboard"),
-                    isChanged: state.copiesToClipboard != SettingsDefaults.copiesToClipboard,
-                    revert: { state.copiesToClipboard = SettingsDefaults.copiesToClipboard }
-                ) {
-                    Toggle("", isOn: $state.copiesToClipboard)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .accessibilityLabel(L10n.tr("Also copy dictations to the clipboard"))
-                        .accessibilityHint(
-                            L10n.tr("Leaves each finished dictation on the clipboard of this Mac. Off by default — the clipboard is shared with everything else running here.")
-                        )
-                }
-                SettingRow(
                     title: L10n.tr("Add a space after each dictation"),
                     isChanged: state.appendsTrailingSpace != SettingsDefaults.appendsTrailingSpace,
                     revert: { state.appendsTrailingSpace = SettingsDefaults.appendsTrailingSpace }

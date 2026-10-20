@@ -684,20 +684,6 @@ public final class AppState: ObservableObject {
         }
     }
 
-    /// Also leave the finished text on the clipboard.
-    ///
-    /// Off by default, and deliberately: dictated text on the clipboard is
-    /// dictated text handed to every clipboard manager on the machine, and the
-    /// product's promise is that what you say stays here. Someone who wants it
-    /// can ask, and then it is written host-only with the transient and
-    /// concealed markers, the same as every other copy this app makes.
-    @Published public var copiesToClipboard: Bool {
-        didSet {
-            guard oldValue != copiesToClipboard else { return }
-            defaults.set(copiesToClipboard, forKey: Keys.copyToClipboard)
-        }
-    }
-
     /// Which microphone to record through, by its stable UID.
     ///
     /// `nil` means whatever the system calls default, which is what almost
@@ -849,7 +835,6 @@ public final class AppState: ObservableObject {
     private enum Keys {
         static let hotkey = "hotkey"
         static let sounds = "soundsEnabled"
-        static let copyToClipboard = "copyToClipboard"
         static let copyShortcut = "copyShortcut"
         static let recordingShortcut = "recordingShortcut"
         static let trailingSpace = "appendsTrailingSpace"
@@ -1082,8 +1067,6 @@ public final class AppState: ObservableObject {
         soundsEnabled = environment.defaults.object(forKey: Keys.sounds) as? Bool ?? SettingsDefaults.soundsEnabled
         // Off unless asked for: dictated text on the clipboard is dictated text
         // handed to every clipboard manager on the machine.
-        copiesToClipboard = environment.defaults.object(forKey: Keys.copyToClipboard) as? Bool
-            ?? SettingsDefaults.copiesToClipboard
         copyShortcut = (environment.defaults.string(forKey: Keys.copyShortcut))
             .flatMap(KeyCombination.init(rawValue:))
         if environment.defaults.object(forKey: Keys.recordingShortcut) == nil {
@@ -1368,12 +1351,6 @@ public final class AppState: ObservableObject {
             controller.onTextInserted = { [weak self] text in
                 guard let self else { return }
                 self.recordSuccessfulDictation(text)
-                if self.copiesToClipboard {
-                    // Host-only with the transient and concealed markers, like
-                    // every other copy this app makes: asking for the clipboard
-                    // is not asking for it to be synced to other devices.
-                    try? HostOnlyPasteboard().copyHostOnly(text)
-                }
                 guard self.learnFromEdits else { return }
                 self.editWatcher.beginWatching(inserted: text) { [weak self] original, edited in
                     self?.learn(original: original, edited: edited)

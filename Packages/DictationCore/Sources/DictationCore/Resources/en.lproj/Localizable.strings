@@ -49,7 +49,6 @@
 "Allow microphone access" = "Allow microphone access";
 "Allow screen recording" = "Allow screen recording";
 "Allow the microphone to record." = "Allow the microphone to record.";
-"Also copy dictations to the clipboard" = "Also copy dictations to the clipboard";
 "Apple's built-in dictation" = "Apple's built-in dictation";
 "Ask on start" = "Ask on start";
 "Attempts to insert the saved text into the current field" = "Attempts to insert the saved text into the current field";
@@ -230,7 +229,6 @@
 "Learned %@ replacements from your edit." = "Learned %@ replacements from your edit.";
 "Learned 1 replacement for future dictations." = "Learned 1 replacement for future dictations.";
 "Learned 1 replacement from your edit." = "Learned 1 replacement from your edit.";
-"Leaves each finished dictation on the clipboard of this Mac. Off by default — the clipboard is shared with everything else running here." = "Leaves each finished dictation on the clipboard of this Mac. Off by default — the clipboard is shared with everything else running here.";
 "Left Command" = "Left Command";
 "Left Control" = "Left Control";
 "Left Option" = "Left Option";

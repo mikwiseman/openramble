@@ -20,7 +20,6 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(state.copyShortcut, SettingsDefaults.copyShortcut)
         XCTAssertEqual(state.recordingShortcut, SettingsDefaults.recordingShortcut)
         XCTAssertEqual(state.soundsEnabled, SettingsDefaults.soundsEnabled)
-        XCTAssertEqual(state.copiesToClipboard, SettingsDefaults.copiesToClipboard)
         XCTAssertEqual(state.appendsTrailingSpace, SettingsDefaults.appendsTrailingSpace)
         XCTAssertEqual(state.overlayPlacement, SettingsDefaults.overlayPlacement)
     }
