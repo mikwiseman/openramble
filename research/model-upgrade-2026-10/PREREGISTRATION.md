@@ -121,3 +121,12 @@ intervals are reported for every candidate and do not change the decision.
 3. Scores, intervals and the gate table are computed with
    `scripts/scorecard/scorecard.py score`, `paired` and `compare`, and the
    reports are written in this folder.
+
+## Deviation recorded on 20 October 2026
+
+The procedure above said a timed block starts only when the Mac is at least
+85% idle. Measured at rest with the window server and the Claude app running,
+this Mac idles at 76% to 83%, so no block could start. The threshold was
+lowered to 75% before any speed observation was taken; builds, tests and
+indexing take the Mac below 65%, so they still hold a block back. Every timed
+observation stores the idle share measured just before its block.

@@ -41,8 +41,12 @@ Each suite is a set of inputs, and each metric is computed from one suite.
 | Resources | Model load, peak memory, model file size | Load time and warm-up come from every warm process start. Peak memory is the maximum resident set size reported by `/usr/bin/time -l`. |
 
 Speed is measured on a shared desktop, so a timed block starts only when two
-one-second samples show at least 85% of the CPUs idle and no other recognition
+one-second samples show at least 75% of the CPUs idle and no other recognition
 process is running. The idle share is stored with every timed observation.
+The threshold was first set at 85%, before measuring this Mac at rest: with the
+window server and the Claude app running, it idles at 76% to 83%, so 85% was
+never reached. 75% still excludes builds, tests and indexing, which take this
+Mac below 65%.
 Several candidates given to one command are interleaved block by block. The
 order rotates separately within quiet and loaded blocks, so every candidate
 takes every position equally often in each condition, which is the only fair

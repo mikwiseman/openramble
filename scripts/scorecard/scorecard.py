@@ -51,7 +51,7 @@ PROFILE = '(version 1) (allow default) (deny network*)'
 SCHEMA = 'openramble-scorecard/1'
 SEED = 20261019
 SHORT_TAKE_SECONDS = 15.0
-QUIET_IDLE = float(os.environ.get('SCORECARD_QUIET_IDLE', '0.85'))
+QUIET_IDLE = float(os.environ.get('SCORECARD_QUIET_IDLE', '0.75'))
 
 # ---------------------------------------------------------------------------
 # Text measures. Pure functions; the unit tests pin them.
