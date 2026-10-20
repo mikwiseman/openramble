@@ -348,7 +348,19 @@ public final class DictationController {
     /// Capture stop owns only the audio-engine handoff and PCM freeze. Disk
     /// drain and fsync are separate milestones and do not consume this budget.
     private let captureFreezeDeadline: Duration
+    /// How long a tap released before the microphone opened may wait for it.
     private let preparingStopDeadline: Duration
+    /// How long the microphone may take to open after the key-down before the
+    /// take ends with a notice, whether or not the key is still held.
+    ///
+    /// Five seconds. The slowest successful start in a week of the journal
+    /// reached listening two whole seconds after preparing (under 3 s), and
+    /// that was beside a model load this change no longer overlaps with the
+    /// start. Bluetooth headsets switching profile are unmeasured on this Mac,
+    /// so the margin is generous: a late notice only delays news about a take
+    /// that is already broken, while an early one would end a real take.
+    /// Retune from `microphoneStartupMilliseconds` in the journal.
+    private let microphoneStartDeadline: Duration
     /// Rare file-only recordings wait for a readable WAV, never for fsync.
     private let recordingReadableDeadline: Duration
     /// Moving a failed take into the support folder is also storage I/O and
@@ -386,7 +398,13 @@ public final class DictationController {
     private var cancellationRequested = false
     private var isHandsFree = false
     private var finalizationTask: Task<Void, Never>?
-    private var preparingStopWatchdog: Task<Void, Never>?
+    /// One watchdog per take for a microphone that does not open: armed at
+    /// the key-down, pulled in by a tap released before the microphone opened,
+    /// disarmed once it is listening.
+    private var microphoneStartWatchdog: Task<Void, Never>?
+    private var microphoneStartWatchdogDeadline: ContinuousClock.Instant?
+    /// The key-down, on the same clock as the deadlines.
+    private var beganAt: ContinuousClock.Instant?
     private var activeRecoveryTickets: [DictationSessionID: RecordingRecoveryTicket] = [:]
     private var currentDisposition: RecordingDisposition?
     private var recordingStartedAt: Date?
@@ -435,6 +453,7 @@ public final class DictationController {
         enginePreparationNoticeDelay: Duration = .milliseconds(250),
         captureFreezeDeadline: Duration = .seconds(10),
         preparingStopDeadline: Duration = .milliseconds(500),
+        microphoneStartDeadline: Duration = .seconds(5),
         recordingReadableDeadline: Duration = .seconds(10),
         recordingPreserveDeadline: Duration = .seconds(2),
         recoveryForegroundGrace: Duration = .milliseconds(150),
@@ -462,6 +481,7 @@ public final class DictationController {
         self.enginePreparationNoticeDelay = enginePreparationNoticeDelay
         self.captureFreezeDeadline = captureFreezeDeadline
         self.preparingStopDeadline = preparingStopDeadline
+        self.microphoneStartDeadline = microphoneStartDeadline
         self.recordingReadableDeadline = recordingReadableDeadline
         self.recordingPreserveDeadline = recordingPreserveDeadline
         self.recoveryForegroundGrace = recoveryForegroundGrace
@@ -497,6 +517,12 @@ public final class DictationController {
         // is launched before callbacks and HUD work so none can clip the first
         // word. Adoption still happens on this actor with the session token.
         launchCapture(session: session, disposition: disposition)
+        let beganAt = ContinuousClock.now
+        self.beganAt = beganAt
+        armMicrophoneStartWatchdog(
+            session: session,
+            until: beganAt.advanced(by: microphoneStartDeadline)
+        )
         // Snapshot the destination before publishing `.preparing`: an observer
         // may activate our own settings window and change focus.
         targetApplication = targetApplicationSnapshot()
@@ -594,6 +620,7 @@ public final class DictationController {
 
         activeRecordingURL = startedURL
         recordingStartedAt = now()
+        cancelMicrophoneStartWatchdog()
         state = .listening
         // `onStateChange` is an external reentrancy point: it may synchronously
         // stop or cancel. Never publish an obsolete Listening command or eat a
@@ -626,7 +653,7 @@ public final class DictationController {
         case .deferUntilListening:
             markStopRequested()
             deferredStopRequested = true
-            if let session = currentSession { schedulePreparingStopWatchdog(session: session) }
+            if let session = currentSession { stopArrivedBeforeTheMicrophoneOpened(session: session) }
         case .ignore, .noSession:
             break
         }
@@ -647,7 +674,7 @@ public final class DictationController {
             // nothing more: the microphone would stay on with no one listening.
             markStopRequested()
             deferredStopRequested = true
-            if let session = currentSession { schedulePreparingStopWatchdog(session: session) }
+            if let session = currentSession { stopArrivedBeforeTheMicrophoneOpened(session: session) }
         case .idle, .transcribing, .inserting:
             break
         }
@@ -674,7 +701,7 @@ public final class DictationController {
         case .preparing:
             markStopRequested()
             deferredStopRequested = true
-            if let session = currentSession { schedulePreparingStopWatchdog(session: session) }
+            if let session = currentSession { stopArrivedBeforeTheMicrophoneOpened(session: session) }
         case .idle, .transcribing, .inserting:
             return false
         }
@@ -698,8 +725,16 @@ public final class DictationController {
         // leave the microphone recording forever.
         isHandsFree = true
         deferredStopRequested = false
-        preparingStopWatchdog?.cancel()
-        preparingStopWatchdog = nil
+        // A tap's release may have pulled the watchdog in. That bound belonged
+        // to the tap; a hands-free take is ended only by a microphone that
+        // misses the deadline from its key-down.
+        cancelMicrophoneStartWatchdog()
+        if state == .preparing, let session = currentSession, let beganAt {
+            armMicrophoneStartWatchdog(
+                session: session,
+                until: beganAt.advanced(by: microphoneStartDeadline)
+            )
+        }
         stopRequestedAt = nil
         stopSLORequestedAt = nil
         isHandsFreeActive = true
@@ -712,8 +747,7 @@ public final class DictationController {
         // One input for all four stop paths: stop, stopHandsFree,
         // and delayed release - everyone comes here.
         markStopRequested()
-        preparingStopWatchdog?.cancel()
-        preparingStopWatchdog = nil
+        cancelMicrophoneStartWatchdog()
         guard let session = currentSession else { return }
         let task = Task { [weak self] in
             await self?.finalize(session: session)
@@ -725,41 +759,80 @@ public final class DictationController {
         presentOverlay(.transcribing, elapsed: elapsedSeconds(), session: session)
     }
 
-    private func schedulePreparingStopWatchdog(session: DictationSessionID) {
-        guard preparingStopWatchdog == nil, let stopSLORequestedAt else { return }
-        let deadline = stopSLORequestedAt.advanced(by: preparingStopDeadline)
-        let task = Task { [weak self] in
+    /// A release (or the second press of a hands-free take) arrived before the
+    /// microphone opened.
+    ///
+    /// The take can no longer record anything: it ends at the moment the
+    /// microphone finally opens, so its recording would be empty whatever
+    /// happens next. After a real hold the person spoke into a microphone that
+    /// was not there yet, and waiting for it only to drop an empty take
+    /// without a word is how a sentence vanished. They hear it now. A tap
+    /// shorter than any take is a change of mind; it stays quiet and waits at
+    /// most `preparingStopDeadline` for the microphone.
+    private func stopArrivedBeforeTheMicrophoneOpened(session: DictationSessionID) {
+        guard state == .preparing else { return }
+        if let beganAt,
+           beganAt.duration(to: .now) >= .seconds(DictationDurationPolicy.minimum) {
+            microphoneStartTookTooLong(session: session)
+        } else if let stopSLORequestedAt {
+            armMicrophoneStartWatchdog(
+                session: session,
+                until: stopSLORequestedAt.advanced(by: preparingStopDeadline)
+            )
+        }
+    }
+
+    /// Keeps the earlier of the current deadline and the new one.
+    private func armMicrophoneStartWatchdog(
+        session: DictationSessionID,
+        until deadline: ContinuousClock.Instant
+    ) {
+        if microphoneStartWatchdog != nil,
+           let current = microphoneStartWatchdogDeadline,
+           current <= deadline {
+            return
+        }
+        microphoneStartWatchdog?.cancel()
+        microphoneStartWatchdogDeadline = deadline
+        microphoneStartWatchdog = Task { [weak self] in
             let remaining = ContinuousClock.now.duration(to: deadline)
             if remaining > .zero { try? await Task.sleep(for: remaining) }
             guard !Task.isCancelled else { return }
-            await self?.preparingStopExpired(session: session)
+            self?.microphoneStartTookTooLong(session: session)
         }
-        preparingStopWatchdog = task
     }
 
-    private func preparingStopExpired(session: DictationSessionID) async {
-        guard isCurrent(session), state == .preparing, deferredStopRequested else { return }
-        let owner = preparingStopWatchdog
-        preparingStopWatchdog = nil
-        finalizationTask = owner
+    private func cancelMicrophoneStartWatchdog() {
+        microphoneStartWatchdog?.cancel()
+        microphoneStartWatchdog = nil
+        microphoneStartWatchdogDeadline = nil
+    }
+
+    /// The microphone did not open in time. The take is contained and kept
+    /// for recovery, never deleted; the notice carries the attention sound.
+    private func microphoneStartTookTooLong(session: DictationSessionID) {
+        guard isCurrent(session), state == .preparing, finalizationTask == nil else { return }
+        cancelMicrophoneStartWatchdog()
         cancellationRequested = true
         streamedSegments?.cancel()
         currentDisposition?.keepInBackground()
-        state = .transcribing
-        guard !Task.isCancelled, isCurrent(session) else { return }
-
         let capture = capture
-        Task.detached(priority: .userInitiated) {
-            await capture.containRecording(session: session, expectedURL: nil)
+        let task = Task { [weak self] in
+            Task.detached(priority: .userInitiated) {
+                await capture.containRecording(session: session, expectedURL: nil)
+            }
+            guard let self else { return }
+            let notice = DictationNotice(
+                kind: .failure,
+                message: L10n.tr("Starting the microphone took too long. Dictation was stopped."),
+                wordsDidNotLand: true,
+                reason: .microphoneStartTimedOut
+            )
+            await self.report(notice, session: session, allowCancellation: true)
+            await self.cleanup(session: session)
         }
-        let notice = DictationNotice(
-            kind: .failure,
-            message: L10n.tr("Starting the microphone took too long. Dictation was stopped."),
-            wordsDidNotLand: true,
-            reason: .microphoneStartTimedOut
-        )
-        await report(notice, session: session, allowCancellation: true)
-        await cleanup(session: session)
+        finalizationTask = task
+        state = .transcribing
     }
 
     /// Whether the panel is currently telling someone that the model is still
@@ -790,8 +863,7 @@ public final class DictationController {
     private func forgetFinalization(session: DictationSessionID) {
         guard isCurrent(session) else { return }
         finalizationTask = nil
-        preparingStopWatchdog?.cancel()
-        preparingStopWatchdog = nil
+        cancelMicrophoneStartWatchdog()
     }
 
     private func freezeCapture(
@@ -1906,8 +1978,8 @@ public final class DictationController {
         // to stop recognition, but it must keep the raw take; never infer file
         // deletion from this transient control-flow flag.
         activeRecoveryTickets[session] = nil
-        preparingStopWatchdog?.cancel()
-        preparingStopWatchdog = nil
+        cancelMicrophoneStartWatchdog()
+        beganAt = nil
         currentSession = nil
         currentDisposition = nil
         finalizationTask = nil
