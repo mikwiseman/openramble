@@ -25,7 +25,7 @@
   },
   "id": "openramble-0.32.0"
  },
- "scored_at": "2026-10-20T00:02:43.657716+00:00",
+ "scored_at": "2026-10-20T05:00:55.408116+00:00",
  "sessions": [
   {
    "started": {
@@ -126,6 +126,110 @@
    "suites": [
     "langbug",
     "hour"
+   ],
+   "host": {
+    "hardware": [
+     "Mac16,8",
+     "Apple M4 Pro",
+     "25769803776",
+     "14"
+    ],
+    "macos": "27.0.1",
+    "pressure_workers": 14
+   },
+   "installed_app_running": true
+  },
+  {
+   "started": {
+    "at": "2026-10-20T00:05:52.836107+00:00",
+    "thermal": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+    "load_average": [
+     6.81787109375,
+     5.14208984375,
+     4.31494140625
+    ]
+   },
+   "suites": [
+    "speed-process",
+    "speed-warm"
+   ],
+   "host": {
+    "hardware": [
+     "Mac16,8",
+     "Apple M4 Pro",
+     "25769803776",
+     "14"
+    ],
+    "macos": "27.0.1",
+    "pressure_workers": 14
+   },
+   "installed_app_running": true
+  },
+  {
+   "started": {
+    "at": "2026-10-20T00:16:13.430722+00:00",
+    "thermal": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+    "load_average": [
+     36.70947265625,
+     26.5029296875,
+     15.8857421875
+    ]
+   },
+   "suites": [
+    "speed-process",
+    "speed-warm"
+   ],
+   "host": {
+    "hardware": [
+     "Mac16,8",
+     "Apple M4 Pro",
+     "25769803776",
+     "14"
+    ],
+    "macos": "27.0.1",
+    "pressure_workers": 14
+   },
+   "installed_app_running": true
+  },
+  {
+   "started": {
+    "at": "2026-10-20T00:42:49.393524+00:00",
+    "thermal": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+    "load_average": [
+     27.87353515625,
+     36.2822265625,
+     33.490234375
+    ]
+   },
+   "suites": [
+    "speed-process",
+    "speed-warm"
+   ],
+   "host": {
+    "hardware": [
+     "Mac16,8",
+     "Apple M4 Pro",
+     "25769803776",
+     "14"
+    ],
+    "macos": "27.0.1",
+    "pressure_workers": 14
+   },
+   "installed_app_running": true
+  },
+  {
+   "started": {
+    "at": "2026-10-20T00:47:08.851087+00:00",
+    "thermal": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+    "load_average": [
+     5.55224609375,
+     20.53759765625,
+     27.3212890625
+    ]
+   },
+   "suites": [
+    "speed-process",
+    "speed-warm"
    ],
    "host": {
     "hardware": [
@@ -483,6 +587,123 @@
     "insertion_rate": 0.012896569512509672
    }
   },
+  "latency_process": {
+   "quiet": {
+    "runs": 36,
+    "success": 36,
+    "n": 36,
+    "p50": 0.42439433299999996,
+    "p95": 0.620101417,
+    "p99": 0.8253940459499997,
+    "max": 0.910809125,
+    "mean": 0.4772984248055556,
+    "max_rss_bytes": 949157888
+   },
+   "load": {
+    "runs": 36,
+    "success": 36,
+    "n": 36,
+    "p50": 0.541057437,
+    "p95": 0.7353905735,
+    "p99": 0.8066684771999999,
+    "max": 0.841701625,
+    "mean": 0.56510635875,
+    "max_rss_bytes": 951697408
+   }
+  },
+  "latency_warm": {
+   "quiet": {
+    "all": {
+     "n": 120,
+     "p50": 0.324449896,
+     "p95": 1.45812521935,
+     "p99": 1.46173729804,
+     "max": 1.462904416,
+     "mean": 0.5180406448333333
+    },
+    "short": {
+     "n": 40,
+     "p50": 0.073222729,
+     "p95": 0.12218903065,
+     "p99": 0.12236442838,
+     "max": 0.122453917,
+     "mean": 0.07938361985
+    },
+    "long": {
+     "n": 80,
+     "p50": 0.615000854,
+     "p95": 1.45861414645,
+     "p99": 1.46221250872,
+     "max": 1.462904416,
+     "mean": 0.7373691573250001
+    }
+   },
+   "load": {
+    "all": {
+     "n": 120,
+     "p50": 0.431263417,
+     "p95": 2.01242351935,
+     "p99": 2.05408545827,
+     "max": 2.076596542,
+     "mean": 0.688290641375
+    },
+    "short": {
+     "n": 40,
+     "p50": 0.10227947949999999,
+     "p95": 0.17104121284999999,
+     "p99": 0.18821203962999997,
+     "max": 0.199116667,
+     "mean": 0.1070077688
+    },
+    "long": {
+     "n": 80,
+     "p50": 0.7878927295,
+     "p95": 2.0158239291499997,
+     "p99": 2.0593218750699998,
+     "max": 2.076596542,
+     "mean": 0.9789320776625001
+    }
+   },
+   "first_request_after_load": {
+    "n": 10,
+    "p50": 0.6177019375,
+    "p95": 1.45114654375,
+    "p99": 1.45371680875,
+    "max": 1.4543593750000001,
+    "mean": 0.6726261001
+   }
+  },
+  "load": {
+   "model_load": {
+    "n": 10,
+    "p50": 0.2235056045,
+    "p95": 0.2378881061,
+    "p99": 0.24181302121999998,
+    "max": 0.24279425,
+    "mean": 0.22623395419999998
+   },
+   "warmup_inference": {
+    "n": 10,
+    "p50": 0.036950291499999996,
+    "p95": 0.0449783042,
+    "p99": 0.04515779444,
+    "max": 0.045202667,
+    "mean": 0.0370862167
+   },
+   "process_to_ready": {
+    "n": 10,
+    "p50": 0.2839200000016717,
+    "p95": 0.3213470622024033,
+    "p99": 0.3272698124439921,
+    "max": 0.3287505000043893,
+    "mean": 0.292258316699008
+   },
+   "peak_rss_bytes": 1018593280
+  },
+  "runner_parity": {
+   "inputs": 6,
+   "identical": 6
+  },
   "model": {
    "bytes": 739508576,
    "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
@@ -533,7 +754,9 @@
    "hour.jsonl": "f77a2ec332cd88b9da82a3c50fc0750bd38c0645f827f1c2c5158fd27736e4c3",
    "langbug.jsonl": "01daf624a026ef81c530a688631958af4d960ae81307c12f16ee248c8a80474d",
    "noise.jsonl": "25a37d8bc3f9a12ce4e58831cd49fb6bedca01f8df29b1fc8ddc7a0afc9593cc",
-   "sessions.jsonl": "78341abe32b70b7d8975a0a36f9848c9483b62e12f85007a02668d27e8ded2e0",
+   "sessions.jsonl": "5b5307247527e6241c8d90752014db8b5772655a3a9080de3e917630fc162a25",
+   "speed-process.jsonl": "6e522595348ad995b4563309f243134cadc97153aba9d2b7585ed338d53c87d8",
+   "speed-warm.jsonl": "235bbf522561921fb40d14062d5d87e0311cfb2274aa6bd8834023e99b915e87",
    "takes.jsonl": "918df8f82b7b56af9aa7bc6c8b3dc30243525a9fc570610267d9969838ba4f58"
   }
  }

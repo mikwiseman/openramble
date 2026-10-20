@@ -25,9 +25,15 @@ Result so far:
 - The LocalASR end-to-end tests with the model pass under both runtimes (21
   tests, 3 skipped, 0 failures), and the unit tests pass (163 tests, 9 skipped).
 - The runtime binary passes the network audit.
-- Speed and memory: pending the interleaved speed run.
+- Speed and memory, in the interleaved speed run: over all speed inputs, warm
+  p50 327.4 against 323.5 ms and p95 1,482 against 1,459 ms idle, 415.7
+  against 413.6 ms and 2,010 against 1,988 ms under load, whole-process p50
+  0.429 against 0.431 s, peak memory 1.07 against 1.02 GB. All within the
+  preregistered limits. On short takes alone (under 15 s) 0.4.0 is about 8%
+  slower: p50 78 against 72 ms, p95 132 against 122 ms. That passes the rule,
+  which pools all inputs, and it is the cost to watch.
 
-Decision: pending rules 4 and 5.
+Decision: all seven rules pass; runtime 0.4.0 is adopted.
 
 ## H2. A runtime built from source is equivalent to the upstream binary
 
@@ -67,7 +73,15 @@ Ultra's zero wrong-script count is not empty output: its 199 private
 transcripts have a median of 14 words and no Cyrillic letter at all, where
 v3's contain 738 Cyrillic letters.
 
-Decision: pending gates 5 and 6 (speed and memory) for Ultra.
+Speed and memory, interleaved with the others: Ultra's warm p95 is 1,615
+against 1,482 ms idle and 2,126 against 2,010 ms under load (both within
+1.15 times v3), its short-take p50 and p95 are 75 and 125 ms (v3 on 0.4.0: 78
+and 132), and its peak memory is 1.06 against 1.07 GB. Nemotron's warm p95 is
+2,846 and 4,151 ms, beyond the limit. `decide.py` applies every rule and
+writes `decision.json`.
+
+Decision: Parakeet Ultra passes the WER rule and all seven gates and is the
+recommended model. Nemotron fails the WER rule and gates 4, 5 and 7.
 
 ## H4. Phrase boosting raises term recall without hurting general speech
 
@@ -132,7 +146,13 @@ vocabulary term ("sintra" to "sentry", "features" to "feature"). Errors on
 names the person did not ask for are the failure the plan ranks worst, and an
 error toward a term the person taught is predictable and visible.
 
-Decision: carry H4c forward, pending rule 5. H4b stays recorded as passing.
+Rule 5, in an interleaved warm run of the same runtime with and without the 60
+terms: p50 327.8 against 326.3 ms idle (+0.5%) and 428.1 against 421.9 ms under
+load (+1.5%), within the 5% limit.
+
+Decision: H4c passes all five rules and is adopted, pending a runtime build
+that ships it (a fork release or an upstream merge, both of which need Mik's
+approval). H4b stays recorded as passing rules 1 to 4.
 Russian speech that says English terms the Russian way is not helped by either
 variant, so for Russian the text dictionary stays the tool.
 
@@ -144,6 +164,16 @@ speed inputs and the six long takes on a quiet Mac. The tuning runs already
 show the decoder at about 43 ms per frozen FLEURS file against roughly 115 ms
 of engine time, so the decoder is about 38% of the engine and the mel front
 end plus the Metal encoder the rest.
+
+Result (`profile-v3-0.4.0.json`, `profile-ultra-0.4.0.json`; one CLI process,
+one decoder thread, Metal, medians of six runs on a quiet Mac). The mel front
+end is under 2 ms. The encoder grows roughly linearly at about 7 ms per second
+of audio: 37 to 50 ms for 4.5 s, 61 to 73 ms for 9 to 11 s, 135 to 170 ms for
+23 to 29 s, and about 1 s for a two-minute take decoded in one pass. The
+decoder takes about 3 to 4 ms per second of audio: 17 to 22 ms for 4.5 s and
+93 to 117 ms for 23 to 29 s. For a typical dictation of 5 to 10 s the encoder
+is about 60% of the engine and the decoder about 40%. Ultra's split is the
+same.
 
 ## H8. The joint network's output layer in the model's own precision
 
@@ -220,3 +250,55 @@ can offer live text. The whole-product audit also found that only 46 of 90
 long takes produced any streamed segment with today's pause-based segmenter,
 which is a separate question about the app's segmenter, owned outside this
 program.
+
+### H8 result
+
+Measured on the frozen 200 FLEURS files with one build whose joint weight type
+is chosen at run time (`profile-joint-*.json`, `v3-joint-*` candidates). The
+median decoder time per file is 40.4 ms in F32, 30.0 ms in the model's Q8_0
+(−26%) and 32.3 ms in F16 (−20%); the encoder is unchanged at 64 ms. Accuracy
+holds: against F32, Q8_0 changes 11 of 1,422 FLEURS transcripts with a pooled
+WER difference of −0.013 pp (95% interval −0.034 to +0.003), F16 changes one
+(−0.003 pp), neither invents words, and the wrong-script count is unchanged.
+The F32 control is identical to upstream 0.4.0 on all 1,422 utterances.
+
+Decision: not adopted. Both variants miss rule 1, a 30% decoder reduction.
+Q8_0 saves about 10 ms on a 10-second take at no measured accuracy cost; it is
+a candidate to combine with the predictor's own weights (H8c, below) and
+measure again.
+
+## H10 result
+
+Measured with transcribe.cpp 0.4.0 on the CPU backend, v3 Q8, the six speed
+inputs, 12 alternating blocks (`cpu-threads.json`). Median per input: idle,
+1,249 ms with one thread and 346 ms with four (3.6 times faster); under the
+14-process load, 1,912 ms with one thread and 3,578 ms with four (1.9 times
+slower). Transcripts are identical.
+
+Decision: not adopted. Rule 2 fails: under load, four threads lose to one by
+almost a factor of two, for the same spin-barrier reason the Mac pins one
+decoder thread. The change was reverted. The next hypothesis is to split the
+two: four threads for the encoder and one for the decoder (H10b), which needs
+a runtime parameter for decoder threads.
+
+## H11 result
+
+Against Ultra Q8_0 on all 1,422 FLEURS utterances: Q5_K_M (550 MB) pooled WER
+−0.007 pp (95% interval −0.087 to +0.072); Q4_K_M (486 MB) +0.071 pp (−0.040
+to +0.183), English −0.06 and Russian +0.19 pp. Neither invents a word or
+writes the wrong alphabet, hour-file deletions stay within 0.2 points (Q4_K_M:
+English 2.71% against 2.97%, Russian 0.85% against 0.79%), and in an
+interleaved warm run their p95 stays within 3% of Q8_0 in every bucket.
+
+Decision: both pass; under the rule the smaller file is chosen, so the
+recommended download is Parakeet Ultra Q4_K_M, 486 MB instead of 740 MB.
+
+## Proposed next hypotheses
+
+- **H8c.** The decoder's joint output layer and LSTM weights in the model's
+  Q8_0 together, against the same 30% decoder rule.
+- **H10b.** Four encoder threads and one decoder thread on the CPU backend.
+- **H12.** The encoder is now the larger share. Test a cached encoder graph
+  per input length (the runtime rebuilds and re-allocates the graph on every
+  run) as the cheap step, then an ANE encoder only with a never-slower gate,
+  cold and warm, and an automatic Metal fallback.

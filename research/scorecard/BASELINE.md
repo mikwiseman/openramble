@@ -61,11 +61,28 @@ second apart. That is the known v3 behavior described in
 
 ## Speed and memory
 
-Pending. The interleaved speed run covers both baselines and all bake-off
-candidates in one session, so their numbers share the same machine state. It
-starts only when the Mac is at least 85% idle with no other recognition
-process; on 20 October sibling builds and Spotlight indexing kept the Mac
-below that, and this section is filled in when the run completes.
+One interleaved run on 20 October covered both baselines and the bake-off
+candidates, so their numbers share the same machine state. Each timed block
+started only with the Mac at least 75% idle and no other recognition process;
+quiet and loaded blocks alternate in ABBA order.
+
+| | OpenRamble 0.32.0 | whisper.cpp Turbo |
+|---|---:|---:|
+| Warm, short takes (under 15 s), p50 / p95 | 73 / 122 ms | not measurable |
+| Warm, short takes under 14 busy CPUs, p50 / p95 | 102 / 171 ms | not measurable |
+| Warm, 33 to 129 s takes decoded whole, p50 / p95 | 615 / 1,459 ms | not measurable |
+| Whole process, six FLEURS files, p50 / p95 idle | 0.424 / 0.620 s | 1.666 / 2.135 s |
+| Whole process under 14 busy CPUs, p50 / p95 | 0.541 / 0.735 s | 1.951 / 2.291 s |
+| Model load, warm file cache | 0.22 s | — |
+| Peak resident memory, warm / whole process | 1.02 / 0.95 GB | — / 2.02 GB |
+
+Whisper has no persistent mode in its CLI, so its warm latency is not
+measured; its whole-process time includes loading a 1.6 GB model each time.
+The warm short-take numbers are the engine's share of a dictation: the app's
+journal reports 167 ms of engine time at p50 for real takes, which include
+longer ones. The long takes are decoded whole here; the app decodes long
+dictations in segments while the person is still speaking, so this row is the
+upper bound for a take that never pauses.
 
 ## Limits
 

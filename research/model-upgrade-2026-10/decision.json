@@ -1,0 +1,317 @@
+{
+ "aa": [
+  {
+   "rule": "1. >= 99% identical and pooled WER within +-0.10 pp",
+   "values": {
+    "identical": "1420/1422",
+    "pooled_pp": -0.003,
+    "ci95_pp": [
+     -0.01,
+     0.0
+    ]
+   },
+   "pass": true
+  },
+  {
+   "rule": "2. wrong script and invented words not more",
+   "values": {
+    "wrong": [
+     20,
+     20
+    ],
+    "invented": [
+     0,
+     0
+    ]
+   },
+   "pass": true
+  },
+  {
+   "rule": "3. hour deleted words within 0.2 pp",
+   "values": {
+    "en-3540s": [
+     0.04797523858653598,
+     0.04797523858653598
+    ],
+    "ru-3540s": [
+     0.0171136203246295,
+     0.0171136203246295
+    ]
+   },
+   "pass": true
+  },
+  {
+   "rule": "4. warm p50/p95 within 5% + 2 ms; process p50 within 10%",
+   "values": {
+    "warm quiet p50 ms": [
+     323.5,
+     327.4
+    ],
+    "warm quiet p95 ms": [
+     1459.2,
+     1482.2
+    ],
+    "warm load p50 ms": [
+     413.6,
+     415.7
+    ],
+    "warm load p95 ms": [
+     1988.3,
+     2009.7
+    ],
+    "process quiet p50 s": [
+     0.431,
+     0.429
+    ]
+   },
+   "pass": true
+  },
+  {
+   "rule": "5. peak memory within 5%",
+   "values": {
+    "bytes": [
+     1016102912,
+     1065926656
+    ]
+   },
+   "pass": true
+  },
+  {
+   "rule": "6. no new test failure",
+   "values": "recorded in HYPOTHESES.md: end-to-end 21/3/0 under both; unit 163/9/0",
+   "pass": true
+  },
+  {
+   "rule": "7. binary audit",
+   "values": "scripts/check-network-surface.sh passes on the 0.4.0 binary",
+   "pass": true
+  }
+ ],
+ "bakeoff": {
+  "parakeet-ultra": {
+   "rows": [
+    {
+     "rule": "WER: upper 95% bound below zero; no language worse by > 0.25 pp",
+     "values": {
+      "pooled_pp": -0.731,
+      "ci95_pp": [
+       -0.907,
+       -0.554
+      ],
+      "by_language_pp": {
+       "en": -0.535,
+       "ru": -0.921
+      }
+     },
+     "pass": true
+    },
+    {
+     "rule": "Gate 1: no failed recognition",
+     "values": {
+      "failures": 0
+     },
+     "pass": true
+    },
+    {
+     "rule": "Gate 2: invented words not more",
+     "values": [
+      0,
+      0
+     ],
+     "pass": true
+    },
+    {
+     "rule": "Gate 3: wrong script not more",
+     "values": [
+      20,
+      0
+     ],
+     "pass": true
+    },
+    {
+     "rule": "Gate 4: hour deletions within +0.5 pp; alternating hour WER within +1 pp",
+     "values": {
+      "deleted_pct": {
+       "en-3540s": [
+        4.8,
+        2.97
+       ],
+       "ru-3540s": [
+        1.71,
+        0.79
+       ]
+      },
+      "mixed_wer_pct": [
+       39.04,
+       39.79
+      ]
+     },
+     "pass": true
+    },
+    {
+     "rule": "Gate 5: warm p95 within 1.15x, idle and load",
+     "values": {
+      "quiet": [
+       1482.2,
+       1614.7
+      ],
+      "load": [
+       2009.7,
+       2125.9
+      ]
+     },
+     "pass": true
+    },
+    {
+     "rule": "Gate 6: peak memory within 1.10x",
+     "values": [
+      1065926656,
+      1057783808
+     ],
+     "pass": true
+    },
+    {
+     "rule": "Gate 7: punctuation and capitalization F1 within -1 pp",
+     "values": {
+      "punctuation": {
+       "en": [
+        80.89,
+        83.28
+       ],
+       "ru": [
+        90.77,
+        92.62
+       ]
+      },
+      "capitalization": {
+       "en": [
+        91.42,
+        92.85
+       ],
+       "ru": [
+        90.88,
+        92.83
+       ]
+      }
+     },
+     "pass": true
+    }
+   ],
+   "pooled_wer": 0.047757069192140476,
+   "eligible": true
+  },
+  "nemotron-3.5": {
+   "rows": [
+    {
+     "rule": "WER: upper 95% bound below zero; no language worse by > 0.25 pp",
+     "values": {
+      "pooled_pp": 6.404,
+      "ci95_pp": [
+       5.805,
+       7.026
+      ],
+      "by_language_pp": {
+       "en": 5.97,
+       "ru": 6.822
+      }
+     },
+     "pass": false
+    },
+    {
+     "rule": "Gate 1: no failed recognition",
+     "values": {
+      "failures": 0
+     },
+     "pass": true
+    },
+    {
+     "rule": "Gate 2: invented words not more",
+     "values": [
+      0,
+      0
+     ],
+     "pass": true
+    },
+    {
+     "rule": "Gate 3: wrong script not more",
+     "values": [
+      20,
+      0
+     ],
+     "pass": true
+    },
+    {
+     "rule": "Gate 4: hour deletions within +0.5 pp; alternating hour WER within +1 pp",
+     "values": {
+      "deleted_pct": {
+       "en-3540s": [
+        4.8,
+        3.21
+       ],
+       "ru-3540s": [
+        1.71,
+        1.08
+       ]
+      },
+      "mixed_wer_pct": [
+       39.04,
+       46.8
+      ]
+     },
+     "pass": false
+    },
+    {
+     "rule": "Gate 5: warm p95 within 1.15x, idle and load",
+     "values": {
+      "quiet": [
+       1482.2,
+       2845.8
+      ],
+      "load": [
+       2009.7,
+       4150.6
+      ]
+     },
+     "pass": false
+    },
+    {
+     "rule": "Gate 6: peak memory within 1.10x",
+     "values": [
+      1065926656,
+      1112768512
+     ],
+     "pass": true
+    },
+    {
+     "rule": "Gate 7: punctuation and capitalization F1 within -1 pp",
+     "values": {
+      "punctuation": {
+       "en": [
+        80.89,
+        77.95
+       ],
+       "ru": [
+        90.77,
+        85.33
+       ]
+      },
+      "capitalization": {
+       "en": [
+        91.42,
+        89.03
+       ],
+       "ru": [
+        90.88,
+        88.4
+       ]
+      }
+     },
+     "pass": false
+    }
+   ],
+   "pooled_wer": 0.11910619797108288,
+   "eligible": false
+  }
+ },
+ "recommendation": "parakeet-ultra"
+}

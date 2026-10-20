@@ -49,17 +49,17 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;max-width:75ch}
 <tr><th scope="row">Hour RU: deleted words</th><td class="">1.71%</td><td class="">1.71%</td><td class="best">0.79%</td><td class="">1.08%</td><td class="">1.52%</td><td class="target">≤ 1%</td></tr>
 <tr><th scope="row">Hour RU↔EN: WER</th><td class="">39.07%</td><td class="best">39.04%</td><td class="">39.79%</td><td class="">46.80%</td><td class="">64.68%</td><td class="target">halve it</td></tr>
 <tr class="family"><th colspan="7">Speed</th></tr>
-<tr><th scope="row">Warm, short take p50 / p95</th><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="target">p95 ≤ 250 ms</td></tr>
-<tr><th scope="row">Warm, long take p50 / p95</th><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="target">p95 ≤ 400 ms</td></tr>
-<tr><th scope="row">Warm, 14 busy CPUs p50 / p95</th><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="target">≤ 1.3× idle</td></tr>
-<tr><th scope="row">Warm p99, idle / load</th><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="target"></td></tr>
-<tr><th scope="row">Whole process p50 / p95, idle</th><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="target"></td></tr>
-<tr><th scope="row">Whole process p50 / p95, 14 busy CPUs</th><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="target"></td></tr>
+<tr><th scope="row">Warm, short take p50 / p95</th><td class="best">73 / 122</td><td class="">78 / 132</td><td class="">75 / 125</td><td class="">144 / 242</td><td class="">—</td><td class="target">p95 ≤ 250 ms</td></tr>
+<tr><th scope="row">Warm, long take p50 / p95</th><td class="best">615 / 1459</td><td class="">620 / 1484</td><td class="">637 / 1616</td><td class="">1145 / 2847</td><td class="">—</td><td class="target">p95 ≤ 400 ms</td></tr>
+<tr><th scope="row">Warm, 14 busy CPUs p50 / p95</th><td class="">431 / 2012</td><td class="best">416 / 2010</td><td class="">431 / 2126</td><td class="">842 / 4151</td><td class="">—</td><td class="target">≤ 1.3× idle</td></tr>
+<tr><th scope="row">Warm p99, idle / load</th><td class="best">1462 / 2054 ms</td><td class="">1487 / 2088 ms</td><td class="">1622 / 2268 ms</td><td class="">2865 / 4319 ms</td><td class="">—</td><td class="target"></td></tr>
+<tr><th scope="row">Whole process p50 / p95, idle</th><td class="">424 / 620</td><td class="">429 / 601</td><td class="best">433 / 598</td><td class="">566 / 894</td><td class="">1666 / 2135</td><td class="target"></td></tr>
+<tr><th scope="row">Whole process p50 / p95, 14 busy CPUs</th><td class="best">541 / 735</td><td class="">551 / 806</td><td class="">605 / 778</td><td class="">664 / 1120</td><td class="">1951 / 2291</td><td class="target"></td></tr>
 <tr><th scope="row">Hour file, English</th><td class="best">42.62 s</td><td class="">42.63 s</td><td class="">46.10 s</td><td class="">80.38 s</td><td class="">144.58 s</td><td class="target">≤ 30 s</td></tr>
 <tr class="family"><th colspan="7">Resources</th></tr>
-<tr><th scope="row">Model load (warm file cache)</th><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="target">≤ 1 s</td></tr>
-<tr><th scope="row">Peak resident memory</th><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="target">≤ 1 GB</td></tr>
-<tr><th scope="row">Peak memory, whole process</th><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="">—</td><td class="target"></td></tr>
+<tr><th scope="row">Model load (warm file cache)</th><td class="best">0.22 s</td><td class="">0.23 s</td><td class="">0.25 s</td><td class="">0.25 s</td><td class="">—</td><td class="target">≤ 1 s</td></tr>
+<tr><th scope="row">Peak resident memory</th><td class="best">1.02 GB</td><td class="">1.07 GB</td><td class="">1.06 GB</td><td class="">1.11 GB</td><td class="">—</td><td class="target">≤ 1 GB</td></tr>
+<tr><th scope="row">Peak memory, whole process</th><td class="best">0.95 GB</td><td class="">0.99 GB</td><td class="">0.99 GB</td><td class="">1.04 GB</td><td class="">2.02 GB</td><td class="target"></td></tr>
 <tr><th scope="row">Model file</th><td class="best">740 MB</td><td class="best">740 MB</td><td class="">740 MB</td><td class="">751 MB</td><td class="">1625 MB</td><td class="target"></td></tr>
 </tbody></table></div>
 <h2>Not measured yet</h2>
