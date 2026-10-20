@@ -22,7 +22,7 @@ spec = importlib.util.spec_from_file_location('scorecard', REPO / 'scripts/score
 sc = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sc)
 
-WEIGHTS = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0]
+WEIGHTS = [0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0]
 
 
 def recognize(cli, model, vocabulary, weight, fixtures):
@@ -54,9 +54,14 @@ def main():
               'dev_inputs': len(dev), 'fleurs_inputs': len(data['fleurs']), 'weights': {}}
     for weight in WEIGHTS:
         entry = {}
-        for name, fixtures in (('dev', dev), ('fleurs', data['fleurs'])):
+        noise = [f for f in data['generated'] if f['suite'] == 'noise']
+        for name, fixtures in (('dev', dev), ('fleurs', data['fleurs']), ('noise', noise)):
             texts, decode_ms = recognize(cli, model, vocabulary, weight, fixtures)
             entry[name] = {'decode_ms_total': decode_ms}
+            if name == 'noise':
+                entry[name]['invented_words'] = sum(sc.invented_words(t)[0] for _, t in texts)
+                entry[name]['transcripts'] = {f['id']: t for f, t in texts}
+                continue
             for language in ('en', 'ru'):
                 rows = [(f, t) for f, t in texts if f['language'] == language]
                 entry[name][language] = {
@@ -66,6 +71,7 @@ def main():
         report['weights'][str(weight)] = entry
         summary = {lang: (entry['dev'][lang]['terms']['recall'], entry['dev'][lang]['wer']['wer'],
                           entry['fleurs'][lang]['wer']['wer']) for lang in ('en', 'ru')}
+        summary['invented'] = entry['noise']['invented_words']
         print(weight, json.dumps(summary), flush=True)
     (HERE / 'tuning.json').write_text(json.dumps(report, ensure_ascii=False, indent=1) + '\n')
 
