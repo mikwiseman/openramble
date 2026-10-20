@@ -209,8 +209,8 @@ impl FfiGestureMachine {
         self.locked().handle(event).into()
     }
 
-    pub fn handle_foreign_key_down(&self) -> FfiGestureAction {
-        self.locked().handle_foreign_key_down().into()
+    pub fn handle_foreign_key_down(&self, at: Duration) -> FfiGestureAction {
+        self.locked().handle_foreign_key_down(at).into()
     }
 
     pub fn rebind(&self) -> FfiGestureAction {
