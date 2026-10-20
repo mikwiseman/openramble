@@ -1,0 +1,24 @@
+{
+  "label": "v3 with vocabulary (H4c)",
+  "summary": "transcribe.cpp 0.4.0 + phrase boosting H4c (34a8b356), 60 terms",
+  "order": 7,
+  "model": {
+    "name": "parakeet-tdt-0.6b-v3 Q8_0",
+    "path": "models/parakeet-tdt-0.6b-v3-Q8_0/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+    "source": "https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/blob/85ac09ea12fc4b1112fa76810059364bc6adc9de/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "license": "CC-BY-4.0"
+  },
+  "runtime": "transcribe.cpp v0.4.0 plus parakeet phrase boosting H4c (re-ranks emitted tokens, no bonus on a term’s first piece), commit 34a8b356, default boost 8.0, built by scripts/build-transcribe-xcframework.sh; Metal, one decoder thread",
+  "process": {
+    "kind": "asr-bench"
+  },
+  "warm": {
+    "kind": "asr-bench",
+    "commit": "4bd185f9f63ed6656447ab6844d9295d7128f8ac",
+    "xcframework_zip": "builds/xcframework-h4c/TranscribeCpp-v0.4.0-4-g34a8b356.xcframework.zip",
+    "xcframework_sha256": "9cdd006943204845877ae394949c9c710d9c4375129d1243a966f24b4a9ad63b"
+  },
+  "index": true,
+  "vocabulary": "research/term-biasing-2026-10/vocabulary.txt"
+}

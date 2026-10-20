@@ -73,7 +73,7 @@ def main():
                           entry['fleurs'][lang]['wer']['wer']) for lang in ('en', 'ru')}
         summary['invented'] = entry['noise']['invented_words']
         print(weight, json.dumps(summary), flush=True)
-    (HERE / 'tuning.json').write_text(json.dumps(report, ensure_ascii=False, indent=1) + '\n')
+    (HERE / os.environ.get('TUNING_OUT', 'tuning.json')).write_text(json.dumps(report, ensure_ascii=False, indent=1) + '\n')
 
 
 if __name__ == '__main__':
