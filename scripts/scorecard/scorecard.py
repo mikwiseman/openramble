@@ -854,9 +854,9 @@ def conditions(blocks):
     return [('quiet', 'load', 'load', 'quiet')[i % 4] for i in range(blocks)]
 
 
-def speed_process(specs, data, repeats=6):
+def speed_process(specs, data, repeats=6, suite='speed-process'):
     files = speed_files(data['fleurs'])
-    done = set.intersection(*({(r['block'], r['fixture']) for r in observations(s['id'], 'speed-process')
+    done = set.intersection(*({(r['block'], r['fixture']) for r in observations(s['id'], suite)
                                if r['candidate_count'] == len(specs)} for s in specs))
     for block, condition in enumerate(conditions(repeats * 2)):
         if all((block, f['id']) in done for f in files):
@@ -871,15 +871,15 @@ def speed_process(specs, data, repeats=6):
                     row = run_process(spec, f, f'speed-{block}-{f["id"]}')
                     row.update({'fixture': f['id'], 'runner': 'process', 'condition': condition, 'block': block,
                                 'order': [specs[i]['id'] for i in sequence], 'candidate_count': len(specs), **quiet})
-                    record(spec['id'], 'speed-process', row)
+                    record(spec['id'], suite, row)
 
 
-def speed_warm(specs, data, repeats=10):
+def speed_warm(specs, data, repeats=10, suite='speed-warm'):
     specs = [s for s in specs if s.get('warm')]
     if not specs:
         return
     files = speed_files(data['fleurs']) + [f for f in data['generated'] if f['suite'] == 'takes']
-    done = set.intersection(*({r['block'] for r in observations(s['id'], 'speed-warm')
+    done = set.intersection(*({r['block'] for r in observations(s['id'], suite)
                                if r['candidate_count'] == len(specs) and r['fixture'] == '_ready'} for s in specs))
     rng = random.Random(SEED)
     for block, condition in enumerate(conditions(repeats * 2)):
@@ -897,7 +897,7 @@ def speed_warm(specs, data, repeats=10):
                 try:
                     for f in sequence:
                         reply = serve.request(f['path'])
-                        record(spec['id'], 'speed-warm', {
+                        record(spec['id'], suite, {
                             'fixture': f['id'], 'runner': 'warm', 'condition': condition, 'block': block,
                             'first_request': first, 'ok': 'error' not in reply, 'text': reply.get('text', ''),
                             'wall_seconds': reply.get('wallSeconds'), 'engine_seconds': reply.get('engineSeconds'),
@@ -906,7 +906,7 @@ def speed_warm(specs, data, repeats=10):
                         first = False
                 finally:
                     rss = serve.close()
-                record(spec['id'], 'speed-warm', {'fixture': '_ready', 'block': block, 'condition': condition,
+                record(spec['id'], suite, {'fixture': '_ready', 'block': block, 'condition': condition,
                                                   'candidate_count': len(specs), 'max_rss_bytes': rss, **quiet, **serve.ready})
 
 
@@ -926,7 +926,7 @@ def wait_for_lane(patience=3600):
         time.sleep(30)
 
 
-def run(names, suites):
+def run(names, suites, tag=None):
     wait_for_lane()
     data = inputs()
     specs = [candidate(n) for n in names]
@@ -943,10 +943,12 @@ def run(names, suites):
                    'installed_app_running': bool(subprocess.run(['pgrep', '-x', 'OpenRamble'], capture_output=True).stdout)}
         record(spec['id'], 'sessions', session)
     for suite in suites:
+        # A tag keeps a side comparison's timings in files of their own, so
+        # they never mix with a candidate's scorecard speed.
         if suite == 'speed-process':
-            speed_process(specs, data)
+            speed_process(specs, data, suite='speed-process' + (f'@{tag}' if tag else ''))
         elif suite == 'speed-warm':
-            speed_warm(specs, data)
+            speed_warm(specs, data, suite='speed-warm' + (f'@{tag}' if tag else ''))
         else:
             for spec in specs:
                 if suite == 'fleurs':
@@ -1444,6 +1446,7 @@ def main():
     p = sub.add_parser('run')
     p.add_argument('candidates', nargs='+')
     p.add_argument('--suite', action='append', choices=SUITES)
+    p.add_argument('--tag', help='write speed suites to separate files for a side comparison')
     p = sub.add_parser('score')
     p.add_argument('candidate')
     sub.add_parser('html')
@@ -1464,7 +1467,7 @@ def main():
     if a.command == 'prepare':
         prepare(a.freeze)
     elif a.command == 'run':
-        run(a.candidates, a.suite or list(SUITES))
+        run(a.candidates, a.suite or list(SUITES), a.tag)
     elif a.command == 'score':
         score(a.candidate)
     elif a.command == 'html':

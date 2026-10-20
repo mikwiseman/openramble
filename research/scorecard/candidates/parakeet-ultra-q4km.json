@@ -1,0 +1,21 @@
+{
+  "label": "Parakeet Ultra Q4_K_M",
+  "summary": "Q4_K_M, transcribe.cpp 0.4.0",
+  "order": 14,
+  "model": {
+    "name": "parakeet-ultra Q4_K_M",
+    "path": "models/parakeet-ultra-Q4_K_M/parakeet-ultra-Q4_K_M.gguf",
+    "sha256": "c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9",
+    "source": "https://huggingface.co/handy-computer/parakeet-ultra-gguf/blob/a1539be1b849ea7463b88343e5277b373d0c4ea9/parakeet-ultra-Q4_K_M.gguf",
+    "license": "CC-BY-4.0"
+  },
+  "runtime": "transcribe.cpp 0.4.0, upstream prebuilt XCFramework (SwiftPM checksum 3da069d2…), Metal, one decoder thread, no language hint",
+  "process": {
+    "kind": "asr-bench"
+  },
+  "warm": {
+    "kind": "asr-bench",
+    "commit": "59e03557bdf265ada6a1521e26c11372707734e8"
+  },
+  "index": false
+}
