@@ -243,6 +243,28 @@ final class KeptHistoryEntryTests: XCTestCase {
         )
     }
 
+    /// Nor does the next dictation break it: recording a take trims with the
+    /// same star-aware budget as lowering the setting.
+    func testStarredEntriesSurviveNewDictations() throws {
+        let store = store()
+        let audio = directory.appending(path: "starred-source.wav", directoryHint: .notDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try Data("fake wav".utf8).write(to: audio)
+        _ = try store.record(text: "the one to keep", audio: audio, limit: 5)
+        for index in 0..<4 {
+            _ = try store.record(text: "dictation \(index)", audio: nil, limit: 5)
+        }
+        let starred = try XCTUnwrap(store.load().last)
+        _ = try store.setKept(true, for: starred)
+
+        let entries = try store.record(text: "one more", audio: nil, limit: 5)
+
+        let survivor = try XCTUnwrap(entries.first { $0.id == starred.id }, "a starred take was evicted")
+        XCTAssertNotNil(store.audioURL(for: survivor), "and its audio with it")
+        XCTAssertEqual(entries.filter { !$0.isKept }.count, 5)
+        XCTAssertEqual(entries.first?.text, "one more")
+    }
+
     /// Re-running recognition replaces the text and nothing else.
     ///
     /// The audio has to survive, or a second attempt would be impossible; the

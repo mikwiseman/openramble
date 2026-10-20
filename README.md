@@ -141,7 +141,7 @@ Application data is stored under
 | Recognition models | Until removed in Settings |
 | Current recording | Queued for local deletion after success or explicit cancellation |
 | Recovery audio after a technical failure | Up to 10 WAV files, seven days, and 1 GiB |
-| Dictation history: transcripts and their audio | The last 5 by default (5–50 in Settings ▸ History); older entries and their recordings are deleted when they fall off |
+| Dictation history: transcripts and their audio | The last 5 by default (5–50 in Settings ▸ History); older entries and their recordings are deleted when they fall off. Starred dictations stay until you delete them |
 | Recordings: two-channel audio, optional screen video, transcript and metadata | Until you delete them. Not bounded by count or age. Audio is about 230 MB per hour; screen video size depends on display and activity. Each recording's size is under More ▸ Recording Details |
 | Local technical journal (`SupportLogs`) | Enabled by default; at most 7 days / 5 MB total. Removed when switched off. |
 | Settings and replacement dictionary | Stored in macOS defaults |

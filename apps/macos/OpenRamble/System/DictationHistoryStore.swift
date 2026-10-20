@@ -141,10 +141,7 @@ public struct DictationHistoryStore: Sendable {
             HistoryEntry(date: date, text: trimmedText, audioFileName: storedName),
             at: 0
         )
-        let kept = Array(entries.prefix(max(1, limit)))
-        for evicted in entries.dropFirst(kept.count) {
-            removeAudio(of: evicted)
-        }
+        let kept = trimmed(entries, to: limit)
         try write(kept)
         return kept
     }
@@ -153,10 +150,19 @@ public struct DictationHistoryStore: Sendable {
     @discardableResult
     public func applyLimit(_ limit: Int) throws -> [HistoryEntry] {
         let entries = load()
-        // The limit counts ordinary dictations. A starred one is a promise
-        // that it stays, and a promise that a later dictation can break is not
-        // one — so starred entries neither count against the limit nor fall
-        // out of it. Order is untouched, so the list still reads by date.
+        let kept = trimmed(entries, to: limit)
+        guard kept.count != entries.count else { return entries }
+        try write(kept)
+        return kept
+    }
+
+    /// The entries that fit `limit`, with the audio of the rest deleted.
+    ///
+    /// The limit counts ordinary dictations. A starred one is a promise that
+    /// it stays, and a promise that a later dictation can break is not one —
+    /// so starred entries neither count against the limit nor fall out of it.
+    /// Order is untouched, so the list still reads by date.
+    private func trimmed(_ entries: [HistoryEntry], to limit: Int) -> [HistoryEntry] {
         var budget = max(1, limit)
         let kept = entries.filter { entry in
             if entry.isKept { return true }
@@ -164,12 +170,10 @@ public struct DictationHistoryStore: Sendable {
             budget -= 1
             return true
         }
-        guard kept.count != entries.count else { return entries }
         let keptIDs = Set(kept.map(\.id))
         for evicted in entries where !keptIDs.contains(evicted.id) {
             removeAudio(of: evicted)
         }
-        try write(kept)
         return kept
     }
 
