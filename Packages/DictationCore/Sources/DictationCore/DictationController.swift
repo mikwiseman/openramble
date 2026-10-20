@@ -1616,12 +1616,17 @@ public final class DictationController {
                 // ready by then is rebuilt from the samples - a copy nobody
                 // needs once History has its own. A take with no samples was
                 // recognized from its file, which is therefore already there.
-                if let source = try? await recoverySourceURL(
-                    for: recording,
-                    readableWithin: recoveryForegroundGrace
-                ) {
+                // With neither, the take is lost, and the journal says so.
+                let handover = ContinuousClock.now
+                do {
+                    let source = try await recoverySourceURL(
+                        for: recording,
+                        readableWithin: recoveryForegroundGrace
+                    )
                     if shouldContinue(session) { onTakeFinished?("", source.url, insertionTarget) }
                     if source.rebuiltFromPCM { await discard(source.url, session: session) }
+                } catch {
+                    onStageFailure?(.readableFile, handover.duration(to: .now), error is TranscriptionTimeout)
                 }
                 notice = DictationNotice(
                     kind: .info,
