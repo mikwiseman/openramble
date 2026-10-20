@@ -1,0 +1,26 @@
+{
+  "label": "v3, joint output F16 (H8b)",
+  "summary": "transcribe.cpp 0.4.0 + selectable joint weight type (86cad71c)",
+  "order": 12,
+  "model": {
+    "name": "parakeet-tdt-0.6b-v3 Q8_0",
+    "path": "models/parakeet-tdt-0.6b-v3-Q8_0/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+    "source": "https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/blob/85ac09ea12fc4b1112fa76810059364bc6adc9de/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    "license": "CC-BY-4.0"
+  },
+  "runtime": "transcribe.cpp v0.4.0 plus TRANSCRIBE_JOINT_WEIGHT_TYPE, commit 86cad71c10932cb5e17c92184018276c849bd0a7, built by scripts/build-transcribe-xcframework.sh; Metal, one decoder thread",
+  "process": {
+    "kind": "asr-bench"
+  },
+  "warm": {
+    "kind": "asr-bench",
+    "commit": "59e03557bdf265ada6a1521e26c11372707734e8",
+    "xcframework_zip": "builds/xcframework-joint/TranscribeCpp-v0.4.0-1-g86cad71c.xcframework.zip",
+    "xcframework_sha256": "c6e04f69a2fb5ce81f62d6789b51a780d17ed5446bde3596b830995a7590d264"
+  },
+  "index": false,
+  "env": {
+    "TRANSCRIBE_JOINT_WEIGHT_TYPE": "f16"
+  }
+}

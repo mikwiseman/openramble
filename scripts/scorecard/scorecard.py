@@ -51,7 +51,7 @@ PROFILE = '(version 1) (allow default) (deny network*)'
 SCHEMA = 'openramble-scorecard/1'
 SEED = 20261019
 SHORT_TAKE_SECONDS = 15.0
-QUIET_IDLE = float(os.environ.get('SCORECARD_QUIET_IDLE', '0.85'))
+QUIET_IDLE = float(os.environ.get('SCORECARD_QUIET_IDLE', '0.75'))
 
 # ---------------------------------------------------------------------------
 # Text measures. Pure functions; the unit tests pin them.
@@ -556,10 +556,11 @@ def build_asr_bench(spec) -> Path:
 
 
 def vocabulary_env(spec):
-    """Terms a candidate's engine is given, one per line, from a file in the repository."""
-    if not spec.get('vocabulary'):
-        return {}
-    return {'WAI_ASR_VOCABULARY_FILE': str(REPO / spec['vocabulary'])}
+    """What a candidate's engine is given besides audio: its terms and its runtime switches."""
+    env = {str(k): str(v) for k, v in (spec.get('env') or {}).items()}
+    if spec.get('vocabulary'):
+        env['WAI_ASR_VOCABULARY_FILE'] = str(REPO / spec['vocabulary'])
+    return env
 
 
 def snapshot():
@@ -853,9 +854,9 @@ def conditions(blocks):
     return [('quiet', 'load', 'load', 'quiet')[i % 4] for i in range(blocks)]
 
 
-def speed_process(specs, data, repeats=6):
+def speed_process(specs, data, repeats=6, suite='speed-process'):
     files = speed_files(data['fleurs'])
-    done = set.intersection(*({(r['block'], r['fixture']) for r in observations(s['id'], 'speed-process')
+    done = set.intersection(*({(r['block'], r['fixture']) for r in observations(s['id'], suite)
                                if r['candidate_count'] == len(specs)} for s in specs))
     for block, condition in enumerate(conditions(repeats * 2)):
         if all((block, f['id']) in done for f in files):
@@ -870,15 +871,15 @@ def speed_process(specs, data, repeats=6):
                     row = run_process(spec, f, f'speed-{block}-{f["id"]}')
                     row.update({'fixture': f['id'], 'runner': 'process', 'condition': condition, 'block': block,
                                 'order': [specs[i]['id'] for i in sequence], 'candidate_count': len(specs), **quiet})
-                    record(spec['id'], 'speed-process', row)
+                    record(spec['id'], suite, row)
 
 
-def speed_warm(specs, data, repeats=10):
+def speed_warm(specs, data, repeats=10, suite='speed-warm'):
     specs = [s for s in specs if s.get('warm')]
     if not specs:
         return
     files = speed_files(data['fleurs']) + [f for f in data['generated'] if f['suite'] == 'takes']
-    done = set.intersection(*({r['block'] for r in observations(s['id'], 'speed-warm')
+    done = set.intersection(*({r['block'] for r in observations(s['id'], suite)
                                if r['candidate_count'] == len(specs) and r['fixture'] == '_ready'} for s in specs))
     rng = random.Random(SEED)
     for block, condition in enumerate(conditions(repeats * 2)):
@@ -896,16 +897,17 @@ def speed_warm(specs, data, repeats=10):
                 try:
                     for f in sequence:
                         reply = serve.request(f['path'])
-                        record(spec['id'], 'speed-warm', {
+                        record(spec['id'], suite, {
                             'fixture': f['id'], 'runner': 'warm', 'condition': condition, 'block': block,
                             'first_request': first, 'ok': 'error' not in reply, 'text': reply.get('text', ''),
                             'wall_seconds': reply.get('wallSeconds'), 'engine_seconds': reply.get('engineSeconds'),
                             'roundtrip_seconds': reply.get('roundtrip_seconds'), 'audio_seconds': reply.get('audioSeconds'),
-                            'candidate_count': len(specs)})
+                            'footprint_bytes': reply.get('footprintBytes'),
+                            'peak_footprint_bytes': reply.get('peakFootprintBytes'), 'candidate_count': len(specs)})
                         first = False
                 finally:
                     rss = serve.close()
-                record(spec['id'], 'speed-warm', {'fixture': '_ready', 'block': block, 'condition': condition,
+                record(spec['id'], suite, {'fixture': '_ready', 'block': block, 'condition': condition,
                                                   'candidate_count': len(specs), 'max_rss_bytes': rss, **quiet, **serve.ready})
 
 
@@ -925,7 +927,7 @@ def wait_for_lane(patience=3600):
         time.sleep(30)
 
 
-def run(names, suites):
+def run(names, suites, tag=None):
     wait_for_lane()
     data = inputs()
     specs = [candidate(n) for n in names]
@@ -942,10 +944,12 @@ def run(names, suites):
                    'installed_app_running': bool(subprocess.run(['pgrep', '-x', 'OpenRamble'], capture_output=True).stdout)}
         record(spec['id'], 'sessions', session)
     for suite in suites:
+        # A tag keeps a side comparison's timings in files of their own, so
+        # they never mix with a candidate's scorecard speed.
         if suite == 'speed-process':
-            speed_process(specs, data)
+            speed_process(specs, data, suite='speed-process' + (f'@{tag}' if tag else ''))
         elif suite == 'speed-warm':
-            speed_warm(specs, data)
+            speed_warm(specs, data, suite='speed-warm' + (f'@{tag}' if tag else ''))
         else:
             for spec in specs:
                 if suite == 'fleurs':
@@ -1080,6 +1084,11 @@ def score(name):
                            'warmup_inference': distribution([r['warmupSeconds'] for r in ready if r['condition'] == 'quiet']),
                            'process_to_ready': distribution([r['process_ready_seconds'] for r in ready if r['condition'] == 'quiet']),
                            'peak_rss_bytes': max((r.get('max_rss_bytes') or 0) for r in ready)}
+        # Older runs predate the footprint fields; their rows stay empty.
+        footprint = [r['footprintBytes'] for r in ready if r.get('footprintBytes') and r['condition'] == 'quiet']
+        if footprint:
+            metrics['load']['footprint_ready_bytes'] = statistics.median(footprint)
+            metrics['load']['peak_footprint_bytes'] = max(r.get('peak_footprint_bytes') or 0 for r in requests)
         metrics['runner_parity'] = parity(name, by_id)
     metrics['model'] = {'bytes': model_path(spec).stat().st_size, 'sha256': spec['model'].get('sha256'),
                         'license': spec['model'].get('license')}
@@ -1305,6 +1314,8 @@ ROWS = [
     ('Speed', 'Hour file, English', ('hour', 'en-3540s', 'wall_seconds'), 's', 'lower', '≤ 30 s'),
     ('Resources', 'Model load (warm file cache)', ('load', 'model_load', 'p50'), 's', 'lower', '≤ 1 s'),
     ('Resources', 'Peak resident memory', ('load', 'peak_rss_bytes'), 'GB', 'lower', '≤ 1 GB'),
+    ('Resources', 'Memory footprint after load', ('load', 'footprint_ready_bytes'), 'GB', 'lower', ''),
+    ('Resources', 'Peak memory footprint', ('load', 'peak_footprint_bytes'), 'GB', 'lower', ''),
     ('Resources', 'Peak memory, whole process', ('latency_process', 'quiet', 'max_rss_bytes'), 'GB', 'lower', ''),
     ('Resources', 'Model file', ('model', 'bytes'), 'MB', 'lower', ''),
 ]
@@ -1443,6 +1454,7 @@ def main():
     p = sub.add_parser('run')
     p.add_argument('candidates', nargs='+')
     p.add_argument('--suite', action='append', choices=SUITES)
+    p.add_argument('--tag', help='write speed suites to separate files for a side comparison')
     p = sub.add_parser('score')
     p.add_argument('candidate')
     sub.add_parser('html')
@@ -1463,7 +1475,7 @@ def main():
     if a.command == 'prepare':
         prepare(a.freeze)
     elif a.command == 'run':
-        run(a.candidates, a.suite or list(SUITES))
+        run(a.candidates, a.suite or list(SUITES), a.tag)
     elif a.command == 'score':
         score(a.candidate)
     elif a.command == 'html':

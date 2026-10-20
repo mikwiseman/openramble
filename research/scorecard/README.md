@@ -41,8 +41,12 @@ Each suite is a set of inputs, and each metric is computed from one suite.
 | Resources | Model load, peak memory, model file size | Load time and warm-up come from every warm process start. Peak memory is the maximum resident set size reported by `/usr/bin/time -l`. |
 
 Speed is measured on a shared desktop, so a timed block starts only when two
-one-second samples show at least 85% of the CPUs idle and no other recognition
+one-second samples show at least 75% of the CPUs idle and no other recognition
 process is running. The idle share is stored with every timed observation.
+The threshold was first set at 85%, before measuring this Mac at rest: with the
+window server and the Claude app running, it idles at 76% to 83%, so 85% was
+never reached. 75% still excludes builds, tests and indexing, which take this
+Mac below 65%.
 Several candidates given to one command are interleaved block by block. The
 order rotates separately within quiet and loaded blocks, so every candidate
 takes every position equally often in each condition, which is the only fair
@@ -70,6 +74,7 @@ A candidate is a JSON file in `candidates/`. Its fields are listed here:
 - `process` names the command-line program for the whole-process lane: `openramble-cli`, `whisper-cli` or `asr-bench`.
 - `warm` names the source commit whose `LocalASR` and `DictationCore` the warm lane is built from. The `asr-bench` tool target is always today's, so an old build can answer the scorecard's requests without any change to what it measures.
 - `warm.xcframework_zip` and `warm.xcframework_sha256` replace the pinned runtime download with a runtime built from source by `scripts/build-transcribe-xcframework.sh`, which builds transcribe.cpp's macOS slice from a clean checkout with upstream's own scripts and runs the same binary audit as `scripts/check-network-surface.sh`.
+- `vocabulary` names a term file in the repository that the engine is given, and `env` sets environment variables for the engine process, e.g. a runtime switch under test.
 - `index: false` keeps a control candidate out of the HTML page; its results are still written.
 
 A candidate without a `warm` lane is measured through its process lane only.
