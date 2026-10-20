@@ -2806,5 +2806,54 @@
     "phoneticMatching": true,
     "mode": "prose",
     "input": "Ship it. Send it."
+  },
+  {
+    "name": "dotfile env",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "add the key to .env and restart."
+  },
+  {
+    "name": "dotfile zshrc",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "open .zshrc"
+  },
+  {
+    "name": "dotfile gitignore",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "it is listed in .gitignore"
+  },
+  {
+    "name": "dotfile ds store",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "delete the .DS_Store files."
+  },
+  {
+    "name": "dot net",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "we moved from .NET to Go."
+  },
+  {
+    "name": "file extensions",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "convert the .png files to .webp"
+  },
+  {
+    "name": "stray space before a full stop",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "it works ."
   }
 ]
