@@ -47,11 +47,29 @@ final class DictationHistoryStoreTests: XCTestCase {
         XCTAssertEqual(entries.first?.text, "newer")
     }
 
-    /// Empty text is not a dictation. Recording it would fill the list with
-    /// blank rows after every silent take.
+    /// Empty text is kept only together with its audio: a row with neither
+    /// words nor a recording would be a blank row and nothing else.
     func testBlankTextIsNotRecorded() throws {
         let entries = try store.record(text: "   \n ", audio: nil, limit: 5)
         XCTAssertTrue(entries.isEmpty)
+    }
+
+    /// A take with sound in which the model found no words is not nothing: it
+    /// is kept with its audio, so it can be played and recognized again.
+    func testATakeWithAudioButNoWordsIsKept() throws {
+        let audio = try makeAudio("unrecognized.wav")
+        let entries = try store.record(text: "", audio: audio, limit: 5)
+
+        XCTAssertEqual(entries.map(\.text), [""])
+        let entry = try XCTUnwrap(entries.first)
+        XCTAssertNotNil(store.audioURL(for: entry))
+    }
+
+    /// Without its audio a wordless take is nothing at all, and is not kept.
+    func testATakeWithNoWordsWhoseAudioIsGoneIsNotKept() throws {
+        let missing = directory.appending(path: "gone.wav", directoryHint: .notDirectory)
+        XCTAssertTrue(try store.record(text: "", audio: missing, limit: 5).isEmpty)
+        XCTAssertTrue(try store.record(text: "", audio: nil, limit: 5).isEmpty)
     }
 
     // MARK: - Retention

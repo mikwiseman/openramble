@@ -133,4 +133,14 @@ final class DictationStatePolicyTests: XCTestCase {
         }
     }
 
+    /// Silence is a take in which nothing reached the speech floor — the same
+    /// 0.02 the segmenter uses, with "at the floor" counting as sound. Without
+    /// the samples there is no telling, and the take is kept, not dismissed.
+    func testATakeIsSilenceOnlyWhenEverySampleStaysUnderTheSpeechFloor() {
+        XCTAssertTrue(SilentTakePolicy.heardOnlySilence([0, 0.0019, -0.0199]))
+        XCTAssertFalse(SilentTakePolicy.heardOnlySilence([0, -0.03]))
+        XCTAssertFalse(SilentTakePolicy.heardOnlySilence([0.02]))
+        XCTAssertFalse(SilentTakePolicy.heardOnlySilence(nil))
+        XCTAssertFalse(SilentTakePolicy.heardOnlySilence([]))
+    }
 }

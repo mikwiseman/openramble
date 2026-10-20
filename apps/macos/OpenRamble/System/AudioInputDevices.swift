@@ -53,6 +53,32 @@ public enum AudioInputDevices {
         }
     }
 
+    /// The name of the microphone a capture built with `id` records from:
+    /// that device, or the system's default input when `id` is `nil`.
+    ///
+    /// Read by id - one or two property reads - rather than through
+    /// `available()`, which walks every device's stream configuration. The
+    /// caller is the end of a take that heard only silence, which is exactly
+    /// when the audio system is most likely to be slow.
+    public static func recordingName(of id: AudioDeviceID?) -> String? {
+        guard let device = id ?? defaultInputID() else { return nil }
+        return name(of: device)
+    }
+
+    private static func defaultInputID() -> AudioDeviceID? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var id = AudioDeviceID(kAudioObjectUnknown)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        guard AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &id
+        ) == noErr, id != kAudioObjectUnknown else { return nil }
+        return id
+    }
+
     private static func rawIDs() -> [AudioDeviceID] {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDevices,

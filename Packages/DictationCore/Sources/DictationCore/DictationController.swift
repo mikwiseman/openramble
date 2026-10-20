@@ -246,15 +246,22 @@ public final class DictationController {
     /// dead system service. The owner should recycle it so the next dictation
     /// runs on a fresh session instead of the same stuck one.
     public var onTranscriptionStall: (@MainActor () -> Void)?
-    /// A take that produced text, with the audio still on disk, and the app
-    /// the words were shaped for.
+    /// A finished take, with the audio still on disk, and the app the words
+    /// were shaped for.
     ///
     /// Called after insertion is attempted and before the recording is
     /// deleted, so an owner that keeps a history gets both halves of the take
     /// while both still exist. Whether the words actually landed is not the
     /// question here — a person who watched an insertion fail wants that
     /// transcript more than anyone, not less.
+    ///
+    /// Empty text is a take with sound in which the model found no words. It
+    /// is handed over too, so it can be played and recognized again rather
+    /// than lost; only a take of silence is not.
     public var onTakeFinished: (@MainActor (String, URL, TargetApplication?) -> Void)?
+    /// The name of the microphone the takes are recorded from, for the one
+    /// message that needs it: a take that heard only silence.
+    public var microphoneName: (@MainActor () -> String?)?
     /// The take is finished and the model is not resident yet, so the words are
     /// waiting for a load rather than for recognition.
     ///
@@ -1582,12 +1589,30 @@ public final class DictationController {
             // a person goes to look for the missing phrase in someone else's window. Too
             // short press does not go here - it is filtered out above and explanations
             // not required.
+            //
+            // Silence is not kept, and it is a warning: a muted, dead or wrong
+            // input needs the person, like the held key that recorded no audio
+            // at all. The microphone's name, when there is one, says where to
+            // look. Sound in which the model found nothing is kept for History:
+            // it may hold words the person still wants, and recognizing it
+            // again is one click.
+            let notice: DictationNotice
+            if SilentTakePolicy.heardOnlySilence(bufferedSamples) {
+                notice = DictationNotice(
+                    kind: .warning,
+                    message: microphoneName?().map { L10n.tr("Heard only silence from %@.", $0) }
+                        ?? L10n.tr("Nothing was recognized — nothing was inserted."),
+                    wordsDidNotLand: true
+                )
+            } else {
+                onTakeFinished?("", recording.url, insertionTarget)
+                notice = DictationNotice(
+                    kind: .info,
+                    message: L10n.tr("Nothing was recognized — nothing was inserted."),
+                    wordsDidNotLand: true
+                )
+            }
             await discard(recording.url, session: session)
-            let notice = DictationNotice(
-                kind: .info,
-                message: L10n.tr("Nothing was recognized — nothing was inserted."),
-                wordsDidNotLand: true
-            )
             await report(notice, session: session)
             await cleanup(session: session)
             return

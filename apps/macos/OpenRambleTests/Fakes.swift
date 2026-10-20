@@ -304,6 +304,8 @@ actor FakeCapture: AudioCapturing {
     /// Shorter than the limit - and the session will end without recognition. This is how it is checked
     /// full circle of dictation without touching the real model.
     private var duration: TimeInterval = 2.0
+    /// The take's PCM, when a test needs to say what it sounded like.
+    private var bufferedSamples: [Float]?
 
     private let file: URL
 
@@ -315,6 +317,9 @@ actor FakeCapture: AudioCapturing {
     init(file: URL) { self.file = file }
 
     func setDuration(_ value: TimeInterval) { duration = value }
+    func setBufferedSamples(_ samples: [Float]?) { bufferedSamples = samples }
+
+    func takeBufferedSamples() async -> [Float]? { bufferedSamples }
 
     func holdStarts() { isHoldingStarts = true }
 

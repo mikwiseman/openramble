@@ -121,6 +121,10 @@ public struct DictationHistoryStore: Sendable {
     /// Returns the list as it now stands. Audio for evicted entries is removed
     /// here rather than by a sweep: the moment an entry leaves the list is the
     /// only moment its file is provably unreferenced.
+    ///
+    /// Empty text is a take the model found no words in. It is kept for its
+    /// audio, to be played and recognized again, so without the audio there
+    /// is nothing to keep.
     @discardableResult
     public func record(
         text: String,
@@ -130,7 +134,7 @@ public struct DictationHistoryStore: Sendable {
         appCategory: ApplicationCategory? = nil
     ) throws -> [HistoryEntry] {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty else { return load() }
+        guard !trimmedText.isEmpty || audio != nil else { return load() }
 
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
 
@@ -143,6 +147,7 @@ public struct DictationHistoryStore: Sendable {
                 storedName = name
             }
         }
+        guard !trimmedText.isEmpty || storedName != nil else { return load() }
 
         var entries = load()
         entries.insert(

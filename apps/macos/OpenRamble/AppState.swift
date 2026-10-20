@@ -1173,6 +1173,9 @@ public final class AppState: ObservableObject {
         let sounds = makeSounds { [weak self] in self?.soundsEnabled ?? true }
 
         do {
+            // Read once: the capture binds this device for good, and a silent
+            // take must name the microphone that actually recorded it.
+            let microphone = preferredInputDeviceID
             let capture = makeCapture(
                 try paths.takes(),
                 { [weak self] session, error in
@@ -1235,7 +1238,7 @@ public final class AppState: ObservableObject {
                         )
                     }
                 },
-                preferredInputDeviceID
+                microphone
             )
             let recordingRecovery = RecordingRecoveryStore(
                 directory: try paths.audioRecovery(),
@@ -1455,11 +1458,14 @@ public final class AppState: ObservableObject {
                 )
             }
             controller.onTakeFinished = { [weak self] text, audio, target in
+                // Counted, never described: a take kept with no words.
+                if text.isEmpty { self?.diagnostics.record(.dictationUnrecognized) }
                 self?.archive(text: text, audio: audio, appCategory: PromptModePolicy.category(for: target))
             }
             controller.amendTakeNotice = { [weak self] notice in
                 self?.takeEndingNotice(notice) ?? notice
             }
+            controller.microphoneName = { AudioInputDevices.recordingName(of: microphone) }
             controller.onDictationCompleted = { [weak self] provenance in
                 self?.lastDictation = LastDictation(
                     insertedText: provenance.finalText,
@@ -1835,6 +1841,13 @@ public final class AppState: ObservableObject {
                     .output.text ?? result.text
                 await MainActor.run {
                     guard let self, let store = self.historyStore else { return }
+                    // A take that never had words says so again, rather than
+                    // claiming to have kept text it does not have.
+                    if text.isEmpty, entry.text.isEmpty {
+                        self.notify(DictationNotice(kind: .info, message: L10n.tr("Still nothing recognized.")))
+                        return
+                    }
+
                     // An empty run keeps the words already there rather than
                     // blanking a record of something the person said.
                     guard !text.isEmpty else {

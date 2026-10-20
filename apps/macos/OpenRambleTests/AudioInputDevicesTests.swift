@@ -31,6 +31,17 @@ final class AudioInputDevicesTests: XCTestCase {
         }
     }
 
+    /// The name a silent take reports is read by the device's own id, not by
+    /// enumerating every device - and it is the name the picker shows.
+    func testAMicrophoneIsNamedByItsIDAsThePickerNamesIt() {
+        for device in AudioInputDevices.available() {
+            XCTAssertEqual(
+                AudioInputDevices.recordingName(of: AudioInputDevices.deviceID(forUID: device.uid)),
+                device.name
+            )
+        }
+    }
+
     /// A microphone that is not on this machine says so rather than being
     /// swapped in silence. Someone who chose a headset and quietly got the
     /// laptop lid would only find out from the transcript.

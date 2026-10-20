@@ -8,6 +8,7 @@ enum DiagnosticEvent: String, Codable, Sendable {
     case dictationCompleted, dictationWarning, dictationFailed, transcriptionStalled
     case recognitionFailed, recognitionModelUnavailable, recognitionAudioInvalid, recognitionEngineFailed, recognitionCancelled
     case dictationStageFailed, recognitionFallback
+    case dictationUnrecognized
     case enginePreparing, engineReady, engineUnavailable, engineFailed
     case audioConfigurationChanged, audioCaptureFailed
     case recordingIdle, recordingStarting, recordingActive, recordingPaused, recordingStopping, recordingFailed

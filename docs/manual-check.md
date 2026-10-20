@@ -37,9 +37,14 @@ for the check.
    an empty or half-filled replacement.
 7. Double-press the hotkey to start hands-free recording, then press once to
    stop. Confirm Escape and a conflicting shortcut cancel without inserting text.
-   Hold the hotkey and press Ctrl+C right away: nothing is inserted. Hold it,
-   speak for a second or two, brush a letter key, keep talking and release:
-   the whole take is inserted, including the words after the key.
+   Hold the hotkey and press C right away (a shortcut such as ⌘C): nothing is
+   inserted. Hold it, speak for a second or two, press Down Arrow (under the
+   default Right Command it only moves the caret), keep talking and release:
+   the whole take is inserted, including the words after the key. Set the
+   input volume to zero and hold the key for 2 s: the orange panel names the
+   microphone and History gains nothing. Restore the volume, hold the key and
+   tap the desk once without speaking: History shows "Nothing recognized" with
+   Play and Recognise again, and no Copy.
 8. Switch focus during transcription and verify insertion returns to the field
    where dictation began. Cover rich text, a multiline field, an empty field, a
    secure field, and a destination that rejects paste.
