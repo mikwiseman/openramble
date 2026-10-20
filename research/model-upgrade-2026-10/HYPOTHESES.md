@@ -483,10 +483,15 @@ fail with Ultra under either runtime, all on macOS synthetic voices:
   "фичерфлэг" for feature flag, and "Rebace" and "Mordge" for rebase and
   merge. The dictionary was built from v3's spellings.
 
-These are recorded as blockers on #79, not decided here: the first is a
-recognition error on one clip, the second is one word, and the third belongs
-to the text pipeline and its conformance fixtures, which this program does not
-touch.
+#79 resolves them as follows. The starter dictionary learns the three
+spellings as exact post-processing rules, with a test on the Swift side and on
+the Rust side and the regenerated fixture the Rust port reads; the conformance
+corpus output does not change. The other two stay recorded as strict expected
+failures: the test's main promise, that speech never presses Return, still
+holds, and a model that hears the words again, or closes the one-word gap at
+the 30 s split, turns them red. The 15 s and 60 s splits beat whole-file
+decoding for both models here, so moving the file split is a candidate
+hypothesis of its own (it needs the hour files measured at the new split).
 
 ## Proposed next hypotheses
 
