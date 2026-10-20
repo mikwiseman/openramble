@@ -44,9 +44,11 @@ final class CameraBubbleOverlay: NSObject, NSWindowDelegate {
         panel.hidesOnDeactivate = false
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
-        panel.contentMinSize = NSSize(width: 80, height: 80)
-        panel.contentMaxSize = NSSize(width: min(displayFrame.width, displayFrame.height) * 0.5,
-                                      height: min(displayFrame.width, displayFrame.height) * 0.5)
+        // Exactly the sizes the recorder draws, so no resize can show a
+        // bubble the recording would not.
+        let diameters = ScreenBubbleGeometry.diameterRange(in: displayFrame.size)
+        panel.contentMinSize = NSSize(width: diameters.lowerBound, height: diameters.lowerBound)
+        panel.contentMaxSize = NSSize(width: diameters.upperBound, height: diameters.upperBound)
         panel.contentView = view
         panel.isReleasedWhenClosed = false
         panel.delegate = self
@@ -54,12 +56,6 @@ final class CameraBubbleOverlay: NSObject, NSWindowDelegate {
         preview = view
         updateFrame()
         panel.orderFrontRegardless()
-    }
-
-    func updateScale(_ value: Double) {
-        scale = ScreenBubbleGeometry.clampedScale(value)
-        position = ScreenBubbleGeometry.clampedPosition(position, scale: scale, in: displayFrame.size)
-        updateFrame()
     }
 
     func updatePosition(_ value: NormalizedPoint) {
@@ -77,35 +73,43 @@ final class CameraBubbleOverlay: NSObject, NSWindowDelegate {
         onChange = nil
     }
 
-    func windowDidMove(_ notification: Notification) { emitCurrentFrame() }
-    func windowDidResize(_ notification: Notification) { emitCurrentFrame() }
+    func windowDidMove(_ notification: Notification) { adoptPanelFrame() }
+    func windowDidResize(_ notification: Notification) { adoptPanelFrame() }
 
+    /// Put the panel exactly where the recording draws the bubble.
     private func updateFrame() {
-        guard panel != nil else { return }
+        guard let panel else { return }
         let rect = ScreenBubbleGeometry.rect(in: displayFrame.size, scale: scale, position: position)
         let frame = clamped(rect.offsetBy(dx: displayFrame.minX, dy: displayFrame.minY))
-        apply(frame: frame)
+        isApplyingFrame = true
+        if panel.frame != frame { panel.setFrame(frame, display: true) }
+        isApplyingFrame = false
     }
 
     private func handle(_ event: CameraBubbleView.Interaction) {
         switch event {
-        case let .frame(frame): apply(frame: clamped(frame))
+        case let .frame(frame): adopt(frame)
         }
     }
 
-    private func emitCurrentFrame() {
+    private func adoptPanelFrame() {
         guard !isApplyingFrame, let panel else { return }
-        let frame = clamped(panel.frame)
-        position = ScreenBubbleGeometry.position(for: frame, in: displayFrame)
-        onChange?(position, scale)
+        adopt(panel.frame)
     }
 
-    private func apply(frame: CGRect) {
-        guard let panel else { return }
-        isApplyingFrame = true
-        if panel.frame != frame { panel.setFrame(frame, display: true) }
-        isApplyingFrame = false
-        position = ScreenBubbleGeometry.position(for: frame, in: displayFrame)
+    /// Whatever the person did to the bubble — moved it, resized it from its
+    /// corner or an edge — becomes the scale and position the recording
+    /// composites, and the panel snaps to exactly that circle. What is on
+    /// screen is what records; the size used to stay at the slider's value.
+    private func adopt(_ frame: CGRect) {
+        let frame = clamped(frame)
+        scale = ScreenBubbleGeometry.scale(forDiameter: min(frame.width, frame.height), in: displayFrame.size)
+        position = ScreenBubbleGeometry.clampedPosition(
+            ScreenBubbleGeometry.position(for: frame, in: displayFrame),
+            scale: scale,
+            in: displayFrame.size
+        )
+        updateFrame()
         onChange?(position, scale)
     }
 
@@ -172,7 +176,7 @@ private final class CameraBubbleView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         initialFrame = window?.frame ?? .zero
-        initialPoint = event.locationInWindow
+        initialPoint = NSEvent.mouseLocation
         resizing = bounds.insetBy(dx: -14, dy: -14).contains(convert(event.locationInWindow, from: nil))
             && convert(event.locationInWindow, from: nil).x > bounds.maxX - 24
             && convert(event.locationInWindow, from: nil).y < 24
@@ -182,12 +186,13 @@ private final class CameraBubbleView: NSView {
     override func mouseDragged(with event: NSEvent) {
         guard let window else { return }
         if resizing {
-            let delta = CGPoint(x: event.locationInWindow.x - initialPoint.x,
-                                y: initialPoint.y - event.locationInWindow.y)
-            let size = max(80, initialFrame.width + delta.x)
-            let frame = CGRect(x: initialFrame.maxX - size, y: initialFrame.minY,
-                               width: size, height: size)
-            window.setFrame(frame, display: true)
+            // Screen coordinates: the window moves under the pointer while it
+            // resizes, so window-relative points would drift.
+            let now = NSEvent.mouseLocation
+            let frame = ScreenBubbleGeometry.resized(
+                initialFrame,
+                drag: CGSize(width: now.x - initialPoint.x, height: initialPoint.y - now.y)
+            )
             onInteraction(.frame(frame))
         } else {
             window.performDrag(with: event)

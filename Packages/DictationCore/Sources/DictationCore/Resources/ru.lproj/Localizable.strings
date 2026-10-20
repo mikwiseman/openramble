@@ -58,11 +58,9 @@
 "Bottom" = "Внизу";
 "Bubble off" = "Камера выключена";
 "Bubble on" = "Камера включена";
-"Bubble size" = "Размер кружка";
 "Camera" = "Камера";
 "Camera Settings" = "Настройки камеры";
 "Camera access is restricted" = "Доступ к камере ограничен";
-"Camera bubble size" = "Размер кружка с камерой";
 "Camera preview unavailable" = "Предпросмотр камеры недоступен";
 "Cancel" = "Отмена";
 "Cancel Dictation" = "Отменить диктовку";
@@ -219,7 +217,6 @@
 "Kept. Stop keeping" = "Сохранено. Больше не хранить";
 "Key %@" = "Клавиша %@";
 "Key warning. %@" = "Предупреждение о клавише. %@";
-"Larger" = "Больше";
 "Last %@" = "Последние %@";
 "Last dictation wasn't inserted" = "Последняя диктовка не вставлена";
 "Launch at login" = "Запускать при входе";
@@ -454,7 +451,6 @@
 "Skip back 15 seconds" = "Назад на 15 секунд";
 "Skip forward 15 seconds" = "Вперёд на 15 секунд";
 "Skip the try-out" = "Пропустить пробу";
-"Smaller" = "Меньше";
 "Something else already exists at %@. Move or remove it before installing the command-line tool." = "По пути %@ уже есть другой файл. Переместите или удалите его перед установкой инструмента командной строки.";
 "Sound was arriving earlier. The selected input may have changed, or another app may have taken the microphone." = "Раньше звук поступал. Возможно, выбранный вход изменился или микрофон заняло другое приложение.";
 "Sound was arriving earlier. Your audio output may have changed." = "Раньше звук поступал. Возможно, аудиовыход изменился.";

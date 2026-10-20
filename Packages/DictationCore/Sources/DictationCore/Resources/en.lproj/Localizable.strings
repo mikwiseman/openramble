@@ -58,11 +58,9 @@
 "Bottom" = "Bottom";
 "Bubble off" = "Bubble off";
 "Bubble on" = "Bubble on";
-"Bubble size" = "Bubble size";
 "Camera" = "Camera";
 "Camera Settings" = "Camera Settings";
 "Camera access is restricted" = "Camera access is restricted";
-"Camera bubble size" = "Camera bubble size";
 "Camera preview unavailable" = "Camera preview unavailable";
 "Cancel" = "Cancel";
 "Cancel Dictation" = "Cancel Dictation";
@@ -219,7 +217,6 @@
 "Kept. Stop keeping" = "Kept. Stop keeping";
 "Key %@" = "Key %@";
 "Key warning. %@" = "Key warning. %@";
-"Larger" = "Larger";
 "Last %@" = "Last %@";
 "Last dictation wasn't inserted" = "Last dictation wasn't inserted";
 "Launch at login" = "Launch at login";
@@ -454,7 +451,6 @@
 "Skip back 15 seconds" = "Skip back 15 seconds";
 "Skip forward 15 seconds" = "Skip forward 15 seconds";
 "Skip the try-out" = "Skip the try-out";
-"Smaller" = "Smaller";
 "Something else already exists at %@. Move or remove it before installing the command-line tool." = "Something else already exists at %@. Move or remove it before installing the command-line tool.";
 "Sound was arriving earlier. The selected input may have changed, or another app may have taken the microphone." = "Sound was arriving earlier. The selected input may have changed, or another app may have taken the microphone.";
 "Sound was arriving earlier. Your audio output may have changed." = "Sound was arriving earlier. Your audio output may have changed.";

@@ -94,23 +94,6 @@ private struct ScreenRecordingHUDView: View {
                 .accessibilityLabel(L10n.tr("Show camera bubble"))
                 .disabled(state.isCameraChanging)
             }
-            Menu {
-                Slider(
-                    value: Binding(
-                        get: { state.screenRecordingOptions.bubbleScale },
-                        set: { state.setRecordingBubbleScale($0) }
-                    ),
-                    in: 0.12...0.36
-                )
-                .labelsHidden()
-                Text(L10n.tr("Bubble size"))
-            } label: {
-                Image(systemName: "circle.dashed")
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .help(L10n.tr("Camera bubble size"))
-            .accessibilityLabel(L10n.tr("Camera bubble size"))
             Button {
                 if isPaused { state.resumeRecording() } else { state.pauseRecording() }
             } label: {

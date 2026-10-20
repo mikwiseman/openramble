@@ -28,6 +28,5 @@ public protocol ScreenRecordingCapturing: AnyObject {
     func resume() async throws
     func stop() async throws
     func updateCameraEnabled(_ enabled: Bool) async throws
-    func updateBubbleScale(_ scale: Double)
     func updateBubblePosition(_ position: NormalizedPoint)
 }

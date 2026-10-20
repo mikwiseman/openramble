@@ -1102,7 +1102,6 @@ final class FakeScreenRecordingCapture: ScreenRecordingCapturing {
     private(set) var resumeCount = 0
     private(set) var stopCount = 0
     private(set) var cameraUpdates: [Bool] = []
-    private(set) var bubbleScaleUpdates: [Double] = []
     var prepareError: Error?
     var startError: Error?
     var stopError: Error?
@@ -1146,12 +1145,6 @@ final class FakeScreenRecordingCapture: ScreenRecordingCapturing {
     func updateCameraEnabled(_ enabled: Bool) async throws {
         cameraUpdates.append(enabled)
         options.cameraEnabled = enabled
-        onBubbleChange?(options)
-    }
-
-    func updateBubbleScale(_ scale: Double) {
-        bubbleScaleUpdates.append(scale)
-        options.bubbleScale = scale
         onBubbleChange?(options)
     }
 

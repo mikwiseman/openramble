@@ -2681,11 +2681,6 @@ public final class AppState: ObservableObject {
         }
     }
 
-    public func setRecordingBubbleScale(_ scale: Double) {
-        screenRecordingOptions.bubbleScale = ScreenBubbleGeometry.clampedScale(scale)
-        screenRecordingCapture?.updateBubbleScale(screenRecordingOptions.bubbleScale)
-    }
-
     public func setRecordingBubblePosition(_ position: NormalizedPoint) {
         screenRecordingOptions.bubblePosition = position
         screenRecordingCapture?.updateBubblePosition(position)
