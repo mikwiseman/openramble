@@ -1,3 +1,4 @@
+import AVFoundation
 import DictationCore
 import Foundation
 import XCTest
@@ -9,6 +10,10 @@ import XCTest
 /// what is said from the file to the insertion in its entirety, in the correct form and without other people’s tails.
 @MainActor
 final class DictationEndToEndTests: EndToEndScenario {
+    /// What History took from each finished take: the words, and its own copy
+    /// of the audio, made in the call as History makes it.
+    private var kept: [(text: String, copy: URL?)] = []
+
     // MARK: - Main product scenario
 
     /// A Russian phrase with English terms is inserted in Latin letters.
@@ -407,5 +412,44 @@ final class DictationEndToEndTests: EndToEndScenario {
         let notices = await overlay.notices
         XCTAssertEqual(notices.map(\.kind), [.warning])
         XCTAssertEqual(notices.map(\.message), ["Heard only silence from Test Mic."])
+    }
+
+    /// A tap on the desk and no words: nothing is inserted, and History gets
+    /// the take whole, so it can be played and recognized again.
+    func testSoundWithoutWordsIsKeptForHistory() async throws {
+        try await tapTheDesk()
+        let controller = makeController()
+        controller.microphoneName = { "Test Mic" }
+        controller.onTakeFinished = { [weak self] text, url in
+            guard let self else { return }
+            let copy = self.workspace.appending(path: "history-\(self.kept.count).wav")
+            do {
+                try FileManager.default.copyItem(at: url, to: copy)
+                self.kept.append((text, copy))
+            } catch {
+                self.kept.append((text, nil))
+            }
+        }
+
+        await dictate(with: controller)
+
+        // The tap reached the model, and the model found no words in it.
+        let calls = await probe.calls
+        XCTAssertEqual(calls, 1)
+        let raw = await probe.rawTexts.first
+        XCTAssertEqual(raw?.trimmingCharacters(in: .whitespacesAndNewlines), "", "words in a tap: \(raw ?? "—")")
+        let texts = await inserter.texts
+        XCTAssertEqual(texts, [])
+
+        XCTAssertEqual(kept.map(\.text), [""], "kept once, with no words")
+        let copy = try XCTUnwrap(kept.first?.copy, "History could not copy the take")
+        let file = try AVAudioFile(forReading: copy)
+        XCTAssertEqual(Double(file.length) / file.fileFormat.sampleRate, 2, accuracy: 0.01)
+
+        await assertNoRecordingsLeft()
+        await waitUntil("the notice") { await !self.overlay.notices.isEmpty }
+        let notices = await overlay.notices
+        XCTAssertEqual(notices.map(\.kind), [.info])
+        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — nothing was inserted."])
     }
 }

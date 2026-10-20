@@ -92,6 +92,25 @@ actor SpeechFixtures {
         }
     }
 
+    /// A recording with sound and no words: one tap on the desk, a 0.4-peak
+    /// decaying click, in the middle of two seconds of the same quiet room.
+    func tap() throws -> URL {
+        let destination = try cached(named: "tap-2000ms")
+        if FileManager.default.fileExists(atPath: destination.path) { return destination }
+
+        return try build(into: destination) { work in
+            var generator = SystemNoise(seed: 0x5DEE_CE66_D000_0002)
+            var samples = (0..<(2 * sampleRate)).map { _ in generator.next() }
+            for index in 0..<160 {
+                let click = 0.4 * exp(-Double(index) / 25) * sin(Double(index) * 0.9)
+                samples[sampleRate + index] = Int16(click * 32_767)
+            }
+            let wav = work.appending(path: "tap.wav", directoryHint: .notDirectory)
+            try Self.writeWAV(samples: samples, sampleRate: sampleRate, to: wav)
+            return wav
+        }
+    }
+
     /// Trim the recording to the required duration without changing the format.
     ///
     /// Needed for testing “pressed and immediately released”: snippet of real speech
