@@ -101,10 +101,40 @@ dictionary stays the tool.
 
 Preregistered on branch `claude/term-biasing` before any code existed. The
 model's own argmax decides between blank and a token; only an emitted token is
-re-ranked by the vocabulary. Same gate, weight grid 1 to 8, and a weight is
-eligible only if the noise clips produce no word.
+re-ranked by the vocabulary. Tuning picked weight 3.0.
 
-Result: tuning in progress.
+Gate result: rule 1 passed (test-half recall 31.0% to 47.9%; English 22/37 to
+32/37, Russian 0/34 to 2/34), rule 2 passed narrowly (pooled FLEURS WER +0.044
+pp, 95% interval −0.007 to +0.097), rule 4 passed (no invented words, wrong
+script unchanged). Rule 3 holds because the no-terms path is the same code as
+H4c's, which was measured identical. Rule 5 (speed) is pending.
+
+## H4c. No bonus on a term's first piece
+
+Preregistered before H4b's gate ran. On top of H4b, a term earns its bonus only
+after the model has begun it. Every tuning weight left frozen FLEURS WER
+exactly unchanged; the rule picked weight 8.0 for the highest dev recall.
+
+Gate result: rule 1 passed (31.0% to 43.7%; English 22/37 to 31/37, Russian
+0/34 to 0/34), rule 2 passed (+0.047 pp, interval +0.014 to +0.091), rule 3
+passed (all 1,422 FLEURS transcripts identical to upstream 0.4.0 without
+terms), rule 4 passed. Rule 5 is pending.
+
+### Choosing between H4b and H4c
+
+Both variants pass rules 1 to 4, and no rule was written in advance for
+choosing between two passing variants. H4b is marginally ahead on both
+averages: three more terms found and 0.003 percentage points less WER. The
+decision below was made after seeing the results, for this reason: H4b changed
+62 FLEURS utterances, mostly ordinary names rewritten ("christina" to
+"cristina", "brides" to "hrides"), while H4c changed 16, every one toward a
+vocabulary term ("sintra" to "sentry", "features" to "feature"). Errors on
+names the person did not ask for are the failure the plan ranks worst, and an
+error toward a term the person taught is predictable and visible.
+
+Decision: carry H4c forward, pending rule 5. H4b stays recorded as passing.
+Russian speech that says English terms the Russian way is not helped by either
+variant, so for Russian the text dictionary stays the tool.
 
 ## H6. Where the engine's time goes
 
