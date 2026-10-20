@@ -31,8 +31,10 @@ for the check.
 6. Copy an image, dictate, and confirm the image is not replaced by an empty
    clipboard. The dictation staying on the clipboard is recoverable; a
    destroyed image is not.
-7. Hold the key and press a letter mid-hold (the Ctrl+C shape). Confirm no text
-   is inserted and no message appears: that was a shortcut, not a dictation.
+7. Hold the key and press a letter right away (the Ctrl+C shape). Confirm no
+   text is inserted and no message appears: that was a shortcut, not a
+   dictation. Then hold the key, speak for a second or two, press a letter,
+   keep talking and release: the whole take is inserted.
 8. Hold the dictation key while the *other* key of the same kind is also held,
    release only the dictation key, and confirm recording stops. This is the
    failure that leaves a microphone live forever, and it cannot be caught any

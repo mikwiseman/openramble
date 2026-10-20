@@ -300,4 +300,29 @@ final class GlobalHotkeyMonitorTests: XCTestCase {
 
         XCTAssertEqual(escapes, 0)
     }
+
+    /// A stray key well into the hold reaches the machine with its own time,
+    /// and the take is not cut short: nothing happens until the release, which
+    /// finishes it as usual.
+    func testScenario019() {
+        var aborted = 0
+        var released = 0
+        monitor.onAbortShortcut = { aborted += 1 }
+        monitor.onRelease = { released += 1 }
+        monitor.start()
+        let pressedAt = pressedRightCommand.at
+
+        source.sendFlags(pressedRightCommand)
+        source.sendKeyDown(HotkeyEvent(keyCode: 8, rawFlags: 0, at: pressedAt.addingTimeInterval(1.0)))
+        XCTAssertEqual(aborted, 0, "a late key is not a shortcut")
+        XCTAssertEqual(released, 0, "and it does not end the take on its own")
+
+        source.sendFlags(HotkeyEvent(
+            keyCode: DictationHotkey.rightCommand.keyCode,
+            rawFlags: 0,
+            at: pressedAt.addingTimeInterval(1.5)
+        ))
+        XCTAssertEqual(released, 1, "the release finishes the take")
+        XCTAssertEqual(aborted, 0)
+    }
 }
