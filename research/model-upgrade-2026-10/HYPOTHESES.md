@@ -455,6 +455,39 @@ them from disk again; that was not measured (it needs `sudo purge`).
 Decision: under the preregistered rules H15 fails and main is not adopted as
 measured. H15b asks the narrower question with the model #79 ships.
 
+## H15b result
+
+On the #79 branch with Ultra Q4_K_M installed in a separate models root and
+imported through the app's own checksum-verified path, the LocalASR suites
+give the same result under 0.4.0 and under main: unit 171 run, 7 skipped, 0
+failed; end-to-end 21 run, 3 skipped, and the same three tests failing (five
+assertions) under both runtimes. Rule 2 holds, so main is adopted together
+with #79. Pinning it needs a published binary: an upstream release that
+contains `db678a03`, or the audited build of it published from the
+`mikwiseman/transcribe.cpp` fork.
+
+## Ultra on the end-to-end suite
+
+H15b ran the end-to-end suite with Ultra for the first time; until then it had
+only run with v3, because it uses the model installed for the app. Three tests
+fail with Ultra under either runtime, all on macOS synthetic voices:
+
+- `testEnglishTrailingSendStaysVerbatimAndNeverPressesReturn`: the take ends
+  in "send it", and Ultra writes "Please review my pull requests and it." The
+  planned "Send it." command depends on these words arriving.
+- `testChunkProfilesPreserveRepeatedSpeechAndTheFinalWords`: at the shipping
+  30 s split the chunked file has 16 errors against 15 for one whole-file
+  pass (455 words). The 15 s and 60 s splits have 13.
+- `testStarterDictionaryOnRealModelOutput`: three developer terms said the
+  Russian way come out in spellings the starter dictionary does not map:
+  "фичерфлэг" for feature flag, and "Rebace" and "Mordge" for rebase and
+  merge. The dictionary was built from v3's spellings.
+
+These are recorded as blockers on #79, not decided here: the first is a
+recognition error on one clip, the second is one word, and the third belongs
+to the text pipeline and its conformance fixtures, which this program does not
+touch.
+
 ## Proposed next hypotheses
 
 - **H8c.** The decoder's joint output layer and LSTM weights in the model's
