@@ -105,3 +105,40 @@ re-ranked by the vocabulary. Same gate, weight grid 1 to 8, and a weight is
 eligible only if the noise clips produce no word.
 
 Result: tuning in progress.
+
+## H6. Where the engine's time goes
+
+Measurement only, no decision. The transcribe.cpp CLI reports mel, encoder
+and decoder milliseconds per input; `profile.py` collects them for the six
+speed inputs and the six long takes on a quiet Mac. The tuning runs already
+show the decoder at about 43 ms per frozen FLEURS file against roughly 115 ms
+of engine time, so the decoder is about 38% of the engine and the mel front
+end plus the Metal encoder the rest.
+
+## H8. The joint network's output layer in the model's own precision
+
+Preregistered on 20 October 2026, before any code for it existed.
+
+The Parakeet decoder runs on one CPU thread. On every step it multiplies the
+joint hidden state by the output layer, 8,198 by 640 weights, and the runtime
+dequantizes that layer from the file's Q8_0 to F32 at load, so every step
+reads about 21 MB from memory. Q8_0 is about 5.6 MB and fits in the
+performance cores' L2 cache; F16 is about 10.5 MB.
+
+Variants: H8a keeps the layer in Q8_0, H8b converts it to F16. Both run
+through ggml's own CPU kernels; the predictor and every other weight stay as
+they are. A variant is adopted when all of these hold against the unchanged
+runtime, with the same model (v3 Q8) and one decoder thread:
+
+1. Median decoder time per frozen FLEURS file, from the runtime's own timing
+   on a quiet Mac, falls by at least 30%.
+2. On all 1,422 FLEURS utterances the upper end of the 95% paired interval
+   for the pooled WER difference is at most +0.05 percentage points, and at
+   least 97% of transcripts are identical.
+3. No word is invented on the noise clips, the wrong-script count does not
+   rise, and hour-file deleted-word rates rise by at most 0.2 percentage
+   points.
+4. Warm p50 and p95 in an interleaved speed run do not get worse.
+
+If both variants pass, the faster one is adopted; on a tie, the one closer to
+the unchanged transcripts. The result is recorded here either way.
