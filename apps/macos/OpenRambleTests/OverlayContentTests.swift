@@ -10,13 +10,15 @@ final class OverlayContentTests: XCTestCase {
         _ state: DictationState,
         notice: DictationNotice? = nil,
         elapsed: TimeInterval = 0,
-        isWaitingForEngine: Bool = false
+        isWaitingForEngine: Bool = false,
+        hasLingered: Bool = false
     ) -> OverlayContent {
         OverlayContent.make(
             state: state,
             notice: notice,
             elapsed: elapsed,
-            isWaitingForEngine: isWaitingForEngine
+            isWaitingForEngine: isWaitingForEngine,
+            hasLingered: hasLingered
         )
     }
 
@@ -27,11 +29,15 @@ final class OverlayContentTests: XCTestCase {
     /// the wait, and the wait can reach the preparation deadline.
     func testWaitingForTheModelIsNotCalledTranscribing() {
         let waiting = content(.transcribing, isWaitingForEngine: true)
-        XCTAssertEqual(waiting.title, "Waking the model…")
-        XCTAssertNotEqual(waiting.title, content(.transcribing).title)
+        XCTAssertEqual(waiting.title, "Waking the model…", "said at once, not after the delay")
+        XCTAssertNotEqual(waiting.title, content(.transcribing, hasLingered: true).title)
         // Still work, still not a failure: the words are safe either way.
-        XCTAssertEqual(waiting.tone, .working)
-        XCTAssertNotNil(waiting.subtitle, "the panel says the words are not lost")
+        XCTAssertEqual(waiting.mark, .working)
+        XCTAssertNil(waiting.tone)
+        XCTAssertTrue(
+            waiting.accessibilityLabel.contains("Your words are waiting, not lost."),
+            "VoiceOver hears that the words are safe"
+        )
         XCTAssertNotEqual(
             waiting.accessibilityLabel,
             content(.transcribing).accessibilityLabel,
@@ -44,8 +50,8 @@ final class OverlayContentTests: XCTestCase {
     func testTheModelWaitDoesNotLeakIntoOtherStates() {
         for state in [DictationState.idle, .preparing, .listening, .inserting] {
             XCTAssertEqual(
-                content(state, isWaitingForEngine: true).title,
-                content(state).title,
+                content(state, isWaitingForEngine: true),
+                content(state),
                 "\(state) is unchanged by the model wait"
             )
         }
@@ -62,36 +68,31 @@ final class OverlayContentTests: XCTestCase {
 
     // MARK: - States
 
+    /// The take's first half second has no words at all; past it, the two
+    /// waits that can run long say what they are.
     func testScenario001() {
-        XCTAssertEqual(content(.idle).title, "Done")
-        XCTAssertEqual(content(.preparing).title, "Turning on the microphone…")
-        XCTAssertEqual(content(.listening).title, "Listening")
-        XCTAssertEqual(content(.transcribing).title, "Transcribing…")
-        XCTAssertEqual(content(.inserting).title, "Done")
+        XCTAssertNil(content(.preparing).title)
+        XCTAssertNil(content(.listening).title)
+        XCTAssertNil(content(.transcribing).title)
+        XCTAssertEqual(content(.preparing, hasLingered: true).title, "Turning on the microphone…")
+        XCTAssertNil(content(.listening, hasLingered: true).title, "the waveform is the title")
+        XCTAssertEqual(content(.transcribing, hasLingered: true).title, "Transcribing…")
+        XCTAssertNil(content(.idle).title)
+        XCTAssertNil(content(.inserting).title)
     }
 
+    /// Gray, then red, then blue — the mark is the only thing that moves.
     func testScenario002() {
-        XCTAssertEqual(content(.listening).tone, .recording)
-        XCTAssertEqual(content(.preparing).tone, .working)
-        XCTAssertEqual(content(.transcribing).tone, .working)
-        XCTAssertEqual(content(.inserting).tone, .idle)
-        XCTAssertEqual(content(.idle).tone, .idle)
-    }
-
-    // MARK: - Seconds
-
-    /// Duration is drawn beside the live waveform by the view. The content model does
-    /// not present the finished recording length as if it were transcription progress.
-    func testScenario003() {
-        XCTAssertNil(content(.listening, elapsed: 7).subtitle)
-        XCTAssertNil(content(.transcribing, elapsed: 12.4).subtitle)
-        XCTAssertNil(content(.preparing, elapsed: 3).subtitle)
-        XCTAssertNil(content(.inserting, elapsed: 3).subtitle)
-        XCTAssertNil(content(.idle, elapsed: 3).subtitle)
-    }
-
-    func testScenario004() {
-        XCTAssertNil(content(.listening, elapsed: -2).subtitle)
+        XCTAssertEqual(content(.preparing).mark, .starting)
+        XCTAssertEqual(content(.listening).mark, .recording)
+        XCTAssertEqual(content(.transcribing).mark, .working)
+        XCTAssertNil(OverlayContent.Mark.starting.colorRole)
+        XCTAssertEqual(OverlayContent.Mark.recording.colorRole, .recording)
+        XCTAssertEqual(OverlayContent.Mark.working.colorRole, .processing)
+        for state in [DictationState.preparing, .listening, .transcribing] {
+            XCTAssertEqual(content(state).panelWidth, 244, "\(state) shares the recording layout")
+            XCTAssertNil(content(state).tone)
+        }
     }
 
     /// "5 s" VoiceOver reads as "5 es".
@@ -132,9 +133,10 @@ final class OverlayContentTests: XCTestCase {
     }
 
     func testScenario008() {
+        XCTAssertNil(content(.transcribing).voice, "a quick take says nothing after its tone")
         XCTAssertEqual(
-            content(.transcribing).voice,
-            .speech("Recording stopped, transcribing speech", urgent: false)
+            content(.transcribing, hasLingered: true).voice,
+            .speech("Transcribing…", urgent: false)
         )
         XCTAssertNil(content(.inserting).voice)
         XCTAssertNil(content(.preparing).voice, "said while the microphone opens, so never said")
@@ -152,8 +154,8 @@ final class OverlayContentTests: XCTestCase {
         let content = content(.listening, notice: notice, elapsed: 9)
 
         XCTAssertEqual(content.title, notice.message)
-        // The counter next to the message is reset: recording is no longer taking place.
-        XCTAssertNil(content.subtitle)
+        XCTAssertNil(content.mark)
+        XCTAssertEqual(content.panelWidth, 320)
         XCTAssertEqual(content.tone, .warning)
         XCTAssertEqual(content.voice, .speech(notice.message, urgent: true))
     }
@@ -185,13 +187,10 @@ final class OverlayContentTests: XCTestCase {
 
     // MARK: - Tone rendering policy
 
-    /// One meaning per color, pinned: red only for the live microphone, blue
-    /// for working/info, orange for anything that needs the person. Failure
-    /// wears orange, not red — every failure here keeps the work recoverable.
+    /// One meaning per color, pinned: blue for info, orange for anything that
+    /// needs the person. Failure wears orange, not red — every failure here
+    /// keeps the work recoverable, and red is the live microphone alone.
     func testScenario014() {
-        XCTAssertNil(OverlayContent.Tone.idle.colorRole)
-        XCTAssertEqual(OverlayContent.Tone.recording.colorRole, .recording)
-        XCTAssertEqual(OverlayContent.Tone.working.colorRole, .processing)
         XCTAssertEqual(OverlayContent.Tone.info.colorRole, .processing)
         XCTAssertEqual(OverlayContent.Tone.warning.colorRole, .attention)
         XCTAssertEqual(OverlayContent.Tone.failure.colorRole, .attention)
@@ -203,8 +202,5 @@ final class OverlayContentTests: XCTestCase {
         XCTAssertEqual(OverlayContent.Tone.failure.iconName, "exclamationmark.triangle.fill")
         XCTAssertEqual(OverlayContent.Tone.warning.iconName, "exclamationmark.triangle.fill")
         XCTAssertEqual(OverlayContent.Tone.info.iconName, "info.circle.fill")
-        XCTAssertEqual(OverlayContent.Tone.recording.iconName, "mic.fill")
-        XCTAssertEqual(OverlayContent.Tone.working.iconName, "waveform")
-        XCTAssertEqual(OverlayContent.Tone.idle.iconName, "checkmark.circle.fill")
     }
 }
