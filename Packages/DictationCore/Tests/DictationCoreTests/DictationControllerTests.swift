@@ -212,6 +212,31 @@ actor FakeInserter: TextInserting {
     nonisolated func frontmostApplication() -> TargetApplication? { frontmost }
 }
 
+/// Sends ⌘V that nobody reads, and waits for the read until told to stop,
+/// the way the real inserter does.
+private final class ReadWaitingInserter: TextInserting, @unchecked Sendable {
+    private let lock = NSLock()
+    private var waiting = false
+    private var ended = false
+
+    var isWaiting: Bool { lock.withLock { waiting } }
+
+    func insert(_ text: String, into target: TargetApplication?) async throws {
+        lock.withLock { waiting = true }
+        for _ in 0..<1000 where !lock.withLock({ ended }) {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        throw TextInsertionError.pasteNotRead
+    }
+
+    func endTheReadWait() {
+        lock.withLock { if waiting { ended = true } }
+    }
+
+    func pressReturn() async throws {}
+    func frontmostApplication() -> TargetApplication? { nil }
+}
+
 actor FakeOverlay: OverlayPresenting {
     private(set) var presentedStates: [DictationState] = []
     private(set) var dismissCount = 0
@@ -853,6 +878,51 @@ final class DictationControllerTests: XCTestCase {
         XCTAssertEqual(notice.recoverableText, "Nobody read this")
         XCTAssertEqual(controller.pendingRecovery?.text, "Nobody read this")
         XCTAssertEqual(archived, ["Nobody read this"])
+    }
+
+    /// The person presses the key again while the paste waits for its read:
+    /// nothing has appeared, so they are trying again. The press ends the
+    /// wait, and the paste nobody read is said out loud now — never a press
+    /// that vanishes while they speak into nothing. The next press starts.
+    func testAPressWhileThePasteWaitsForItsReadEndsTheWaitOutLoud() async throws {
+        let waiting = ReadWaitingInserter()
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in
+                ASRResult(text: "nobody read this", audioDuration: 2, processingDuration: 0.1)
+            },
+            inserter: waiting,
+            overlay: overlay,
+            sounds: sounds,
+            pipeline: { _ in TextPipeline() }
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        for _ in 0..<400 where !waiting.isWaiting {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(controller.state, .inserting)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+
+        let notices = await overlay.notices
+        let notice = try XCTUnwrap(notices.last)
+        XCTAssertTrue(notice.wordsDidNotLand)
+        XCTAssertEqual(notice.recoverableText, "Nobody read this")
+        XCTAssertEqual(controller.pendingRecovery?.text, "Nobody read this")
+        let plays = await sounds.attentionPlays
+        XCTAssertEqual(plays, 1)
+        XCTAssertEqual(controller.state, .idle)
+        let startsAfterThePress = await capture.startCount
+        XCTAssertEqual(startsAfterThePress, 1, "the press that ended the wait is not a take")
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        let startsAfterTheNextPress = await capture.startCount
+        XCTAssertEqual(startsAfterTheNextPress, 2, "the next press starts normally")
     }
 
     // MARK: Insertion target

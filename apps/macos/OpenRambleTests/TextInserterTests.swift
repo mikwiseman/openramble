@@ -388,6 +388,53 @@ final class TextInserterTests: XCTestCase {
         )
     }
 
+    /// The person presses the dictation key while an unread paste waits:
+    /// nothing has appeared, so they are trying again. The wait ends then,
+    /// not at the limit, and the paste nobody read is reported with the
+    /// person's clipboard back.
+    func testAPressEndsTheWaitForAPasteNobodyReads() async throws {
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
+        let inserter = board.inserter(
+            system: system,
+            readFloor: .milliseconds(100),
+            readLimit: .seconds(3)
+        )
+        system.onPost = {
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.2) { inserter.endTheReadWait() }
+        }
+
+        let started = ContinuousClock.now
+        await XCTAssertThrowsErrorAsync(
+            try await inserter.insert("DICTATED", into: target),
+            expected: .pasteNotRead
+        )
+
+        XCTAssertLessThan(started.duration(to: .now), .seconds(1), "the press ended the wait, not the limit")
+        XCTAssertEqual(board.contents, "what the person copied")
+    }
+
+    /// Regression guard: a press just before ⌘V does not cut short a paste
+    /// that is about to land. The target still has the floor to read it.
+    func testAPressBeforeThePasteLeavesTheTargetTimeToRead() async throws {
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
+        let reader = BoardReader(board: board.name)
+        let inserter = board.inserter(
+            system: system,
+            readQuiet: TextInserter.readQuiet,
+            readFloor: .milliseconds(300),
+            readLimit: .seconds(3)
+        )
+        system.onHeldModifiers = { inserter.endTheReadWait() }
+        system.onPost = { reader.read(after: .milliseconds(20)) }
+
+        try await inserter.insert("DICTATED", into: target)
+
+        XCTAssertEqual(reader.texts, ["DICTATED"])
+        XCTAssertEqual(board.contents, "what the person copied")
+    }
+
     /// A read that lands after the last look but before the restore closes
     /// the transaction still counts: the words landed, and calling them lost
     /// would make the person insert them a second time from the menu.
@@ -458,6 +505,29 @@ final class TextInserterTests: XCTestCase {
         XCTAssertLessThanOrEqual(read, returned)
         let texts = await reader.texts(count: 1)
         XCTAssertEqual(texts, ["DICTATED"])
+    }
+
+    /// The real route: another process pastes the way TextEdit does, through
+    /// NSTextView.readSelection. Its read is served from this process's main
+    /// thread, which an in-process read never exercises.
+    func testAnotherProcessPastingThroughATextViewIsTheReceipt() async throws {
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
+        let otherApp = OtherProcessPaste(board: board.name)
+        system.onPost = { otherApp.paste() }
+
+        let marks = try await board.inserter(
+            system: system,
+            readQuiet: TextInserter.readQuiet,
+            readFloor: TextInserter.readFloor,
+            readLimit: .seconds(10)
+        ).insertReportingMarks("DICTATED", into: target)
+
+        XCTAssertEqual(otherApp.pasted(), "DICTATED")
+        let read = try XCTUnwrap(marks.firstReadAt)
+        let restored = try XCTUnwrap(marks.clipboardRestoredAt)
+        XCTAssertGreaterThanOrEqual(read.duration(to: restored), TextInserter.readQuiet)
+        XCTAssertEqual(board.contents, "what the person copied")
     }
 
     /// The controller's deadline cancels the insertion while it waits for the
@@ -770,6 +840,36 @@ private final class BoardReader: @unchecked Sendable {
     }
 }
 
+/// Another process that pastes the board through NSTextView.readSelection,
+/// TextEdit's own path. It reads a private named board and touches nothing
+/// else: no window, no other application, no general pasteboard.
+private final class OtherProcessPaste: @unchecked Sendable {
+    private let process = Process()
+    private let output = Pipe()
+
+    init(board name: String) {
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-l", "JavaScript", "-e", """
+            ObjC.import('AppKit');
+            const view = $.NSTextView.alloc.initWithFrame($.NSMakeRect(0, 0, 400, 100));
+            view.richText = true;
+            view.readSelectionFromPasteboard($.NSPasteboard.pasteboardWithName('\(name)'))
+                ? ObjC.unwrap(view.string) : 'nothing';
+            """]
+        process.standardOutput = output
+    }
+
+    func paste() {
+        try? process.run()
+    }
+
+    func pasted() -> String {
+        process.waitUntilExit()
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        return String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
 private final class ReportCounter: @unchecked Sendable {
     private let lock = NSLock()
     private var stored = 0
@@ -791,7 +891,9 @@ final class PasteKeyTests: XCTestCase {
             "com.apple.keylayout.Turkish-Standard": 8,
         ]
         for (identifier, keyCode) in expected {
-            let layout = try XCTUnwrap(Self.layoutData(identifier), identifier)
+            guard let layout = Self.layoutData(identifier) else {
+                throw XCTSkip("\(identifier) is not installed on this Mac")
+            }
             XCTAssertEqual(
                 PasteKey.keyCode(translating: PasteKey.characters(in: layout)),
                 keyCode,

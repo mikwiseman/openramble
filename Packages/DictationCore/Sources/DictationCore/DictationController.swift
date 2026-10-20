@@ -494,6 +494,12 @@ public final class DictationController {
 
     /// Hotkey pressed.
     public func begin(handsFree: Bool, isEnabled: Bool, isModelReady: Bool) {
+        if state == .inserting {
+            // The paste may be waiting for its read: nothing has appeared, so
+            // the person is trying again. End the wait, and a paste nobody read
+            // is said out loud now instead of this press vanishing unheard.
+            inserter.endTheReadWait()
+        }
         // The first check is synchronous, before any waiting. Between her and
         // the asynchronous start is completed by pressing again.
         guard DictationStopPolicy.canStart(

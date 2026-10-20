@@ -49,8 +49,10 @@ for the check.
    a dictation pastes rather than typing ⌘K or copying.
    Dictate with no text field focused (Finder's desktop) and confirm the
    "couldn't be inserted" notice appears within three seconds and the previous
-   clipboard is back. Then use `Insert Last Dictation` from the menu into a
-   text field and confirm it lands without a second notice.
+   clipboard is back. Repeat, and press the dictation key again a second
+   after releasing it: the notice and its sound come at once, and the press
+   after that starts a new take. Then use `Insert Last Dictation` from the menu into
+   a text field and confirm it lands without a second notice.
 9. Confirm clipboard text, rich content, files, and multiple items are restored
    after insertion and do not appear on another device through Universal
    Clipboard. Verify password-manager values, lazy file promises, and content

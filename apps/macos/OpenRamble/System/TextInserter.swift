@@ -496,14 +496,24 @@ final class TextInsertionLane: @unchecked Sendable {
 
     private let lock = NSLock()
     private var isOwned = false
+    private var pressedAgain = false
 
     func tryAcquire() -> Bool {
         lock.withLock {
             guard !isOwned else { return false }
             isOwned = true
+            pressedAgain = false
             return true
         }
     }
+
+    /// The person pressed the dictation key during the current transaction.
+    /// A press with no transaction under way belongs to nothing.
+    func notePressedAgain() {
+        lock.withLock { if isOwned { pressedAgain = true } }
+    }
+
+    var wasPressedAgain: Bool { lock.withLock { pressedAgain } }
 
     func release() {
         lock.withLock {
@@ -685,6 +695,10 @@ public struct TextInserter: TextInserting {
         )
     }
 
+    public func endTheReadWait() {
+        operationLane.notePressedAgain()
+    }
+
     public func pressReturn() async throws {
         try await pressReturn(into: nil)
     }
@@ -736,6 +750,10 @@ public struct TextInserter: TextInserting {
     /// floor. A read before ⌘V, or one by a clipboard watcher just after it,
     /// then costs at most the floor - never a false alarm, and never the text
     /// taken away from a target that reads a moment later.
+    ///
+    /// A press of the dictation key brings the limit down to the floor:
+    /// nothing has appeared and the person is trying again, while every real
+    /// application has read well within it.
     private func waitForTheRead(
         of transaction: PasteboardTransaction,
         pastedAt: ContinuousClock.Instant
@@ -744,7 +762,7 @@ public struct TextInserter: TextInserting {
             let now = ContinuousClock.now
             if let read = pasteboard.firstRead(of: transaction) {
                 if now >= max(read + readQuiet, pastedAt + readFloor) { return false }
-            } else if now >= pastedAt + readLimit {
+            } else if now >= pastedAt + (operationLane.wasPressedAgain ? readFloor : readLimit) {
                 return false
             }
             do {

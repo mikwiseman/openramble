@@ -440,8 +440,8 @@ public protocol TextInserting: Sendable {
     func pressReturn() async throws
 
     /// Send Return to the same application captured for this dictation. The
-    /// default keeps old/test inserters source-compatible; production targets
-    /// the process so an actor-turn focus change cannot redirect the command.
+    /// default keeps old/test inserters source-compatible; production presses
+    /// it where the paste went, and only while that application is in front.
     func pressReturn(into target: TargetApplication?) async throws
 
     /// The application that was active at the time the hotkey was pressed.
@@ -459,12 +459,21 @@ public protocol TextInserting: Sendable {
         _ text: String,
         into target: TargetApplication?
     ) async throws -> InsertionMarks
+
+    /// The person pressed the dictation key while the insertion waits for the
+    /// target to read the paste. Nothing has appeared, so they are trying
+    /// again: stop waiting as soon as a real application would have read. A
+    /// paste nobody read by then throws `pasteNotRead`, so it is said out loud.
+    func endTheReadWait()
 }
 
 extension TextInserting {
     public func pressReturn(into target: TargetApplication?) async throws {
         try await pressReturn()
     }
+
+    /// Inserters that do not wait for a read have nothing to end.
+    public func endTheReadWait() {}
 
     /// The default is a normal insert without marks. False inserters in
     /// tests do not measure anything and should not pretend to measure anything.
