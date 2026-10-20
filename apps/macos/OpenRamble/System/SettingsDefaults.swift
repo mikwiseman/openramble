@@ -16,31 +16,10 @@ public enum SettingsDefaults {
     public static let appendsTrailingSpace = false
     public static let launchAtLogin = false
     public static let overlayPlacement: DictationOverlayPlacement = .top
-    public static let appearance: AppAppearance = .system
     public static let presence: AppPresence = .menuBar
     public static let detailedLogging = true
     public static let stopsOnSilence = false
 }
-
-/// Which look the app takes, regardless of the rest of the system.
-///
-/// `system` is the default and the honest one — an app that follows the
-/// machine needs no setting at all. The other two exist because a person who
-/// keeps their Mac light and this window dark is not doing anything strange.
-public enum AppAppearance: String, CaseIterable, Identifiable, Sendable {
-    case system, light, dark
-
-    public var id: Self { self }
-
-    public var title: String {
-        switch self {
-        case .system: return L10n.tr("System")
-        case .light: return L10n.tr("Light")
-        case .dark: return L10n.tr("Dark")
-        }
-    }
-}
-
 
 /// Where the app lives on screen.
 ///

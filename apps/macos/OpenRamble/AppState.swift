@@ -785,25 +785,6 @@ public final class AppState: ObservableObject {
         NSApp?.setActivationPolicy(presence.showsDockIcon ? .regular : .accessory)
     }
 
-    /// Light, dark, or whatever the machine is doing.
-    @Published public var appearance: AppAppearance {
-        didSet {
-            guard oldValue != appearance else { return }
-            defaults.set(appearance.rawValue, forKey: Keys.appearance)
-            Self.apply(appearance)
-        }
-    }
-
-    /// Hand the choice to AppKit, which owns every window including the ones
-    /// SwiftUI has not made yet.
-    static func apply(_ appearance: AppAppearance) {
-        NSApp?.appearance = switch appearance {
-        case .system: nil
-        case .light: NSAppearance(named: .aqua)
-        case .dark: NSAppearance(named: .darkAqua)
-        }
-    }
-
     /// The shortcut that copies the last dictation, or nothing.
     ///
     /// Optional because most people will not want a second global shortcut
@@ -872,7 +853,6 @@ public final class AppState: ObservableObject {
         static let copyShortcut = "copyShortcut"
         static let recordingShortcut = "recordingShortcut"
         static let trailingSpace = "appendsTrailingSpace"
-        static let appearance = "appearance"
         static let inputDevice = "inputDeviceUID"
         static let presence = "presence"
         static let detailedLogging = "detailedLogging"
@@ -1114,9 +1094,6 @@ public final class AppState: ObservableObject {
         }
         appendsTrailingSpace = environment.defaults.object(forKey: Keys.trailingSpace) as? Bool
             ?? SettingsDefaults.appendsTrailingSpace
-        appearance = AppAppearance(
-            rawValue: environment.defaults.string(forKey: Keys.appearance) ?? ""
-        ) ?? SettingsDefaults.appearance
         inputDeviceUID = (environment.defaults.string(forKey: Keys.inputDevice))
             .flatMap { $0.isEmpty ? nil : $0 }
         presence = AppPresence(

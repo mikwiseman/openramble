@@ -50,7 +50,6 @@
 "Allow screen recording" = "Allow screen recording";
 "Allow the microphone to record." = "Allow the microphone to record.";
 "Also copy dictations to the clipboard" = "Also copy dictations to the clipboard";
-"Appearance" = "Appearance";
 "Apple's built-in dictation" = "Apple's built-in dictation";
 "Ask on start" = "Ask on start";
 "Attempts to insert the saved text into the current field" = "Attempts to insert the saved text into the current field";
@@ -119,7 +118,6 @@
 "Couldn't transcribe this part" = "Couldn't transcribe this part";
 "Couldn’t save the report" = "Couldn’t save the report";
 "Credits" = "Credits";
-"Dark" = "Dark";
 "Delete" = "Delete";
 "Delete All" = "Delete All";
 "Delete Model" = "Delete Model";
@@ -178,7 +176,6 @@
 "Finished text is pasted through the clipboard; its previous contents are restored shortly afterward." = "Finished text is pasted through the clipboard; its previous contents are restored shortly afterward.";
 "Removes OpenRamble's old Accessibility entry and relaunches the app." = "Removes OpenRamble's old Accessibility entry and relaunches the app.";
 "Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT." = "Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT.";
-"Follow the system, or keep this app light or dark on its own" = "Follow the system, or keep this app light or dark on its own";
 "For dictating in runs, so the next phrase does not arrive welded to the last word." = "For dictating in runs, so the next phrase does not arrive welded to the last word.";
 "Frees the speech model's memory after this much idle time. It reloads under your voice at the next dictation." = "Frees the speech model's memory after this much idle time. It reloads under your voice at the next dictation.";
 "Frees up disk space. Dictation stops working until the model is downloaded again." = "Frees up disk space. Dictation stops working until the model is downloaded again.";
@@ -239,7 +236,6 @@
 "Left Option" = "Left Option";
 "Lets OpenRamble record the other people in a call. Used only while you are recording." = "Lets OpenRamble record the other people in a call. Used only while you are recording.";
 "“Let’s meet Tuesday. Scratch that. Let’s meet Wednesday.”" = "“Let’s meet Tuesday. Scratch that. Let’s meet Wednesday.”";
-"Light" = "Light";
 "Listening" = "Listening";
 "Listening — press %@ to finish" = "Listening — press %@ to finish";
 "Listening…" = "Listening…";
@@ -492,7 +488,6 @@
 "Stopped when OpenRamble quit." = "Stopped when OpenRamble quit.";
 "Stops the current dictation so you can continue setup." = "Stops the current dictation so you can continue setup.";
 "Stops the download and deletes the partially downloaded files." = "Stops the download and deletes the partially downloaded files.";
-"System" = "System";
 "System Audio" = "System Audio";
 "System audio is off. Recordings include your voice only until you turn it on." = "System audio is off. Recordings include your voice only until you turn it on.";
 "System default" = "System default";
@@ -554,7 +549,6 @@
 "The transcript can't be saved. The recording continues." = "The transcript can't be saved. The recording continues.";
 "The transcripts and their recordings are removed from this Mac." = "The transcripts and their recordings are removed from this Mac.";
 "Their audio was kept so nothing was lost. It is deleted within seven days." = "Their audio was kept so nothing was lost. It is deleted within seven days.";
-"Theme" = "Theme";
 "There is no option to hide it entirely — an app you cannot see is one you cannot open again." = "There is no option to hide it entirely — an app you cannot see is one you cannot open again.";
 "This Mac can't record other apps' audio" = "This Mac can't record other apps' audio";
 "This Mac restricts camera access. Turn off the bubble to record your screen." = "This Mac restricts camera access. Turn off the bubble to record your screen.";

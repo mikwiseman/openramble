@@ -88,7 +88,6 @@ struct SettingsView: View {
             AboutView(
                 updater: state.updater,
                 revealSupportFolder: state.revealSupportFolder,
-                appearance: $state.appearance,
                 detailedLogging: $state.detailedLogging,
             diagnostics: state.diagnostics
             )
@@ -735,7 +734,6 @@ private struct AboutView: View {
     // Sparkle reports its changes itself; they would not have reached through AppState.
     @ObservedObject var updater: SparkleUpdater
     let revealSupportFolder: () -> Void
-    @Binding var appearance: AppAppearance
     @Binding var detailedLogging: Bool
     let diagnostics: DictationLogFile
     @State private var isSavingReport = false
@@ -799,23 +797,6 @@ private struct AboutView: View {
                     }
                 }
                 .padding(.vertical, 4)
-            }
-
-            Section(L10n.tr("Appearance")) {
-                SettingRow(
-                    title: L10n.tr("Theme"),
-                    isChanged: appearance != SettingsDefaults.appearance,
-                    revert: { appearance = SettingsDefaults.appearance }
-                ) {
-                    Picker("", selection: $appearance) {
-                        ForEach(AppAppearance.allCases) { option in
-                            Text(option.title).tag(option)
-                        }
-                    }
-                    .labelsHidden()
-                    .accessibilityLabel(L10n.tr("Theme"))
-                    .accessibilityHint(L10n.tr("Follow the system, or keep this app light or dark on its own"))
-                }
             }
 
             Section {

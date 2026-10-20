@@ -59,11 +59,9 @@ struct OpenRambleApp: App {
                 showOnboarding: { onboardingCompleted = false }
             )
             .environment(\.locale, L10n.shared.language.locale)
-            // The chosen look has to be applied to AppKit, and the menu is the
-            // one piece of this app that exists from launch — every window
-            // here is opened later, or never.
+            // The menu is the one piece of this app that exists from launch —
+            // every window here is opened later, or never.
             .task {
-                AppState.apply(state.appearance)
                 AppState.applyDockPresence(state.presence)
                 // Closing the settings window must not take away a Dock icon
                 // the person asked to keep.

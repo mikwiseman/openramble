@@ -50,7 +50,6 @@
 "Allow screen recording" = "Разрешите запись экрана";
 "Allow the microphone to record." = "Разрешите доступ к микрофону для записи.";
 "Also copy dictations to the clipboard" = "Копировать диктовки в буфер обмена";
-"Appearance" = "Оформление";
 "Apple's built-in dictation" = "встроенную диктовку Apple";
 "Ask on start" = "Запрос при запуске";
 "Attempts to insert the saved text into the current field" = "Пробует вставить сохранённый текст в текущее поле";
@@ -119,7 +118,6 @@
 "Couldn't transcribe this part" = "Не удалось распознать этот фрагмент";
 "Couldn’t save the report" = "Не удалось сохранить отчёт";
 "Credits" = "Благодарности";
-"Dark" = "Тёмная";
 "Delete" = "Удалить";
 "Delete All" = "Удалить всё";
 "Delete Model" = "Удалить модель";
@@ -178,7 +176,6 @@
 "Finished text is pasted through the clipboard; its previous contents are restored shortly afterward." = "Готовый текст вставляется через буфер обмена. Его прежнее содержимое вскоре восстанавливается.";
 "Removes OpenRamble's old Accessibility entry and relaunches the app." = "Удаляет старую запись OpenRamble в Универсальном доступе и перезапускает приложение.";
 "Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT." = "Распознавание речи работает на transcribe.cpp от CJ Pais и команды Handy, лицензия MIT. Sparkle распространяется по лицензии MIT.";
-"Follow the system, or keep this app light or dark on its own" = "Следовать системе или выбрать светлую либо тёмную тему для приложения";
 "For dictating in runs, so the next phrase does not arrive welded to the last word." = "При диктовке по частям следующая фраза не будет склеиваться с предыдущей.";
 "Frees the speech model's memory after this much idle time. It reloads under your voice at the next dictation." = "Освобождает память модели после указанного времени бездействия. При следующей диктовке модель загрузится, пока вы говорите.";
 "Frees up disk space. Dictation stops working until the model is downloaded again." = "Освобождает место на диске. Диктовка не будет работать, пока модель не будет скачана снова.";
@@ -239,7 +236,6 @@
 "Left Option" = "Левый Option";
 "Lets OpenRamble record the other people in a call. Used only while you are recording." = "Позволяет OpenRamble записывать собеседников в звонке. Используется только во время записи.";
 "“Let’s meet Tuesday. Scratch that. Let’s meet Wednesday.”" = "«Мы, ээ, думаем, что надо подождать.»";
-"Light" = "Светлая";
 "Listening" = "Слушаю";
 "Listening — press %@ to finish" = "Слушаю — нажмите %@ для завершения";
 "Listening…" = "Слушаю…";
@@ -492,7 +488,6 @@
 "Stopped when OpenRamble quit." = "Запись остановлена при выходе из OpenRamble.";
 "Stops the current dictation so you can continue setup." = "Останавливает текущую диктовку, чтобы продолжить настройку.";
 "Stops the download and deletes the partially downloaded files." = "Останавливает загрузку и удаляет частично скачанные файлы.";
-"System" = "Системная";
 "System Audio" = "Системный звук";
 "System audio is off. Recordings include your voice only until you turn it on." = "Системный звук отключён. Пока вы его не включите, в записях будет только ваш голос.";
 "System default" = "Системный";
@@ -554,7 +549,6 @@
 "The transcript can't be saved. The recording continues." = "Не удаётся сохранить расшифровку. Запись продолжается.";
 "The transcripts and their recordings are removed from this Mac." = "Расшифровки и их записи будут удалены с этого Mac.";
 "Their audio was kept so nothing was lost. It is deleted within seven days." = "Звук сохранён, чтобы ничего не потерялось. Он будет удалён в течение семи дней.";
-"Theme" = "Тема";
 "There is no option to hide it entirely — an app you cannot see is one you cannot open again." = "Полностью скрыть приложение нельзя — иначе его не получится открыть снова.";
 "This Mac can't record other apps' audio" = "Этот Mac не может записывать звук других приложений";
 "This Mac restricts camera access. Turn off the bubble to record your screen." = "На этом Mac доступ к камере ограничен. Отключите кружок с камерой для записи экрана.";

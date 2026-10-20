@@ -23,7 +23,6 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(state.copiesToClipboard, SettingsDefaults.copiesToClipboard)
         XCTAssertEqual(state.appendsTrailingSpace, SettingsDefaults.appendsTrailingSpace)
         XCTAssertEqual(state.overlayPlacement, SettingsDefaults.overlayPlacement)
-        XCTAssertEqual(state.appearance, SettingsDefaults.appearance)
     }
 
     func testExistingDiagnosticsOptOutIsRespectedAtLaunch() {
@@ -51,9 +50,4 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(state.overlayPlacement, SettingsDefaults.overlayPlacement)
     }
 
-    /// The theme survives a relaunch, or it is not a setting.
-    func testScenario003() {
-        harness.defaults.set("dark", forKey: "appearance")
-        XCTAssertEqual(harness.makeState().appearance, .dark)
-    }
 }
