@@ -1,3 +1,4 @@
+import AVFoundation
 import XCTest
 @testable import DictationCore
 
@@ -15,9 +16,13 @@ final class EmptyTakeTests: XCTestCase {
     private var sounds: FakeSounds!
     private var controller: DictationController!
     private var archived: [(text: String, url: URL)] = []
+    /// What the handed-over file held at the moment of the handover, which is
+    /// the only moment History gets to copy it.
+    private var handedOverFrames: [AVAudioFramePosition?] = []
 
     /// Room noise, well under the speech floor.
     private let quiet = [Float](repeating: 0.001, count: 16_000)
+    private nonisolated static let nothing = ASRResult(text: "", audioDuration: 2, processingDuration: 0.1)
 
     override func setUp() async throws {
         capture = FakeCapture()
@@ -25,28 +30,60 @@ final class EmptyTakeTests: XCTestCase {
         overlay = FakeOverlay()
         sounds = FakeSounds()
         archived = []
-        controller = DictationController(
+        handedOverFrames = []
+        controller = makeController(capture: capture)
+    }
+
+    private func makeController(
+        capture: any AudioCapturing,
+        transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)? = nil
+    ) -> DictationController {
+        let controller = DictationController(
             capture: capture,
-            transcribe: { _ in ASRResult(text: "", audioDuration: 2, processingDuration: 0.1) },
+            transcribe: { _ in Self.nothing },
+            transcribeSamples: transcribeSamples,
             inserter: inserter,
             overlay: overlay,
             sounds: sounds,
             pipeline: { _ in TextPipeline() }
         )
-        controller.onTakeFinished = { [weak self] text, url in self?.archived.append((text, url)) }
+        controller.onTakeFinished = { [weak self] text, url in
+            self?.archived.append((text, url))
+            self?.handedOverFrames.append(try? AVAudioFile(forReading: url).length)
+        }
+        return controller
     }
 
-    private func dictate() async {
+    /// One whole take, waited on by condition rather than by a fixed number
+    /// of sleeps: under load a fixed wait ends before the take does.
+    private func dictate(_ controller: DictationController? = nil) async throws {
+        let controller = controller ?? self.controller!
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
-        for _ in 0..<12 { await Task.yield(); try? await Task.sleep(for: .milliseconds(5)) }
+        try await waitUntil { controller.state == .listening }
         controller.stop()
-        for _ in 0..<24 { await Task.yield(); try? await Task.sleep(for: .milliseconds(5)) }
+        try await waitUntil { controller.state == .idle }
+        // The notice reaches the panel through its own queue, after idle.
+        try await waitUntil { [overlay] in await !(overlay!.notices.isEmpty) }
     }
 
-    func testAnEmptyTakeWithSoundIsKeptInHistoryWithoutText() async {
+    private func waitUntil(_ predicate: () async -> Bool) async throws {
+        let end = ContinuousClock.now.advanced(by: .seconds(8))
+        while !(await predicate()), ContinuousClock.now < end {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        let satisfied = await predicate()
+        XCTAssertTrue(satisfied)
+    }
+
+    private func waitForOneAttentionPlay() async throws {
+        try await waitUntil { [sounds] in await sounds!.attentionPlays >= 1 }
+    }
+
+    func testAnEmptyTakeWithSoundIsKeptInHistoryWithoutText() async throws {
         await capture.setBufferedSamples(quiet + [0.1] + quiet)
 
-        await dictate()
+        try await dictate()
+        try await waitForOneAttentionPlay()
 
         let inserted = await inserter.insertedTexts
         let notices = await overlay.notices
@@ -61,19 +98,51 @@ final class EmptyTakeTests: XCTestCase {
         XCTAssertEqual(plays, 1)
     }
 
-    func testAnEmptyTakeOfSilenceNamesTheMicrophoneAndKeepsNothing() async {
+    /// Takes under five minutes are recognized from memory, so nothing waits
+    /// for the file before the words come back. When the file never reached
+    /// disk — the writer slot was busy, or the writer failed — History must
+    /// still get a whole, playable recording, rebuilt from the samples, and
+    /// that rebuilt copy must not stay behind for recovery to adopt.
+    func testAWordlessTakeWhoseFileNeverReachedDiskIsKeptFromItsSamples() async throws {
+        let takes = FileManager.default.temporaryDirectory
+            .appending(path: "wordless-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: takes, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: takes) }
+        let samples = quiet + [0.1] + quiet
+        let controller = makeController(
+            capture: MemoryOnlyCapture(directory: takes, samples: samples),
+            transcribeSamples: { _ in Self.nothing }
+        )
+
+        try await dictate(controller)
+
+        XCTAssertEqual(archived.map(\.text), [""])
+        XCTAssertEqual(
+            handedOverFrames,
+            [AVAudioFramePosition(samples.count)],
+            "History gets the whole take while it still exists"
+        )
+        let notices = await overlay.notices
+        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — nothing was inserted."])
+        try await waitUntil {
+            let names = (try? FileManager.default.contentsOfDirectory(atPath: takes.path)) ?? []
+            return !names.contains { $0.hasPrefix("memory-recovery-") }
+        }
+    }
+
+    func testAnEmptyTakeOfSilenceNamesTheMicrophoneAndKeepsNothing() async throws {
         await capture.setBufferedSamples(quiet)
         controller.microphoneName = { "Test Mic" }
 
-        await dictate()
+        try await dictate()
+        try await waitForOneAttentionPlay()
 
         let notices = await overlay.notices
         let plays = await sounds.attentionPlays
         XCTAssertTrue(archived.isEmpty, "silence is not kept")
         XCTAssertEqual(notices.count, 1, "\(notices)")
         XCTAssertEqual(notices.first?.message, "Heard only silence from Test Mic.")
-        // Orange, like the notice for a held key that recorded no audio at
-        // all: a muted, dead or wrong input needs the person to act.
+        // Orange: a muted, dead or wrong input needs the person to act.
         XCTAssertEqual(notices.first?.kind, .warning)
         XCTAssertEqual(notices.first?.wordsDidNotLand, true)
         XCTAssertNil(notices.first?.recoveryAudio)
@@ -82,11 +151,11 @@ final class EmptyTakeTests: XCTestCase {
 
     /// Without a name the words change, never the kind: it is the same
     /// silence, and it is counted the same way.
-    func testSilenceFromAnUnnamedMicrophoneSaysNothingWasRecognized() async {
+    func testSilenceFromAnUnnamedMicrophoneSaysNothingWasRecognized() async throws {
         await capture.setBufferedSamples(quiet)
         controller.microphoneName = { nil }
 
-        await dictate()
+        try await dictate()
 
         let notices = await overlay.notices
         XCTAssertTrue(archived.isEmpty)
@@ -97,14 +166,82 @@ final class EmptyTakeTests: XCTestCase {
 
     /// Without the samples (a take longer than the in-memory bound) there is
     /// no telling silence from sound, so the take is kept.
-    func testAnEmptyTakeWithoutPCMIsKeptRatherThanCalledSilence() async {
+    func testAnEmptyTakeWithoutPCMIsKeptRatherThanCalledSilence() async throws {
         await capture.setBufferedSamples(nil)
         controller.microphoneName = { "Test Mic" }
 
-        await dictate()
+        try await dictate()
 
         let notices = await overlay.notices
         XCTAssertEqual(archived.map(\.text), [""])
         XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — nothing was inserted."])
+    }
+}
+
+/// A take that lives only in memory, like the production capture's when the
+/// writer slot is busy: its file never appears, and the only way to a WAV is
+/// to rebuild one from the samples, beside where the file would have been.
+private actor MemoryOnlyCapture: AudioCapturing {
+    private let url: URL
+    private let samples: [Float]
+
+    init(directory: URL, samples: [Float]) {
+        url = directory.appending(path: "take.wav")
+        self.samples = samples
+    }
+
+    func startRecording() async throws -> URL { url }
+
+    func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
+        throw AudioCaptureError.writeFailed("the recording file is unavailable")
+    }
+
+    func freezeRecording() async throws -> CapturedRecording {
+        let unavailable = Task<URL, Error> {
+            throw AudioCaptureError.writeFailed("the recording file is unavailable")
+        }
+        let samples = samples
+        let rebuilt = url.deletingLastPathComponent()
+            .appending(path: "memory-recovery-\(UUID().uuidString).wav")
+        let disposition = RecordingDisposition()
+        disposition.register([rebuilt])
+        return CapturedRecording(
+            url: url,
+            duration: Double(samples.count) / 16_000,
+            samples: samples,
+            disposition: disposition,
+            readableTask: unavailable,
+            durableTask: unavailable,
+            materializeRecovery: {
+                try Self.write(samples, to: rebuilt)
+                return rebuilt
+            }
+        )
+    }
+
+    func abortRecording() async {}
+
+    private static func write(_ samples: [Float], to url: URL) throws {
+        let file = try AVAudioFile(
+            forWriting: url,
+            settings: [
+                AVFormatIDKey: kAudioFormatLinearPCM,
+                AVSampleRateKey: 16_000,
+                AVNumberOfChannelsKey: 1,
+                AVLinearPCMBitDepthKey: 16,
+                AVLinearPCMIsFloatKey: false,
+            ],
+            commonFormat: .pcmFormatFloat32,
+            interleaved: false
+        )
+        let count = AVAudioFrameCount(samples.count)
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: count) else {
+            throw AudioCaptureError.writeFailed("no buffer")
+        }
+        buffer.frameLength = count
+        samples.withUnsafeBufferPointer { source in
+            buffer.floatChannelData![0].update(from: source.baseAddress!, count: samples.count)
+        }
+        try file.write(from: buffer)
     }
 }

@@ -1591,11 +1591,10 @@ public final class DictationController {
             // not required.
             //
             // Silence is not kept, and it is a warning: a muted, dead or wrong
-            // input needs the person, like the held key that recorded no audio
-            // at all. The microphone's name, when there is one, says where to
-            // look. Sound in which the model found nothing is kept for History:
-            // it may hold words the person still wants, and recognizing it
-            // again is one click.
+            // input needs the person. The microphone's name, when there is
+            // one, says where to look. Sound in which the model found nothing
+            // is kept for History: it may hold words the person still wants,
+            // and recognizing it again is one click.
             let notice: DictationNotice
             if SilentTakePolicy.heardOnlySilence(bufferedSamples) {
                 notice = DictationNotice(
@@ -1605,7 +1604,15 @@ public final class DictationController {
                     wordsDidNotLand: true
                 )
             } else {
-                onTakeFinished?("", recording.url, insertionTarget)
+                // History copies the file during this call, and with no words
+                // the file is all there is, so it must be whole. Recognition
+                // from memory never waited for it, and a file that never
+                // reached disk is rebuilt from the samples - a copy nobody
+                // needs once History has its own.
+                if let source = try? await recoverySourceURL(for: recording) {
+                    if shouldContinue(session) { onTakeFinished?("", source.url, insertionTarget) }
+                    if source.rebuiltFromPCM { await discard(source.url, session: session) }
+                }
                 notice = DictationNotice(
                     kind: .info,
                     message: L10n.tr("Nothing was recognized — nothing was inserted."),
