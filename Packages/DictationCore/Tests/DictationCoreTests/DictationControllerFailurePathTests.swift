@@ -64,6 +64,46 @@ actor SilentSounds: Sounding {
     func playAttention() async {}
 }
 
+/// A microphone that opens only when the test says so, and records exactly as
+/// long as it was open: a take released before it opened holds nothing, the
+/// way the real device behaves.
+actor SlowOpeningMicrophone: AudioCapturing {
+    private let gate: Gate
+    private var openedAt: ContinuousClock.Instant?
+    private(set) var containCount = 0
+    private(set) var abortCount = 0
+    private let file = URL(fileURLWithPath: "/tmp/slow-opening-take.wav")
+
+    init(gate: Gate) { self.gate = gate }
+
+    func startRecording() async throws -> URL {
+        await gate.pass()
+        openedAt = .now
+        return file
+    }
+
+    func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
+        let open = openedAt.map { $0.duration(to: .now) } ?? .zero
+        openedAt = nil
+        return (file, Double(open.components.seconds) + Double(open.components.attoseconds) / 1e18)
+    }
+
+    func abortRecording() async {
+        abortCount += 1
+        openedAt = nil
+    }
+
+    func abortRecording(session: DictationSessionID, expectedURL: URL?) async {
+        abortCount += 1
+        openedAt = nil
+    }
+
+    func containRecording(session: DictationSessionID, expectedURL: URL?) async {
+        containCount += 1
+        openedAt = nil
+    }
+}
+
 @MainActor
 final class StateLog {
     var states: [DictationState] = []
@@ -360,6 +400,215 @@ final class DictationControllerFailurePathTests: XCTestCase {
         let inserted = await inserter.insertedTexts
         XCTAssertEqual(inserted, ["\u{041F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442} \u{043C}\u{0438}\u{0440}"])
         XCTAssertEqual(controller.state, .idle)
+    }
+
+    // MARK: - A microphone that is slow to start
+
+    private static let slowStartMessage = "Starting the microphone took too long. Dictation was stopped."
+
+    private func makeSlowStartController(
+        microphone: SlowOpeningMicrophone,
+        sounds: FakeSounds,
+        microphoneStartDeadline: Duration = .seconds(5),
+        preparingStopDeadline: Duration = .milliseconds(500)
+    ) -> DictationController {
+        let counter = transcribeCalls!
+        return DictationController(
+            capture: microphone,
+            transcribe: { _ in
+                await counter.increment()
+                return ASRResult(text: "words", audioDuration: 2, processingDuration: 0.1)
+            },
+            inserter: inserter,
+            overlay: overlay,
+            sounds: sounds,
+            preparingStopDeadline: preparingStopDeadline,
+            microphoneStartDeadline: microphoneStartDeadline
+        )
+    }
+
+    private func waitUntilIdle(_ controller: DictationController, timeout: Duration = .seconds(2)) async {
+        let deadline = ContinuousClock.now + timeout
+        while controller.state != .idle, ContinuousClock.now < deadline {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+    }
+
+    /// The key is still held and the microphone has not opened. Waiting for
+    /// the release to say so meant a person could talk for many seconds into
+    /// nothing; they hear about it while they are still holding the key.
+    func testAMicrophoneThatNeverStartsIsReportedWhileTheKeyIsHeld() async throws {
+        let gate = Gate()
+        let microphone = SlowOpeningMicrophone(gate: gate)
+        let sounds = FakeSounds()
+        let controller = makeSlowStartController(
+            microphone: microphone,
+            sounds: sounds,
+            microphoneStartDeadline: .milliseconds(50)
+        )
+        var notices: [DictationNotice] = []
+        controller.onNotice = { notices.append($0) }
+
+        let began = ContinuousClock.now
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await waitUntilIdle(controller)
+        let ended = began.duration(to: .now)
+        await settle()
+
+        XCTAssertEqual(controller.state, .idle)
+        XCTAssertGreaterThanOrEqual(ended, .milliseconds(50), "not before the deadline")
+        XCTAssertLessThan(ended, .seconds(1), "while the key is still held, not at its release")
+        XCTAssertEqual(notices.map(\.message), [Self.slowStartMessage])
+        XCTAssertEqual(notices.first?.kind, .failure)
+        XCTAssertEqual(notices.first?.wordsDidNotLand, true)
+        let attention = await sounds.attentionPlays
+        XCTAssertEqual(attention, 1)
+        let contained = await microphone.containCount
+        let aborted = await microphone.abortCount
+        XCTAssertGreaterThanOrEqual(contained, 1, "the take is kept, not thrown away")
+        XCTAssertEqual(aborted, 0)
+
+        // The microphone comes back; the next press dictates normally.
+        await gate.open()
+        await settle()
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        XCTAssertEqual(controller.state, .listening)
+        controller.cancel()
+        await waitUntilIdle(controller)
+    }
+
+    /// A microphone that opens inside the deadline is the normal take. A tap
+    /// released while it was opening still finishes once it is listening.
+    func testAStartWithinTheDeadlineIsNotReported() async throws {
+        let gate = Gate()
+        let microphone = SlowOpeningMicrophone(gate: gate)
+        let sounds = FakeSounds()
+        let controller = makeSlowStartController(
+            microphone: microphone,
+            sounds: sounds,
+            microphoneStartDeadline: .milliseconds(300)
+        )
+        var notices: [DictationNotice] = []
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        try await Task.sleep(for: .milliseconds(20))
+        await gate.open()
+        await settle()
+        XCTAssertEqual(controller.state, .listening)
+        try await Task.sleep(for: .milliseconds(400))
+        XCTAssertEqual(controller.state, .listening)
+        XCTAssertTrue(notices.isEmpty, "\(notices.map(\.message))")
+        controller.cancel()
+        await waitUntilIdle(controller)
+
+        // A tap released while the microphone is still opening.
+        let second = SlowOpeningMicrophone(gate: Gate())
+        let tapController = makeSlowStartController(microphone: second, sounds: sounds)
+        var tapNotices: [DictationNotice] = []
+        tapController.onNotice = { tapNotices.append($0) }
+        tapController.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await Task.yield()
+        tapController.stop()
+        XCTAssertEqual(tapController.state, .preparing, "a tap waits for the microphone")
+        tapController.cancel()
+        await waitUntilIdle(tapController)
+        XCTAssertTrue(tapNotices.isEmpty)
+    }
+
+    /// A key held past the shortest take and released before the microphone
+    /// opened. Nothing was recorded and nothing can be: finishing when the
+    /// microphone finally opens recognized an empty take and dropped it
+    /// without a word. The person spoke, so the person is told, at once.
+    func testAHeldReleaseBeforeTheMicrophoneOpensIsReportedNotDropped() async throws {
+        for openAfterRelease in [Duration.milliseconds(300), .milliseconds(700)] {
+            let gate = Gate()
+            let microphone = SlowOpeningMicrophone(gate: gate)
+            let sounds = FakeSounds()
+            let controller = makeSlowStartController(microphone: microphone, sounds: sounds)
+            var notices: [DictationNotice] = []
+            controller.onNotice = { notices.append($0) }
+
+            controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+            try await Task.sleep(for: .milliseconds(400))
+            XCTAssertEqual(controller.state, .preparing)
+            controller.stop()
+            try await Task.sleep(for: openAfterRelease)
+            await gate.open()
+            await waitUntilIdle(controller)
+            await settle()
+
+            XCTAssertEqual(notices.map(\.message), [Self.slowStartMessage], "opened \(openAfterRelease) after release")
+            let attention = await sounds.attentionPlays
+            XCTAssertEqual(attention, 1)
+            let inserted = await inserter.insertedTexts
+            XCTAssertTrue(inserted.isEmpty)
+            XCTAssertEqual(controller.state, .idle)
+        }
+    }
+
+    /// A tap is a change of mind, not a lost take: it stays quiet, and a
+    /// microphone that never opens still ends it within the short bound after
+    /// the release rather than the long one after the key-down.
+    func testATapReleasedBeforeTheMicrophoneOpensKeepsTheShortBound() async throws {
+        let gate = Gate()
+        let microphone = SlowOpeningMicrophone(gate: gate)
+        let sounds = FakeSounds()
+        let controller = makeSlowStartController(
+            microphone: microphone,
+            sounds: sounds,
+            microphoneStartDeadline: .seconds(5),
+            preparingStopDeadline: .milliseconds(60)
+        )
+        var notices: [DictationNotice] = []
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        try await Task.sleep(for: .milliseconds(10))
+        controller.stop()
+        await waitUntilIdle(controller, timeout: .seconds(1))
+
+        XCTAssertEqual(controller.state, .idle, "the short bound after release still holds")
+        XCTAssertEqual(notices.map(\.message), [Self.slowStartMessage])
+        await gate.open()
+        await settle()
+    }
+
+    /// A double tap promotes the take to hands-free while the microphone is
+    /// still opening. Nobody will release a key now, so the deadline from the
+    /// key-down is the only thing that can end a microphone that never opens.
+    func testAHandsFreeTakeKeepsTheStartDeadline() async throws {
+        let gate = Gate()
+        let microphone = SlowOpeningMicrophone(gate: gate)
+        let sounds = FakeSounds()
+        let controller = makeSlowStartController(
+            microphone: microphone,
+            sounds: sounds,
+            microphoneStartDeadline: .milliseconds(300),
+            preparingStopDeadline: .milliseconds(30)
+        )
+        var notices: [DictationNotice] = []
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        try await Task.sleep(for: .milliseconds(5))
+        // The double tap: the first release, then the second press.
+        controller.stop()
+        controller.promoteToHandsFree()
+        try await Task.sleep(for: .milliseconds(120))
+        XCTAssertEqual(controller.state, .preparing, "the release bound belonged to the tap, not to hands-free")
+        XCTAssertTrue(notices.isEmpty)
+
+        await waitUntilIdle(controller)
+        await settle()
+        XCTAssertEqual(controller.state, .idle)
+        XCTAssertEqual(notices.map(\.message), [Self.slowStartMessage])
+        let attention = await sounds.attentionPlays
+        XCTAssertEqual(attention, 1)
+        await gate.open()
+        await settle()
     }
 
     // MARK: - State flow
