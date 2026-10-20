@@ -812,9 +812,12 @@ public final class DictationController {
         }
     }
 
-    private func readableURL(for recording: CapturedRecording) async throws -> URL {
+    private func readableURL(
+        for recording: CapturedRecording,
+        within deadline: Duration? = nil
+    ) async throws -> URL {
         do {
-            return try await withTranscriptionDeadline(recordingReadableDeadline) {
+            return try await withTranscriptionDeadline(deadline ?? recordingReadableDeadline) {
                 try await recording.readableURL()
             }
         } catch is TranscriptionTimeout {
@@ -823,10 +826,11 @@ public final class DictationController {
     }
 
     private func recoverySourceURL(
-        for recording: CapturedRecording
+        for recording: CapturedRecording,
+        readableWithin deadline: Duration? = nil
     ) async throws -> (url: URL, rebuiltFromPCM: Bool) {
         do {
-            return (try await readableURL(for: recording), false)
+            return (try await readableURL(for: recording, within: deadline), false)
         } catch let readableFailure {
             let rebuilt = try await withTranscriptionDeadline(recordingPreserveDeadline) {
                 try await recording.materializedRecoveryURL()
@@ -1484,10 +1488,16 @@ public final class DictationController {
             } else {
                 // History copies the file during this call, and with no words
                 // the file is all there is, so it must be whole. Recognition
-                // from memory never waited for it, and a file that never
-                // reached disk is rebuilt from the samples - a copy nobody
-                // needs once History has its own.
-                if let source = try? await recoverySourceURL(for: recording) {
+                // from memory never waited for it, and the person who was just
+                // told nothing was recognized is about to try again, so the
+                // writer gets only the foreground grace. A file that is not
+                // ready by then is rebuilt from the samples - a copy nobody
+                // needs once History has its own. A take with no samples was
+                // recognized from its file, which is therefore already there.
+                if let source = try? await recoverySourceURL(
+                    for: recording,
+                    readableWithin: recoveryForegroundGrace
+                ) {
                     if shouldContinue(session) { onTakeFinished?("", source.url) }
                     if source.rebuiltFromPCM { await discard(source.url, session: session) }
                 }

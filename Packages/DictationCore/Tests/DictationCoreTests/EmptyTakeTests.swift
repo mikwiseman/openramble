@@ -130,6 +130,46 @@ final class EmptyTakeTests: XCTestCase {
         }
     }
 
+    /// A writer that never finishes must not hold the next take hostage.
+    /// Someone told "nothing was recognized" says it again a few seconds
+    /// later, and the samples are already whole in memory, so History gets
+    /// them without waiting on the disk.
+    func testAWordlessTakeDoesNotWaitForAWedgedWriter() async throws {
+        let takes = FileManager.default.temporaryDirectory
+            .appending(path: "wedged-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: takes, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: takes) }
+        let samples = quiet + [0.1] + quiet
+        let controller = makeController(
+            capture: MemoryOnlyCapture(directory: takes, samples: samples, writerWedged: true),
+            transcribeSamples: { _ in Self.nothing }
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        try await waitUntil { controller.state == .listening }
+        let released = ContinuousClock.now
+        controller.stop()
+        try await waitUntil { controller.state == .idle }
+        XCTAssertLessThan(released.duration(to: .now), .seconds(2), "the take waited on the writer")
+
+        try await Task.sleep(until: released.advanced(by: .seconds(1)), clock: .continuous)
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        try await waitUntil { controller.state == .listening }
+        controller.cancel()
+        try await waitUntil { controller.state == .idle }
+
+        XCTAssertEqual(archived.map(\.text), [""])
+        XCTAssertEqual(
+            handedOverFrames,
+            [AVAudioFramePosition(samples.count)],
+            "History gets the whole take while it still exists"
+        )
+        try await waitUntil {
+            let names = (try? FileManager.default.contentsOfDirectory(atPath: takes.path)) ?? []
+            return !names.contains { $0.hasPrefix("memory-recovery-") }
+        }
+    }
+
     func testAnEmptyTakeOfSilenceNamesTheMicrophoneAndKeepsNothing() async throws {
         await capture.setBufferedSamples(quiet)
         controller.microphoneName = { "Test Mic" }
@@ -181,13 +221,17 @@ final class EmptyTakeTests: XCTestCase {
 /// A take that lives only in memory, like the production capture's when the
 /// writer slot is busy: its file never appears, and the only way to a WAV is
 /// to rebuild one from the samples, beside where the file would have been.
+/// A wedged writer is the slower version of the same thing: the file is never
+/// refused, it just never arrives.
 private actor MemoryOnlyCapture: AudioCapturing {
     private let url: URL
     private let samples: [Float]
+    private let writerWedged: Bool
 
-    init(directory: URL, samples: [Float]) {
+    init(directory: URL, samples: [Float], writerWedged: Bool = false) {
         url = directory.appending(path: "take.wav")
         self.samples = samples
+        self.writerWedged = writerWedged
     }
 
     func startRecording() async throws -> URL { url }
@@ -197,7 +241,8 @@ private actor MemoryOnlyCapture: AudioCapturing {
     }
 
     func freezeRecording() async throws -> CapturedRecording {
-        let unavailable = Task<URL, Error> {
+        let unavailable = Task<URL, Error> { [writerWedged] in
+            if writerWedged { try await Task.sleep(for: .seconds(120)) }
             throw AudioCaptureError.writeFailed("the recording file is unavailable")
         }
         let samples = samples
