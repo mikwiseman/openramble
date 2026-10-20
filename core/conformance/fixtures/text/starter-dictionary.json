@@ -432,5 +432,26 @@
     "noAcousticBoost" : true,
     "spoken" : "дакаревки убернит",
     "written" : "Docker и Kubernetes"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "фичерфлэг",
+    "written" : "feature flag"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "rebace",
+    "written" : "rebase"
+  },
+  {
+    "allowsPhoneticMatching" : false,
+    "inflects" : false,
+    "noAcousticBoost" : true,
+    "spoken" : "mordge",
+    "written" : "merge"
   }
 ]

@@ -30,6 +30,21 @@ final class StarterDictionaryTests: XCTestCase {
         XCTAssertEqual(pipeline.process("\u{0437}\u{0430}\u{043A}\u{0438}\u{043D}\u{0443}\u{043B} \u{043F}\u{0443}\u{043B} \u{0440}\u{0435}\u{043A}\u{0432}\u{0435}\u{0441}\u{0442}").text, "\u{0417}\u{0430}\u{043A}\u{0438}\u{043D}\u{0443}\u{043B} pull request")
     }
 
+    /// Parakeet Ultra's own spellings of terms said the Russian way, from the
+    /// end-to-end run that first used it (research/model-upgrade-2026-10).
+    func testFixesParakeetUltraSpellings() {
+        let pipeline = TextPipeline(replacements: StarterDictionary.developer)
+
+        XCTAssertEqual(
+            pipeline.process("\u{0412}\u{043A}\u{043B}\u{044E}\u{0447}\u{0438} \u{0444}\u{0438}\u{0447}\u{0435}\u{0440}\u{0444}\u{043B}\u{044D}\u{0433} \u{043D}\u{0430} staging.").text,
+            "\u{0412}\u{043A}\u{043B}\u{044E}\u{0447}\u{0438} feature flag \u{043D}\u{0430} staging."
+        )
+        XCTAssertEqual(
+            pipeline.process("\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} commit \u{0432} branch, \u{043F}\u{043E}\u{0442}\u{043E}\u{043C} Rebace \u{0438} Mordge.").text,
+            "\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} commit \u{0432} branch, \u{043F}\u{043E}\u{0442}\u{043E}\u{043C} rebase \u{0438} merge."
+        )
+    }
+
     func testCommitDecoderErrorRequiresCommitContext() {
         let pipeline = TextPipeline(replacements: StarterDictionary.developer)
 

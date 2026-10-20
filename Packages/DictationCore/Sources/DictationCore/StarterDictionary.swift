@@ -171,6 +171,10 @@ public enum StarterDictionary {
         ("\u{043A}\u{043E}\u{0443}\u{0442}\u{0440}\u{0438}\u{0432}\u{044C}\u{044E}", "code review"),
         ("\u{0434}\u{0430}\u{043A}\u{0430}\u{0440}\u{044B} \u{0432} \u{043A}\u{044C}\u{044E}\u{0431}\u{0435}\u{0440}\u{043D}\u{0438}\u{0446}", "Docker \u{0438} \u{0432} Kubernetes"),
         ("\u{0434}\u{0430}\u{043A}\u{0430}\u{0440}\u{0435}\u{0432}\u{043A}\u{0438} \u{0443}\u{0431}\u{0435}\u{0440}\u{043D}\u{0438}\u{0442}", "Docker \u{0438} Kubernetes"),
+        // Parakeet Ultra's spellings of the same terms.
+        ("\u{0444}\u{0438}\u{0447}\u{0435}\u{0440}\u{0444}\u{043B}\u{044D}\u{0433}", "feature flag"),
+        ("rebace", "rebase"),
+        ("mordge", "merge"),
     ]
 
     /// Replacements that the user does not yet have.
