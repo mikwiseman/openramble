@@ -125,12 +125,12 @@
 "Deleting model" = "Deleting model";
 "Deleting model…" = "Deleting model…";
 "Dictation History" = "Dictation History";
+"Dictation needs Accessibility access. Open Settings → Setup." = "Dictation needs Accessibility access. Open Settings → Setup.";
+"Dictation needs microphone access. Open Settings → Setup." = "Dictation needs microphone access. Open Settings → Setup.";
 "Dictation cancelled. Its local recording is queued for deletion." = "Dictation cancelled. Its local recording is queued for deletion.";
 "Dictation is in progress. Wait for it to finish." = "Dictation is in progress. Wait for it to finish.";
 "Dictation is off: grant %@ in System Settings." = "Dictation is off: grant %@ in System Settings.";
 "Dictation key" = "Dictation key";
-"Dictation needs Accessibility access. Open Settings → General → Permissions." = "Dictation needs Accessibility access. Open Settings → General → Permissions.";
-"Dictation needs microphone access. Open Settings → General → Permissions." = "Dictation needs microphone access. Open Settings → General → Permissions.";
 "Dictation panel" = "Dictation panel";
 "Dictation stops working until you download the model again — that's another %@ MB over the network." = "Dictation stops working until you download the model again — that's another %@ MB over the network.";
 "Dictation that stays on your Mac" = "Dictation that stays on your Mac";
@@ -203,6 +203,7 @@
 "Inserting…" = "Inserting…";
 "Insertion couldn't be confirmed in time. The text stays in the menu and may already have been pasted." = "Insertion couldn't be confirmed in time. The text stays in the menu and may already have been pasted.";
 "Install command-line tool" = "Install command-line tool";
+"Interface language" = "Interface language";
 "Installed at %@" = "Installed at %@";
 "Its audio and transcript appear here." = "Its audio and transcript appear here.";
 "Its audio file was moved or deleted outside OpenRamble. The entry can be removed." = "Its audio file was moved or deleted outside OpenRamble. The entry can be removed.";
@@ -364,7 +365,6 @@
 "Ready — hold %@ and speak" = "Ready — hold %@ and speak";
 "Recent Dictations" = "Recent Dictations";
 "Recognize this recording again" = "Recognize this recording again";
-"Recognition" = "Recognition";
 "Record" = "Record";
 "Record Screen…" = "Record Screen…";
 "Recording" = "Recording";
@@ -443,6 +443,7 @@
 "Settings" = "Settings";
 "Settings…" = "Settings…";
 "Setup needed" = "Setup needed";
+"Setup" = "Setup";
 "Shortcut" = "Shortcut";
 "Show OpenRamble in" = "Show OpenRamble in";
 "Show camera bubble" = "Show camera bubble";
@@ -525,8 +526,8 @@
 "The other side went quiet." = "The other side went quiet.";
 "The recognition model is being deleted." = "The recognition model is being deleted.";
 "The recognition model is still downloading." = "The recognition model is still downloading.";
-"The recognition model isn't downloaded yet. Open Settings → Model." = "The recognition model isn't downloaded yet. Open Settings → Model.";
-"The recognition model needs repair. Open Settings → Model." = "The recognition model needs repair. Open Settings → Model.";
+"The recognition model isn't downloaded yet. Open Settings → Setup." = "The recognition model isn't downloaded yet. Open Settings → Setup.";
+"The recognition model needs repair. Open Settings → Setup." = "The recognition model needs repair. Open Settings → Setup.";
 "The recording could not be read. %@" = "The recording could not be read. %@";
 "The recording ended but couldn't be filed: %@" = "The recording ended but couldn't be filed: %@";
 "The recording is in an unexpected format." = "The recording is in an unexpected format.";
@@ -622,7 +623,6 @@
 "the files passed verification, but Core ML couldn't load the model: %@" = "the files passed verification, but Core ML couldn't load the model: %@";
 "vocabulary helper: %@" = "vocabulary helper: %@";
 "were left untouched, not deleted or imported." = "were left untouched, not deleted or imported.";
-"Language" = "Language";
 "Starting the microphone took too long. Dictation was stopped." = "Starting the microphone took too long. Dictation was stopped.";
 " The recording couldn't be kept: %@" = " The recording couldn't be kept: %@";
 " The recording couldn't be kept." = " The recording couldn't be kept.";

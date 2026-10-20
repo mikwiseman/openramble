@@ -4,6 +4,17 @@ import XCTest
 
 @MainActor
 final class SettingsLayoutTests: XCTestCase {
+    /// General keeps what changes how dictation behaves; everything you do
+    /// once to make it work — the model, both permissions, the command-line
+    /// tool — is one "Setup" pane, the same three things onboarding asks for.
+    func testSetupIsItsOwnPane() {
+        XCTAssertEqual(
+            SettingsView.Pane.allCases.map(\.title),
+            ["General", "Setup", "Dictation History", "Dictionary", "About"]
+        )
+        XCTAssertEqual(SettingsView.Pane.setup.symbol, "checklist", "the onboarding setup step's symbol")
+    }
+
     func testEmptyHistoryKeepsSettingsInsideTheWindow() async throws {
         try await checkLayout(historyCount: 0)
     }

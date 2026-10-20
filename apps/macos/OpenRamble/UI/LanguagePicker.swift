@@ -2,7 +2,7 @@ import SwiftUI
 
 struct LanguagePicker: View {
     var body: some View {
-        Picker(L10n.tr("Language"), selection: Binding(
+        Picker(L10n.tr("Interface language"), selection: Binding(
             get: { L10n.shared.language },
             set: { L10n.shared.language = $0 }
         )) {

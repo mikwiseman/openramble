@@ -20,13 +20,13 @@ struct SettingsView: View {
     @State private var pane: Pane = .general
 
     enum Pane: String, CaseIterable, Identifiable {
-        case general, recognition, history, dictionary, about
+        case general, setup, history, dictionary, about
         var id: Self { self }
 
         var title: String {
             switch self {
             case .general: return L10n.tr("General")
-            case .recognition: return L10n.tr("Recognition")
+            case .setup: return L10n.tr("Setup")
             case .history: return L10n.tr("Dictation History")
             case .dictionary: return L10n.tr("Dictionary")
             case .about: return L10n.tr("About")
@@ -36,7 +36,7 @@ struct SettingsView: View {
         var symbol: String {
             switch self {
             case .general: return "gearshape"
-            case .recognition: return "waveform"
+            case .setup: return "checklist"
             case .history: return "clock.arrow.circlepath"
             case .dictionary: return "character.book.closed"
             case .about: return "info.circle"
@@ -81,7 +81,7 @@ struct SettingsView: View {
     private var detail: some View {
         switch pane {
         case .general: GeneralSettings(state: state)
-        case .recognition: RecognitionSettings(state: state)
+        case .setup: SetupSettings(state: state)
         case .history: HistoryView(state: state)
         case .dictionary: DictionarySettings(state: state)
         case .about:
@@ -97,9 +97,10 @@ struct SettingsView: View {
 
 // MARK: - General
 
+/// What changes how dictation behaves. Everything done once to make it work
+/// lives in Setup.
 private struct GeneralSettings: View {
     @ObservedObject var state: AppState
-    @State private var showAccessibilityRepairConfirmation = false
 
     var body: some View {
         Form {
@@ -276,6 +277,41 @@ private struct GeneralSettings: View {
                     .accessibilityLabel(L10n.tr("Dictation panel"))
                     .accessibilityHint(L10n.tr("Places dictation feedback at the top or bottom of the active screen"))
                 }
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+// MARK: - Setup
+
+/// Everything done once so dictation works, in onboarding's order: the
+/// speech model, the two permissions, and the command-line tool.
+private struct SetupSettings: View {
+    @ObservedObject var state: AppState
+    @State private var showDeleteConfirmation = false
+    @State private var showAccessibilityRepairConfirmation = false
+
+    var body: some View {
+        Form {
+            Section {
+                ModelStatusView(
+                    status: ModelStatus.make(
+                        state: state.modelState,
+                        preparation: state.enginePreparation,
+                        place: .settings,
+                        downloadMegabytes: state.remainingDownloadMegabytes,
+                        isEngineReady: state.isEngineReady,
+                        isPreparingEngine: state.isPreparingEngine
+                    ),
+                    install: state.installModel,
+                    cancel: state.cancelModelInstall,
+                    // Delete is next to regular buttons and earlier
+                    // worked on the first click: a miss cost half
+                    // gigabyte and new download. There is nothing to cancel this, it means
+                    // ask.
+                    delete: { showDeleteConfirmation = true }
+                )
                 Picker(L10n.tr("Unload model"), selection: $state.modelUnloadTimeout) {
                     ForEach(IdleUnloadPolicy.allCases) { option in
                         Text(option.label).tag(option)
@@ -284,6 +320,23 @@ private struct GeneralSettings: View {
                 .accessibilityHint(
                     L10n.tr("Frees the speech model's memory after this much idle time. It reloads under your voice at the next dictation.")
                 )
+                // Retained audio moved out of the daily menu: it is announced
+                // by the failure notice when it happens, and findable here for
+                // as long as it exists.
+            } header: {
+                Text(L10n.tr("Speech model"))
+            } footer: {
+                Text(L10n.tr("Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings."))
+            }
+            .confirmationDialog(
+                L10n.tr("Delete the recognition model?"),
+                isPresented: $showDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button(L10n.tr("Delete Model"), role: .destructive) { state.deleteModel() }
+                Button(L10n.tr("Cancel"), role: .cancel) {}
+            } message: {
+                Text(L10n.tr("Dictation stops working until you download the model again — that's another %@ MB over the network.", String(describing: state.fullModelDownloadMegabytes)))
             }
 
             Section {
@@ -332,6 +385,7 @@ private struct GeneralSettings: View {
             CommandLineToolSettings()
         }
         .formStyle(.grouped)
+        .task { await state.refreshModelState() }
         // Permissions are granted in system settings, and returned here
         // a person should see a fresh state, and not what was before leaving.
         .task { state.refreshPermissions() }
@@ -419,57 +473,6 @@ private struct PermissionRow: View {
                     // “issued” without an owner only gets in the way.
                     .accessibilityHidden(true)
             }
-        }
-    }
-}
-
-// MARK: - Recognition
-
-private struct RecognitionSettings: View {
-    @ObservedObject var state: AppState
-    @State private var showDeleteConfirmation = false
-
-    var body: some View {
-        Form {
-            Section {
-                ModelStatusView(
-                    status: ModelStatus.make(
-                        state: state.modelState,
-                        preparation: state.enginePreparation,
-                        place: .settings,
-                        downloadMegabytes: state.remainingDownloadMegabytes,
-                        isEngineReady: state.isEngineReady,
-                        isPreparingEngine: state.isPreparingEngine
-                    ),
-                    install: state.installModel,
-                    cancel: state.cancelModelInstall,
-                    // Delete is next to regular buttons and earlier
-                    // worked on the first click: a miss cost half
-                    // gigabyte and new download. There is nothing to cancel this, it means
-                    // ask.
-                    delete: { showDeleteConfirmation = true }
-                )
-                // Retained audio moved out of the daily menu: it is announced
-                // by the failure notice when it happens, and findable here for
-                // as long as it exists.
-            } header: {
-                Text(L10n.tr("Speech model"))
-            } footer: {
-                Text(L10n.tr("Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings."))
-            }
-
-        }
-        .formStyle(.grouped)
-        .task { await state.refreshModelState() }
-        .confirmationDialog(
-            L10n.tr("Delete the recognition model?"),
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button(L10n.tr("Delete Model"), role: .destructive) { state.deleteModel() }
-            Button(L10n.tr("Cancel"), role: .cancel) {}
-        } message: {
-            Text(L10n.tr("Dictation stops working until you download the model again — that's another %@ MB over the network.", String(describing: state.fullModelDownloadMegabytes)))
         }
     }
 }
