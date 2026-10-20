@@ -48,3 +48,33 @@ these hold:
 
 If the feature fails a rule, it is not adopted, and the report says which rule
 failed and by how much.
+
+## Result of the first attempt and a second hypothesis (H4b)
+
+Added on 20 October 2026, after the gate above ran and before any H4b code
+existed.
+
+At the chosen weight 3.0 the first design passed rules 1 and 3 and failed
+rules 2 and 4. Pooled FLEURS WER rose by 0.071 percentage points with an upper
+95% bound of +0.137, above the +0.10 limit, and the noise clips produced 18
+invented words, among them "Postgres." on two seconds of digital silence. The
+bonus on a term's first token could outscore blank, so biasing changed whether
+the decoder emitted anything, not only what it emitted. That design is not
+adopted.
+
+H4b keeps the decision between blank and a token unbiased: the decoder first
+takes the model's own argmax, and only when that is a non-blank token does the
+vocabulary re-rank the non-blank tokens. Biasing can then change which word is
+written but never whether one is written, so it cannot invent speech on
+silence or drop words that the model emitted.
+
+H4b is tested with the same procedure and the same gate as above, with three
+changes fixed now:
+
+- The weight grid is 1, 2, 3, 4, 6 and 8, because re-ranking alone may
+  tolerate larger bonuses.
+- A weight is eligible only if, besides the FLEURS rule, the noise clips
+  produce no word at all with the whole vocabulary active.
+- The candidates are rebuilt from the H4b commit; their names stay
+  `v3-vocabulary` and `v3-vocabulary-off`, and the first attempt's results are
+  kept in the report.
