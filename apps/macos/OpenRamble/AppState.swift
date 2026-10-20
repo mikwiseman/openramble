@@ -1436,16 +1436,7 @@ public final class AppState: ObservableObject {
                 engineLog.notice("\(DictationSpeedLine.text(for: report), privacy: .public)")
                 self?.diagnostics.record(.dictationCompleted,
                     milliseconds: DictationLogFile.milliseconds(report.toRecognizedText.appSeconds),
-                    recognition: report.phases.map {
-                        .init(audioMilliseconds: DictationLogFile.milliseconds($0.audioDuration.appSeconds),
-                              engineMilliseconds: $0.engineProcessing.flatMap { DictationLogFile.milliseconds($0.appSeconds) },
-                              decodingMilliseconds: $0.audioDecoding.flatMap { DictationLogFile.milliseconds($0.appSeconds) },
-                              streamedSegments: $0.streamedSegments,
-                              fileBacked: $0.recordingReadable != nil,
-                              freezeMilliseconds: DictationLogFile.milliseconds($0.captureFreeze.appSeconds),
-                              readableMilliseconds: $0.recordingReadable.flatMap { DictationLogFile.milliseconds($0.appSeconds) },
-                              preparationMilliseconds: $0.enginePreparation.flatMap { DictationLogFile.milliseconds($0.appSeconds) })
-                    })
+                    recognition: DictationLogFile.Recognition(report: report))
                 DictationDiagnostics.noteCompleted(
                     report: report,
                     characterCount: self?.lastDictation?.insertedText.count ?? 0

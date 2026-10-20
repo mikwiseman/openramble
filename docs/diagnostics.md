@@ -20,11 +20,20 @@ the cause of every failed recognition.
 
 From 0.31.2, `dictationStageFailed` includes an allowlisted stage (capture freeze,
 readable WAV, model preparation, or recognition), elapsed milliseconds, and a
-timeout flag. `recognitionFallback` distinguishes a take with no completed
-segments from a failed segment, retaining a native numeric status when present.
-Successful recovery does not erase that fallback event. Completed dictations
-also include capture-freeze, WAV-readiness and model-preparation durations.
-These durations can overlap background work and must not be summed as a total.
+timeout flag. `recognitionFallback` records a failed segment, retaining a native
+numeric status when present. Successful recovery does not erase that fallback
+event. Up to 0.32.0 it was also written as `noSegments` for every ordinary take
+recognized whole, which was most takes; older journals still contain those lines.
+Completed dictations also include capture-freeze, WAV-readiness and
+model-preparation durations. These durations can overlap background work and
+must not be summed as a total.
+
+After 0.32.0, completed dictations also include `microphoneStartupMilliseconds`
+and `pasteMilliseconds`. The first runs from the capture accepting the start to its
+first 16 kHz frame. It is not key-down to speech: the built-in microphone then
+spends about 180 ms more delivering near silence before the room is audible.
+The second runs from key-up until ⌘V was sent. Sent is not landed: the target
+app may accept the paste later, or never.
 
 The ZIP contains `system.json`, `events.jsonl`, `README.txt`, and at most five
 redacted Apple `.ips` crash reports (each source limited to 5 MB, last seven days).

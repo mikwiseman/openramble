@@ -42,6 +42,13 @@ final class DictationLogFile: @unchecked Sendable {
         var freezeMilliseconds: Int? = nil
         var readableMilliseconds: Int? = nil
         var preparationMilliseconds: Int? = nil
+        /// The capture accepting the start → its first committed 16 kHz
+        /// frame. Not key-down → speech: the device's own warm-up (~180 ms
+        /// of near-silence on the built-in microphone) comes after it.
+        var microphoneStartupMilliseconds: Int? = nil
+        /// Key-up → ⌘V sent. Sent, not landed: the target app may take the
+        /// paste later, or never.
+        var pasteMilliseconds: Int? = nil
     }
 
     static func milliseconds(_ seconds: Double) -> Int? {
@@ -249,5 +256,27 @@ final class LevelUpdateGate: @unchecked Sendable {
         lock.lock()
         busy = false
         lock.unlock()
+    }
+}
+
+
+extension DictationLogFile.Recognition {
+    /// A finished take's numbers, and nothing of the take itself. `nil` for a
+    /// report built without its breakdown, as the journal always did.
+    init?(report: DictationSpeedReport) {
+        guard let phases = report.phases else { return nil }
+        let ms = DictationLogFile.milliseconds
+        self.init(
+            audioMilliseconds: ms(phases.audioDuration.appSeconds),
+            engineMilliseconds: phases.engineProcessing.flatMap { ms($0.appSeconds) },
+            decodingMilliseconds: phases.audioDecoding.flatMap { ms($0.appSeconds) },
+            streamedSegments: phases.streamedSegments,
+            fileBacked: phases.recordingReadable != nil,
+            freezeMilliseconds: ms(phases.captureFreeze.appSeconds),
+            readableMilliseconds: phases.recordingReadable.flatMap { ms($0.appSeconds) },
+            preparationMilliseconds: phases.enginePreparation.flatMap { ms($0.appSeconds) },
+            microphoneStartupMilliseconds: report.microphoneStartup.flatMap { ms($0.appSeconds) },
+            pasteMilliseconds: report.toPasteDispatched.flatMap { ms($0.appSeconds) }
+        )
     }
 }

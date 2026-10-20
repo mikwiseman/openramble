@@ -121,4 +121,18 @@ final class DictationSpeedLineTests: XCTestCase {
         )
         XCTAssertTrue(DictationSpeedLine.text(for: fromFile).contains("path=file"))
     }
+
+    /// How long the capture took to hand over its first frame. An I/O proc
+    /// leaves no AUHAL lines in the system log, so this is where the
+    /// microphone start can still be read after a release.
+    func testItSaysHowLongTheMicrophoneTookToStart() {
+        func line(_ startup: Duration?) -> String {
+            DictationSpeedLine.text(for: DictationSpeedReport(
+                toRecognizedText: .seconds(1),
+                microphoneStartup: startup
+            ))
+        }
+        XCTAssertTrue(line(.milliseconds(50)).contains("mic=0.05s"), line(.milliseconds(50)))
+        XCTAssertTrue(line(nil).contains("mic=absent"), line(nil))
+    }
 }

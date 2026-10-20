@@ -140,4 +140,44 @@ final class DictationLogFileTests: XCTestCase {
         XCTAssertFalse(text.contains("PRIVATE_CANARY"))
         XCTAssertFalse(text.contains("/Users/"))
     }
+
+    /// How long the microphone took to deliver its first frame, and how long
+    /// key-up took to reach the ⌘V, are numbers every take already measured
+    /// and the journal threw away. Numbers only: nothing of the take itself.
+    func testCompletedDictationRecordsMicrophoneStartupAndPaste() throws {
+        let phases = DictationPhaseBreakdown(
+            captureFreeze: .milliseconds(12),
+            enginePreparation: .milliseconds(3),
+            recognition: .milliseconds(150),
+            engineProcessing: .milliseconds(140),
+            audioDuration: .seconds(4)
+        )
+        let measured = try XCTUnwrap(DictationLogFile.Recognition(report: DictationSpeedReport(
+            toRecognizedText: .milliseconds(170),
+            toPasteDispatched: .milliseconds(190),
+            microphoneStartup: .milliseconds(212),
+            phases: phases
+        )))
+        let unmeasured = try XCTUnwrap(DictationLogFile.Recognition(report: DictationSpeedReport(
+            toRecognizedText: .milliseconds(170),
+            phases: phases
+        )))
+        XCTAssertNil(
+            DictationLogFile.Recognition(report: DictationSpeedReport(toRecognizedText: .milliseconds(170))),
+            "a report without its breakdown records no recognition, as before"
+        )
+
+        let log = DictationLogFile(directory: root, enabled: true)
+        log.record(.dictationCompleted, milliseconds: 170, recognition: measured)
+        log.record(.dictationCompleted, milliseconds: 170, recognition: unmeasured)
+        let saved = log.snapshot()
+        XCTAssertFalse(saved.incomplete)
+        let lines = saved.data.split(separator: 10).map { String(decoding: $0, as: UTF8.self) }
+        XCTAssertEqual(lines.count, 2)
+        XCTAssertTrue(lines[0].contains("\"microphoneStartupMilliseconds\":212"), lines[0])
+        XCTAssertTrue(lines[0].contains("\"pasteMilliseconds\":190"), lines[0])
+        XCTAssertTrue(lines[0].contains("\"preparationMilliseconds\":3"), lines[0])
+        XCTAssertFalse(lines[1].contains("microphoneStartupMilliseconds"), lines[1])
+        XCTAssertFalse(lines[1].contains("pasteMilliseconds"), lines[1])
+    }
 }
