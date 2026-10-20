@@ -323,14 +323,14 @@ public protocol InputSystem: Sendable {
     func heldModifiers() -> CGEventFlags
     /// Return focus to the application. `false` - the application no longer exists.
     func activate(_ target: TargetApplication) async -> Bool
-    /// Post to the captured process when one is known. A delayed WindowServer
-    /// return must never redirect an old dictation into whichever app happens
-    /// to be frontmost later.
-    func post(
-        keyCode: CGKeyCode,
-        flags: CGEventFlags,
-        targetProcessIdentifier: Int32?
-    ) throws
+    /// The key that types "v" with ⌘ held in the layout in use right now.
+    func pasteKeyCode() async -> CGKeyCode
+    /// Press a key the way a keyboard does: the system delivers it to the key
+    /// window, panels included (Spotlight, Raycast), which a post to a process
+    /// would miss. ⌘V and Return take this one route, so a dictation never
+    /// splits between two windows; the caller checks the target is still in
+    /// front right before each press.
+    func post(keyCode: CGKeyCode, flags: CGEventFlags) throws
 }
 
 public struct SystemInput: InputSystem {
@@ -369,11 +369,12 @@ public struct SystemInput: InputSystem {
         return true
     }
 
-    public func post(
-        keyCode: CGKeyCode,
-        flags: CGEventFlags,
-        targetProcessIdentifier: Int32?
-    ) throws {
+    public func pasteKeyCode() async -> CGKeyCode {
+        // Text Input Sources are main-thread API on older systems.
+        await MainActor.run { PasteKey.current() }
+    }
+
+    public func post(keyCode: CGKeyCode, flags: CGEventFlags) throws {
         guard let source = CGEventSource(stateID: .combinedSessionState),
               let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
@@ -383,13 +384,56 @@ public struct SystemInput: InputSystem {
 
         keyDown.flags = flags
         keyUp.flags = flags
-        if let targetProcessIdentifier {
-            keyDown.postToPid(pid_t(targetProcessIdentifier))
-            keyUp.postToPid(pid_t(targetProcessIdentifier))
-        } else {
-            keyDown.post(tap: .cgSessionEventTap)
-            keyUp.post(tap: .cgSessionEventTap)
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
+    }
+}
+
+/// Which key pastes.
+///
+/// ⌘V is a character shortcut, not a key position. The ANSI V key types ⌘K on
+/// Dvorak and ⌘C - copy instead of paste - on Turkish F. So the paste uses the
+/// key that types "v" with ⌘ held in the current layout, and the ANSI V key
+/// when no key does.
+enum PasteKey {
+    static func keyCode(translating characterFor: (CGKeyCode) -> String?) -> CGKeyCode {
+        let ansiV = CGKeyCode(kVK_ANSI_V)
+        if characterFor(ansiV) == "v" { return ansiV }
+        return (0..<128).map { CGKeyCode($0) }.first { characterFor($0) == "v" } ?? ansiV
+    }
+
+    /// What each key types with ⌘ held, from a layout's `uchr` data.
+    static func characters(in layoutData: CFData) -> (CGKeyCode) -> String? {
+        { keyCode in
+            guard let bytes = CFDataGetBytePtr(layoutData) else { return nil }
+            let layout = UnsafeRawPointer(bytes).assumingMemoryBound(to: UCKeyboardLayout.self)
+            var deadKeyState: UInt32 = 0
+            var length = 0
+            var characters = [UniChar](repeating: 0, count: 4)
+            let status = UCKeyTranslate(
+                layout,
+                keyCode,
+                UInt16(kUCKeyActionDown),
+                UInt32((cmdKey >> 8) & 0xFF),
+                UInt32(LMGetKbdType()),
+                OptionBits(kUCKeyTranslateNoDeadKeysBit),
+                &deadKeyState,
+                characters.count,
+                &length,
+                &characters
+            )
+            guard status == noErr, length > 0 else { return nil }
+            return String(utf16CodeUnits: characters, count: length)
         }
+    }
+
+    @MainActor
+    static func current() -> CGKeyCode {
+        guard let source = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
+              let pointer = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData)
+        else { return CGKeyCode(kVK_ANSI_V) }
+        let layoutData = Unmanaged<CFData>.fromOpaque(pointer).takeUnretainedValue()
+        return keyCode(translating: characters(in: layoutData))
     }
 }
 
@@ -663,6 +707,8 @@ public struct TextInserter: TextInserting {
         try Task.checkCancellation()
         try validateTarget(target)
         try validateProtectedState()
+        // Read once the target is in front: the layout follows the document.
+        let pasteKey = await system.pasteKeyCode()
 
         let transaction = try pasteboard.beginHostOnlyWrite(text)
         let pasteDispatchedAt: ContinuousClock.Instant
@@ -678,11 +724,7 @@ public struct TextInserter: TextInserting {
             try validateTarget(target)
             try validateProtectedState()
             try Task.checkCancellation()
-            try system.post(
-                keyCode: CGKeyCode(kVK_ANSI_V),
-                flags: .maskCommand,
-                targetProcessIdentifier: target.processIdentifier
-            )
+            try system.post(keyCode: pasteKey, flags: .maskCommand)
             // Header: from now on, the text is in someone else's window.
             // Everything further is buffer protection, and it is not speed.
             pasteDispatchedAt = .now
@@ -739,18 +781,12 @@ public struct TextInserter: TextInserting {
             throw TextInsertionError.insertionInProgress
         }
         defer { operationLane.release() }
-        guard !system.isSecureInputEnabled else {
-            throw TextInsertionError.secureInputActive
-        }
-        guard system.isAccessibilityTrusted else {
-            throw TextInsertionError.accessibilityPermissionDenied
-        }
+        try validateProtectedState()
+        // Return goes where the paste went, and only while the dictation's
+        // application is still in front: it is irreversible.
+        if let target { try validateTarget(target) }
         try Task.checkCancellation()
-        try system.post(
-            keyCode: CGKeyCode(kVK_Return),
-            flags: [],
-            targetProcessIdentifier: target?.processIdentifier
-        )
+        try system.post(keyCode: CGKeyCode(kVK_Return), flags: [])
     }
 
     /// Return focus to the application where the dictation began.

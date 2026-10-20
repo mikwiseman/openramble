@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import DictationAudio
 import DictationCore
 import Foundation
@@ -129,11 +130,8 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
     private var heldPlan: [CGEventFlags] = [[]]
     private var heldCalls = 0
     private var postError: TextInsertionError?
-    private var posted: [(
-        keyCode: CGKeyCode,
-        flags: CGEventFlags,
-        targetProcessIdentifier: Int32?
-    )] = []
+    private var pasteKey = CGKeyCode(kVK_ANSI_V)
+    private var posted: [(keyCode: CGKeyCode, flags: CGEventFlags)] = []
 
     let log: CallLog
 
@@ -149,14 +147,11 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
     func setActivateResult(_ value: Bool) { withLock { activateResult = value } }
     func setHeldPlan(_ plan: [CGEventFlags]) { withLock { heldPlan = plan.isEmpty ? [[]] : plan } }
     func setPostError(_ error: TextInsertionError?) { withLock { postError = error } }
+    func setPasteKeyCode(_ keyCode: CGKeyCode) { withLock { pasteKey = keyCode } }
 
     // MARK: Observation
 
-    var postedKeys: [(
-        keyCode: CGKeyCode,
-        flags: CGEventFlags,
-        targetProcessIdentifier: Int32?
-    )] { withLock { posted } }
+    var postedKeys: [(keyCode: CGKeyCode, flags: CGEventFlags)] { withLock { posted } }
     var heldModifiersCallCount: Int { withLock { heldCalls } }
 
     // MARK: InputSystem
@@ -179,14 +174,12 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
         return withLock { activateResult }
     }
 
-    func post(
-        keyCode: CGKeyCode,
-        flags: CGEventFlags,
-        targetProcessIdentifier: Int32?
-    ) throws {
+    func pasteKeyCode() async -> CGKeyCode { withLock { pasteKey } }
+
+    func post(keyCode: CGKeyCode, flags: CGEventFlags) throws {
         log.record("post")
         if let error = withLock({ postError }) { throw error }
-        withLock { posted.append((keyCode, flags, targetProcessIdentifier)) }
+        withLock { posted.append((keyCode, flags)) }
     }
 
     private func withLock<T>(_ body: () -> T) -> T {

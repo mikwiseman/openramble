@@ -43,6 +43,10 @@ for the check.
    With two displays, repeat while the keyboard focus and pointer are on different
    screens; verify insertion still targets the original field and the HUD stays
    visible without stealing focus.
+   Open a Spotlight or Raycast panel over a terminal, end a take with
+   "Send it.", and confirm both the text and Return reach the panel, never the
+   terminal behind it. With the Dvorak and Turkish F layouts selected, confirm
+   a dictation pastes rather than typing ⌘K or copying.
 9. Confirm clipboard text, rich content, files, and multiple items are restored
    after insertion and do not appear on another device through Universal
    Clipboard. Verify password-manager values, lazy file promises, and content

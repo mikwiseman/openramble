@@ -147,7 +147,17 @@ final class TextInserterTests: XCTestCase {
         XCTAssertEqual(system.postedKeys.count, 1)
         XCTAssertEqual(system.postedKeys.first?.keyCode, CGKeyCode(kVK_ANSI_V))
         XCTAssertEqual(system.postedKeys.first?.flags, .maskCommand)
-        XCTAssertEqual(system.postedKeys.first?.targetProcessIdentifier, target.processIdentifier)
+    }
+
+    /// ⌘V is a character shortcut, not a key position. On Dvorak the ANSI V
+    /// key types ⌘K; the paste must use whatever key types "v" right now.
+    func testPasteUsesTheKeyThatTypesVInTheCurrentLayout() async throws {
+        system.setPasteKeyCode(47)
+
+        try await inserter.insert("hello", into: target)
+
+        XCTAssertEqual(system.postedKeys.first?.keyCode, 47)
+        XCTAssertEqual(system.postedKeys.first?.flags, .maskCommand)
     }
 
     func testScenario012() async {
@@ -218,15 +228,37 @@ final class TextInserterTests: XCTestCase {
         XCTAssertEqual(system.postedKeys.count, 1)
         XCTAssertEqual(system.postedKeys.first?.keyCode, CGKeyCode(kVK_Return))
         XCTAssertEqual(system.postedKeys.first?.flags, [])
-        XCTAssertNil(system.postedKeys.first?.targetProcessIdentifier)
     }
 
-    func testReturnForDictationIsPinnedToTheOriginalApplication() async throws {
+    /// "Send it." presses Return where the paste went: both keys take the same
+    /// route, so a panel over a terminal never gets the text while the terminal
+    /// runs whatever was on its command line.
+    func testReturnFollowsThePaste() async throws {
+        try await inserter.insert("hello", into: target)
         try await inserter.pressReturn(into: target)
 
-        XCTAssertEqual(system.postedKeys.count, 1)
-        XCTAssertEqual(system.postedKeys.first?.keyCode, CGKeyCode(kVK_Return))
-        XCTAssertEqual(system.postedKeys.first?.targetProcessIdentifier, target.processIdentifier)
+        XCTAssertEqual(
+            system.postedKeys.map(\.keyCode),
+            [CGKeyCode(kVK_ANSI_V), CGKeyCode(kVK_Return)]
+        )
+    }
+
+    /// Return is irreversible. If the dictation's application is no longer in
+    /// front, it is not pressed at all.
+    func testReturnIsNotPressedOnceTheTargetIsNoLongerInFront() async {
+        system.setFrontmost(
+            TargetApplication(
+                bundleIdentifier: "com.apple.Terminal",
+                processIdentifier: 999,
+                localizedName: "Terminal"
+            )
+        )
+
+        await XCTAssertThrowsErrorAsync(
+            try await inserter.pressReturn(into: target),
+            expected: TextInsertionError.targetChanged
+        )
+        XCTAssertEqual(system.postedKeys.count, 0)
     }
 
     func testScenario017() async {
@@ -294,38 +326,6 @@ final class TextInserterTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(5))
         }
         XCTAssertEqual(board.string(forType: .string), "what the person copied")
-    }
-
-    /// A WindowServer call may return only after the insertion deadline and
-    /// after the user has focused another application. The irreversible event
-    /// must remain addressed to the app captured at keypress, never to the new
-    /// frontmost app.
-    func testDelayedPostRemainsTargetedToOriginalApplication() async throws {
-        let originalTarget = target
-        let delayedSystem = DelayedPostInputSystem(frontmost: originalTarget)
-        let pasteboard = FakePasteboard(log: CallLog())
-        let inserter = TextInserter(
-            system: delayedSystem,
-            pasteboard: pasteboard,
-            restoreDelay: .zero
-        )
-        let task = Task {
-            try await inserter.insert("hello", into: originalTarget)
-        }
-
-        XCTAssertEqual(delayedSystem.postEntered.wait(timeout: .now() + 1), .success)
-        task.cancel()
-        delayedSystem.setFrontmost(
-            TargetApplication(
-                bundleIdentifier: "com.apple.Terminal",
-                processIdentifier: 999,
-                localizedName: "Terminal"
-            )
-        )
-        delayedSystem.allowPost.signal()
-
-        try await task.value
-        XCTAssertEqual(delayedSystem.postedTarget, originalTarget.processIdentifier)
     }
 
     /// A controller deadline can stop waiting while the actual WindowServer
@@ -476,7 +476,6 @@ private final class DelayedPostInputSystem: InputSystem, @unchecked Sendable {
 
     private let lock = NSLock()
     private var frontmost: TargetApplication?
-    private var storedPostedTarget: Int32?
 
     init(frontmost: TargetApplication?) {
         self.frontmost = frontmost
@@ -484,7 +483,6 @@ private final class DelayedPostInputSystem: InputSystem, @unchecked Sendable {
 
     var isSecureInputEnabled: Bool { false }
     var isAccessibilityTrusted: Bool { true }
-    var postedTarget: Int32? { lock.withLock { storedPostedTarget } }
 
     func setFrontmost(_ target: TargetApplication?) {
         lock.withLock { frontmost = target }
@@ -496,15 +494,11 @@ private final class DelayedPostInputSystem: InputSystem, @unchecked Sendable {
 
     func heldModifiers() -> CGEventFlags { [] }
     func activate(_ target: TargetApplication) async -> Bool { true }
+    func pasteKeyCode() async -> CGKeyCode { CGKeyCode(kVK_ANSI_V) }
 
-    func post(
-        keyCode: CGKeyCode,
-        flags: CGEventFlags,
-        targetProcessIdentifier: Int32?
-    ) throws {
+    func post(keyCode: CGKeyCode, flags: CGEventFlags) throws {
         postEntered.signal()
         _ = allowPost.wait(timeout: .now() + 2)
-        lock.withLock { storedPostedTarget = targetProcessIdentifier }
     }
 }
 
@@ -599,5 +593,47 @@ final class DeferredRestoreFailureTests: XCTestCase {
             lock.lock(); defer { lock.unlock() }
             stored = error
         }
+    }
+}
+
+/// The key that types "v" with ⌘ held, read from the real layouts installed
+/// with macOS. Nothing is switched: the layouts are only looked up.
+final class PasteKeyTests: XCTestCase {
+    func testThePasteKeyIsTheKeyThatTypesVOnRealLayouts() throws {
+        let expected: [String: CGKeyCode] = [
+            "com.apple.keylayout.ABC": 9,
+            "com.apple.keylayout.Russian": 9,
+            "com.apple.keylayout.DVORAK-QWERTYCMD": 9,
+            "com.apple.keylayout.Dvorak": 47,
+            "com.apple.keylayout.Dvorak-Right": 43,
+            "com.apple.keylayout.Turkish": 8,
+            "com.apple.keylayout.Turkish-Standard": 8,
+        ]
+        for (identifier, keyCode) in expected {
+            let layout = try XCTUnwrap(Self.layoutData(identifier), identifier)
+            XCTAssertEqual(
+                PasteKey.keyCode(translating: PasteKey.characters(in: layout)),
+                keyCode,
+                identifier
+            )
+        }
+    }
+
+    func testTheANSIVKeyWinsWhenItTypesV() {
+        XCTAssertEqual(PasteKey.keyCode { $0 == 9 || $0 == 3 ? "v" : "x" }, 9)
+    }
+
+    func testALayoutWithNoVFallsBackToTheANSIVKey() {
+        XCTAssertEqual(PasteKey.keyCode { _ in "\u{0436}" }, CGKeyCode(kVK_ANSI_V))
+    }
+
+    private static func layoutData(_ identifier: String) -> CFData? {
+        let filter = [kTISPropertyInputSourceID as String: identifier] as CFDictionary
+        guard let sources = TISCreateInputSourceList(filter, true)?.takeRetainedValue()
+            as? [TISInputSource],
+            let source = sources.first,
+            let pointer = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData)
+        else { return nil }
+        return Unmanaged<CFData>.fromOpaque(pointer).takeUnretainedValue()
     }
 }

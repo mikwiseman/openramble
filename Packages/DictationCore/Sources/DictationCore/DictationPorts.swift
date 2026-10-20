@@ -440,8 +440,8 @@ public protocol TextInserting: Sendable {
     func pressReturn() async throws
 
     /// Send Return to the same application captured for this dictation. The
-    /// default keeps old/test inserters source-compatible; production targets
-    /// the process so an actor-turn focus change cannot redirect the command.
+    /// default keeps old/test inserters source-compatible; production presses
+    /// it where the paste went, and only while that application is in front.
     func pressReturn(into target: TargetApplication?) async throws
 
     /// The application that was active at the time the hotkey was pressed.
