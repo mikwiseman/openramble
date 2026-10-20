@@ -15,8 +15,8 @@ in [HYPOTHESES.md](HYPOTHESES.md). The numbers come from the scorecard
 | 1. At least 99% of the 1,422 FLEURS transcripts identical; pooled WER within ±0.10 pp | 1,420 identical (99.86%); −0.003 pp, 95% interval −0.01 to 0.00 | pass |
 | 2. Wrong script and invented words not more than 0.2.3 | 20 and 0, the same | pass |
 | 3. Hour-file deleted words within 0.2 pp | English 4.80% and 4.80%, Russian 1.71% and 1.71% | pass |
-| 4. Warm p50 and p95 within 5% + 2 ms; whole-process p50 within 10% | all inputs: warm p50 323.5 → 327.4 ms, p95 1,459 → 1,482 ms idle; 413.6 → 415.7 and 1,988 → 2,010 ms under load; whole-process p50 0.431 → 0.429 s | all inputs: warm p50 323.5 → 327.4 ms, p95 1,459 → 1,482 ms idle; 413.6 → 415.7 and 1,988 → 2,010 ms under load; whole-process p50 0.431 → 0.429 s_VERDICT |
-| 5. Peak memory within 5% | 1.02 → 1.07 GB (+4.9%) | 1.02 → 1.07 GB (+4.9%)_VERDICT |
+| 4. Warm p50 and p95 within 5% + 2 ms; whole-process p50 within 10% | all inputs: warm p50 323.5 → 327.4 ms, p95 1,459 → 1,482 ms idle; 413.6 → 415.7 and 1,988 → 2,010 ms under load; whole-process p50 0.431 → 0.429 s | pass |
+| 5. Peak memory within 5% | 1.02 → 1.07 GB (+4.9%) | pass |
 | 6. No new end-to-end or unit test failure | end-to-end 21 run, 3 skipped, 0 failed under both; unit 163 run, 9 skipped, 0 failed | pass |
 | 7. Binary audit | passes; same frameworks, same selectors | pass |
 
@@ -63,7 +63,7 @@ Decision: Parakeet Ultra passes the WER rule and all seven gates and is recommen
 
 ## What adopting a model means for people
 
-Ultra is a drop-in for v3 in the runtime, but it is a new 740 MB download.
+Ultra is a drop-in for v3 in the runtime, but it is a new 486 MB download.
 The plan requires that the old model keep working until the new one verifies.
 Branch `claude/parakeet-ultra` implements that: the app keeps dictating with v3,
 offers Ultra in Settings, downloads it only when asked, switches once it
