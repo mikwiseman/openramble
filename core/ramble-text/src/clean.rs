@@ -35,16 +35,6 @@ use std::collections::HashSet;
 
 use crate::span;
 
-/// Where the text is going. Prose apps get paragraph breaks; verbatim apps
-/// (terminals, editors, anything unknown) never receive a newline they did not
-/// ask for. Ported from `PromptMode` in `PromptMode.swift`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum PromptMode {
-    #[default]
-    Verbatim,
-    Prose,
-}
-
 /// Hesitation in every language Parakeet speaks: none of these is a word.
 const FILLERS: &[&str] = &[
     "uh", "uhh", "uhm", "umm", "erm", "hmm", "hm", "ээ", "эээ", "эмм", "äh", "ähm", "euh",
