@@ -1617,6 +1617,7 @@ public final class DictationController {
                 toRecognizedText: stopRequestedAt.duration(to: recognizedAt),
                 toPasteDispatched: marks.pasteDispatchedAt.map { stopRequestedAt.duration(to: $0) },
                 toClipboardRestored: marks.clipboardRestoredAt.map { stopRequestedAt.duration(to: $0) },
+                toFirstRead: marks.firstReadAt.map { stopRequestedAt.duration(to: $0) },
                 microphoneStartup: microphoneStartup,
                 phases: phases
             )
@@ -1635,8 +1636,8 @@ public final class DictationController {
         guard shouldContinue(session) else { return .abandoned }
         state = .inserting
         // Cmd+V is the meaningful completion feedback. Do not leave a redundant
-        // “Inserting” panel over the destination application while the clipboard is
-        // restored in the background.
+        // “Inserting” panel over the destination application while the inserter
+        // waits for it to read the paste and puts the clipboard back.
         dismissOverlay(session: session)
 
         // Last point where cancellation is still possible. Then the event goes into
@@ -1720,13 +1721,6 @@ public final class DictationController {
 
     /// The text was recognized, but it was not possible to insert it - we save it so that it does not disappear.
     private func insertionFailureNotice(_ error: Error, text: String) -> DictationNotice {
-        if let insertion = error as? TextInsertionError,
-           insertion == .insertedButClipboardRestoreFailed {
-            return DictationNotice(
-                kind: .warning,
-                message: L10n.tr("The text was inserted, but the previous clipboard couldn't be restored.")
-            )
-        }
         pendingRecovery = RecoveredDictation(text: text)
 
         let message: String

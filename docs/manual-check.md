@@ -47,6 +47,10 @@ for the check.
    "Send it.", and confirm both the text and Return reach the panel, never the
    terminal behind it. With the Dvorak and Turkish F layouts selected, confirm
    a dictation pastes rather than typing ⌘K or copying.
+   Dictate with no text field focused (Finder's desktop) and confirm the
+   "couldn't be inserted" notice appears within three seconds and the previous
+   clipboard is back. Then use `Insert Last Dictation` from the menu into a
+   text field and confirm it lands without a second notice.
 9. Confirm clipboard text, rich content, files, and multiple items are restored
    after insertion and do not appear on another device through Universal
    Clipboard. Verify password-manager values, lazy file promises, and content

@@ -10,9 +10,13 @@ import Foundation
 /// **This is the headline metric** and what the HUD shows;
 /// - `toClipboardRestored` - the previous contents of the buffer are returned to their place.
 ///
+/// `toFirstRead` sits beside them as evidence, not as a promise: when the target
+/// application first read the pasted text. Earlier than `toPasteDispatched`
+/// means someone else read it before ⌘V.
+///
 /// There is no prohibited metric here intentionally: “time until return
-/// `TextInserter.insert`" is not a speed - it’s a thousand milliseconds inside
-/// buffer protection. It's waiting, not working.
+/// `TextInserter.insert`" is not a speed - it is the wait for the target to read
+/// the paste plus buffer protection. It's waiting, not working.
 ///
 /// `nil` means "not measured", and never "zero". The land that can't
 /// give a mark, has no right to look instant.
@@ -20,6 +24,7 @@ public struct DictationSpeedReport: Sendable, Equatable {
     public let toRecognizedText: Duration
     public let toPasteDispatched: Duration?
     public let toClipboardRestored: Duration?
+    public let toFirstRead: Duration?
     /// How long the microphone was raised before the first frame. Does not count from
     /// releases are a warm-up before the phrase, not after it.
     public let microphoneStartup: Duration?
@@ -31,12 +36,14 @@ public struct DictationSpeedReport: Sendable, Equatable {
         toRecognizedText: Duration,
         toPasteDispatched: Duration? = nil,
         toClipboardRestored: Duration? = nil,
+        toFirstRead: Duration? = nil,
         microphoneStartup: Duration? = nil,
         phases: DictationPhaseBreakdown? = nil
     ) {
         self.toRecognizedText = toRecognizedText
         self.toPasteDispatched = toPasteDispatched
         self.toClipboardRestored = toClipboardRestored
+        self.toFirstRead = toFirstRead
         self.microphoneStartup = microphoneStartup
         self.phases = phases
     }
@@ -155,16 +162,20 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
 /// When the insertion has done something that is visible to humans.
 ///
 /// The inserter himself removes the marks: they cannot be taken from outside, because `insert`
-/// returns only after a second of buffer protection.
+/// returns only after the target has read the paste and the clipboard is back.
 public struct InsertionMarks: Sendable, Equatable {
     public let pasteDispatchedAt: ContinuousClock.Instant?
     public let clipboardRestoredAt: ContinuousClock.Instant?
+    /// When an application first read the pasted text off the clipboard.
+    public let firstReadAt: ContinuousClock.Instant?
 
     public init(
         pasteDispatchedAt: ContinuousClock.Instant? = nil,
-        clipboardRestoredAt: ContinuousClock.Instant? = nil
+        clipboardRestoredAt: ContinuousClock.Instant? = nil,
+        firstReadAt: ContinuousClock.Instant? = nil
     ) {
         self.pasteDispatchedAt = pasteDispatchedAt
         self.clipboardRestoredAt = clipboardRestoredAt
+        self.firstReadAt = firstReadAt
     }
 }

@@ -19,7 +19,14 @@ final class TextInserterTests: XCTestCase {
         log = CallLog()
         system = FakeInputSystem(log: log)
         pasteboard = FakePasteboard(log: log)
-        inserter = TextInserter(system: system, pasteboard: pasteboard, restoreDelay: .zero)
+        inserter = TextInserter(
+            system: system,
+            pasteboard: pasteboard,
+            readQuiet: .zero,
+            readFloor: .zero,
+            readLimit: .seconds(1),
+            operationLane: TextInsertionLane()
+        )
         system.setFrontmost(target)
     }
 
@@ -187,12 +194,15 @@ final class TextInserterTests: XCTestCase {
         XCTAssertEqual(log.entries, ["activate", "pasteboard", "restore"])
     }
 
+    /// Nobody read the paste and the person's clipboard could not be put back
+    /// either: nothing landed, and that is what is said.
     func testScenario014() async {
+        pasteboard.setReadMode(.never)
         pasteboard.setRestoreError(.clipboardWriteFailed)
 
         await XCTAssertThrowsErrorAsync(
             try await inserter.insert("hello", into: target),
-            expected: TextInsertionError.insertedButClipboardRestoreFailed
+            expected: TextInsertionError.clipboardRestoreFailed
         )
 
         XCTAssertEqual(system.postedKeys.count, 1, "Paste has already been posted")
@@ -281,51 +291,204 @@ final class TextInserterTests: XCTestCase {
     }
 
     func testScenario019() async throws {
-        let backgroundRestoringInserter = TextInserter(
-            system: system,
-            pasteboard: pasteboard,
-            restoreDelay: .milliseconds(50)
-        )
+        let marks = try await inserter.insertReportingMarks("hello", into: target)
 
-        let marks = try await backgroundRestoringInserter.insertReportingMarks("hello", into: target)
-
-        XCTAssertNotNil(marks.pasteDispatchedAt)
-        XCTAssertNil(marks.clipboardRestoredAt)
-        XCTAssertEqual(log.entries, ["activate", "pasteboard", "post"])
-
-        for _ in 0..<200 where !log.entries.contains("restore") {
-            try await Task.sleep(for: .milliseconds(5))
-        }
+        let pasted = try XCTUnwrap(marks.pasteDispatchedAt)
+        let read = try XCTUnwrap(marks.firstReadAt)
+        let restored = try XCTUnwrap(marks.clipboardRestoredAt)
+        XCTAssertLessThanOrEqual(pasted, read)
+        XCTAssertLessThanOrEqual(read, restored)
         XCTAssertEqual(log.entries, ["activate", "pasteboard", "post", "restore"])
     }
 
-    /// Two dictations one after another, faster than the deferred restore.
+    /// Two dictations one after another, as fast as a person can manage.
     ///
-    /// Two short answers in the chat a second apart - and the second insert falls into
-    /// the restore window of the first one. What a person copied before dictation must
-    /// survive both: this is his clipboard, and the application borrowed it for a second.
+    /// What a person copied before dictation must survive both: this is their
+    /// clipboard, and the application borrowed it for a moment.
     ///
     /// A real board here, and not a fake one: the whole point is in the ownership counter,
     /// and it belongs to the system, not to us.
     func testScenario020() async throws {
-        let boardName = "is.waiwai.dictation.tests.\(UUID().uuidString)"
-        let board = NSPasteboard(name: NSPasteboard.Name(boardName))
-        defer { board.releaseGlobally() }
-        board.prepareForNewContents(with: .currentHostOnly)
-        board.setString("what the person copied", forType: .string)
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
+        let reader = BoardReader(board: board.name)
+        system.onPost = { reader.read(after: .milliseconds(5)) }
 
-        let inserter = TextInserter(
-            system: system,
-            pasteboard: HostOnlyPasteboard(name: boardName),
-            restoreDelay: .milliseconds(80)
-        )
+        let inserter = board.inserter(system: system)
         try await inserter.insert("DICTATION ONE", into: target)
         try await inserter.insert("DICTATION TWO", into: target)
 
-        for _ in 0..<200 where board.string(forType: .string) != "what the person copied" {
-            try await Task.sleep(for: .milliseconds(5))
+        let texts = await reader.texts(count: 2)
+        XCTAssertEqual(texts, ["DICTATION ONE", "DICTATION TWO"])
+        XCTAssertEqual(board.contents, "what the person copied")
+    }
+
+    // MARK: - Read receipt
+
+    /// The target reads the paste within milliseconds; the person's clipboard
+    /// comes back a moment later instead of a fixed second.
+    func testRestoresSoonAfterTheTargetReadsThePaste() async throws {
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
+        let reader = BoardReader(board: board.name)
+        system.onPost = { reader.read(after: .milliseconds(20)) }
+
+        let marks = try await board.inserter(
+            system: system,
+            readQuiet: TextInserter.readQuiet,
+            readFloor: TextInserter.readFloor
+        ).insertReportingMarks("DICTATED", into: target)
+
+        XCTAssertEqual(reader.texts, ["DICTATED"])
+        XCTAssertEqual(board.contents, "what the person copied")
+        let pasted = try XCTUnwrap(marks.pasteDispatchedAt)
+        let read = try XCTUnwrap(marks.firstReadAt)
+        let restored = try XCTUnwrap(marks.clipboardRestoredAt)
+        XCTAssertGreaterThanOrEqual(read.duration(to: restored), TextInserter.readQuiet)
+        XCTAssertGreaterThanOrEqual(pasted.duration(to: restored), TextInserter.readFloor)
+        // Loose on purpose: shared CI runners are slow. The harness measures the
+        // real numbers; this only has to tell "soon" from the old fixed second.
+        XCTAssertLessThan(pasted.duration(to: restored), .milliseconds(900))
+    }
+
+    /// A slow application that reads well after a second still pastes the
+    /// dictation, not whatever the person had copied (VoiceInk #722).
+    func testASlowTargetStillGetsTheDictationNotThePersonsClipboard() async throws {
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
+        let reader = BoardReader(board: board.name)
+        system.onPost = { reader.read(after: .milliseconds(1500)) }
+
+        try await board.inserter(system: system, readLimit: .seconds(3))
+            .insert("DICTATED", into: target)
+
+        let texts = await reader.texts(count: 1)
+        XCTAssertEqual(texts, ["DICTATED"])
+        XCTAssertEqual(board.contents, "what the person copied")
+    }
+
+    /// ⌘V went out and nothing ever read the clipboard: nothing was pasted.
+    /// The person hears it, gets their clipboard back, and the dictation does
+    /// not linger anywhere.
+    func testAPasteNobodyReadsIsReportedAsNotLanded() async throws {
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
+
+        await XCTAssertThrowsErrorAsync(
+            try await board.inserter(system: system, readLimit: .milliseconds(150))
+                .insert("DICTATED", into: target),
+            expected: .pasteNotRead
+        )
+
+        XCTAssertEqual(board.contents, "what the person copied")
+        XCTAssertNotEqual(
+            BoardReader(board: board.name).readNowReturning(),
+            "DICTATED",
+            "an unread dictation must not linger for a later reader"
+        )
+    }
+
+    /// A read that lands after the last look but before the restore closes
+    /// the transaction still counts: the words landed, and calling them lost
+    /// would make the person insert them a second time from the menu.
+    func testAReadJustBeforeTheRestoreStillCountsAsLanded() async throws {
+        pasteboard.setReadMode(.duringRestore)
+        let inserter = TextInserter(
+            system: system,
+            pasteboard: pasteboard,
+            readQuiet: .zero,
+            readFloor: .zero,
+            readLimit: .milliseconds(50),
+            operationLane: TextInsertionLane()
+        )
+
+        let marks = try await inserter.insertReportingMarks("hello", into: target)
+
+        XCTAssertNotNil(marks.firstReadAt)
+        XCTAssertEqual(log.entries, ["activate", "pasteboard", "post", "restore"])
+    }
+
+    /// Something that ignores the markers reads the board before the target
+    /// does. The receipt is spent, but that is no reason to raise a false
+    /// alarm or to snatch the text away from the target a moment later.
+    func testAnEarlyReaderDoesNotCutTheTargetsPasteShort() async throws {
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
+        let watcher = BoardReader(board: board.name)
+        let pastingApp = BoardReader(board: board.name)
+        system.onHeldModifiers = { watcher.readNow() }
+        system.onPost = { pastingApp.read(after: .milliseconds(100)) }
+        // A floor far above the target's read keeps this about the rule, not
+        // about how fast a shared CI runner serves the main queue.
+        let floor = Duration.milliseconds(600)
+        let limit = Duration.seconds(2)
+
+        let marks = try await board.inserter(
+            system: system,
+            readQuiet: TextInserter.readQuiet,
+            readFloor: floor,
+            readLimit: limit
+        ).insertReportingMarks("DICTATED", into: target)
+
+        XCTAssertEqual(watcher.texts, ["DICTATED"])
+        XCTAssertEqual(pastingApp.texts, ["DICTATED"], "the target still pastes the dictation")
+        let pasted = try XCTUnwrap(marks.pasteDispatchedAt)
+        let read = try XCTUnwrap(marks.firstReadAt)
+        let restored = try XCTUnwrap(marks.clipboardRestoredAt)
+        XCTAssertLessThan(read, pasted)
+        XCTAssertGreaterThanOrEqual(pasted.duration(to: restored), floor)
+        XCTAssertLessThan(pasted.duration(to: restored), limit, "an early read does not hold the text to the limit")
+        XCTAssertEqual(board.contents, "what the person copied")
+    }
+
+    /// The application serves the read from its main thread. Whatever runs
+    /// after the insertion on the main actor (edit learning reads the focused
+    /// field) must not start before the target has its text.
+    func testInsertReturnsOnlyAfterTheTargetHasRead() async throws {
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
+        let reader = BoardReader(board: board.name)
+        system.onPost = { reader.read(after: .milliseconds(40)) }
+
+        let marks = try await board.inserter(system: system)
+            .insertReportingMarks("DICTATED", into: target)
+        let returned = ContinuousClock.now
+
+        let read = try XCTUnwrap(marks.firstReadAt, "insert returned before the target read")
+        XCTAssertLessThanOrEqual(read, returned)
+        let texts = await reader.texts(count: 1)
+        XCTAssertEqual(texts, ["DICTATED"])
+    }
+
+    /// The controller's deadline cancels the insertion while it waits for the
+    /// read. The person gets their clipboard back, the dictation never stays
+    /// on the board, the lane is free, and the cancellation is not dressed up
+    /// as a paste that landed.
+    func testCancellingWhileWaitingForTheReadPutsTheClipboardBack() async throws {
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
+        let lane = TextInsertionLane()
+        let inserter = board.inserter(system: system, readLimit: .seconds(5), operationLane: lane)
+        let target = target
+        let system = try XCTUnwrap(system)
+        let task = Task { try await inserter.insert("DICTATED", into: target) }
+        let posted = ContinuousClock.now + .seconds(1)
+        while system.postedKeys.isEmpty, ContinuousClock.now < posted {
+            try await Task.sleep(for: .milliseconds(1))
         }
-        XCTAssertEqual(board.string(forType: .string), "what the person copied")
+        XCTAssertEqual(system.postedKeys.count, 1)
+
+        task.cancel()
+        do {
+            try await task.value
+            XCTFail("an unread paste that was cancelled is not a success")
+        } catch {
+            XCTAssertTrue(error is CancellationError, "\(error)")
+        }
+
+        XCTAssertEqual(board.contents, "what the person copied")
+        XCTAssertTrue(lane.tryAcquire(), "the lane is free again")
+        lane.release()
     }
 
     /// A controller deadline can stop waiting while the actual WindowServer
@@ -339,7 +502,9 @@ final class TextInserterTests: XCTestCase {
         let inserter = TextInserter(
             system: delayedSystem,
             pasteboard: pasteboard,
-            restoreDelay: .zero,
+            readQuiet: .zero,
+            readFloor: .zero,
+            readLimit: .seconds(1),
             operationLane: lane
         )
         let first = Task {
@@ -367,17 +532,20 @@ final class TextInserterTests: XCTestCase {
     /// ownership, clear our dictated item, then rewrite the snapshot. A second
     /// dictation must not enter after that clear and race its Cmd+V against the
     /// rewrite.
-    func testDeferredRestoreOwnsTheProcessLaneAcrossClearAndRewrite() async throws {
+    func testRestoreOwnsTheProcessLaneAcrossClearAndRewrite() async throws {
         let gatedPasteboard = ClearThenRewriteGatedPasteboard(original: "ORIGINAL")
         let lane = TextInsertionLane()
         let inserter = TextInserter(
             system: system,
             pasteboard: gatedPasteboard,
-            restoreDelay: .milliseconds(20),
+            readQuiet: .zero,
+            readFloor: .zero,
+            readLimit: .seconds(1),
             operationLane: lane
         )
+        let target = target
 
-        try await inserter.insert("FIRST", into: target)
+        let first = Task { try await inserter.insert("FIRST", into: target) }
         let clearDeadline = ContinuousClock.now + .seconds(1)
         while !gatedPasteboard.hasClearedRestore, ContinuousClock.now < clearDeadline {
             try await Task.sleep(for: .milliseconds(1))
@@ -398,10 +566,7 @@ final class TextInserterTests: XCTestCase {
         XCTAssertEqual(system.postedKeys.count, 1, "later attempts must never dispatch Cmd+V")
 
         gatedPasteboard.allowRestoreRewrite.signal()
-        let finishDeadline = ContinuousClock.now + .seconds(1)
-        while !gatedPasteboard.hasFinishedRestore, ContinuousClock.now < finishDeadline {
-            try await Task.sleep(for: .milliseconds(1))
-        }
+        try await first.value
         XCTAssertTrue(gatedPasteboard.hasFinishedRestore)
         XCTAssertEqual(gatedPasteboard.contents, "ORIGINAL")
     }
@@ -419,6 +584,7 @@ private final class ClearThenRewriteGatedPasteboard: DictationPasteboard, @unche
     private var snapshots: [(transaction: PasteboardTransaction, contents: String)] = []
     private var restoreWasCleared = false
     private var restoreWasFinished = false
+    private var readAt: ContinuousClock.Instant?
 
     init(original: String) {
         storedContents = original
@@ -448,6 +614,14 @@ private final class ClearThenRewriteGatedPasteboard: DictationPasteboard, @unche
             storedWrittenTexts.append(text)
         }
         return transaction
+    }
+
+    /// The target reads at once.
+    func firstRead(of transaction: PasteboardTransaction) -> ContinuousClock.Instant? {
+        lock.withLock {
+            if readAt == nil { readAt = .now }
+            return readAt
+        }
     }
 
     func restore(_ transaction: PasteboardTransaction) throws {
@@ -519,81 +693,88 @@ func XCTAssertThrowsErrorAsync<T>(
     }
 }
 
-/// A deferred restore that fails must still reach the person.
-///
-/// The restore runs a second after the paste, detached, with nobody left to
-/// throw to. The only branch that reported it threw from the zero-delay path,
-/// which production never uses — so on the shipping path the loss was
-/// completely silent: the person's clipboard gone, our dictation in its place.
-final class DeferredRestoreFailureTests: XCTestCase {
-    private let target = TargetApplication(
-        bundleIdentifier: "com.apple.TextEdit",
-        processIdentifier: 4242,
-        localizedName: "TextEdit"
-    )
+/// A real named board holding what the person copied, and the inserter that
+/// writes to it. Never the general pasteboard: a test must not touch what the
+/// person copied at that moment.
+private struct RealBoard {
+    let name = "is.waiwai.dictation.tests.\(UUID().uuidString)"
 
-    func testScenario021() async throws {
-        let log = CallLog()
-        let system = FakeInputSystem(log: log)
-        let pasteboard = FakePasteboard(log: log)
-        system.setFrontmost(target)
-        pasteboard.setRestoreError(.clipboardRestoreFailed)
+    init(holding contents: String) {
+        let board = NSPasteboard(name: NSPasteboard.Name(name))
+        board.prepareForNewContents(with: .currentHostOnly)
+        board.setString(contents, forType: .string)
+    }
 
-        let reported = ReportBox()
-        let reporter = ClipboardRestoreReporter()
-        reporter.onFailure { error in reported.record(error) }
-        let inserter = TextInserter(
+    var contents: String? {
+        NSPasteboard(name: NSPasteboard.Name(name)).string(forType: .string)
+    }
+
+    func inserter(
+        system: any InputSystem,
+        readQuiet: Duration = .zero,
+        readFloor: Duration = .zero,
+        readLimit: Duration = .seconds(2),
+        operationLane: TextInsertionLane = TextInsertionLane()
+    ) -> TextInserter {
+        TextInserter(
             system: system,
-            pasteboard: pasteboard,
-            restoreDelay: .milliseconds(20),
-            restoreReporter: reporter
-        )
-
-        _ = try await inserter.insertReportingMarks("\u{043F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}", into: target)
-        try await Task.sleep(for: .milliseconds(400))
-
-        XCTAssertEqual(
-            reported.value, .insertedButClipboardRestoreFailed,
-            "losing the person's clipboard has to be said out loud"
+            pasteboard: HostOnlyPasteboard(name: name),
+            readQuiet: readQuiet,
+            readFloor: readFloor,
+            readLimit: readLimit,
+            operationLane: operationLane
         )
     }
 
-    /// A restore that works stays quiet: a warning after every dictation would
-    /// be noise, and noise is how real warnings stop being read.
-    func testScenario022() async throws {
-        let log = CallLog()
-        let system = FakeInputSystem(log: log)
-        let pasteboard = FakePasteboard(log: log)
-        system.setFrontmost(target)
+    func release() {
+        NSPasteboard(name: NSPasteboard.Name(name)).releaseGlobally()
+    }
+}
 
-        let reported = ReportBox()
-        let reporter = ClipboardRestoreReporter()
-        reporter.onFailure { error in reported.record(error) }
-        let inserter = TextInserter(
-            system: system,
-            pasteboard: pasteboard,
-            restoreDelay: .milliseconds(20),
-            restoreReporter: reporter
-        )
+/// Plays the target application: reads the board's text from the main
+/// thread, the way AppKit serves a paste.
+private final class BoardReader: @unchecked Sendable {
+    private let name: String
+    private let lock = NSLock()
+    private var stored: [String?] = []
 
-        _ = try await inserter.insertReportingMarks("\u{043F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}", into: target)
-        try await Task.sleep(for: .milliseconds(400))
-
-        XCTAssertNil(reported.value)
+    init(board name: String) {
+        self.name = name
     }
 
-    private final class ReportBox: @unchecked Sendable {
-        private let lock = NSLock()
-        private var stored: TextInsertionError?
-        var value: TextInsertionError? {
-            lock.lock(); defer { lock.unlock() }
-            return stored
+    var texts: [String?] { lock.withLock { stored } }
+
+    /// The reads so far, once `count` of them have finished on the main
+    /// thread (or after a second): the receipt is noted inside the read, the
+    /// text a moment after it.
+    func texts(count: Int) async -> [String?] {
+        for _ in 0..<200 where texts.count < count {
+            try? await Task.sleep(for: .milliseconds(5))
         }
-        func record(_ error: TextInsertionError) {
-            lock.lock(); defer { lock.unlock() }
-            stored = error
-        }
+        return texts
     }
+
+    func read(after delay: Duration) {
+        let seconds = Double(delay.components.seconds)
+            + Double(delay.components.attoseconds) / 1e18
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { self.readNow() }
+    }
+
+    func readNow() {
+        let text = readNowReturning()
+        lock.withLock { stored.append(text) }
+    }
+
+    func readNowReturning() -> String? {
+        NSPasteboard(name: NSPasteboard.Name(name)).string(forType: .string)
+    }
+}
+
+private final class ReportCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored = 0
+    var count: Int { lock.withLock { stored } }
+    func record() { lock.withLock { stored += 1 } }
 }
 
 /// The key that types "v" with ⌘ held, read from the real layouts installed
@@ -620,11 +801,13 @@ final class PasteKeyTests: XCTestCase {
     }
 
     func testTheANSIVKeyWinsWhenItTypesV() {
-        XCTAssertEqual(PasteKey.keyCode { $0 == 9 || $0 == 3 ? "v" : "x" }, 9)
+        let keyCode = PasteKey.keyCode { $0 == 9 || $0 == 3 ? "v" : "x" }
+
+        XCTAssertEqual(keyCode, 9)
     }
 
     func testALayoutWithNoVFallsBackToTheANSIVKey() {
-        XCTAssertEqual(PasteKey.keyCode { _ in "\u{0436}" }, CGKeyCode(kVK_ANSI_V))
+        XCTAssertEqual(PasteKey.keyCode { _ in "ж" }, CGKeyCode(kVK_ANSI_V))
     }
 
     private static func layoutData(_ identifier: String) -> CFData? {
@@ -635,5 +818,71 @@ final class PasteKeyTests: XCTestCase {
             let pointer = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData)
         else { return nil }
         return Unmanaged<CFData>.fromOpaque(pointer).takeUnretainedValue()
+    }
+}
+
+/// A restore that fails after the paste landed must still reach the person.
+///
+/// The words are in the target, so the insertion succeeded; what failed is
+/// putting the person's own clipboard back. Thrown, it would read as "not
+/// inserted"; swallowed, the person would silently lose what they had copied.
+final class LandedPasteRestoreFailureTests: XCTestCase {
+    private let target = TargetApplication(
+        bundleIdentifier: "com.apple.TextEdit",
+        processIdentifier: 4242,
+        localizedName: "TextEdit"
+    )
+
+    func testScenario021() async throws {
+        let log = CallLog()
+        let system = FakeInputSystem(log: log)
+        let pasteboard = FakePasteboard(log: log)
+        system.setFrontmost(target)
+        pasteboard.setRestoreError(.clipboardRestoreFailed)
+
+        let reports = ReportCounter()
+        let reporter = ClipboardRestoreReporter()
+        reporter.onFailure { reports.record() }
+        let inserter = TextInserter(
+            system: system,
+            pasteboard: pasteboard,
+            readQuiet: .milliseconds(20),
+            readFloor: .zero,
+            readLimit: .seconds(1),
+            restoreReporter: reporter,
+            operationLane: TextInsertionLane()
+        )
+
+        let marks = try await inserter.insertReportingMarks("\u{043F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}", into: target)
+
+        XCTAssertNotNil(marks.pasteDispatchedAt, "the words landed: an insertion, not a failure")
+        XCTAssertNil(marks.clipboardRestoredAt, "the clipboard did not come back")
+        XCTAssertEqual(reports.count, 1, "losing the person's clipboard has to be said out loud")
+    }
+
+    /// A restore that works stays quiet: a warning after every dictation would
+    /// be noise, and noise is how real warnings stop being read.
+    func testScenario022() async throws {
+        let log = CallLog()
+        let system = FakeInputSystem(log: log)
+        let pasteboard = FakePasteboard(log: log)
+        system.setFrontmost(target)
+
+        let reports = ReportCounter()
+        let reporter = ClipboardRestoreReporter()
+        reporter.onFailure { reports.record() }
+        let inserter = TextInserter(
+            system: system,
+            pasteboard: pasteboard,
+            readQuiet: .milliseconds(20),
+            readFloor: .zero,
+            readLimit: .seconds(1),
+            restoreReporter: reporter,
+            operationLane: TextInsertionLane()
+        )
+
+        _ = try await inserter.insertReportingMarks("\u{043F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}", into: target)
+
+        XCTAssertEqual(reports.count, 0)
     }
 }

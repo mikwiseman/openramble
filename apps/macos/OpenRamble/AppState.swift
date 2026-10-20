@@ -210,7 +210,7 @@ public struct AppEnvironment {
             AudioDeviceID?
         ) -> any AudioCapturing,
         transcribe: @escaping (@escaping @Sendable () -> URL) -> @Sendable (URL) async throws -> ASRResult,
-        recoveryInsertionDeadline: Duration = .seconds(2),
+        recoveryInsertionDeadline: Duration = TextInserter.insertionDeadline,
         engineWarmupRetryDelay: Duration? = nil,
         idleUnloadDelayOverride: Duration? = nil,
         recordingRecoveryCompatibilityGrace: TimeInterval = 60,
@@ -1323,7 +1323,8 @@ public final class AppState: ObservableObject {
                 },
                 prepareForTranscription: makePrepareForTranscription(
                     engineDirectory: engineDirectory
-                )
+                ),
+                insertionDeadline: TextInserter.insertionDeadline
             )
             controller.onStateChange = { [weak self] state in
                 self?.dictationState = state
@@ -1454,12 +1455,10 @@ public final class AppState: ObservableObject {
                     provenance: provenance
                 )
             }
-            // Putting the person's own clipboard back happens a second after the
-            // paste, detached, with nobody left to throw to. If it fails they
-            // silently lose whatever they had copied and our dictation stays on
-            // the board in its place — exactly the kind of quiet loss the
-            // project forbids. This is the only path that can say so.
-            clipboardRestoreReporter?.onFailure { [weak self] _ in
+            // The paste landed, but the person's own clipboard could not be put
+            // back. The insertion still counts as one; losing what they had
+            // copied is said here, on the side, rather than swallowed.
+            clipboardRestoreReporter?.onFailure { [weak self] in
                 Task { @MainActor [weak self] in
                     self?.notify(
                         DictationNotice(

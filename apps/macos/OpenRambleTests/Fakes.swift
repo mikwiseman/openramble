@@ -132,6 +132,10 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
     private var postError: TextInsertionError?
     private var pasteKey = CGKeyCode(kVK_ANSI_V)
     private var posted: [(keyCode: CGKeyCode, flags: CGEventFlags)] = []
+    /// Runs after each post, outside the lock: a test plays the target here.
+    var onPost: (@Sendable () -> Void)?
+    /// Runs on each modifier poll, between the clipboard write and ⌘V.
+    var onHeldModifiers: (@Sendable () -> Void)?
 
     let log: CallLog
 
@@ -162,11 +166,13 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
     func frontmostApplication() -> TargetApplication? { withLock { frontmost } }
 
     func heldModifiers() -> CGEventFlags {
-        withLock {
+        let value = withLock {
             let value = heldPlan[min(heldCalls, heldPlan.count - 1)]
             heldCalls += 1
             return value
         }
+        onHeldModifiers?()
+        return value
     }
 
     func activate(_ target: TargetApplication) async -> Bool {
@@ -180,6 +186,7 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
         log.record("post")
         if let error = withLock({ postError }) { throw error }
         withLock { posted.append((keyCode, flags)) }
+        onPost?()
     }
 
     private func withLock<T>(_ body: () -> T) -> T {
@@ -190,11 +197,23 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
 }
 
 final class FakePasteboard: DictationPasteboard, @unchecked Sendable {
+    /// When the target reads the dictation.
+    enum ReadMode {
+        /// Right after ⌘V: the first time anyone asks.
+        case afterPaste
+        case never
+        /// After the last look and just before the restore takes the
+        /// transaction: the read that races the verdict.
+        case duringRestore
+    }
+
     private let lock = NSLock()
     private var written: [String] = []
     private var error: TextInsertionError?
     private var restoreError: TextInsertionError?
     private var transactions: [PasteboardTransaction] = []
+    private var readMode = ReadMode.afterPaste
+    private var readAt: ContinuousClock.Instant?
     var onBegin: (@Sendable () -> Void)?
 
     let log: CallLog
@@ -215,6 +234,12 @@ final class FakePasteboard: DictationPasteboard, @unchecked Sendable {
         restoreError = error
     }
 
+    func setReadMode(_ mode: ReadMode) {
+        lock.lock()
+        defer { lock.unlock() }
+        readMode = mode
+    }
+
     var writtenTexts: [String] {
         lock.lock()
         defer { lock.unlock() }
@@ -231,15 +256,31 @@ final class FakePasteboard: DictationPasteboard, @unchecked Sendable {
         let transaction = PasteboardTransaction()
         lock.lock()
         transactions.append(transaction)
+        readAt = nil
         lock.unlock()
         onBegin?()
         return transaction
+    }
+
+    func firstRead(of transaction: PasteboardTransaction) -> ContinuousClock.Instant? {
+        lock.lock()
+        defer { lock.unlock() }
+        switch readMode {
+        case .afterPaste:
+            if readAt == nil { readAt = .now }
+            return readAt
+        case .never:
+            return nil
+        case .duringRestore:
+            return readAt
+        }
     }
 
     func restore(_ transaction: PasteboardTransaction) throws {
         log.record("restore")
         lock.lock()
         transactions.removeAll { $0 == transaction }
+        if readMode == .duringRestore, readAt == nil { readAt = .now }
         let failure = restoreError
         lock.unlock()
         if let failure { throw failure }

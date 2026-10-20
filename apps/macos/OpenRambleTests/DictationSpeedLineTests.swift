@@ -135,4 +135,22 @@ final class DictationSpeedLineTests: XCTestCase {
         XCTAssertTrue(line(.milliseconds(50)).contains("mic=0.05s"), line(.milliseconds(50)))
         XCTAssertTrue(line(nil).contains("mic=absent"), line(nil))
     }
+
+    /// When the target read the paste, from the key release like `paste`.
+    /// Earlier than `paste` means something else read the dictation first.
+    func testItSaysWhenTheTargetReadThePaste() {
+        let read = DictationSpeedLine.text(
+            for: DictationSpeedReport(
+                toRecognizedText: .milliseconds(200),
+                toPasteDispatched: .milliseconds(210),
+                toFirstRead: .milliseconds(270)
+            )
+        )
+        let unread = DictationSpeedLine.text(
+            for: DictationSpeedReport(toRecognizedText: .milliseconds(200))
+        )
+
+        XCTAssertTrue(read.contains("paste=0.21s read=0.27s"), read)
+        XCTAssertTrue(unread.contains("read=absent"), unread)
+    }
 }

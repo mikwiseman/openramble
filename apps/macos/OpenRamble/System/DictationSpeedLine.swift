@@ -15,6 +15,9 @@ enum DictationSpeedLine {
         let phases = report.phases
         var parts = ["dictation", field("total", report.toRecognizedText)]
         parts.append(field("paste", report.toPasteDispatched))
+        // When the target read the paste. Earlier than `paste` means something
+        // else read the dictation first.
+        parts.append(field("read", report.toFirstRead))
         // Capture accepted the start → first committed frame. Not key-down →
         // speech: the device's own ~180 ms warm-up comes after it. An I/O
         // proc leaves no AUHAL lines in the system log, so this is where the

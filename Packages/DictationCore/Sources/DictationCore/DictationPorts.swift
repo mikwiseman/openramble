@@ -440,8 +440,8 @@ public protocol TextInserting: Sendable {
     func pressReturn() async throws
 
     /// Send Return to the same application captured for this dictation. The
-    /// default keeps old/test inserters source-compatible; production presses
-    /// it where the paste went, and only while that application is in front.
+    /// default keeps old/test inserters source-compatible; production targets
+    /// the process so an actor-turn focus change cannot redirect the command.
     func pressReturn(into target: TargetApplication?) async throws
 
     /// The application that was active at the time the hotkey was pressed.
@@ -452,9 +452,9 @@ public protocol TextInserting: Sendable {
 
     /// Insert and tell when exactly the text went into someone else’s window.
     ///
-    /// A separate method is needed because `insert` returns only via
-    /// second of buffer protection: from the outside the moment of insertion cannot be caught, from the inside -
-    /// trivial.
+    /// A separate method is needed because `insert` returns only after the
+    /// target has read the paste and the clipboard is back: from the outside the
+    /// moment of insertion cannot be caught, from the inside - trivial.
     func insertReportingMarks(
         _ text: String,
         into target: TargetApplication?
@@ -498,8 +498,9 @@ public enum TextInsertionError: Error, Sendable, Equatable {
     case clipboardWriteFailed
     /// Before Paste the clipboard could not be returned; no text inserted.
     case clipboardRestoreFailed
-    /// Paste has already been sent, but the old clipboard could not be returned.
-    case insertedButClipboardRestoreFailed
+    /// ⌘V was sent, but no application read the clipboard within the limit,
+    /// so nothing was pasted.
+    case pasteNotRead
     /// The user did not release the modifiers, and the press would turn into someone else's combination.
     case modifiersStillHeld
     case targetUnavailable

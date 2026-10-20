@@ -33,7 +33,7 @@ OpenRamble's voice typing works in any app that accepts text, from Mail, Slack a
 - **Hands-free.** Double-press the key to dictate without holding it. In Settings, you can also let hands-free dictation finish when you stop talking.
 - **Long dictation.** You can dictate for longer than five minutes, and OpenRamble starts transcribing while you are still speaking.
 - **Personal dictionary.** Tell OpenRamble how a word sounds and how to write it. A built-in list already covers common technical terms. You can also import and export your dictionary as a file.
-- **Your clipboard comes back.** After the paste, OpenRamble puts back what was on your clipboard, images included. Dictated text is marked so that it stays off Universal Clipboard and out of clipboard managers that respect the standard privacy markers.
+- **Your clipboard comes back.** A moment after the app you are dictating into reads the text, OpenRamble puts back what was on your clipboard, images included. If no app reads the text within three seconds, OpenRamble puts your clipboard back, tells you the text was not inserted and keeps it for Insert Last Dictation. Dictated text is marked so that it stays off Universal Clipboard and out of clipboard managers that respect the standard privacy markers.
 - **History.** Replay, copy or delete recent dictations, or recognize one again. If a paste fails, choose Insert Last Dictation from the OpenRamble menu in the menu bar.
 - **VoiceOver.** With VoiceOver on, OpenRamble plays a short tone when the microphone opens instead of a spoken announcement, so VoiceOver's speech does not end up in your dictation.
 

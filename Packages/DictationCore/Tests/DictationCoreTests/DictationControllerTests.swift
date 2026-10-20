@@ -832,9 +832,14 @@ final class DictationControllerTests: XCTestCase {
         )
     }
 
-    func testClipboardRestoreFailureDoesNotClaimInsertedTextWasLost() async throws {
-        await inserter.setError(.insertedButClipboardRestoreFailed)
-        let controller = makeController(recognized: "\u{0442}\u{0435}\u{043A}\u{0441}\u{0442} \u{0443}\u{0436}\u{0435} \u{0432}\u{0441}\u{0442}\u{0430}\u{0432}\u{043B}\u{0435}\u{043D}")
+    /// ⌘V went out, but no application ever read the clipboard: nothing was
+    /// pasted. That is words that did not land, said out loud, with the text
+    /// kept for the menu — never a silent success.
+    func testAPasteNobodyReadIsReportedAsWordsThatDidNotLand() async throws {
+        await inserter.setError(.pasteNotRead)
+        let controller = makeController(recognized: "nobody read this")
+        var archived: [String] = []
+        controller.onTakeFinished = { text, _ in archived.append(text) }
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()
@@ -842,8 +847,12 @@ final class DictationControllerTests: XCTestCase {
         await settle()
 
         let notices = await overlay.notices
-        XCTAssertNil(controller.pendingRecovery)
-        XCTAssertTrue(notices.contains { $0.message.contains("The text was inserted") })
+        let notice = try XCTUnwrap(notices.last)
+        XCTAssertEqual(notice.kind, .warning)
+        XCTAssertTrue(notice.wordsDidNotLand)
+        XCTAssertEqual(notice.recoverableText, "Nobody read this")
+        XCTAssertEqual(controller.pendingRecovery?.text, "Nobody read this")
+        XCTAssertEqual(archived, ["Nobody read this"])
     }
 
     // MARK: Insertion target
