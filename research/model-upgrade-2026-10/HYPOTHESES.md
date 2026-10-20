@@ -273,6 +273,47 @@ v3's, idle and under load, in the same 12-block design.
 If it passes, the desktop app ships Ultra Q8_0 from its own manifest while the
 Mac ships Q4_K_M. If it fails, the desktop app keeps v3.
 
+## H15. Weights served from the model file (upstream main after #195)
+
+Preregistered on 20 October 2026 before any output of this runtime existed on
+this Mac. This is ranked improvement 4e in the plan. transcribe.cpp 0.4.0 copies
+every weight into memory the process owns. Upstream #195, merged after 0.4.0,
+memory-maps the GGUF file instead and hands the mapped pages to the primary
+device when it can use host memory, which includes Metal on Apple silicon.
+Mapped weights are clean, file-backed pages: macOS can reclaim them under
+memory pressure instead of charging them to the app, and the app and the CLI
+loading the same file can share them. Upstream main also carries #199 (Parakeet
+long-form memory) and other changes since 0.4.0, so this is a whole-runtime
+comparison like H1, not a test of #195 alone.
+
+The candidate is transcribe.cpp built from upstream main at `db678a03` by
+`scripts/build-transcribe-xcframework.sh`. The baseline is 0.4.0. Both run
+Parakeet Ultra Q4_K_M, the model #79 ships, through the app's adapter. The
+footprint is the process's physical footprint (`task_vm_info.phys_footprint`,
+what Activity Monitor shows), which `asr-bench serve` now reports; peak RSS
+cannot show this change because mapped pages count toward it.
+
+The runtime is adopted when:
+
+1. At least 99% of the 1,422 FLEURS transcripts are identical, and the pooled
+   WER difference is within ±0.10 points.
+2. Wrong-script decodes and invented words are not more than with 0.4.0.
+3. Hour-file deleted-word rates are within 0.2 points.
+4. Warm p50 and p95 are within 5% + 2 ms, idle and under load, and the whole-process
+   p50 is within 10%, in an interleaved run.
+5. The footprint after load and warm-up is at least 300 MB lower, and the peak
+   footprint over the warm run is not higher.
+6. The model load with a warm file cache is not more than 10% slower.
+7. No new unit or end-to-end test failure, and the binary audit passes.
+8. No code path in the app, the CLI or the desktop store rewrites an installed
+   model file in place. A mapped file changed in place kills the process
+   (SIGBUS), so this is checked by reading every writer of the model
+   directory.
+
+A cold page cache needs `sudo purge` and is not measured; a first dictation
+after the OS has evicted the pages reads them from disk, and that cost is
+reported as a limit, not gated.
+
 ## Live text needs partials at least every 300 ms
 
 Recorded on 20 October 2026 as a gate for any future live-text feature, not

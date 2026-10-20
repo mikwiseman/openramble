@@ -70,6 +70,21 @@ func peakMemoryBytes() -> Int64 {
     return Int64(info.ru_maxrss)
 }
 
+/// Physical footprint now and at its peak: what Activity Monitor shows and what
+/// memory pressure charges. Unlike resident size it leaves out clean,
+/// file-backed pages, such as weights mapped from the model file.
+func footprintBytes() -> (current: Int64, peak: Int64) {
+    var info = task_vm_info_data_t()
+    var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
+    let status = withUnsafeMutablePointer(to: &info) {
+        $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+            task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+        }
+    }
+    guard status == KERN_SUCCESS else { return (0, 0) }
+    return (Int64(info.phys_footprint), Int64(info.ledger_phys_footprint_peak))
+}
+
 func printState(_ state: ModelState, layout: ModelInstallLayout, manifest: ModelManifest) {
     switch state {
     case .notInstalled:

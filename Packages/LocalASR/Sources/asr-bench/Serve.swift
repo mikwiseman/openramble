@@ -29,6 +29,8 @@ func serve(directory: URL) async throws {
         "warmupSeconds": seconds(warmupStarted.duration(to: .now)),
         "runtime": TranscribeCppAdapter.runtimeVersion,
         "peakMemoryBytes": peakMemoryBytes(),
+        "footprintBytes": footprintBytes().current,
+        "peakFootprintBytes": footprintBytes().peak,
     ])
 
     let reader = AudioFileReader()
@@ -63,6 +65,9 @@ func serve(directory: URL) async throws {
             reply["error"] = String(describing: error)
         }
         reply["peakMemoryBytes"] = peakMemoryBytes()
+        let footprint = footprintBytes()
+        reply["footprintBytes"] = footprint.current
+        reply["peakFootprintBytes"] = footprint.peak
         emit(reply)
     }
     await transcriber.unload()

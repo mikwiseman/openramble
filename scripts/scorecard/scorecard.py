@@ -902,7 +902,8 @@ def speed_warm(specs, data, repeats=10, suite='speed-warm'):
                             'first_request': first, 'ok': 'error' not in reply, 'text': reply.get('text', ''),
                             'wall_seconds': reply.get('wallSeconds'), 'engine_seconds': reply.get('engineSeconds'),
                             'roundtrip_seconds': reply.get('roundtrip_seconds'), 'audio_seconds': reply.get('audioSeconds'),
-                            'candidate_count': len(specs)})
+                            'footprint_bytes': reply.get('footprintBytes'),
+                            'peak_footprint_bytes': reply.get('peakFootprintBytes'), 'candidate_count': len(specs)})
                         first = False
                 finally:
                     rss = serve.close()
@@ -1083,6 +1084,11 @@ def score(name):
                            'warmup_inference': distribution([r['warmupSeconds'] for r in ready if r['condition'] == 'quiet']),
                            'process_to_ready': distribution([r['process_ready_seconds'] for r in ready if r['condition'] == 'quiet']),
                            'peak_rss_bytes': max((r.get('max_rss_bytes') or 0) for r in ready)}
+        # Older runs predate the footprint fields; their rows stay empty.
+        footprint = [r['footprintBytes'] for r in ready if r.get('footprintBytes') and r['condition'] == 'quiet']
+        if footprint:
+            metrics['load']['footprint_ready_bytes'] = statistics.median(footprint)
+            metrics['load']['peak_footprint_bytes'] = max(r.get('peak_footprint_bytes') or 0 for r in requests)
         metrics['runner_parity'] = parity(name, by_id)
     metrics['model'] = {'bytes': model_path(spec).stat().st_size, 'sha256': spec['model'].get('sha256'),
                         'license': spec['model'].get('license')}
@@ -1308,6 +1314,8 @@ ROWS = [
     ('Speed', 'Hour file, English', ('hour', 'en-3540s', 'wall_seconds'), 's', 'lower', '≤ 30 s'),
     ('Resources', 'Model load (warm file cache)', ('load', 'model_load', 'p50'), 's', 'lower', '≤ 1 s'),
     ('Resources', 'Peak resident memory', ('load', 'peak_rss_bytes'), 'GB', 'lower', '≤ 1 GB'),
+    ('Resources', 'Memory footprint after load', ('load', 'footprint_ready_bytes'), 'GB', 'lower', ''),
+    ('Resources', 'Peak memory footprint', ('load', 'peak_footprint_bytes'), 'GB', 'lower', ''),
     ('Resources', 'Peak memory, whole process', ('latency_process', 'quiet', 'max_rss_bytes'), 'GB', 'lower', ''),
     ('Resources', 'Model file', ('model', 'bytes'), 'MB', 'lower', ''),
 ]
