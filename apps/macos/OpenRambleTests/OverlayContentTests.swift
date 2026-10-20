@@ -126,22 +126,23 @@ final class OverlayContentTests: XCTestCase {
     ///
     /// The panel does not take focus on purpose, there is no icon in the dock, there is no window: without this
     /// phrases: a blind person does not know that the microphone is on.
+    /// The microphone opening is a tone: words said now would be dictated.
     func testScenario007() {
-        let content = content(.listening)
-
-        XCTAssertEqual(content.announcement, "Recording.")
-        XCTAssertTrue(content.isAnnouncementUrgent)
+        XCTAssertEqual(content(.listening).voice, .cue)
     }
 
     func testScenario008() {
-        XCTAssertEqual(content(.transcribing).announcement, "Recording stopped, transcribing speech")
-        XCTAssertNil(content(.inserting).announcement)
-        XCTAssertEqual(content(.preparing).announcement, "Turning on the microphone")
+        XCTAssertEqual(
+            content(.transcribing).voice,
+            .speech("Recording stopped, transcribing speech", urgent: false)
+        )
+        XCTAssertNil(content(.inserting).voice)
+        XCTAssertNil(content(.preparing).voice, "said while the microphone opens, so never said")
     }
 
     /// The panel is removed from the screen at rest - there is nothing to declare there.
     func testScenario009() {
-        XCTAssertNil(content(.idle).announcement)
+        XCTAssertNil(content(.idle).voice)
     }
 
     // MARK: - Messages
@@ -154,7 +155,7 @@ final class OverlayContentTests: XCTestCase {
         // The counter next to the message is reset: recording is no longer taking place.
         XCTAssertNil(content.subtitle)
         XCTAssertEqual(content.tone, .warning)
-        XCTAssertEqual(content.announcement, notice.message)
+        XCTAssertEqual(content.voice, .speech(notice.message, urgent: true))
     }
 
     func testScenario011() {
@@ -165,9 +166,9 @@ final class OverlayContentTests: XCTestCase {
 
     /// A crash interrupts what VoiceOver is currently reading, but a simple notification does not.
     func testScenario012() {
-        XCTAssertFalse(content(.idle, notice: DictationNotice(kind: .info, message: "and")).isAnnouncementUrgent)
-        XCTAssertTrue(content(.idle, notice: DictationNotice(kind: .warning, message: "p")).isAnnouncementUrgent)
-        XCTAssertTrue(content(.idle, notice: DictationNotice(kind: .failure, message: "about")).isAnnouncementUrgent)
+        XCTAssertEqual(content(.idle, notice: DictationNotice(kind: .info, message: "and")).voice, .speech("and", urgent: false))
+        XCTAssertEqual(content(.idle, notice: DictationNotice(kind: .warning, message: "p")).voice, .speech("p", urgent: true))
+        XCTAssertEqual(content(.idle, notice: DictationNotice(kind: .failure, message: "about")).voice, .speech("about", urgent: true))
     }
 
     // MARK: - Labels

@@ -157,29 +157,24 @@ final class OverlayModelTests: XCTestCase {
 
     // MARK: - Voice
 
+    /// The microphone opening is a tone, never words. Speech played into an
+    /// open microphone was measured in 100% of transcripts: a VoiceOver user's
+    /// every dictation began with "Recording."
     func testScenario010() {
         model.show(.listening, elapsed: 0)
 
-        XCTAssertEqual(
-            announcer.messages,
-            ["Recording."]
-        )
-        XCTAssertEqual(announcer.announcements.first?.urgent, true)
+        XCTAssertEqual(announcer.messages, [], "nothing is spoken into an open microphone")
+        XCTAssertEqual(announcer.cues, 1)
     }
 
-    /// The counter ticks twice per second.
-    ///
-    /// Without memory of what was said, VoiceOver would repeat “recording” until the end
-    /// dictation and would drown out everything else.
+    /// The counter ticks twice per second; the tone belongs to the take.
     func testScenario011() {
         model.show(.listening, elapsed: 0)
         model.show(.listening, elapsed: 1)
         model.show(.listening, elapsed: 2)
 
-        XCTAssertEqual(
-            announcer.messages,
-            ["Recording."]
-        )
+        XCTAssertEqual(announcer.cues, 1)
+        XCTAssertEqual(announcer.messages, [])
     }
 
     func testScenario012() {
@@ -188,13 +183,7 @@ final class OverlayModelTests: XCTestCase {
 
         model.show(.listening, elapsed: 0)
 
-        XCTAssertEqual(
-            announcer.messages,
-            [
-                "Recording.",
-                "Recording.",
-            ]
-        )
+        XCTAssertEqual(announcer.cues, 2, "every take opens the microphone again")
     }
 
     func testScenario013() {
@@ -214,12 +203,23 @@ final class OverlayModelTests: XCTestCase {
 
         XCTAssertEqual(
             announcer.messages,
-            [
-                "Turning on the microphone",
-                "Recording.",
-                "Recording stopped, transcribing speech",
-            ]
+            ["Recording stopped, transcribing speech"],
+            "the microphone starting is not narrated: it is spoken while it opens"
         )
+        XCTAssertEqual(announcer.cues, 1)
+    }
+
+    /// VoiceOver never speaks while the microphone is open — not the state,
+    /// and not a notice that happens to arrive mid-take either.
+    func testVoiceOverNeverSpeaksWhileTheMicrophoneIsOpen() async throws {
+        model.show(.preparing, elapsed: 0)
+        model.showNotice(DictationNotice(kind: .info, message: "Copied."))
+        model.show(.listening, elapsed: 0)
+        model.showNotice(DictationNotice(kind: .warning, message: "Check the microphone."))
+        try await waitForNoticeToHide()
+
+        XCTAssertEqual(announcer.messages, [])
+        XCTAssertEqual(announcer.cues, 1, "a notice expiring mid-take does not re-open the take")
     }
 
     // MARK: - Waveform

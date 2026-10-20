@@ -324,8 +324,11 @@ final class OverlayModel: ObservableObject {
     /// long enough to be read, then honor that deferred dismissal.
     private var dismissAfterNotice = false
     /// What has already been said out loud. The seconds counter ticks twice per second, and without
-    /// of this memory, VoiceOver would repeat “recording” until the end of the dictation.
+    /// of this memory, VoiceOver would repeat the same words until the end of the dictation.
     private var lastAnnouncement: String?
+    /// The microphone-open tone belongs to the take, not to each redraw or
+    /// each return from a notice.
+    private var hasCuedThisTake = false
 
     init(
         announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
@@ -451,6 +454,7 @@ final class OverlayModel: ObservableObject {
         // The next dictation must appear again, even if the state
         // matches the previous one.
         lastAnnouncement = nil
+        hasCuedThisTake = false
     }
 
     /// Show elapsed time.
@@ -490,10 +494,24 @@ final class OverlayModel: ObservableObject {
     }
 
     private func announceContent() {
-        let content = self.content
-        guard let announcement = content.announcement, announcement != lastAnnouncement else { return }
-        lastAnnouncement = announcement
-        announcer.announce(announcement, urgent: content.isAnnouncementUrgent)
+        switch content.voice {
+        case nil:
+            return
+        case .cue:
+            guard !hasCuedThisTake else { return }
+            hasCuedThisTake = true
+            announcer.playCue()
+        case let .speech(text, urgent):
+            // Never into an open microphone, notices included: whatever
+            // VoiceOver says now ends up in the transcript.
+            guard !isMicrophoneOpen, text != lastAnnouncement else { return }
+            lastAnnouncement = text
+            announcer.announce(text, urgent: urgent)
+        }
+    }
+
+    private var isMicrophoneOpen: Bool {
+        state == .preparing || state == .listening
     }
 }
 

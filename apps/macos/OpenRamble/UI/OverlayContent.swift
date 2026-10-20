@@ -50,10 +50,17 @@ struct OverlayContent: Equatable {
     /// by itself, a blind person does not get it in any way. The shortcut is needed for
     /// those who search for it with the VoiceOver cursor.
     var accessibilityLabel: String
-    /// What to say out loud when entering this state. `nil` - nothing to say.
-    var announcement: String?
-    /// An urgent announcement interrupts what VoiceOver is currently reading.
-    var isAnnouncementUrgent: Bool
+    /// What VoiceOver hears on entering this state. `nil` - nothing.
+    var voice: Voice?
+
+    /// VoiceOver never speaks while the microphone is open: whatever it says
+    /// then is played into that microphone and dictated. The moment it opens
+    /// is a tone; words wait until it has closed.
+    enum Voice: Equatable {
+        case cue
+        /// An urgent announcement interrupts what VoiceOver is currently reading.
+        case speech(String, urgent: Bool)
+    }
 
     static func make(
         state: DictationState,
@@ -68,11 +75,10 @@ struct OverlayContent: Equatable {
                 subtitle: nil,
                 tone: tone(for: notice.kind),
                 accessibilityLabel: notice.message,
-                announcement: notice.message,
                 // The message comes exactly when something goes wrong.
                 // Waiting for the end of someone else's phrase means saying too much
                 //too late for this to be useful.
-                isAnnouncementUrgent: notice.kind != .info
+                voice: .speech(notice.message, urgent: notice.kind != .info)
             )
         }
 
@@ -85,8 +91,7 @@ struct OverlayContent: Equatable {
                 accessibilityLabel: L10n.tr("Not dictating"),
                 // The panel is removed at this moment. Announcing “ready” into the void
                 // no need: the person already heard that the dictation was over.
-                announcement: nil,
-                isAnnouncementUrgent: false
+                voice: nil
             )
 
         case .preparing:
@@ -95,8 +100,8 @@ struct OverlayContent: Equatable {
                 subtitle: nil,
                 tone: .working,
                 accessibilityLabel: L10n.tr("Turning on the microphone"),
-                announcement: L10n.tr("Turning on the microphone"),
-                isAnnouncementUrgent: false
+                // Said while the microphone opens, so it would be dictated.
+                voice: nil
             )
 
         case .listening:
@@ -106,10 +111,9 @@ struct OverlayContent: Equatable {
                 subtitle: nil,
                 tone: .recording,
                 accessibilityLabel: L10n.tr("Recording, %@.", String(describing: seconds)),
-                // The main announcement throughout the application: without it, you are blind
-                // the person does not know that the microphone is on.
-                announcement: L10n.tr("Recording."),
-                isAnnouncementUrgent: true
+                // The main cue throughout the application: without it, a blind
+                // person does not know that the microphone is on.
+                voice: .cue
             )
 
         case .transcribing:
@@ -126,8 +130,7 @@ struct OverlayContent: Equatable {
                     subtitle: L10n.tr("Your words are waiting, not lost."),
                     tone: .working,
                     accessibilityLabel: L10n.tr("Recording stopped, waiting for the speech model to load"),
-                    announcement: L10n.tr("Waiting for the speech model to load"),
-                    isAnnouncementUrgent: false
+                    voice: .speech(L10n.tr("Waiting for the speech model to load"), urgent: false)
                 )
             }
             return OverlayContent(
@@ -137,8 +140,7 @@ struct OverlayContent: Equatable {
                 subtitle: nil,
                 tone: .working,
                 accessibilityLabel: L10n.tr("Recording stopped, transcribing speech"),
-                announcement: L10n.tr("Recording stopped, transcribing speech"),
-                isAnnouncementUrgent: false
+                voice: .speech(L10n.tr("Recording stopped, transcribing speech"), urgent: false)
             )
 
         case .inserting:
@@ -147,8 +149,7 @@ struct OverlayContent: Equatable {
                 subtitle: nil,
                 tone: .idle,
                 accessibilityLabel: L10n.tr("Text inserted"),
-                announcement: nil,
-                isAnnouncementUrgent: false
+                voice: nil
             )
         }
     }

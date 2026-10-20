@@ -716,6 +716,8 @@ final class AppHarness {
 @MainActor
 final class FakeAnnouncer: AccessibilityAnnouncing {
     private(set) var announcements: [(message: String, urgent: Bool)] = []
+    /// How many times the microphone-open tone played.
+    private(set) var cues = 0
 
     var messages: [String] { announcements.map(\.message) }
 
@@ -723,10 +725,15 @@ final class FakeAnnouncer: AccessibilityAnnouncing {
         announcements.append((message, urgent))
     }
 
+    func playCue() {
+        cues += 1
+    }
+
     /// Forget what was said. Needed where one ad is checked, and before it
     /// Others were heard on the case.
     func reset() {
         announcements = []
+        cues = 0
     }
 }
 

@@ -9,6 +9,10 @@ import AppKit
 public protocol AccessibilityAnnouncing: AnyObject {
     /// Say it out loud. `urgent` - interrupt what is being read now.
     func announce(_ message: String, urgent: Bool)
+    /// The microphone just opened. A short tone, never words: anything spoken
+    /// now plays into that microphone, and a spoken "Recording." was measured
+    /// at the start of 100% of transcripts.
+    func playCue()
 }
 
 @MainActor
@@ -31,5 +35,13 @@ public final class SystemAccessibilityAnnouncer: AccessibilityAnnouncing {
                 .priority: priority.rawValue,
             ]
         )
+    }
+
+    public func playCue() {
+        // VoiceOver users only: they cannot see the panel, and this tone is
+        // what replaced the spoken cue they got before. Everyone else has the
+        // red dot, and "one sound" stays true for them.
+        guard NSWorkspace.shared.isVoiceOverEnabled else { return }
+        NSSound(named: "Tink")?.play()
     }
 }
