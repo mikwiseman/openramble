@@ -1222,10 +1222,10 @@ public final class DictationController {
                                 transcribe: transcribeSamples
                             )
                         }
+                        // A take with no cuts is the ordinary path, not a
+                        // fallback; only a failed segment is worth reporting.
                         if case let .failed(error) = outcome {
                             fallbackBox.set((.segmentFailed, error))
-                        } else {
-                            fallbackBox.set((.noSegments, nil))
                         }
                         // No cuts were made, or a segment failed. Either way the
                         // whole take is recognized here exactly as it always
@@ -1264,8 +1264,6 @@ public final class DictationController {
                     }
                     if case let .failed(error) = outcome {
                         fallbackBox.set((.segmentFailed, error))
-                    } else {
-                        fallbackBox.set((.noSegments, nil))
                     }
                     return try await transcribe(url)
                 }
@@ -2051,7 +2049,10 @@ public enum DictationFailureStage: String, Codable, Sendable {
 }
 
 public enum DictationFallbackReason: String, Codable, Sendable {
-    case noSegments, segmentFailed
+    /// No longer reported: a take with no cuts is the ordinary path. Kept so
+    /// journal lines written before that still decode.
+    case noSegments
+    case segmentFailed
 }
 
 private enum RecordingFinalizationStage: Sendable, Equatable {

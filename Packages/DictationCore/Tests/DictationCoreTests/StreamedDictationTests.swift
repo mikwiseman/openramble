@@ -208,6 +208,24 @@ final class StreamedDictationTests: XCTestCase {
         XCTAssertEqual(inserted.first, "One whole take.")
     }
 
+    /// A take short enough to need no cut is the ordinary path, not a
+    /// fallback. It used to be journaled as `noSegments` on 234 of 273 takes in
+    /// a week, which buried the one fallback worth reading: a failed segment.
+    func testAWholeTakeWithNoSegmentsReportsNoFallback() async {
+        let samples = [Float](repeating: 0.5, count: 5 * 16_000)
+        let capture = StreamingCapture(samples: samples, segments: [])
+        let inserter = FakeInserter()
+        let controller = makeController(capture: capture, inserter: inserter) { _ in "one whole take." }
+        var fallbackReasons: [DictationFallbackReason] = []
+        controller.onRecognitionFallback = { reason, _ in fallbackReasons.append(reason) }
+
+        await run(controller)
+
+        let inserted = await inserter.insertedTexts
+        XCTAssertEqual(inserted.first, "One whole take.")
+        XCTAssertEqual(fallbackReasons, [])
+    }
+
     func testEightMinuteFileBackedTakeReusesEveryStreamedPiece() async {
         let samples = [Float](repeating: 0.5, count: 480 * 16_000)
         let capture = StreamingCapture(samples: samples,
