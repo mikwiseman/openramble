@@ -188,12 +188,15 @@ private struct HistoryRow: View {
                     .accessibilityLabel(L10n.tr("Recognise this recording again"))
                 }
 
-                Button(action: onCopy) {
-                    Image(systemName: "doc.on.doc")
+                // A take with no words has nothing to copy.
+                if !entry.text.isEmpty {
+                    Button(action: onCopy) {
+                        Image(systemName: "doc.on.doc")
+                    }
+                    .buttonStyle(.borderless)
+                    .help(L10n.tr("Copy"))
+                    .accessibilityLabel(L10n.tr("Copy this dictation"))
                 }
-                .buttonStyle(.borderless)
-                .help(L10n.tr("Copy"))
-                .accessibilityLabel(L10n.tr("Copy this dictation"))
 
                 Button(role: .destructive, action: onDelete) {
                     Image(systemName: "trash")
@@ -203,10 +206,17 @@ private struct HistoryRow: View {
                 .accessibilityLabel(L10n.tr("Delete this dictation"))
             }
 
-            Text(entry.text)
-                .font(.body)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+            if entry.text.isEmpty {
+                // Kept for its audio: the model found no words in it.
+                Text(L10n.tr("Nothing recognized"))
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(entry.text)
+                    .font(.body)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if let audioURL {
                 Button {

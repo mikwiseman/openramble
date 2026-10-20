@@ -31,9 +31,11 @@ and the app contains no analytics or crash-reporting SDK.
 Transcripts are never written to logs. Recent dictations **are** kept on this
 Mac, with their audio, so you can replay, copy or delete them: the last 5 by
 default, adjustable in Settings ▸ History, deletable individually or all at
-once. Earlier versions kept transcripts in memory only; this is a deliberate
-change, and it is the one thing this app stores that it previously did not.
-Nothing leaves the Mac either way.
+once. A take in which nothing was recognized is kept too, so you can play it or
+recognize it again; a take that heard only silence is not. Earlier versions
+kept transcripts in memory only; this is a deliberate change, and it is the one
+thing this app stores that it previously did not. Nothing leaves the Mac either
+way.
 
 **Recordings** you make on purpose — in the Recordings window, ⌘R, or with ⌃⌘R — stay until
 you delete them, with a transcript beside the audio. A recording captures your

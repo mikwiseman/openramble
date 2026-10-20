@@ -377,6 +377,7 @@ final class DictationEndToEndTests: EndToEndScenario {
     func testSilentRecordingProducesNoInsertion() async throws {
         try await stayQuiet(seconds: 3)
         let controller = makeController()
+        controller.microphoneName = { "Test Mic" }
 
         await dictate(with: controller)
 
@@ -397,6 +398,10 @@ final class DictationEndToEndTests: EndToEndScenario {
         XCTAssertEqual(presses, 0)
 
         await assertNoRecordingsLeft()
-        await assertNoFailureNotices()
+        // Silence gets one warning, and it names the microphone: if the person
+        // did speak, a muted or wrong input is what lost the words.
+        let notices = await overlay.notices
+        XCTAssertEqual(notices.map(\.kind), [.warning])
+        XCTAssertEqual(notices.map(\.message), ["Heard only silence from Test Mic."])
     }
 }

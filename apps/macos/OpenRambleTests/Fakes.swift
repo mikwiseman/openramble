@@ -270,12 +270,17 @@ actor FakeCapture: AudioCapturing {
     /// Shorter than the limit - and the session will end without recognition. This is how it is checked
     /// full circle of dictation without touching the real model.
     private var duration: TimeInterval = 2.0
+    /// The take's PCM, when a test needs to say what it sounded like.
+    private var bufferedSamples: [Float]?
 
     private let file: URL
 
     init(file: URL) { self.file = file }
 
     func setDuration(_ value: TimeInterval) { duration = value }
+    func setBufferedSamples(_ samples: [Float]?) { bufferedSamples = samples }
+
+    func takeBufferedSamples() async -> [Float]? { bufferedSamples }
 
     func startRecording(session: DictationSessionID, disposition: RecordingDisposition) async throws -> URL {
         self.session = session
@@ -891,8 +896,13 @@ actor ReadinessControlledRecognizer: DictationRecognizing {
 
     func prepare(modelDirectory: URL) async throws { prepares += 1 }
 
+    /// What a file decode answers - recognizing a History take again.
+    private var fileText = ""
+
+    func setFileText(_ text: String) { fileText = text }
+
     func transcribe(fileURL: URL) async throws -> ASRResult {
-        ASRResult(text: "", audioDuration: 1, processingDuration: 0)
+        ASRResult(text: fileText, audioDuration: 1, processingDuration: 0)
     }
 
     /// What a sample-based decode answers, and whether it fails instead.
