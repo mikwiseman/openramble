@@ -78,3 +78,22 @@ changes fixed now:
 - The candidates are rebuilt from the H4b commit; their names stay
   `v3-vocabulary` and `v3-vocabulary-off`, and the first attempt's results are
   kept in the report.
+
+## A third hypothesis (H4c), written before H4b's gate ran
+
+Added on 20 October 2026, after H4b's tuning and before its gate.
+
+The first attempt's FLEURS changes were mostly ordinary words rewritten
+through a term's first piece ("brides" to "hrides", "table" to "cable",
+"threats" to "frets"), not terms inserted. Many terms begin with a one- or
+two-letter word piece, so a bonus on that piece competes with every ordinary
+word that starts the same way. H4b does not change this, because it re-ranks
+among emitted tokens, which includes those words.
+
+H4c gives no bonus to a term's first piece. The automaton still tracks a match
+that the model starts on its own, and only the pieces after the first earn the
+bonus, so a term is completed once the model has begun it, and nothing is
+started for it. H4c keeps H4b's rule that biasing never changes the decision
+between blank and a token. It is tested with the same procedure, the same
+weight grid and noise constraint as H4b, and the same gate, as candidates
+`v3-vocabulary-h4c` and `v3-vocabulary-off`.
