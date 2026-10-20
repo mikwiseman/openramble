@@ -12,14 +12,20 @@ final class BundledManifestTests: XCTestCase {
         // revision, non-zero sizes, well-formed checksums, safe paths.
         let manifest = try ModelManifest.bundled()
 
-        XCTAssertEqual(manifest.modelID, "parakeet-tdt-0.6b-v3-gguf")
-        XCTAssertEqual(manifest.repository, "handy-computer/parakeet-tdt-0.6b-v3-gguf")
-        XCTAssertEqual(manifest.revision, "85ac09ea12fc4b1112fa76810059364bc6adc9de")
+        XCTAssertEqual(manifest.modelID, "parakeet-ultra-gguf")
+        XCTAssertEqual(manifest.repository, "handy-computer/parakeet-ultra-gguf")
+        XCTAssertEqual(manifest.revision, "a1539be1b849ea7463b88343e5277b373d0c4ea9")
         XCTAssertEqual(manifest.runtimeVersion, "transcribe.cpp 0.4.0")
         XCTAssertEqual(manifest.quantization, "Q8_0")
-        // The weights are NVIDIA's Parakeet TDT 0.6B v3, and attribution is a
-        // licence condition rather than a courtesy.
+        // The weights are Moondream's post-training of NVIDIA's Parakeet TDT
+        // 0.6B v3, and attribution is a licence condition rather than a courtesy.
         XCTAssertEqual(manifest.license, "CC-BY-4.0")
+
+        // The model it replaced stays readable, so a Mac that holds it keeps
+        // dictating until the new one verifies.
+        let previous = try XCTUnwrap(try ModelManifest.bundledPrevious())
+        XCTAssertEqual(previous.modelID, "parakeet-tdt-0.6b-v3-gguf")
+        XCTAssertEqual(previous.revision, "85ac09ea12fc4b1112fa76810059364bc6adc9de")
     }
 
     /// One file, not a directory tree.
@@ -31,7 +37,7 @@ final class BundledManifestTests: XCTestCase {
     /// the old complexity.
     func testTheModelIsExactlyOneFile() throws {
         let manifest = try ModelManifest.bundled()
-        XCTAssertEqual(manifest.files.map(\.path), ["parakeet-tdt-0.6b-v3-Q8_0.gguf"])
+        XCTAssertEqual(manifest.files.map(\.path), ["parakeet-ultra-Q8_0.gguf"])
     }
 
     /// The published size, pinned.
