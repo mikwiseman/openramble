@@ -1,6 +1,6 @@
 {
   "label": "v3 with vocabulary",
-  "summary": "transcribe.cpp 0.4.0 + phrase boosting (81d40989), 60 terms",
+  "summary": "transcribe.cpp 0.4.0 + phrase boosting (40b08f3f), 60 terms",
   "order": 7,
   "model": {
     "name": "parakeet-tdt-0.6b-v3 Q8_0",
@@ -9,15 +9,15 @@
     "source": "https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/blob/85ac09ea12fc4b1112fa76810059364bc6adc9de/parakeet-tdt-0.6b-v3-Q8_0.gguf",
     "license": "CC-BY-4.0"
   },
-  "runtime": "transcribe.cpp v0.4.0 plus parakeet phrase boosting, commit 81d40989871b74b0c31b12f19ad089fcfac32418, built by scripts/build-transcribe-xcframework.sh; Metal, one decoder thread",
+  "runtime": "transcribe.cpp v0.4.0 plus parakeet phrase boosting, commit 40b08f3f67a623db328aa5f88a1b703bf6b91f7f, built by scripts/build-transcribe-xcframework.sh; Metal, one decoder thread; default boost 3.0 chosen on the dev half",
   "process": {
     "kind": "asr-bench"
   },
   "warm": {
     "kind": "asr-bench",
     "commit": "4bd185f9f63ed6656447ab6844d9295d7128f8ac",
-    "xcframework_zip": "builds/xcframework-v0.4.0-vocabulary/TranscribeCpp-v0.4.0-1-g81d40989.xcframework.zip",
-    "xcframework_sha256": "6bca7c6f099f348f8dc30cc2f60cfc47cf5401d918dafaf5c8e0c190faf544cd"
+    "xcframework_zip": "builds/xcframework-vocab-40b08f3f/TranscribeCpp-v0.4.0-1-g40b08f3f.xcframework.zip",
+    "xcframework_sha256": "f7f4f8ba65c293043e0f4baed94d567b67a6442af3f2169f14f89f446d0c1fb9"
   },
   "index": true,
   "vocabulary": "research/term-biasing-2026-10/vocabulary.txt"

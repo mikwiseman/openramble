@@ -37,7 +37,7 @@ def recognize(cli, model, vocabulary, weight, fixtures):
         if weight > 0:
             argv += ['--vocabulary-file', str(terms)]
         out = subprocess.run(argv, env=env, capture_output=True, text=True, check=True).stdout
-    rows = {r['file']: r for r in (json.loads(line) for line in out.splitlines() if line.startswith('{'))}
+    rows = {r['file']: r for r in (json.loads(line) for line in out.splitlines() if line.startswith('{')) if 'file' in r}
     missing = [f['id'] for f in fixtures if f['path'] not in rows or 'error' in rows[f['path']]]
     if missing:
         sys.exit(f'transcribe-cli failed on {missing[:5]}')
