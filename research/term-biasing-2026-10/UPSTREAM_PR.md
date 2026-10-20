@@ -2,8 +2,9 @@
 
 Target: `handy-computer/transcribe.cpp`, branch `main`.
 Status: draft. Not opened. Opening it needs Mik's approval.
-Commit on top of `main`: `ece570e5` in the local checkout; the same change on
-top of `v0.4.0` is `81d40989`, which is what OpenRamble measured.
+Commits on top of `main` in the local checkout: `38e6f165`, `cc00dde6`,
+`28e509ff` and `00aab60d`, to be squashed into one. The same change on top of
+`v0.4.0` is `34a8b356`, which is what OpenRamble measured.
 
 ## Title
 
@@ -25,16 +26,20 @@ How it works:
 - The terms form an Aho-Corasick automaton over token ids
   (`src/transcribe-phrase-boost.{h,cpp}`), with every transition resolved
   through the failure links once, at build time.
-- On every greedy step the decoder adds to each candidate token the score
-  emitting it would earn: a token that extends a partial match earns a logit
-  bonus, a token that breaks one gives back what the unfinished match earned,
-  and a completed term keeps its bonus. Blank is never adjusted.
-- The argmax is taken over the boosted logits; the reported token confidence
-  stays the model's own.
+- The model's own argmax decides between blank and a token. Only when it
+  emits a token does the vocabulary re-rank the non-blank tokens, so biasing
+  changes which word is written and never whether one is: it cannot invent
+  speech on silence or drop a word the model emitted.
+- A term earns no bonus for its first piece. Once the model has begun a term
+  on its own, each piece that extends the match earns a logit bonus, a piece
+  that breaks it gives back what the unfinished match earned, and a completed
+  term keeps its bonus. Many terms begin with a short, common word piece, and
+  a bonus there rewrote ordinary words.
+- The reported token confidence stays the model's own.
 - With no terms the decoder never calls into the automaton, so output is
   bit-exact with today's.
-- The bonus defaults to the value chosen below and can be overridden with
-  `TRANSCRIBE_VOCABULARY_BOOST` for tuning. Streaming and CTC heads ignore
+- The bonus defaults to 8.0, chosen on a held-out half of the term set, and
+  can be overridden with `TRANSCRIBE_VOCABULARY_BOOST`. Streaming and CTC heads ignore
   terms for now; the docs say so.
 
 The automaton has a host-only unit test (`tests/phrase_boost_unit.cpp`): a
@@ -45,15 +50,17 @@ alone. All 59 existing tests pass.
 
 ## Measurements
 
-To be filled from `research/term-biasing-2026-10/REPORT.md` after the gate:
+From OpenRamble's `research/term-biasing-2026-10/REPORT.md`, Parakeet v3 Q8,
+Metal, one decoder thread:
 
-- Term recall on the test half of a 70-sentence synthetic set (English names
-  and tools; Russian speech with English developer terms), with and without
-  the terms.
-- WER on all 1,422 FLEURS English and Russian test utterances with the same
-  60 terms active, against the unbiased decode, to show the cost of biasing on
-  speech that contains none of the terms.
-- Decode time with and without terms.
+- Term recall on the held-out half of a 70-sentence synthetic set: English
+  22/37 without terms and 31/37 with them.
+- On all 1,422 FLEURS English and Russian test utterances with 60 unrelated
+  terms active, pooled WER +0.047 points (95% interval +0.014 to +0.091); 16
+  utterances changed, every one toward a vocabulary term.
+- No word on eleven clips of silence and noise, with or without terms.
+- Without terms, transcripts are identical to v0.4.0 on all 1,422 utterances.
+- The two earlier designs and why they were dropped are in the same report.
 
 ## Credit
 
