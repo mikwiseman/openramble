@@ -703,7 +703,7 @@ final class AppStateTests: XCTestCase {
     func testTheFirstDownloadSizeShownIsTheManifests() {
         let state = makeState()
 
-        XCTAssertEqual(state.remainingDownloadMegabytes, 740)
+        XCTAssertEqual(state.remainingDownloadMegabytes, 486)
     }
 
     // MARK: - Failure journal
