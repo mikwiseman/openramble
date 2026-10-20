@@ -1,0 +1,7 @@
+{
+  "scope": "diagnostic transcribe command cleanup; primary quality binary remains sealed v2",
+  "red": "missing file aborts with SIGABRT (-6) on sealed v2; new regression fails",
+  "green": "same regression passes; fixed command exits 70 without Metal assertion",
+  "giga_diagnostic": "same retained word-timing failure exits 70 cleanly",
+  "fixed_binary_sha256": "9047d47340d54e20e12795cfab41ae994f85363da26c816c0965ba505d75155c"
+}

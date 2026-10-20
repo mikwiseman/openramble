@@ -1,0 +1,227 @@
+{
+  "experiment": "offline paired text replay; same inference and file timings",
+  "baseline_identity_sha256": "cdff18adf735ebfa3ac1cad143e2b1211a59bdc9a75d9856bff656732a830ba0",
+  "baseline_results_sha256": "af86d0be5aba2774b22798e5c228a37ca07302d5a7e1391767f3a9af0d024a30",
+  "manifest_sha256": "a146341b1659cb01ff64812ee8276103ca79c0f8489126951de779d35af3ddb2",
+  "candidate_binary_sha256": "58c15eef57a19e4dacf7562c880cd84c221b87286cc3da5ea244b7a8cb9297b2",
+  "candidate_source_sha256": "6aa7c686f319f5db5f30337a9fe4a64e88481e1ae733b038e15c66a10ba4a1b6",
+  "replay_script_sha256": "a634f5308bee327f61f919c6ba77d8d8d02dd619810834ff749136a85c9948a2",
+  "sets": {
+    "eleven_v4_short/en": {
+      "baseline": {
+        "examples": 15,
+        "groups": 5,
+        "failures": 0,
+        "raw": {
+          "substitutions": 12,
+          "deletions": 0,
+          "insertions": 12,
+          "reference_units": 276,
+          "wer": 0.08695652173913043,
+          "cer": 0.11435523114355231
+        },
+        "app": {
+          "substitutions": 12,
+          "deletions": 0,
+          "insertions": 12,
+          "reference_units": 276,
+          "wer": 0.08695652173913043,
+          "cer": 0.11435523114355231
+        },
+        "timed_successes": 15,
+        "wall_seconds": {
+          "p50": 0.186905917,
+          "p95": 0.2936538124999999,
+          "max": 0.37841375
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "candidate": {
+        "examples": 15,
+        "groups": 5,
+        "failures": 0,
+        "raw": {
+          "substitutions": 12,
+          "deletions": 0,
+          "insertions": 12,
+          "reference_units": 276,
+          "wer": 0.08695652173913043,
+          "cer": 0.11435523114355231
+        },
+        "app": {
+          "substitutions": 12,
+          "deletions": 0,
+          "insertions": 12,
+          "reference_units": 276,
+          "wer": 0.08695652173913043,
+          "cer": 0.11435523114355231
+        },
+        "timed_successes": 15,
+        "wall_seconds": {
+          "p50": 0.186905917,
+          "p95": 0.2936538124999999,
+          "max": 0.37841375
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "paired": {
+        "wer_delta": 0.0,
+        "wer_delta_ci95": [
+          0.0,
+          0.0
+        ],
+        "independent_groups": 5,
+        "method": "paired bootstrap of source groups; word-weighted WER",
+        "resamples": 2000,
+        "seed": 20260930
+      },
+      "changed_outputs": 0
+    },
+    "eleven_v4_short/mixed": {
+      "baseline": {
+        "examples": 6,
+        "groups": 2,
+        "failures": 0,
+        "raw": {
+          "substitutions": 12,
+          "deletions": 2,
+          "insertions": 0,
+          "reference_units": 108,
+          "wer": 0.12962962962962962,
+          "cer": 0.12065439672801637
+        },
+        "app": {
+          "substitutions": 12,
+          "deletions": 2,
+          "insertions": 0,
+          "reference_units": 108,
+          "wer": 0.12962962962962962,
+          "cer": 0.12065439672801637
+        },
+        "timed_successes": 6,
+        "wall_seconds": {
+          "p50": 0.146568937,
+          "p95": 0.16431563500000002,
+          "max": 0.169243041
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "candidate": {
+        "examples": 6,
+        "groups": 2,
+        "failures": 0,
+        "raw": {
+          "substitutions": 12,
+          "deletions": 2,
+          "insertions": 0,
+          "reference_units": 108,
+          "wer": 0.12962962962962962,
+          "cer": 0.12065439672801637
+        },
+        "app": {
+          "substitutions": 12,
+          "deletions": 2,
+          "insertions": 0,
+          "reference_units": 108,
+          "wer": 0.12962962962962962,
+          "cer": 0.12065439672801637
+        },
+        "timed_successes": 6,
+        "wall_seconds": {
+          "p50": 0.146568937,
+          "p95": 0.16431563500000002,
+          "max": 0.169243041
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "paired": {
+        "wer_delta": 0.0,
+        "wer_delta_ci95": [
+          0.0,
+          0.0
+        ],
+        "independent_groups": 2,
+        "method": "paired bootstrap of source groups; word-weighted WER",
+        "resamples": 2000,
+        "seed": 20260930
+      },
+      "changed_outputs": 0
+    },
+    "eleven_v4_short/ru": {
+      "baseline": {
+        "examples": 15,
+        "groups": 5,
+        "failures": 0,
+        "raw": {
+          "substitutions": 18,
+          "deletions": 0,
+          "insertions": 8,
+          "reference_units": 237,
+          "wer": 0.10970464135021098,
+          "cer": 0.12337164750957855
+        },
+        "app": {
+          "substitutions": 17,
+          "deletions": 0,
+          "insertions": 8,
+          "reference_units": 237,
+          "wer": 0.10548523206751055,
+          "cer": 0.11877394636015326
+        },
+        "timed_successes": 15,
+        "wall_seconds": {
+          "p50": 0.199320792,
+          "p95": 0.2514735786,
+          "max": 0.254445458
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "candidate": {
+        "examples": 15,
+        "groups": 5,
+        "failures": 0,
+        "raw": {
+          "substitutions": 18,
+          "deletions": 0,
+          "insertions": 8,
+          "reference_units": 237,
+          "wer": 0.10970464135021098,
+          "cer": 0.12337164750957855
+        },
+        "app": {
+          "substitutions": 15,
+          "deletions": 0,
+          "insertions": 8,
+          "reference_units": 237,
+          "wer": 0.0970464135021097,
+          "cer": 0.10804597701149425
+        },
+        "timed_successes": 15,
+        "wall_seconds": {
+          "p50": 0.199320792,
+          "p95": 0.2514735786,
+          "max": 0.254445458
+        },
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately"
+      },
+      "paired": {
+        "wer_delta": -0.008438818565400843,
+        "wer_delta_ci95": [
+          -0.024390243902439025,
+          0.0
+        ],
+        "independent_groups": 5,
+        "method": "paired bootstrap of source groups; word-weighted WER",
+        "resamples": 2000,
+        "seed": 20260930
+      },
+      "changed_outputs": 2
+    }
+  }
+}

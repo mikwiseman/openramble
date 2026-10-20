@@ -1,0 +1,449 @@
+{
+  "baseline": "parakeet",
+  "paired": {
+    "gigaam-e2e-ctc/common_voice_19_mirror/ru/app": {
+      "independent_groups": 425,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": -0.033817575613241245,
+      "wer_delta_ci95": [
+        -0.043900897303320384,
+        -0.023642374867552624
+      ]
+    },
+    "gigaam-e2e-ctc/common_voice_19_mirror/ru/raw": {
+      "independent_groups": 425,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": -0.033817575613241245,
+      "wer_delta_ci95": [
+        -0.043900897303320384,
+        -0.023642374867552624
+      ]
+    },
+    "gigaam-e2e-ctc/golos_crowd_mirror/ru/app": {
+      "independent_groups": 497,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.1594996090695856,
+      "wer_delta_ci95": [
+        0.1266555841104293,
+        0.1942566817336897
+      ]
+    },
+    "gigaam-e2e-ctc/golos_crowd_mirror/ru/raw": {
+      "independent_groups": 497,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": 0.1594996090695856,
+      "wer_delta_ci95": [
+        0.1266555841104293,
+        0.1942566817336897
+      ]
+    },
+    "gigaam-e2e-ctc/golos_farfield_mirror/ru/app": {
+      "independent_groups": 449,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": -0.0014077897700610043,
+      "wer_delta_ci95": [
+        -0.015625359360625576,
+        0.012082628872944213
+      ]
+    },
+    "gigaam-e2e-ctc/golos_farfield_mirror/ru/raw": {
+      "independent_groups": 449,
+      "method": "paired bootstrap of source groups; word-weighted WER",
+      "resamples": 2000,
+      "seed": 20260930,
+      "wer_delta": -0.0014077897700610043,
+      "wer_delta_ci95": [
+        -0.015625359360625576,
+        0.012082628872944213
+      ]
+    }
+  },
+  "reports": {
+    "gigaam-e2e-ctc": {
+      "identity": {
+        "alignment": {
+          "long_distance_dependency": "3.14.6",
+          "method": "exact DP; exact-distance band for matrices over 1 million cells",
+          "ties": "diagonal then deletion then insertion"
+        },
+        "app_settings": {
+          "allow_press_return": false,
+          "personal_dictionary": false,
+          "phonetic_matching": true,
+          "starter_dictionary": true,
+          "trailing_space": false
+        },
+        "asr_binary_sha256": "3164e3cbe7d7ad346d0e8900d9ef9131544405f09f574a63eb21c8d54badec96",
+        "benchmark_sources": {
+          "Packages/LocalASR/Sources/asr-bench/QualityBenchmark.swift": "890d344d9719d99d974eb41bb853d05c6f6135ca528970d642b68ed7b415e774",
+          "core/ramble-text/examples/quality_pipeline.rs": "6a69af3ce102f071084bfa30379b600b384793f5e225739faaed3762f669c839",
+          "scripts/asr-quality.py": "f48d81291fd2157a63124f75bba297fa1132f2740ba8aceabb56956fa2ae9d86",
+          "scripts/prepare-asr-quality.py": "bbee9aa1cd75f1e55507240689149ae7fa2f734f9526211184d2880022efa0d3",
+          "scripts/quality-alignment.py": "a087ea61dab64ef000a011bc58082240b316d18be057661db8d11cc8b0ed5773"
+        },
+        "host": {
+          "chip": "Apple M4",
+          "hardware_model": "Mac16,10",
+          "machine": "arm64",
+          "macos": "26.4",
+          "macos_build": "25E246",
+          "memory_bytes": 17179869184,
+          "python": "3.14.7"
+        },
+        "manifest_sha256": "01d1f8618bd8ea713f0b0f2fa7c0f20768aedd5b6f95f2b5aea782101c4c929a",
+        "model_id": "gigaam-e2e-ctc",
+        "model_revision": "ab38ecc31dbd25264cf96e07dd4dbcf744151618",
+        "model_sha256": "9ccce4750dc813a493d96ca15ee251712bedec15ac9a02fa3d2bd732f08ae5eb",
+        "normalization": "NFC lowercase yo=ye punctuation+whitespace; preserves script and digits",
+        "pipeline_binary_sha256": "a37f0f721b48530f576d70cb5334b8247ea0aabd571b069aca5ce551e9828a2a",
+        "pipeline_sources": {
+          "apps/macos/OpenRamble/System/SettingsDefaults.swift": "6338bdd7eb7ebcb476e7b252d2e377e88e992f6a7d141dd7c5cff4cf71f80d94",
+          "apps/macos/OpenRamble/System/SharedCorePipeline.swift": "ed38d69642d2528a9266cced4f4fd88cbb7776eb436ce358da6bd724eea3d0ee",
+          "core/conformance/fixtures/text/starter-dictionary.json": "14629315103bb784b61672393c8a184c39e90f80c2ff1ba29c9cc6f6aa4f3fb6",
+          "core/ramble-ffi/src/lib.rs": "1900ffca2e20ce0b5176b9fc67bf57684ffea50babd2130a3df41c37ae4cf770",
+          "core/ramble-text/src/pipeline.rs": "700d83d013cd17d5979798f65ea0a16bd440a29be63e8ff55a2c7d06942fd5fe"
+        },
+        "schema_version": 1,
+        "source_commit": "b7cfc884a1527a6d6c85a5fd9924e4c1568468b0",
+        "threads": 1,
+        "timeout_seconds": 300
+      },
+      "loads": [
+        {
+          "backend": "MTL0",
+          "load_seconds": 0.108555208,
+          "memory_scope": "cumulative process high-water mark; fresh process per model",
+          "process_peak_memory_bytes": 341278720,
+          "recognition_scope": "current LocalTranscriber; default pause-aware long chunks",
+          "runtime": "0.2.3",
+          "schema_version": 1,
+          "threads": 1,
+          "type": "ready",
+          "warmup_seconds": 0.031080584
+        }
+      ],
+      "overall": {
+        "app": {
+          "cer": 0.055232558139534885,
+          "deletions": 211,
+          "insertions": 23,
+          "reference_units": 8888,
+          "substitutions": 504,
+          "wer": 0.08303330333033303
+        },
+        "examples": 1500,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 1371,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.055232558139534885,
+          "deletions": 211,
+          "insertions": 23,
+          "reference_units": 8888,
+          "substitutions": 504,
+          "wer": 0.08303330333033303
+        },
+        "timed_successes": 1500,
+        "wall_seconds": {
+          "max": 0.148019333,
+          "p50": 0.039324770999999994,
+          "p95": 0.0768560649
+        }
+      },
+      "process": {
+        "engine_exit_code": 0,
+        "process_peak_memory_bytes": 356106240,
+        "status": "ok",
+        "type": "complete"
+      },
+      "sets": {
+        "common_voice_19_mirror/ru": {
+          "app": {
+            "cer": 0.006256724983063006,
+            "deletions": 13,
+            "insertions": 7,
+            "reference_units": 4199,
+            "substitutions": 74,
+            "wer": 0.02238628244820195
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 425,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.006256724983063006,
+            "deletions": 13,
+            "insertions": 7,
+            "reference_units": 4199,
+            "substitutions": 74,
+            "wer": 0.02238628244820195
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 0.098842375,
+            "p50": 0.0518843125,
+            "p95": 0.07977979615
+          }
+        },
+        "golos_crowd_mirror/ru": {
+          "app": {
+            "cer": 0.16033439815129477,
+            "deletions": 181,
+            "insertions": 12,
+            "reference_units": 2558,
+            "substitutions": 297,
+            "wer": 0.19155590304925724
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 497,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.16033439815129477,
+            "deletions": 181,
+            "insertions": 12,
+            "reference_units": 2558,
+            "substitutions": 297,
+            "wer": 0.19155590304925724
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 0.148019333,
+            "p50": 0.0397491875,
+            "p95": 0.07458303784999996
+          }
+        },
+        "golos_farfield_mirror/ru": {
+          "app": {
+            "cer": 0.029082221123743614,
+            "deletions": 17,
+            "insertions": 4,
+            "reference_units": 2131,
+            "substitutions": 133,
+            "wer": 0.07226654152979822
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 449,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.029082221123743614,
+            "deletions": 17,
+            "insertions": 4,
+            "reference_units": 2131,
+            "substitutions": 133,
+            "wer": 0.07226654152979822
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 0.108749458,
+            "p50": 0.030524792,
+            "p95": 0.048427023249999986
+          }
+        }
+      }
+    },
+    "parakeet": {
+      "identity": {
+        "alignment": {
+          "long_distance_dependency": "3.14.6",
+          "method": "exact DP; exact-distance band for matrices over 1 million cells",
+          "ties": "diagonal then deletion then insertion"
+        },
+        "app_settings": {
+          "allow_press_return": false,
+          "personal_dictionary": false,
+          "phonetic_matching": true,
+          "starter_dictionary": true,
+          "trailing_space": false
+        },
+        "asr_binary_sha256": "3164e3cbe7d7ad346d0e8900d9ef9131544405f09f574a63eb21c8d54badec96",
+        "benchmark_sources": {
+          "Packages/LocalASR/Sources/asr-bench/QualityBenchmark.swift": "890d344d9719d99d974eb41bb853d05c6f6135ca528970d642b68ed7b415e774",
+          "core/ramble-text/examples/quality_pipeline.rs": "6a69af3ce102f071084bfa30379b600b384793f5e225739faaed3762f669c839",
+          "scripts/asr-quality.py": "f48d81291fd2157a63124f75bba297fa1132f2740ba8aceabb56956fa2ae9d86",
+          "scripts/prepare-asr-quality.py": "bbee9aa1cd75f1e55507240689149ae7fa2f734f9526211184d2880022efa0d3",
+          "scripts/quality-alignment.py": "a087ea61dab64ef000a011bc58082240b316d18be057661db8d11cc8b0ed5773"
+        },
+        "host": {
+          "chip": "Apple M4",
+          "hardware_model": "Mac16,10",
+          "machine": "arm64",
+          "macos": "26.4",
+          "macos_build": "25E246",
+          "memory_bytes": 17179869184,
+          "python": "3.14.7"
+        },
+        "manifest_sha256": "01d1f8618bd8ea713f0b0f2fa7c0f20768aedd5b6f95f2b5aea782101c4c929a",
+        "model_id": "parakeet",
+        "model_revision": "85ac09ea12fc4b1112fa76810059364bc6adc9de",
+        "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+        "normalization": "NFC lowercase yo=ye punctuation+whitespace; preserves script and digits",
+        "pipeline_binary_sha256": "a37f0f721b48530f576d70cb5334b8247ea0aabd571b069aca5ce551e9828a2a",
+        "pipeline_sources": {
+          "apps/macos/OpenRamble/System/SettingsDefaults.swift": "6338bdd7eb7ebcb476e7b252d2e377e88e992f6a7d141dd7c5cff4cf71f80d94",
+          "apps/macos/OpenRamble/System/SharedCorePipeline.swift": "ed38d69642d2528a9266cced4f4fd88cbb7776eb436ce358da6bd724eea3d0ee",
+          "core/conformance/fixtures/text/starter-dictionary.json": "14629315103bb784b61672393c8a184c39e90f80c2ff1ba29c9cc6f6aa4f3fb6",
+          "core/ramble-ffi/src/lib.rs": "1900ffca2e20ce0b5176b9fc67bf57684ffea50babd2130a3df41c37ae4cf770",
+          "core/ramble-text/src/pipeline.rs": "700d83d013cd17d5979798f65ea0a16bd440a29be63e8ff55a2c7d06942fd5fe"
+        },
+        "schema_version": 1,
+        "source_commit": "b7cfc884a1527a6d6c85a5fd9924e4c1568468b0",
+        "threads": 1,
+        "timeout_seconds": 300
+      },
+      "loads": [
+        {
+          "backend": "MTL0",
+          "load_seconds": 0.222609167,
+          "memory_scope": "cumulative process high-water mark; fresh process per model",
+          "process_peak_memory_bytes": 924549120,
+          "recognition_scope": "current LocalTranscriber; default pause-aware long chunks",
+          "runtime": "0.2.3",
+          "schema_version": 1,
+          "threads": 1,
+          "type": "ready",
+          "warmup_seconds": 0.052706541
+        }
+      ],
+      "overall": {
+        "app": {
+          "cer": 0.013630063144925304,
+          "deletions": 47,
+          "insertions": 43,
+          "reference_units": 8888,
+          "substitutions": 385,
+          "wer": 0.05344284428442844
+        },
+        "examples": 1500,
+        "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+        "failures": 0,
+        "groups": 1371,
+        "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+        "raw": {
+          "cer": 0.013630063144925304,
+          "deletions": 47,
+          "insertions": 43,
+          "reference_units": 8888,
+          "substitutions": 385,
+          "wer": 0.05344284428442844
+        },
+        "timed_successes": 1500,
+        "wall_seconds": {
+          "max": 0.251538792,
+          "p50": 0.079005458,
+          "p95": 0.14972301635
+        }
+      },
+      "process": {
+        "engine_exit_code": 0,
+        "process_peak_memory_bytes": 953729024,
+        "status": "ok",
+        "type": "complete"
+      },
+      "sets": {
+        "common_voice_19_mirror/ru": {
+          "app": {
+            "cer": 0.013390188498784521,
+            "deletions": 28,
+            "insertions": 16,
+            "reference_units": 4199,
+            "substitutions": 192,
+            "wer": 0.0562038580614432
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 425,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.013390188498784521,
+            "deletions": 28,
+            "insertions": 16,
+            "reference_units": 4199,
+            "substitutions": 192,
+            "wer": 0.0562038580614432
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 0.192848459,
+            "p50": 0.1042344795,
+            "p95": 0.15782563784999998
+          }
+        },
+        "golos_crowd_mirror/ru": {
+          "app": {
+            "cer": 0.006592809080405084,
+            "deletions": 12,
+            "insertions": 12,
+            "reference_units": 2558,
+            "substitutions": 58,
+            "wer": 0.03205629397967162
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 497,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.006592809080405084,
+            "deletions": 12,
+            "insertions": 12,
+            "reference_units": 2558,
+            "substitutions": 58,
+            "wer": 0.03205629397967162
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 0.251538792,
+            "p50": 0.07870593749999999,
+            "p95": 0.1393215151999997
+          }
+        },
+        "golos_farfield_mirror/ru": {
+          "app": {
+            "cer": 0.022656121272038227,
+            "deletions": 7,
+            "insertions": 15,
+            "reference_units": 2131,
+            "substitutions": 135,
+            "wer": 0.07367433129985922
+          },
+          "examples": 500,
+          "failure_quality_policy": "empty hypothesis (all reference units deleted); outcomes also reported separately",
+          "failures": 0,
+          "groups": 449,
+          "latency_scope": "per-file decode + app recognition; excludes model load, GUI, microphone and insertion",
+          "raw": {
+            "cer": 0.022656121272038227,
+            "deletions": 7,
+            "insertions": 15,
+            "reference_units": 2131,
+            "substitutions": 135,
+            "wer": 0.07367433129985922
+          },
+          "timed_successes": 500,
+          "wall_seconds": {
+            "max": 0.209249916,
+            "p50": 0.058273624499999996,
+            "p95": 0.0965029024
+          }
+        }
+      }
+    }
+  }
+}

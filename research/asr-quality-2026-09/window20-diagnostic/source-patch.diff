@@ -1,0 +1,20 @@
+--- a/Packages/LocalASR/Sources/LocalASR/FileAudioChunks.swift
++++ b/Packages/LocalASR/Sources/LocalASR/FileAudioChunks.swift
+@@ -25,7 +25,7 @@
+     private let whole: Bool
+     private let overlap = 2 * 16_000
+ 
+-    init(url: URL, seconds: Int = 30) async throws {
++    init(url: URL, seconds: Int = 20) async throws {
+         let stream = try await AudioFileStream(url: url)
+         self.stream = stream
+         samples = nil
+@@ -37,7 +37,7 @@
+         ))
+     }
+ 
+-    init(samples: [Float], seconds: Int = 30) {
++    init(samples: [Float], seconds: Int = 20) {
+         stream = nil
+         self.samples = samples
+         duration = Double(samples.count) / 16_000

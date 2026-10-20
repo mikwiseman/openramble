@@ -22,6 +22,8 @@ func usage() -> Never {
     asr-bench — local recognition from a terminal
 
     Commands:
+      quality-benchmark <manifest.json> <threads>  one-pass local quality series
+      canonicalize <manifest.json>  freeze the app reader output without loading a model
       status                 what is installed, and where
       install                download and verify the model
       import <folder>        take the model from a prepared folder, no network
@@ -150,6 +152,12 @@ guard let command = arguments.first else { usage() }
 let operands = Array(arguments.dropFirst())
 
 switch command {
+case "quality-benchmark":
+    try await benchmarkQuality(operands)
+
+case "canonicalize":
+    try canonicalizeQuality(operands)
+
 case "batch-benchmark":
     try await benchmarkBatch(operands, directory: resolveEngineDirectory())
 
@@ -215,10 +223,12 @@ case "transcribe":
         } catch {
             print("\n=== \(url.lastPathComponent) ===")
             print("Error: \(error)")
+            await transcriber.unload()
             exit(70)
         }
     }
     print("\nprocess peak memory: \(formatBytes(peakMemoryBytes()))")
+    await transcriber.unload()
 
 case "stream":
     // What the shipping path will do, measured on a file so it can be compared

@@ -1,0 +1,43 @@
+Create one polished Russian-language benchmark infographic as a high-resolution landscape image, roughly 3:2 aspect ratio. Use an editorial data-visualization style: warm white background, crisp navy typography, restrained teal accents for OpenRamble, slate for other models, and amber for caveats. Large readable Cyrillic, tabular numerals, meticulous spacing. No mascots, stock art, fake logos, medals, invented claims, gradients or decorative complexity. This is a factual research summary for the user, not a marketing claim about competing apps.
+
+Exact title: "OpenRamble: локальный ASR-бенчмарк"
+Exact subtitle: "Mac mini M4 · 16 ГБ · 01.10.2026"
+Main finding: "Текущий выбор для RU/EN — Parakeet"
+
+The principal central visual is a spacious comparison table/heatmap. Heading: "Ошибки по словам, WER · меньше — лучше"
+Six dataset rows, with sample counts displayed clearly. Four model columns, in exactly this order:
+1. "Parakeet" with small secondary label "в OpenRamble"
+2. "Whisper Turbo"
+3. "Breeze-ASR-25"
+4. "GigaAM CTC" with small secondary label "только RU"
+Keep the Parakeet column subtly tinted teal without implying it wins every row. Make all numerical labels exact; do not average domains. Render Russian decimal commas throughout.
+Row "CV19 · EN · N=500": 8,06% | 12,84% | 9,65% | "—"
+Row "CV19 · RU · N=500": 5,62% | 7,88% | 10,05% | 2,24%
+Row "Golos Crowd · RU · N=500": 3,21% | 23,34% | 37,41% | 19,16%
+Row "Golos Farfield · RU · N=500": 7,37% | 19,90% | 38,39% | 7,23%
+Row "FLEURS · EN · N=647": 5,44% | 4,92% | 5,39% | "—"
+Row "FLEURS · RU · N=775": 5,55% | 4,80% | 6,74% | 5,01%
+If emphasizing a row minimum, do so only with bold type; no statistical significance or universal-winner badges.
+
+Below the table, left panel is a horizontal bar chart for the two models with repeated idle latency measurements, not the first-pass timings. Heading: "Скорость · повторные RU-замеры"
+Two bars with a true shared zero baseline and proportional lengths:
+Parakeet: bar at 152 ms, text "p95: 151–152 мс", memory text "≈896 МиБ"
+GigaAM CTC: bar at 75 ms, text "p95: 75 мс", memory text "≈332 МиБ"
+A small 0–160 ms axis. Label: "Прогретый ASR; без загрузки модели, чтения файла и GUI"
+Small conclusion: "GigaAM быстрее, но качество зависит от набора"
+Do not create latency bars for Turbo or Breeze; they have not been tested in this repeated idle protocol.
+
+Below the table, right panel: "Длинные записи · синтетический диагностический тест"
+Large readable relationship: "24 мин 24 с RU → 31,7 с обработки"
+Second line: "Parakeet: WER 2,88%"
+An amber caveat box: "В длинной RU/EN-записи пропущено 37 слов"
+Second amber line: "Окна 20 с: WER лучше, пропусков отрицаний больше — отклонено"
+Small text: "Одна запись на язык; заданный текст не заменяет проверенный человеком эталон"
+Small text: "Turbo/Breeze: сбой таймингов длинных файлов в текущем адаптере"
+
+Bottom footer, legible, two or three concise lines:
+"Модели GGUF Q8; Parakeet/GigaAM — 1 поток, Turbo/Breeze — 4."
+"WER учитывает оформление чисел и сбои; это не процент смысловых ошибок."
+"Данные: Common Voice 19, Golos, FLEURS · PR №69 · GUI-задержка ещё не измерена"
+
+All values and model names are mandatory and must match verbatim. Draw chart geometry from the supplied values, with no invented observations or extra cloud competitors. This compares model configurations inside the current OpenRamble benchmark pipeline, not whole competing applications. Ensure table columns and labels are aligned, all text is readable, and none is cropped.

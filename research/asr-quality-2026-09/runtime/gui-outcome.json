@@ -1,0 +1,16 @@
+{
+  "status": "unmeasured_tool_blocker",
+  "version": "0.31.2",
+  "build": "74",
+  "engine_ready": true,
+  "owned_app_pid": 84495,
+  "fictional_document": "gui-insertion-test.rtf",
+  "attempts": [
+    "Finder opened the installed app; support log confirms engineReady",
+    "CUA cannot bind menu-bar-only application by name, bundle or exact path",
+    "CUA refuses modifier-only Control_R before sending input: keyPressIncludedNoNonModifierKeys"
+  ],
+  "stop_to_insertion_seconds": null,
+  "reason": "No observable recording/stop/insertion cycle; adapter latency is a separate measurement",
+  "observed_utc": "2026-09-30T23:11:35.667023+00:00"
+}

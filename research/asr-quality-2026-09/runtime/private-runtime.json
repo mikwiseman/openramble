@@ -1,0 +1,33 @@
+{
+  "scope": "local runtime/latency only; no independent references, no accuracy metric or upload",
+  "reports": {
+    "parakeet": {
+      "examples": 5,
+      "failures": 0,
+      "file_p50_seconds": 0.188938833,
+      "load_seconds": 0.475527792,
+      "warmup_seconds": 0.056827458,
+      "process_peak_memory_bytes": 951140352,
+      "accuracy": "unavailable: no independently verified reference"
+    },
+    "turbo": {
+      "examples": 5,
+      "failures": 0,
+      "file_p50_seconds": 1.34915275,
+      "load_seconds": 0.492946042,
+      "warmup_seconds": 1.2372746669999999,
+      "process_peak_memory_bytes": 1146716160,
+      "accuracy": "unavailable: no independently verified reference"
+    },
+    "breeze": {
+      "examples": 5,
+      "failures": 0,
+      "file_p50_seconds": 2.197689375,
+      "load_seconds": 0.936333916,
+      "warmup_seconds": 2.000738042,
+      "process_peak_memory_bytes": 2190475264,
+      "accuracy": "unavailable: no independently verified reference"
+    }
+  },
+  "limitations": "five local recordings; first-pass file timing, not GUI, not a quality gold"
+}
