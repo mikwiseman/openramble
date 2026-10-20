@@ -325,6 +325,19 @@ struct OnboardingView: View {
                 .accessibilityLabel(modelCard.announcement)
             }
 
+            // One sentence that shows the cleanup: what lands in the field is
+            // visibly cleaner than what was said.
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L10n.tr("Try saying"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(OnboardingStep.tryOutSuggestion())
+                    .font(.title3.weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+            }
+            .accessibilityElement(children: .combine)
+
             Picker(L10n.tr("Dictation key"), selection: $state.hotkey) {
                 ForEach(DictationHotkey.allCases, id: \.self) { key in
                     Text(key.title).tag(key)
@@ -409,10 +422,16 @@ struct OnboardingView: View {
     // MARK: - Navigation
 
     private var nextButton: some View {
-        Button(step.nextButtonTitle) {
+        Button(step.continueTitle(
+            modelState: state.modelState,
+            downloadMegabytes: state.remainingDownloadMegabytes
+        )) {
             if step.isLast {
                 finishOnboarding()
             } else {
+                if step.downloadsOnContinue(modelState: state.modelState) {
+                    state.installModel()
+                }
                 forward()
             }
         }

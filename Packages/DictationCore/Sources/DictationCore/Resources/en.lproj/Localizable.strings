@@ -81,6 +81,7 @@
 "Common technical terms are handled automatically. Add personal names or phrases the model hears differently." = "Common technical terms are handled automatically. Add personal names or phrases the model hears differently.";
 "Connect a display, then try again." = "Connect a display, then try again.";
 "Continue" = "Continue";
+"Continue and download %@ MB" = "Continue and download %@ MB";
 "Copied — to this Mac only." = "Copied — to this Mac only.";
 "Copy" = "Copy";
 "Copy Last Dictation" = "Copy Last Dictation";
@@ -237,6 +238,7 @@
 "Left Control" = "Left Control";
 "Left Option" = "Left Option";
 "Lets OpenRamble record the other people in a call. Used only while you are recording." = "Lets OpenRamble record the other people in a call. Used only while you are recording.";
+"“Let’s meet Tuesday. Scratch that. Let’s meet Wednesday.”" = "“Let’s meet Tuesday. Scratch that. Let’s meet Wednesday.”";
 "Light" = "Light";
 "Listening" = "Listening";
 "Listening — press %@ to finish" = "Listening — press %@ to finish";
@@ -574,6 +576,7 @@
 "Try another location with available disk space." = "Try another location with available disk space.";
 "Try dictation first, or press “Skip the try-out”." = "Try dictation first, or press “Skip the try-out”.";
 "Try it" = "Try it";
+"Try saying" = "Try saying";
 "Turn On" = "Turn On";
 "Turn on OpenRamble in the System Settings window that just opened, then come back here." = "Turn on OpenRamble in the System Settings window that just opened, then come back here.";
 "Turned off" = "Turned off";

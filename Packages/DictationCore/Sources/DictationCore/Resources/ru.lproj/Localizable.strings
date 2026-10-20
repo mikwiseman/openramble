@@ -81,6 +81,7 @@
 "Common technical terms are handled automatically. Add personal names or phrases the model hears differently." = "Распространённые технические термины обрабатываются автоматически. Добавьте личные имена и фразы, которые модель слышит иначе.";
 "Connect a display, then try again." = "Подключите экран и повторите попытку.";
 "Continue" = "Продолжить";
+"Continue and download %@ MB" = "Продолжить и загрузить %@ МБ";
 "Copied — to this Mac only." = "Скопировано — только на этом Mac.";
 "Copy" = "Копировать";
 "Copy Last Dictation" = "Копировать последнюю диктовку";
@@ -237,6 +238,7 @@
 "Left Control" = "Левый Control";
 "Left Option" = "Левый Option";
 "Lets OpenRamble record the other people in a call. Used only while you are recording." = "Позволяет OpenRamble записывать собеседников в звонке. Используется только во время записи.";
+"“Let’s meet Tuesday. Scratch that. Let’s meet Wednesday.”" = "«Мы, ээ, думаем, что надо подождать.»";
 "Light" = "Светлая";
 "Listening" = "Слушаю";
 "Listening — press %@ to finish" = "Слушаю — нажмите %@ для завершения";
@@ -574,6 +576,7 @@
 "Try another location with available disk space." = "Выберите другую папку со свободным местом.";
 "Try dictation first, or press “Skip the try-out”." = "Сначала попробуйте диктовку или нажмите «Пропустить пробу».";
 "Try it" = "Попробуйте";
+"Try saying" = "Скажите, например";
 "Turn On" = "Включить";
 "Turn on OpenRamble in the System Settings window that just opened, then come back here." = "Включите OpenRamble в открывшемся окне Системных настроек, затем вернитесь сюда.";
 "Turned off" = "Выключено";
