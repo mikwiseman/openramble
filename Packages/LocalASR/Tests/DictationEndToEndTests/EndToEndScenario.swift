@@ -158,6 +158,12 @@ class EndToEndScenario: XCTestCase {
         await capture.enqueue([file])
     }
 
+    /// Queue a take with sound and no words: one tap on the desk.
+    func tapTheDesk() async throws {
+        let file = try await fixture { try await SpeechFixtures.shared.tap() }
+        await capture.enqueue([file])
+    }
+
     /// Queue a snippet of real speech - “pressed and immediately released.”
     func speakBriefly(_ text: String, seconds: Double) async throws {
         let file = try await fixture {
