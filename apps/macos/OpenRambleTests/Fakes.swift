@@ -273,9 +273,23 @@ actor FakeCapture: AudioCapturing {
 
     private let file: URL
 
+    /// Keep the microphone opening until the test lets it, in the style of
+    /// `FakeInserter`'s hold: what happens during `.preparing` can be seen.
+    private var isHoldingStarts = false
+    private var heldStarts: [CheckedContinuation<Void, Never>] = []
+
     init(file: URL) { self.file = file }
 
     func setDuration(_ value: TimeInterval) { duration = value }
+
+    func holdStarts() { isHoldingStarts = true }
+
+    func releaseStarts() {
+        isHoldingStarts = false
+        let held = heldStarts
+        heldStarts = []
+        for start in held { start.resume() }
+    }
 
     func startRecording(session: DictationSessionID, disposition: RecordingDisposition) async throws -> URL {
         self.session = session
@@ -283,6 +297,9 @@ actor FakeCapture: AudioCapturing {
     }
 
     func startRecording() async throws -> URL {
+        if isHoldingStarts {
+            await withCheckedContinuation { heldStarts.append($0) }
+        }
         startCount += 1
         isRecording = true
         return file

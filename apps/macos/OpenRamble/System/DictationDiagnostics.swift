@@ -31,14 +31,10 @@ enum DictationDiagnostics {
     /// The person stopped speaking. Samples the machine before the take's
     /// remaining work runs, so the closing sample can be differenced against it.
     @MainActor
-    static func noteStop(
-        engineWasReady: Bool,
-        unloadPolicy: IdleUnloadPolicy
-    ) {
+    static func noteStop(engineWasReady: Bool) {
         #if OPENRAMBLE_DIAGNOSTICS
         pendingStop = PendingStop(
             engineWasReady: engineWasReady,
-            unloadPolicy: unloadPolicy.rawValue,
             sample: MachineSample.current()
         )
         #endif
@@ -59,7 +55,6 @@ enum DictationDiagnostics {
         let record = Record(
             timestamp: ISO8601DateFormatter().string(from: Date()),
             engineWasReady: opened.engineWasReady,
-            unloadPolicy: opened.unloadPolicy,
             characterCount: characterCount,
             audioSeconds: report.phases?.audioDuration.diagnosticSeconds,
             stopToTextSeconds: report.toRecognizedText.diagnosticSeconds,
@@ -86,7 +81,6 @@ enum DictationDiagnostics {
 
     private struct PendingStop {
         let engineWasReady: Bool
-        let unloadPolicy: String
         let sample: MachineSample
     }
 
@@ -294,7 +288,6 @@ enum DictationDiagnostics {
     private struct Record: Codable, Sendable {
         let timestamp: String
         let engineWasReady: Bool
-        let unloadPolicy: String
         let characterCount: Int
         let audioSeconds: Double?
         let stopToTextSeconds: Double

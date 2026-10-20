@@ -264,7 +264,7 @@ An early Windows and Linux version is in [`apps/desktop`](apps/desktop), and its
 - A Mac with Apple Silicon, where recognition runs on the GPU. Support for Intel Macs is experimental. On an Intel Mac, recognition runs on the processor. The Intel version has been tested only under Rosetta on an Apple Silicon Mac.
 - About 490 MB of disk space for the speech model, plus temporary space while it downloads.
 - If you used Parakeet v3 before, Settings offers the upgrade to Parakeet Ultra, and nothing downloads until you click. Both models stay on disk, about 1.2 GB together, until Ultra has been verified and loaded. OpenRamble then deletes v3.
-- In OpenRamble's tests, the recognition process used at most 842 MB of memory with the model loaded. By default the model unloads after 5 minutes with no dictation or recording, and you can change that in Settings → Setup → Unload model.
+- In OpenRamble's tests, the recognition process used at most 842 MB of memory with the model loaded. The model stays loaded until an hour passes with no dictation or recording, and nothing unloads it earlier, memory pressure included. The next dictation reloads it while you speak, and recording starts at once either way.
 - Permissions:
   - Microphone, to hear you.
   - Accessibility, to notice the dictation key and paste the text.

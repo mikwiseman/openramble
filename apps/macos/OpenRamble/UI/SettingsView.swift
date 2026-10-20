@@ -313,14 +313,6 @@ private struct SetupSettings: View {
                     // ask.
                     delete: { showDeleteConfirmation = true }
                 )
-                Picker(L10n.tr("Unload model"), selection: $state.modelUnloadTimeout) {
-                    ForEach(IdleUnloadPolicy.allCases) { option in
-                        Text(option.label).tag(option)
-                    }
-                }
-                .accessibilityHint(
-                    L10n.tr("Frees the speech model's memory after this much idle time. It reloads under your voice at the next dictation.")
-                )
                 // Retained audio moved out of the daily menu: it is announced
                 // by the failure notice when it happens, and findable here for
                 // as long as it exists.

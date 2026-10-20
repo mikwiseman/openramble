@@ -861,11 +861,16 @@ final class AppStateTests: XCTestCase {
         )
     }
 
-    /// The key press is the earliest reload trigger: it fires before any
-    /// readiness guard can swallow it, so a resting engine comes back under
-    /// the voice rather than after it.
-    func testKeyDownRewarmsAColdEngine() async throws {
+    /// A cold take opens the microphone first and reloads the model second.
+    ///
+    /// The reload used to start at the key-down, before the take even began,
+    /// so the ~0.3 s model load ran beside the microphone start, where the
+    /// first word lives. The reload has the whole take to finish, so it waits
+    /// until the take is listening.
+    func testColdKeyPressOpensTheMicrophoneBeforeReloadingTheModel() async throws {
         try installModelMarker()
+        harness.defaults.set(true, forKey: AppState.onboardingCompletedKey)
+        harness.idleUnloadDelayOverride = .milliseconds(30)
         let recognizer = ReadinessControlledRecognizer()
         harness.recognizer = recognizer
         let state = makeState()
@@ -873,32 +878,38 @@ final class AppStateTests: XCTestCase {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))
         }
-        let baselineWarmUps = await recognizer.warmUps
-
-        // Let the idle countdown put the engine down, which is now the only
-        // way it rests: the memory-pressure eviction that used to do this went
-        // with the 2.4 GB engine that needed it. The countdown is a courtesy
-        // to someone who has finished setting up, so say that they have.
-        harness.defaults.set(true, forKey: AppState.onboardingCompletedKey)
-        state.modelUnloadTimeout = .immediately
         for _ in 0..<500 where state.isEngineReady {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))
         }
-        XCTAssertFalse(state.isEngineReady)
+        XCTAssertFalse(state.isEngineReady, "the idle countdown put the engine down")
+        let baselineWarmUps = await recognizer.warmUps
 
+        await capture.holdStarts()
         monitor.onPress?()
-        for _ in 0..<500 where !state.isEngineReady {
+        try? await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(state.dictationState, .preparing)
+        let warmUpsWhileOpening = await recognizer.warmUps
+        XCTAssertEqual(warmUpsWhileOpening, baselineWarmUps, "nothing reloads while the microphone opens")
+
+        await capture.releaseStarts()
+        for _ in 0..<500 where state.dictationState != .listening || !state.isEngineReady {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))
         }
-        XCTAssertTrue(state.isEngineReady, "the press rewarms a resting engine")
+        XCTAssertEqual(state.dictationState, .listening)
+        XCTAssertTrue(state.isEngineReady, "the reload rides the take")
         let warmUps = await recognizer.warmUps
         XCTAssertGreaterThan(warmUps, baselineWarmUps)
+        monitor.onRelease?()
+        for _ in 0..<500 where state.dictationState != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
     }
 
-    /// The Handy-style idle unload: after the countdown the engine's memory
-    /// goes back, and the next key press brings it back under the voice.
+    /// After an hour without dictation the engine's memory goes back, and the
+    /// next take brings it back under the voice.
     func testIdleUnloadFreesTheEngineAfterTheCountdown() async throws {
         try installModelMarker()
         // Idle unload is a courtesy for someone who has finished setting up.
@@ -912,7 +923,6 @@ final class AppStateTests: XCTestCase {
             try? await Task.sleep(for: .milliseconds(2))
         }
         XCTAssertTrue(state.isEngineReady)
-        XCTAssertEqual(state.modelUnloadTimeout, .afterFiveMinutes, "Handy's default is ours")
 
         for _ in 0..<500 where state.isEngineReady {
             await Task.yield()
@@ -925,11 +935,20 @@ final class AppStateTests: XCTestCase {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))
         }
-        XCTAssertTrue(state.isEngineReady, "the comeback rides the next key press")
+        XCTAssertTrue(state.isEngineReady, "the comeback rides the next take")
+        monitor.onRelease?()
+        for _ in 0..<500 where state.dictationState != .idle {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
     }
 
-    func testNeverKeepsTheEngineResidentForever() async throws {
+    /// The "Unload model" picker is gone. Somebody who once chose "Never"
+    /// gets the same hour as everyone else, and one reload after an idle hour.
+    func testALegacyNeverSettingNoLongerKeepsTheEngineForever() async throws {
         try installModelMarker()
+        harness.defaults.set("never", forKey: "modelUnloadTimeout")
+        harness.defaults.set(true, forKey: AppState.onboardingCompletedKey)
         let recognizer = ReadinessControlledRecognizer()
         harness.recognizer = recognizer
         harness.idleUnloadDelayOverride = .milliseconds(30)
@@ -938,23 +957,13 @@ final class AppStateTests: XCTestCase {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))
         }
+        XCTAssertTrue(state.isEngineReady)
 
-        state.modelUnloadTimeout = .never
-        try? await Task.sleep(for: .milliseconds(120))
-        XCTAssertTrue(state.isEngineReady, "never means the pre-0.8 behavior")
-    }
-
-    func testUnloadTimeoutPersistsAcrossAppStates() async throws {
-        try installModelMarker()
-        let first = makeState()
-        first.modelUnloadTimeout = .afterOneHour
-
-        let second = makeState()
-        XCTAssertEqual(
-            second.modelUnloadTimeout,
-            .afterOneHour,
-            "the picker's choice survives a relaunch"
-        )
+        for _ in 0..<500 where state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertFalse(state.isEngineReady, "a stored Never is ignored")
     }
 
     /// The reported first-run stall, reproduced.
@@ -982,10 +991,15 @@ final class AppStateTests: XCTestCase {
             "setup is not idleness: the engine must still be there when the person returns"
         )
 
-        // Once setup is done, the courtesy applies again.
+        // Once setup is done, the courtesy applies again from the first
+        // dictation on.
         harness.defaults.set(true, forKey: AppState.onboardingCompletedKey)
-        state.modelUnloadTimeout = .afterTwoMinutes
-        state.modelUnloadTimeout = .afterFiveMinutes
+        monitor.onPress?()
+        for _ in 0..<500 where state.dictationState != .listening {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        monitor.onRelease?()
         for _ in 0..<500 where state.isEngineReady {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))

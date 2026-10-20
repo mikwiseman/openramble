@@ -1069,7 +1069,6 @@ public final class AppState: ObservableObject {
         recoveryInsertionDeadline = environment.recoveryInsertionDeadline
         engineWarmupRetryDelayOverride = environment.engineWarmupRetryDelay
         idleUnloadDelayOverride = environment.idleUnloadDelayOverride
-        modelUnloadTimeout = IdleUnloadPolicy.stored(in: environment.defaults)
         recordingRecoveryCompatibilityGrace = environment.recordingRecoveryCompatibilityGrace
         recordingRecoveryMaintenanceRetryDelay = environment.recordingRecoveryMaintenanceRetryDelay
         recordingRecoveryIdleScanInterval = environment.recordingRecoveryIdleScanInterval
@@ -1348,20 +1347,19 @@ public final class AppState: ObservableObject {
                 if let arbiter = self?.engineArbiter {
                     Task { await arbiter.setDictationActive(state != .idle) }
                 }
-                // The person just pressed the key and is about to speak for
-                // seconds. Refresh accelerator residency now, under their
-                // voice, instead of trusting a device-specific idle timer and
-                // discovering a cold Core ML graph only after key-up.
-                if state == .preparing { self?.warmEngineUnderVoice() }
+                // The person is speaking and will be for a while: reload a
+                // resting engine now, under their voice. Not at `.preparing`:
+                // the first word lives in the microphone start, and a ~0.3 s
+                // model load beside it can only compete (one run here: p90
+                // 291 → 378 ms; a second run, no change). The load has the
+                // whole take to finish.
+                if state == .listening { self?.warmEngineUnderVoice() }
                 // The moment the person stopped speaking, before any of the
                 // remaining work has run. A diagnostics build samples the
                 // machine here so the closing sample has something to be
                 // differenced against; a release build does nothing at all.
                 if state == .transcribing, let self {
-                    DictationDiagnostics.noteStop(
-                        engineWasReady: self.isEngineReady,
-                        unloadPolicy: self.modelUnloadTimeout
-                    )
+                    DictationDiagnostics.noteStop(engineWasReady: self.isEngineReady)
                 }
                 // Every state change re-arms or cancels the idle-unload
                 // timer: activity disarms it, idleness starts the countdown.
@@ -2177,15 +2175,16 @@ public final class AppState: ObservableObject {
     /// waiting for the engine rather than resting from it.
     private var shouldStayUnloadedUntilUse = false
 
-    /// When to give the engine's memory back after dictation goes idle.
-    /// Mirrors Handy's "Unload Model" row; `.never` is the pre-0.8 behavior.
-    @Published public var modelUnloadTimeout: IdleUnloadPolicy {
-        didSet {
-            guard oldValue != modelUnloadTimeout else { return }
-            defaults.set(modelUnloadTimeout.rawValue, forKey: IdleUnloadPolicy.defaultsKey)
-            rescheduleIdleUnload()
-        }
-    }
+    /// How long the engine stays loaded after the last dictation: an hour,
+    /// for everyone, with no setting.
+    ///
+    /// It holds about 1 GB for that hour, which an 8 GB Mac carries too, and
+    /// nothing gives it back earlier: there is no memory-pressure eviction.
+    /// Five minutes made a third of a week's key presses cold (106 of 303);
+    /// the gaps in that same week project about one in ten for an hour. A
+    /// cold take still keeps its words: the reload starts once it is
+    /// listening and runs under the voice.
+    static let engineIdleUnloadDelay: Duration = .seconds(60 * 60)
 
     /// One pending idle-unload timer at most; any dictation activity replaces
     /// it through the state-change hook.
@@ -2216,12 +2215,10 @@ public final class AppState: ObservableObject {
               // for a loaded engine, and a resting one is woken by the same
               // key press as everywhere else — so it is a courtesy, not a
               // guard.
-              hasCompletedOnboarding,
-              let policyDelay = modelUnloadTimeout.idleDelay
+              hasCompletedOnboarding
         else { return }
-        // The override shortens the countdown for tests; the decision itself
-        // (`never` keeps the engine forever) always belongs to the policy.
-        let delay = idleUnloadDelayOverride ?? policyDelay
+        // The override shortens the countdown for tests.
+        let delay = idleUnloadDelayOverride ?? Self.engineIdleUnloadDelay
         idleUnloadTask = Task { [weak self] in
             if delay > .zero {
                 try? await Task.sleep(for: delay)
@@ -2242,9 +2239,7 @@ public final class AppState: ObservableObject {
               isEngineReady,
               let transcriber
         else { return }
-        engineLog.notice(
-            "engine idle unload: \(self.modelUnloadTimeout.rawValue, privacy: .public)"
-        )
+        engineLog.notice("engine idle unload")
         guard await transcriber.unloadIfIdle() else { return }
         isEngineReady = false
         // Unloading crosses an actor boundary. Record may have been pressed
@@ -2440,9 +2435,8 @@ public final class AppState: ObservableObject {
         }
         hotkeyMonitor.onPress = { [weak self] in
             guard let self else { return }
-            // Before any guard can swallow the press: the reload must start
-            // at the earliest observable moment of intent.
-            self.rewarmEngineIfCold(trigger: .keyDown)
+            // Nothing before `begin`: the microphone start is where the first
+            // word lives. A cold engine reloads once the take is listening.
             guard !self.isRecoveryOperationActive else { return }
             guard self.explainIfNotReady() else { return }
             self.controller?.begin(
