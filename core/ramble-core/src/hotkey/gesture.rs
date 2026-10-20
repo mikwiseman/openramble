@@ -20,7 +20,9 @@ pub const DEFAULT_DOUBLE_TAP_WINDOW: Duration = Duration::from_millis(350);
 /// Ctrl+C follows its modifier by a tenth to a third of a second. A key that
 /// arrives later lands in the middle of speech, and ending the take on it
 /// would throw away everything said so far — so past this window the key is
-/// ignored and the take finishes at the release like any other.
+/// ignored and the take finishes at the release like any other. Ignored by
+/// the take, not swallowed: the front app still receives the chord and acts
+/// on it before the paste.
 pub const SHORTCUT_WINDOW: Duration = Duration::from_millis(800);
 
 /// A modifier-state change, already decoded by the platform adapter.

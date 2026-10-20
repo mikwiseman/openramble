@@ -33,9 +33,12 @@ for the check.
 7. Double-press the hotkey to start hands-free recording, then press once to
    stop. Confirm Escape and a conflicting shortcut cancel without inserting text.
    Hold the hotkey and press C right away (a shortcut such as ⌘C): nothing is
-   inserted. Hold it, speak for a second or two, press Down Arrow (under the
-   default Right Command it only moves the caret), keep talking and release:
-   the whole take is inserted, including the words after the key. Set the
+   inserted. In an empty TextEdit document, hold it, speak for a second or
+   two, press Down Arrow, keep talking and release: the whole take is
+   inserted, including the words after the key. The key is not swallowed:
+   under Right Command it reaches the app as ⌘↓, which an empty document has
+   nowhere to act on, and in any other field a late chord (⌘A, ⌘↓) acts
+   before the paste lands. Set the
    input volume to zero and hold the key for 2 s: the orange panel names the
    microphone and History gains nothing. Restore the volume, hold the key and
    tap the desk once without speaking: History shows "Nothing recognized" with
