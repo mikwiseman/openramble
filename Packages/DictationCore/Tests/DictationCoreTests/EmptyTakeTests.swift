@@ -110,7 +110,7 @@ final class EmptyTakeTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: takes) }
         let samples = quiet + [0.1] + quiet
         let controller = makeController(
-            capture: MemoryOnlyCapture(directory: takes, samples: samples),
+            capture: try MemoryOnlyCapture(directory: takes, samples: samples),
             transcribeSamples: { _ in Self.nothing }
         )
 
@@ -141,7 +141,7 @@ final class EmptyTakeTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: takes) }
         let samples = quiet + [0.1] + quiet
         let controller = makeController(
-            capture: MemoryOnlyCapture(directory: takes, samples: samples, writerWedged: true),
+            capture: try MemoryOnlyCapture(directory: takes, samples: samples, writerWedged: true),
             transcribeSamples: { _ in Self.nothing }
         )
 
@@ -223,15 +223,24 @@ final class EmptyTakeTests: XCTestCase {
 /// to rebuild one from the samples, beside where the file would have been.
 /// A wedged writer is the slower version of the same thing: the file is never
 /// refused, it just never arrives.
+///
+/// The rebuilt copy is written before the take and only revealed when the
+/// controller asks for it. These tests measure the controller, and a shared
+/// disk that stalls past the rebuild deadline once in a while is not it.
 private actor MemoryOnlyCapture: AudioCapturing {
     private let url: URL
     private let samples: [Float]
     private let writerWedged: Bool
+    private let prepared: URL
+    private let rebuilt: URL
 
-    init(directory: URL, samples: [Float], writerWedged: Bool = false) {
+    init(directory: URL, samples: [Float], writerWedged: Bool = false) throws {
         url = directory.appending(path: "take.wav")
         self.samples = samples
         self.writerWedged = writerWedged
+        prepared = directory.appending(path: "prepared.wav.partial")
+        rebuilt = directory.appending(path: "memory-recovery-\(UUID().uuidString).wav")
+        try Self.write(samples, to: prepared)
     }
 
     func startRecording() async throws -> URL { url }
@@ -245,9 +254,8 @@ private actor MemoryOnlyCapture: AudioCapturing {
             if writerWedged { try await Task.sleep(for: .seconds(120)) }
             throw AudioCaptureError.writeFailed("the recording file is unavailable")
         }
-        let samples = samples
-        let rebuilt = url.deletingLastPathComponent()
-            .appending(path: "memory-recovery-\(UUID().uuidString).wav")
+        let prepared = prepared
+        let rebuilt = rebuilt
         let disposition = RecordingDisposition()
         disposition.register([rebuilt])
         return CapturedRecording(
@@ -258,7 +266,7 @@ private actor MemoryOnlyCapture: AudioCapturing {
             readableTask: unavailable,
             durableTask: unavailable,
             materializeRecovery: {
-                try Self.write(samples, to: rebuilt)
+                try FileManager.default.moveItem(at: prepared, to: rebuilt)
                 return rebuilt
             }
         )
