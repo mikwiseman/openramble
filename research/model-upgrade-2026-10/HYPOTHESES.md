@@ -172,3 +172,51 @@ runtime, with the same model (v3 Q8) and one decoder thread:
 
 If both variants pass, the faster one is adopted; on a tie, the one closer to
 the unchanged transcripts. The result is recorded here either way.
+
+## H10. Four threads on the CPU backend (Windows, Linux, Intel Mac)
+
+Preregistered on 20 October 2026 before measurement. The desktop app always
+gives the recognition session one thread (`core/ramble-engine/src/lib.rs`).
+That is right on an accelerator, where the session threads only run the
+decoder and two or more threads add a spin barrier that collapses under load.
+On the CPU backend the same threads also run the encoder; an audit measured a
+12-second clip at 2.6 to 3.0 s with one thread and 0.83 to 1.10 s with four.
+
+The change gives the CPU backend `min(4, available cores)` threads and keeps
+one thread on Metal and Vulkan. It is adopted when, with transcribe.cpp on the
+CPU backend and Parakeet v3 Q8, on the six speed inputs, interleaved, at least
+six times each per condition:
+
+1. Idle, the four-thread median whole-run time is at most 0.67 times the
+   one-thread median.
+2. Under the 14-process CPU load, the four-thread median is not slower than
+   the one-thread median.
+3. Transcripts are identical between one and four threads.
+4. The `ramble-engine` unit tests, the conformance test and
+   `transcribes_real_speech` pass unchanged.
+
+## H11. A smaller quantization of the chosen model
+
+Preregistered on 20 October 2026 before any output of these files existed.
+Parakeet Ultra is also published as Q5_K_M (550 MB) and Q4_K_M (486 MB). A
+smaller file is a faster first run and less disk for every person. A smaller
+quantization replaces Q8_0 (740 MB) when, against Ultra Q8_0 on runtime 0.4.0:
+
+1. On all 1,422 FLEURS utterances, the upper end of the 95% paired interval
+   for the pooled WER difference is at most +0.20 percentage points.
+2. No word is invented on the noise clips, the wrong-script count does not
+   rise, and hour-file deleted-word rates rise by at most 0.2 points.
+3. Warm p95 is not more than 5% slower in an interleaved speed run.
+
+If both pass, the smaller file is chosen.
+
+## Live text needs partials at least every 300 ms
+
+Recorded on 20 October 2026 as a gate for any future live-text feature, not
+measured yet. Partial text must update at least every 300 ms while the person
+speaks, and final text must still pass every gate above. Nemotron 3.5, the
+only streaming candidate, failed the accuracy rule, so no current candidate
+can offer live text. The whole-product audit also found that only 46 of 90
+long takes produced any streamed segment with today's pause-based segmenter,
+which is a separate question about the app's segmenter, owned outside this
+program.

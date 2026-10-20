@@ -82,18 +82,10 @@ impl Engine {
         let (model, active) = load_with_fallback(&model_path, requested)?;
 
         let report = BackendReport::new(requested, &model, active);
-        // Match the shipping macOS adapter. Parakeet's CPU predictor installs
-        // a spin/yield barrier for every graph node at two or more threads;
-        // one thread removes that pressure-sensitive synchronization while
-        // the Metal/Vulkan encoder keeps its own parallelism.
-        // Intel macOS also runs the encoder on the CPU, so it uses four threads.
+        let available = std::thread::available_parallelism().map_or(1, |n| n.get());
         let session = model
             .session_with(&SessionOptions {
-                n_threads: if cfg!(all(target_os = "macos", target_arch = "x86_64")) {
-                    4
-                } else {
-                    1
-                },
+                n_threads: session_threads(active, available),
                 ..SessionOptions::default()
             })
             .map_err(|error| EngineError::Load(error.to_string()))?;
@@ -171,6 +163,23 @@ fn install_logging_policy() {
             transcribe_cpp::disable_logging();
         }
     });
+}
+
+/// Threads for the recognition session, decided by where the encoder runs.
+///
+/// On an accelerator the session's threads only drive the decoder, and
+/// Parakeet's CPU predictor installs a spin/yield barrier for every graph node
+/// at two or more threads, so one thread is both enough and the only setting
+/// that stays fast when the machine is busy. On the CPU backend the same
+/// threads also run the encoder, which is most of the work: four threads are
+/// several times faster than one, idle and under load
+/// (research/model-upgrade-2026-10, H10). Never more than the machine has.
+fn session_threads(active: Backend, available: usize) -> i32 {
+    if matches!(active, Backend::Cpu | Backend::CpuAccel) {
+        available.clamp(1, 4) as i32
+    } else {
+        1
+    }
 }
 
 /// The accelerator this platform should ask for.
@@ -263,6 +272,17 @@ mod tests {
                 .unwrap(),
             "a-model.gguf"
         );
+    }
+
+    #[test]
+    fn the_cpu_backend_gets_up_to_four_threads_and_accelerators_one() {
+        assert_eq!(session_threads(Backend::Cpu, 14), 4);
+        assert_eq!(session_threads(Backend::Cpu, 2), 2);
+        assert_eq!(session_threads(Backend::Cpu, 1), 1);
+        assert_eq!(session_threads(Backend::Cpu, 0), 1);
+        assert_eq!(session_threads(Backend::CpuAccel, 8), 4);
+        assert_eq!(session_threads(Backend::Metal, 14), 1);
+        assert_eq!(session_threads(Backend::Vulkan, 8), 1);
     }
 
     #[test]
