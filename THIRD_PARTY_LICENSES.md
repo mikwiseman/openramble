@@ -27,22 +27,25 @@ The user downloads them explicitly from the app.
 
 | Component | Version | License | Purpose |
 |---|---|---|---|
-| [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) by CJ Pais and the Handy team | 0.2.3 | MIT | GGUF speech-recognition runtime on Metal |
+| [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) by CJ Pais and the Handy team | 0.4.0 | MIT | GGUF speech-recognition runtime on Metal |
 | [Sparkle](https://sparkle-project.org) | 2.9.4 | MIT | Application updates |
 
 The dependencies are pinned immutably:
 
-- transcribe.cpp: the `TranscribeCpp.xcframework.zip` asset of release `v0.2.3`,
-  SHA-256 `944be4d5232f39c99608f676a2ddda2516e0ed3c9fb6db50685ffa8d20a8b9c9`
+- transcribe.cpp: the `TranscribeCpp.xcframework.zip` asset of release `v0.4.0`,
+  SHA-256 `3da069d288b79475adb257e4425c7c00f7026a90d0ef06af2214b7355dcd0453`
 - Sparkle: `b6496a74a087257ef5e6da1c5b29a447a60f5bd7`
 
-transcribe.cpp vendors two libraries, whose notices ship with it:
+transcribe.cpp vendors three libraries, whose notices ship with it:
 
 - ggml, MIT License — the tensor library the runtime is built on;
-- miniz, MIT License — used for reading model archives.
+- miniz, MIT License — used for reading model archives;
+- Silero VAD, MIT License — the runtime's voice-activity segmentation is
+  translated from it.
 
 The DMG includes the complete license texts as `transcribe-cpp-MIT.txt`,
-`ggml-MIT.txt`, `miniz-MIT.txt` and `Sparkle-LICENSE.txt`.
+`ggml-MIT.txt`, `miniz-MIT.txt`, `silero-vad-MIT.txt` and
+`Sparkle-LICENSE.txt`.
 
 The CC BY 4.0 text for the model weights is included as
 `Parakeet-CC-BY-4.0.txt`.
