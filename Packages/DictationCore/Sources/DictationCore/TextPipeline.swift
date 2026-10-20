@@ -172,7 +172,7 @@ public struct TextPipeline: Sendable, TextProcessing {
     /// Whether `text` closes with a full stop, question mark, exclamation or
     /// ellipsis — what makes a trailing command its own sentence.
     static func endsSentence(_ text: String) -> Bool {
-        guard let last = text.last else { return false }
+        guard let last = text.trimmingCharacters(in: .whitespacesAndNewlines).last else { return false }
         return CleanVerbatim.sentenceEnding.contains(last)
     }
 
@@ -216,6 +216,12 @@ public struct TextPipeline: Sendable, TextProcessing {
     /// calls `run` and throws away the entry, so “branches without provenance”
     /// does not exist in the product.
     public func run(_ recognized: String) -> Run {
+        // Stage 0: a paragraph mark (`ParagraphBreaks`) is a blank line where
+        // prose is going and a plain space everywhere else.
+        let recognized = recognized.replacingOccurrences(
+            of: String(ParagraphBreaks.marker),
+            with: mode == .prose ? "\n\n" : " "
+        )
         var parsed = TrailingCommandParser.parse(recognized)
         // Return is pressed only where the caller allows it (terminals) and
         // only for a command said as its own final sentence: "…first. Send it."

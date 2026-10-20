@@ -33,6 +33,9 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
     /// recognized as nothing. Kept aligned with `sampleCounts` so the owner can
     /// drop the last segment and re-recognize it with the tail.
     private var texts: [String] = []
+    /// Each segment's word timings, on the segment's own clock. Aligned with
+    /// `texts`.
+    private var words: [[ASRResult.Word]] = []
     private var sampleCounts: [Int] = []
     private var failure: (any Error)?
     private var stopped = false
@@ -64,7 +67,7 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
             do {
                 let result = try await transcribe(samples)
                 let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                self.append(text)
+                self.append(text, words: result.words)
             } catch {
                 self.recordFailure(error)
             }
@@ -75,7 +78,7 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
 
     private var isAbandoned: Bool { lock.withLock { failure != nil || cancelled } }
 
-    private func append(_ text: String) {
+    private func append(_ text: String, words segmentWords: [ASRResult.Word]) {
         lock.withLock {
             guard failure == nil, !cancelled else { return }
             // Appended even when empty. A segment of pure breath recognizes as
@@ -84,6 +87,7 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
             // segment back when the tail turns out too short to stand alone.
             // The blanks are filtered where the pieces are joined.
             texts.append(text)
+            words.append(segmentWords)
         }
     }
 
@@ -98,6 +102,7 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
             stopped = true
             cancelled = true
             texts.removeAll()
+            words.removeAll()
             return tail
         }
         pending?.cancel()
@@ -129,6 +134,10 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
     /// How many segments have finished. For the speed report, and for tests
     /// that need to know the stream actually ran.
     public var recognizedCount: Int { lock.withLock { texts.count } }
+
+    /// Word timings of the recognized segments, each on its segment's own
+    /// clock, aligned with the texts `finish()` returns.
+    public var recognizedWords: [[ASRResult.Word]] { lock.withLock { words } }
 
     /// Sample counts of the segments handed over, in order.
     ///
