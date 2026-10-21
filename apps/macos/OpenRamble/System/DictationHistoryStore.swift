@@ -175,13 +175,18 @@ public struct DictationHistoryStore: Sendable {
     /// deleted. The limit counts ordinary dictations. A starred one is a
     /// promise that it stays, and a promise that the next dictation can break
     /// is not one, so starred entries neither count against the limit nor
-    /// fall out of it. Order is untouched, so the list still reads by date.
+    /// fall out of it. A take with no words is kept to be heard again, beside
+    /// the dictations rather than instead of one: takes with no words count
+    /// against the same limit among themselves, so they never push a
+    /// dictation out. Order is untouched, so the list still reads by date.
     private func trimmed(_ entries: [HistoryEntry], to limit: Int) -> [HistoryEntry] {
-        var budget = max(1, limit)
+        // Keyed by "has no words".
+        var budget = [false: max(1, limit), true: max(1, limit)]
         let kept = entries.filter { entry in
             if entry.isKept { return true }
-            guard budget > 0 else { return false }
-            budget -= 1
+            let wordless = entry.text.isEmpty
+            guard budget[wordless, default: 0] > 0 else { return false }
+            budget[wordless, default: 0] -= 1
             return true
         }
         let keptIDs = Set(kept.map(\.id))

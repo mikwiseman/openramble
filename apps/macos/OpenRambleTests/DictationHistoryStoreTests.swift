@@ -104,6 +104,42 @@ final class DictationHistoryStoreTests: XCTestCase {
         )
     }
 
+    /// A take with no words is kept to be heard again, not instead of a
+    /// dictation. A fiddly microphone giving three of them in a row must not
+    /// cost three transcripts and their audio.
+    func testTakesWithNoWordsNeverPushADictationOut() throws {
+        for index in 0..<5 {
+            _ = try store.record(text: "dictation \(index)", audio: try makeAudio("d\(index).wav"), limit: 5)
+        }
+        for index in 0..<3 {
+            _ = try store.record(text: "", audio: try makeAudio("w\(index).wav"), limit: 5)
+        }
+
+        let entries = store.load()
+        XCTAssertEqual(
+            entries.filter { !$0.text.isEmpty }.map(\.text),
+            ["dictation 4", "dictation 3", "dictation 2", "dictation 1", "dictation 0"]
+        )
+        XCTAssertEqual(entries.filter(\.text.isEmpty).count, 3)
+        XCTAssertTrue(entries.allSatisfy { store.audioURL(for: $0) != nil }, "a kept entry lost its audio")
+    }
+
+    /// They are still bounded: by the same limit, counted among themselves,
+    /// and the ones that fall off take their audio with them.
+    func testTakesWithNoWordsAreLimitedAmongThemselves() throws {
+        _ = try store.record(text: "dictation", audio: nil, limit: 5)
+        for index in 0..<7 {
+            _ = try store.record(text: "", audio: try makeAudio("w\(index).wav"), limit: 5)
+        }
+
+        let entries = store.load()
+        XCTAssertEqual(entries.filter(\.text.isEmpty).count, 5)
+        XCTAssertEqual(entries.filter { !$0.text.isEmpty }.map(\.text), ["dictation"])
+        let stored = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+            .filter { UUID(uuidString: ($0 as NSString).deletingPathExtension) != nil }
+        XCTAssertEqual(stored.count, 5, "evicted audio is still on disk")
+    }
+
     /// Lowering the setting has to take effect on what is already stored, not
     /// only on what arrives next.
     func testLoweringTheLimitTrimsWhatIsAlreadyThere() throws {
