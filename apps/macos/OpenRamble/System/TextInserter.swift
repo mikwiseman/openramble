@@ -83,8 +83,10 @@ private final class PasteboardTransactionStorage: @unchecked Sendable {
     /// note the moment.
     ///
     /// Under the lock, so it never interleaves with `take`: a read that wins is
-    /// on record before the restore decides anything, and one that loses gets
-    /// nothing at all - never the dictation after the person's clipboard is back.
+    /// on record before the restore decides anything, and one that loses is
+    /// never handed the dictation after the person's clipboard is back. AppKit
+    /// may give that late reader whatever the board holds by then, so the wait
+    /// lets our main thread serve a pending read before the restore.
     func provide(for id: UUID, _ handOver: () -> Void) {
         lock.lock()
         defer { lock.unlock() }
@@ -765,22 +767,44 @@ public struct TextInserter: TextInserting {
     /// A press of the dictation key brings the limit down to the floor:
     /// nothing has appeared and the person is trying again, while every real
     /// application has read well within it.
+    ///
+    /// The read is served on our main thread. If that thread was busy, the
+    /// target's read is still waiting for it at the limit, and the restore
+    /// would hand it the person's clipboard. So nobody has read only once the
+    /// main thread has had a turn after the limit, and a quiet moment after it.
     private func waitForTheRead(
         of transaction: PasteboardTransaction,
         pastedAt: ContinuousClock.Instant
     ) async -> Bool {
+        var mainThreadFreeAt: ContinuousClock.Instant?
         while true {
             let now = ContinuousClock.now
             if let read = pasteboard.firstRead(of: transaction) {
                 if now >= max(read + readQuiet, pastedAt + readFloor) { return false }
             } else if now >= pastedAt + (operationLane.wasPressedAgain ? readFloor : readLimit) {
-                return false
+                guard let free = mainThreadFreeAt else {
+                    await mainThreadTurn()
+                    mainThreadFreeAt = .now
+                    continue
+                }
+                if now >= free + readQuiet { return false }
             }
             do {
                 try await Task.sleep(for: Self.readPollInterval)
             } catch {
                 return true
             }
+        }
+    }
+
+    /// Returns once our main thread runs its loop where a paste is served: the
+    /// common modes, panels and menus included. Not the main actor, whose
+    /// queue waits while a panel runs inside one of its jobs.
+    private func mainThreadTurn() async {
+        await withCheckedContinuation { (turn: CheckedContinuation<Void, Never>) in
+            let main = CFRunLoopGetMain()
+            CFRunLoopPerformBlock(main, CFRunLoopMode.commonModes.rawValue) { turn.resume() }
+            CFRunLoopWakeUp(main)
         }
     }
 

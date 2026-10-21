@@ -571,6 +571,71 @@ final class TextInserterTests: XCTestCase {
         }
     }
 
+    /// Our main thread is busy past the read limit, so the target's read
+    /// waits for it. Putting the person's clipboard back in the meantime would
+    /// hand that read the person's clipboard: pasted where the dictation
+    /// belongs, while we say nothing was. The read is served once the thread
+    /// is free, and the dictation lands.
+    func testATargetWaitingForOurBusyMainThreadGetsTheDictation() async throws {
+        await MainActor.run { _ = NSApplication.shared }
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
+        let otherApp = OtherProcessPaste(board: board.name)
+        system.onPost = {
+            DispatchQueue.main.async { Thread.sleep(forTimeInterval: 2.5) }
+            otherApp.paste()
+        }
+
+        var outcome = "landed"
+        do {
+            _ = try await board.inserter(
+                system: system,
+                readQuiet: TextInserter.readQuiet,
+                readFloor: TextInserter.readFloor,
+                readLimit: .seconds(1)
+            ).insertReportingMarks("DICTATED", into: target)
+        } catch {
+            outcome = "\(error)"
+        }
+        let pasted = otherApp.pasted()
+
+        XCTAssertEqual(outcome, "landed")
+        XCTAssertEqual(pasted, "DICTATED", "what the target pasted")
+        XCTAssertEqual(board.contents, "what the person copied")
+    }
+
+    /// A panel or menu of ours runs its own loop on the main thread, and
+    /// nobody reads the paste. The main thread still serves reads there, so
+    /// the wait ends at the limit with the person's clipboard back; it does
+    /// not sit out the panel.
+    func testAPasteNobodyReadsWhileAPanelOfOursIsOpenEndsAtTheLimit() async throws {
+        await MainActor.run { _ = NSApplication.shared }
+        for mode in [RunLoop.Mode.modalPanel, .eventTracking] {
+            let board = RealBoard(holding: "what the person copied")
+            defer { board.release() }
+            let spin = MainThreadSpin(mode)
+            system.onPost = { spin.start() }
+
+            let started = ContinuousClock.now
+            var outcome = "landed"
+            do {
+                try await board.inserter(
+                    system: system,
+                    readQuiet: TextInserter.readQuiet,
+                    readLimit: .milliseconds(300)
+                ).insert("DICTATED", into: target)
+            } catch {
+                outcome = "\(error)"
+            }
+            let waited = started.duration(to: .now)
+            await spin.stop()
+
+            XCTAssertEqual(outcome, "pasteNotRead", mode.rawValue)
+            XCTAssertLessThan(waited, .seconds(2), mode.rawValue)
+            XCTAssertEqual(board.contents, "what the person copied", mode.rawValue)
+        }
+    }
+
     /// The controller's deadline cancels the insertion while it waits for the
     /// read. The person gets their clipboard back, the dictation never stays
     /// on the board, the lane is free, and the cancellation is not dressed up
