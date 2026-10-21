@@ -417,6 +417,10 @@ public final class AppState: ObservableObject {
     }
     @Published public private(set) var accessibilityGranted = false
     @Published public private(set) var accessibilityState: AccessibilityPermissionState = .denied
+    /// The person came back from System Settings and the app is still not
+    /// trusted. Only then is "Already on? Repair" offered: macOS may show the
+    /// switch on for a stale entry that does not match this build.
+    @Published public private(set) var accessibilityReturnedWithoutGrant = false
     @Published public private(set) var microphoneGranted = false
     @Published public private(set) var lastNotice: DictationNotice? {
         didSet {
@@ -511,26 +515,12 @@ public final class AppState: ObservableObject {
     }
     @Published public private(set) var lastDictation: LastDictation?
 
-    /// A short, in-memory list for quick copying from the menu. Nothing is
-    /// persisted, so quitting the app clears the history.
-    public struct RecentDictation: Identifiable, Equatable {
-        public let id: UUID
-        public let text: String
-
-        init(id: UUID = UUID(), text: String) {
-            self.id = id
-            self.text = text
-        }
-
-        var menuTitle: String {
-            let singleLine = text
-                .split(whereSeparator: \.isWhitespace)
-                .joined(separator: " ")
-            guard singleLine.count > 56 else { return singleLine }
-            return String(singleLine.prefix(55)) + "…"
-        }
-    }
-    @Published public private(set) var recentDictations: [RecentDictation] = []
+    /// What the menu offers to copy: the newest of History, nothing else.
+    ///
+    /// Read from History rather than kept beside it. A second list in memory
+    /// ignored the Keep limit and survived "Delete All", which made both of
+    /// History's promises false.
+    public var recentDictations: [HistoryEntry] { Array(history.prefix(8)) }
 
     // MARK: - Recordings
 
@@ -565,10 +555,6 @@ public final class AppState: ObservableObject {
     @Published public private(set) var liveLevels = MeetingCapture.Levels.silent
     /// The recording that most recently ended — the window selects it.
     @Published public private(set) var lastFinishedRecordingID: UUID?
-    /// The compact selector beside the Record button. Audio remains the
-    /// default so the existing meeting shortcut never unexpectedly captures a
-    /// display.
-    @Published public var recordingCaptureKind: RecordingCaptureKind = .audio
     public static let screenRecordingOptionsKey = "screenRecordingOptions"
     @Published public var screenRecordingOptions: ScreenRecordingOptions {
         didSet {
@@ -701,20 +687,6 @@ public final class AppState: ObservableObject {
         }
     }
 
-    /// Also leave the finished text on the clipboard.
-    ///
-    /// Off by default, and deliberately: dictated text on the clipboard is
-    /// dictated text handed to every clipboard manager on the machine, and the
-    /// product's promise is that what you say stays here. Someone who wants it
-    /// can ask, and then it is written host-only with the transient and
-    /// concealed markers, the same as every other copy this app makes.
-    @Published public var copiesToClipboard: Bool {
-        didSet {
-            guard oldValue != copiesToClipboard else { return }
-            defaults.set(copiesToClipboard, forKey: Keys.copyToClipboard)
-        }
-    }
-
     /// Which microphone to record through, by its stable UID.
     ///
     /// `nil` means whatever the system calls default, which is what almost
@@ -802,25 +774,6 @@ public final class AppState: ObservableObject {
         NSApp?.setActivationPolicy(presence.showsDockIcon ? .regular : .accessory)
     }
 
-    /// Light, dark, or whatever the machine is doing.
-    @Published public var appearance: AppAppearance {
-        didSet {
-            guard oldValue != appearance else { return }
-            defaults.set(appearance.rawValue, forKey: Keys.appearance)
-            Self.apply(appearance)
-        }
-    }
-
-    /// Hand the choice to AppKit, which owns every window including the ones
-    /// SwiftUI has not made yet.
-    static func apply(_ appearance: AppAppearance) {
-        NSApp?.appearance = switch appearance {
-        case .system: nil
-        case .light: NSAppearance(named: .aqua)
-        case .dark: NSAppearance(named: .darkAqua)
-        }
-    }
-
     /// The shortcut that copies the last dictation, or nothing.
     ///
     /// Optional because most people will not want a second global shortcut
@@ -885,11 +838,9 @@ public final class AppState: ObservableObject {
     private enum Keys {
         static let hotkey = "hotkey"
         static let sounds = "soundsEnabled"
-        static let copyToClipboard = "copyToClipboard"
         static let copyShortcut = "copyShortcut"
         static let recordingShortcut = "recordingShortcut"
         static let trailingSpace = "appendsTrailingSpace"
-        static let appearance = "appearance"
         static let inputDevice = "inputDeviceUID"
         static let presence = "presence"
         static let detailedLogging = "detailedLogging"
@@ -899,10 +850,6 @@ public final class AppState: ObservableObject {
         /// macOS global setup: what pressing 🌐 does.
         static let fnUsage = "AppleFnUsageType"
     }
-
-    /// The marker survives relaunch. If the new process is still not trusted,
-    /// There is no point in repeating the restart - an explicit repair of the old TCC record is needed.
-    static let accessibilityRelaunchPendingKey = "accessibilityRelaunchPending"
 
     private let defaults: UserDefaults
     let diagnostics: DictationLogFile
@@ -1131,8 +1078,6 @@ public final class AppState: ObservableObject {
         soundsEnabled = environment.defaults.object(forKey: Keys.sounds) as? Bool ?? SettingsDefaults.soundsEnabled
         // Off unless asked for: dictated text on the clipboard is dictated text
         // handed to every clipboard manager on the machine.
-        copiesToClipboard = environment.defaults.object(forKey: Keys.copyToClipboard) as? Bool
-            ?? SettingsDefaults.copiesToClipboard
         copyShortcut = (environment.defaults.string(forKey: Keys.copyShortcut))
             .flatMap(KeyCombination.init(rawValue:))
         if environment.defaults.object(forKey: Keys.recordingShortcut) == nil {
@@ -1143,9 +1088,6 @@ public final class AppState: ObservableObject {
         }
         appendsTrailingSpace = environment.defaults.object(forKey: Keys.trailingSpace) as? Bool
             ?? SettingsDefaults.appendsTrailingSpace
-        appearance = AppAppearance(
-            rawValue: environment.defaults.string(forKey: Keys.appearance) ?? ""
-        ) ?? SettingsDefaults.appearance
         inputDeviceUID = (environment.defaults.string(forKey: Keys.inputDevice))
             .flatMap { $0.isEmpty ? nil : $0 }
         presence = AppPresence(
@@ -1341,8 +1283,8 @@ public final class AppState: ObservableObject {
                 overlay: overlay,
                 sounds: sounds,
                 recordingRecovery: recordingRecovery,
-                pipeline: { [weak self] in
-                    self?.makePipeline() ?? TextPipeline()
+                pipeline: { [weak self] target in
+                    self?.makePipeline(for: target) ?? TextPipeline()
                 },
                 prepareForTranscription: makePrepareForTranscription(
                     engineDirectory: engineDirectory
@@ -1391,13 +1333,11 @@ public final class AppState: ObservableObject {
                 if notice.recoveryAudio != nil {
                     self?.refreshRecoveredRecordingCount()
                 }
+                // The words reach History through `onTakeFinished` whether or
+                // not they landed, so a later failure overwriting this slot
+                // loses nothing.
                 if let text = notice.recoverableText {
                     self?.recoveredText = text
-                    // The words also join Recent Dictations at failure time:
-                    // the single recovery slot is overwritten by the next
-                    // failure, and without this copy the first failure's words
-                    // would silently vanish from the person's reach.
-                    self?.rememberFailedInsertion(text)
                 }
                 // The kernel explained itself. Your own explanation on top of his words would be
                 // worse than silence: the session has one reason for ending, not two.
@@ -1408,6 +1348,10 @@ public final class AppState: ObservableObject {
                 // “stop”, not “start a new dictation”.
                 self?.hotkeyMonitor.isHandsFreeActive = active
                 self?.isHandsFreeActive = active
+                // The panel shows a lock: the key is up and the microphone is
+                // still live, which is otherwise indistinguishable from holding.
+                (self?.overlay as? any HandsFreePresenting)?
+                    .setHandsFree(finishKey: active ? self?.hotkey.title : nil)
             }
             controller.onTranscriptionStall = { [weak self] in
                 // Recognition blew its deadline: the engine is presumed wedged
@@ -1429,12 +1373,6 @@ public final class AppState: ObservableObject {
             controller.onTextInserted = { [weak self] text in
                 guard let self else { return }
                 self.recordSuccessfulDictation(text)
-                if self.copiesToClipboard {
-                    // Host-only with the transient and concealed markers, like
-                    // every other copy this app makes: asking for the clipboard
-                    // is not asking for it to be synced to other devices.
-                    try? HostOnlyPasteboard().copyHostOnly(text)
-                }
                 guard self.learnFromEdits else { return }
                 self.editWatcher.beginWatching(inserted: text) { [weak self] original, edited in
                     self?.learn(original: original, edited: edited)
@@ -1760,6 +1698,14 @@ public final class AppState: ObservableObject {
             history = try historyStore.record(text: text, audio: audio, limit: historyLimit)
         } catch {
             engineLog.error("history entry not written")
+            notify(
+                DictationNotice(
+                    kind: .warning,
+                    message: L10n.tr("This dictation couldn't be saved to History."),
+                    wordsDidNotLand: false,
+                    reason: .storage
+                )
+            )
         }
     }
 
@@ -1810,6 +1756,18 @@ public final class AppState: ObservableObject {
                 let text = self?.makePipeline().run(result.text).output.text ?? result.text
                 await MainActor.run {
                     guard let self, let store = self.historyStore else { return }
+                    // An empty run keeps the words already there rather than
+                    // blanking a record of something the person said.
+                    guard !text.isEmpty else {
+                        let heard = !result.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        self.notify(DictationNotice(
+                            kind: .info,
+                            message: heard
+                                ? L10n.tr("Nothing left after cleanup — the text was kept.")
+                                : L10n.tr("Nothing new was recognized — the text was kept.")
+                        ))
+                        return
+                    }
                     self.history = (try? store.replaceText(text, for: entry)) ?? self.history
                 }
             } catch {
@@ -1837,10 +1795,15 @@ public final class AppState: ObservableObject {
         history = (try? historyStore.delete(entry)) ?? history
     }
 
+    /// Delete every copy of what was said: History, and the two in-memory
+    /// slots behind Copy Last and Insert Last. A "Delete All" that left the
+    /// last dictation one click away would not be one.
     public func clearHistory() {
         guard let historyStore else { return }
         try? historyStore.deleteAll()
         history = []
+        lastDictation = nil
+        recoveredText = nil
     }
 
     /// Put a stored transcript back on the clipboard.
@@ -1861,36 +1824,6 @@ public final class AppState: ObservableObject {
         guard !trimmed.isEmpty else { return }
         successfulDictationCount += 1
         recoveredText = nil
-        prependRecentDictation(trimmed)
-    }
-
-    /// Words that failed to insert enter the history immediately.
-    ///
-    /// Idempotent across repeated failures of the same text: retrying the
-    /// insertion and failing again must not fill the history with copies.
-    private func rememberFailedInsertion(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, recentDictations.first?.text != trimmed else { return }
-        prependRecentDictation(trimmed)
-    }
-
-    private func prependRecentDictation(_ trimmed: String) {
-        recentDictations.insert(RecentDictation(text: trimmed), at: 0)
-        if recentDictations.count > 8 {
-            recentDictations.removeLast(recentDictations.count - 8)
-        }
-    }
-
-    /// Copy a completed dictation without opening another window or writing
-    /// history to disk. Successful copies stay quiet; the menu action itself is
-    /// sufficient feedback.
-    public func copyRecentDictation(_ dictation: RecentDictation) {
-        guard recentDictations.contains(where: { $0.id == dictation.id }) else { return }
-        do {
-            try HostOnlyPasteboard().copyHostOnly(dictation.text)
-        } catch {
-            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation."), reason: .clipboard))
-        }
     }
 
     /// Put the last dictation back on the clipboard.
@@ -1936,7 +1869,7 @@ public final class AppState: ObservableObject {
                 try await withTranscriptionDeadline(recoveryInsertionDeadline) {
                     try await inserter.insert(recoveredText, into: target)
                 }
-                // The words already joined Recent Dictations at failure time;
+                // The words already joined History at failure time;
                 // appending again here would duplicate them. The provenance
                 // slot is cleared too: it still holds the PREVIOUS dictation,
                 // and after inserting recovered words neither "Copy Last
@@ -1983,9 +1916,12 @@ public final class AppState: ObservableObject {
     private func handleApplicationBecameActive() {
         let wasWaitingForSettings = accessibilityState == .waitingForSettings
         refreshPermissions()
-        if wasWaitingForSettings, !accessibilityGranted,
-           accessibilityState != .repairRequired {
-            accessibilityState = .restartRequired
+        // Back without the grant. Nothing to relaunch: the grant is read live
+        // and the window comes back by itself once it is on. A relaunch here
+        // used to throw away the model download in progress. What is left is
+        // the rare stale system entry, so "Already on? Repair" appears now.
+        if wasWaitingForSettings, !accessibilityGranted, !accessibilityReturnedWithoutGrant {
+            accessibilityReturnedWithoutGrant = true
         }
         if isScreenRecordingSetupPresented {
             // Returning from Privacy & Security is the only reliable signal
@@ -2771,11 +2707,6 @@ public final class AppState: ObservableObject {
         }
     }
 
-    public func setRecordingBubbleScale(_ scale: Double) {
-        screenRecordingOptions.bubbleScale = ScreenBubbleGeometry.clampedScale(scale)
-        screenRecordingCapture?.updateBubbleScale(screenRecordingOptions.bubbleScale)
-    }
-
     public func setRecordingBubblePosition(_ position: NormalizedPoint) {
         screenRecordingOptions.bubblePosition = position
         screenRecordingCapture?.updateBubblePosition(position)
@@ -3414,7 +3345,9 @@ public final class AppState: ObservableObject {
         transcribingRecordingID = id
         let incompleteAudio = directory.appending(path: MeetingWriter.audioFileName, directoryHint: .notDirectory)
         let transcriber = self.transcriber
-        let pipeline = makePipeline()
+        // Fillers go, as in dictation; "scratch that" stays, because in a
+        // meeting it is something a person said about their own words.
+        let pipeline = makePipeline(spokenCorrections: false)
         let arbiter = engineArbiter
         transcriptionQueue = MeetingTranscriptionQueue(
             read: { segment in
@@ -3752,18 +3685,20 @@ public final class AppState: ObservableObject {
         if microphone != microphoneGranted { microphoneGranted = microphone }
 
         if accessibility {
+            // The person turned it on in the System Settings window we opened.
+            // Bring ours back, as the microphone grant does: they should not
+            // have to find the setup window behind System Settings.
+            if !previousAccessibility, accessibilityState == .waitingForSettings {
+                activateApplication()
+            }
             // Assignments are guarded: `@Published` does not deduplicate, and
             // an unconditional write here re-rendered the whole menu bar scene
             // on every poll tick — a permanent one-hertz UI heartbeat at rest.
             if accessibilityState != .granted { accessibilityState = .granted }
-            if defaults.bool(forKey: Self.accessibilityRelaunchPendingKey) {
-                defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
-            }
-        } else if defaults.bool(forKey: Self.accessibilityRelaunchPendingKey) {
-            accessibilityState = .repairRequired
+            if accessibilityReturnedWithoutGrant { accessibilityReturnedWithoutGrant = false }
         } else {
             switch accessibilityState {
-            case .waitingForSettings, .restartRequired, .repairRequired, .repairing, .failed:
+            case .waitingForSettings, .repairing, .failed:
                 break
             case .denied, .granted:
                 accessibilityState = .denied
@@ -3879,25 +3814,6 @@ public final class AppState: ObservableObject {
         accessibilityManager.revealApplication()
     }
 
-    public func restartForAccessibility() {
-        defaults.set(true, forKey: Self.accessibilityRelaunchPendingKey)
-        Task {
-            do {
-                try await accessibilityManager.relaunchApplication()
-            } catch {
-                defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
-                accessibilityState = .failed(error.localizedDescription)
-                notify(
-                    DictationNotice(
-                        kind: .failure,
-                        message: L10n.tr("Couldn't relaunch OpenRamble: %@", String(describing: error.localizedDescription)),
-                        reason: .relaunch
-                    )
-                )
-            }
-        }
-    }
-
     /// Called only after a separate confirmation in the UI: the command deletes
     /// Accessibility records of exactly this bundle id will require access to be granted
     /// again. There is no automatic reset upon startup or request.
@@ -3907,14 +3823,10 @@ public final class AppState: ObservableObject {
         Task {
             do {
                 try await accessibilityManager.resetAccess()
-                // After reset, the lack of grant is expected: the new process must
-                // show the normal "Give" button again instead of getting into a loop
-                // "repair required". Pending only applies to restarts
-                // without reset, which was supposed to pick up the already enabled grant.
-                defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
+                // After reset, the lack of grant is expected: the new process
+                // shows the normal "Grant" button again.
                 try await accessibilityManager.relaunchApplication()
             } catch {
-                defaults.removeObject(forKey: Self.accessibilityRelaunchPendingKey)
                 accessibilityState = .failed(error.localizedDescription)
                 notify(
                     DictationNotice(
@@ -4515,7 +4427,15 @@ public final class AppState: ObservableObject {
     /// There were two paths, and they were already diverging - the replay was losing `output.command`.
     /// Generic assembly makes "both paths are the same" a property of the code, not something that
     /// must be remembered when ruling one of two places.
-    private func makePipeline() -> any TextProcessing {
+    ///
+    /// `target` is where the words are going. Prose apps get paragraph breaks;
+    /// terminals get verbatim text and may honour a spoken "Send it."; an
+    /// unknown app is treated as verbatim. Without a target (meetings, a
+    /// re-recognized take) the text is verbatim and nothing is ever pressed.
+    private func makePipeline(
+        for target: TargetApplication? = nil,
+        spokenCorrections: Bool = true
+    ) -> any TextProcessing {
         // Safe built-in technical vocabulary is part of recognition, not a
         // hidden setup chore. Personal entries win when they use the same
         // heard spelling.
@@ -4527,7 +4447,11 @@ public final class AppState: ObservableObject {
         // corpus.
         TrailingSpacePipeline(
             wrapped: SharedCorePipeline(
-                replacements: StarterDictionary.missing(from: replacements) + replacements
+                replacements: StarterDictionary.missing(from: replacements) + replacements,
+                allowPressReturnCommand: target != nil
+                    && PromptModePolicy.category(for: target) == .terminal,
+                spokenCorrections: spokenCorrections,
+                mode: PromptModePolicy().mode(for: target)
             ),
             appendsSpace: appendsTrailingSpace
         )

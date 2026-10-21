@@ -309,13 +309,18 @@ impl Dictation {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .process(&text);
 
-        if self
-            .advance(Event::Transcribed {
-                is_empty: output.text.is_empty(),
-            })
-            .contains(&Effect::FinishSilently)
-        {
+        let effects = self.advance(Event::Transcribed {
+            heard: !text.trim().is_empty(),
+            is_empty: output.text.is_empty(),
+        });
+        if effects.contains(&Effect::FinishSilently) {
             return Outcome::DroppedSilently;
+        }
+        if effects.contains(&Effect::ReportTakenBack) {
+            // What was heard, not what cleanup left: that is what a person
+            // needs to undo a take-back they did not mean.
+            self.remember(&text, &samples);
+            return Outcome::TakenBack;
         }
 
         // Recorded before insertion is attempted: if putting the text into the

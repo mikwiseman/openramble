@@ -199,9 +199,9 @@ final class TextPipelineTests: XCTestCase {
             allowPressReturnCommand: true
         )
 
-        let output = pipeline.process("\u{0441}\u{0435}\u{043D}\u{0442}\u{0440}\u{0438} \u{0441}\u{043D}\u{043E}\u{0432}\u{0430} \u{0443}\u{043F}\u{0430}\u{043B} , \u{043F}\u{043E}\u{0441}\u{043C}\u{043E}\u{0442}\u{0440}\u{0438} \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}")
+        let output = pipeline.process("\u{0441}\u{0435}\u{043D}\u{0442}\u{0440}\u{0438} \u{0441}\u{043D}\u{043E}\u{0432}\u{0430} \u{0443}\u{043F}\u{0430}\u{043B} , \u{043F}\u{043E}\u{0441}\u{043C}\u{043E}\u{0442}\u{0440}\u{0438}. \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}")
 
-        XCTAssertEqual(output.text, "Sentry \u{0441}\u{043D}\u{043E}\u{0432}\u{0430} \u{0443}\u{043F}\u{0430}\u{043B}, \u{043F}\u{043E}\u{0441}\u{043C}\u{043E}\u{0442}\u{0440}\u{0438}")
+        XCTAssertEqual(output.text, "Sentry \u{0441}\u{043D}\u{043E}\u{0432}\u{0430} \u{0443}\u{043F}\u{0430}\u{043B}, \u{043F}\u{043E}\u{0441}\u{043C}\u{043E}\u{0442}\u{0440}\u{0438}.")
         XCTAssertEqual(output.command, .pressReturn)
     }
 
@@ -213,10 +213,23 @@ final class TextPipelineTests: XCTestCase {
             allowPressReturnCommand: true
         )
 
-        let output = pipeline.process("\u{0433}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E} \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}")
+        let output = pipeline.process("\u{0433}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E}. \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}")
 
         XCTAssertEqual(output.command, .pressReturn)
-        XCTAssertEqual(output.text, "\u{0413}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E}")
+        XCTAssertEqual(output.text, "\u{0413}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E}.")
+    }
+
+    /// Return submits irreversibly, so the command counts only as its own
+    /// final sentence.
+    func testSendItMidThoughtStaysWords() {
+        let pipeline = TextPipeline(allowPressReturnCommand: true)
+        XCTAssertNil(pipeline.process("and then we send it").command)
+        XCTAssertNil(pipeline.process("Review the doc, send it.").command)
+        XCTAssertEqual(pipeline.process("and then we send it").text, "And then we send it")
+
+        let standalone = pipeline.process("Ship it. Send it.")
+        XCTAssertEqual(standalone.command, .pressReturn)
+        XCTAssertEqual(standalone.text, "Ship it.")
     }
 
     func testEmptyRecognitionProducesEmptyOutput() {

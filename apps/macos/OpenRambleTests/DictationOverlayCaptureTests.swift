@@ -13,6 +13,7 @@ import XCTest
 final class DictationOverlayCaptureTests: XCTestCase {
     private final class SilentAnnouncer: AccessibilityAnnouncing, @unchecked Sendable {
         func announce(_ message: String, urgent: Bool) {}
+        func playCue() {}
     }
 
     func testPanelIsNotExcludedFromScreenCapture() async throws {

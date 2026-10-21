@@ -1861,5 +1861,2622 @@
     "allowPressReturnCommand": false,
     "phoneticMatching": true,
     "input": "смотри “TextPipeline.Output” тут"
+  },
+  {
+    "name": "clean leading filler",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, so the build passed."
+  },
+  {
+    "name": "clean filler set off by commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We should, um, ship it."
+  },
+  {
+    "name": "clean bare filler",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Then uh we ship it."
+  },
+  {
+    "name": "clean filler at an inner sentence start",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Done. Uh, the next one."
+  },
+  {
+    "name": "clean filler carrying the full stop",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I think, uh."
+  },
+  {
+    "name": "clean filler carrying a question mark",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Is it ready, um?"
+  },
+  {
+    "name": "clean russian filler",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ээ, я думаю, что это работает."
+  },
+  {
+    "name": "clean russian filler between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Я, э, не уверен."
+  },
+  {
+    "name": "clean german and french fillers",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ähm, ich komme morgen. Euh, je pense que oui."
+  },
+  {
+    "name": "clean only hesitation",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh, uh."
+  },
+  {
+    "name": "clean keeps german um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um fünf Uhr treffen wir uns."
+  },
+  {
+    "name": "clean keeps portuguese um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Eu tenho um carro."
+  },
+  {
+    "name": "clean keeps an um without punctuation",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "So um the build passed."
+  },
+  {
+    "name": "clean stutters",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I I think the the build passed."
+  },
+  {
+    "name": "clean russian stutters",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Я я думаю, что и и это тоже."
+  },
+  {
+    "name": "clean keeps meaningful doubles",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "That was very very good. I had had enough. Да да, конечно."
+  },
+  {
+    "name": "clean keeps a punctuated repeat",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "No, no, no."
+  },
+  {
+    "name": "clean scratch that sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The deploy failed. Scratch that. The deploy passed."
+  },
+  {
+    "name": "clean scratch that tail",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "So the deploy failed, scratch that. The deploy passed."
+  },
+  {
+    "name": "clean russian correction",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Встреча в пятницу. Зачеркни это. Встреча в субботу."
+  },
+  {
+    "name": "clean repeated corrections",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First. Second. Scratch that. Scratch that. Third."
+  },
+  {
+    "name": "clean scratch inside a sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Please scratch that line from the file."
+  },
+  {
+    "name": "clean the messy take",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, so the the deploy failed, uh, scratch that. The deploy passed."
+  },
+  {
+    "name": "clean never touches spans",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Run `uh` now, open /tmp/um/file, call AppState AppState."
+  },
+  {
+    "name": "clean filler after a backtick span",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Run `swift  test`, uh, now."
+  },
+  {
+    "name": "clean filler before an identifier",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh, onTextInserted fired."
+  },
+  {
+    "name": "clean with the dictionary",
+    "dictionary": [
+      {
+        "spoken": "сентри",
+        "written": "Sentry",
+        "inflects": false,
+        "allowsPhoneticMatching": true
+      }
+    ],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "ну, э, сентри, э, упал"
+  },
+  {
+    "name": "clean then the trailing new line",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh, first point new line"
+  },
+  {
+    "name": "clean then send it",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Uh, ship it. Send it."
+  },
+  {
+    "name": "clean meeting keeps a scratch that sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "spokenCorrections": false,
+    "input": "Um, the deploy failed. Scratch that. It passed."
+  },
+  {
+    "name": "clean meeting keeps a scratch that tail",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "spokenCorrections": false,
+    "input": "Uh, it failed, scratch that. It passed."
+  },
+  {
+    "name": "clean um carrying its own comma",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I need you to um, fix it."
+  },
+  {
+    "name": "clean scratch that between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "This stays. We go Friday, scratch that, we go Monday."
+  },
+  {
+    "name": "clean scratch that opening a sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The deploy failed. Scratch that, it passed."
+  },
+  {
+    "name": "clean russian correction between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Встреча в пятницу, зачеркни это, в субботу."
+  },
+  {
+    "name": "clean scratch that as a verb between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "If it chips, scratch that spot and repaint."
+  },
+  {
+    "name": "clean real model: scratch that between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, so that the deploy failed, uh, scratch that, the deploy passed."
+  },
+  {
+    "name": "clean real model: fillers and a stutter",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We should, um, ship it on Friday. I I think that the tests are green, uh, mostly."
+  },
+  {
+    "name": "clean real model: um without a comma before",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh, I need you to um, fix the login bug, um, and then update the readme."
+  },
+  {
+    "name": "clean real model: german um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um 5 Uhr treffen wir uns im Büro."
+  },
+  {
+    "name": "review: german separable verb um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Benenne die Funktion um."
+  },
+  {
+    "name": "review: german um before a comma",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Bau die Funktion um, damit sie async ist."
+  },
+  {
+    "name": "review: portuguese numeral um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Quero um, não dois."
+  },
+  {
+    "name": "review: portuguese counting",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, dois, três, quatro."
+  },
+  {
+    "name": "review: german hesitation next to um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Es geht um, äh, Geld."
+  },
+  {
+    "name": "review: millimetres",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Use a 3 mm drill bit and a 10 mm bolt."
+  },
+  {
+    "name": "review: russian millimetres",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Толщина стенки 5 мм."
+  },
+  {
+    "name": "review: russian letter names",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Слово начинается на э. Отправь эс эм эс."
+  },
+  {
+    "name": "review: acronyms",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We trained an HMM. The ERM team approved it. I studied at UH."
+  },
+  {
+    "name": "review: grammatical doubles",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "What it is is a mess. Log in in Safari. Turn it on on staging. Search for for loops."
+  },
+  {
+    "name": "review: spelled letters and roman numerals",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "My name is Aaron, spelled A A R O N. Tell IT it is broken."
+  },
+  {
+    "name": "review: foreign doubles",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Il y a a priori un problème. Najważniejsze to to, że działa. Это это?"
+  },
+  {
+    "name": "review: list commas stay",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Set the values to 10, 20, um, 30. We need eggs, milk, uh, butter."
+  },
+  {
+    "name": "review: closing quote ends a sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "He said \"stop.\" Then we left, scratch that, we stayed."
+  },
+  {
+    "name": "review: abbreviations",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Meet at 5 p.m. tomorrow. Scratch that. Meet at 6."
+  },
+  {
+    "name": "review: dr between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Call Dr. Smith, scratch that, Dr. Jones."
+  },
+  {
+    "name": "review: russian instruction stays",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "В третьей строке опечатка. Зачеркни это, а потом перепиши."
+  },
+  {
+    "name": "review: hesitation sentence before scratch that",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ship it. Um. Scratch that. Ship it Monday."
+  },
+  {
+    "name": "review: line break survives",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First paragraph.\n\nUh, second paragraph."
+  },
+  {
+    "name": "review: filler then new line",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh, new line."
+  },
+  {
+    "name": "review: filler then send it",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Uh, send it."
+  },
+  {
+    "name": "review: um before new line",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We should ship it, um, new line."
+  },
+  {
+    "name": "review: meeting interjection",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Hmm?",
+    "spokenCorrections": false
+  },
+  {
+    "name": "clean real model (Samantha) h1",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ah, I need you to um, fix the login bug, um, and then update the readme."
+  },
+  {
+    "name": "clean real model (Samantha) h2",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Don't deploy on Friday, run the migration on staging first and tell me if it fails."
+  },
+  {
+    "name": "clean real model (Samantha) h3",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We should, um, ship it on Friday. I I think that the tests are green, uh, mostly."
+  },
+  {
+    "name": "clean real model (Samantha) h4",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, so that the deploy failed. Ah, scratch that, the deploy passed."
+  },
+  {
+    "name": "clean real model (Samantha) h5",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Can you look at the pull request today? I left two comments on the parser."
+  },
+  {
+    "name": "clean real model (Samantha) h6",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Let's move the launch to Sunday and post on Hacker News first."
+  },
+  {
+    "name": "clean sorry scratch that",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We meet on Friday. Sorry, scratch that, we meet on Monday."
+  },
+  {
+    "name": "clean list keeps its commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Set the values to 10, 20, um, 30."
+  },
+  {
+    "name": "clean list of two numbers",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Set it to 10, um, 30."
+  },
+  {
+    "name": "clean russian list",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Купи хлеб, молоко, э, сыр."
+  },
+  {
+    "name": "clean comma before a grammar word",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Мы, э, думаем, что, ээ, надо подождать."
+  },
+  {
+    "name": "clean don't deploy",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Don't, uh, deploy on Friday."
+  },
+  {
+    "name": "clean detached punctuation",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh , the build passed."
+  },
+  {
+    "name": "clean detached commas around a filler",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ship it , uh , now"
+  },
+  {
+    "name": "clean keeps uh huh",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh huh, ship it."
+  },
+  {
+    "name": "clean keeps uh oh",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh oh, the deploy failed."
+  },
+  {
+    "name": "clean keeps mm hmm",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Mm hmm, sounds good."
+  },
+  {
+    "name": "clean keeps an acronym",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We trained an HMM on the data."
+  },
+  {
+    "name": "clean removes before an acronym",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, I studied at MIT."
+  },
+  {
+    "name": "clean keeps a millimetre",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Use a 3 mm drill bit and a 10 mm bolt."
+  },
+  {
+    "name": "clean keeps a date format",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Format the date as dd mmm yyyy."
+  },
+  {
+    "name": "clean keeps russian vowels",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Гласные: а, о, у, э, ы."
+  },
+  {
+    "name": "clean keeps portuguese um with markers",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Quantos? Um, por favor."
+  },
+  {
+    "name": "clean keeps german um in a command",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Dreh dich um, bitte."
+  },
+  {
+    "name": "clean keeps croatian um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ljudski um, kao i tijelo, treba odmor."
+  },
+  {
+    "name": "clean german filler next to um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Es geht um, äh, Geld."
+  },
+  {
+    "name": "clean removes um despite a lookalike",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, the battery will die soon."
+  },
+  {
+    "name": "clean opening pronoun stutter",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I, I really think so."
+  },
+  {
+    "name": "clean russian opening stutter",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Я, я думаю."
+  },
+  {
+    "name": "clean article stutter with a comma",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The, the answer is yes."
+  },
+  {
+    "name": "clean keeps a repeated pronoun",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I told you you were right."
+  },
+  {
+    "name": "clean keeps it it",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "When I saw it it was broken."
+  },
+  {
+    "name": "clean keeps polish i i",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Zmienne i i j są indeksami."
+  },
+  {
+    "name": "clean keeps my my",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "My my, how you have grown."
+  },
+  {
+    "name": "clean keeps a double across a line",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Read the\nthe report"
+  },
+  {
+    "name": "clean keeps no no no",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "No, no, no."
+  },
+  {
+    "name": "clean a time keeps its sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Meet at 3 p.m. Bring snacks. Scratch that. Bring drinks."
+  },
+  {
+    "name": "clean a question keeps its answer",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Are we shipping today? No. Scratch that. Yes."
+  },
+  {
+    "name": "clean a number ends a sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We meet at 5. Scratch that. We meet at 6."
+  },
+  {
+    "name": "clean a title does not end a sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I met Dr. Smith today. Scratch that. I met nobody."
+  },
+  {
+    "name": "clean capitalizes after a short sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Can we ship? No. Uh, not yet."
+  },
+  {
+    "name": "clean a lone filler sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "He said no. Uh. Then he left."
+  },
+  {
+    "name": "clean every scratch that",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I will scratch that off the list, scratch that, I will keep it."
+  },
+  {
+    "name": "clean crlf paragraphs",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First paragraph.\r\n\r\nUh, second paragraph."
+  },
+  {
+    "name": "clean dictionary words are kept",
+    "dictionary": [
+      {
+        "spoken": "the the",
+        "written": "The The",
+        "inflects": false,
+        "allowsPhoneticMatching": false
+      }
+    ],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I love The The band."
+  },
+  {
+    "name": "clean dictionary filler words are kept",
+    "dictionary": [
+      {
+        "spoken": "hmm labs",
+        "written": "Hmm Labs",
+        "inflects": false,
+        "allowsPhoneticMatching": false
+      }
+    ],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I work at Hmm Labs."
+  },
+  {
+    "name": "clean meeting keeps an interjection",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "spokenCorrections": false,
+    "input": "Hmm?"
+  },
+  {
+    "name": "clean dangling um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ship it, um"
+  },
+  {
+    "name": "clean two fillers in a row",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ship it, um uh, now"
+  },
+  {
+    "name": "clean round 3: I opened an MR. Ping the team about it. Scratch ",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I opened an MR. Ping the team about it. Scratch that."
+  },
+  {
+    "name": "clean round 3: Review the MR. Merge it after lunch. Scratch tha",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Review the MR. Merge it after lunch. Scratch that, merge it tomorrow."
+  },
+  {
+    "name": "clean round 3: Set the timeout to 500 ms. Use three retries. Sc",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Set the timeout to 500 ms. Use three retries. Scratch that."
+  },
+  {
+    "name": "clean round 3: I asked the Mrs. She said no. Scratch that, she ",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I asked the Mrs. She said no. Scratch that, she said yes."
+  },
+  {
+    "name": "clean round 3: Install MS. Office is great. Scratch that.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Install MS. Office is great. Scratch that."
+  },
+  {
+    "name": "clean round 3: Is it ready? No, scratch that, yes.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Is it ready? No, scratch that, yes."
+  },
+  {
+    "name": "clean round 3: Ship it today. No, scratch that.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ship it today. No, scratch that."
+  },
+  {
+    "name": "clean round 3: Invite Anna, um, Maria and Bob.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Invite Anna, um, Maria and Bob."
+  },
+  {
+    "name": "clean round 3: Пригласи Анну, э, Марию и Бориса.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Пригласи Анну, э, Марию и Бориса."
+  },
+  {
+    "name": "clean round 3: I'm sorry, um, I love you.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I'm sorry, um, I love you."
+  },
+  {
+    "name": "clean round 3: Hi John, um, can you review this?",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Hi John, um, can you review this?"
+  },
+  {
+    "name": "clean round 3: Yes, um, that works for me.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Yes, um, that works for me."
+  },
+  {
+    "name": "clean round 3: Да, ээ, это работает.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Да, ээ, это работает."
+  },
+  {
+    "name": "clean round 3: We need milk, um, eggs and bread.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We need milk, um, eggs and bread."
+  },
+  {
+    "name": "clean round 3: Купи хлеб, э, молоко и сыр.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Купи хлеб, э, молоко и сыр."
+  },
+  {
+    "name": "clean round 3: Мы думаем, ээ, что надо подождать.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Мы думаем, ээ, что надо подождать."
+  },
+  {
+    "name": "clean round 3: The build, uh, failed.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The build, uh, failed."
+  },
+  {
+    "name": "clean round 3: Well, um, the build failed.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Well, um, the build failed."
+  },
+  {
+    "name": "clean round 3: We should, um, ship and celebrate.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We should, um, ship and celebrate."
+  },
+  {
+    "name": "clean round 3: Stell die Config um, that should fix it.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Stell die Config um, that should fix it."
+  },
+  {
+    "name": "clean round 3: And I um, think that works.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "And I um, think that works."
+  },
+  {
+    "name": "clean round 3: Handle the edge cases, e.g. uh, empty input.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Handle the edge cases, e.g. uh, empty input."
+  },
+  {
+    "name": "clean round 3: Нужно всё переписать, т.е. э, начать заново.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Нужно всё переписать, т.е. э, начать заново."
+  },
+  {
+    "name": "clean round 3: I think... uh, maybe tomorrow.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I think... uh, maybe tomorrow."
+  },
+  {
+    "name": "clean round 3: Let's meet at 10 a.m. uh, on Monday.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Let's meet at 10 a.m. uh, on Monday."
+  },
+  {
+    "name": "clean round 3: Meet me at 5 p.m. on Monday, scratch that, on Tu",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Meet me at 5 p.m. on Monday, scratch that, on Tuesday."
+  },
+  {
+    "name": "clean round 3: Compare tea vs. coffee, scratch that, water.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Compare tea vs. coffee, scratch that, water."
+  },
+  {
+    "name": "clean round 3: I'll be there by 9 a.m., uh.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I'll be there by 9 a.m., uh."
+  },
+  {
+    "name": "clean round 3: Bring plates, cups, etc., uh.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Bring plates, cups, etc., uh."
+  },
+  {
+    "name": "clean round 3: If I were you I'd uh scratch that.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "If I were you I'd uh scratch that."
+  },
+  {
+    "name": "clean round 3: Гласные: а, о, у, э",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Гласные: а, о, у, э"
+  },
+  {
+    "name": "clean round 3: Date formats: dd, mm, mmm",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Date formats: dd, mm, mmm"
+  },
+  {
+    "name": "clean round 3: Напряжение 220 В в сети.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Напряжение 220 В в сети."
+  },
+  {
+    "name": "clean round 3: After World War I I moved to Paris.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "After World War I I moved to Paris."
+  },
+  {
+    "name": "clean round 3: Then I I moved to Paris.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Then I I moved to Paris."
+  },
+  {
+    "name": "clean round 3: Um hmm.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um hmm."
+  },
+  {
+    "name": "clean round 3: Um hmm, sounds good.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um hmm, sounds good."
+  },
+  {
+    "name": "clean round 3: Read the the report",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Read the the report"
+  },
+  {
+    "name": "clean round 3: First paragraph. Uh, second paragraph.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First paragraph. Uh, second paragraph."
+  },
+  {
+    "name": "clean round 3: lowercase dictionary words do not protect stutters",
+    "dictionary": [
+      {
+        "spoken": "коммит в",
+        "written": "commit в",
+        "inflects": false,
+        "allowsPhoneticMatching": false
+      },
+      {
+        "spoken": "докер и в кубернетис",
+        "written": "Docker и в Kubernetes",
+        "inflects": false,
+        "allowsPhoneticMatching": false
+      }
+    ],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Я и и ты пойдём. Положи файл в в папку."
+  },
+  {
+    "name": "clean round 3: um before a trailing new line",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "This is the end um, new line."
+  },
+  {
+    "name": "clean round 3: um alone before new line",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, new line."
+  },
+  {
+    "name": "clean round 3: um alone before send it",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Um, send it."
+  },
+  {
+    "name": "clean round 3: letter list before a trailing new line",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Гласные: а, о, у, э, новая строка"
+  },
+  {
+    "name": "clean round 4: Is it ready? Uh. No, scratch that, yes.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Is it ready? Uh. No, scratch that, yes."
+  },
+  {
+    "name": "clean round 4: Is it ready? Hmm. No, scratch that.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Is it ready? Hmm. No, scratch that."
+  },
+  {
+    "name": "clean round 4: She asked, \"Is it ready?\" No, scratch that, yes.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "She asked, \"Is it ready?\" No, scratch that, yes."
+  },
+  {
+    "name": "clean round 4: Is it ready?! No, scratch that, yes.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Is it ready?! No, scratch that, yes."
+  },
+  {
+    "name": "clean round 4: I live at 5 Main Dr. The house is blue. Scratch ",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I live at 5 Main Dr. The house is blue. Scratch that."
+  },
+  {
+    "name": "clean round 4: We met the new Prof. She seems nice. Scratch tha",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We met the new Prof. She seems nice. Scratch that."
+  },
+  {
+    "name": "clean round 4: Done. 3 tests failed. Scratch that, all passed.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Done. 3 tests failed. Scratch that, all passed."
+  },
+  {
+    "name": "clean round 4: Okay. \"Ship it\" was the plan. Scratch that, we w",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Okay. \"Ship it\" was the plan. Scratch that, we wait."
+  },
+  {
+    "name": "clean round 4: Thanks, John, um, see you tomorrow.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Thanks, John, um, see you tomorrow."
+  },
+  {
+    "name": "clean round 4: Okay, Mike, um, I will check.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Okay, Mike, um, I will check."
+  },
+  {
+    "name": "clean round 4: Hi, Anna, um, quick question.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Hi, Anna, um, quick question."
+  },
+  {
+    "name": "clean round 4: Ну, э, Sentry, э, упал.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ну, э, Sentry, э, упал."
+  },
+  {
+    "name": "clean round 4: We'll ship it on Friday, uh scratch that, on Mon",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We'll ship it on Friday, uh scratch that, on Monday."
+  },
+  {
+    "name": "clean round 4: Ship it today, uh scratch that.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ship it today, uh scratch that."
+  },
+  {
+    "name": "clean round 4: Ship it on Friday. Scratch that uh, on Monday.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ship it on Friday. Scratch that uh, on Monday."
+  },
+  {
+    "name": "clean round 4: Send it to Anna, um scratch that, to Bob.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Send it to Anna, um scratch that, to Bob."
+  },
+  {
+    "name": "clean round 4: I think that um um um um",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I think that um um um um"
+  },
+  {
+    "name": "clean round 4: So I'm um, not sure about that.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "So I'm um, not sure about that."
+  },
+  {
+    "name": "clean round 4: I think I'll um, call you tomorrow.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I think I'll um, call you tomorrow."
+  },
+  {
+    "name": "clean round 4: Гласные: а́, о́, у́, э, ы́.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Гласные: а́, о́, у́, э, ы́."
+  },
+  {
+    "name": "clean round 4: many trailing ums before new line",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "This is the end um um um um, new line."
+  },
+  {
+    "name": "clean round 4: emoji are not letters",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Pick 👍🏽, э, 👍🏽 now."
+  },
+  {
+    "name": "clean round 4: keycaps are not letters",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Pick 1️⃣, um, 2️⃣ please."
+  },
+  {
+    "name": "clean round 5: No, no, um, that's wrong.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "No, no, um, that's wrong."
+  },
+  {
+    "name": "clean round 5: Well, actually, um, I think so.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Well, actually, um, I think so."
+  },
+  {
+    "name": "clean round 5: Да, конечно, э, сделаю.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Да, конечно, э, сделаю."
+  },
+  {
+    "name": "clean round 5: Okay, this, uh, looks good.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Okay, this, uh, looks good."
+  },
+  {
+    "name": "clean round 5: Yes, it, um, works now.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Yes, it, um, works now."
+  },
+  {
+    "name": "clean round 5: Ну, это, э, работает.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ну, это, э, работает."
+  },
+  {
+    "name": "clean round 5: Yes, rename, um, it to FooBar.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Yes, rename, um, it to FooBar."
+  },
+  {
+    "name": "clean round 5: Thanks, um, for the quick reply.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Thanks, um, for the quick reply."
+  },
+  {
+    "name": "clean round 5: Sorry, uh, for the delay.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Sorry, uh, for the delay."
+  },
+  {
+    "name": "clean round 5: Спасибо, э, за помощь.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Спасибо, э, за помощь."
+  },
+  {
+    "name": "clean round 5: Okay, thanks, uh, for the quick reply.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Okay, thanks, uh, for the quick reply."
+  },
+  {
+    "name": "clean round 5: Let me know if that works for you, um.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Let me know if that works for you, um."
+  },
+  {
+    "name": "clean round 5: We should ship it on Friday, um.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We should ship it on Friday, um."
+  },
+  {
+    "name": "clean round 5: Um, I don't know, um.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Um, I don't know, um."
+  },
+  {
+    "name": "clean round 5: Надо подождать, э.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Надо подождать, э."
+  },
+  {
+    "name": "clean round 5: Is it ready, um?",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Is it ready, um?"
+  },
+  {
+    "name": "clean round 5: Гласные: а, о, у, э.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Гласные: а, о, у, э."
+  },
+  {
+    "name": "clean round 5: Quero mais, um.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Quero mais, um."
+  },
+  {
+    "name": "clean round 5: Date formats: dd, mm, mmm.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Date formats: dd, mm, mmm."
+  },
+  {
+    "name": "clean round 5: The The um, build failed.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The The um, build failed."
+  },
+  {
+    "name": "clean round 5: We We um, should ship it.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We We um, should ship it."
+  },
+  {
+    "name": "clean round 5: I met Dr. Will Smith today. Scratch that. I met ",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I met Dr. Will Smith today. Scratch that. I met nobody."
+  },
+  {
+    "name": "clean round 5: Call Ms. May tomorrow, scratch that, call her to",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Call Ms. May tomorrow, scratch that, call her today."
+  },
+  {
+    "name": "clean round 5: Ask Dr. Will Jones about it, scratch that.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ask Dr. Will Jones about it, scratch that."
+  },
+  {
+    "name": "clean round 5: Meet me on Ocean Dr. Bring snacks. Scratch that.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Meet me on Ocean Dr. Bring snacks. Scratch that."
+  },
+  {
+    "name": "clean round 5: We met the new Prof. Students love her. Scratch ",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We met the new Prof. Students love her. Scratch that."
+  },
+  {
+    "name": "clean round 5: э before новая строка",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Надо подождать, э, новая строка"
+  },
+  {
+    "name": "clean round 5: э before новая строка with a full stop",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Это конец, э, новая строка."
+  },
+  {
+    "name": "clean round 6: Купи хлеб, ээ, молоко, сыр.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Купи хлеб, ээ, молоко, сыр."
+  },
+  {
+    "name": "clean round 6: Invite Anna, um, Maria, and Bob.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Invite Anna, um, Maria, and Bob."
+  },
+  {
+    "name": "clean round 6: Add tests for login, uh, signup, and logout.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Add tests for login, uh, signup, and logout."
+  },
+  {
+    "name": "clean round 6: I met John, um, Paul.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I met John, um, Paul."
+  },
+  {
+    "name": "clean round 6: Thank you, um, I'll take a look.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Thank you, um, I'll take a look."
+  },
+  {
+    "name": "clean round 6: Thank you um, I'll take a look.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Thank you um, I'll take a look."
+  },
+  {
+    "name": "clean round 6: I love you, um, see you tomorrow.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I love you, um, see you tomorrow."
+  },
+  {
+    "name": "clean round 6: Refactor the function, uh, it's too long.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Refactor the function, uh, it's too long."
+  },
+  {
+    "name": "clean round 6: Let's use SQLite for now, um, it's simpler.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Let's use SQLite for now, um, it's simpler."
+  },
+  {
+    "name": "clean round 6: Я не знаю, ээ, может быть завтра.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Я не знаю, ээ, может быть завтра."
+  },
+  {
+    "name": "clean round 6: Anna, um, can you review my PR?",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Anna, um, can you review my PR?"
+  },
+  {
+    "name": "clean round 6: Claude, um, please refactor this function.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Claude, um, please refactor this function."
+  },
+  {
+    "name": "clean round 6: Коллеги, ээ, завтра созвон в десять.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Коллеги, ээ, завтра созвон в десять."
+  },
+  {
+    "name": "clean round 6: Hey team, um, quick update.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Hey team, um, quick update."
+  },
+  {
+    "name": "clean round 6: However, um, the tests still fail.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "However, um, the tests still fail."
+  },
+  {
+    "name": "clean round 6: Кстати, ээ, я забыл ключи.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Кстати, ээ, я забыл ключи."
+  },
+  {
+    "name": "clean round 6: Well, basically, um, we ship it on Friday.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Well, basically, um, we ship it on Friday."
+  },
+  {
+    "name": "clean round 6: Ну, короче, э, давай завтра.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ну, короче, э, давай завтра."
+  },
+  {
+    "name": "clean round 6: Hi everyone, um, thanks for joining.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Hi everyone, um, thanks for joining."
+  },
+  {
+    "name": "clean round 6: Привет, ребята, э, есть минутка?",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Привет, ребята, э, есть минутка?"
+  },
+  {
+    "name": "clean round 6: Dear John, um, thanks for the note.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Dear John, um, thanks for the note."
+  },
+  {
+    "name": "clean round 6: Honestly, um, I'm not sure.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Honestly, um, I'm not sure."
+  },
+  {
+    "name": "clean round 6: So Sentry, uh, is down.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "So Sentry, uh, is down."
+  },
+  {
+    "name": "clean round 6: Es geht um, äh, Geld.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Es geht um, äh, Geld."
+  },
+  {
+    "name": "clean round 6: It's a, uh, a memory leak.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "It's a, uh, a memory leak."
+  },
+  {
+    "name": "clean round 6: I'm, uh, I'm not sure.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I'm, uh, I'm not sure."
+  },
+  {
+    "name": "clean round 6: I want you to, uh, to add logging.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I want you to, uh, to add logging."
+  },
+  {
+    "name": "clean round 6: Write a function that, um, that returns the sum.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Write a function that, um, that returns the sum."
+  },
+  {
+    "name": "clean round 6: Это, э, это баг.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Это, э, это баг."
+  },
+  {
+    "name": "clean round 6: Can you, um, can you check it?",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Can you, um, can you check it?"
+  },
+  {
+    "name": "clean round 6: Make sure, um, make sure it compiles.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Make sure, um, make sure it compiles."
+  },
+  {
+    "name": "clean round 6: Я хотел, э, я хотел сказать.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Я хотел, э, я хотел сказать."
+  },
+  {
+    "name": "clean round 6: It's, um, it's not ready.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "It's, um, it's not ready."
+  },
+  {
+    "name": "clean round 6: I, um, I think we should ship it.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I, um, I think we should ship it."
+  },
+  {
+    "name": "clean round 6: Я, э, я думаю, что да.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Я, э, я думаю, что да."
+  },
+  {
+    "name": "clean round 6: Давай в, э, в субботу.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Давай в, э, в субботу."
+  },
+  {
+    "name": "clean round 6: We need a, um, a new plan.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We need a, um, a new plan."
+  },
+  {
+    "name": "clean round 6: И, э, и потом мы уйдём.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "И, э, и потом мы уйдём."
+  },
+  {
+    "name": "clean round 6: Can you come at 9 a.m., um?",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Can you come at 9 a.m., um?"
+  },
+  {
+    "name": "clean round 6: Is it ready by 5 p.m., uh?",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Is it ready by 5 p.m., uh?"
+  },
+  {
+    "name": "clean round 6: Hi Anna, Dr. Lee is here. Scratch that.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Hi Anna, Dr. Lee is here. Scratch that."
+  },
+  {
+    "name": "clean round 6: I asked the team. Dr. Smith said no. Scratch tha",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I asked the team. Dr. Smith said no. Scratch that."
+  },
+  {
+    "name": "clean round 6: On Monday Dr. Smith called. Scratch that, on Tue",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "On Monday Dr. Smith called. Scratch that, on Tuesday."
+  },
+  {
+    "name": "clean round 6: Invite Anna, Dr. Smith and Bob. Scratch that.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Invite Anna, Dr. Smith and Bob. Scratch that."
+  },
+  {
+    "name": "clean round 6: Call Dr. Uh scratch that, call the nurse.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Call Dr. Uh scratch that, call the nurse."
+  },
+  {
+    "name": "clean round 6: Book it with Dr. Scratch that. Book it with the ",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Book it with Dr. Scratch that. Book it with the nurse."
+  },
+  {
+    "name": "clean round 6: That's the plan. Um. Let's see what you think.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "That's the plan. Um. Let's see what you think."
+  },
+  {
+    "name": "clean round 6: I don't know. Um... maybe you should ask them.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I don't know. Um... maybe you should ask them."
+  },
+  {
+    "name": "clean round 6: Is it safe to merge? Uh uh.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Is it safe to merge? Uh uh."
+  },
+  {
+    "name": "clean round 6: Nuh uh, that's not true.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Nuh uh, that's not true."
+  },
+  {
+    "name": "clean round 6: Uh uh, don't merge that.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh uh, don't merge that."
+  },
+  {
+    "name": "clean round 6: The old migration is broken. Scratch that? Or fi",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The old migration is broken. Scratch that? Or fix it?"
+  },
+  {
+    "name": "clean round 6: If I say, scratch that, it should delete the sen",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "If I say, scratch that, it should delete the sentence."
+  },
+  {
+    "name": "clean round 6: When the user says, scratch that, remove the las",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "When the user says, scratch that, remove the last sentence."
+  },
+  {
+    "name": "clean round 6: Use the format dd, mmm, yyyy.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Use the format dd, mmm, yyyy."
+  },
+  {
+    "name": "clean round 6: The date tokens are dd, mmm, and yyyy.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The date tokens are dd, mmm, and yyyy."
+  },
+  {
+    "name": "clean round 6: He he, that's funny.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "He he, that's funny."
+  },
+  {
+    "name": "clean round 6: He he he, nice one.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "He he he, nice one."
+  },
+  {
+    "name": "clean round 6: Гласные: а, о, у, э, ы.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Гласные: а, о, у, э, ы."
+  },
+  {
+    "name": "clean round 6: Ask me and I I.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ask me and I I."
+  },
+  {
+    "name": "clean round 6: The the the deploy failed.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The the the deploy failed."
+  },
+  {
+    "name": "clean round 6 parity: CRLF inside backticks",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Type `x\r\nuh y` here"
+  },
+  {
+    "name": "clean round 6 parity: CRLF after a backtick start",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Run uh`ls\r\npwd` now"
+  },
+  {
+    "name": "clean round 6 parity: a combining mark after a space",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Send the ́uh report"
+  },
+  {
+    "name": "clean round 6 parity: a ZWJ after a comma and space",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We should, ‍uh, ship it."
+  },
+  {
+    "name": "clean round 6 parity: capitalizing before a combining mark",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Uh, tͅhe build passed."
+  },
+  {
+    "name": "clean round 6 parity: a lowercase letter with no uppercase form",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I met Dr. ªmith today. Scratch that."
+  },
+  {
+    "name": "clean round 8: Try it, um, it works.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Try it, um, it works."
+  },
+  {
+    "name": "clean round 8: Ask Uma, uh, Uma knows the answer.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Ask Uma, uh, Uma knows the answer."
+  },
+  {
+    "name": "clean round 8: That's very, um, very kind of you.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "That's very, um, very kind of you."
+  },
+  {
+    "name": "clean round 8: Мы обсудили бюджет, э, бюджет утвердили в пятницу.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Мы обсудили бюджет, э, бюджет утвердили в пятницу."
+  },
+  {
+    "name": "clean round 8: I bought milk, uh, milk is expensive now.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I bought milk, uh, milk is expensive now."
+  },
+  {
+    "name": "clean round 8: Version 10, um, 10 users signed up.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Version 10, um, 10 users signed up."
+  },
+  {
+    "name": "clean round 8: I sent the file, um, file names are wrong.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I sent the file, um, file names are wrong."
+  },
+  {
+    "name": "clean round 8: Я отправил, ммм, отправил договор юристу.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Я отправил, ммм, отправил договор юристу."
+  },
+  {
+    "name": "clean round 8: Не длиннее пятнадцати, ээ, пятнадцати секунд.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Не длиннее пятнадцати, ээ, пятнадцати секунд."
+  },
+  {
+    "name": "clean round 8: Сделай отдельный, э, отдельный endpoint.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Сделай отдельный, э, отдельный endpoint."
+  },
+  {
+    "name": "clean round 8: So I, um, I think it's fine.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "So I, um, I think it's fine."
+  },
+  {
+    "name": "clean round 8: It's a, um, an issue.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "It's a, um, an issue."
+  },
+  {
+    "name": "clean round 8: I gave it to the, to the team.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I gave it to the, to the team."
+  },
+  {
+    "name": "clean round 8: Between you and I, and I mean this, it's fine.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Between you and I, and I mean this, it's fine."
+  },
+  {
+    "name": "clean round 8: The tests pass, um, and the build failed.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The tests pass, um, and the build failed."
+  },
+  {
+    "name": "clean round 8: Get milk, eggs, um, and the bread.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Get milk, eggs, um, and the bread."
+  },
+  {
+    "name": "clean round 8: The API is done, uh, and the docs are live.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The API is done, uh, and the docs are live."
+  },
+  {
+    "name": "clean round 8: Call the vendor, uh, Sam has the number.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Call the vendor, uh, Sam has the number."
+  },
+  {
+    "name": "clean round 8: Пишется э, а не е.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Пишется э, а не е."
+  },
+  {
+    "name": "clean round 8: Он сказал, э, а не пойти ли нам.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Он сказал, э, а не пойти ли нам."
+  },
+  {
+    "name": "clean round 8: Напиши мне, э, если что.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Напиши мне, э, если что."
+  },
+  {
+    "name": "clean round 8: Только, э, если успеем.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Только, э, если успеем."
+  },
+  {
+    "name": "clean round 8: Refer her to Dr. Haddad, uh, scratch that, to Dr. Moreau.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Refer her to Dr. Haddad, uh, scratch that, to Dr. Moreau."
+  },
+  {
+    "name": "clean round 8: Не, не надо.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Не, не надо."
+  },
+  {
+    "name": "clean round 8: Это не, не критично.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Это не, не критично."
+  },
+  {
+    "name": "clean round 8: Use and and or instead of the symbols.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Use and and or instead of the symbols."
+  },
+  {
+    "name": "clean round 8: Fruit, e.g., um, apples.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Fruit, e.g., um, apples."
+  },
+  {
+    "name": "clean round 8: Нужен ноутбук, т. е., э, лёгкий.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Нужен ноутбук, т. е., э, лёгкий."
+  },
+  {
+    "name": "clean round 8: Привет, ээ, хотел спросить.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Привет, ээ, хотел спросить."
+  },
+  {
+    "name": "clean round 8: Марина, ээ, сказала, что да.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Марина, ээ, сказала, что да."
+  },
+  {
+    "name": "clean round 8: Маша, э, ты сделала?",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Маша, э, ты сделала?"
+  },
+  {
+    "name": "clean round 8: Я не буду, э, трогать модуль, пока нет тестов.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Я не буду, э, трогать модуль, пока нет тестов."
+  },
+  {
+    "name": "clean round 8: Eu queria uma, hmm, uma sopa.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Eu queria uma, hmm, uma sopa."
+  },
+  {
+    "name": "clean round 8: Can you, um, look at the failing test in auth.test.ts?",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Can you, um, look at the failing test in auth.test.ts?"
+  },
+  {
+    "name": "clean round 8: Добрый день, ээ, Наталья Сергеевна.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Добрый день, ээ, Наталья Сергеевна."
+  },
+  {
+    "name": "clean round 8: Thanks, John, um, see you tomorrow.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Thanks, John, um, see you tomorrow."
+  },
+  {
+    "name": "clean round 8: Я не знаю, ээ, может быть завтра.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Я не знаю, ээ, может быть завтра."
+  },
+  {
+    "name": "clean round 8: На ревью три PR: от Лены, от Тимура, э, от Вадима.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "На ревью три PR: от Лены, от Тимура, э, от Вадима."
+  },
+  {
+    "name": "clean round 8: I booked the flights, uh, and Sam is handling the hotel.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I booked the flights, uh, and Sam is handling the hotel."
+  },
+  {
+    "name": "clean round 8: I like the red car, um, the one with stripes.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I like the red car, um, the one with stripes."
+  },
+  {
+    "name": "clean round 8: Okay, if it fails, um, we roll back.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Okay, if it fails, um, we roll back."
+  },
+  {
+    "name": "clean round 8: Okay, this, uh, looks good.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Okay, this, uh, looks good."
+  },
+  {
+    "name": "clean round 8: I need, um, a new laptop, and a mouse.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I need, um, a new laptop, and a mouse."
+  },
+  {
+    "name": "clean round 8: Bring a tent, um, a warm jacket, and boots.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Bring a tent, um, a warm jacket, and boots."
+  },
+  {
+    "name": "clean round 8: В общем, ээ, всё готово.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "В общем, ээ, всё готово."
+  },
+  {
+    "name": "clean round 8: Of course, um, we can do that.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Of course, um, we can do that."
+  },
+  {
+    "name": "clean round 8: Мы, эм, честно говоря, не ожидали.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Мы, эм, честно говоря, не ожидали."
+  },
+  {
+    "name": "clean round 8: Это, э, может быть, лучший вариант.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Это, э, может быть, лучший вариант."
+  },
+  {
+    "name": "clean round 8: Сервер, который мы купили в мае, ээ, сломался.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Сервер, который мы купили в мае, ээ, сломался."
+  },
+  {
+    "name": "clean round 8: Дом, который построили для, э, нас.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Дом, который построили для, э, нас."
+  },
+  {
+    "name": "clean round 8: The server, which we set up last week, um, crashed.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "The server, which we set up last week, um, crashed."
+  },
+  {
+    "name": "clean round 8: Tell me, which one, um, you want.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Tell me, which one, um, you want."
+  },
+  {
+    "name": "clean round 8: Высылаю, э, акт сверки.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Высылаю, э, акт сверки."
+  },
+  {
+    "name": "clean round 8: Думаю, э, это сработает.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Думаю, э, это сработает."
+  },
+  {
+    "name": "clean round 8: Андрей, э, посмотри пулреквест.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Андрей, э, посмотри пулреквест."
+  },
+  {
+    "name": "clean round 8: We're meeting with the, um, with Kowalski's team.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We're meeting with the, um, with Kowalski's team."
+  },
+  {
+    "name": "clean round 8: It's a, uh, it's an issue.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "It's a, uh, it's an issue."
+  },
+  {
+    "name": "clean round 8: Put it in the, uh, in my bag.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Put it in the, uh, in my bag."
+  },
+  {
+    "name": "clean round 8: Talk to the, um, to Anna.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Talk to the, um, to Anna."
+  },
+  {
+    "name": "clean round 8: It needs a 3 mm, uh, a 3 mm margin.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "It needs a 3 mm, uh, a 3 mm margin."
+  },
+  {
+    "name": "clean round 8: It fires every, every 15 minutes.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "It fires every, every 15 minutes."
+  },
+  {
+    "name": "clean round 8: Перенести приём на среду, ммм.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Перенести приём на среду, ммм."
+  },
+  {
+    "name": "clean round 8: Нам нужны, ммм, два монитора.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Нам нужны, ммм, два монитора."
+  },
+  {
+    "name": "clean round 8: Meet me at 5 p.m. on Monday, scratch that, on Tuesday.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Meet me at 5 p.m. on Monday, scratch that, on Tuesday."
+  },
+  {
+    "name": "clean round 8: When I asked, the agent said mm hmm, uh, and left.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "When I asked, the agent said mm hmm, uh, and left."
+  },
+  {
+    "name": "clean round 8: Every, um, every time it fails.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Every, um, every time it fails."
+  },
+  {
+    "name": "clean round 8: I want the, um, the blue one.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I want the, um, the blue one."
+  },
+  {
+    "name": "clean round 8: Use the format dd, mmm.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Use the format dd, mmm."
+  },
+  {
+    "name": "prose new paragraph as its own sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First point. New paragraph. Second point.",
+    "mode": "prose"
+  },
+  {
+    "name": "prose new paragraph between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First point, new paragraph, second point.",
+    "mode": "prose"
+  },
+  {
+    "name": "prose russian new paragraph",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Первый пункт. Новый абзац. Второй пункт.",
+    "mode": "prose"
+  },
+  {
+    "name": "prose new paragraph after a filler",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First point. New paragraph. Um, second point.",
+    "mode": "prose"
+  },
+  {
+    "name": "prose new paragraph inside a sentence stays text",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I added a new paragraph about pricing.",
+    "mode": "prose"
+  },
+  {
+    "name": "verbatim new paragraph stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First point. New paragraph. Second point.",
+    "mode": "verbatim"
+  },
+  {
+    "name": "send it as its own sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Ship it. Send it."
+  },
+  {
+    "name": "send it mid-thought stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "and then we send it"
+  },
+  {
+    "name": "send it after a comma stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Review the doc, send it."
+  },
+  {
+    "name": "command-send-standalone",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Привет. Отправь."
+  },
+  {
+    "name": "command-enter-standalone",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Текст. Энтер."
+  },
+  {
+    "name": "command-press-enter-standalone",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Some text. Press enter."
+  },
+  {
+    "name": "dictionary-then-standalone-command",
+    "dictionary": [
+      {
+        "spoken": "релиз",
+        "written": "release",
+        "inflects": true,
+        "allowsPhoneticMatching": true
+      }
+    ],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Сделай релиз. Отправь."
+  },
+  {
+    "name": "paragraph mark in prose",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "mode": "prose",
+    "input": "The tests are green. Next, we ship."
+  },
+  {
+    "name": "paragraph mark in a terminal",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "mode": "verbatim",
+    "input": "The tests are green. Next, we ship."
+  },
+  {
+    "name": "paragraph mark before a filler in prose",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "mode": "prose",
+    "input": "First point. Um, second point."
+  },
+  {
+    "name": "paragraph mark and send it",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "mode": "prose",
+    "input": "Ship it. Send it."
+  },
+  {
+    "name": "dotfile env",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "add the key to .env and restart."
+  },
+  {
+    "name": "dotfile zshrc",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "open .zshrc"
+  },
+  {
+    "name": "dotfile gitignore",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "it is listed in .gitignore"
+  },
+  {
+    "name": "dotfile ds store",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "delete the .DS_Store files."
+  },
+  {
+    "name": "dot net",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "we moved from .NET to Go."
+  },
+  {
+    "name": "file extensions",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "convert the .png files to .webp"
+  },
+  {
+    "name": "stray space before a full stop",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "it works ."
   }
 ]

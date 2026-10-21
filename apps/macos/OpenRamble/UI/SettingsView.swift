@@ -20,13 +20,13 @@ struct SettingsView: View {
     @State private var pane: Pane = .general
 
     enum Pane: String, CaseIterable, Identifiable {
-        case general, recognition, history, dictionary, about
+        case general, setup, history, dictionary, about
         var id: Self { self }
 
         var title: String {
             switch self {
             case .general: return L10n.tr("General")
-            case .recognition: return L10n.tr("Recognition")
+            case .setup: return L10n.tr("Setup")
             case .history: return L10n.tr("Dictation History")
             case .dictionary: return L10n.tr("Dictionary")
             case .about: return L10n.tr("About")
@@ -36,7 +36,7 @@ struct SettingsView: View {
         var symbol: String {
             switch self {
             case .general: return "gearshape"
-            case .recognition: return "waveform"
+            case .setup: return "checklist"
             case .history: return "clock.arrow.circlepath"
             case .dictionary: return "character.book.closed"
             case .about: return "info.circle"
@@ -81,14 +81,13 @@ struct SettingsView: View {
     private var detail: some View {
         switch pane {
         case .general: GeneralSettings(state: state)
-        case .recognition: RecognitionSettings(state: state)
+        case .setup: SetupSettings(state: state)
         case .history: HistoryView(state: state)
         case .dictionary: DictionarySettings(state: state)
         case .about:
             AboutView(
                 updater: state.updater,
                 revealSupportFolder: state.revealSupportFolder,
-                appearance: $state.appearance,
                 detailedLogging: $state.detailedLogging,
             diagnostics: state.diagnostics
             )
@@ -98,9 +97,10 @@ struct SettingsView: View {
 
 // MARK: - General
 
+/// What changes how dictation behaves. Everything done once to make it work
+/// lives in Setup.
 private struct GeneralSettings: View {
     @ObservedObject var state: AppState
-    @State private var showAccessibilityRepairConfirmation = false
 
     var body: some View {
         Form {
@@ -182,19 +182,6 @@ private struct GeneralSettings: View {
                         .toggleStyle(.switch)
                         .accessibilityLabel(L10n.tr("Launch at login"))
                         .accessibilityHint(L10n.tr("Starts OpenRamble automatically when you log in"))
-                }
-                SettingRow(
-                    title: L10n.tr("Also copy dictations to the clipboard"),
-                    isChanged: state.copiesToClipboard != SettingsDefaults.copiesToClipboard,
-                    revert: { state.copiesToClipboard = SettingsDefaults.copiesToClipboard }
-                ) {
-                    Toggle("", isOn: $state.copiesToClipboard)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .accessibilityLabel(L10n.tr("Also copy dictations to the clipboard"))
-                        .accessibilityHint(
-                            L10n.tr("Leaves each finished dictation on the clipboard of this Mac. Off by default — the clipboard is shared with everything else running here.")
-                        )
                 }
                 SettingRow(
                     title: L10n.tr("Add a space after each dictation"),
@@ -290,6 +277,42 @@ private struct GeneralSettings: View {
                     .accessibilityLabel(L10n.tr("Dictation panel"))
                     .accessibilityHint(L10n.tr("Places dictation feedback at the top or bottom of the active screen"))
                 }
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+// MARK: - Setup
+
+/// Everything done once so dictation works, in onboarding's order: the
+/// speech model, the two permissions, and the command-line tool.
+private struct SetupSettings: View {
+    @ObservedObject var state: AppState
+    @State private var showDeleteConfirmation = false
+    @State private var showAccessibilityRepairConfirmation = false
+
+    var body: some View {
+        Form {
+            Section {
+                ModelStatusView(
+                    status: ModelStatus.make(
+                        state: state.modelState,
+                        preparation: state.enginePreparation,
+                        place: .settings,
+                        downloadMegabytes: state.remainingDownloadMegabytes,
+                        isEngineReady: state.isEngineReady,
+                        isPreparingEngine: state.isPreparingEngine,
+                        hasMirror: state.modelHasMirror
+                    ),
+                    install: state.installModel,
+                    cancel: state.cancelModelInstall,
+                    // Delete is next to regular buttons and earlier
+                    // worked on the first click: a miss cost half
+                    // gigabyte and new download. There is nothing to cancel this, it means
+                    // ask.
+                    delete: { showDeleteConfirmation = true }
+                )
                 Picker(L10n.tr("Unload model"), selection: $state.modelUnloadTimeout) {
                     ForEach(IdleUnloadPolicy.allCases) { option in
                         Text(option.label).tag(option)
@@ -298,6 +321,34 @@ private struct GeneralSettings: View {
                 .accessibilityHint(
                     L10n.tr("Frees the speech model's memory after this much idle time. It reloads under your voice at the next dictation.")
                 )
+                // Retained audio moved out of the daily menu: it is announced
+                // by the failure notice when it happens, and findable here for
+                // as long as it exists.
+            } header: {
+                Text(L10n.tr("Speech model"))
+            } footer: {
+                Text(L10n.tr("The speech model runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings."))
+            }
+            .confirmationDialog(
+                L10n.tr("Delete the recognition model?"),
+                isPresented: $showDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button(L10n.tr("Delete Model"), role: .destructive) { state.deleteModel() }
+                Button(L10n.tr("Cancel"), role: .cancel) {}
+            } message: {
+                Text(L10n.tr("Dictation stops working until you download the model again — that's another %@ MB over the network.", String(describing: state.fullModelDownloadMegabytes)))
+            }
+
+            if let upgrade = state.upgradeState {
+                Section {
+                    ModelStatusView(
+                        status: ModelStatus.upgrade(state: upgrade, downloadMegabytes: state.remainingDownloadMegabytes),
+                        install: state.installModel,
+                        cancel: state.cancelModelInstall,
+                        delete: {}
+                    )
+                }
             }
 
             Section {
@@ -316,6 +367,14 @@ private struct GeneralSettings: View {
                         Button(L10n.tr("Open System Settings")) {
                             state.openAccessibilitySettings()
                         }
+                    }
+                }
+                if AccessibilityRepairLink.isShown(
+                    state: state.accessibilityState,
+                    returnedWithoutGrant: state.accessibilityReturnedWithoutGrant
+                ) {
+                    AccessibilityRepairLinkButton(modelState: state.modelState) {
+                        showAccessibilityRepairConfirmation = true
                     }
                 }
                 PermissionRow(
@@ -338,6 +397,7 @@ private struct GeneralSettings: View {
             CommandLineToolSettings()
         }
         .formStyle(.grouped)
+        .task { await state.refreshModelState() }
         // Permissions are granted in system settings, and returned here
         // a person should see a fresh state, and not what was before leaving.
         .task { state.refreshPermissions() }
@@ -356,12 +416,8 @@ private struct GeneralSettings: View {
     }
 
     private var needsAccessibilityRepair: Bool {
-        switch state.accessibilityState {
-        case .repairRequired, .failed:
-            true
-        default:
-            false
-        }
+        if case .failed = state.accessibilityState { return true }
+        return false
     }
 
     private func performAccessibilityAction() {
@@ -370,13 +426,33 @@ private struct GeneralSettings: View {
             state.requestAccessibility()
         case .waitingForSettings:
             state.openAccessibilitySettings()
-        case .restartRequired:
-            state.restartForAccessibility()
-        case .repairRequired, .failed:
+        case .failed:
             showAccessibilityRepairConfirmation = true
         case .repairing, .granted:
             break
         }
+    }
+}
+
+/// The secondary way out beside the Accessibility row; see
+/// `AccessibilityRepairLink`. A link, not a button: the primary action is
+/// still to turn the switch on in System Settings.
+struct AccessibilityRepairLinkButton: View {
+    let modelState: ModelState
+    let action: () -> Void
+
+    var body: some View {
+        let enabled = AccessibilityRepairLink.isEnabled(modelState: modelState)
+        Button(L10n.tr("Already on? Repair"), action: action)
+            .buttonStyle(.link)
+            .font(.caption)
+            .disabled(!enabled)
+            .help(enabled ? "" : L10n.tr("Available once the model has downloaded."))
+            .accessibilityHint(
+                enabled
+                    ? L10n.tr("Removes OpenRamble's old Accessibility entry and relaunches the app.")
+                    : L10n.tr("Available once the model has downloaded.")
+            )
     }
 }
 
@@ -409,69 +485,6 @@ private struct PermissionRow: View {
                     // “issued” without an owner only gets in the way.
                     .accessibilityHidden(true)
             }
-        }
-    }
-}
-
-// MARK: - Recognition
-
-private struct RecognitionSettings: View {
-    @ObservedObject var state: AppState
-    @State private var showDeleteConfirmation = false
-
-    var body: some View {
-        Form {
-            Section {
-                ModelStatusView(
-                    status: ModelStatus.make(
-                        state: state.modelState,
-                        preparation: state.enginePreparation,
-                        place: .settings,
-                        downloadMegabytes: state.remainingDownloadMegabytes,
-                        isEngineReady: state.isEngineReady,
-                        isPreparingEngine: state.isPreparingEngine,
-                        hasMirror: state.modelHasMirror
-                    ),
-                    install: state.installModel,
-                    cancel: state.cancelModelInstall,
-                    // Delete is next to regular buttons and earlier
-                    // worked on the first click: a miss cost half
-                    // gigabyte and new download. There is nothing to cancel this, it means
-                    // ask.
-                    delete: { showDeleteConfirmation = true }
-                )
-                // Retained audio moved out of the daily menu: it is announced
-                // by the failure notice when it happens, and findable here for
-                // as long as it exists.
-            } header: {
-                Text(L10n.tr("Speech model"))
-            } footer: {
-                Text(L10n.tr("The speech model runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings."))
-            }
-
-            if let upgrade = state.upgradeState {
-                Section {
-                    ModelStatusView(
-                        status: ModelStatus.upgrade(state: upgrade, downloadMegabytes: state.remainingDownloadMegabytes),
-                        install: state.installModel,
-                        cancel: state.cancelModelInstall,
-                        delete: {}
-                    )
-                }
-            }
-
-        }
-        .formStyle(.grouped)
-        .task { await state.refreshModelState() }
-        .confirmationDialog(
-            L10n.tr("Delete the recognition model?"),
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button(L10n.tr("Delete Model"), role: .destructive) { state.deleteModel() }
-            Button(L10n.tr("Cancel"), role: .cancel) {}
-        } message: {
-            Text(L10n.tr("Dictation stops working until you download the model again — that's another %@ MB over the network.", String(describing: state.fullModelDownloadMegabytes)))
         }
     }
 }
@@ -723,7 +736,6 @@ private struct AboutView: View {
     // Sparkle reports its changes itself; they would not have reached through AppState.
     @ObservedObject var updater: SparkleUpdater
     let revealSupportFolder: () -> Void
-    @Binding var appearance: AppAppearance
     @Binding var detailedLogging: Bool
     let diagnostics: DictationLogFile
     @State private var isSavingReport = false
@@ -787,23 +799,6 @@ private struct AboutView: View {
                     }
                 }
                 .padding(.vertical, 4)
-            }
-
-            Section(L10n.tr("Appearance")) {
-                SettingRow(
-                    title: L10n.tr("Theme"),
-                    isChanged: appearance != SettingsDefaults.appearance,
-                    revert: { appearance = SettingsDefaults.appearance }
-                ) {
-                    Picker("", selection: $appearance) {
-                        ForEach(AppAppearance.allCases) { option in
-                            Text(option.title).tag(option)
-                        }
-                    }
-                    .labelsHidden()
-                    .accessibilityLabel(L10n.tr("Theme"))
-                    .accessibilityHint(L10n.tr("Follow the system, or keep this app light or dark on its own"))
-                }
             }
 
             Section {

@@ -2,8 +2,10 @@ import DictationCore
 import SwiftUI
 
 /// A single floating transport. It records the microphone and, where this Mac can, what
-/// the Mac plays — the other side of a call. There is one recording action;
-/// there is no secondary "microphone only" mode to explain or accidentally pick.
+/// the Mac plays — the other side of a call. There is no secondary "microphone
+/// only" mode to explain or accidentally pick, and no hidden mode at all:
+/// recording the screen is its own action beside Record, not a setting that
+/// silently changes what Record does.
 ///
 /// State, both sources, and controls share one glass surface. The primary
 /// action stays in the same place as it changes from Record to Stop.
@@ -19,17 +21,13 @@ struct RecordBar: View {
         state.meetingState == .starting || state.meetingState == .stopping
     }
 
-    private var isScreenMode: Bool {
-        state.recordingCaptureKind == .screen
-    }
-
     var body: some View {
         HStack(alignment: .center, spacing: GlassTokens.Space.inline) {
             HStack(spacing: GlassTokens.Space.inline) {
                 if isBusy {
                     ProgressView().controlSize(.small)
                 } else {
-                    Image(systemName: isScreenMode ? "rectangle.inset.filled" : "waveform")
+                    Image(systemName: "waveform")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(isRecording ? StatusColorRole.recording.color : .secondary)
                         .frame(width: 24, height: 24)
@@ -50,21 +48,9 @@ struct RecordBar: View {
                     .accessibilityLabel(state.meetingState == .paused ? L10n.tr("Paused") : L10n.tr("Recording"))
                     .accessibilityValue(RecordingTime.spoken(state.liveDuration))
                 } else {
-                    VStack(alignment: .leading, spacing: GlassTokens.Space.tight) {
-                        if !isRecording {
-                            Picker(L10n.tr("Recording type"), selection: $state.recordingCaptureKind) {
-                                Label(L10n.tr("Audio"), systemImage: "waveform").tag(RecordingCaptureKind.audio)
-                                Label(L10n.tr("Screen"), systemImage: "rectangle.inset.filled").tag(RecordingCaptureKind.screen)
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-                            .frame(width: 132)
-                            .accessibilityLabel(L10n.tr("Recording type"))
-                        }
-                        Text(line)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(line)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             Spacer(minLength: GlassTokens.Space.tight)
@@ -89,12 +75,27 @@ struct RecordBar: View {
                 .help(state.meetingState == .paused ? L10n.tr("Resume recording") : L10n.tr("Pause recording"))
                 .accessibilityLabel(state.meetingState == .paused ? L10n.tr("Resume recording") : L10n.tr("Pause recording"))
             }
+            if !isRecording {
+                // The second action, quieter than the first: screen recording
+                // asks its questions in its own panel before anything records.
+                Button {
+                    state.prepareScreenRecording()
+                } label: {
+                    Label(L10n.tr("Record Screen…"), systemImage: "rectangle.inset.filled")
+                        .font(.callout.weight(.medium))
+                        .padding(.horizontal, GlassTokens.Space.inline)
+                        .frame(height: 40)
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .disabled(isBusy)
+                .accessibilityHint(L10n.tr("Opens screen recording choices"))
+            }
             HStack(spacing: 0) {
                 Button {
                     if isRecording {
                         state.stopRecording()
-                    } else if isScreenMode {
-                        state.prepareScreenRecording()
                     } else {
                         state.startRecording()
                     }
@@ -126,7 +127,6 @@ struct RecordBar: View {
     private var line: String {
         switch state.meetingState {
         case .idle:
-            if isScreenMode { return L10n.tr("Records this display") }
             return state.systemAudioMode == .enabled ? L10n.tr("Records you and the other side") : L10n.tr("Records your voice")
         case .starting: return L10n.tr("Starting…")
         case .recording: return L10n.tr("Recording — %@", String(describing: RecordingTime.clock(state.liveDuration)))

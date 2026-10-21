@@ -9,7 +9,9 @@ import SwiftUI
 /// never borrow from this table.
 ///
 /// - `recording` — the microphone is capturing. Nothing else may be red.
-/// - `processing` — the app is working on speech (transcribing, inserting).
+/// - `processing` — the app is working on speech: the dictation panel's mark
+///   after release, and informational notices. Never in the menu bar, where
+///   that work is too brief to read.
 /// - `success` — a good outcome: permission granted, model ready, trial passed.
 /// - `attention` — something waits for the person, and their work is preserved.
 ///   Failures here are recoverable by design, so they wear orange, not a

@@ -3,7 +3,21 @@ import Observation
 import XCTest
 
 final class LocalizationTests: XCTestCase {
-    func testFreshInstallDefaultsToEnglishEvenOnARussianMac() {
+    /// Nothing chosen yet: the app speaks the first language in the Mac's own
+    /// list that it has. The Welcome screen no longer asks — a picker before
+    /// the first word is a question most people have already answered in
+    /// System Settings. The choice stays in Settings ▸ General.
+    func testAFreshInstallFollowsTheMacsLanguages() {
+        XCTAssertEqual(AppLanguage.preferred(by: ["ru-RU", "en-US"]), .russian)
+        XCTAssertEqual(AppLanguage.preferred(by: ["uk-UA", "ru-RU"]), .russian, "the first one the app has")
+        XCTAssertEqual(AppLanguage.preferred(by: ["en-GB", "ru-RU"]), .english)
+        XCTAssertEqual(AppLanguage.preferred(by: ["de-DE"]), .english, "nothing supported: English")
+        XCTAssertEqual(AppLanguage.preferred(by: []), .english)
+    }
+
+    /// Without the app's launch-time registration — in tests — the fallback
+    /// stays English, so no suite depends on the language of the Mac running it.
+    func testTheLibraryAloneStaysEnglish() {
         withDefaults { defaults, suite in
             defaults.set(["ru"], forKey: "AppleLanguages")
             XCTAssertEqual(L10n(suiteName: suite).language, .english)

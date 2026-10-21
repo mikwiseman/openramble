@@ -18,7 +18,7 @@ struct OnboardingView: View {
     /// decoration, and the person who disabled it should not get it.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @State private var step: OnboardingStep = .welcome
+    @State private var step: OnboardingStep
     /// Direction of the last navigation: forward slides left, back slides
     /// right. Symmetric paths make the wizard predictable — a step returns
     /// the same way it left.
@@ -30,6 +30,15 @@ struct OnboardingView: View {
     @State private var trialStartCount = 0
     @State private var showAccessibilityRepairConfirmation = false
     @FocusState private var trialFocused: Bool
+
+    init(state: AppState, onFinish: @escaping () -> Void) {
+        self.state = state
+        self.onFinish = onFinish
+        _step = State(initialValue: OnboardingStep.first(
+            microphoneGranted: state.microphoneGranted,
+            accessibilityGranted: state.accessibilityGranted
+        ))
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -124,11 +133,6 @@ struct OnboardingView: View {
 
     private var welcome: some View {
         VStack(spacing: 16) {
-            HStack {
-                Spacer()
-                LanguagePicker()
-                    .fixedSize()
-            }
             Spacer(minLength: 0)
 
             // The product crest is the app icon itself — the same mark the
@@ -218,7 +222,18 @@ struct OnboardingView: View {
                         detail: L10n.tr("Notices your dictation key and types the finished text at your cursor."),
                     ),
                     action: performAccessibilityAction
-                )
+                ) {
+                    // Under the button it qualifies, so the card keeps its
+                    // height and nothing above it is squeezed.
+                    if AccessibilityRepairLink.isShown(
+                        state: state.accessibilityState,
+                        returnedWithoutGrant: state.accessibilityReturnedWithoutGrant
+                    ) {
+                        AccessibilityRepairLinkButton(modelState: state.modelState) {
+                            showAccessibilityRepairConfirmation = true
+                        }
+                    }
+                }
             }
 
             if needsAccessibilityRepair {
@@ -258,12 +273,8 @@ struct OnboardingView: View {
     }
 
     private var needsAccessibilityRepair: Bool {
-        switch state.accessibilityState {
-        case .repairRequired, .failed:
-            true
-        default:
-            false
-        }
+        if case .failed = state.accessibilityState { return true }
+        return false
     }
 
     private func performAccessibilityAction() {
@@ -272,9 +283,7 @@ struct OnboardingView: View {
             state.requestAccessibility()
         case .waitingForSettings:
             state.openAccessibilitySettings()
-        case .restartRequired:
-            state.restartForAccessibility()
-        case .repairRequired, .failed:
+        case .failed:
             showAccessibilityRepairConfirmation = true
         case .repairing, .granted:
             break
@@ -311,6 +320,19 @@ struct OnboardingView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(modelCard.announcement)
             }
+
+            // One sentence that shows the cleanup: what lands in the field is
+            // visibly cleaner than what was said.
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L10n.tr("Try saying"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(OnboardingStep.tryOutSuggestion())
+                    .font(.title3.weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+            }
+            .accessibilityElement(children: .combine)
 
             Picker(L10n.tr("Dictation key"), selection: $state.hotkey) {
                 ForEach(DictationHotkey.allCases, id: \.self) { key in
@@ -396,10 +418,16 @@ struct OnboardingView: View {
     // MARK: - Navigation
 
     private var nextButton: some View {
-        Button(step.nextButtonTitle) {
+        Button(step.continueTitle(
+            modelState: state.modelState,
+            downloadMegabytes: state.remainingDownloadMegabytes
+        )) {
             if step.isLast {
                 finishOnboarding()
             } else {
+                if step.downloadsOnContinue(modelState: state.modelState) {
+                    state.installModel()
+                }
                 forward()
             }
         }
@@ -573,9 +601,20 @@ private struct OnboardingFeatureRow: View {
     }
 }
 
-private struct OnboardingPermission: View {
+private struct OnboardingPermission<Secondary: View>: View {
     let status: PermissionStatus
     let action: () -> Void
+    @ViewBuilder var secondary: Secondary
+
+    init(
+        status: PermissionStatus,
+        action: @escaping () -> Void,
+        @ViewBuilder secondary: () -> Secondary = { EmptyView() }
+    ) {
+        self.status = status
+        self.action = action
+        self.secondary = secondary()
+    }
 
     var body: some View {
         HStack {
@@ -600,10 +639,13 @@ private struct OnboardingPermission: View {
 
             Spacer()
 
-            if let title = status.actionTitle {
-                Button(title, action: action)
-                    .buttonStyle(.bordered)
-                    .accessibilityLabel(status.actionAccessibilityLabel ?? title)
+            VStack(alignment: .trailing, spacing: 4) {
+                if let title = status.actionTitle {
+                    Button(title, action: action)
+                        .buttonStyle(.bordered)
+                        .accessibilityLabel(status.actionAccessibilityLabel ?? title)
+                }
+                secondary
             }
         }
         .padding(14)

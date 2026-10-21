@@ -88,16 +88,12 @@ struct MenuContent: View {
 
         case .recentDictations:
             Menu(L10n.tr("Recent Dictations")) {
-                ForEach(Array(state.recentDictations.enumerated()), id: \.element.id) { index, dictation in
+                // History itself, so the Keep limit and Delete All hold here.
+                ForEach(state.recentDictations) { entry in
                     Button {
-                        state.copyRecentDictation(dictation)
+                        state.copyHistoryEntry(entry)
                     } label: {
-                        // The copy key belongs on the first row, because the
-                        // first row is the last dictation — the one the key
-                        // copies. Written into the title rather than set as a
-                        // real shortcut: this is a held modifier, and
-                        // `keyboardShortcut` cannot express one.
-                        Text(dictation.menuTitle)
+                        Text(entry.menuTitle)
                     }
                 }
             }
@@ -131,23 +127,23 @@ struct MenuContent: View {
 
         case .startRecording:
             Button {
-                if state.recordingCaptureKind == .screen {
-                    openWindow(id: RecordingsWindow.windowID)
-                    WindowFronting.raiseOpenedWindow(id: RecordingsWindow.windowID)
-                    state.prepareScreenRecording()
-                } else {
-                    state.startRecording()
-                }
+                state.startRecording()
             } label: {
                 Text(titled(L10n.tr("Start Recording"), shortcut: state.recordingShortcut))
             }
             .accessibilityHint(
-                state.recordingCaptureKind == .screen
-                    ? L10n.tr("Opens screen recording choices")
-                    : (state.systemAudioMode == .enabled
-                        ? L10n.tr("Records you and the other side until you stop")
-                        : L10n.tr("Records your microphone until you stop"))
+                state.systemAudioMode == .enabled
+                    ? L10n.tr("Records you and the other side until you stop")
+                    : L10n.tr("Records your microphone until you stop")
             )
+
+        case .startScreenRecording:
+            Button(L10n.tr("Record Screen…")) {
+                openWindow(id: RecordingsWindow.windowID)
+                WindowFronting.raiseOpenedWindow(id: RecordingsWindow.windowID)
+                state.prepareScreenRecording()
+            }
+            .accessibilityHint(L10n.tr("Opens screen recording choices"))
 
         case .pauseRecording:
             Button(L10n.tr("Pause Recording")) { state.pauseRecording() }
@@ -200,9 +196,7 @@ struct MenuContent: View {
                 Button(L10n.tr("Grant Accessibility Access")) { state.requestAccessibility() }
             case .waitingForSettings:
                 Button(L10n.tr("Open Accessibility Settings")) { state.openAccessibilitySettings() }
-            case .restartRequired:
-                Button(L10n.tr("Relaunch to Apply Access")) { state.restartForAccessibility() }
-            case .repairRequired, .failed:
+            case .failed:
                 Text(L10n.tr("Accessibility access needs repair"))
             case .repairing:
                 Text(L10n.tr("Repairing Accessibility access…"))
@@ -245,5 +239,16 @@ struct MenuContent: View {
                 }
             }
         }
+    }
+}
+
+private extension HistoryEntry {
+    /// One line, short enough for a menu.
+    var menuTitle: String {
+        let singleLine = text
+            .split(whereSeparator: \.isWhitespace)
+            .joined(separator: " ")
+        guard singleLine.count > 56 else { return singleLine }
+        return String(singleLine.prefix(55)) + "…"
     }
 }

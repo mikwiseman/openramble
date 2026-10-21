@@ -668,6 +668,12 @@ extension DictationError {
 /// and a sound on every session teaches the ear to ignore sounds. This one
 /// plays only when the app has something to say: the words did not reach the
 /// field, nothing was recognized, something failed. Silence means it worked.
+///
+/// One exception, and it is not a second sound for anyone who sees the
+/// screen: with VoiceOver on, the microphone opening plays a short tone
+/// (`AccessibilityAnnouncing.playCue` in the app). It replaces the spoken
+/// "Recording." those users used to hear, which the microphone then
+/// transcribed into every dictation.
 public protocol Sounding: Sendable {
     func playAttention() async
     /// Fence delayed sound work to the newest dictation generation.

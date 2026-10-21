@@ -14,6 +14,7 @@ enum MenuRow: Equatable {
     case copyLast
     case recordingLine
     case startRecording
+    case startScreenRecording
     case pauseRecording
     case resumeRecording
     case stopRecording
@@ -86,7 +87,7 @@ enum MenuSections {
                 sections.append([.recentDictations, .copyLast])
             }
             if recordingState == .idle {
-                sections.append([.startRecording])
+                sections.append([.startRecording, .startScreenRecording])
             }
         }
 

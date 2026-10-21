@@ -11,12 +11,12 @@ import XCTest
 /// picture stays stable.
 final class MenuBarStatusTests: XCTestCase {
     /// A meeting being recorded is the microphone capturing — the same red as
-    /// dictation, because the colour means one thing. Dictation's own work
-    /// outranks it while it lasts.
+    /// dictation, because the colour means one thing, and it stays red while a
+    /// dictation is transcribed: that microphone is still live.
     func testAMeetingRecordingShowsTheRecordingDotAndSaysSo() {
         XCTAssertEqual(MenuBarStatus.activity(state: .idle, isRecordingMeeting: true), .recording)
         XCTAssertEqual(MenuBarStatus.activity(state: .preparing, isRecordingMeeting: true), .recording)
-        XCTAssertEqual(MenuBarStatus.activity(state: .transcribing, isRecordingMeeting: true), .working)
+        XCTAssertEqual(MenuBarStatus.activity(state: .transcribing, isRecordingMeeting: true), .recording)
         XCTAssertEqual(MenuBarStatus.activity(state: .idle, isRecordingMeeting: false), .hidden)
         XCTAssertEqual(
             MenuBarStatus.accessibilityLabel(state: .idle, isDictationReady: true, isRecordingMeeting: true),
@@ -39,11 +39,32 @@ final class MenuBarStatusTests: XCTestCase {
     }
 
     /// A meeting whose other side is missing wears orange, not red: red would
-    /// say everything is fine. Dictation's own work still outranks it.
+    /// say everything is fine.
     func testADegradedRecordingTurnsTheBadgeOrange() {
         XCTAssertEqual(MenuBarStatus.badge(activity: .recording, recordingIsDegraded: true), .attention)
         XCTAssertEqual(MenuBarStatus.badge(activity: .recording, recordingIsDegraded: false), .recording)
-        XCTAssertEqual(MenuBarStatus.badge(activity: .working, recordingIsDegraded: true), .working)
+    }
+
+    /// Two colors in the menu bar, one meaning each: red is a live
+    /// microphone, orange needs you. The blue "working" dot was a 0.2 s blink
+    /// after every take — a third color nobody could read.
+    func testTheMenuBarHasTwoColors() {
+        let states: [DictationState] = [.idle, .preparing, .listening, .transcribing, .inserting]
+        for state in states {
+            for meeting in [false, true] {
+                for attention in [false, true] {
+                    let badge = MenuBarStatus.badge(
+                        activity: MenuBarStatus.activity(state: state, isRecordingMeeting: meeting),
+                        needsAttention: attention
+                    )
+                    let microphoneLive = state == .listening || meeting
+                    XCTAssertEqual(badge == .recording, microphoneLive, "\(state), meeting \(meeting)")
+                    if !microphoneLive {
+                        XCTAssertEqual(badge, attention ? .attention : .hidden, "\(state)")
+                    }
+                }
+            }
+        }
     }
 
     func testAPausedRecordingDoesNotClaimToBeCapturingOneSide() {
@@ -278,13 +299,12 @@ final class MenuBarActivityTests: XCTestCase {
         XCTAssertEqual(MenuBarStatus.activity(state: .idle), .hidden)
         XCTAssertEqual(MenuBarStatus.activity(state: .preparing), .hidden)
         XCTAssertEqual(MenuBarStatus.activity(state: .listening), .recording)
-        XCTAssertEqual(MenuBarStatus.activity(state: .transcribing), .working)
-        XCTAssertEqual(MenuBarStatus.activity(state: .inserting), .working)
+        XCTAssertEqual(MenuBarStatus.activity(state: .transcribing), .hidden)
+        XCTAssertEqual(MenuBarStatus.activity(state: .inserting), .hidden)
     }
 
     func testScenario033() {
         XCTAssertEqual(MenuBarStatus.badge(activity: .recording), .recording)
-        XCTAssertEqual(MenuBarStatus.badge(activity: .working), .working)
         XCTAssertEqual(MenuBarStatus.badge(activity: .hidden), .hidden)
         XCTAssertEqual(
             MenuBarStatus.badge(activity: .hidden, needsAttention: true),
@@ -295,10 +315,6 @@ final class MenuBarActivityTests: XCTestCase {
         XCTAssertEqual(
             MenuBarStatus.badge(activity: .recording, needsAttention: true),
             .recording
-        )
-        XCTAssertEqual(
-            MenuBarStatus.badge(activity: .working, needsAttention: true),
-            .working
         )
     }
 
@@ -323,8 +339,7 @@ final class MenuBarActivityTests: XCTestCase {
         XCTAssertEqual(preparing, idle, "the dot must not claim recording before audio flows")
         XCTAssertNotEqual(recovery, idle, "recovered work must remain visible after the HUD disappears")
         XCTAssertNotEqual(recording, idle, "recording must add an indicator to the rendered label")
-        XCTAssertNotEqual(processing, idle, "processing must add an indicator to the rendered label")
-        XCTAssertNotEqual(recording, processing, "recording and processing must render differently")
+        XCTAssertEqual(processing, idle, "working on speech is not a third color: the label rests")
     }
 
     @MainActor
@@ -363,7 +378,7 @@ final class MenuBarActivityTests: XCTestCase {
 final class MenuBarLabelArtTests: XCTestCase {
     func testScenario037() {
         XCTAssertNil(MenuBarLabelArt.image(badge: .hidden), "rest uses the plain template asset")
-        for badge in [MenuBarBadge.recording, .working, .attention] {
+        for badge in [MenuBarBadge.recording, .attention] {
             let image = MenuBarLabelArt.image(badge: badge)
             XCTAssertNotNil(image)
             XCTAssertEqual(image?.size, NSSize(width: 22, height: 22))
@@ -405,8 +420,6 @@ final class SetupAttentionTests: XCTestCase {
     func testScenario041() {
         XCTAssertTrue(needsAction(accessibility: .denied))
         XCTAssertTrue(needsAction(accessibility: .waitingForSettings))
-        XCTAssertTrue(needsAction(accessibility: .restartRequired))
-        XCTAssertTrue(needsAction(accessibility: .repairRequired))
         XCTAssertTrue(needsAction(accessibility: .failed("boom")))
         XCTAssertFalse(needsAction(accessibility: .repairing), "repair is running — nothing to click")
     }

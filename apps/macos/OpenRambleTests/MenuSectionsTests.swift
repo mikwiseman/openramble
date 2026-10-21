@@ -52,6 +52,18 @@ final class MenuSectionsTests: XCTestCase {
         )
     }
 
+    /// Two actions, not a hidden mode: "Start Recording" always records
+    /// audio, and "Record Screen…" is always one click away. A segmented
+    /// Audio|Screen choice in the Recordings window used to decide silently
+    /// what the menu's Start Recording did.
+    func testScreenRecordingIsItsOwnAction() {
+        let idle = sections().flatMap(\.self)
+        XCTAssertTrue(idle.contains(.startRecording))
+        XCTAssertTrue(idle.contains(.startScreenRecording))
+        XCTAssertFalse(sections(recording: .recording).flatMap(\.self).contains(.startScreenRecording))
+        XCTAssertFalse(sections(state: .listening).flatMap(\.self).contains(.startScreenRecording))
+    }
+
     func testARecordingTakesFocusAndCanBePausedFromTheMenu() {
         let menu = sections(recording: .recording)
         XCTAssertEqual(menu.first?.first, .recordingLine)
@@ -80,7 +92,7 @@ final class MenuSectionsTests: XCTestCase {
     func testScenario001() {
         XCTAssertEqual(
             sections(),
-            [[.statusLine], [.startRecording], [.openRecordings, .settings, .quit]]
+            [[.statusLine], [.startRecording, .startScreenRecording], [.openRecordings, .settings, .quit]]
         )
     }
 
@@ -92,7 +104,7 @@ final class MenuSectionsTests: XCTestCase {
                 [.statusLine],
                 [.insertLastDictation],
                 [.recentDictations, .copyLast],
-                [.startRecording],
+                [.startRecording, .startScreenRecording],
                 [.openRecordings, .settings, .quit],
             ]
         )
@@ -130,7 +142,7 @@ final class MenuSectionsTests: XCTestCase {
     func testScenario005() {
         XCTAssertEqual(
             sections(ready: false),
-            [[.statusLine], [.setupHints, .finishSetup], [.startRecording], [.openRecordings, .settings, .quit]]
+            [[.statusLine], [.setupHints, .finishSetup], [.startRecording, .startScreenRecording], [.openRecordings, .settings, .quit]]
         )
     }
 
@@ -143,7 +155,7 @@ final class MenuSectionsTests: XCTestCase {
                 [.setupHints, .finishSetup],
                 [.insertLastDictation],
                 [.recentDictations, .copyLast],
-                [.startRecording],
+                [.startRecording, .startScreenRecording],
                 [.openRecordings, .settings, .quit],
             ]
         )
@@ -174,7 +186,7 @@ final class MenuSectionsTests: XCTestCase {
         let allowed: Set<MenuRow> = [
             .statusLine, .stopAndInsert, .cancelDictation, .setupHints, .finishSetup,
             .insertLastDictation, .revealRecoveredRecordings,
-            .recentDictations, .copyLast, .startRecording, .openRecordings, .settings, .quit,
+            .recentDictations, .copyLast, .startRecording, .startScreenRecording, .openRecordings, .settings, .quit,
         ]
         XCTAssertTrue(everything.isSubset(of: allowed))
     }
@@ -187,12 +199,12 @@ final class MenuSectionsTests: XCTestCase {
     func testRecoveredAudioStaysOutOfTheMenuUnlessRecoveryFaulted() {
         XCTAssertEqual(
             sections(),
-            [[.statusLine], [.startRecording], [.openRecordings, .settings, .quit]],
+            [[.statusLine], [.startRecording, .startScreenRecording], [.openRecordings, .settings, .quit]],
             "ordinary retained recordings are a Settings affair, not menu debris"
         )
         XCTAssertEqual(
             sections(recoveryFaulted: true),
-            [[.statusLine], [.revealRecoveredRecordings], [.startRecording], [.openRecordings, .settings, .quit]]
+            [[.statusLine], [.revealRecoveredRecordings], [.startRecording, .startScreenRecording], [.openRecordings, .settings, .quit]]
         )
         XCTAssertFalse(
             sections(state: .listening, recoveryFaulted: true)
