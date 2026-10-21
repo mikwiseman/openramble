@@ -68,6 +68,57 @@ enum CaptureInputs {
         ) else { return nil }
         return AVAudioFormat(streamDescription: &description, channelLayout: layout)
     }
+
+    /// What a reader of the device is told about. Being disconnected and
+    /// changing format are the same news: the stream it opened is gone.
+    static let watched: [AudioObjectPropertyAddress] = [
+        AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyDeviceIsAlive,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        ),
+        AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyNominalSampleRate,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        ),
+        AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyStreamFormat,
+            mScope: kAudioDevicePropertyScopeInput,
+            mElement: kAudioObjectPropertyElementMain
+        ),
+    ]
+
+    /// Whether the device still delivers the stream a reader opened as
+    /// `format`: alive, at the same rate and channel count. A call that turns
+    /// voice processing on takes a Mac's built-in microphones from one
+    /// channel to three, and back when it ends; every I/O cycle after that
+    /// no longer fits the format and is dropped.
+    static func delivers(_ format: AVAudioFormat, from device: AudioDeviceID) -> Bool {
+        var address = watched[0]
+        var alive: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &alive) == noErr, alive != 0 else {
+            return false
+        }
+        return isSameStream(inputFormat(of: device), as: format)
+    }
+
+    static func isSameStream(_ current: AudioStreamBasicDescription?, as opened: AVAudioFormat) -> Bool {
+        guard let current else { return false }
+        return current.mSampleRate == opened.sampleRate && current.mChannelsPerFrame == opened.channelCount
+    }
+
+    static func inputFormat(of device: AudioDeviceID) -> AudioStreamBasicDescription? {
+        var description = AudioStreamBasicDescription()
+        var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+        var address = watched[2]
+        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &description) == noErr,
+              description.mSampleRate > 0,
+              description.mChannelsPerFrame > 0
+        else { return nil }
+        return description
+    }
 }
 
 /// Runs a closure once, from whichever thread gets there first.
@@ -98,26 +149,6 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
     private var listening = false
     private let listenerQueue = DispatchQueue(label: "is.waiwai.dictation.capture-device")
     private var listener: AudioObjectPropertyListenerBlock?
-
-    /// What the take is told about. Being disconnected and changing format
-    /// are the same news: the stream the take was opened on is gone.
-    private static let watched: [AudioObjectPropertyAddress] = [
-        AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyDeviceIsAlive,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        ),
-        AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyNominalSampleRate,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        ),
-        AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyStreamFormat,
-            mScope: kAudioDevicePropertyScopeInput,
-            mElement: kAudioObjectPropertyElementMain
-        ),
-    ]
 
     private final class HandlerSlot: @unchecked Sendable {
         private let lock = NSLock()
@@ -162,7 +193,7 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
         guard transport != kAudioDeviceTransportTypeBluetooth,
               transport != kAudioDeviceTransportTypeBluetoothLE,
               Self.inputStreamCount(of: device) == 1,
-              let description = Self.inputFormat(of: device),
+              let description = CaptureInputs.inputFormat(of: device),
               let format = CaptureInputs.format(of: description),
               format.sampleRate > 0,
               format.channelCount > 0
@@ -220,19 +251,13 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
         let expected = format
         let slot = slot
         let block: AudioObjectPropertyListenerBlock = { _, _ in
-            let alive = (Self.uint32(device, kAudioDevicePropertyDeviceIsAlive) ?? 0) != 0
-            let current = Self.inputFormat(of: device)
-            let unchanged = current.map {
-                $0.mSampleRate == expected.sampleRate
-                    && $0.mChannelsPerFrame == expected.channelCount
-            } ?? false
-            if !alive || !unchanged { slot.reportLost() }
+            if !CaptureInputs.delivers(expected, from: device) { slot.reportLost() }
         }
         lock.withLock {
             listener = block
             listening = true
         }
-        for var address in Self.watched {
+        for var address in CaptureInputs.watched {
             AudioObjectAddPropertyListenerBlock(device, &address, listenerQueue, block)
         }
     }
@@ -246,7 +271,7 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
             return listening ? listener : nil
         }
         guard let block else { return }
-        for var address in Self.watched {
+        for var address in CaptureInputs.watched {
             AudioObjectRemovePropertyListenerBlock(device, &address, listenerQueue, block)
         }
     }
@@ -284,21 +309,6 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
         var size: UInt32 = 0
         guard AudioObjectGetPropertyDataSize(device, &address, 0, nil, &size) == noErr else { return 0 }
         return Int(size) / MemoryLayout<AudioStreamID>.size
-    }
-
-    private static func inputFormat(of device: AudioDeviceID) -> AudioStreamBasicDescription? {
-        var description = AudioStreamBasicDescription()
-        var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyStreamFormat,
-            mScope: kAudioDevicePropertyScopeInput,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &description) == noErr,
-              description.mSampleRate > 0,
-              description.mChannelsPerFrame > 0
-        else { return nil }
-        return description
     }
 }
 

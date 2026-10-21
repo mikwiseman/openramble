@@ -271,6 +271,37 @@ final class MicrophoneCaptureInputTests: XCTestCase {
         XCTAssertEqual(rms, 0.5 / 2.0.squareRoot(), accuracy: 0.02, "the first microphone, as itself")
     }
 
+    /// A call that turns voice processing on or off takes the built-in
+    /// microphones between one channel and three under a reader that is
+    /// already running. Every I/O cycle after that no longer fits the format
+    /// the reader opened, and is dropped. A dictation take and the recorder
+    /// ask this one question to learn that their stream is gone, and open
+    /// the device again.
+    func testAStreamWithOtherChannelsOrRateIsNoLongerTheOneOpened() throws {
+        func stream(rate: Double, channels: UInt32) -> AudioStreamBasicDescription {
+            AudioStreamBasicDescription(
+                mSampleRate: rate,
+                mFormatID: kAudioFormatLinearPCM,
+                mFormatFlags: kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked,
+                mBytesPerPacket: 4 * channels,
+                mFramesPerPacket: 1,
+                mBytesPerFrame: 4 * channels,
+                mChannelsPerFrame: channels,
+                mBitsPerChannel: 32,
+                mReserved: 0
+            )
+        }
+        let mono = try XCTUnwrap(CaptureInputs.format(of: stream(rate: 48_000, channels: 1)))
+        let underACall = try XCTUnwrap(CaptureInputs.format(of: stream(rate: 48_000, channels: 3)))
+
+        XCTAssertTrue(CaptureInputs.isSameStream(stream(rate: 48_000, channels: 1), as: mono))
+        XCTAssertTrue(CaptureInputs.isSameStream(stream(rate: 48_000, channels: 3), as: underACall))
+        XCTAssertFalse(CaptureInputs.isSameStream(stream(rate: 48_000, channels: 3), as: mono), "a call starts")
+        XCTAssertFalse(CaptureInputs.isSameStream(stream(rate: 48_000, channels: 1), as: underACall), "the call ends")
+        XCTAssertFalse(CaptureInputs.isSameStream(stream(rate: 24_000, channels: 1), as: mono), "the rate moves")
+        XCTAssertFalse(CaptureInputs.isSameStream(nil, as: mono), "a device that no longer answers")
+    }
+
     /// Opening the device is a Core Audio call, and Core Audio calls wedge
     /// when coreaudiod is in trouble. Run on the capture actor, one wedged
     /// open held every later call behind it: the containment of that very

@@ -43,8 +43,8 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
     private var name: String?
     private var session: Session = .idle
     private var defaultInputListener: AudioObjectPropertyListenerBlock?
-    private var deviceAliveListener: AudioObjectPropertyListenerBlock?
-    private var aliveDevice: AudioDeviceID?
+    private var deviceListener: AudioObjectPropertyListenerBlock?
+    private var listenedDevice: AudioDeviceID?
     private let ioQueue = DispatchQueue(label: "is.waiwai.dictation.meeting-microphone")
 
     private enum Session {
@@ -184,7 +184,7 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
 
         session = .hal(device: device, procID: procID)
         name = Self.name(of: device)
-        listenForChanges(device: device, pinned: preferred != nil, onFailure: onFailure)
+        listenForChanges(device: device, format: sourceFormat, pinned: preferred != nil, onFailure: onFailure)
     }
 
     // MARK: - Engine fallback
@@ -260,8 +260,14 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
 
     // MARK: - Route changes
 
+    /// The default input moving, the device going away, or its stream
+    /// changing under the I/O proc: a call that turns voice processing on or
+    /// off takes the built-in microphones between one channel and three, and
+    /// no cycle after that fits the format the proc was opened with. Each is
+    /// a reason to open the microphone again.
     private func listenForChanges(
         device: AudioDeviceID,
+        format: AVAudioFormat,
         pinned: Bool,
         onFailure: @escaping @Sendable (MeetingSourceFailure) -> Void
     ) {
@@ -273,11 +279,16 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
             )
             defaultInputListener = block
         }
-        var aliveAddress = Self.deviceAliveAddress
-        let alive: AudioObjectPropertyListenerBlock = { _, _ in onFailure(.configurationChanged) }
-        AudioObjectAddPropertyListenerBlock(device, &aliveAddress, nil, alive)
-        deviceAliveListener = alive
-        aliveDevice = device
+        let reported = OnceFlag()
+        let changed: AudioObjectPropertyListenerBlock = { _, _ in
+            guard !CaptureInputs.delivers(format, from: device), reported.claim() else { return }
+            onFailure(.configurationChanged)
+        }
+        for var address in CaptureInputs.watched {
+            AudioObjectAddPropertyListenerBlock(device, &address, nil, changed)
+        }
+        deviceListener = changed
+        listenedDevice = device
     }
 
     private func tearDownListeners() {
@@ -287,13 +298,14 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
                 AudioObjectID(kAudioObjectSystemObject), &address, nil, defaultInputListener
             )
         }
-        if let deviceAliveListener, let aliveDevice {
-            var address = Self.deviceAliveAddress
-            AudioObjectRemovePropertyListenerBlock(aliveDevice, &address, nil, deviceAliveListener)
+        if let deviceListener, let listenedDevice {
+            for var address in CaptureInputs.watched {
+                AudioObjectRemovePropertyListenerBlock(listenedDevice, &address, nil, deviceListener)
+            }
         }
         defaultInputListener = nil
-        deviceAliveListener = nil
-        aliveDevice = nil
+        deviceListener = nil
+        listenedDevice = nil
     }
 
     // MARK: - Core Audio queries
@@ -301,14 +313,6 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
     private static var defaultInputAddress: AudioObjectPropertyAddress {
         AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDefaultInputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-    }
-
-    private static var deviceAliveAddress: AudioObjectPropertyAddress {
-        AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyDeviceIsAlive,
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
