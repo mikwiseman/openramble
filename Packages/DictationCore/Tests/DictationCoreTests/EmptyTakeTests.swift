@@ -40,7 +40,8 @@ final class EmptyTakeTests: XCTestCase {
 
     private func makeController(
         capture: any AudioCapturing,
-        transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)? = nil
+        transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)? = nil,
+        recordingReadableDeadline: Duration = .seconds(10)
     ) -> DictationController {
         let controller = DictationController(
             capture: capture,
@@ -49,7 +50,8 @@ final class EmptyTakeTests: XCTestCase {
             inserter: inserter,
             overlay: overlay,
             sounds: sounds,
-            pipeline: { _ in TextPipeline() }
+            pipeline: { _ in TextPipeline() },
+            recordingReadableDeadline: recordingReadableDeadline
         )
         controller.onTakeFinished = { [weak self] text, url in
             guard let self, historyKeeps else { return false }
@@ -138,8 +140,8 @@ final class EmptyTakeTests: XCTestCase {
 
     /// A writer that never finishes must not hold the next take hostage.
     /// Someone told "nothing was recognized" says it again a few seconds
-    /// later, and the samples are already whole in memory, so History gets
-    /// them without waiting on the disk.
+    /// later. History waits for the writer on its own, and once the writer's
+    /// time is up it gets the take rebuilt from the samples.
     func testAWordlessTakeDoesNotWaitForAWedgedWriter() async throws {
         let takes = FileManager.default.temporaryDirectory
             .appending(path: "wedged-\(UUID().uuidString)", directoryHint: .isDirectory)
@@ -148,7 +150,8 @@ final class EmptyTakeTests: XCTestCase {
         let samples = quiet + [0.1] + quiet
         let controller = makeController(
             capture: try MemoryOnlyCapture(directory: takes, samples: samples, writerWedged: true),
-            transcribeSamples: { _ in Self.nothing }
+            transcribeSamples: { _ in Self.nothing },
+            recordingReadableDeadline: .milliseconds(500)
         )
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
@@ -164,6 +167,7 @@ final class EmptyTakeTests: XCTestCase {
         controller.cancel()
         try await waitUntil { controller.state == .idle }
 
+        try await waitUntil { !self.archived.isEmpty }
         XCTAssertEqual(archived.map(\.text), [""])
         XCTAssertEqual(
             handedOverFrames,

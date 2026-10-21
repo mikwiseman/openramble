@@ -934,12 +934,9 @@ public final class DictationController {
         }
     }
 
-    private func readableURL(
-        for recording: CapturedRecording,
-        within deadline: Duration? = nil
-    ) async throws -> URL {
+    private func readableURL(for recording: CapturedRecording) async throws -> URL {
         do {
-            return try await withTranscriptionDeadline(deadline ?? recordingReadableDeadline) {
+            return try await withTranscriptionDeadline(recordingReadableDeadline) {
                 try await recording.readableURL()
             }
         } catch is TranscriptionTimeout {
@@ -948,11 +945,10 @@ public final class DictationController {
     }
 
     private func recoverySourceURL(
-        for recording: CapturedRecording,
-        readableWithin deadline: Duration? = nil
+        for recording: CapturedRecording
     ) async throws -> (url: URL, rebuiltFromPCM: Bool) {
         do {
-            return (try await readableURL(for: recording, within: deadline), false)
+            return (try await readableURL(for: recording), false)
         } catch let readableFailure {
             let rebuilt = try await withTranscriptionDeadline(recordingPreserveDeadline) {
                 try await recording.materializedRecoveryURL()
@@ -1052,6 +1048,39 @@ public final class DictationController {
                 nil,
                 L10n.tr(" Local safekeeping is continuing in the background; automatic recovery will keep the take on this Mac even if Retry is not shown immediately.")
             )
+        }
+    }
+
+    /// Hand a take with no words to History, and say whether History kept it.
+    ///
+    /// With no words the file is all there is, so History must get it whole:
+    /// from the take's own writer, which may be slow but holds the disk while
+    /// it writes, or else rebuilt from the samples. A take History never got
+    /// is not deleted here; it stays where automatic recovery looks, and the
+    /// journal says the file never arrived. After Escape the take was thrown
+    /// away, not lost.
+    private func keepWordlessTake(
+        _ recording: CapturedRecording,
+        target: TargetApplication?,
+        session: DictationSessionID
+    ) async -> Bool {
+        let started = ContinuousClock.now
+        let thrownAway = { [self] in
+            recording.disposition.state == .deleteRequested
+                || (isCurrent(session) && !shouldContinue(session))
+        }
+        do {
+            let source = try await recoverySourceURL(for: recording)
+            // History makes its own copy; a rebuilt one is needed by nobody after.
+            defer { if source.rebuiltFromPCM { RecordingFileDisposer.shared.submit(source.url) } }
+            guard !thrownAway(), onTakeFinished?("", source.url, target) == true else { return false }
+            RecordingFileDisposer.shared.submit(recording.url)
+            return true
+        } catch {
+            if !thrownAway() {
+                onStageFailure?(.readableFile, started.duration(to: .now), error is TranscriptionTimeout)
+            }
+            return false
         }
     }
 
@@ -1604,6 +1633,7 @@ public final class DictationController {
             // and recognizing it again is one click.
             let notice: DictationNotice
             if SilentTakePolicy.heardOnlySilence(bufferedSamples) {
+                await discard(recording.url, session: session)
                 notice = DictationNotice(
                     kind: .warning,
                     message: microphoneName?().map { L10n.tr("Heard only silence from %@.", $0) }
@@ -1611,42 +1641,37 @@ public final class DictationController {
                     wordsDidNotLand: true
                 )
             } else {
-                // History copies the file during this call, and with no words
-                // the file is all there is, so it must be whole. Recognition
-                // from memory never waited for it, and the person who was just
-                // told nothing was recognized is about to try again, so the
-                // writer gets only the foreground grace. A file that is not
-                // ready by then is rebuilt from the samples - a copy nobody
-                // needs once History has its own. A take with no samples was
-                // recognized from its file, which is therefore already there.
-                // With neither, the take is lost, and the journal says so.
-                // The notice says where the take went, so it is only claimed
-                // once History has really kept it.
-                let handover = ContinuousClock.now
-                var kept = false
-                do {
-                    let source = try await recoverySourceURL(
-                        for: recording,
-                        readableWithin: recoveryForegroundGrace
-                    )
-                    if shouldContinue(session) { kept = onTakeFinished?("", source.url, insertionTarget) ?? false }
-                    if source.rebuiltFromPCM { await discard(source.url, session: session) }
-                } catch {
-                    // After Escape the person threw the take away; it was not lost.
-                    if shouldContinue(session) {
-                        onStageFailure?(.readableFile, handover.duration(to: .now), error is TranscriptionTimeout)
-                    }
+                // The handover to History waits for the take's file, and the
+                // person who was just told nothing was recognized is about to
+                // try again, so the foreground waits only the grace. A
+                // handover still running then finishes on its own. The notice
+                // says where the take went only once that is known.
+                let handover = Task { [weak self] in
+                    await self?.keepWordlessTake(recording, target: insertionTarget, session: session) ?? false
                 }
-                notice = DictationNotice(
-                    kind: .info,
-                    message: kept
-                        ? L10n.tr("Nothing was recognized — the recording is in History.")
-                        : L10n.tr("Nothing was recognized — nothing was inserted.")
-                            + L10n.tr(" The recording couldn't be kept."),
-                    wordsDidNotLand: true
-                )
+                let kept = try? await withTranscriptionDeadline(recoveryForegroundGrace) {
+                    await handover.value
+                }
+                guard shouldContinue(session) else {
+                    // Escape: the take is thrown away, wherever its handover is.
+                    recording.disposition.requestDelete()
+                    await discard(recording.url, session: session)
+                    await finishWithoutInsertion(session: session)
+                    return
+                }
+                let message: String
+                switch kept {
+                case true?:
+                    message = L10n.tr("Nothing was recognized — the recording is in History.")
+                case false?:
+                    await discard(recording.url, session: session)
+                    message = L10n.tr("Nothing was recognized — nothing was inserted.")
+                        + L10n.tr(" The recording couldn't be kept.")
+                case nil:
+                    message = L10n.tr("Nothing was recognized — nothing was inserted.")
+                }
+                notice = DictationNotice(kind: .info, message: message, wordsDidNotLand: true)
             }
-            await discard(recording.url, session: session)
             await report(notice, session: session)
             await cleanup(session: session)
             return
