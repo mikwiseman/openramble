@@ -1789,6 +1789,10 @@ public final class DictationController {
 
     /// Cancel dictation.
     public func cancel() {
+        // A press that waits for the paste is no take yet, so cancelling it
+        // only forgets it. The hotkey monitor swallows the release of a hold
+        // it cancels, and a replayed press would listen with the key up.
+        pressDuringInsertion = nil
         guard DictationStopPolicy.canCancel(state: state) else { return }
         streamedSegments?.cancel()
 

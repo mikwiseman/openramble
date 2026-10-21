@@ -1014,6 +1014,30 @@ final class DictationControllerTests: XCTestCase {
         XCTAssertEqual(stops, 2, "the tap's take was stopped, not left listening")
     }
 
+    /// A press inside the hold that turns out to be a shortcut (Right ⌘ and
+    /// Return, "send" in a chat app) is no take. The hotkey monitor cancels
+    /// the hold and swallows its release, so the press that waits for the
+    /// paste must go with it, or its take would listen with the key up.
+    func testAShortcutPressedWhileALandedPasteFinishesStartsNothing() async throws {
+        let landed = LandedPasteInserter()
+        let controller = makeController(inserter: landed)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        let pasted = try await waitForPaste(landed, count: 1)
+        try await Task.sleep(until: pasted + .milliseconds(80))
+        XCTAssertEqual(controller.state, .inserting)
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        // What `onAbortShortcut` does; the release that follows never comes.
+        controller.cancel()
+
+        try await Task.sleep(until: pasted + .milliseconds(600))
+        XCTAssertEqual(controller.state, .idle)
+        let starts = await capture.startCount
+        XCTAssertEqual(starts, 1, "the shortcut started no take")
+    }
+
     /// Nothing was pasted, and putting the person's clipboard back failed
     /// too. Both are said: the text is in the menu, and what they had copied
     /// is gone.
