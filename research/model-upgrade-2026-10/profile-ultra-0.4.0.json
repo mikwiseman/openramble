@@ -1,0 +1,128 @@
+{
+ "cli": "/Users/mikwiseman/Library/Caches/OpenRambleScorecard/src/transcribe.cpp-v0.4.0/build-cli/bin/transcribe-cli",
+ "model": "/Users/mikwiseman/Library/Caches/OpenRambleScorecard/models/parakeet-ultra-Q8_0/parakeet-ultra-Q8_0.gguf",
+ "model_sha256": "007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59",
+ "repeats": 6,
+ "switches": [],
+ "quiet": [
+  {
+   "cpu_idle": 0.8781,
+   "waited_seconds": 0.0
+  },
+  {
+   "cpu_idle": 0.8563,
+   "waited_seconds": 0.0
+  },
+  {
+   "cpu_idle": 0.8353,
+   "waited_seconds": 0.0
+  },
+  {
+   "cpu_idle": 0.8556,
+   "waited_seconds": 0.0
+  },
+  {
+   "cpu_idle": 0.8397,
+   "waited_seconds": 0.0
+  },
+  {
+   "cpu_idle": 0.8459,
+   "waited_seconds": 0.0
+  },
+  {
+   "cpu_idle": 0.8484999999999999,
+   "waited_seconds": 0.0
+  }
+ ],
+ "inputs": [
+  {
+   "id": "ru_ru-18363036360322471934",
+   "audio_seconds": 4.5,
+   "mel_ms": 0.5,
+   "encode_ms": 48.6,
+   "decode_ms": 16.15
+  },
+  {
+   "id": "ru_ru-15785260273753185229",
+   "audio_seconds": 11.1,
+   "mel_ms": 1.0,
+   "encode_ms": 65.6,
+   "decode_ms": 53.4
+  },
+  {
+   "id": "ru_ru-3470812321873741369",
+   "audio_seconds": 23.16,
+   "mel_ms": 1.75,
+   "encode_ms": 132.85000000000002,
+   "decode_ms": 118.69999999999999
+  },
+  {
+   "id": "en_us-14648010410081654131",
+   "audio_seconds": 4.5,
+   "mel_ms": 0.5,
+   "encode_ms": 37.75,
+   "decode_ms": 22.1
+  },
+  {
+   "id": "en_us-2381187994276969930",
+   "audio_seconds": 8.8,
+   "mel_ms": 0.7,
+   "encode_ms": 55.25,
+   "decode_ms": 27.35
+  },
+  {
+   "id": "en_us-2508559905589212221",
+   "audio_seconds": 29.3,
+   "mel_ms": 1.9,
+   "encode_ms": 166.64999999999998,
+   "decode_ms": 92.4
+  },
+  {
+   "id": "take-en-30s",
+   "audio_seconds": 37.32,
+   "mel_ms": 1.85,
+   "encode_ms": 206.95,
+   "decode_ms": 98.4
+  },
+  {
+   "id": "take-en-60s",
+   "audio_seconds": 71.72,
+   "mel_ms": 3.8,
+   "encode_ms": 457.75,
+   "decode_ms": 210.7
+  },
+  {
+   "id": "take-en-120s",
+   "audio_seconds": 128.7,
+   "mel_ms": 8.55,
+   "encode_ms": 969.55,
+   "decode_ms": 476.35
+  },
+  {
+   "id": "take-ru-30s",
+   "audio_seconds": 33.06,
+   "mel_ms": 2.4,
+   "encode_ms": 246.95,
+   "decode_ms": 137.9
+  },
+  {
+   "id": "take-ru-60s",
+   "audio_seconds": 71.64,
+   "mel_ms": 5.199999999999999,
+   "encode_ms": 536.45,
+   "decode_ms": 305.0
+  },
+  {
+   "id": "take-ru-120s",
+   "audio_seconds": 120.18,
+   "mel_ms": 7.9,
+   "encode_ms": 916.4,
+   "decode_ms": 491.95
+  }
+ ],
+ "median": {
+  "mel_ms": 1.875,
+  "encode_ms": 186.79999999999998,
+  "decode_ms": 108.55
+ }
+}

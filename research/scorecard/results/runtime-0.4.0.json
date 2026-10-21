@@ -1,0 +1,821 @@
+{
+ "schema": "openramble-scorecard/1",
+ "candidate": {
+  "label": "v3, runtime 0.4.0",
+  "summary": "Parakeet v3 Q8, transcribe.cpp 0.4.0",
+  "order": 3,
+  "model": {
+   "name": "parakeet-tdt-0.6b-v3 Q8_0",
+   "path": "models/parakeet-tdt-0.6b-v3-Q8_0/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+   "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+   "source": "https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/blob/85ac09ea12fc4b1112fa76810059364bc6adc9de/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+   "license": "CC-BY-4.0"
+  },
+  "runtime": "transcribe.cpp 0.4.0, upstream prebuilt XCFramework (SwiftPM checksum 3da069d2…), Metal, one decoder thread, no language hint",
+  "process": {
+   "kind": "asr-bench"
+  },
+  "warm": {
+   "kind": "asr-bench",
+   "commit": "59e03557bdf265ada6a1521e26c11372707734e8"
+  },
+  "id": "runtime-0.4.0"
+ },
+ "scored_at": "2026-10-20T05:00:56.163515+00:00",
+ "sessions": [
+  {
+   "started": {
+    "at": "2026-10-19T20:30:11.961622+00:00",
+    "thermal": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+    "load_average": [
+     8.13427734375,
+     15.080078125,
+     25.62109375
+    ]
+   },
+   "suites": [
+    "fleurs-full",
+    "fleurs",
+    "noise",
+    "takes",
+    "langbug",
+    "hour"
+   ],
+   "host": {
+    "hardware": [
+     "Mac16,8",
+     "Apple M4 Pro",
+     "25769803776",
+     "14"
+    ],
+    "macos": "27.0.1",
+    "pressure_workers": 14
+   },
+   "installed_app_running": true
+  },
+  {
+   "started": {
+    "at": "2026-10-20T00:05:54.309732+00:00",
+    "thermal": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+    "load_average": [
+     6.81787109375,
+     5.14208984375,
+     4.31494140625
+    ]
+   },
+   "suites": [
+    "speed-process",
+    "speed-warm"
+   ],
+   "host": {
+    "hardware": [
+     "Mac16,8",
+     "Apple M4 Pro",
+     "25769803776",
+     "14"
+    ],
+    "macos": "27.0.1",
+    "pressure_workers": 14
+   },
+   "installed_app_running": true
+  },
+  {
+   "started": {
+    "at": "2026-10-20T00:16:14.832239+00:00",
+    "thermal": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+    "load_average": [
+     36.70947265625,
+     26.5029296875,
+     15.8857421875
+    ]
+   },
+   "suites": [
+    "speed-process",
+    "speed-warm"
+   ],
+   "host": {
+    "hardware": [
+     "Mac16,8",
+     "Apple M4 Pro",
+     "25769803776",
+     "14"
+    ],
+    "macos": "27.0.1",
+    "pressure_workers": 14
+   },
+   "installed_app_running": true
+  },
+  {
+   "started": {
+    "at": "2026-10-20T00:42:51.843023+00:00",
+    "thermal": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+    "load_average": [
+     27.87353515625,
+     36.2822265625,
+     33.490234375
+    ]
+   },
+   "suites": [
+    "speed-process",
+    "speed-warm"
+   ],
+   "host": {
+    "hardware": [
+     "Mac16,8",
+     "Apple M4 Pro",
+     "25769803776",
+     "14"
+    ],
+    "macos": "27.0.1",
+    "pressure_workers": 14
+   },
+   "installed_app_running": true
+  },
+  {
+   "started": {
+    "at": "2026-10-20T00:47:10.279702+00:00",
+    "thermal": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+    "load_average": [
+     5.55224609375,
+     20.53759765625,
+     27.3212890625
+    ]
+   },
+   "suites": [
+    "speed-process",
+    "speed-warm"
+   ],
+   "host": {
+    "hardware": [
+     "Mac16,8",
+     "Apple M4 Pro",
+     "25769803776",
+     "14"
+    ],
+    "macos": "27.0.1",
+    "pressure_workers": 14
+   },
+   "installed_app_running": true
+  }
+ ],
+ "metrics": {
+  "fleurs": {
+   "en": {
+    "wer": {
+     "n": 100,
+     "reference_words": 2138,
+     "wer": 0.055659494855004675,
+     "substitutions": 90,
+     "deletions": 22,
+     "insertions": 7,
+     "deletion_rate": 0.01028999064546305,
+     "insertion_rate": 0.003274087932647334
+    },
+    "punctuation": {
+     "comma": {
+      "tp": 82,
+      "fp": 27,
+      "fn": 36,
+      "precision": 0.7522935779816514,
+      "recall": 0.6949152542372882,
+      "f1": 0.7224669603524229
+     },
+     "period": {
+      "tp": 114,
+      "fp": 3,
+      "fn": 5,
+      "precision": 0.9743589743589743,
+      "recall": 0.957983193277311,
+      "f1": 0.9661016949152542
+     },
+     "question": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null
+     },
+     "micro_f1": 0.8466522678185745,
+     "macro_f1": 0.8442843276338385,
+     "skipped_pairs": 0
+    },
+    "capitalization": {
+     "aligned_words": 2026,
+     "accuracy": 0.9827245804540967,
+     "precision": 0.952755905511811,
+     "recall": 0.9132075471698113,
+     "f1": 0.9325626204238922,
+     "tp": 242,
+     "fp": 12,
+     "fn": 23
+    },
+    "wrong_script": {
+     "decodes": 100,
+     "wrong": 0,
+     "empty": 0
+    },
+    "failures": 0
+   },
+   "ru": {
+    "wer": {
+     "n": 100,
+     "reference_words": 1882,
+     "wer": 0.05951115834218916,
+     "substitutions": 88,
+     "deletions": 17,
+     "insertions": 7,
+     "deletion_rate": 0.009032943676939426,
+     "insertion_rate": 0.0037194473963868225
+    },
+    "punctuation": {
+     "comma": {
+      "tp": 130,
+      "fp": 13,
+      "fn": 33,
+      "precision": 0.9090909090909091,
+      "recall": 0.7975460122699386,
+      "f1": 0.8496732026143791
+     },
+     "period": {
+      "tp": 114,
+      "fp": 5,
+      "fn": 6,
+      "precision": 0.957983193277311,
+      "recall": 0.95,
+      "f1": 0.9539748953974896
+     },
+     "question": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+     },
+     "micro_f1": 0.8957952468007312,
+     "macro_f1": 0.9345493660039562,
+     "skipped_pairs": 0
+    },
+    "capitalization": {
+     "aligned_words": 1777,
+     "accuracy": 0.9842431063590321,
+     "precision": 0.9547738693467337,
+     "recall": 0.9090909090909091,
+     "f1": 0.9313725490196078,
+     "tp": 190,
+     "fp": 9,
+     "fn": 19
+    },
+    "wrong_script": {
+     "decodes": 100,
+     "wrong": 0,
+     "empty": 0
+    },
+    "failures": 0
+   },
+   "pooled_wer": 0.057462686567164176
+  },
+  "latency_fleurs_idle": {
+   "all": {
+    "n": 200,
+    "p50": 0.1781691045,
+    "p95": 0.38438922914999984,
+    "p99": 0.5345239069999986,
+    "max": 0.784652167,
+    "mean": 0.20552195834999998
+   },
+   "short": {
+    "n": 182,
+    "p50": 0.1672983545,
+    "p95": 0.3336763648999999,
+    "p99": 0.5116820945,
+    "max": 0.678666917,
+    "mean": 0.19272179442857143
+   },
+   "long": {
+    "n": 18,
+    "p50": 0.29596266699999996,
+    "p95": 0.5480910750499997,
+    "p99": 0.7373399486099995,
+    "max": 0.784652167,
+    "mean": 0.334945838
+   }
+  },
+  "fleurs_full": {
+   "en": {
+    "wer": {
+     "n": 647,
+     "reference_words": 14573,
+     "wer": 0.054484320318397034,
+     "substitutions": 566,
+     "deletions": 159,
+     "insertions": 69,
+     "deletion_rate": 0.010910588073835175,
+     "insertion_rate": 0.004734783503739793
+    },
+    "punctuation": {
+     "comma": {
+      "tp": 485,
+      "fp": 184,
+      "fn": 278,
+      "precision": 0.7249626307922272,
+      "recall": 0.63564875491481,
+      "f1": 0.6773743016759777
+     },
+     "period": {
+      "tp": 713,
+      "fp": 48,
+      "fn": 57,
+      "precision": 0.9369250985545335,
+      "recall": 0.925974025974026,
+      "f1": 0.9314173742651861
+     },
+     "question": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+     },
+     "micro_f1": 0.8088978766430738,
+     "macro_f1": 0.8695972253137212,
+     "skipped_pairs": 0
+    },
+    "capitalization": {
+     "aligned_words": 13848,
+     "accuracy": 0.9802859618717504,
+     "precision": 0.9261616804583068,
+     "recall": 0.902605459057072,
+     "f1": 0.9142318567389256,
+     "tp": 1455,
+     "fp": 116,
+     "fn": 157
+    },
+    "wrong_script": {
+     "decodes": 647,
+     "wrong": 0,
+     "empty": 0
+    },
+    "failures": 0
+   },
+   "ru": {
+    "wer": {
+     "n": 775,
+     "reference_words": 15098,
+     "wer": 0.055636508146774406,
+     "substitutions": 688,
+     "deletions": 100,
+     "insertions": 52,
+     "deletion_rate": 0.0066233938269969535,
+     "insertion_rate": 0.0034441647900384158
+    },
+    "punctuation": {
+     "comma": {
+      "tp": 1214,
+      "fp": 158,
+      "fn": 162,
+      "precision": 0.8848396501457726,
+      "recall": 0.8822674418604651,
+      "f1": 0.883551673944687
+     },
+     "period": {
+      "tp": 868,
+      "fp": 36,
+      "fn": 68,
+      "precision": 0.9601769911504425,
+      "recall": 0.9273504273504274,
+      "f1": 0.9434782608695652
+     },
+     "question": {
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+     },
+     "micro_f1": 0.9077057030909882,
+     "macro_f1": 0.9423433116047507,
+     "skipped_pairs": 0
+    },
+    "capitalization": {
+     "aligned_words": 14310,
+     "accuracy": 0.9813417190775682,
+     "precision": 0.9473309608540925,
+     "recall": 0.8733595800524935,
+     "f1": 0.9088426083987708,
+     "tp": 1331,
+     "fp": 74,
+     "fn": 193
+    },
+    "wrong_script": {
+     "decodes": 775,
+     "wrong": 0,
+     "empty": 0
+    },
+    "failures": 0
+   },
+   "pooled_wer": 0.05507060766404907
+  },
+  "latency_fleurs_full_idle": {
+   "all": {
+    "n": 1422,
+    "p50": 0.130128458,
+    "p95": 0.23454507320000004,
+    "p99": 0.32203703249999927,
+    "max": 6.831434583,
+    "mean": 0.14673309699859352
+   },
+   "short": {
+    "n": 1244,
+    "p50": 0.1239773745,
+    "p95": 0.20078499819999998,
+    "p99": 0.25331504575,
+    "max": 1.46449625,
+    "mean": 0.13074422823713824
+   },
+   "long": {
+    "n": 178,
+    "p50": 0.2002429375,
+    "p95": 0.32744515620000003,
+    "p99": 0.7164410418199966,
+    "max": 6.831434583,
+    "mean": 0.2584755281179775
+   }
+  },
+  "long_takes": {
+   "take-en-30s": {
+    "audio_seconds": 37.32,
+    "n": 1,
+    "reference_words": 76,
+    "wer": 0.06578947368421052,
+    "substitutions": 4,
+    "deletions": 0,
+    "insertions": 1,
+    "deletion_rate": 0.0,
+    "insertion_rate": 0.013157894736842105
+   },
+   "take-en-60s": {
+    "audio_seconds": 71.72,
+    "n": 1,
+    "reference_words": 162,
+    "wer": 0.04938271604938271,
+    "substitutions": 6,
+    "deletions": 0,
+    "insertions": 2,
+    "deletion_rate": 0.0,
+    "insertion_rate": 0.012345679012345678
+   },
+   "take-en-120s": {
+    "audio_seconds": 128.7,
+    "n": 1,
+    "reference_words": 303,
+    "wer": 0.052805280528052806,
+    "substitutions": 6,
+    "deletions": 7,
+    "insertions": 3,
+    "deletion_rate": 0.0231023102310231,
+    "insertion_rate": 0.009900990099009901
+   },
+   "take-ru-30s": {
+    "audio_seconds": 33.06,
+    "n": 1,
+    "reference_words": 56,
+    "wer": 0.0,
+    "substitutions": 0,
+    "deletions": 0,
+    "insertions": 0,
+    "deletion_rate": 0.0,
+    "insertion_rate": 0.0
+   },
+   "take-ru-60s": {
+    "audio_seconds": 71.64,
+    "n": 1,
+    "reference_words": 118,
+    "wer": 0.059322033898305086,
+    "substitutions": 4,
+    "deletions": 3,
+    "insertions": 0,
+    "deletion_rate": 0.025423728813559324,
+    "insertion_rate": 0.0
+   },
+   "take-ru-120s": {
+    "audio_seconds": 120.18,
+    "n": 1,
+    "reference_words": 181,
+    "wer": 0.09944751381215469,
+    "substitutions": 14,
+    "deletions": 3,
+    "insertions": 1,
+    "deletion_rate": 0.016574585635359115,
+    "insertion_rate": 0.0055248618784530384
+   }
+  },
+  "hallucination": {
+   "clips": 11,
+   "clips_with_words": 0,
+   "words": 0,
+   "annotations": 0,
+   "per_clip_words": {
+    "noise-silence-02s": 0,
+    "noise-silence-10s": 0,
+    "noise-silence-45s": 0,
+    "noise-white-60dbfs-10s": 0,
+    "noise-white-40dbfs-10s": 0,
+    "noise-white-30dbfs-10s": 0,
+    "noise-white-40dbfs-45s": 0,
+    "noise-pink-40dbfs-10s": 0,
+    "noise-brown-35dbfs-10s": 0,
+    "noise-hum50-40dbfs-10s": 0,
+    "noise-clicks-30dbfs-10s": 0
+   },
+   "failures": 0
+  },
+  "wrong_script_private": {
+   "corpus": "Mik's preserved English takes, ~/.openramble/lang-bug (private)",
+   "identity_sha256": "9167869cc7542f2883c9816f0ec9931e09beb0043eae610865a085c922d8231c",
+   "take": {
+    "decodes": 5,
+    "wrong": 0,
+    "empty": 0
+   },
+   "total": {
+    "decodes": 199,
+    "wrong": 20,
+    "empty": 1
+   },
+   "sweep": {
+    "decodes": 79,
+    "wrong": 17,
+    "empty": 0
+   },
+   "varied": {
+    "decodes": 90,
+    "wrong": 1,
+    "empty": 0
+   },
+   "perturb": {
+    "decodes": 13,
+    "wrong": 1,
+    "empty": 0
+   },
+   "pieces": {
+    "decodes": 12,
+    "wrong": 1,
+    "empty": 1
+   }
+  },
+  "hour": {
+   "mixed-60s": {
+    "audio_seconds": 71.46,
+    "wall_seconds": 0.834016583,
+    "ok": true,
+    "max_rss_bytes": 1005436928,
+    "runner": "warm-file",
+    "n": 1,
+    "reference_words": 136,
+    "wer": 0.21323529411764705,
+    "substitutions": 0,
+    "deletions": 28,
+    "insertions": 1,
+    "deletion_rate": 0.20588235294117646,
+    "insertion_rate": 0.007352941176470588
+   },
+   "mixed-600s": {
+    "audio_seconds": 613.22,
+    "wall_seconds": 7.627772833,
+    "ok": true,
+    "max_rss_bytes": 1025687552,
+    "runner": "warm-file",
+    "n": 1,
+    "reference_words": 1154,
+    "wer": 0.3648180242634315,
+    "substitutions": 43,
+    "deletions": 373,
+    "insertions": 5,
+    "deletion_rate": 0.32322357019064124,
+    "insertion_rate": 0.004332755632582322
+   },
+   "mixed-3540s": {
+    "audio_seconds": 3543.3,
+    "wall_seconds": 44.877669666,
+    "ok": true,
+    "max_rss_bytes": 1023098880,
+    "runner": "warm-file",
+    "n": 1,
+    "reference_words": 6622,
+    "wer": 0.3903654485049834,
+    "substitutions": 313,
+    "deletions": 2238,
+    "insertions": 34,
+    "deletion_rate": 0.33796436122017515,
+    "insertion_rate": 0.005134400483237693
+   },
+   "ru-3540s": {
+    "audio_seconds": 3550.1,
+    "wall_seconds": 45.985323416,
+    "ok": true,
+    "max_rss_bytes": 1059815424,
+    "runner": "warm-file",
+    "n": 1,
+    "reference_words": 5668,
+    "wer": 0.06386732533521525,
+    "substitutions": 241,
+    "deletions": 97,
+    "insertions": 24,
+    "deletion_rate": 0.0171136203246295,
+    "insertion_rate": 0.004234297812279464
+   },
+   "en-3540s": {
+    "audio_seconds": 3546.8,
+    "wall_seconds": 42.629755083,
+    "ok": true,
+    "max_rss_bytes": 1041121280,
+    "runner": "warm-file",
+    "n": 1,
+    "reference_words": 7754,
+    "wer": 0.09762703120969822,
+    "substitutions": 285,
+    "deletions": 372,
+    "insertions": 100,
+    "deletion_rate": 0.04797523858653598,
+    "insertion_rate": 0.012896569512509672
+   }
+  },
+  "latency_process": {
+   "quiet": {
+    "runs": 36,
+    "success": 36,
+    "n": 36,
+    "p50": 0.42900431250000004,
+    "p95": 0.6012256874999999,
+    "p99": 0.6482567226999999,
+    "max": 0.670119458,
+    "mean": 0.47310846986111105,
+    "max_rss_bytes": 991707136
+   },
+   "load": {
+    "runs": 36,
+    "success": 36,
+    "n": 36,
+    "p50": 0.550565708,
+    "p95": 0.80562520875,
+    "p99": 0.86615114585,
+    "max": 0.878654458,
+    "mean": 0.5992775775555556,
+    "max_rss_bytes": 992706560
+   }
+  },
+  "latency_warm": {
+   "quiet": {
+    "all": {
+     "n": 120,
+     "p50": 0.3274123335,
+     "p95": 1.48223107675,
+     "p99": 1.4865353289799998,
+     "max": 1.48744375,
+     "mean": 0.5245121083500001
+    },
+    "short": {
+     "n": 40,
+     "p50": 0.0784220835,
+     "p95": 0.1321313753,
+     "p99": 0.13314983363,
+     "max": 0.133713416,
+     "mean": 0.085725959275
+    },
+    "long": {
+     "n": 80,
+     "p50": 0.6197770005,
+     "p95": 1.48357001845,
+     "p99": 1.48718397114,
+     "max": 1.48744375,
+     "mean": 0.7439051828875
+    }
+   },
+   "load": {
+    "all": {
+     "n": 120,
+     "p50": 0.4156955,
+     "p95": 2.0097097417,
+     "p99": 2.08767090002,
+     "max": 2.154261291,
+     "mean": 0.6818043099916667
+    },
+    "short": {
+     "n": 40,
+     "p50": 0.1003792915,
+     "p95": 0.20048206605,
+     "p99": 0.21256750451,
+     "max": 0.217752083,
+     "mean": 0.11403499365
+    },
+    "long": {
+     "n": 80,
+     "p50": 0.7619376664999999,
+     "p95": 2.03553965,
+     "p99": 2.1023164541799995,
+     "max": 2.154261291,
+     "mean": 0.9656889681624999
+    }
+   },
+   "first_request_after_load": {
+    "n": 10,
+    "p50": 0.6220897085,
+    "p95": 1.4682332391,
+    "p99": 1.48048801422,
+    "max": 1.483551708,
+    "mean": 0.6836105042
+   }
+  },
+  "load": {
+   "model_load": {
+    "n": 10,
+    "p50": 0.22884381250000002,
+    "p95": 0.24123078475,
+    "p99": 0.24135358975,
+    "max": 0.241384291,
+    "mean": 0.23109264980000002
+   },
+   "warmup_inference": {
+    "n": 10,
+    "p50": 0.026616562,
+    "p95": 0.036107587499999996,
+    "p99": 0.036902017499999995,
+    "max": 0.037100625,
+    "mean": 0.0281647249
+   },
+   "process_to_ready": {
+    "n": 10,
+    "p50": 0.28469633349595824,
+    "p95": 0.2898528711979452,
+    "p99": 0.29052664143717266,
+    "max": 0.2906950839969795,
+    "mean": 0.2836470293972525
+   },
+   "peak_rss_bytes": 1065926656
+  },
+  "runner_parity": {
+   "inputs": 6,
+   "identical": 6
+  },
+  "model": {
+   "bytes": 739508576,
+   "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+   "license": "CC-BY-4.0"
+  }
+ },
+ "hooks": {
+  "term-recall": {
+   "status": "no-data",
+   "needs": "Names, companies and code terms. Rows: {\"path\", \"language\", \"reference\", \"terms\": [...]}. Record consented takes or TTS; keep audio outside Git.",
+   "where": "/Users/mikwiseman/.openramble/scorecard/suites/term-recall.jsonl"
+  },
+  "code-switch": {
+   "status": "no-data",
+   "needs": "RU↔EN switching inside one take. Rows: {\"path\", \"language\", \"reference\"}.",
+   "where": "/Users/mikwiseman/.openramble/scorecard/suites/code-switch.jsonl"
+  },
+  "noise-accent": {
+   "status": "no-data",
+   "needs": "MUSAN mixes at 20/10/5 dB and non-native speech. Rows: {\"path\", \"language\", \"reference\", \"tag\"}.",
+   "where": "/Users/mikwiseman/.openramble/scorecard/suites/noise-accent.jsonl"
+  },
+  "onset-offset": {
+   "status": "no-data",
+   "needs": "Scripted takes whose first and last words sit at the clip edges. Rows: {\"path\", \"language\", \"reference\"}.",
+   "where": "/Users/mikwiseman/.openramble/scorecard/suites/onset-offset.jsonl"
+  },
+  "insertion-matrix": {
+   "status": "not-in-harness",
+   "needs": "Right app, right text, clipboard byte-exact across 12 apps. Needs the Phase 4 e2e harness driving the app."
+  },
+  "paste-timings": {
+   "status": "not-in-harness",
+   "needs": "Key-up to paste p50/p95 from the local numeric journal once toPasteDispatched lands (Phase 4)."
+  },
+  "energy": {
+   "status": "not-in-harness",
+   "needs": "Energy per dictated minute with powermetrics; needs sudo, so it is run by hand."
+  },
+  "meaning-preservation": {
+   "status": "not-in-harness",
+   "needs": "False deletions on the scripted disfluent set; owned by the Clean Verbatim work in DictationCore."
+  }
+ },
+ "evidence": {
+  "observation_sha256": {
+   "fleurs-full.jsonl": "755fac27a778800a88f31f4ff425395fdbaedd1957aa7b3e2d4a43180ce27d58",
+   "fleurs.jsonl": "04a0de9cea9d64be8dc60abf842838f6a4eca3a2b5a47a663d654f46535d0abc",
+   "hour.jsonl": "c417a3d80f7fdc0565edefcefbc404414973e772cd3488c23e41120ec73bf8a6",
+   "langbug.jsonl": "a97c2414c96f6f805e8f04b601fb160b669bd96b72f69512e1e32116d6f09600",
+   "noise.jsonl": "bbc795210a91dd3e928b3e2b7f1ef7194eebb0303a3ee6c3a571a0af99021333",
+   "sessions.jsonl": "1349b79bf7315b6f4acedae9fd68f93fcc8badf0f0207fa953f208cef947ca7a",
+   "speed-process.jsonl": "5af4dee4793ca66abdd4be8b8e0e9d8fb1a68091095a66d15ab0fbf7d098054b",
+   "speed-warm.jsonl": "25e2b1dfcf5f62da865e2a87deabb142a72c123a38522bd98810bbc71247435d",
+   "takes.jsonl": "1c2803c91f83a05a354859b95e7a351f19bb1bf7e0cc63668e1c4230987e2ace"
+  }
+ }
+}

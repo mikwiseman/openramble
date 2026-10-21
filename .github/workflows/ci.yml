@@ -49,6 +49,11 @@ jobs:
           python3 -m py_compile scripts/benchmark-local-asr.py scripts/tests/test_benchmark_local_asr.py
           python3 -m unittest scripts.tests.test_benchmark_local_asr
 
+      - name: Scorecard measures
+        run: |
+          python3 -m py_compile scripts/scorecard/scorecard.py scripts/tests/test_scorecard.py
+          python3 -m unittest scripts.tests.test_scorecard
+
   app:
     name: Application build
     runs-on: macos-26
@@ -376,7 +381,7 @@ jobs:
           for file in \
             LICENSE NOTICE THIRD_PARTY_LICENSES.md \
             model-manifest.json Sparkle-LICENSE.txt \
-            transcribe-cpp-MIT.txt ggml-MIT.txt miniz-MIT.txt \
+            transcribe-cpp-MIT.txt ggml-MIT.txt miniz-MIT.txt silero-vad-MIT.txt \
             Parakeet-CC-BY-4.0.txt
           do
             test -s "$RESOURCES/$file" || { echo "No required resource: $file" >&2; exit 1; }

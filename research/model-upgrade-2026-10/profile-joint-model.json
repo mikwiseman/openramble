@@ -1,0 +1,1447 @@
+{
+ "cli": "/Users/mikwiseman/Library/Caches/OpenRambleScorecard/src/transcribe.cpp-joint/build-joint/bin/transcribe-cli",
+ "model": "/Users/mikwiseman/Library/Caches/OpenRambleScorecard/models/parakeet-tdt-0.6b-v3-Q8_0/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+ "model_sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+ "repeats": 6,
+ "switches": [
+  "fleurs",
+  "TRANSCRIBE_JOINT_WEIGHT_TYPE=model"
+ ],
+ "quiet": [
+  {
+   "cpu_idle": 0.8918,
+   "waited_seconds": 0.0
+  },
+  {
+   "cpu_idle": 0.8534999999999999,
+   "waited_seconds": 0.0
+  },
+  {
+   "cpu_idle": 0.8898,
+   "waited_seconds": 0.0
+  },
+  {
+   "cpu_idle": 0.8595,
+   "waited_seconds": 0.0
+  },
+  {
+   "cpu_idle": 0.8581,
+   "waited_seconds": 0.0
+  },
+  {
+   "cpu_idle": 0.8459,
+   "waited_seconds": 0.0
+  },
+  {
+   "cpu_idle": 0.8920999999999999,
+   "waited_seconds": 0.0
+  }
+ ],
+ "inputs": [
+  {
+   "id": "en_us-11200231708585274851",
+   "audio_seconds": 10.18,
+   "mel_ms": 0.9,
+   "encode_ms": 76.05,
+   "decode_ms": 29.1
+  },
+  {
+   "id": "en_us-14944400645209157789",
+   "audio_seconds": 8.46,
+   "mel_ms": 0.75,
+   "encode_ms": 60.45,
+   "decode_ms": 31.9
+  },
+  {
+   "id": "en_us-10492135991603561867",
+   "audio_seconds": 5.64,
+   "mel_ms": 0.5,
+   "encode_ms": 45.1,
+   "decode_ms": 18.799999999999997
+  },
+  {
+   "id": "en_us-12953138808800823203",
+   "audio_seconds": 11.04,
+   "mel_ms": 0.8500000000000001,
+   "encode_ms": 72.7,
+   "decode_ms": 31.3
+  },
+  {
+   "id": "en_us-12517884865939916901",
+   "audio_seconds": 12.8,
+   "mel_ms": 1.0,
+   "encode_ms": 86.69999999999999,
+   "decode_ms": 29.5
+  },
+  {
+   "id": "en_us-6057938296244834632",
+   "audio_seconds": 10.8,
+   "mel_ms": 0.8,
+   "encode_ms": 67.75,
+   "decode_ms": 32.4
+  },
+  {
+   "id": "en_us-4821372520807131",
+   "audio_seconds": 8.16,
+   "mel_ms": 0.7,
+   "encode_ms": 58.8,
+   "decode_ms": 29.2
+  },
+  {
+   "id": "en_us-11820398005906165915",
+   "audio_seconds": 7.02,
+   "mel_ms": 0.6,
+   "encode_ms": 47.650000000000006,
+   "decode_ms": 26.65
+  },
+  {
+   "id": "en_us-12381237049043414166",
+   "audio_seconds": 11.28,
+   "mel_ms": 0.8500000000000001,
+   "encode_ms": 73.7,
+   "decode_ms": 38.150000000000006
+  },
+  {
+   "id": "en_us-129240607624460201",
+   "audio_seconds": 6.6,
+   "mel_ms": 0.55,
+   "encode_ms": 48.25,
+   "decode_ms": 27.35
+  },
+  {
+   "id": "en_us-1361225517388701679",
+   "audio_seconds": 11.56,
+   "mel_ms": 0.8,
+   "encode_ms": 75.15,
+   "decode_ms": 21.7
+  },
+  {
+   "id": "en_us-17392214165625498386",
+   "audio_seconds": 10.56,
+   "mel_ms": 0.8,
+   "encode_ms": 71.1,
+   "decode_ms": 27.9
+  },
+  {
+   "id": "en_us-11853072634976133891",
+   "audio_seconds": 6.84,
+   "mel_ms": 0.55,
+   "encode_ms": 49.0,
+   "decode_ms": 14.0
+  },
+  {
+   "id": "en_us-15592925372393530543",
+   "audio_seconds": 6.78,
+   "mel_ms": 0.6,
+   "encode_ms": 48.6,
+   "decode_ms": 21.9
+  },
+  {
+   "id": "en_us-4844570914389909899",
+   "audio_seconds": 7.38,
+   "mel_ms": 0.6,
+   "encode_ms": 51.05,
+   "decode_ms": 24.8
+  },
+  {
+   "id": "en_us-5531306493601107261",
+   "audio_seconds": 10.26,
+   "mel_ms": 0.75,
+   "encode_ms": 69.65,
+   "decode_ms": 30.35
+  },
+  {
+   "id": "en_us-5381693779708341332",
+   "audio_seconds": 11.16,
+   "mel_ms": 0.8,
+   "encode_ms": 68.80000000000001,
+   "decode_ms": 24.2
+  },
+  {
+   "id": "en_us-8573379125813015407",
+   "audio_seconds": 7.44,
+   "mel_ms": 0.6499999999999999,
+   "encode_ms": 51.4,
+   "decode_ms": 24.8
+  },
+  {
+   "id": "en_us-4690800207484418897",
+   "audio_seconds": 9.84,
+   "mel_ms": 0.8,
+   "encode_ms": 62.150000000000006,
+   "decode_ms": 34.0
+  },
+  {
+   "id": "en_us-9999528530847666097",
+   "audio_seconds": 7.2,
+   "mel_ms": 0.6,
+   "encode_ms": 50.3,
+   "decode_ms": 24.6
+  },
+  {
+   "id": "en_us-15494714124475485422",
+   "audio_seconds": 7.38,
+   "mel_ms": 0.7,
+   "encode_ms": 50.95,
+   "decode_ms": 23.65
+  },
+  {
+   "id": "en_us-837008417921522673",
+   "audio_seconds": 7.92,
+   "mel_ms": 0.6,
+   "encode_ms": 56.05,
+   "decode_ms": 30.4
+  },
+  {
+   "id": "en_us-5196260640941390313",
+   "audio_seconds": 10.44,
+   "mel_ms": 0.8,
+   "encode_ms": 70.5,
+   "decode_ms": 36.2
+  },
+  {
+   "id": "en_us-3160468870562283269",
+   "audio_seconds": 7.92,
+   "mel_ms": 0.6,
+   "encode_ms": 55.95,
+   "decode_ms": 28.0
+  },
+  {
+   "id": "en_us-9100750275960890476",
+   "audio_seconds": 10.58,
+   "mel_ms": 0.8,
+   "encode_ms": 71.25,
+   "decode_ms": 24.5
+  },
+  {
+   "id": "en_us-125194026787628519",
+   "audio_seconds": 9.3,
+   "mel_ms": 0.7,
+   "encode_ms": 63.3,
+   "decode_ms": 26.9
+  },
+  {
+   "id": "en_us-2508559905589212221",
+   "audio_seconds": 29.3,
+   "mel_ms": 2.0,
+   "encode_ms": 170.5,
+   "decode_ms": 69.75
+  },
+  {
+   "id": "en_us-5106380017322065030",
+   "audio_seconds": 8.54,
+   "mel_ms": 0.75,
+   "encode_ms": 60.55,
+   "decode_ms": 23.7
+  },
+  {
+   "id": "en_us-5408022991504111502",
+   "audio_seconds": 14.92,
+   "mel_ms": 1.2,
+   "encode_ms": 85.15,
+   "decode_ms": 36.8
+  },
+  {
+   "id": "en_us-4807942348083346744",
+   "audio_seconds": 8.96,
+   "mel_ms": 0.7,
+   "encode_ms": 62.2,
+   "decode_ms": 24.85
+  },
+  {
+   "id": "en_us-13297690853135603331",
+   "audio_seconds": 7.68,
+   "mel_ms": 0.6,
+   "encode_ms": 57.7,
+   "decode_ms": 20.9
+  },
+  {
+   "id": "en_us-16311865697463361030",
+   "audio_seconds": 7.2,
+   "mel_ms": 0.6,
+   "encode_ms": 50.25,
+   "decode_ms": 21.4
+  },
+  {
+   "id": "en_us-4332544138278608734",
+   "audio_seconds": 6.66,
+   "mel_ms": 0.6,
+   "encode_ms": 46.6,
+   "decode_ms": 14.6
+  },
+  {
+   "id": "en_us-4638707534646618403",
+   "audio_seconds": 7.68,
+   "mel_ms": 0.6499999999999999,
+   "encode_ms": 57.5,
+   "decode_ms": 23.6
+  },
+  {
+   "id": "en_us-8361417265277853163",
+   "audio_seconds": 9.48,
+   "mel_ms": 0.75,
+   "encode_ms": 63.849999999999994,
+   "decode_ms": 34.0
+  },
+  {
+   "id": "en_us-4491697341889976683",
+   "audio_seconds": 8.28,
+   "mel_ms": 0.6,
+   "encode_ms": 56.6,
+   "decode_ms": 30.0
+  },
+  {
+   "id": "en_us-10938576782105608041",
+   "audio_seconds": 8.76,
+   "mel_ms": 0.7,
+   "encode_ms": 60.900000000000006,
+   "decode_ms": 35.45
+  },
+  {
+   "id": "en_us-16482413846901462656",
+   "audio_seconds": 9.06,
+   "mel_ms": 0.7,
+   "encode_ms": 62.2,
+   "decode_ms": 19.55
+  },
+  {
+   "id": "en_us-17629209318705923135",
+   "audio_seconds": 9.36,
+   "mel_ms": 0.7,
+   "encode_ms": 63.650000000000006,
+   "decode_ms": 27.85
+  },
+  {
+   "id": "en_us-9431561488681290113",
+   "audio_seconds": 9.96,
+   "mel_ms": 0.75,
+   "encode_ms": 65.45,
+   "decode_ms": 25.9
+  },
+  {
+   "id": "en_us-15648812079343683412",
+   "audio_seconds": 9.3,
+   "mel_ms": 0.7,
+   "encode_ms": 63.3,
+   "decode_ms": 39.05
+  },
+  {
+   "id": "en_us-2652155470394119415",
+   "audio_seconds": 6.72,
+   "mel_ms": 0.55,
+   "encode_ms": 48.6,
+   "decode_ms": 18.4
+  },
+  {
+   "id": "en_us-12164368102080603077",
+   "audio_seconds": 7.26,
+   "mel_ms": 0.6,
+   "encode_ms": 50.2,
+   "decode_ms": 16.4
+  },
+  {
+   "id": "en_us-16249020005264010985",
+   "audio_seconds": 11.8,
+   "mel_ms": 0.9,
+   "encode_ms": 71.0,
+   "decode_ms": 29.8
+  },
+  {
+   "id": "en_us-394135166243682296",
+   "audio_seconds": 10.74,
+   "mel_ms": 0.8,
+   "encode_ms": 71.55,
+   "decode_ms": 35.05
+  },
+  {
+   "id": "en_us-14077379425479054842",
+   "audio_seconds": 12.24,
+   "mel_ms": 0.9,
+   "encode_ms": 77.65,
+   "decode_ms": 35.0
+  },
+  {
+   "id": "en_us-2611687111227264759",
+   "audio_seconds": 6.24,
+   "mel_ms": 0.5,
+   "encode_ms": 46.9,
+   "decode_ms": 16.6
+  },
+  {
+   "id": "en_us-7783164194712761839",
+   "audio_seconds": 8.28,
+   "mel_ms": 0.6499999999999999,
+   "encode_ms": 56.9,
+   "decode_ms": 24.8
+  },
+  {
+   "id": "en_us-10751756685109361684",
+   "audio_seconds": 6.3,
+   "mel_ms": 0.5,
+   "encode_ms": 46.95,
+   "decode_ms": 23.05
+  },
+  {
+   "id": "en_us-17476880836582943567",
+   "audio_seconds": 10.98,
+   "mel_ms": 0.8,
+   "encode_ms": 72.75,
+   "decode_ms": 26.05
+  },
+  {
+   "id": "en_us-18192639498290469063",
+   "audio_seconds": 8.82,
+   "mel_ms": 0.7,
+   "encode_ms": 61.3,
+   "decode_ms": 27.25
+  },
+  {
+   "id": "en_us-11559094331412401332",
+   "audio_seconds": 7.68,
+   "mel_ms": 0.6499999999999999,
+   "encode_ms": 57.7,
+   "decode_ms": 27.1
+  },
+  {
+   "id": "en_us-16851035292487940942",
+   "audio_seconds": 6.48,
+   "mel_ms": 0.5,
+   "encode_ms": 47.8,
+   "decode_ms": 24.85
+  },
+  {
+   "id": "en_us-7355420232561873190",
+   "audio_seconds": 7.32,
+   "mel_ms": 0.6,
+   "encode_ms": 48.55,
+   "decode_ms": 26.65
+  },
+  {
+   "id": "en_us-11497310594035767755",
+   "audio_seconds": 10.2,
+   "mel_ms": 0.75,
+   "encode_ms": 62.0,
+   "decode_ms": 33.2
+  },
+  {
+   "id": "en_us-2786302614981736925",
+   "audio_seconds": 5.52,
+   "mel_ms": 0.55,
+   "encode_ms": 44.650000000000006,
+   "decode_ms": 19.2
+  },
+  {
+   "id": "en_us-11554335886429174193",
+   "audio_seconds": 14.22,
+   "mel_ms": 1.0,
+   "encode_ms": 92.80000000000001,
+   "decode_ms": 35.75
+  },
+  {
+   "id": "en_us-14396239747345303015",
+   "audio_seconds": 5.64,
+   "mel_ms": 0.5,
+   "encode_ms": 45.1,
+   "decode_ms": 21.1
+  },
+  {
+   "id": "en_us-14648010410081654131",
+   "audio_seconds": 4.5,
+   "mel_ms": 0.4,
+   "encode_ms": 36.95,
+   "decode_ms": 16.2
+  },
+  {
+   "id": "en_us-1277588711703410007",
+   "audio_seconds": 14.88,
+   "mel_ms": 1.1,
+   "encode_ms": 85.2,
+   "decode_ms": 32.8
+  },
+  {
+   "id": "en_us-1146643745158029931",
+   "audio_seconds": 8.88,
+   "mel_ms": 0.7,
+   "encode_ms": 58.599999999999994,
+   "decode_ms": 24.1
+  },
+  {
+   "id": "en_us-3130624662424273953",
+   "audio_seconds": 6.84,
+   "mel_ms": 0.6,
+   "encode_ms": 49.25,
+   "decode_ms": 23.2
+  },
+  {
+   "id": "en_us-16207777688923954070",
+   "audio_seconds": 10.02,
+   "mel_ms": 0.7,
+   "encode_ms": 66.1,
+   "decode_ms": 32.2
+  },
+  {
+   "id": "en_us-8546403500877190903",
+   "audio_seconds": 6.9,
+   "mel_ms": 0.6,
+   "encode_ms": 49.25,
+   "decode_ms": 19.6
+  },
+  {
+   "id": "en_us-9253409408372025849",
+   "audio_seconds": 6.54,
+   "mel_ms": 0.55,
+   "encode_ms": 48.45,
+   "decode_ms": 24.4
+  },
+  {
+   "id": "en_us-14624695685248966546",
+   "audio_seconds": 11.1,
+   "mel_ms": 0.8,
+   "encode_ms": 72.75,
+   "decode_ms": 33.349999999999994
+  },
+  {
+   "id": "en_us-8837680402159291933",
+   "audio_seconds": 8.64,
+   "mel_ms": 0.6499999999999999,
+   "encode_ms": 60.75,
+   "decode_ms": 27.75
+  },
+  {
+   "id": "en_us-11974497390699501411",
+   "audio_seconds": 4.62,
+   "mel_ms": 0.4,
+   "encode_ms": 37.1,
+   "decode_ms": 14.6
+  },
+  {
+   "id": "en_us-2381187994276969930",
+   "audio_seconds": 8.8,
+   "mel_ms": 0.7,
+   "encode_ms": 61.4,
+   "decode_ms": 20.55
+  },
+  {
+   "id": "en_us-7490665909832439995",
+   "audio_seconds": 7.8,
+   "mel_ms": 0.7,
+   "encode_ms": 58.0,
+   "decode_ms": 22.15
+  },
+  {
+   "id": "en_us-10899527843662463911",
+   "audio_seconds": 6.84,
+   "mel_ms": 0.6,
+   "encode_ms": 49.35,
+   "decode_ms": 18.5
+  },
+  {
+   "id": "en_us-6263891810431071444",
+   "audio_seconds": 19.8,
+   "mel_ms": 1.6,
+   "encode_ms": 114.19999999999999,
+   "decode_ms": 69.05
+  },
+  {
+   "id": "en_us-12725120105000747485",
+   "audio_seconds": 10.8,
+   "mel_ms": 0.8,
+   "encode_ms": 67.7,
+   "decode_ms": 24.95
+  },
+  {
+   "id": "en_us-6927296460002744628",
+   "audio_seconds": 9.66,
+   "mel_ms": 0.7,
+   "encode_ms": 64.45,
+   "decode_ms": 21.85
+  },
+  {
+   "id": "en_us-6603783905885843777",
+   "audio_seconds": 9.9,
+   "mel_ms": 0.7,
+   "encode_ms": 62.1,
+   "decode_ms": 32.75
+  },
+  {
+   "id": "en_us-18320871674783850842",
+   "audio_seconds": 7.02,
+   "mel_ms": 0.6,
+   "encode_ms": 47.95,
+   "decode_ms": 25.1
+  },
+  {
+   "id": "en_us-12682843461389402977",
+   "audio_seconds": 7.02,
+   "mel_ms": 0.6,
+   "encode_ms": 47.8,
+   "decode_ms": 24.75
+  },
+  {
+   "id": "en_us-15228527404193944906",
+   "audio_seconds": 7.2,
+   "mel_ms": 0.6,
+   "encode_ms": 50.35,
+   "decode_ms": 14.25
+  },
+  {
+   "id": "en_us-10861831846737909528",
+   "audio_seconds": 9.58,
+   "mel_ms": 0.7,
+   "encode_ms": 60.849999999999994,
+   "decode_ms": 22.9
+  },
+  {
+   "id": "en_us-14704091860070528032",
+   "audio_seconds": 5.86,
+   "mel_ms": 0.5,
+   "encode_ms": 45.75,
+   "decode_ms": 13.5
+  },
+  {
+   "id": "en_us-12728606633758857674",
+   "audio_seconds": 14.84,
+   "mel_ms": 1.0,
+   "encode_ms": 85.3,
+   "decode_ms": 37.6
+  },
+  {
+   "id": "en_us-1605300975319497622",
+   "audio_seconds": 9.76,
+   "mel_ms": 0.7,
+   "encode_ms": 65.0,
+   "decode_ms": 30.6
+  },
+  {
+   "id": "en_us-4446007980468141561",
+   "audio_seconds": 16.5,
+   "mel_ms": 1.25,
+   "encode_ms": 96.65,
+   "decode_ms": 48.9
+  },
+  {
+   "id": "en_us-16766787285057438836",
+   "audio_seconds": 11.22,
+   "mel_ms": 0.8,
+   "encode_ms": 73.6,
+   "decode_ms": 36.6
+  },
+  {
+   "id": "en_us-8158297484454595266",
+   "audio_seconds": 12.96,
+   "mel_ms": 0.9,
+   "encode_ms": 87.45,
+   "decode_ms": 34.6
+  },
+  {
+   "id": "en_us-15257026998252037010",
+   "audio_seconds": 6.54,
+   "mel_ms": 0.55,
+   "encode_ms": 47.9,
+   "decode_ms": 22.3
+  },
+  {
+   "id": "en_us-4838660681321542582",
+   "audio_seconds": 6.72,
+   "mel_ms": 0.6,
+   "encode_ms": 48.650000000000006,
+   "decode_ms": 16.05
+  },
+  {
+   "id": "en_us-5131184112261114926",
+   "audio_seconds": 8.28,
+   "mel_ms": 0.6499999999999999,
+   "encode_ms": 56.95,
+   "decode_ms": 29.75
+  },
+  {
+   "id": "en_us-14212778709566873555",
+   "audio_seconds": 11.52,
+   "mel_ms": 0.8,
+   "encode_ms": 74.80000000000001,
+   "decode_ms": 33.1
+  },
+  {
+   "id": "en_us-11665346626937246597",
+   "audio_seconds": 5.04,
+   "mel_ms": 0.4,
+   "encode_ms": 36.9,
+   "decode_ms": 13.75
+  },
+  {
+   "id": "en_us-17567046183557458641",
+   "audio_seconds": 5.4,
+   "mel_ms": 0.45,
+   "encode_ms": 43.25,
+   "decode_ms": 18.5
+  },
+  {
+   "id": "en_us-17901982257181767377",
+   "audio_seconds": 11.04,
+   "mel_ms": 0.8,
+   "encode_ms": 72.95,
+   "decode_ms": 38.6
+  },
+  {
+   "id": "en_us-9544943042431649615",
+   "audio_seconds": 9.34,
+   "mel_ms": 0.75,
+   "encode_ms": 63.7,
+   "decode_ms": 21.1
+  },
+  {
+   "id": "en_us-15533201887617185536",
+   "audio_seconds": 9.84,
+   "mel_ms": 0.75,
+   "encode_ms": 62.15,
+   "decode_ms": 28.3
+  },
+  {
+   "id": "en_us-14868402834603110105",
+   "audio_seconds": 5.46,
+   "mel_ms": 0.5,
+   "encode_ms": 44.5,
+   "decode_ms": 19.65
+  },
+  {
+   "id": "en_us-911543279759253336",
+   "audio_seconds": 10.32,
+   "mel_ms": 0.8,
+   "encode_ms": 70.1,
+   "decode_ms": 32.650000000000006
+  },
+  {
+   "id": "en_us-6959849979442158896",
+   "audio_seconds": 15.3,
+   "mel_ms": 1.05,
+   "encode_ms": 85.44999999999999,
+   "decode_ms": 40.8
+  },
+  {
+   "id": "en_us-6351367445025505944",
+   "audio_seconds": 6.6,
+   "mel_ms": 0.6,
+   "encode_ms": 48.25,
+   "decode_ms": 15.3
+  },
+  {
+   "id": "en_us-17722393517246760407",
+   "audio_seconds": 14.04,
+   "mel_ms": 1.0,
+   "encode_ms": 84.75,
+   "decode_ms": 34.3
+  },
+  {
+   "id": "en_us-15359249341091182172",
+   "audio_seconds": 7.98,
+   "mel_ms": 0.7,
+   "encode_ms": 56.150000000000006,
+   "decode_ms": 23.7
+  },
+  {
+   "id": "ru_ru-5487295687414650404",
+   "audio_seconds": 10.92,
+   "mel_ms": 0.8,
+   "encode_ms": 72.4,
+   "decode_ms": 35.2
+  },
+  {
+   "id": "ru_ru-3365405680216890019",
+   "audio_seconds": 9.0,
+   "mel_ms": 0.6499999999999999,
+   "encode_ms": 62.150000000000006,
+   "decode_ms": 23.1
+  },
+  {
+   "id": "ru_ru-3867413265291599525",
+   "audio_seconds": 11.64,
+   "mel_ms": 0.8,
+   "encode_ms": 75.4,
+   "decode_ms": 42.85
+  },
+  {
+   "id": "ru_ru-13400623215759901430",
+   "audio_seconds": 12.12,
+   "mel_ms": 0.8500000000000001,
+   "encode_ms": 71.80000000000001,
+   "decode_ms": 43.3
+  },
+  {
+   "id": "ru_ru-14526443250508745164",
+   "audio_seconds": 11.94,
+   "mel_ms": 0.8,
+   "encode_ms": 76.80000000000001,
+   "decode_ms": 31.7
+  },
+  {
+   "id": "ru_ru-12364813361789689901",
+   "audio_seconds": 7.62,
+   "mel_ms": 0.6,
+   "encode_ms": 49.0,
+   "decode_ms": 22.6
+  },
+  {
+   "id": "ru_ru-9458476084801823623",
+   "audio_seconds": 14.16,
+   "mel_ms": 1.0,
+   "encode_ms": 92.4,
+   "decode_ms": 47.95
+  },
+  {
+   "id": "ru_ru-16247214951217171392",
+   "audio_seconds": 8.88,
+   "mel_ms": 0.7,
+   "encode_ms": 58.75,
+   "decode_ms": 33.9
+  },
+  {
+   "id": "ru_ru-18270002016134104047",
+   "audio_seconds": 13.92,
+   "mel_ms": 0.9,
+   "encode_ms": 91.05000000000001,
+   "decode_ms": 43.6
+  },
+  {
+   "id": "ru_ru-5029838189816866441",
+   "audio_seconds": 16.92,
+   "mel_ms": 1.1,
+   "encode_ms": 97.95,
+   "decode_ms": 43.1
+  },
+  {
+   "id": "ru_ru-4617748510394424716",
+   "audio_seconds": 6.48,
+   "mel_ms": 0.55,
+   "encode_ms": 48.0,
+   "decode_ms": 21.6
+  },
+  {
+   "id": "ru_ru-9438983099483324827",
+   "audio_seconds": 15.18,
+   "mel_ms": 1.1,
+   "encode_ms": 86.0,
+   "decode_ms": 51.6
+  },
+  {
+   "id": "ru_ru-847319919963451248",
+   "audio_seconds": 12.72,
+   "mel_ms": 0.9,
+   "encode_ms": 73.4,
+   "decode_ms": 33.6
+  },
+  {
+   "id": "ru_ru-7080248592335657947",
+   "audio_seconds": 12.6,
+   "mel_ms": 0.9,
+   "encode_ms": 79.05,
+   "decode_ms": 40.8
+  },
+  {
+   "id": "ru_ru-12926839485671255625",
+   "audio_seconds": 10.44,
+   "mel_ms": 0.7,
+   "encode_ms": 70.5,
+   "decode_ms": 37.2
+  },
+  {
+   "id": "ru_ru-5354578987853956582",
+   "audio_seconds": 22.92,
+   "mel_ms": 1.8,
+   "encode_ms": 131.5,
+   "decode_ms": 68.9
+  },
+  {
+   "id": "ru_ru-7946012461394054207",
+   "audio_seconds": 8.52,
+   "mel_ms": 0.7,
+   "encode_ms": 60.349999999999994,
+   "decode_ms": 27.15
+  },
+  {
+   "id": "ru_ru-5724870887171192195",
+   "audio_seconds": 9.9,
+   "mel_ms": 0.8,
+   "encode_ms": 62.25,
+   "decode_ms": 37.3
+  },
+  {
+   "id": "ru_ru-14604667945691252471",
+   "audio_seconds": 8.76,
+   "mel_ms": 0.7,
+   "encode_ms": 61.1,
+   "decode_ms": 26.4
+  },
+  {
+   "id": "ru_ru-9046861204650565592",
+   "audio_seconds": 14.04,
+   "mel_ms": 1.0,
+   "encode_ms": 84.55,
+   "decode_ms": 39.6
+  },
+  {
+   "id": "ru_ru-18349867574016806605",
+   "audio_seconds": 12.36,
+   "mel_ms": 0.8500000000000001,
+   "encode_ms": 78.25,
+   "decode_ms": 43.45
+  },
+  {
+   "id": "ru_ru-1031274584441245050",
+   "audio_seconds": 17.76,
+   "mel_ms": 1.15,
+   "encode_ms": 100.7,
+   "decode_ms": 61.75
+  },
+  {
+   "id": "ru_ru-5812961093372884470",
+   "audio_seconds": 13.14,
+   "mel_ms": 0.9,
+   "encode_ms": 87.95,
+   "decode_ms": 43.75
+  },
+  {
+   "id": "ru_ru-7336278217695149606",
+   "audio_seconds": 12.78,
+   "mel_ms": 0.9,
+   "encode_ms": 73.45,
+   "decode_ms": 51.25
+  },
+  {
+   "id": "ru_ru-17968273900305326459",
+   "audio_seconds": 9.42,
+   "mel_ms": 0.7,
+   "encode_ms": 63.9,
+   "decode_ms": 35.8
+  },
+  {
+   "id": "ru_ru-4958278879529562498",
+   "audio_seconds": 5.76,
+   "mel_ms": 0.5,
+   "encode_ms": 45.45,
+   "decode_ms": 17.9
+  },
+  {
+   "id": "ru_ru-1579517183108050640",
+   "audio_seconds": 12.48,
+   "mel_ms": 0.9,
+   "encode_ms": 78.7,
+   "decode_ms": 30.35
+  },
+  {
+   "id": "ru_ru-11625131477558873455",
+   "audio_seconds": 7.8,
+   "mel_ms": 0.6,
+   "encode_ms": 57.849999999999994,
+   "decode_ms": 25.0
+  },
+  {
+   "id": "ru_ru-151745618946626002",
+   "audio_seconds": 11.16,
+   "mel_ms": 0.8,
+   "encode_ms": 68.75,
+   "decode_ms": 40.95
+  },
+  {
+   "id": "ru_ru-10536195230190303304",
+   "audio_seconds": 13.32,
+   "mel_ms": 0.95,
+   "encode_ms": 88.6,
+   "decode_ms": 49.55
+  },
+  {
+   "id": "ru_ru-13483529829862079624",
+   "audio_seconds": 16.14,
+   "mel_ms": 1.1,
+   "encode_ms": 95.55,
+   "decode_ms": 58.8
+  },
+  {
+   "id": "ru_ru-2005742764595256883",
+   "audio_seconds": 13.38,
+   "mel_ms": 0.9,
+   "encode_ms": 82.75,
+   "decode_ms": 30.3
+  },
+  {
+   "id": "ru_ru-13160699003193524788",
+   "audio_seconds": 12.36,
+   "mel_ms": 0.9,
+   "encode_ms": 77.95,
+   "decode_ms": 42.95
+  },
+  {
+   "id": "ru_ru-16041322115715759159",
+   "audio_seconds": 10.68,
+   "mel_ms": 0.8,
+   "encode_ms": 71.4,
+   "decode_ms": 35.6
+  },
+  {
+   "id": "ru_ru-9662386589719946986",
+   "audio_seconds": 12.24,
+   "mel_ms": 0.8500000000000001,
+   "encode_ms": 77.5,
+   "decode_ms": 42.75
+  },
+  {
+   "id": "ru_ru-17970174005402751578",
+   "audio_seconds": 15.0,
+   "mel_ms": 1.0,
+   "encode_ms": 85.4,
+   "decode_ms": 48.6
+  },
+  {
+   "id": "ru_ru-7320542684398584698",
+   "audio_seconds": 6.18,
+   "mel_ms": 0.5,
+   "encode_ms": 46.7,
+   "decode_ms": 20.6
+  },
+  {
+   "id": "ru_ru-10669014641440041936",
+   "audio_seconds": 7.56,
+   "mel_ms": 0.6499999999999999,
+   "encode_ms": 51.3,
+   "decode_ms": 23.700000000000003
+  },
+  {
+   "id": "ru_ru-15785260273753185229",
+   "audio_seconds": 11.1,
+   "mel_ms": 0.8,
+   "encode_ms": 73.0,
+   "decode_ms": 39.849999999999994
+  },
+  {
+   "id": "ru_ru-5984804448144807649",
+   "audio_seconds": 10.74,
+   "mel_ms": 0.8,
+   "encode_ms": 71.95,
+   "decode_ms": 41.1
+  },
+  {
+   "id": "ru_ru-1175584355831615712",
+   "audio_seconds": 11.52,
+   "mel_ms": 0.8,
+   "encode_ms": 74.9,
+   "decode_ms": 41.95
+  },
+  {
+   "id": "ru_ru-17398624990105526845",
+   "audio_seconds": 9.42,
+   "mel_ms": 0.7,
+   "encode_ms": 63.65,
+   "decode_ms": 22.85
+  },
+  {
+   "id": "ru_ru-7911126538049258283",
+   "audio_seconds": 9.3,
+   "mel_ms": 0.7,
+   "encode_ms": 63.45,
+   "decode_ms": 26.0
+  },
+  {
+   "id": "ru_ru-16150462226337863901",
+   "audio_seconds": 9.48,
+   "mel_ms": 0.8,
+   "encode_ms": 63.9,
+   "decode_ms": 34.9
+  },
+  {
+   "id": "ru_ru-18048850841466933061",
+   "audio_seconds": 10.02,
+   "mel_ms": 0.7,
+   "encode_ms": 66.3,
+   "decode_ms": 26.25
+  },
+  {
+   "id": "ru_ru-1506406005226975606",
+   "audio_seconds": 5.34,
+   "mel_ms": 0.45,
+   "encode_ms": 43.95,
+   "decode_ms": 16.55
+  },
+  {
+   "id": "ru_ru-809012245271118418",
+   "audio_seconds": 12.54,
+   "mel_ms": 0.9,
+   "encode_ms": 78.75,
+   "decode_ms": 50.25
+  },
+  {
+   "id": "ru_ru-9348521898703183474",
+   "audio_seconds": 8.04,
+   "mel_ms": 0.7,
+   "encode_ms": 58.650000000000006,
+   "decode_ms": 29.2
+  },
+  {
+   "id": "ru_ru-3470812321873741369",
+   "audio_seconds": 23.16,
+   "mel_ms": 1.85,
+   "encode_ms": 134.95,
+   "decode_ms": 87.19999999999999
+  },
+  {
+   "id": "ru_ru-11981020350023909190",
+   "audio_seconds": 10.38,
+   "mel_ms": 0.75,
+   "encode_ms": 70.15,
+   "decode_ms": 34.0
+  },
+  {
+   "id": "ru_ru-2535619911625676737",
+   "audio_seconds": 7.38,
+   "mel_ms": 0.6,
+   "encode_ms": 50.9,
+   "decode_ms": 16.7
+  },
+  {
+   "id": "ru_ru-550840767125300647",
+   "audio_seconds": 9.72,
+   "mel_ms": 0.7,
+   "encode_ms": 64.85,
+   "decode_ms": 44.2
+  },
+  {
+   "id": "ru_ru-5046190389640051711",
+   "audio_seconds": 9.24,
+   "mel_ms": 0.7,
+   "encode_ms": 59.95,
+   "decode_ms": 30.35
+  },
+  {
+   "id": "ru_ru-16752154771542602401",
+   "audio_seconds": 20.28,
+   "mel_ms": 1.4,
+   "encode_ms": 115.6,
+   "decode_ms": 54.349999999999994
+  },
+  {
+   "id": "ru_ru-10874905686012773608",
+   "audio_seconds": 9.96,
+   "mel_ms": 0.8,
+   "encode_ms": 65.55,
+   "decode_ms": 36.55
+  },
+  {
+   "id": "ru_ru-13520902169230211439",
+   "audio_seconds": 11.88,
+   "mel_ms": 0.8500000000000001,
+   "encode_ms": 76.5,
+   "decode_ms": 44.45
+  },
+  {
+   "id": "ru_ru-2203515489150865469",
+   "audio_seconds": 12.72,
+   "mel_ms": 0.95,
+   "encode_ms": 73.35,
+   "decode_ms": 40.95
+  },
+  {
+   "id": "ru_ru-17217365587764906751",
+   "audio_seconds": 16.98,
+   "mel_ms": 1.15,
+   "encode_ms": 98.44999999999999,
+   "decode_ms": 63.1
+  },
+  {
+   "id": "ru_ru-12245409147618250890",
+   "audio_seconds": 15.6,
+   "mel_ms": 1.1,
+   "encode_ms": 93.9,
+   "decode_ms": 43.0
+  },
+  {
+   "id": "ru_ru-14514479534654139276",
+   "audio_seconds": 15.72,
+   "mel_ms": 1.15,
+   "encode_ms": 94.45,
+   "decode_ms": 53.25
+  },
+  {
+   "id": "ru_ru-1939763355001006605",
+   "audio_seconds": 13.62,
+   "mel_ms": 0.9,
+   "encode_ms": 90.0,
+   "decode_ms": 46.6
+  },
+  {
+   "id": "ru_ru-728239380900580834",
+   "audio_seconds": 10.26,
+   "mel_ms": 0.8,
+   "encode_ms": 70.15,
+   "decode_ms": 29.85
+  },
+  {
+   "id": "ru_ru-8208791745337031802",
+   "audio_seconds": 8.88,
+   "mel_ms": 0.7,
+   "encode_ms": 58.7,
+   "decode_ms": 33.849999999999994
+  },
+  {
+   "id": "ru_ru-13623652254325515330",
+   "audio_seconds": 13.74,
+   "mel_ms": 0.9,
+   "encode_ms": 83.75,
+   "decode_ms": 47.0
+  },
+  {
+   "id": "ru_ru-4021006210146211127",
+   "audio_seconds": 8.4,
+   "mel_ms": 0.6,
+   "encode_ms": 59.8,
+   "decode_ms": 28.75
+  },
+  {
+   "id": "ru_ru-15533548753796272197",
+   "audio_seconds": 4.92,
+   "mel_ms": 0.4,
+   "encode_ms": 37.9,
+   "decode_ms": 14.45
+  },
+  {
+   "id": "ru_ru-1027147027471254370",
+   "audio_seconds": 9.72,
+   "mel_ms": 0.7,
+   "encode_ms": 64.65,
+   "decode_ms": 30.05
+  },
+  {
+   "id": "ru_ru-9685636378657877388",
+   "audio_seconds": 4.92,
+   "mel_ms": 0.45,
+   "encode_ms": 37.849999999999994,
+   "decode_ms": 21.7
+  },
+  {
+   "id": "ru_ru-1663386367563524870",
+   "audio_seconds": 9.96,
+   "mel_ms": 0.7,
+   "encode_ms": 65.85,
+   "decode_ms": 31.2
+  },
+  {
+   "id": "ru_ru-17611445495380763772",
+   "audio_seconds": 8.64,
+   "mel_ms": 0.6499999999999999,
+   "encode_ms": 60.7,
+   "decode_ms": 27.85
+  },
+  {
+   "id": "ru_ru-10686921193911051678",
+   "audio_seconds": 13.56,
+   "mel_ms": 1.0,
+   "encode_ms": 89.5,
+   "decode_ms": 39.6
+  },
+  {
+   "id": "ru_ru-14653713353433040596",
+   "audio_seconds": 12.66,
+   "mel_ms": 0.9,
+   "encode_ms": 79.05000000000001,
+   "decode_ms": 42.6
+  },
+  {
+   "id": "ru_ru-2197684876414777192",
+   "audio_seconds": 18.0,
+   "mel_ms": 1.25,
+   "encode_ms": 108.5,
+   "decode_ms": 47.8
+  },
+  {
+   "id": "ru_ru-7856152970092989014",
+   "audio_seconds": 5.76,
+   "mel_ms": 0.6,
+   "encode_ms": 45.6,
+   "decode_ms": 17.75
+  },
+  {
+   "id": "ru_ru-71559965833227875",
+   "audio_seconds": 9.78,
+   "mel_ms": 0.75,
+   "encode_ms": 64.95,
+   "decode_ms": 29.1
+  },
+  {
+   "id": "ru_ru-2108424922472675813",
+   "audio_seconds": 13.44,
+   "mel_ms": 0.9,
+   "encode_ms": 89.25,
+   "decode_ms": 43.45
+  },
+  {
+   "id": "ru_ru-3251148393715961239",
+   "audio_seconds": 10.32,
+   "mel_ms": 0.8,
+   "encode_ms": 70.25,
+   "decode_ms": 40.45
+  },
+  {
+   "id": "ru_ru-3333288572612453637",
+   "audio_seconds": 9.12,
+   "mel_ms": 0.7,
+   "encode_ms": 62.95,
+   "decode_ms": 25.9
+  },
+  {
+   "id": "ru_ru-3284314201243234918",
+   "audio_seconds": 6.48,
+   "mel_ms": 0.5,
+   "encode_ms": 48.05,
+   "decode_ms": 24.05
+  },
+  {
+   "id": "ru_ru-1295187326794625413",
+   "audio_seconds": 15.12,
+   "mel_ms": 1.1,
+   "encode_ms": 86.1,
+   "decode_ms": 43.05
+  },
+  {
+   "id": "ru_ru-518776252680975054",
+   "audio_seconds": 6.0,
+   "mel_ms": 0.55,
+   "encode_ms": 44.9,
+   "decode_ms": 17.8
+  },
+  {
+   "id": "ru_ru-7142219369901880118",
+   "audio_seconds": 7.56,
+   "mel_ms": 0.6,
+   "encode_ms": 51.650000000000006,
+   "decode_ms": 29.1
+  },
+  {
+   "id": "ru_ru-12813531627668957324",
+   "audio_seconds": 12.12,
+   "mel_ms": 0.9,
+   "encode_ms": 71.9,
+   "decode_ms": 29.95
+  },
+  {
+   "id": "ru_ru-14292181950589556379",
+   "audio_seconds": 13.68,
+   "mel_ms": 0.9,
+   "encode_ms": 83.35,
+   "decode_ms": 41.349999999999994
+  },
+  {
+   "id": "ru_ru-8715634098033389550",
+   "audio_seconds": 13.92,
+   "mel_ms": 1.0,
+   "encode_ms": 91.3,
+   "decode_ms": 36.6
+  },
+  {
+   "id": "ru_ru-11672443779778469180",
+   "audio_seconds": 11.64,
+   "mel_ms": 0.8,
+   "encode_ms": 75.5,
+   "decode_ms": 42.150000000000006
+  },
+  {
+   "id": "ru_ru-10218496378622054093",
+   "audio_seconds": 8.34,
+   "mel_ms": 0.6,
+   "encode_ms": 59.9,
+   "decode_ms": 28.25
+  },
+  {
+   "id": "ru_ru-18363036360322471934",
+   "audio_seconds": 4.5,
+   "mel_ms": 0.4,
+   "encode_ms": 36.9,
+   "decode_ms": 10.25
+  },
+  {
+   "id": "ru_ru-2317848900994801252",
+   "audio_seconds": 14.04,
+   "mel_ms": 0.9,
+   "encode_ms": 84.25,
+   "decode_ms": 52.55
+  },
+  {
+   "id": "ru_ru-4796938064723650370",
+   "audio_seconds": 8.58,
+   "mel_ms": 0.6,
+   "encode_ms": 57.85,
+   "decode_ms": 30.3
+  },
+  {
+   "id": "ru_ru-7583656175724529114",
+   "audio_seconds": 13.2,
+   "mel_ms": 1.0,
+   "encode_ms": 88.35,
+   "decode_ms": 37.25
+  },
+  {
+   "id": "ru_ru-14538972329666110700",
+   "audio_seconds": 12.06,
+   "mel_ms": 0.9,
+   "encode_ms": 77.0,
+   "decode_ms": 42.3
+  },
+  {
+   "id": "ru_ru-9149690385543505925",
+   "audio_seconds": 11.04,
+   "mel_ms": 0.8,
+   "encode_ms": 72.75,
+   "decode_ms": 31.55
+  },
+  {
+   "id": "ru_ru-730496809304106291",
+   "audio_seconds": 6.9,
+   "mel_ms": 0.55,
+   "encode_ms": 49.1,
+   "decode_ms": 18.0
+  },
+  {
+   "id": "ru_ru-8628366913948651170",
+   "audio_seconds": 13.5,
+   "mel_ms": 0.9,
+   "encode_ms": 89.45,
+   "decode_ms": 41.05
+  },
+  {
+   "id": "ru_ru-6554847401218516712",
+   "audio_seconds": 19.08,
+   "mel_ms": 1.2,
+   "encode_ms": 111.05,
+   "decode_ms": 60.8
+  },
+  {
+   "id": "ru_ru-3268275672981624787",
+   "audio_seconds": 7.44,
+   "mel_ms": 0.6,
+   "encode_ms": 51.25,
+   "decode_ms": 18.9
+  },
+  {
+   "id": "ru_ru-847814654966528224",
+   "audio_seconds": 8.7,
+   "mel_ms": 0.7,
+   "encode_ms": 60.8,
+   "decode_ms": 30.1
+  },
+  {
+   "id": "ru_ru-14190545118405417593",
+   "audio_seconds": 12.12,
+   "mel_ms": 0.9,
+   "encode_ms": 72.2,
+   "decode_ms": 36.05
+  },
+  {
+   "id": "ru_ru-8847382245486560241",
+   "audio_seconds": 9.12,
+   "mel_ms": 0.7,
+   "encode_ms": 62.8,
+   "decode_ms": 19.75
+  }
+ ],
+ "median": {
+  "mel_ms": 0.725,
+  "encode_ms": 63.9,
+  "decode_ms": 30.025
+ }
+}

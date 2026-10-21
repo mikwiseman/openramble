@@ -153,7 +153,9 @@ done < <(grep -rnE "$FORBIDDEN_IMPORTS" "${SHIPPING_PATHS[@]}" 2>/dev/null || tr
 # proves nothing about what ships. Audit the Mach-O we actually link: a library
 # that can reach the network has to reference something that can open a socket.
 echo "Checking the inference runtime binary..."
-RUNTIME_BINARY=$(find "$PWD/Packages/LocalASR" -path "*CTranscribe.framework/Versions/A/CTranscribe" -print -quit 2>/dev/null || true)
+# RUNTIME_BINARY names a runtime built elsewhere, so a build of our own is
+# audited by exactly this check before anything links it.
+RUNTIME_BINARY=${RUNTIME_BINARY:-$(find "$PWD/Packages/LocalASR" -path "*CTranscribe.framework/Versions/A/CTranscribe" -print -quit 2>/dev/null || true)}
 if [[ -z "$RUNTIME_BINARY" ]]; then
   RUNTIME_BINARY=$(find "$PWD/Packages/LocalASR" -path "*CTranscribe.framework/CTranscribe" -print -quit 2>/dev/null || true)
 fi

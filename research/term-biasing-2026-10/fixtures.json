@@ -1,0 +1,919 @@
+{
+ "note": "Hashes of the synthetic speech on the Mac that generated it; another macOS voice build may produce different audio, and then the suite refuses to run.",
+ "macos": "27.0.1",
+ "fixtures": [
+  {
+   "id": "term-000",
+   "language": "en",
+   "voice": "Samantha",
+   "split": "dev",
+   "audio_sha256": "76a19585f6373f7ccab8632630701992ec4bcc4b0fb722150eabb7679e9e8e8d",
+   "duration_seconds": 3.80475,
+   "reference": "Ask Anthropic whether Claude can read the whole Kubernetes manifest.",
+   "terms": [
+    "Anthropic",
+    "Claude",
+    "Kubernetes"
+   ]
+  },
+  {
+   "id": "term-001",
+   "language": "en",
+   "voice": "Daniel",
+   "split": "test",
+   "audio_sha256": "43900b1e7340ea8dd62611f4506c6c4a203321eaae413ab62249cbff4701b226",
+   "duration_seconds": 3.9264375,
+   "reference": "We moved the database from Supabase to plain Postgres last week.",
+   "terms": [
+    "Supabase",
+    "Postgres"
+   ]
+  },
+  {
+   "id": "term-002",
+   "language": "en",
+   "voice": "Karen",
+   "split": "dev",
+   "audio_sha256": "eb805b391dab087b874e4282b2b36c498e9b1d6ef92fdae13088070b2d733b57",
+   "duration_seconds": 4.311375,
+   "reference": "The preview deploys on Vercel, but the API runs behind Cloudflare.",
+   "terms": [
+    "Vercel",
+    "Cloudflare"
+   ]
+  },
+  {
+   "id": "term-003",
+   "language": "en",
+   "voice": "Moira",
+   "split": "test",
+   "audio_sha256": "09cf8a2356122e10f7d0137ffc3be3f783e8b54ab22506d836d4b08389c4e9b8",
+   "duration_seconds": 3.3485625,
+   "reference": "Spin up a new Hetzner box and install Grafana on it.",
+   "terms": [
+    "Hetzner",
+    "Grafana"
+   ]
+  },
+  {
+   "id": "term-004",
+   "language": "en",
+   "voice": "Samantha",
+   "split": "dev",
+   "audio_sha256": "c0bda736d5832dbedfa94ff7fe68c84d8b88cd78598716512b662308e5b846b0",
+   "duration_seconds": 4.1568125,
+   "reference": "The desktop app is built with Tauri, and the Mac app updates with Sparkle.",
+   "terms": [
+    "Tauri",
+    "Sparkle"
+   ]
+  },
+  {
+   "id": "term-005",
+   "language": "en",
+   "voice": "Daniel",
+   "split": "test",
+   "audio_sha256": "549153a0eed3f92b4fa883e07e2786dfb0dd512f929695474d320ccf1d882e8d",
+   "duration_seconds": 4.072875,
+   "reference": "OpenRamble runs Parakeet locally, so nothing leaves the Mac.",
+   "terms": [
+    "OpenRamble",
+    "Parakeet"
+   ]
+  },
+  {
+   "id": "term-006",
+   "language": "en",
+   "voice": "Karen",
+   "split": "dev",
+   "audio_sha256": "1ab9b02ac0988030544a05471ab2abd771578b9f6e07adc72e048ac11a7a25c9",
+   "duration_seconds": 3.1908125,
+   "reference": "Compare Nemotron with the Moondream model before we decide.",
+   "terms": [
+    "Nemotron",
+    "Moondream"
+   ]
+  },
+  {
+   "id": "term-007",
+   "language": "en",
+   "voice": "Moira",
+   "split": "test",
+   "audio_sha256": "c601a7db7c15aaa54eb558770ab4efa6599f7ff93801a7d3e654f39ef8ebb4d6",
+   "duration_seconds": 2.94525,
+   "reference": "Send the Figma link to Mik Wiseman before the call.",
+   "terms": [
+    "Figma",
+    "Wiseman"
+   ]
+  },
+  {
+   "id": "term-008",
+   "language": "en",
+   "voice": "Samantha",
+   "split": "dev",
+   "audio_sha256": "47e1b6c0d7e0d4e01ffef3938debf8be110810900755d3350e9fa65480963814",
+   "duration_seconds": 3.1095625,
+   "reference": "Put the meeting notes in Notion and file the bug in Sentry.",
+   "terms": [
+    "Notion",
+    "Sentry"
+   ]
+  },
+  {
+   "id": "term-009",
+   "language": "en",
+   "voice": "Daniel",
+   "split": "test",
+   "audio_sha256": "0b258ab2e7a056df7d8895aa1ecadc24220e6c4bc71ed51786f37757a481de8b",
+   "duration_seconds": 3.5620625,
+   "reference": "Open the project in Xcode and preview the SwiftUI view.",
+   "terms": [
+    "Xcode",
+    "SwiftUI"
+   ]
+  },
+  {
+   "id": "term-010",
+   "language": "en",
+   "voice": "Karen",
+   "split": "dev",
+   "audio_sha256": "ec9bffb64693775ec41911d55a8b5ab279e0db01d927fd0bc9238149994165c9",
+   "duration_seconds": 3.4638125,
+   "reference": "The web client is TypeScript and the server is written in Rust.",
+   "terms": [
+    "TypeScript",
+    "Rust"
+   ]
+  },
+  {
+   "id": "term-011",
+   "language": "en",
+   "voice": "Moira",
+   "split": "test",
+   "audio_sha256": "ae3d92c4706249b09ee9b82d52919f20080056107eb86ad44b8bfc83ea0d4b47",
+   "duration_seconds": 3.4869375,
+   "reference": "Push the branch to GitHub and install the tool with Homebrew.",
+   "terms": [
+    "GitHub",
+    "Homebrew"
+   ]
+  },
+  {
+   "id": "term-012",
+   "language": "en",
+   "voice": "Samantha",
+   "split": "dev",
+   "audio_sha256": "df08bff2d8ce76fa888f1a05f6405914d6fae85b13ca518dd0dd6c0230508abb",
+   "duration_seconds": 3.0166875,
+   "reference": "Post the release notes to the Telegram channel tonight.",
+   "terms": [
+    "Telegram"
+   ]
+  },
+  {
+   "id": "term-013",
+   "language": "en",
+   "voice": "Daniel",
+   "split": "test",
+   "audio_sha256": "065c73be5eb34a52ca3cfd38296ffe381f5bd8b811812c51391234998e4bdb6f",
+   "duration_seconds": 3.2669375,
+   "reference": "I switched my terminal to Ghostty and it feels faster.",
+   "terms": [
+    "Ghostty"
+   ]
+  },
+  {
+   "id": "term-014",
+   "language": "en",
+   "voice": "Karen",
+   "split": "dev",
+   "audio_sha256": "53bcaba122c4b88b3e4807cd0d6159a63a35da9f9ddc09184acc8435e933575e",
+   "duration_seconds": 3.312375,
+   "reference": "Superwhisper and Handy both run models on the device.",
+   "terms": [
+    "Superwhisper",
+    "Handy"
+   ]
+  },
+  {
+   "id": "term-015",
+   "language": "en",
+   "voice": "Moira",
+   "split": "test",
+   "audio_sha256": "c2d7c297230e9e311e204b9e47e1f848ae25ba9319cc6ebf6fe1e8ed71f8c20f",
+   "duration_seconds": 2.5444375,
+   "reference": "The staging server lives on Kamatera for now.",
+   "terms": [
+    "Kamatera"
+   ]
+  },
+  {
+   "id": "term-016",
+   "language": "en",
+   "voice": "Samantha",
+   "split": "dev",
+   "audio_sha256": "4f7f5f067d2c8742e7baac2acb105657e21fa547bd479645f973c15dc9e1f037",
+   "duration_seconds": 2.85825,
+   "reference": "Waiwai pays for the domain and the Cloudflare plan.",
+   "terms": [
+    "Waiwai",
+    "Cloudflare"
+   ]
+  },
+  {
+   "id": "term-017",
+   "language": "en",
+   "voice": "Daniel",
+   "split": "test",
+   "audio_sha256": "c8f85a9fa0dbaa92c217ff6c0d6885da5943dd65c627788fb3bbf95a14d91794",
+   "duration_seconds": 2.915,
+   "reference": "Cache the session in Redis and run everything in Docker.",
+   "terms": [
+    "Redis",
+    "Docker"
+   ]
+  },
+  {
+   "id": "term-018",
+   "language": "en",
+   "voice": "Karen",
+   "split": "dev",
+   "audio_sha256": "840ba2180282b02840540df6e0bf423e2fec7a5f1ff24365ea4fad38979f5d99",
+   "duration_seconds": 3.1180625,
+   "reference": "Nginx sits in front of the app and Datadog watches it.",
+   "terms": [
+    "Nginx",
+    "Datadog"
+   ]
+  },
+  {
+   "id": "term-019",
+   "language": "en",
+   "voice": "Moira",
+   "split": "test",
+   "audio_sha256": "61451f6c0332f408bb516cf9eddad811df9b9748793866e8cc3a634bda1ac0c6",
+   "duration_seconds": 3.229875,
+   "reference": "Our old automations used Zapier and an Airtable base.",
+   "terms": [
+    "Zapier",
+    "Airtable"
+   ]
+  },
+  {
+   "id": "term-020",
+   "language": "en",
+   "voice": "Samantha",
+   "split": "dev",
+   "audio_sha256": "b28d3b1cfa4312f32fcd5a7322b399fe6b5b583cf4947459e55bf00cba1c20b3",
+   "duration_seconds": 3.423375,
+   "reference": "The Android client is Kotlin, the Mac client is Swift.",
+   "terms": [
+    "Kotlin",
+    "Swift"
+   ]
+  },
+  {
+   "id": "term-021",
+   "language": "en",
+   "voice": "Daniel",
+   "split": "test",
+   "audio_sha256": "06e40fa859f23b35cbcd6ab6119bcc902a64e9cff443ace90980e20db0f3c131",
+   "duration_seconds": 2.8763125,
+   "reference": "Terraform creates the bucket and the Cloudflare tunnel.",
+   "terms": [
+    "Terraform",
+    "Cloudflare"
+   ]
+  },
+  {
+   "id": "term-022",
+   "language": "en",
+   "voice": "Karen",
+   "split": "dev",
+   "audio_sha256": "bb8d4cc93317c34c53a41a5d3a89508bddf87f2813c77c5b704a2018e99ff85a",
+   "duration_seconds": 3.0600625,
+   "reference": "Claude wrote the first draft and Mik Wiseman edited it.",
+   "terms": [
+    "Claude",
+    "Wiseman"
+   ]
+  },
+  {
+   "id": "term-023",
+   "language": "en",
+   "voice": "Moira",
+   "split": "test",
+   "audio_sha256": "e9b37791f01299fe4ff72be7664a9fc702639484f09de842499c1220b6994abe",
+   "duration_seconds": 3.6118125,
+   "reference": "Run the Parakeet model through transcribe on the Metal backend.",
+   "terms": [
+    "Parakeet",
+    "Metal"
+   ]
+  },
+  {
+   "id": "term-024",
+   "language": "en",
+   "voice": "Samantha",
+   "split": "dev",
+   "audio_sha256": "7969491e708ed6990dd5ad9559c341ba2104506de96f5af6202573a5a584890b",
+   "duration_seconds": 2.806375,
+   "reference": "Anthropic released a new Claude model this morning.",
+   "terms": [
+    "Anthropic",
+    "Claude"
+   ]
+  },
+  {
+   "id": "term-025",
+   "language": "en",
+   "voice": "Daniel",
+   "split": "test",
+   "audio_sha256": "62479a987dc34b19d68b3db6b89223d400c0d2d06062205dd8121f3de8221c7e",
+   "duration_seconds": 3.17875,
+   "reference": "The Kubernetes cluster needs more memory for Grafana.",
+   "terms": [
+    "Kubernetes",
+    "Grafana"
+   ]
+  },
+  {
+   "id": "term-026",
+   "language": "en",
+   "voice": "Karen",
+   "split": "dev",
+   "audio_sha256": "b8f60dc3ea3d57b73c3e02f3776d590a38e8341cc68a0c743dc3429514c4f354",
+   "duration_seconds": 3.5135,
+   "reference": "Ask the Supabase team why the Postgres connection drops.",
+   "terms": [
+    "Supabase",
+    "Postgres"
+   ]
+  },
+  {
+   "id": "term-027",
+   "language": "en",
+   "voice": "Moira",
+   "split": "test",
+   "audio_sha256": "11a0e6d52353f847c47afbc147bf7b5b7529669597359fdf2773caa23acf06b6",
+   "duration_seconds": 3.3448125,
+   "reference": "OpenRamble should paste the text straight into Ghostty.",
+   "terms": [
+    "OpenRamble",
+    "Ghostty"
+   ]
+  },
+  {
+   "id": "term-028",
+   "language": "en",
+   "voice": "Samantha",
+   "split": "dev",
+   "audio_sha256": "109bf0fffc8f37304ea0cfb9720b01a65cb82df3a1f241b08e5fb6f5d0c5c79d",
+   "duration_seconds": 2.6978125,
+   "reference": "Moondream trained the Ultra version of Parakeet.",
+   "terms": [
+    "Moondream",
+    "Parakeet"
+   ]
+  },
+  {
+   "id": "term-029",
+   "language": "en",
+   "voice": "Daniel",
+   "split": "test",
+   "audio_sha256": "54ee2be066bcd45d1f14c713c7d37de65224cef9803640d438b394f7507b3040",
+   "duration_seconds": 3.7363125,
+   "reference": "Track the onboarding work in Notion, not in Figma comments.",
+   "terms": [
+    "Notion",
+    "Figma"
+   ]
+  },
+  {
+   "id": "term-030",
+   "language": "en",
+   "voice": "Karen",
+   "split": "dev",
+   "audio_sha256": "598682c4d9a67aeb984c57605fe6de25613f0d56b79a183e57fa9b5fe1e3b320",
+   "duration_seconds": 2.51125,
+   "reference": "Sparkle checks for updates once a day.",
+   "terms": [
+    "Sparkle"
+   ]
+  },
+  {
+   "id": "term-031",
+   "language": "en",
+   "voice": "Moira",
+   "split": "test",
+   "audio_sha256": "132e83c1b7734330fbe6f0f500301f0bf17b2992dd9ebba6578e145869945abd",
+   "duration_seconds": 3.0851875,
+   "reference": "Hetzner is cheaper than Vercel for the long running jobs.",
+   "terms": [
+    "Hetzner",
+    "Vercel"
+   ]
+  },
+  {
+   "id": "term-032",
+   "language": "en",
+   "voice": "Samantha",
+   "split": "dev",
+   "audio_sha256": "6c3d6f1016f9461378d792198d73885cb798b13e5a7f864e99b64ad69e3cd330",
+   "duration_seconds": 3.16375,
+   "reference": "Datadog alerted us when Nginx started returning errors.",
+   "terms": [
+    "Datadog",
+    "Nginx"
+   ]
+  },
+  {
+   "id": "term-033",
+   "language": "en",
+   "voice": "Daniel",
+   "split": "test",
+   "audio_sha256": "3f92e3fb1e151451f545ce060506d4b7cbdd0c34ca43bad8e5df3f9b4558c395",
+   "duration_seconds": 2.9165,
+   "reference": "Build the Tauri app for Windows on the GitHub runner.",
+   "terms": [
+    "Tauri",
+    "GitHub"
+   ]
+  },
+  {
+   "id": "term-034",
+   "language": "en",
+   "voice": "Karen",
+   "split": "dev",
+   "audio_sha256": "290aff24dcd0f726d0f6f5db5a7c7af772cf4b1528869caa5bdb0b243b1a5618",
+   "duration_seconds": 3.7191875,
+   "reference": "Superwhisper costs money, Handy and OpenRamble are free.",
+   "terms": [
+    "Superwhisper",
+    "Handy",
+    "OpenRamble"
+   ]
+  },
+  {
+   "id": "term-035",
+   "language": "en",
+   "voice": "Moira",
+   "split": "test",
+   "audio_sha256": "8e79c90df858dc3296cd7b6b3675b35d544db58fdb0ccc9f12ed01b78973a3bd",
+   "duration_seconds": 3.58175,
+   "reference": "Waiwai uses Telegram for almost all customer support.",
+   "terms": [
+    "Waiwai",
+    "Telegram"
+   ]
+  },
+  {
+   "id": "term-036",
+   "language": "en",
+   "voice": "Samantha",
+   "split": "dev",
+   "audio_sha256": "e3e4cb144333c5f16a3b4460a006014457de051725dfffed04b16bc224d4c18c",
+   "duration_seconds": 3.213,
+   "reference": "Install Redis with Homebrew before you run the tests.",
+   "terms": [
+    "Redis",
+    "Homebrew"
+   ]
+  },
+  {
+   "id": "term-037",
+   "language": "en",
+   "voice": "Daniel",
+   "split": "test",
+   "audio_sha256": "553e103f1555ea7ea7e446ece34ca67508237bfdb54bd26f7a3acebbbbf99b91",
+   "duration_seconds": 3.091125,
+   "reference": "Nemotron streams text while you are still talking.",
+   "terms": [
+    "Nemotron"
+   ]
+  },
+  {
+   "id": "term-038",
+   "language": "en",
+   "voice": "Karen",
+   "split": "dev",
+   "audio_sha256": "3d8d598a4aba81a9111d58c59dbd504e5dd2d23cc3c1554f120f3669220ac0a4",
+   "duration_seconds": 2.860125,
+   "reference": "The Docker image is built by Terraform in Kamatera.",
+   "terms": [
+    "Docker",
+    "Terraform",
+    "Kamatera"
+   ]
+  },
+  {
+   "id": "term-039",
+   "language": "en",
+   "voice": "Moira",
+   "split": "test",
+   "audio_sha256": "f41d1d0bcc77549991d8eb4ab7b71da56f850c176828c7287e49508ec4690c63",
+   "duration_seconds": 3.11275,
+   "reference": "Rewrite the Kotlin module in Rust when there is time.",
+   "terms": [
+    "Kotlin",
+    "Rust"
+   ]
+  },
+  {
+   "id": "term-040",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "e8c47d5f35f9b68b1c506615b273fa1eea34769e7bedfd4a31e78eeb633966df",
+   "duration_seconds": 2.82975,
+   "reference": "Открой pull request и попроси code review у Мика.",
+   "terms": [
+    "pull request",
+    "code review"
+   ]
+  },
+  {
+   "id": "term-041",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "124b80c6c97362fa40fcfcff1e8dc0f7e8fb40fedec83fcfe061fa7b8aac87c1",
+   "duration_seconds": 3.299625,
+   "reference": "Deploy упал, потому что Sentry был недоступен.",
+   "terms": [
+    "deploy",
+    "Sentry"
+   ]
+  },
+  {
+   "id": "term-042",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "392f85db2e6b3c653f8b6c3abf0e4b91eccefac28af68048728fa970b20d83fd",
+   "duration_seconds": 2.702375,
+   "reference": "Kubernetes поднимет Postgres за пять минут.",
+   "terms": [
+    "Kubernetes",
+    "Postgres"
+   ]
+  },
+  {
+   "id": "term-043",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "0e2b9964ba8b9b93f82aed59448a70c1f1a334fd4ba0282df9c582c0611be9a0",
+   "duration_seconds": 2.4814375,
+   "reference": "Открой Xcode и собери build для релиза.",
+   "terms": [
+    "Xcode",
+    "build"
+   ]
+  },
+  {
+   "id": "term-044",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "fa78d1d31cfdf9e9c7b165be7a6c4e0bfc8bb927d5c5d649dc53fdc1c7b02d90",
+   "duration_seconds": 3.509875,
+   "reference": "Frontend написан на TypeScript, backend на Swift.",
+   "terms": [
+    "frontend",
+    "TypeScript",
+    "backend",
+    "Swift"
+   ]
+  },
+  {
+   "id": "term-045",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "ac4a5fc92f581a17a6755c2bb5133911202cbd5e40f0f98d97480bb310cc8f70",
+   "duration_seconds": 2.806375,
+   "reference": "Нужен hotfix, merge прямо сейчас.",
+   "terms": [
+    "hotfix",
+    "merge"
+   ]
+  },
+  {
+   "id": "term-046",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "eb0eebb540a925618f5a67d27c1f6104467d2444a677b4166fc91aaac4a4099b",
+   "duration_seconds": 2.3566875,
+   "reference": "Запушь ветку в GitHub и сделай rebase.",
+   "terms": [
+    "GitHub",
+    "rebase"
+   ]
+  },
+  {
+   "id": "term-047",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "c6cf6ea841f6501eb48587d24f407897bf512bd784e541703b33e1a2610244cf",
+   "duration_seconds": 2.4736875,
+   "reference": "Включи feature flag только на staging.",
+   "terms": [
+    "feature flag",
+    "staging"
+   ]
+  },
+  {
+   "id": "term-048",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "cefaa60e526108e8fa88c064aeac6e9228024441fed7523aeacc940a557224ac",
+   "duration_seconds": 2.5365,
+   "reference": "Claude от Anthropic написал этот endpoint.",
+   "terms": [
+    "Claude",
+    "Anthropic",
+    "endpoint"
+   ]
+  },
+  {
+   "id": "term-049",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "56a355418b7d7f8263cbf809e1c7329dfce0013f168028493b80b613f6875f46",
+   "duration_seconds": 2.6018125,
+   "reference": "Положи кэш в Redis, а сервис в Docker.",
+   "terms": [
+    "Redis",
+    "Docker"
+   ]
+  },
+  {
+   "id": "term-050",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "f410d887ef3e176ec8d292510e2d0c2c3974f9f4efa0f00a74dca4b49a196d6d",
+   "duration_seconds": 2.5371875,
+   "reference": "Downtime был три минуты во время rollback.",
+   "terms": [
+    "downtime",
+    "rollback"
+   ]
+  },
+  {
+   "id": "term-051",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "7aa349c82e2ca8058ec71b18c411ce6ab3da137e418b278424909ef1fc9a5a4f",
+   "duration_seconds": 2.9153125,
+   "reference": "Production и staging смотрят в один Postgres.",
+   "terms": [
+    "production",
+    "staging",
+    "Postgres"
+   ]
+  },
+  {
+   "id": "term-052",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "9a0aaefba11a12dbbfe0a779daeb96b9a030546ea3c71e183089625d57f7c99d",
+   "duration_seconds": 2.3536875,
+   "reference": "OpenRamble работает на модели Parakeet.",
+   "terms": [
+    "OpenRamble",
+    "Parakeet"
+   ]
+  },
+  {
+   "id": "term-053",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "bdf0f9237fbb57123e548505007afd1fe18f6437061e61370e51fb34ae46576d",
+   "duration_seconds": 2.7488125,
+   "reference": "Linter ругается на JavaScript в этом файле.",
+   "terms": [
+    "linter",
+    "JavaScript"
+   ]
+  },
+  {
+   "id": "term-054",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "0d875115776c625ed9a72e9fa614089cb8fa97a4aa0aac625b6aa011a99d4ba7",
+   "duration_seconds": 2.179,
+   "reference": "Скинь ссылку на Figma в Telegram.",
+   "terms": [
+    "Telegram"
+   ]
+  },
+  {
+   "id": "term-055",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "76668cfcbc751cdf5983d5bc6a731a3e5336a83c404654562785b0545b21362c",
+   "duration_seconds": 3.0044375,
+   "reference": "API отвечает медленно, посмотри Grafana.",
+   "terms": [
+    "API"
+   ]
+  },
+  {
+   "id": "term-056",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "aea72353669e08575c9e6aa84fb8551ce8e4e9424cd2ca9a0286f81ef34bd9a4",
+   "duration_seconds": 2.2080625,
+   "reference": "Сделай commit и открой pull request.",
+   "terms": [
+    "commit",
+    "pull request"
+   ]
+  },
+  {
+   "id": "term-057",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "2954343bd5192360873509916818fa811928ebfa17fef38ff36d862de3e6ac46",
+   "duration_seconds": 2.69,
+   "reference": "Sentry показывает ошибку после deploy.",
+   "terms": [
+    "Sentry",
+    "deploy"
+   ]
+  },
+  {
+   "id": "term-058",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "7e1c36041a71f606fbdf58c215242b7b53fd209533c0bdf0d72681b5b335d0da",
+   "duration_seconds": 2.4349375,
+   "reference": "Merge в master только после code review.",
+   "terms": [
+    "merge",
+    "code review"
+   ]
+  },
+  {
+   "id": "term-059",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "4d14d84b2cca3c18ebbdc14d6f18754fb063cde775c1f0709a58531c8cfc55bd",
+   "duration_seconds": 2.330875,
+   "reference": "Kubernetes и Docker стоят на Hetzner.",
+   "terms": [
+    "Kubernetes",
+    "Docker",
+    "Hetzner"
+   ]
+  },
+  {
+   "id": "term-060",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "34919a54dbc3a1ba6eea4e423a6bf9f348d2404cad4892983796c21da8a26ca6",
+   "duration_seconds": 2.157375,
+   "reference": "Xcode снова не видит симулятор.",
+   "terms": [
+    "Xcode"
+   ]
+  },
+  {
+   "id": "term-061",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "02452a03cef4eeb34a9bf3efafc564c13b025776123ae7338078f97c4e1d7e0e",
+   "duration_seconds": 2.6188125,
+   "reference": "Swift и TypeScript делят один endpoint.",
+   "terms": [
+    "Swift",
+    "TypeScript",
+    "endpoint"
+   ]
+  },
+  {
+   "id": "term-062",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "98eec0eaac3a90444085196a3b9bc2eace939b17b985d2383861dcd94369aec3",
+   "duration_seconds": 2.7481875,
+   "reference": "GitHub Actions собирает build каждую ночь.",
+   "terms": [
+    "GitHub",
+    "build"
+   ]
+  },
+  {
+   "id": "term-063",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "6b95d1ab84c7261bb223be1bed59f2fb4aedc2daa476bac8c647453d876203c5",
+   "duration_seconds": 3.2355,
+   "reference": "Hotfix уже на production, rollback не нужен.",
+   "terms": [
+    "hotfix",
+    "production",
+    "rollback"
+   ]
+  },
+  {
+   "id": "term-064",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "378e006eefe418ec6bb2c121da395a85eec3de3e4006f9a9e4751666e26d609d",
+   "duration_seconds": 3.375,
+   "reference": "Спроси Claude, как сделать rebase без конфликтов.",
+   "terms": [
+    "Claude",
+    "rebase"
+   ]
+  },
+  {
+   "id": "term-065",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "67c9e88a54af07558273b7e6b7f8d8529dae77b5a4d2a31e53bf019c386a556f",
+   "duration_seconds": 2.5393125,
+   "reference": "Backend пишет логи в Sentry и в Grafana.",
+   "terms": [
+    "backend",
+    "Sentry"
+   ]
+  },
+  {
+   "id": "term-066",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "a990f4abe1246c6dceeaf0043cbb9b8dbfd05bfd1642b952a035a70ec0bcb44e",
+   "duration_seconds": 2.8761875,
+   "reference": "Feature flag выключен, downtime не грозит.",
+   "terms": [
+    "feature flag",
+    "downtime"
+   ]
+  },
+  {
+   "id": "term-067",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "0bd48af6e91f8992ed45eebf0da0eeae2843c58ce4b4bc6524c7081087e5dc09",
+   "duration_seconds": 2.8713125,
+   "reference": "Frontend на JavaScript, а linter старый.",
+   "terms": [
+    "frontend",
+    "JavaScript",
+    "linter"
+   ]
+  },
+  {
+   "id": "term-068",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "dev",
+   "audio_sha256": "9000e1afcf1dcae521561db6125c5d85518f5ac3cf574466f3ca4533c0fa6dbf",
+   "duration_seconds": 2.377,
+   "reference": "Anthropic выпустил новую модель Claude.",
+   "terms": [
+    "Anthropic",
+    "Claude"
+   ]
+  },
+  {
+   "id": "term-069",
+   "language": "ru",
+   "voice": "Milena",
+   "split": "test",
+   "audio_sha256": "6526b7efdf298d28061aca95c0b6e481fe30c59952c2aec604b24c2f396d0e74",
+   "duration_seconds": 3.0966875,
+   "reference": "Redis упал, Docker перезапускает контейнер.",
+   "terms": [
+    "Redis",
+    "Docker"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,20 @@
+{
+  "label": "Nemotron 3.5 streaming",
+  "summary": "0.6B Q8, offline path, auto language, transcribe.cpp 0.4.0",
+  "order": 5,
+  "model": {
+    "name": "nemotron-3.5-asr-streaming-0.6b Q8_0",
+    "path": "models/nemotron-3.5-asr-streaming-0.6b-Q8_0/nemotron-3.5-asr-streaming-0.6b-Q8_0.gguf",
+    "sha256": "b94545b313b3223fda7b2857a52681da813935c2127643d1e9ff0c23d988089c",
+    "source": "https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf/blob/53ce288f69326b415aeef030cfcb02a08a8096dd/nemotron-3.5-asr-streaming-0.6b-Q8_0.gguf (from nvidia/nemotron-3.5-asr-streaming-0.6b 24b151a)",
+    "license": "OpenMDW-1.1"
+  },
+  "runtime": "transcribe.cpp 0.4.0, upstream prebuilt XCFramework (SwiftPM checksum 3da069d2…), Metal, one decoder thread, no language hint; the model's auto-language prompt slot",
+  "process": {
+    "kind": "asr-bench"
+  },
+  "warm": {
+    "kind": "asr-bench",
+    "commit": "59e03557bdf265ada6a1521e26c11372707734e8"
+  }
+}

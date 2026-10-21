@@ -303,6 +303,7 @@ for source in \
   "$RUNTIME_LICENSES/LICENSE" \
   "$RUNTIME_LICENSES/LICENSE.ggml" \
   "$RUNTIME_LICENSES/LICENSE.miniz" \
+  "$RUNTIME_LICENSES/LICENSE.silero_vad" \
   "$SPARKLE_LICENSES/LICENSE"
 do
   [[ -s "$source" ]] || { echo "No license in resolved dependency: $source" >&2; exit 1; }
@@ -310,6 +311,7 @@ done
 cp "$RUNTIME_LICENSES/LICENSE" "$RESOURCES/transcribe-cpp-MIT.txt"
 cp "$RUNTIME_LICENSES/LICENSE.ggml" "$RESOURCES/ggml-MIT.txt"
 cp "$RUNTIME_LICENSES/LICENSE.miniz" "$RESOURCES/miniz-MIT.txt"
+cp "$RUNTIME_LICENSES/LICENSE.silero_vad" "$RESOURCES/silero-vad-MIT.txt"
 cp "$SPARKLE_LICENSES/LICENSE" "$RESOURCES/Sparkle-LICENSE.txt"
 
 # CC BY 4.0 text has been submitted to the repository: the build should not require a network.
