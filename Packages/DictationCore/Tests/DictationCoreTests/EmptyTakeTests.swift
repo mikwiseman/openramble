@@ -262,6 +262,107 @@ final class EmptyTakeTests: XCTestCase {
         XCTAssertEqual(archived.map(\.text), [""])
         XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — the recording is in History."])
     }
+
+    /// Escape while the wordless take is being handed to History is the
+    /// person throwing it away, not a take lost on the way. Counting it as
+    /// the file stage failing would inflate the very number that says how
+    /// often takes are lost.
+    func testEscapeDuringTheWordlessHandoverIsNotJournaledAsALostTake() async throws {
+        let takes = FileManager.default.temporaryDirectory
+            .appending(path: "escaped-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: takes, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: takes) }
+        let escape = EscapeKey()
+        let controller = makeController(
+            capture: try MemoryOnlyCapture(
+                directory: takes,
+                samples: quiet + [0.1] + quiet,
+                duringRebuild: {
+                    // Escape lands while History's copy is still being made,
+                    // and the copy is never finished.
+                    await escape.press()
+                    try await Task.sleep(for: .seconds(120))
+                }
+            ),
+            transcribeSamples: { _ in Self.nothing }
+        )
+        escape.controller = controller
+        var failures: [DictationFailureStage] = []
+        controller.onStageFailure = { stage, _, _ in failures.append(stage) }
+
+        try await escapeDuringHandover(controller, escape)
+
+        XCTAssertTrue(archived.isEmpty)
+        XCTAssertEqual(failures, [], "a cancelled take is not a lost one")
+        let notices = await overlay.notices
+        XCTAssertEqual(notices, [])
+    }
+
+    /// Escape that lands after History's copy is ready, but before the
+    /// controller gets back to the main actor to hand it over. The person
+    /// said no; the take must not appear in History anyway.
+    func testEscapeAsTheWordlessTakeIsHandedOverKeepsItOutOfHistory() async throws {
+        let takes = FileManager.default.temporaryDirectory
+            .appending(path: "escaped-late-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: takes, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: takes) }
+        let escape = EscapeKey()
+        let controller = makeController(
+            capture: try MemoryOnlyCapture(
+                directory: takes,
+                samples: quiet + [0.1] + quiet,
+                duringRebuild: {
+                    // Hold the main actor while the copy finishes and comes
+                    // back, then press Escape there. The controller's own
+                    // resumption is queued behind it, so Escape is the first
+                    // thing it sees.
+                    let held = DispatchSemaphore(value: 0)
+                    DispatchQueue.main.async {
+                        held.wait()
+                        MainActor.assumeIsolated { escape.press() }
+                    }
+                    DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(100)) { held.signal() }
+                }
+            ),
+            transcribeSamples: { _ in Self.nothing }
+        )
+        escape.controller = controller
+        var failures: [DictationFailureStage] = []
+        controller.onStageFailure = { stage, _, _ in failures.append(stage) }
+
+        try await escapeDuringHandover(controller, escape)
+
+        XCTAssertTrue(archived.isEmpty, "a take the person cancelled reached History")
+        XCTAssertEqual(failures, [])
+        let notices = await overlay.notices
+        XCTAssertEqual(notices, [])
+        try await waitUntil {
+            let names = (try? FileManager.default.contentsOfDirectory(atPath: takes.path)) ?? []
+            return !names.contains { $0.hasPrefix("memory-recovery-") }
+        }
+    }
+
+    private func escapeDuringHandover(_ controller: DictationController, _ escape: EscapeKey) async throws {
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        try await waitUntil { controller.state == .listening }
+        controller.stop()
+        try await waitUntil { escape.pressed }
+        try await waitUntil { controller.state == .idle }
+        // Anything the controller still had queued after idle has had its turn.
+        try await Task.sleep(for: .milliseconds(200))
+    }
+}
+
+/// The person pressing Escape, from wherever the test needs it.
+@MainActor
+private final class EscapeKey {
+    weak var controller: DictationController?
+    private(set) var pressed = false
+
+    func press() {
+        pressed = true
+        controller?.cancel()
+    }
 }
 
 /// A take that lives only in memory, like the production capture's when the
@@ -273,19 +374,29 @@ final class EmptyTakeTests: XCTestCase {
 /// The rebuilt copy is written before the take and only revealed when the
 /// controller asks for it. These tests measure the controller, and a shared
 /// disk that stalls past the rebuild deadline once in a while is not it.
+/// `duringRebuild` runs first when the controller asks, so a test can press
+/// Escape at exactly that moment.
 private actor MemoryOnlyCapture: AudioCapturing {
     private let url: URL
     private let samples: [Float]
     private let writerWedged: Bool
     private let rebuildFails: Bool
+    private let duringRebuild: (@Sendable () async throws -> Void)?
     private let prepared: URL
     private let rebuilt: URL
 
-    init(directory: URL, samples: [Float], writerWedged: Bool = false, rebuildFails: Bool = false) throws {
+    init(
+        directory: URL,
+        samples: [Float],
+        writerWedged: Bool = false,
+        rebuildFails: Bool = false,
+        duringRebuild: (@Sendable () async throws -> Void)? = nil
+    ) throws {
         url = directory.appending(path: "take.wav")
         self.samples = samples
         self.writerWedged = writerWedged
         self.rebuildFails = rebuildFails
+        self.duringRebuild = duringRebuild
         prepared = directory.appending(path: "prepared.wav.partial")
         rebuilt = directory.appending(path: "memory-recovery-\(UUID().uuidString).wav")
         try Self.write(samples, to: prepared)
@@ -305,6 +416,7 @@ private actor MemoryOnlyCapture: AudioCapturing {
         let prepared = prepared
         let rebuilt = rebuilt
         let rebuildFails = rebuildFails
+        let duringRebuild = duringRebuild
         let disposition = RecordingDisposition()
         disposition.register([rebuilt])
         return CapturedRecording(
@@ -315,6 +427,7 @@ private actor MemoryOnlyCapture: AudioCapturing {
             readableTask: unavailable,
             durableTask: unavailable,
             materializeRecovery: {
+                try await duringRebuild?()
                 if rebuildFails { throw AudioCaptureError.writeFailed("the disk is full") }
                 try FileManager.default.moveItem(at: prepared, to: rebuilt)
                 return rebuilt

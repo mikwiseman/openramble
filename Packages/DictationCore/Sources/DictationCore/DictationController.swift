@@ -1632,7 +1632,10 @@ public final class DictationController {
                     if shouldContinue(session) { kept = onTakeFinished?("", source.url, insertionTarget) ?? false }
                     if source.rebuiltFromPCM { await discard(source.url, session: session) }
                 } catch {
-                    onStageFailure?(.readableFile, handover.duration(to: .now), error is TranscriptionTimeout)
+                    // After Escape the person threw the take away; it was not lost.
+                    if shouldContinue(session) {
+                        onStageFailure?(.readableFile, handover.duration(to: .now), error is TranscriptionTimeout)
+                    }
                 }
                 notice = DictationNotice(
                     kind: .info,
