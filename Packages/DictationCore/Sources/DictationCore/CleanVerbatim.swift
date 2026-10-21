@@ -27,9 +27,14 @@ import Foundation
 ///    keep.
 /// 2. **Fillers.** Words that are hesitation and nothing else. "um", "э" and
 ///    "mmm" are words too (a German particle, the Portuguese "one", a Russian
-///    letter, a date format), so they go only when punctuation sets them apart
-///    on both sides. "um" also goes after a word in a take that reads as
-///    English, and never from a take with German or Portuguese in it.
+///    letter, a date format), so each goes only where it cannot be the word.
+///    "um" never goes from a take with German or Portuguese in it. In a take
+///    that reads as English it goes wherever it stands, except right after a
+///    name; there, and in any other take, it goes only when punctuation sets
+///    it apart on both sides. "э" and "эм", bare or before a comma, go
+///    wherever they stand unless a letter is meant: next to another letter or
+///    a letter's name, or after "буква". "mmm" goes only when punctuation sets
+///    it apart on both sides, and never in a date format.
 ///    An all-caps token is an acronym; "uh huh" and "uh oh" are words. The
 ///    comma after a hesitation goes with it; the one before stays, because the
 ///    recognizer wrote it, unless it can only be the pause: after a word that
