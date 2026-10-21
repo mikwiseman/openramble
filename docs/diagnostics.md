@@ -22,13 +22,13 @@ From 0.31.2, `dictationStageFailed` includes an allowlisted stage (capture freez
 readable WAV, model preparation, or recognition), elapsed milliseconds, and a
 timeout flag. `recognitionFallback` records a failed segment, retaining a native
 numeric status when present. Successful recovery does not erase that fallback
-event. Up to 0.32.0 it was also written as `noSegments` for every ordinary take
+event. Up to 0.33.0 it was also written as `noSegments` for every ordinary take
 recognized whole, which was most takes; older journals still contain those lines.
 Completed dictations also include capture-freeze, WAV-readiness and
 model-preparation durations. These durations can overlap background work and
 must not be summed as a total.
 
-After 0.32.0, completed dictations also include `microphoneStartupMilliseconds`
+After 0.33.0, completed dictations also include `microphoneStartupMilliseconds`
 and `pasteMilliseconds`. The first runs from the capture accepting the start to its
 first 16 kHz frame. It is not key-down to speech: the built-in microphone then
 spends about 180 ms more delivering near silence before the room is audible.
@@ -109,14 +109,15 @@ sees the failure.
 one JSON object per line. Nothing is ever uploaded; nothing is deleted
 automatically.
 
-Each record carries durations (`microphoneStartup`, `captureFreeze`,
-`enginePreparation`, `recognition`, `engineProcessing`, `engineDispatch`,
-`poolReturn`, `mainActorReturn`, `stopToText`, `stopToPaste`), the take's audio
-duration and character count, whether the engine was ready when the person
-stopped speaking, and a `machineAtStop` / `machineAtText` pair with the delta
-between them.
+Each record carries durations in seconds (`microphoneStartupSeconds`,
+`captureFreezeSeconds`, `enginePreparationSeconds`, `recognitionSeconds`,
+`engineProcessingSeconds`, `engineDispatchSeconds`, `poolReturnSeconds`,
+`mainActorReturnSeconds`, `stopToTextSeconds`, `stopToPasteSeconds`), the take's
+audio duration (`audioSeconds`) and `characterCount`, whether the engine was
+ready when the person stopped speaking (`engineWasReady`), and a `machineAtStop`
+/ `machineAtText` pair with the `delta` between them.
 
-`recognition` minus `engineProcessing` is everything the recognition round trip
+`recognitionSeconds` minus `engineProcessingSeconds` is everything the recognition round trip
 cost that was not recognition: transport, scheduling, and page faults.
 
 ### Privacy
