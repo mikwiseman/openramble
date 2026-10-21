@@ -46,16 +46,23 @@ Almost every automatic lifecycle rule this document used to describe existed to
 keep that number away from a person mid-dictation: memory-pressure eviction,
 proactive rewarm with settle windows, a pressure gauge readable across
 isolations, and jittered respawn backoff for a worker that jetsam had killed.
-They are gone, because their cause is. Nothing evicts the engine on the app's
-initiative any more; a memory squeeze is the operating system's business.
+They are gone, because their cause is. Nothing evicts the engine in reaction
+to memory any more; a memory squeeze is the operating system's business.
 
 What remains is simple enough to state in full:
 
-- the model loads when the app becomes ready, and stays loaded;
-- **"Unload model"** — the same countdown the app this one is modelled on
-  offers, chosen by the person rather than by a policy reacting to the OS;
-- a key press wakes a resting engine before any readiness guard can swallow
-  it, so the reload rides under the voice;
+- the model loads when the app becomes ready, and stays loaded until an hour
+  passes with no dictation and no recording. Then the app releases it. The
+  hour is fixed and has no setting. Nothing releases the engine earlier, and
+  there is no memory-pressure eviction, so an 8 GB Mac also holds about 1 GB
+  for up to an hour after the last take. Five minutes, the old default, made
+  106 of 303 key presses in a week cold; the same week's gaps project about
+  one in ten for an hour;
+- a take that finds the engine resting reloads it once the take is listening.
+  The reload rides under the voice and never competes with the microphone
+  start, where the first word lives. A load beside that start made its
+  slowest tenth go from 291 to 378 ms in one run and changed nothing in
+  another; the load has the whole take to finish either way;
 - a stop-time load, if one is still in flight, is waited out and the words are
   inserted normally — the panel says "Waking the model…" rather than claiming
   to transcribe.

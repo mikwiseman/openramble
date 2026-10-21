@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import DictationAudio
 import DictationCore
 import Foundation
@@ -129,11 +130,12 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
     private var heldPlan: [CGEventFlags] = [[]]
     private var heldCalls = 0
     private var postError: TextInsertionError?
-    private var posted: [(
-        keyCode: CGKeyCode,
-        flags: CGEventFlags,
-        targetProcessIdentifier: Int32?
-    )] = []
+    private var pasteKey = CGKeyCode(kVK_ANSI_V)
+    private var posted: [(keyCode: CGKeyCode, flags: CGEventFlags)] = []
+    /// Runs after each post, outside the lock: a test plays the target here.
+    var onPost: (@Sendable () -> Void)?
+    /// Runs on each modifier poll, between the clipboard write and ⌘V.
+    var onHeldModifiers: (@Sendable () -> Void)?
 
     let log: CallLog
 
@@ -149,14 +151,11 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
     func setActivateResult(_ value: Bool) { withLock { activateResult = value } }
     func setHeldPlan(_ plan: [CGEventFlags]) { withLock { heldPlan = plan.isEmpty ? [[]] : plan } }
     func setPostError(_ error: TextInsertionError?) { withLock { postError = error } }
+    func setPasteKeyCode(_ keyCode: CGKeyCode) { withLock { pasteKey = keyCode } }
 
     // MARK: Observation
 
-    var postedKeys: [(
-        keyCode: CGKeyCode,
-        flags: CGEventFlags,
-        targetProcessIdentifier: Int32?
-    )] { withLock { posted } }
+    var postedKeys: [(keyCode: CGKeyCode, flags: CGEventFlags)] { withLock { posted } }
     var heldModifiersCallCount: Int { withLock { heldCalls } }
 
     // MARK: InputSystem
@@ -167,11 +166,13 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
     func frontmostApplication() -> TargetApplication? { withLock { frontmost } }
 
     func heldModifiers() -> CGEventFlags {
-        withLock {
+        let value = withLock {
             let value = heldPlan[min(heldCalls, heldPlan.count - 1)]
             heldCalls += 1
             return value
         }
+        onHeldModifiers?()
+        return value
     }
 
     func activate(_ target: TargetApplication) async -> Bool {
@@ -179,14 +180,13 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
         return withLock { activateResult }
     }
 
-    func post(
-        keyCode: CGKeyCode,
-        flags: CGEventFlags,
-        targetProcessIdentifier: Int32?
-    ) throws {
+    func pasteKeyCode() async -> CGKeyCode { withLock { pasteKey } }
+
+    func post(keyCode: CGKeyCode, flags: CGEventFlags) throws {
         log.record("post")
         if let error = withLock({ postError }) { throw error }
-        withLock { posted.append((keyCode, flags, targetProcessIdentifier)) }
+        withLock { posted.append((keyCode, flags)) }
+        onPost?()
     }
 
     private func withLock<T>(_ body: () -> T) -> T {
@@ -197,11 +197,23 @@ final class FakeInputSystem: InputSystem, @unchecked Sendable {
 }
 
 final class FakePasteboard: DictationPasteboard, @unchecked Sendable {
+    /// When the target reads the dictation.
+    enum ReadMode {
+        /// Right after ⌘V: the first time anyone asks.
+        case afterPaste
+        case never
+        /// After the last look and just before the restore takes the
+        /// transaction: the read that races the verdict.
+        case duringRestore
+    }
+
     private let lock = NSLock()
     private var written: [String] = []
     private var error: TextInsertionError?
     private var restoreError: TextInsertionError?
     private var transactions: [PasteboardTransaction] = []
+    private var readMode = ReadMode.afterPaste
+    private var readAt: ContinuousClock.Instant?
     var onBegin: (@Sendable () -> Void)?
 
     let log: CallLog
@@ -222,6 +234,12 @@ final class FakePasteboard: DictationPasteboard, @unchecked Sendable {
         restoreError = error
     }
 
+    func setReadMode(_ mode: ReadMode) {
+        lock.lock()
+        defer { lock.unlock() }
+        readMode = mode
+    }
+
     var writtenTexts: [String] {
         lock.lock()
         defer { lock.unlock() }
@@ -238,15 +256,31 @@ final class FakePasteboard: DictationPasteboard, @unchecked Sendable {
         let transaction = PasteboardTransaction()
         lock.lock()
         transactions.append(transaction)
+        readAt = nil
         lock.unlock()
         onBegin?()
         return transaction
+    }
+
+    func firstRead(of transaction: PasteboardTransaction) -> ContinuousClock.Instant? {
+        lock.lock()
+        defer { lock.unlock() }
+        switch readMode {
+        case .afterPaste:
+            if readAt == nil { readAt = .now }
+            return readAt
+        case .never:
+            return nil
+        case .duringRestore:
+            return readAt
+        }
     }
 
     func restore(_ transaction: PasteboardTransaction) throws {
         log.record("restore")
         lock.lock()
         transactions.removeAll { $0 == transaction }
+        if readMode == .duringRestore, readAt == nil { readAt = .now }
         let failure = restoreError
         lock.unlock()
         if let failure { throw failure }
@@ -270,12 +304,31 @@ actor FakeCapture: AudioCapturing {
     /// Shorter than the limit - and the session will end without recognition. This is how it is checked
     /// full circle of dictation without touching the real model.
     private var duration: TimeInterval = 2.0
+    /// The take's PCM, when a test needs to say what it sounded like.
+    private var bufferedSamples: [Float]?
 
     private let file: URL
+
+    /// Keep the microphone opening until the test lets it, in the style of
+    /// `FakeInserter`'s hold: what happens during `.preparing` can be seen.
+    private var isHoldingStarts = false
+    private var heldStarts: [CheckedContinuation<Void, Never>] = []
 
     init(file: URL) { self.file = file }
 
     func setDuration(_ value: TimeInterval) { duration = value }
+    func setBufferedSamples(_ samples: [Float]?) { bufferedSamples = samples }
+
+    func takeBufferedSamples() async -> [Float]? { bufferedSamples }
+
+    func holdStarts() { isHoldingStarts = true }
+
+    func releaseStarts() {
+        isHoldingStarts = false
+        let held = heldStarts
+        heldStarts = []
+        for start in held { start.resume() }
+    }
 
     func startRecording(session: DictationSessionID, disposition: RecordingDisposition) async throws -> URL {
         self.session = session
@@ -283,6 +336,9 @@ actor FakeCapture: AudioCapturing {
     }
 
     func startRecording() async throws -> URL {
+        if isHoldingStarts {
+            await withCheckedContinuation { heldStarts.append($0) }
+        }
         startCount += 1
         isRecording = true
         return file
@@ -340,6 +396,12 @@ actor FakeInserter: TextInserting {
     func pressReturn() async throws { returnPresses += 1 }
 
     nonisolated func frontmostApplication() -> TargetApplication? { frontmost }
+
+    private let readWaitLock = NSLock()
+    nonisolated(unsafe) private var readWaitEndCount = 0
+    /// How many times a press asked the insertion to stop waiting for a read.
+    nonisolated var readWaitEnds: Int { readWaitLock.withLock { readWaitEndCount } }
+    nonisolated func endTheReadWait() { readWaitLock.withLock { readWaitEndCount += 1 } }
 }
 
 actor FakeOverlay: OverlayPresenting {
@@ -475,6 +537,8 @@ final class AppHarness {
     let overlay = FakeOverlay()
     let capture: FakeCapture
     var captureMemoryLimit: (@Sendable (DictationSessionID) -> Void)?
+    /// What the application gave the capture to report a broken take with.
+    var captureFailure: (@Sendable (DictationSessionID, AudioCaptureError) -> Void)?
     let meetingCapture = FakeMeetingCapture()
     let screenCapture = FakeScreenRecordingCapture()
     let announcer = FakeAnnouncer()
@@ -600,7 +664,8 @@ final class AppHarness {
                 // through the speakers of whoever runs the suite — once per
                 // failure path, across hundreds of tests.
                 makeSounds: { [sounds] _ in sounds },
-                makeCapture: { [weak self, capture] _, _, _, memoryLimit, _ in
+                makeCapture: { [weak self, capture] _, failure, _, memoryLimit, _ in
+                    self?.captureFailure = failure
                     self?.captureMemoryLimit = memoryLimit
                     return capture
                 },

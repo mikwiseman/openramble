@@ -154,3 +154,24 @@ public enum DictationDurationPolicy {
     // to disk; the transcription deadline scales with the recording; there
     // is no engineering reason left to interrupt anyone mid-sentence.
 }
+
+/// Whether a take that the model found no words in heard anything at all.
+///
+/// Asked only after recognition came back empty, so quiet speech never gets
+/// here: the installed model wrote a spoken sentence out at peaks of 0.015,
+/// 0.01 and 0.005, with and without a room-noise floor - word for word in five
+/// of the six, one word changed in the quietest - while zeros, noise and a
+/// lone click came back empty. A take that came back empty and
+/// never reached the floor heard silence - a muted, dead or wrong microphone,
+/// or a person who said nothing - and keeping it would fill History with rows
+/// of nothing.
+public enum SilentTakePolicy {
+    /// The same floor the segmenter uses; reaching it counts as sound.
+    public static let floor = SpeechSegmenter.Parameters.defaultSpeechPeak
+
+    /// `nil` or empty samples cannot prove silence, so the take is kept.
+    public static func heardOnlySilence(_ samples: [Float]?) -> Bool {
+        guard let samples, !samples.isEmpty else { return false }
+        return !samples.contains { abs($0) >= floor }
+    }
+}

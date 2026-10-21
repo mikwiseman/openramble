@@ -37,12 +37,34 @@ for the check.
    an empty or half-filled replacement.
 7. Double-press the hotkey to start hands-free recording, then press once to
    stop. Confirm Escape and a conflicting shortcut cancel without inserting text.
+   Hold the hotkey and press C right away (a shortcut such as ⌘C): nothing is
+   inserted. In an empty TextEdit document, hold it, speak for a second or
+   two, press Down Arrow, keep talking and release: the whole take is
+   inserted, including the words after the key. The key is not swallowed:
+   under Right Command it reaches the app as ⌘↓, which an empty document has
+   nowhere to act on, and in any other field a late chord (⌘A, ⌘↓) acts
+   before the paste lands.
+   Set the input volume to zero and hold the key for 2 s: the orange panel
+   names the microphone and History gains nothing. Restore the volume, hold
+   the key and tap the desk once without speaking: the panel says the
+   recording is in History, and History shows "Nothing recognized" with Play,
+   the ↻ button ("Recognize this recording again") and Delete, and no Copy.
 8. Switch focus during transcription and verify insertion returns to the field
    where dictation began. Cover rich text, a multiline field, an empty field, a
    secure field, and a destination that rejects paste.
    With two displays, repeat while the keyboard focus and pointer are on different
    screens; verify insertion still targets the original field and the HUD stays
    visible without stealing focus.
+   Open a Spotlight or Raycast panel over a terminal, end a take with
+   "Send it.", and confirm both the text and Return reach the panel, never the
+   terminal behind it. With the Dvorak and Turkish F layouts selected, confirm
+   a dictation pastes rather than typing ⌘K or copying.
+   Dictate with no text field focused (Finder's desktop) and confirm the
+   "couldn't be inserted" notice appears within three seconds and the previous
+   clipboard is back. Repeat, and press the dictation key again a second
+   after releasing it: the notice and its sound come at once, and the press
+   after that starts a new take. Then use `Insert Last Dictation` from the menu into
+   a text field and confirm it lands without a second notice.
 9. Confirm clipboard text, rich content, files, and multiple items are restored
    after insertion and do not appear on another device through Universal
    Clipboard. Verify password-manager values, lazy file promises, and content

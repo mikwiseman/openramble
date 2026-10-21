@@ -113,4 +113,28 @@ final class CaptureInterruptionTests: XCTestCase {
 
         XCTAssertEqual(controller.state, .listening, "\u{041E}\u{0441}\u{0432}\u{043E}\u{0431}\u{043E}\u{0434}\u{0438}\u{043B}\u{0438} \u{043C}\u{0435}\u{0441}\u{0442}\u{043E} — \u{0434}\u{0438}\u{043A}\u{0442}\u{0443}\u{0435}\u{043C} \u{0434}\u{0430}\u{043B}\u{044C}\u{0448}\u{0435}")
     }
+
+    /// A disconnect is reported from the microphone's own thread and reaches
+    /// the controller after a hop. By then that take may be over and the next
+    /// one listening: the news belongs to the take it was about, and the
+    /// person speaking now keeps their take.
+    func testADisconnectForAnEarlierTakeLeavesTheCurrentOneListening() async throws {
+        let earlier = DictationSessionID()
+        let capture = FakeCapture()
+        let controller = makeController(capture: capture)
+        var notices: [DictationNotice] = []
+        controller.onNotice = { notices.append($0) }
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        XCTAssertEqual(controller.state, .listening)
+
+        controller.preserveActiveRecording(session: earlier, reason: "The microphone was disconnected.")
+        await settle()
+
+        XCTAssertEqual(controller.state, .listening)
+        XCTAssertTrue(notices.isEmpty)
+        let stopped = await capture.stopCount
+        XCTAssertEqual(stopped, 0)
+    }
 }

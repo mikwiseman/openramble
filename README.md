@@ -33,7 +33,7 @@ OpenRamble's voice typing works in any app that accepts text, from Mail, Slack a
 - **Hands-free.** Double-press the key to dictate without holding it. In Settings, you can also let hands-free dictation finish when you stop talking.
 - **Long dictation.** You can dictate for longer than five minutes, and OpenRamble starts transcribing while you are still speaking.
 - **Personal dictionary.** Tell OpenRamble how a word sounds and how to write it. A built-in list already covers common technical terms. You can also import and export your dictionary as a file.
-- **Your clipboard comes back.** After the paste, OpenRamble puts back what was on your clipboard, images included. Dictated text is marked so that it stays off Universal Clipboard and out of clipboard managers that respect the standard privacy markers.
+- **Your clipboard comes back.** Once the text has been read, usually a quarter of a second after the paste, OpenRamble puts back what was on your clipboard, images included. If no app reads the text within three seconds, OpenRamble puts your clipboard back, tells you the text was not inserted and keeps it for Insert Last Dictation. Dictated text is marked so that it stays off Universal Clipboard and out of clipboard managers that respect the standard privacy markers.
 - **History.** Replay, copy or delete recent dictations, or recognize one again. If a paste fails, choose Insert Last Dictation from the OpenRamble menu in the menu bar.
 - **VoiceOver.** With VoiceOver on, OpenRamble plays a short tone when the microphone opens instead of a spoken announcement, so VoiceOver's speech does not end up in your dictation.
 
@@ -141,7 +141,7 @@ You can verify the network limits yourself. On every pull request and every push
 
 OpenRamble stores audio and text from your dictations and recordings only on your Mac, in `~/Library/Application Support/OpenRamble`:
 
-- **Dictation history.** OpenRamble keeps your recent dictations with their audio, so you can replay, copy or delete them. It keeps the last 5 by default, and you can change that to 10, 20 or 50 in Settings → Dictation History → Keep. When a new dictation pushes an old one past the limit, OpenRamble deletes the old one's text and audio. A dictation you star with "Keep this one" does not count toward the limit and stays until you delete it. Each dictation also notes the kind of app it went to, such as mail, chat or terminal, never the app's name, so recognizing it again shapes the text the same way. You can also delete one dictation or all of them at any time.
+- **Dictation history.** OpenRamble keeps your recent dictations with their audio, so you can replay, copy or delete them. It keeps the last 5 by default, and you can change that to 10, 20 or 50 in Settings → Dictation History → Keep. When a new dictation pushes an old one past the limit, OpenRamble deletes the old one's text and audio. A dictation you star with "Keep this one" does not count toward the limit and stays until you delete it. Each dictation also notes the kind of app it went to, such as mail, chat or terminal, never the app's name, so recognizing it again shapes the text the same way. You can also delete one dictation or all of them at any time. OpenRamble also keeps a take in which it recognized no words, so you can play it or recognize it again. Such takes never push out a dictation, because they have their own limit of the same number. A take that heard only silence is not kept.
 - **Recordings.** OpenRamble keeps each meeting or screen recording with its audio, its transcript and any screen video. The audio takes about 230 MB per hour while you record, and about 43 MB per hour after OpenRamble compresses it once the transcript is done. A recording stays until you delete it, and deleting it moves it to the Trash. Your Mac's backups include your recordings but skip the folders that hold temporary dictation audio.
 
 | Other local data | How long it stays |
@@ -264,7 +264,7 @@ An early Windows and Linux version is in [`apps/desktop`](apps/desktop), and its
 - A Mac with Apple Silicon, where recognition runs on the GPU. Support for Intel Macs is experimental. On an Intel Mac, recognition runs on the processor. The Intel version has been tested only under Rosetta on an Apple Silicon Mac.
 - About 490 MB of disk space for the speech model, plus temporary space while it downloads.
 - If you used Parakeet v3 before, Settings offers the upgrade to Parakeet Ultra, and nothing downloads until you click. Both models stay on disk, about 1.2 GB together, until Ultra has been verified and loaded. OpenRamble then deletes v3.
-- In OpenRamble's tests, the recognition process used at most 842 MB of memory with the model loaded. By default the model unloads after 5 minutes with no dictation or recording, and you can change that in Settings → Setup → Unload model.
+- In OpenRamble's tests, the recognition process used at most 842 MB of memory with the model loaded. The model stays loaded until an hour passes with no dictation or recording, and nothing unloads it earlier, memory pressure included. The next dictation reloads it while you speak, and recording starts at once either way.
 - Permissions:
   - Microphone, to hear you.
   - Accessibility, to notice the dictation key and paste the text.

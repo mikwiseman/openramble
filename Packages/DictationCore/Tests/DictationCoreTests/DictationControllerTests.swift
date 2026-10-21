@@ -212,6 +212,63 @@ actor FakeInserter: TextInserting {
     nonisolated func frontmostApplication() -> TargetApplication? { frontmost }
 }
 
+/// Sends ⌘V that nobody reads, and waits for the read until told to stop,
+/// the way the real inserter does.
+private final class ReadWaitingInserter: TextInserting, @unchecked Sendable {
+    private let lock = NSLock()
+    private var waiting = false
+    private var ended = false
+
+    var isWaiting: Bool { lock.withLock { waiting } }
+
+    func insert(_ text: String, into target: TargetApplication?) async throws {
+        lock.withLock { waiting = true }
+        for _ in 0..<1000 where !lock.withLock({ ended }) {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        throw TextInsertionError.pasteNotRead
+    }
+
+    func endTheReadWait() {
+        lock.withLock { if waiting { ended = true } }
+    }
+
+    func pressReturn() async throws {}
+    func frontmostApplication() -> TargetApplication? { nil }
+}
+
+/// A paste the target reads 18 ms after ⌘V, held to the restore floor the
+/// way the real inserter holds it: the text is already in place while the
+/// insertion still has 250 ms to go.
+private final class LandedPasteInserter: TextInserting, @unchecked Sendable {
+    private let lock = NSLock()
+    private var pastes: [ContinuousClock.Instant] = []
+
+    var lastPaste: ContinuousClock.Instant? { lock.withLock { pastes.last } }
+    var pasteCount: Int { lock.withLock { pastes.count } }
+
+    func insert(_ text: String, into target: TargetApplication?) async throws {
+        _ = try await insertReportingMarks(text, into: target)
+    }
+
+    func insertReportingMarks(
+        _ text: String,
+        into target: TargetApplication?
+    ) async throws -> InsertionMarks {
+        let paste = ContinuousClock.now
+        lock.withLock { pastes.append(paste) }
+        try await Task.sleep(until: paste + .milliseconds(250))
+        return InsertionMarks(
+            pasteDispatchedAt: paste,
+            clipboardRestoredAt: .now,
+            firstReadAt: paste + .milliseconds(18)
+        )
+    }
+
+    func pressReturn() async throws {}
+    func frontmostApplication() -> TargetApplication? { nil }
+}
+
 actor FakeOverlay: OverlayPresenting {
     private(set) var presentedStates: [DictationState] = []
     private(set) var dismissCount = 0
@@ -261,7 +318,8 @@ final class DictationControllerTests: XCTestCase {
         recognized: String = "\u{043F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442} \u{043C}\u{0438}\u{0440}",
         transcribeDelay: Duration = .zero,
         transcribeError: Error? = nil,
-        replacements: [DictionaryReplacement] = []
+        replacements: [DictionaryReplacement] = [],
+        inserter: (any TextInserting)? = nil
     ) -> DictationController {
         DictationController(
             capture: capture,
@@ -270,7 +328,7 @@ final class DictationControllerTests: XCTestCase {
                 if let transcribeError { throw transcribeError }
                 return ASRResult(text: recognized, audioDuration: 2, processingDuration: 0.1)
             },
-            inserter: inserter,
+            inserter: inserter ?? self.inserter,
             overlay: overlay,
             sounds: sounds,
             pipeline: { _ in TextPipeline(replacements: replacements) }
@@ -832,9 +890,17 @@ final class DictationControllerTests: XCTestCase {
         )
     }
 
-    func testClipboardRestoreFailureDoesNotClaimInsertedTextWasLost() async throws {
-        await inserter.setError(.insertedButClipboardRestoreFailed)
-        let controller = makeController(recognized: "\u{0442}\u{0435}\u{043A}\u{0441}\u{0442} \u{0443}\u{0436}\u{0435} \u{0432}\u{0441}\u{0442}\u{0430}\u{0432}\u{043B}\u{0435}\u{043D}")
+    /// ⌘V went out, but no application ever read the clipboard: nothing was
+    /// pasted. That is words that did not land, said out loud, with the text
+    /// kept for the menu — never a silent success.
+    func testAPasteNobodyReadIsReportedAsWordsThatDidNotLand() async throws {
+        await inserter.setError(.pasteNotRead)
+        let controller = makeController(recognized: "nobody read this")
+        var archived: [String] = []
+        controller.onTakeFinished = { text, _, _ in
+            archived.append(text)
+            return true
+        }
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()
@@ -842,8 +908,172 @@ final class DictationControllerTests: XCTestCase {
         await settle()
 
         let notices = await overlay.notices
-        XCTAssertNil(controller.pendingRecovery)
-        XCTAssertTrue(notices.contains { $0.message.contains("The text was inserted") })
+        let notice = try XCTUnwrap(notices.last)
+        XCTAssertEqual(notice.kind, .warning)
+        XCTAssertTrue(notice.wordsDidNotLand)
+        XCTAssertEqual(notice.recoverableText, "Nobody read this")
+        XCTAssertEqual(controller.pendingRecovery?.text, "Nobody read this")
+        XCTAssertEqual(archived, ["Nobody read this"])
+    }
+
+    /// The person presses the key again while the paste waits for its read:
+    /// nothing has appeared, so they are trying again. The press ends the
+    /// wait, and the paste nobody read is said out loud now — never a press
+    /// that vanishes while they speak into nothing. The next press starts.
+    func testAPressWhileThePasteWaitsForItsReadEndsTheWaitOutLoud() async throws {
+        let waiting = ReadWaitingInserter()
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in
+                ASRResult(text: "nobody read this", audioDuration: 2, processingDuration: 0.1)
+            },
+            inserter: waiting,
+            overlay: overlay,
+            sounds: sounds,
+            pipeline: { _ in TextPipeline() }
+        )
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        for _ in 0..<400 where !waiting.isWaiting {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(controller.state, .inserting)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+
+        let notices = await overlay.notices
+        let notice = try XCTUnwrap(notices.last)
+        XCTAssertTrue(notice.wordsDidNotLand)
+        XCTAssertEqual(notice.recoverableText, "Nobody read this")
+        XCTAssertEqual(controller.pendingRecovery?.text, "Nobody read this")
+        let plays = await sounds.attentionPlays
+        XCTAssertEqual(plays, 1)
+        XCTAssertEqual(controller.state, .idle)
+        let startsAfterThePress = await capture.startCount
+        XCTAssertEqual(startsAfterThePress, 1, "the press that ended the wait is not a take")
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        let startsAfterTheNextPress = await capture.startCount
+        XCTAssertEqual(startsAfterTheNextPress, 2, "the next press starts normally")
+    }
+
+    /// The text is already in place, but the insertion holds on to the
+    /// restore floor. The person presses again and speaks: that press is
+    /// late by at most the floor, never lost.
+    func testAPressWhileALandedPasteFinishesStartsItsTake() async throws {
+        let landed = LandedPasteInserter()
+        let controller = makeController(inserter: landed)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        let pasted = try await waitForPaste(landed, count: 1)
+        try await Task.sleep(until: pasted + .milliseconds(100))
+        XCTAssertEqual(controller.state, .inserting)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        let deadline = ContinuousClock.now + .seconds(1)
+        while await capture.startCount < 2, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        let starts = await capture.startCount
+        XCTAssertEqual(starts, 2, "the press starts its take once the paste is done")
+        XCTAssertTrue([.preparing, .listening].contains(controller.state), "\(controller.state)")
+
+        controller.stop()
+        _ = try await waitForPaste(landed, count: 2)
+    }
+
+    /// A press and release inside the hold is the tap it would have been a
+    /// moment later: its take starts and stops, and the microphone is never
+    /// left on for a key that is already up.
+    func testATapWhileALandedPasteFinishesIsStillATap() async throws {
+        let landed = LandedPasteInserter()
+        let controller = makeController(inserter: landed)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        let pasted = try await waitForPaste(landed, count: 1)
+        try await Task.sleep(until: pasted + .milliseconds(100))
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        try await Task.sleep(until: pasted + .milliseconds(150))
+        controller.stop()
+        XCTAssertEqual(controller.state, .inserting)
+
+        _ = try await waitForPaste(landed, count: 2)
+        let deadline = ContinuousClock.now + .seconds(1)
+        while controller.state != .idle, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(controller.state, .idle)
+        let starts = await capture.startCount
+        let stops = await capture.stopCount
+        XCTAssertEqual(starts, 2)
+        XCTAssertEqual(stops, 2, "the tap's take was stopped, not left listening")
+    }
+
+    /// A press inside the hold that turns out to be a shortcut (Right ⌘ and
+    /// Return, "send" in a chat app) is no take. The hotkey monitor cancels
+    /// the hold and swallows its release, so the press that waits for the
+    /// paste must go with it, or its take would listen with the key up.
+    func testAShortcutPressedWhileALandedPasteFinishesStartsNothing() async throws {
+        let landed = LandedPasteInserter()
+        let controller = makeController(inserter: landed)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        let pasted = try await waitForPaste(landed, count: 1)
+        try await Task.sleep(until: pasted + .milliseconds(80))
+        XCTAssertEqual(controller.state, .inserting)
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        // What `onAbortShortcut` does; the release that follows never comes.
+        controller.cancel()
+
+        try await Task.sleep(until: pasted + .milliseconds(600))
+        XCTAssertEqual(controller.state, .idle)
+        let starts = await capture.startCount
+        XCTAssertEqual(starts, 1, "the shortcut started no take")
+    }
+
+    /// Nothing was pasted, and putting the person's clipboard back failed
+    /// too. Both are said: the text is in the menu, and what they had copied
+    /// is gone.
+    func testAFailedPasteThatAlsoLostTheClipboardSaysSo() async throws {
+        await inserter.setError(.clipboardRestoreFailed)
+        let controller = makeController(recognized: "lost both")
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        let notices = await overlay.notices
+        let notice = try XCTUnwrap(notices.last)
+        XCTAssertEqual(notice.kind, .warning)
+        XCTAssertTrue(notice.wordsDidNotLand)
+        XCTAssertEqual(notice.recoverableText, "Lost both")
+        XCTAssertEqual(
+            notice.message,
+            L10n.tr("The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu.")
+        )
+    }
+
+    private func waitForPaste(
+        _ inserter: LandedPasteInserter,
+        count: Int
+    ) async throws -> ContinuousClock.Instant {
+        let deadline = ContinuousClock.now + .seconds(2)
+        while inserter.pasteCount < count, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertEqual(inserter.pasteCount, count)
+        return try XCTUnwrap(inserter.lastPaste)
     }
 
     // MARK: Insertion target

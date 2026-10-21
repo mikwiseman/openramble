@@ -423,6 +423,10 @@ public enum AudioCaptureError: Error, Sendable, Equatable {
     case diskFull
     case writeFailed(String)
     case notRecording
+    /// The microphone disappeared or changed its format under a running take.
+    /// Carries no detail on purpose: the application shows its own localized
+    /// sentence and keeps the take, exactly as for an engine route change.
+    case deviceDisconnected
 }
 
 // MARK: - Insert text
@@ -436,8 +440,8 @@ public protocol TextInserting: Sendable {
     func pressReturn() async throws
 
     /// Send Return to the same application captured for this dictation. The
-    /// default keeps old/test inserters source-compatible; production targets
-    /// the process so an actor-turn focus change cannot redirect the command.
+    /// default keeps old/test inserters source-compatible; production presses
+    /// it where the paste went, and only while that application is in front.
     func pressReturn(into target: TargetApplication?) async throws
 
     /// The application that was active at the time the hotkey was pressed.
@@ -448,19 +452,28 @@ public protocol TextInserting: Sendable {
 
     /// Insert and tell when exactly the text went into someone else’s window.
     ///
-    /// A separate method is needed because `insert` returns only via
-    /// second of buffer protection: from the outside the moment of insertion cannot be caught, from the inside -
-    /// trivial.
+    /// A separate method is needed because `insert` returns only after the
+    /// target has read the paste and the clipboard is back: from the outside the
+    /// moment of insertion cannot be caught, from the inside - trivial.
     func insertReportingMarks(
         _ text: String,
         into target: TargetApplication?
     ) async throws -> InsertionMarks
+
+    /// The person pressed the dictation key while the insertion waits for the
+    /// target to read the paste. Nothing has appeared, so they are trying
+    /// again: stop waiting as soon as a real application would have read. A
+    /// paste nobody read by then throws `pasteNotRead`, so it is said out loud.
+    func endTheReadWait()
 }
 
 extension TextInserting {
     public func pressReturn(into target: TargetApplication?) async throws {
         try await pressReturn()
     }
+
+    /// Inserters that do not wait for a read have nothing to end.
+    public func endTheReadWait() {}
 
     /// The default is a normal insert without marks. False inserters in
     /// tests do not measure anything and should not pretend to measure anything.
@@ -494,8 +507,9 @@ public enum TextInsertionError: Error, Sendable, Equatable {
     case clipboardWriteFailed
     /// Before Paste the clipboard could not be returned; no text inserted.
     case clipboardRestoreFailed
-    /// Paste has already been sent, but the old clipboard could not be returned.
-    case insertedButClipboardRestoreFailed
+    /// ⌘V was sent, but no application read the clipboard within the limit,
+    /// so nothing was pasted.
+    case pasteNotRead
     /// The user did not release the modifiers, and the press would turn into someone else's combination.
     case modifiersStillHeld
     case targetUnavailable

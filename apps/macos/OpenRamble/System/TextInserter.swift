@@ -9,6 +9,14 @@ import Foundation
 public protocol DictationPasteboard: Sendable {
     /// Keep valid previous contents in memory and put local text.
     func beginHostOnlyWrite(_ text: String) throws -> PasteboardTransaction
+    /// When an application first read the dictated text; `nil` while nobody has.
+    ///
+    /// The receipt that a paste landed: no read means nothing was pasted. A
+    /// read does not say who made it, so an app that polls the clipboard
+    /// during the wait (Claude does, every 500 ms in bursts) spends it as well.
+    /// Once the transaction is restored no read can be added, so asking after
+    /// `restore` gives the final answer.
+    func firstRead(of transaction: PasteboardTransaction) -> ContinuousClock.Instant?
     /// Return the original content only if the post still belongs to us.
     func restore(_ transaction: PasteboardTransaction) throws
 }
@@ -44,6 +52,8 @@ private final class PasteboardTransactionStorage: @unchecked Sendable {
     /// Tombstone expired snapshot. There is no content here - only Int,
     /// therefore the privacy budget is not violated.
     private var expiredOwnership: [UUID: Int] = [:]
+    /// When the dictation was first handed to a reader. Instants only.
+    private var firstReads: [UUID: ContinuousClock.Instant] = [:]
     private let lifetime: TimeInterval
 
     init(lifetime: TimeInterval) {
@@ -52,54 +62,41 @@ private final class PasteboardTransactionStorage: @unchecked Sendable {
 
     func insert(_ snapshot: Snapshot, for id: UUID) {
         lock.lock()
-        // The old tombstone is no longer needed: a record that lands on our own dictation
-        // takes it over through `inherit`, and everyone else lands on someone else's
-        // contents, where the past ownership counter means nothing. The dictionary
-        // does not grow indefinitely.
+        // The insertion lane admits one transaction at a time, so every earlier
+        // one is finished: its tombstone and receipt mean nothing any more, and
+        // the dictionaries do not grow indefinitely.
         expiredOwnership.removeAll()
+        firstReads.removeAll()
         snapshots[id] = snapshot
         lock.unlock()
 
-        // Even if the calling task died between write and restore,
-        // sensitive snapshot does not survive the privacy budget. Three seconds:
-        // seconds to consume ⌘V by a slow application (VoiceInk #722),
-        // up to half a second to release modifiers and reserve for the scheduler.
+        // Even if the calling task died between write and restore, the
+        // sensitive snapshot does not survive the privacy budget. Five seconds:
+        // the three-second wait for the target to read ⌘V, up to half a second
+        // to release modifiers, and a reserve for the scheduler.
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + lifetime) { [weak self] in
             self?.expire(id)
         }
     }
 
-    /// Remember only ownership: there is nothing to restore anymore.
+    /// Hand the dictation over, but only while the transaction is open, and
+    /// note the moment.
     ///
-    /// The fact itself cannot be lost. Losing it means that restore would consider
-    /// the clipboard someone else's and would silently leave the dictation in it.
-    func insertExpired(ownedChangeCount: Int, for id: UUID) {
-        lock.lock()
-        expiredOwnership.removeAll()
-        expiredOwnership[id] = ownedChangeCount
-        lock.unlock()
-    }
-
-    /// Give the pending contents of the person to the record that is about to replace
-    /// our own dictation on the board.
-    ///
-    /// Two dictations within one restore window are commonplace: a short answer in the
-    /// chat, and a second one a second later. For a record that lands on our own text,
-    /// the person's clipboard is what the previous transaction holds - and only it. The
-    /// transaction is taken away along with it: its own restore would be applied to a
-    /// board that is no longer his.
-    func inherit(ownedChangeCount: Int) -> Claim {
+    /// Under the lock, so it never interleaves with `take`: a read that wins is
+    /// on record before the restore decides anything, and one that loses is
+    /// never handed the dictation after the person's clipboard is back. AppKit
+    /// may give that late reader whatever the board holds by then, so the wait
+    /// lets our main thread serve a pending read before the restore.
+    func provide(for id: UUID, _ handOver: () -> Void) {
         lock.lock()
         defer { lock.unlock() }
-        if let id = snapshots.first(where: { $0.value.ownedChangeCount == ownedChangeCount })?.key,
-           let snapshot = snapshots.removeValue(forKey: id) {
-            return .snapshot(snapshot)
-        }
-        if let id = expiredOwnership.first(where: { $0.value == ownedChangeCount })?.key {
-            expiredOwnership.removeValue(forKey: id)
-            return .expired(ownedChangeCount: ownedChangeCount)
-        }
-        return .missing
+        guard snapshots[id] != nil || expiredOwnership[id] != nil else { return }
+        handOver()
+        if firstReads[id] == nil { firstReads[id] = .now }
+    }
+
+    func firstRead(_ id: UUID) -> ContinuousClock.Instant? {
+        lock.withLock { firstReads[id] }
     }
 
     func take(_ id: UUID) -> Claim {
@@ -120,6 +117,34 @@ private final class PasteboardTransactionStorage: @unchecked Sendable {
             expiredOwnership[id] = snapshot.ownedChangeCount
         }
         lock.unlock()
+    }
+}
+
+/// Serves the dictated text to whichever application reads it first.
+///
+/// AppKit asks for the data at most once per write and caches the answer, and
+/// it asks on the main thread. That single call is the read receipt. It comes
+/// in the common run-loop modes, so a save panel, alert or menu of ours does
+/// not hold it up; only a main thread that is busy does.
+private final class DictationDataProvider: NSObject, NSPasteboardItemDataProvider, @unchecked Sendable {
+    private let text: String
+    private let id: UUID
+    private let transactions: PasteboardTransactionStorage
+
+    init(text: String, id: UUID, transactions: PasteboardTransactionStorage) {
+        self.text = text
+        self.id = id
+        self.transactions = transactions
+    }
+
+    func pasteboard(
+        _ pasteboard: NSPasteboard?,
+        item: NSPasteboardItem,
+        provideDataForType type: NSPasteboard.PasteboardType
+    ) {
+        transactions.provide(for: id) {
+            item.setString(text, forType: type)
+        }
     }
 }
 
@@ -145,14 +170,14 @@ public struct HostOnlyPasteboard: DictationPasteboard {
     private let transactions: PasteboardTransactionStorage
 
     public init(name: String = NSPasteboard.Name.general.rawValue) {
-        self.init(name: name, snapshotLifetime: 3) { pasteboard, objects in
+        self.init(name: name, snapshotLifetime: 5) { pasteboard, objects in
             pasteboard.writeObjects(objects)
         }
     }
 
     init(
         name: String,
-        snapshotLifetime: TimeInterval = 3,
+        snapshotLifetime: TimeInterval = 5,
         writeObjects: @escaping @Sendable (NSPasteboard, [NSPasteboardWriting]) -> Bool = {
             pasteboard, objects in
             pasteboard.writeObjects(objects)
@@ -166,40 +191,26 @@ public struct HostOnlyPasteboard: DictationPasteboard {
     public func beginHostOnlyWrite(_ text: String) throws -> PasteboardTransaction {
         let pasteboard = NSPasteboard(name: NSPasteboard.Name(name))
         let observedChangeCount = pasteboard.changeCount
-        // Restoration is deferred by a second after ⌘V, and the second dictation within
-        // this second is normal life, not an edge case. If our own dictation is still on
-        // the board, the person's contents are held by the previous transaction: a fresh
-        // snapshot here would capture the dictated text instead of it - and the person's
-        // clipboard would be lost forever, and the previous dictation would return to
-        // the board instead.
-        let inherited = transactions.inherit(ownedChangeCount: pasteboard.changeCount)
-        let snapshot: [[NSPasteboard.PasteboardType: Data]]
-        let inheritsLostContents: Bool
-        switch inherited {
-        case let .snapshot(previous):
-            snapshot = previous.items
-            inheritsLostContents = false
-        case .expired:
-            // The privacy budget has already erased the person's contents; only the fact
-            // that the board is still ours has survived. This fact is passed on: restore
-            // has to say it out loud, and not leave the dictation in the buffer silently.
-            snapshot = []
-            inheritsLostContents = true
-        case .missing:
-            snapshot = materializeSnapshot(from: pasteboard)
-            inheritsLostContents = false
-            // Materializing a lazy clipboard promise can block in another
-            // process. If the user copied something while that read was
-            // suspended, do not overwrite the newer clipboard when it
-            // eventually returns.
-            guard pasteboard.changeCount == observedChangeCount else {
-                throw TextInsertionError.clipboardWriteFailed
-            }
+        let snapshot = materializeSnapshot(from: pasteboard)
+        // Materializing a lazy clipboard promise can block in another
+        // process. If the user copied something while that read was
+        // suspended, do not overwrite the newer clipboard when it
+        // eventually returns.
+        guard pasteboard.changeCount == observedChangeCount else {
+            throw TextInsertionError.clipboardWriteFailed
         }
 
         pasteboard.prepareForNewContents(with: .currentHostOnly)
         let ownedChangeCount = pasteboard.changeCount
-        guard writeObjects(pasteboard, [dictatedItem(text)]) else {
+        let transaction = PasteboardTransaction()
+        // On record before the item is visible, so a reader that comes at once
+        // is served rather than refused.
+        transactions.insert(
+            .init(items: snapshot, ownedChangeCount: ownedChangeCount),
+            for: transaction.id
+        )
+        guard writeObjects(pasteboard, [lazyDictatedItem(text, for: transaction)]) else {
+            _ = transactions.take(transaction.id)
             do {
                 try restoreSnapshot(snapshot, to: pasteboard, ownedChangeCount: ownedChangeCount)
             } catch {
@@ -207,20 +218,11 @@ public struct HostOnlyPasteboard: DictationPasteboard {
             }
             throw TextInsertionError.clipboardWriteFailed
         }
-
-        let transaction = PasteboardTransaction()
-        if inheritsLostContents {
-            transactions.insertExpired(
-                ownedChangeCount: pasteboard.changeCount,
-                for: transaction.id
-            )
-        } else {
-            transactions.insert(
-                .init(items: snapshot, ownedChangeCount: pasteboard.changeCount),
-                for: transaction.id
-            )
-        }
         return transaction
+    }
+
+    public func firstRead(of transaction: PasteboardTransaction) -> ContinuousClock.Instant? {
+        transactions.firstRead(transaction.id)
     }
 
     /// Explicit Copy command: the user himself allowed to replace the clipboard, but
@@ -281,10 +283,28 @@ public struct HostOnlyPasteboard: DictationPasteboard {
     private func dictatedItem(_ text: String) -> NSPasteboardItem {
         let item = NSPasteboardItem()
         item.setString(text, forType: .string)
+        markDoNotKeep(item)
+        return item
+    }
+
+    /// The paste's item: the text is handed out on demand, so the first read is
+    /// a receipt. The markers stay eager - a clipboard manager decides from
+    /// them without asking for the text.
+    private func lazyDictatedItem(
+        _ text: String,
+        for transaction: PasteboardTransaction
+    ) -> NSPasteboardItem {
+        let item = NSPasteboardItem()
+        let provider = DictationDataProvider(text: text, id: transaction.id, transactions: transactions)
+        item.setDataProvider(provider, forTypes: [.string])
+        markDoNotKeep(item)
+        return item
+    }
+
+    private func markDoNotKeep(_ item: NSPasteboardItem) {
         item.setString("", forType: Self.transientType)
         item.setString("", forType: Self.concealedType)
         item.setString("", forType: Self.autoGeneratedType)
-        return item
     }
 
     private func restoreSnapshot(
@@ -323,14 +343,15 @@ public protocol InputSystem: Sendable {
     func heldModifiers() -> CGEventFlags
     /// Return focus to the application. `false` - the application no longer exists.
     func activate(_ target: TargetApplication) async -> Bool
-    /// Post to the captured process when one is known. A delayed WindowServer
-    /// return must never redirect an old dictation into whichever app happens
-    /// to be frontmost later.
-    func post(
-        keyCode: CGKeyCode,
-        flags: CGEventFlags,
-        targetProcessIdentifier: Int32?
-    ) throws
+    /// The key that types "v" with ⌘ held in the layout in use right now.
+    func pasteKeyCode() async -> CGKeyCode
+    /// Press a key the way a keyboard does: the system delivers it to the key
+    /// window, panels included (Spotlight, Raycast), which a post to a process
+    /// would miss. ⌘V and Return take this one route, so a dictation never
+    /// splits between two windows; the caller checks the target is still in
+    /// front right before each press. Our own key monitors see the press too,
+    /// and pass over it as this process's.
+    func post(keyCode: CGKeyCode, flags: CGEventFlags) throws
 }
 
 public struct SystemInput: InputSystem {
@@ -369,11 +390,12 @@ public struct SystemInput: InputSystem {
         return true
     }
 
-    public func post(
-        keyCode: CGKeyCode,
-        flags: CGEventFlags,
-        targetProcessIdentifier: Int32?
-    ) throws {
+    public func pasteKeyCode() async -> CGKeyCode {
+        // Text Input Sources are main-thread API on older systems.
+        await MainActor.run { PasteKey.current() }
+    }
+
+    public func post(keyCode: CGKeyCode, flags: CGEventFlags) throws {
         guard let source = CGEventSource(stateID: .combinedSessionState),
               let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
@@ -383,47 +405,92 @@ public struct SystemInput: InputSystem {
 
         keyDown.flags = flags
         keyUp.flags = flags
-        if let targetProcessIdentifier {
-            keyDown.postToPid(pid_t(targetProcessIdentifier))
-            keyUp.postToPid(pid_t(targetProcessIdentifier))
-        } else {
-            keyDown.post(tap: .cgSessionEventTap)
-            keyUp.post(tap: .cgSessionEventTap)
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
+    }
+}
+
+/// Which key pastes.
+///
+/// ⌘V is a character shortcut, not a key position. The ANSI V key types ⌘K on
+/// Dvorak and ⌘C - copy instead of paste - on Turkish F. So the paste uses the
+/// key that types "v" with ⌘ held in the current layout, and the ANSI V key
+/// when no key does.
+enum PasteKey {
+    static func keyCode(translating characterFor: (CGKeyCode) -> String?) -> CGKeyCode {
+        let ansiV = CGKeyCode(kVK_ANSI_V)
+        if characterFor(ansiV) == "v" { return ansiV }
+        return (0..<128).map { CGKeyCode($0) }.first { characterFor($0) == "v" } ?? ansiV
+    }
+
+    /// What each key types with ⌘ held, from a layout's `uchr` data.
+    static func characters(in layoutData: CFData) -> (CGKeyCode) -> String? {
+        { keyCode in
+            guard let bytes = CFDataGetBytePtr(layoutData) else { return nil }
+            let layout = UnsafeRawPointer(bytes).assumingMemoryBound(to: UCKeyboardLayout.self)
+            var deadKeyState: UInt32 = 0
+            var length = 0
+            var characters = [UniChar](repeating: 0, count: 4)
+            let status = UCKeyTranslate(
+                layout,
+                keyCode,
+                UInt16(kUCKeyActionDown),
+                UInt32((cmdKey >> 8) & 0xFF),
+                UInt32(LMGetKbdType()),
+                OptionBits(kUCKeyTranslateNoDeadKeysBit),
+                &deadKeyState,
+                characters.count,
+                &length,
+                &characters
+            )
+            guard status == noErr, length > 0 else { return nil }
+            return String(utf16CodeUnits: characters, count: length)
         }
+    }
+
+    @MainActor
+    static func current() -> CGKeyCode {
+        guard let source = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
+              let pointer = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData)
+        else { return CGKeyCode(kVK_ANSI_V) }
+        let layoutData = Unmanaged<CFData>.fromOpaque(pointer).takeUnretainedValue()
+        return keyCode(translating: characters(in: layoutData))
     }
 }
 
 // MARK: - Insert
 
-/// Insert recognized text into the active application.
+/// Carries a restore that failed after the paste landed to whoever can show it.
 ///
-/// Works via the clipboard and synthetic pressing ⌘V: this is the only one
-/// a way to insert text into an arbitrary application without knowing its device.
-/// Carries a failed deferred restore to whoever can show it.
+/// The words are in the target, so the insertion succeeded and must be reported
+/// as one: the controller then keeps it as the last dictation, learns from it,
+/// and presses Return for "Send it.". What failed is putting the person's own
+/// clipboard back, and that is said on the side, never swallowed.
 ///
 /// `TextInserter` is a value type built before `AppState` exists, so a callback
 /// assigned afterwards would land on a copy and never fire. A reference handed
 /// in at construction closes that gap honestly.
 public final class ClipboardRestoreReporter: @unchecked Sendable {
     private let lock = NSLock()
-    private var handler: (@Sendable (TextInsertionError) -> Void)?
+    private var handler: (@Sendable () -> Void)?
 
     public init() {}
 
-    public func onFailure(_ handler: @escaping @Sendable (TextInsertionError) -> Void) {
+    public func onFailure(_ handler: @escaping @Sendable () -> Void) {
         lock.lock(); defer { lock.unlock() }
         self.handler = handler
     }
 
-    func report(_ error: TextInsertionError) {
+    func report() {
         lock.lock()
         let handler = self.handler
         lock.unlock()
-        handler?(error)
+        handler?()
     }
 }
 
-/// Process-wide ownership of the clipboard + synthetic-event transaction.
+/// Process-wide ownership of the clipboard + synthetic-event transaction:
+/// write, ⌘V, the wait for the target to read, and the restore.
 ///
 /// Controller deadlines may abandon a synchronous WindowServer call, but the
 /// call itself can still return later. Until it does, changing the clipboard
@@ -435,140 +502,39 @@ public final class ClipboardRestoreReporter: @unchecked Sendable {
 final class TextInsertionLane: @unchecked Sendable {
     static let shared = TextInsertionLane()
 
-    private enum Owner {
-        case idle
-        case insertion
-        case restoration
-    }
-
-    private struct ScheduledRestore {
-        let generation: UInt64
-        let operation: @Sendable () -> Void
-        var isDue = false
-        var timer: Task<Void, Never>?
-    }
-
     private let lock = NSLock()
-    private var owner = Owner.idle
-    private var restoreGeneration: UInt64 = 0
-    /// At most one restore is pending. A successful N+1 write inherits N's
-    /// snapshot, so only the newest transaction can still put the person's
-    /// clipboard back. Replacing its timer keeps a burst of short dictations
-    /// from accumulating detached restore tasks.
-    private var scheduledRestore: ScheduledRestore?
+    private var isOwned = false
+    private var pressedAgain = false
 
     func tryAcquire() -> Bool {
         lock.withLock {
-            guard owner == .idle else { return false }
-            owner = .insertion
+            guard !isOwned else { return false }
+            isOwned = true
+            pressedAgain = false
             return true
         }
     }
 
+    /// The person pressed the dictation key during the current transaction.
+    /// A press with no transaction under way belongs to nothing.
+    func notePressedAgain() {
+        lock.withLock { if isOwned { pressedAgain = true } }
+    }
+
+    var wasPressedAgain: Bool { lock.withLock { pressedAgain } }
+
     func release() {
-        let dueRestore: (@Sendable () -> Void)? = lock.withLock {
-            guard owner == .insertion else {
-                assertionFailure("only an insertion owner can release this lane")
-                return nil
-            }
-
-            guard let restore = scheduledRestore, restore.isDue else {
-                owner = .idle
-                return nil
-            }
-
-            scheduledRestore = nil
-            owner = .restoration
-            return restore.operation
+        lock.withLock {
+            assert(isOwned, "only the owner can release this lane")
+            isOwned = false
         }
-
-        if let dueRestore {
-            performRestore(dueRestore)
-        }
-    }
-
-    /// Schedule the production restore before releasing insertion ownership.
-    ///
-    /// During the delay another insertion may safely inherit the snapshot and
-    /// replace this single ticket. Once the ticket becomes due, either restore
-    /// takes the lane first or an insertion does. In the latter case release
-    /// hands the lane directly to restore, leaving no clear/write race window.
-    func scheduleRestore(
-        after delay: Duration,
-        operation: @escaping @Sendable () -> Void
-    ) {
-        let generation: UInt64
-        let previousTimer: Task<Void, Never>?
-        (generation, previousTimer) = lock.withLock {
-            assert(owner == .insertion, "restore must be scheduled by the insertion owner")
-            restoreGeneration &+= 1
-            let generation = restoreGeneration
-            let previousTimer = scheduledRestore?.timer
-            scheduledRestore = ScheduledRestore(
-                generation: generation,
-                operation: operation
-            )
-            return (generation, previousTimer)
-        }
-        previousTimer?.cancel()
-
-        // The lane stores only the newest timer. Superseded sleeps are
-        // cancelled, so a burst cannot leave an unbounded restore queue.
-        let timer = Task.detached(priority: .utility) { [self] in
-            do {
-                try await Task.sleep(for: delay)
-            } catch {
-                return
-            }
-            restoreBecameDue(generation: generation)
-        }
-
-        let wasSuperseded = lock.withLock {
-            guard scheduledRestore?.generation == generation else { return true }
-            scheduledRestore?.timer = timer
-            return false
-        }
-        if wasSuperseded {
-            timer.cancel()
-        }
-    }
-
-    private func restoreBecameDue(generation: UInt64) {
-        let restore: (@Sendable () -> Void)? = lock.withLock {
-            guard var scheduled = scheduledRestore,
-                  scheduled.generation == generation
-            else { return nil }
-
-            scheduled.timer = nil
-            guard owner == .idle else {
-                // The current insertion either replaces this ticket after it
-                // inherits the snapshot, or hands the lane to it on release.
-                scheduled.isDue = true
-                scheduledRestore = scheduled
-                return nil
-            }
-
-            scheduledRestore = nil
-            owner = .restoration
-            return scheduled.operation
-        }
-
-        if let restore {
-            performRestore(restore)
-        }
-    }
-
-    private func performRestore(_ operation: @Sendable () -> Void) {
-        defer {
-            lock.withLock {
-                assert(owner == .restoration, "restore lost ownership of the insertion lane")
-                owner = .idle
-            }
-        }
-        operation()
     }
 }
 
+/// Insert recognized text into the active application.
+///
+/// Works via the clipboard and synthetic pressing ⌘V: this is the only one
+/// a way to insert text into an arbitrary application without knowing its device.
 public struct TextInserter: TextInserting {
     /// Modifiers, the release of which we wait for before ⌘V.
     ///
@@ -584,27 +550,48 @@ public struct TextInserter: TextInserting {
     /// How long to wait for release and in what steps.
     static let releasePollLimit = 50
     static let releasePollInterval = Duration.milliseconds(10)
+
+    /// The person's clipboard comes back this long after the target's read.
+    /// On 29 of 31 real takes the paste's own reads (Chromium asks for several
+    /// types) ended within 9 ms of the first. The other two were the app
+    /// looking at the clipboard again later (ChatGPT at +961 ms, Claude
+    /// polling), not the paste.
+    static let readQuiet = Duration.milliseconds(50)
+    /// ...and never sooner than this after ⌘V: the slowest first read on those
+    /// 31 takes came at 149 ms (p50 23 ms). A read cannot say which application
+    /// made it, so a clipboard watcher that reads first must not take the text
+    /// away from a target that is about to.
+    static let readFloor = Duration.milliseconds(250)
+    /// No read by then means nothing was pasted.
+    static let readLimit = Duration.seconds(3)
+    static let readPollInterval = Duration.milliseconds(5)
+    /// How long our main thread may take, after the limit, to serve a read
+    /// that waits for it. The limit, this turn, the quiet moment and the
+    /// restore stay inside both five-second budgets: the clipboard snapshot's,
+    /// and the caller's insertion deadline, which also spends up to 0.6 s
+    /// before ⌘V activating the target and waiting for the modifiers.
+    static let mainThreadTurnLimit = Duration.seconds(1)
+    /// How long a caller may wait for an insertion: the read limit and the
+    /// main thread's turn after it, plus room to activate the target and
+    /// release the modifiers before ⌘V.
+    public static let insertionDeadline = readLimit + .seconds(2)
+
     private let system: any InputSystem
     private let pasteboard: any DictationPasteboard
-    private let restoreDelay: Duration
-    /// Where a failed deferred restore is reported.
-    ///
-    /// The restore is fire-and-forget a second after the paste, so there is
-    /// nobody left to throw to. Without this the person silently loses whatever
-    /// they had copied, and the dictated text stays on the board in its place.
+    private let readQuiet: Duration
+    private let readFloor: Duration
+    private let readLimit: Duration
     private let restoreReporter: ClipboardRestoreReporter?
     private let operationLane: TextInsertionLane
 
     public init(
         system: any InputSystem = SystemInput(),
         pasteboard: any DictationPasteboard = HostOnlyPasteboard(),
-        restoreDelay: Duration = .milliseconds(1000),
         restoreReporter: ClipboardRestoreReporter? = nil
     ) {
         self.init(
             system: system,
             pasteboard: pasteboard,
-            restoreDelay: restoreDelay,
             restoreReporter: restoreReporter,
             operationLane: .shared
         )
@@ -613,13 +600,17 @@ public struct TextInserter: TextInserting {
     init(
         system: any InputSystem,
         pasteboard: any DictationPasteboard,
-        restoreDelay: Duration,
+        readQuiet: Duration = Self.readQuiet,
+        readFloor: Duration = Self.readFloor,
+        readLimit: Duration = Self.readLimit,
         restoreReporter: ClipboardRestoreReporter? = nil,
         operationLane: TextInsertionLane
     ) {
         self.system = system
         self.pasteboard = pasteboard
-        self.restoreDelay = restoreDelay
+        self.readQuiet = readQuiet
+        self.readFloor = readFloor
+        self.readLimit = readLimit
         self.restoreReporter = restoreReporter
         self.operationLane = operationLane
     }
@@ -663,6 +654,8 @@ public struct TextInserter: TextInserting {
         try Task.checkCancellation()
         try validateTarget(target)
         try validateProtectedState()
+        // Read once the target is in front: the layout follows the document.
+        let pasteKey = await system.pasteKeyCode()
 
         let transaction = try pasteboard.beginHostOnlyWrite(text)
         let pasteDispatchedAt: ContinuousClock.Instant
@@ -678,11 +671,7 @@ public struct TextInserter: TextInserting {
             try validateTarget(target)
             try validateProtectedState()
             try Task.checkCancellation()
-            try system.post(
-                keyCode: CGKeyCode(kVK_ANSI_V),
-                flags: .maskCommand,
-                targetProcessIdentifier: target.processIdentifier
-            )
+            try system.post(keyCode: pasteKey, flags: .maskCommand)
             // Header: from now on, the text is in someone else's window.
             // Everything further is buffer protection, and it is not speed.
             pasteDispatchedAt = .now
@@ -695,38 +684,37 @@ public struct TextInserter: TextInserting {
             throw error
         }
 
-        // Slow apps may consume the pasteboard from a later event-loop turn. Keep the
-        // dictated text available for one second, but do not keep the UI in an
-        // “Inserting” state after Cmd+V has already been dispatched.
-        if restoreDelay == .zero {
-            do {
-                try pasteboard.restore(transaction)
-            } catch {
-                throw TextInsertionError.insertedButClipboardRestoreFailed
-            }
-            return InsertionMarks(
-                pasteDispatchedAt: pasteDispatchedAt,
-                clipboardRestoredAt: .now
-            )
+        // The dictation stays on the board until the target has read it; then
+        // the person's clipboard comes back. Both happen before returning: the
+        // target's read is served from our main thread, so nothing the caller
+        // does on the main actor next may run before it.
+        let wasCancelled = await waitForTheRead(of: transaction, pastedAt: pasteDispatchedAt)
+        var restoredAt: ContinuousClock.Instant?
+        do {
+            try pasteboard.restore(transaction)
+            restoredAt = .now
+        } catch {
+            restoredAt = nil
         }
+        // Asked after the restore, which closes the receipt: a read that slipped
+        // in just before it still counts, and none can come later.
+        guard let firstReadAt = pasteboard.firstRead(of: transaction) else {
+            if restoredAt == nil { throw TextInsertionError.clipboardRestoreFailed }
+            if wasCancelled { throw CancellationError() }
+            throw TextInsertionError.pasteNotRead
+        }
+        if restoredAt == nil {
+            restoreReporter?.report()
+        }
+        return InsertionMarks(
+            pasteDispatchedAt: pasteDispatchedAt,
+            clipboardRestoredAt: restoredAt,
+            firstReadAt: firstReadAt
+        )
+    }
 
-        let pasteboard = self.pasteboard
-        let reporter = self.restoreReporter
-        operationLane.scheduleRestore(after: restoreDelay) {
-            do {
-                try pasteboard.restore(transaction)
-            } catch {
-                // The insertion itself succeeded, so this cannot be thrown — the
-                // caller is long gone. Reporting it is the only honest option:
-                // what failed here is putting the person's own clipboard back,
-                // and on the shipping path (a one second delay) this branch is
-                // the ONLY one that can say so. The zero-delay branch above
-                // throws, but production never uses it, so before this callback
-                // existed the loss was completely silent.
-                reporter?.report(.insertedButClipboardRestoreFailed)
-            }
-        }
-        return InsertionMarks(pasteDispatchedAt: pasteDispatchedAt)
+    public func endTheReadWait() {
+        operationLane.notePressedAgain()
     }
 
     public func pressReturn() async throws {
@@ -739,18 +727,12 @@ public struct TextInserter: TextInserting {
             throw TextInsertionError.insertionInProgress
         }
         defer { operationLane.release() }
-        guard !system.isSecureInputEnabled else {
-            throw TextInsertionError.secureInputActive
-        }
-        guard system.isAccessibilityTrusted else {
-            throw TextInsertionError.accessibilityPermissionDenied
-        }
+        try validateProtectedState()
+        // Return goes where the paste went, and only while the dictation's
+        // application is still in front: it is irreversible.
+        if let target { try validateTarget(target) }
         try Task.checkCancellation()
-        try system.post(
-            keyCode: CGKeyCode(kVK_Return),
-            flags: [],
-            targetProcessIdentifier: target?.processIdentifier
-        )
+        try system.post(keyCode: CGKeyCode(kVK_Return), flags: [])
     }
 
     /// Return focus to the application where the dictation began.
@@ -779,11 +761,81 @@ public struct TextInserter: TextInserting {
         }
     }
 
+    /// Wait until the target has read the paste, or until the limit says
+    /// nobody will. Returns whether cancellation cut the wait short.
+    ///
+    /// One rule for every read: a quiet moment after it, and never before the
+    /// floor. A read before ⌘V, or one by a clipboard watcher just after it,
+    /// then costs at most the floor - never a false alarm, and never the text
+    /// taken away from a target that reads within the floor, as every real
+    /// one has. A target slower than that, behind such a watcher, would read
+    /// the person's clipboard: the price of not holding every paste longer.
+    ///
+    /// A press of the dictation key brings the limit down to the floor:
+    /// nothing has appeared and the person is trying again, while every real
+    /// application has read well within it.
+    ///
+    /// The read is served on our main thread. If that thread was busy, the
+    /// target's read is still waiting for it at the limit, and the restore
+    /// would hand it the person's clipboard. So nobody has read only once the
+    /// main thread has had a turn after the limit, and a quiet moment after it.
+    /// A main thread still busy after `mainThreadTurnLimit` gets no longer:
+    /// waiting it out would outlive the clipboard snapshot, and the person's
+    /// clipboard would be lost with nobody left to say so.
+    private func waitForTheRead(
+        of transaction: PasteboardTransaction,
+        pastedAt: ContinuousClock.Instant
+    ) async -> Bool {
+        var turn: MainThreadTurn?
+        while true {
+            let now = ContinuousClock.now
+            if let read = pasteboard.firstRead(of: transaction) {
+                if now >= max(read + readQuiet, pastedAt + readFloor) { return false }
+            } else if let turn {
+                if let free = turn.cameAt {
+                    if now >= free + readQuiet { return false }
+                } else if now >= turn.askedAt + Self.mainThreadTurnLimit {
+                    return false
+                }
+            } else if now >= pastedAt + (operationLane.wasPressedAgain ? readFloor : readLimit) {
+                turn = MainThreadTurn()
+                continue
+            }
+            do {
+                try await Task.sleep(for: Self.readPollInterval)
+            } catch {
+                return true
+            }
+        }
+    }
+
     private func waitForModifiersRelease() async throws {
         for _ in 0..<Self.releasePollLimit {
             if system.heldModifiers().intersection(Self.watchedModifiers).isEmpty { return }
             try await Task.sleep(for: Self.releasePollInterval)
         }
         throw TextInsertionError.modifiersStillHeld
+    }
+}
+
+/// One turn of our main thread's loop where a paste is served: the common
+/// modes, panels and menus included. Not the main actor, whose queue waits
+/// while a panel runs inside one of its jobs.
+private final class MainThreadTurn: @unchecked Sendable {
+    let askedAt = ContinuousClock.now
+    private let lock = NSLock()
+    private var came: ContinuousClock.Instant?
+
+    init() {
+        let main = CFRunLoopGetMain()
+        CFRunLoopPerformBlock(main, CFRunLoopMode.commonModes.rawValue) { [self] in
+            lock.withLock { came = .now }
+        }
+        CFRunLoopWakeUp(main)
+    }
+
+    /// When the main thread took it, if it has.
+    var cameAt: ContinuousClock.Instant? {
+        lock.withLock { came }
     }
 }

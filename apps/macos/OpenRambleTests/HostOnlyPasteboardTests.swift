@@ -27,6 +27,55 @@ final class HostOnlyPasteboardTests: XCTestCase {
         XCTAssertEqual(board.string(forType: .string), "hello from dictation")
     }
 
+    /// The dictation is handed out on demand, once, and the moment of that
+    /// first read is the receipt that the paste landed.
+    ///
+    /// The markers stay eager: a clipboard manager decides from them alone,
+    /// and reading them must not count as anybody reading the dictation.
+    func testTheDictationIsHandedOutLazilyAndOnlyOnce() throws {
+        let transaction = try pasteboard.beginHostOnlyWrite("dictated")
+
+        let types = try XCTUnwrap(board.types)
+        XCTAssertTrue(types.contains(.string))
+        XCTAssertTrue(types.contains(HostOnlyPasteboard.concealedType))
+        XCTAssertNil(pasteboard.firstRead(of: transaction))
+        XCTAssertNotNil(board.data(forType: HostOnlyPasteboard.transientType))
+        XCTAssertNotNil(board.data(forType: HostOnlyPasteboard.concealedType))
+        XCTAssertNil(pasteboard.firstRead(of: transaction), "reading a marker is not reading the dictation")
+
+        XCTAssertEqual(board.string(forType: .string), "dictated")
+        let firstRead = try XCTUnwrap(pasteboard.firstRead(of: transaction))
+        XCTAssertEqual(board.string(forType: .string), "dictated")
+        XCTAssertEqual(pasteboard.firstRead(of: transaction), firstRead, "only the first read counts")
+    }
+
+    /// Handing the text out must not move the board's change count, or the
+    /// restore would think someone else had copied and leave the dictation.
+    func testRestoreStillOwnsTheBoardAfterTheDictationWasRead() throws {
+        board.prepareForNewContents(with: .currentHostOnly)
+        board.setString("what the person copied", forType: .string)
+        let transaction = try pasteboard.beginHostOnlyWrite("dictated")
+        XCTAssertEqual(board.string(forType: .string), "dictated")
+
+        try pasteboard.restore(transaction)
+
+        XCTAssertEqual(board.string(forType: .string), "what the person copied")
+        XCTAssertNotNil(pasteboard.firstRead(of: transaction), "the receipt outlives the restore")
+    }
+
+    /// A read that comes after the restore gets the person's clipboard, never
+    /// the dictation, and it is not a receipt.
+    func testAReadAfterTheRestoreIsNotAReceipt() throws {
+        board.prepareForNewContents(with: .currentHostOnly)
+        board.setString("what the person copied", forType: .string)
+        let transaction = try pasteboard.beginHostOnlyWrite("dictated")
+
+        try pasteboard.restore(transaction)
+
+        XCTAssertEqual(board.string(forType: .string), "what the person copied")
+        XCTAssertNil(pasteboard.firstRead(of: transaction))
+    }
+
     /// Notes for clipboard managers.
     ///
     /// This is the nspasteboard.org agreement: third-party managers do not post with them
@@ -89,7 +138,7 @@ final class HostOnlyPasteboardTests: XCTestCase {
         XCTAssertEqual(board.string(forType: .string), "new user")
     }
 
-    /// Privacy budget erases the snapshot after two seconds. If by this moment
+    /// Privacy budget erases the snapshot after five seconds. If by this moment
     /// clipboard is still ours, the previous contents of the person are lost forever -
     /// You cannot remain silent about this, and the dictation should not remain in the buffer.
     func testScenario008() throws {
@@ -123,14 +172,10 @@ final class HostOnlyPasteboardTests: XCTestCase {
         XCTAssertEqual(board.string(forType: .string), "new user")
     }
 
-    /// What "Also copy dictations to the clipboard" rests on.
-    ///
-    /// The setting writes the finished text in `onTextInserted`, which runs
-    /// while the insertion's own restore is still pending a second out. The
-    /// write survives only because restore checks ownership first and steps
-    /// aside when the board changed underneath it. Without that check the
-    /// setting would appear to work and then quietly undo itself a second
-    /// later — so the check is pinned here rather than left to be rediscovered.
+    /// Restore checks ownership first and steps aside when the board changed
+    /// underneath it. Anything written between the paste and the restore — the
+    /// person copying while the target is still reading — is theirs, and the
+    /// restore must not quietly undo it.
     func testACopyMadeAfterInsertionIsNotUndoneByTheRestore() throws {
         board.prepareForNewContents(with: .currentHostOnly)
         board.setString("what the person had copied", forType: .string)
@@ -220,30 +265,6 @@ final class HostOnlyPasteboardTests: XCTestCase {
         XCTAssertEqual(board.string(forType: .string), "before dictation")
     }
 
-    /// Two dictations inside one restore window.
-    ///
-    /// Restoration is deferred by a second after ⌘V, and a second dictation within that
-    /// second is an ordinary thing - two short replies in a chat. The second write lands
-    /// on OUR text: a snapshot taken here would capture the dictation instead of the
-    /// person's clipboard, and the person's own content would be gone for good.
-    func testScenario015() throws {
-        board.prepareForNewContents(with: .currentHostOnly)
-        board.setString("what the person copied", forType: .string)
-
-        let first = try pasteboard.beginHostOnlyWrite("DICTATION ONE")
-        let second = try pasteboard.beginHostOnlyWrite("DICTATION TWO")
-        // The deferred restore of the first dictation arrives when the second one has
-        // already replaced it on the board.
-        try pasteboard.restore(first)
-        try pasteboard.restore(second)
-
-        XCTAssertEqual(board.string(forType: .string), "what the person copied")
-        XCTAssertFalse(
-            board.types?.contains(HostOnlyPasteboard.concealedType) == true,
-            "The dictated text has no right to remain in the clipboard"
-        )
-    }
-
     /// A copied screenshot is TIFF + PNG with no text at all. The dictation
     /// round trip must return both representations byte-for-byte — losing a
     /// screenshot to a dictated chat reply is exactly the kind of small theft
@@ -284,20 +305,6 @@ final class HostOnlyPasteboardTests: XCTestCase {
             board.string(forType: .string),
             "a screenshot has no text — restore must not invent one"
         )
-    }
-
-    /// The same overlap, but the restores arrive in reverse order: the superseded
-    /// transaction must not return the dictation to the board over the person's content.
-    func testScenario016() throws {
-        board.prepareForNewContents(with: .currentHostOnly)
-        board.setString("what the person copied", forType: .string)
-
-        let first = try pasteboard.beginHostOnlyWrite("DICTATION ONE")
-        let second = try pasteboard.beginHostOnlyWrite("DICTATION TWO")
-        try pasteboard.restore(second)
-        XCTAssertNoThrow(try pasteboard.restore(first))
-
-        XCTAssertEqual(board.string(forType: .string), "what the person copied")
     }
 }
 

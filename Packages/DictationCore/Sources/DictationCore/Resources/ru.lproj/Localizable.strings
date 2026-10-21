@@ -38,11 +38,6 @@
 "Add ⌘, ⌃ or ⌥ — a plain key would fire while you type." = "Добавьте ⌘, ⌃ или ⌥ — обычная клавиша будет срабатывать при наборе текста.";
 "Adds phrases from an OpenRamble dictionary file" = "Добавляет фразы из файла словаря OpenRamble";
 "Adds this replacement to future dictations" = "Добавляет эту замену для будущих диктовок";
-"After 1 hour" = "Через 1 час";
-"After 10 minutes" = "Через 10 минут";
-"After 15 minutes" = "Через 15 минут";
-"After 2 minutes" = "Через 2 минуты";
-"After 5 minutes" = "Через 5 минут";
 "Allow Microphone" = "Разрешить микрофон";
 "Allow camera access" = "Разрешите доступ к камере";
 "Allow in Settings" = "Разрешите в Настройках";
@@ -173,7 +168,6 @@
 "Removes OpenRamble's old Accessibility entry and relaunches the app." = "Удаляет старую запись OpenRamble в Универсальном доступе и перезапускает приложение.";
 "Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT." = "Распознавание речи работает на transcribe.cpp от CJ Pais и команды Handy, лицензия MIT. Sparkle распространяется по лицензии MIT.";
 "For dictating in runs, so the next phrase does not arrive welded to the last word." = "При диктовке по частям следующая фраза не будет склеиваться с предыдущей.";
-"Frees the speech model's memory after this much idle time. It reloads under your voice at the next dictation." = "Освобождает память модели после указанного времени бездействия. При следующей диктовке модель загрузится, пока вы говорите.";
 "Frees up disk space. Dictation stops working until the model is downloaded again." = "Освобождает место на диске. Диктовка не будет работать, пока модель не будет скачана снова.";
 "General" = "Основные";
 "Go back to step %@" = "Вернуться к шагу %@";
@@ -193,7 +187,6 @@
 "How many dictations to keep, with their audio" = "Сколько диктовок хранить вместе со звуком";
 "If access is enabled in Settings and Retry still fails, quit and reopen OpenRamble once." = "Если доступ разрешён в Настройках, но повторная попытка не помогает, закройте и снова откройте OpenRamble.";
 "If your terminal says 'command not found', add this line to your shell startup file, such as ~/.zshrc, then open a new terminal:" = "Если терминал пишет «command not found», добавьте эту строку в файл настроек оболочки, например ~/.zshrc, и откройте новый терминал:";
-"Immediately" = "Сразу";
 "Imported %@, updated %@." = "Импортировано: %@. Обновлено: %@.";
 "Imported %@." = "Импортировано: %@.";
 "Import…" = "Импорт…";
@@ -265,7 +258,6 @@
 "Move to Trash" = "В Корзину";
 "Neither your microphone nor the other side of this call was captured." = "Ни ваш микрофон, ни звук собеседников не были записаны.";
 "Network, only on your terms" = "Интернет — на ваших условиях";
-"Never" = "Никогда";
 "No account, analytics, or cloud transcription. Reports contain technical events and available crash details, never your speech. Nothing is sent automatically. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder." = "Без аккаунта, аналитики и облачной расшифровки. В отчётах только технические события и сведения о сбоях, никогда — ваша речь. Ничего не отправляется автоматически. Интернет используется только для загрузки моделей и проверки обновлений. Модели и записи, сохранённые после сбоя, находятся в папке поддержки.";
 "No accounts, no analytics, no automatic reports. The code is open — you can check." = "Без аккаунтов, аналитики и автоматических отчётов. Код открыт — можно проверить.";
 "No dictations yet" = "Диктовок пока нет";
@@ -570,7 +562,6 @@
 "Two permissions left to grant — Microphone and Accessibility." = "Осталось выдать два разрешения: Микрофон и Универсальный доступ.";
 "Unavailable" = "Недоступно";
 "Unavailable on this Mac" = "Недоступно на этом Mac";
-"Unload model" = "Выгружать модель";
 "Updated %@ from the file." = "Обновлено из файла: %@.";
 "Updates" = "Обновления";
 "Updates are not working" = "Обновления не работают";
@@ -640,11 +631,16 @@
 "Nothing left to insert after cleanup." = "После очистки вставлять нечего.";
 "Nothing left after cleanup — the text was kept." = "После очистки ничего не осталось — текст сохранён.";
 "Nothing new was recognized — the text was kept." = "Ничего нового не распознано — текст сохранён.";
+"Nothing recognized" = "Речь не распознана";
+"Heard only silence from %@." = "С устройства «%@» пришла только тишина.";
+"Still nothing recognized." = "Речь по-прежнему не распознана.";
+"Nothing was recognized — the recording is in History." = "Речь не распознана — запись сохранена в истории.";
 "Insertion couldn't be confirmed in time. The text is saved in the menu and may already have been pasted." = "Не удалось вовремя подтвердить вставку. Текст сохранён в меню и, возможно, уже вставлен.";
 "The text was inserted, but pressing Return failed." = "Текст вставлен, но нажать Return не удалось.";
 "Text not inserted: secure input is active. Your text is saved in the menu." = "Текст не вставлен: включён защищённый ввод. Ваш текст сохранён в меню.";
 "A previous paste is still finishing. Your text is saved in the menu." = "Предыдущая вставка ещё завершается. Ваш текст сохранён в меню.";
 "The text couldn't be inserted. It's saved in the menu." = "Не удалось вставить текст. Он сохранён в меню.";
+"The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu." = "Не удалось вставить текст и вернуть прежнее содержимое буфера обмена. Текст сохранён в меню.";
 "Couldn't record audio." = "Не удалось записать звук.";
 "Couldn't transcribe speech." = "Не удалось распознать речь.";
 "This file is not an OpenRamble dictionary." = "Это не файл словаря OpenRamble.";

@@ -110,7 +110,8 @@ final class DictationSpeedTests: XCTestCase {
         let inserter = MarkingInserter(
             marks: InsertionMarks(
                 pasteDispatchedAt: clock.instant(at: .milliseconds(150)),
-                clipboardRestoredAt: clock.instant(at: .milliseconds(1150))
+                clipboardRestoredAt: clock.instant(at: .milliseconds(1150)),
+                firstReadAt: clock.instant(at: .milliseconds(168))
             )
         )
         var report: DictationSpeedReport?
@@ -133,6 +134,7 @@ final class DictationSpeedTests: XCTestCase {
         XCTAssertEqual(speed.toRecognizedText, .milliseconds(120))
         XCTAssertEqual(speed.toPasteDispatched, .milliseconds(150))
         XCTAssertEqual(speed.toClipboardRestored, .milliseconds(1150))
+        XCTAssertEqual(speed.toFirstRead, .milliseconds(168))
         XCTAssertEqual(speed.microphoneStartup, .milliseconds(130))
     }
 

@@ -108,11 +108,12 @@ final class AppStateTranscriptTests: XCTestCase {
         defer { harness.tearDown() }
         harness.recognizer = ReadinessControlledRecognizer()
         harness.idleUnloadDelayOverride = .milliseconds(40)
+        // Setup keeps the engine, so the countdown waits for real activity.
+        harness.defaults.set(false, forKey: AppState.onboardingCompletedKey)
         let state = harness.makeState()
-        state.modelUnloadTimeout = .never
         try await waitUntil { state.isEngineReady }
 
-        state.modelUnloadTimeout = .afterFiveMinutes
+        harness.defaults.set(true, forKey: AppState.onboardingCompletedKey)
         state.startRecording()
         try await waitUntil { state.meetingState == .recording }
         try await Task.sleep(for: .milliseconds(200))
@@ -131,10 +132,9 @@ final class AppStateTranscriptTests: XCTestCase {
         harness.recognizer = recognizer
         harness.idleUnloadDelayOverride = .milliseconds(40)
         let state = harness.makeState()
-        state.modelUnloadTimeout = .never
         try await waitUntil { state.isEngineReady }
 
-        state.modelUnloadTimeout = .afterFiveMinutes
+        // Ready arms the countdown, and the held unload waits mid-flight.
         try await waitUntil { await recognizer.isIdleUnloadWaiting }
         state.startRecording()
         try await waitUntil { state.meetingState == .recording }

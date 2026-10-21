@@ -93,8 +93,8 @@ public struct AppEnvironment {
     /// suite from sleeping production-scale intervals (nil = the real ladder).
     public var engineWarmupRetryDelay: Duration?
     /// Warning-tier rewarm settle window; injectable for the same reason.
-    /// Test-only override for the idle-unload countdown: the policy's real
-    /// options start at two minutes, and suites never sleep that long.
+    /// Test-only override for the one-hour idle-unload countdown, which
+    /// suites never sleep through.
     public var idleUnloadDelayOverride: Duration?
     /// Crash-recovery timing is injectable so launch-to-idle maintenance can
     /// be proven without sleeping for the production compatibility window.
@@ -210,7 +210,7 @@ public struct AppEnvironment {
             AudioDeviceID?
         ) -> any AudioCapturing,
         transcribe: @escaping (@escaping @Sendable () -> URL) -> @Sendable (URL) async throws -> ASRResult,
-        recoveryInsertionDeadline: Duration = .seconds(2),
+        recoveryInsertionDeadline: Duration = TextInserter.insertionDeadline,
         engineWarmupRetryDelay: Duration? = nil,
         idleUnloadDelayOverride: Duration? = nil,
         recordingRecoveryCompatibilityGrace: TimeInterval = 60,
@@ -395,7 +395,13 @@ public final class AppState: ObservableObject {
             case .preparing: diagnostics.record(.dictationPreparing)
             case .listening: diagnostics.record(.dictationListening)
             case .transcribing: diagnostics.record(.dictationTranscribing)
-            case .inserting: diagnostics.record(.dictationInserting)
+            case .inserting:
+                diagnostics.record(.dictationInserting)
+                // The paste's target reads the text from our main thread. The
+                // last take's edit watch reads a field from that same thread,
+                // synchronously, inside the target: while one waits on the
+                // other, both stall. The new paste ends that watch anyway.
+                editWatcher.cancel()
             }
         }
     }
@@ -529,8 +535,9 @@ public final class AppState: ObservableObject {
     ///
     /// Read from History rather than kept beside it. A second list in memory
     /// ignored the Keep limit and survived "Delete All", which made both of
-    /// History's promises false.
-    public var recentDictations: [HistoryEntry] { Array(history.prefix(8)) }
+    /// History's promises false. A take with no words has nothing to copy:
+    /// offered here, it would put an empty string over the person's clipboard.
+    public var recentDictations: [HistoryEntry] { Array(history.lazy.filter { !$0.text.isEmpty }.prefix(8)) }
 
     // MARK: - Recordings
 
@@ -951,6 +958,11 @@ public final class AppState: ObservableObject {
     private var engineLoadFailure: String?
     /// Retry/Delete recovery are performed one at a time and block the hotkey.
     private var isRecoveryOperationActive = false
+    /// A press of the dictation key while "Insert Last Dictation" finishes
+    /// its paste, and whether that key is up again. If the text landed, the
+    /// person went on: the press starts its take once the paste is done.
+    private var pressDuringRecovery: KeyPress?
+    private enum KeyPress { case held, released }
     /// A message that waits for the end of the session.
     private var noticeAfterSession: DictationNotice?
     /// History could not keep the take now ending. Said inside the take's
@@ -1069,7 +1081,6 @@ public final class AppState: ObservableObject {
         recoveryInsertionDeadline = environment.recoveryInsertionDeadline
         engineWarmupRetryDelayOverride = environment.engineWarmupRetryDelay
         idleUnloadDelayOverride = environment.idleUnloadDelayOverride
-        modelUnloadTimeout = IdleUnloadPolicy.stored(in: environment.defaults)
         recordingRecoveryCompatibilityGrace = environment.recordingRecoveryCompatibilityGrace
         recordingRecoveryMaintenanceRetryDelay = environment.recordingRecoveryMaintenanceRetryDelay
         recordingRecoveryIdleScanInterval = environment.recordingRecoveryIdleScanInterval
@@ -1163,6 +1174,9 @@ public final class AppState: ObservableObject {
         let sounds = makeSounds { [weak self] in self?.soundsEnabled ?? true }
 
         do {
+            // Read once: the capture binds this device for good, and a silent
+            // take must name the microphone that actually recorded it.
+            let microphone = preferredInputDeviceID
             let capture = makeCapture(
                 try paths.takes(),
                 { [weak self] session, error in
@@ -1170,6 +1184,16 @@ public final class AppState: ObservableObject {
                     // stopping is not possible: the person speaks into emptiness, and the reason
                     // must be shown exactly.
                     Task { @MainActor in
+                        // The microphone itself went away: what was recorded
+                        // until then is sound, and is kept for Retry.
+                        if error == .deviceDisconnected {
+                            self?.diagnostics.record(.audioConfigurationChanged)
+                            self?.controller?.preserveActiveRecording(
+                                session: session,
+                                reason: Self.captureFailureMessage(error)
+                            )
+                            return
+                        }
                         self?.diagnostics.record(.audioCaptureFailed, errorCode: (error as NSError).code)
                         self?.controller?.interrupt(
                             session: session,
@@ -1215,7 +1239,7 @@ public final class AppState: ObservableObject {
                         )
                     }
                 },
-                preferredInputDeviceID
+                microphone
             )
             let recordingRecovery = RecordingRecoveryStore(
                 directory: try paths.audioRecovery(),
@@ -1314,7 +1338,8 @@ public final class AppState: ObservableObject {
                 },
                 prepareForTranscription: makePrepareForTranscription(
                     engineDirectory: engineDirectory
-                )
+                ),
+                insertionDeadline: TextInserter.insertionDeadline
             )
             controller.onStateChange = { [weak self] state in
                 self?.dictationState = state
@@ -1338,20 +1363,19 @@ public final class AppState: ObservableObject {
                 if let arbiter = self?.engineArbiter {
                     Task { await arbiter.setDictationActive(state != .idle) }
                 }
-                // The person just pressed the key and is about to speak for
-                // seconds. Refresh accelerator residency now, under their
-                // voice, instead of trusting a device-specific idle timer and
-                // discovering a cold Core ML graph only after key-up.
-                if state == .preparing { self?.warmEngineUnderVoice() }
+                // The person is speaking and will be for a while: reload a
+                // resting engine now, under their voice. Not at `.preparing`:
+                // the first word lives in the microphone start, and a ~0.3 s
+                // model load beside it can only compete (one run here: p90
+                // 291 → 378 ms; a second run, no change). The load has the
+                // whole take to finish.
+                if state == .listening { self?.warmEngineUnderVoice() }
                 // The moment the person stopped speaking, before any of the
                 // remaining work has run. A diagnostics build samples the
                 // machine here so the closing sample has something to be
                 // differenced against; a release build does nothing at all.
                 if state == .transcribing, let self {
-                    DictationDiagnostics.noteStop(
-                        engineWasReady: self.isEngineReady,
-                        unloadPolicy: self.modelUnloadTimeout
-                    )
+                    DictationDiagnostics.noteStop(engineWasReady: self.isEngineReady)
                 }
                 // Every state change re-arms or cancels the idle-unload
                 // timer: activity disarms it, idleness starts the countdown.
@@ -1428,39 +1452,35 @@ public final class AppState: ObservableObject {
                 engineLog.notice("\(DictationSpeedLine.text(for: report), privacy: .public)")
                 self?.diagnostics.record(.dictationCompleted,
                     milliseconds: DictationLogFile.milliseconds(report.toRecognizedText.appSeconds),
-                    recognition: report.phases.map {
-                        .init(audioMilliseconds: DictationLogFile.milliseconds($0.audioDuration.appSeconds),
-                              engineMilliseconds: $0.engineProcessing.flatMap { DictationLogFile.milliseconds($0.appSeconds) },
-                              decodingMilliseconds: $0.audioDecoding.flatMap { DictationLogFile.milliseconds($0.appSeconds) },
-                              streamedSegments: $0.streamedSegments,
-                              fileBacked: $0.recordingReadable != nil,
-                              freezeMilliseconds: DictationLogFile.milliseconds($0.captureFreeze.appSeconds),
-                              readableMilliseconds: $0.recordingReadable.flatMap { DictationLogFile.milliseconds($0.appSeconds) },
-                              preparationMilliseconds: $0.enginePreparation.flatMap { DictationLogFile.milliseconds($0.appSeconds) })
-                    })
+                    recognition: DictationLogFile.Recognition(report: report))
                 DictationDiagnostics.noteCompleted(
                     report: report,
                     characterCount: self?.lastDictation?.insertedText.count ?? 0
                 )
             }
             controller.onTakeFinished = { [weak self] text, audio, target in
-                self?.archive(text: text, audio: audio, appCategory: PromptModePolicy.category(for: target))
+                guard let self,
+                      self.archive(text: text, audio: audio, appCategory: PromptModePolicy.category(for: target))
+                else { return false }
+                // Counted, never described: a take kept with no words, once
+                // History really holds it.
+                if text.isEmpty { self.diagnostics.record(.dictationUnrecognized) }
+                return true
             }
             controller.amendTakeNotice = { [weak self] notice in
                 self?.takeEndingNotice(notice) ?? notice
             }
+            controller.microphoneName = { AudioInputDevices.recordingName(of: microphone) }
             controller.onDictationCompleted = { [weak self] provenance in
                 self?.lastDictation = LastDictation(
                     insertedText: provenance.finalText,
                     provenance: provenance
                 )
             }
-            // Putting the person's own clipboard back happens a second after the
-            // paste, detached, with nobody left to throw to. If it fails they
-            // silently lose whatever they had copied and our dictation stays on
-            // the board in its place — exactly the kind of quiet loss the
-            // project forbids. This is the only path that can say so.
-            clipboardRestoreReporter?.onFailure { [weak self] _ in
+            // The paste landed, but the person's own clipboard could not be put
+            // back. The insertion still counts as one; losing what they had
+            // copied is said here, on the side, rather than swallowed.
+            clipboardRestoreReporter?.onFailure { [weak self] in
                 Task { @MainActor [weak self] in
                     self?.notify(
                         DictationNotice(
@@ -1605,6 +1625,8 @@ public final class AppState: ObservableObject {
             return L10n.tr("Couldn't record audio: %@", String(describing: detail))
         case .notRecording:
             return L10n.tr("Recording stopped unexpectedly.")
+        case .deviceDisconnected:
+            return L10n.tr("The microphone or audio device was disconnected. Dictation stopped.")
         }
     }
 
@@ -1719,13 +1741,14 @@ public final class AppState: ObservableObject {
 
     // MARK: - Verbatim text of the last dictation
 
-    /// Keep a finished take: its text, and a copy of its audio.
+    /// Keep a finished take: its text, and a copy of its audio. Returns
+    /// whether History took it.
     ///
     /// Failures here are reported rather than swallowed. A history that
     /// silently stops recording looks exactly like a history of someone who
     /// stopped dictating.
-    private func archive(text: String, audio: URL, appCategory: ApplicationCategory) {
-        guard let historyStore else { return }
+    private func archive(text: String, audio: URL, appCategory: ApplicationCategory) -> Bool {
+        guard let historyStore else { return false }
         do {
             history = try historyStore.record(
                 text: text, audio: audio, limit: historyLimit, appCategory: appCategory
@@ -1741,9 +1764,11 @@ public final class AppState: ObservableObject {
             if recoveredEntryID == nil, let recoveredText {
                 recoveredEntryID = historyEntryID(holding: recoveredText)
             }
+            return true
         } catch {
             engineLog.error("history entry not written")
             takeNotKept = true
+            return false
         }
     }
 
@@ -1824,6 +1849,13 @@ public final class AppState: ObservableObject {
                     .output.text ?? result.text
                 await MainActor.run {
                     guard let self, let store = self.historyStore else { return }
+                    // A take that never had words says so again, rather than
+                    // claiming to have kept text it does not have.
+                    if text.isEmpty, entry.text.isEmpty {
+                        self.notify(DictationNotice(kind: .info, message: L10n.tr("Still nothing recognized.")))
+                        return
+                    }
+
                     // An empty run keeps the words already there rather than
                     // blanking a record of something the person said.
                     guard !text.isEmpty else {
@@ -1939,15 +1971,25 @@ public final class AppState: ObservableObject {
         dictationState = .inserting
         Task { [weak self] in
             guard let self else { return }
+            var landed = false
             defer {
                 self.dictationState = .idle
                 self.isRecoveryOperationActive = false
+                let press = self.pressDuringRecovery
+                self.pressDuringRecovery = nil
+                // Every other ending says what happened, and the press goes
+                // with it, as it does after a dictation.
+                if landed, let press {
+                    self.beginHoldToTalk()
+                    if press == .released { self.controller?.stop() }
+                }
             }
             do {
                 let inserter = inserter
                 try await withTranscriptionDeadline(recoveryInsertionDeadline) {
                     try await inserter.insert(text, into: target)
                 }
+                landed = true
                 // The words already joined History at failure time;
                 // appending again here would duplicate them. The provenance
                 // slot is cleared too: it still holds the PREVIOUS dictation,
@@ -1963,6 +2005,16 @@ public final class AppState: ObservableObject {
                     DictationNotice(
                         kind: .warning,
                         message: L10n.tr("Insertion couldn't be confirmed in time. The text stays in the menu and may already have been pasted."),
+                        recoverableText: recoveredText
+                    )
+                )
+            } catch TextInsertionError.clipboardRestoreFailed {
+                // Nothing was pasted and what the person had copied is gone:
+                // both are theirs to know.
+                notify(
+                    DictationNotice(
+                        kind: .warning,
+                        message: L10n.tr("The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu."),
                         recoverableText: recoveredText
                     )
                 )
@@ -1986,7 +2038,6 @@ public final class AppState: ObservableObject {
     private func observeSystemEvents() {
         observe(workspaceNotifications, NSWorkspace.willSleepNotification) { $0.handleSleep() }
         observe(workspaceNotifications, NSWorkspace.didWakeNotification) { $0.handleWake() }
-        observe(notifications, .AVAudioEngineConfigurationChange) { $0.handleAudioConfigurationChange() }
         observe(notifications, NSApplication.didBecomeActiveNotification) {
             $0.handleApplicationBecameActive()
         }
@@ -2091,15 +2142,13 @@ public final class AppState: ObservableObject {
     /// Internal, not private: the residency pin drives the exact press hook.
     func warmEngineUnderVoice() {
         guard transcriber != nil, !isRecyclingEngine else { return }
-        // Residency gave the memory back: the press starts the FULL reload —
-        // weights — in parallel with the recording. The
+        // Residency gave the memory back: the listening take starts the FULL
+        // reload — weights — in parallel with the recording. The
         // single-flight transcriber coalesces this with the transcription
         // path's own prepare, and the preparation UI narrates honestly if
         // the reload outlasts the speech.
         guard isEngineReady else {
-            // Same single-flight path the key-down trigger takes; by the time
-            // this runs the reload is usually already riding under the voice.
-            rewarmEngineIfCold(trigger: .keyDown)
+            rewarmEngineIfCold(trigger: .listening)
             return
         }
         // A ready engine needs nothing further. There used to be a "ping" here
@@ -2166,15 +2215,16 @@ public final class AppState: ObservableObject {
     /// waiting for the engine rather than resting from it.
     private var shouldStayUnloadedUntilUse = false
 
-    /// When to give the engine's memory back after dictation goes idle.
-    /// Mirrors Handy's "Unload Model" row; `.never` is the pre-0.8 behavior.
-    @Published public var modelUnloadTimeout: IdleUnloadPolicy {
-        didSet {
-            guard oldValue != modelUnloadTimeout else { return }
-            defaults.set(modelUnloadTimeout.rawValue, forKey: IdleUnloadPolicy.defaultsKey)
-            rescheduleIdleUnload()
-        }
-    }
+    /// How long the engine stays loaded after the last dictation: an hour,
+    /// for everyone, with no setting.
+    ///
+    /// It holds about 1 GB for that hour, which an 8 GB Mac carries too, and
+    /// nothing gives it back earlier: there is no memory-pressure eviction.
+    /// Five minutes made a third of a week's key presses cold (106 of 303);
+    /// the gaps in that same week project about one in ten for an hour. A
+    /// cold take still keeps its words: the reload starts once it is
+    /// listening and runs under the voice.
+    static let engineIdleUnloadDelay: Duration = .seconds(60 * 60)
 
     /// One pending idle-unload timer at most; any dictation activity replaces
     /// it through the state-change hook.
@@ -2205,12 +2255,10 @@ public final class AppState: ObservableObject {
               // for a loaded engine, and a resting one is woken by the same
               // key press as everywhere else — so it is a courtesy, not a
               // guard.
-              hasCompletedOnboarding,
-              let policyDelay = modelUnloadTimeout.idleDelay
+              hasCompletedOnboarding
         else { return }
-        // The override shortens the countdown for tests; the decision itself
-        // (`never` keeps the engine forever) always belongs to the policy.
-        let delay = idleUnloadDelayOverride ?? policyDelay
+        // The override shortens the countdown for tests.
+        let delay = idleUnloadDelayOverride ?? Self.engineIdleUnloadDelay
         idleUnloadTask = Task { [weak self] in
             if delay > .zero {
                 try? await Task.sleep(for: delay)
@@ -2231,9 +2279,7 @@ public final class AppState: ObservableObject {
               isEngineReady,
               let transcriber
         else { return }
-        engineLog.notice(
-            "engine idle unload: \(self.modelUnloadTimeout.rawValue, privacy: .public)"
-        )
+        engineLog.notice("engine idle unload")
         guard await transcriber.unloadIfIdle() else { return }
         isEngineReady = false
         // Unloading crosses an actor boundary. Record may have been pressed
@@ -2298,13 +2344,13 @@ public final class AppState: ObservableObject {
 
     /// What woke the engine back up.
     enum RewarmTrigger: String {
-        case keyDown
+        /// A take found the engine resting, once its microphone was open.
+        case listening
         case appActivation
     }
 
-    /// The earliest reload triggers: they fire before any readiness guard can
-    /// swallow the press. Single-flight through `warmUpEngine`'s shared task;
-    /// calling on every press is safe and free when warm.
+    /// The reload triggers. Single-flight through `warmUpEngine`'s shared
+    /// task; calling on every take is safe and free when warm.
     ///
     /// There used to be a memory-pressure tier in this condition, deciding
     /// whether waking was polite right now. It is gone with the rest of the
@@ -2364,19 +2410,6 @@ public final class AppState: ObservableObject {
               !isRecyclingEngine
         else { return }
         pingEngine(deadline: .seconds(10))
-    }
-
-    /// The audio device changed mid-recording.
-    ///
-    /// The headphones were taken out, the monitor and microphone were turned off - the engine remains
-    /// launched, but frames no longer arrive to it. Man speaks in
-    /// silence and learns about it only by the empty result.
-    private func handleAudioConfigurationChange() {
-        diagnostics.record(.audioConfigurationChanged)
-        guard dictationState == .listening else { return }
-        controller?.preserveActiveRecording(
-            reason: L10n.tr("The microphone or audio device was disconnected. Dictation stopped.")
-        )
     }
 
     /// Say what was waiting for the end of the session.
@@ -2442,19 +2475,28 @@ public final class AppState: ObservableObject {
         }
         hotkeyMonitor.onPress = { [weak self] in
             guard let self else { return }
-            // Before any guard can swallow the press: the reload must start
-            // at the earliest observable moment of intent.
-            self.rewarmEngineIfCold(trigger: .keyDown)
-            guard !self.isRecoveryOperationActive else { return }
-            guard self.explainIfNotReady() else { return }
-            self.controller?.begin(
-                handsFree: false,
-                isEnabled: self.isDictationReady,
-                isModelReady: self.modelState.isReady
-            )
+            // Nothing before `begin`: the microphone start is where the first
+            // word lives. A cold engine reloads once the take is listening.
+            guard !self.isRecoveryOperationActive else {
+                // "Insert Last Dictation" may be waiting for its paste to be
+                // read: nothing appeared, so end the wait and say so now. Or
+                // the text has landed and only the restore floor is left:
+                // then the press starts its take once that is over.
+                self.inserter.endTheReadWait()
+                self.pressDuringRecovery = .held
+                return
+            }
+            self.beginHoldToTalk()
         }
         hotkeyMonitor.onRelease = { [weak self] in
-            self?.controller?.stop()
+            guard let self else { return }
+            guard self.pressDuringRecovery == nil else {
+                // Replayed with its press, so a tap stays a tap and no key
+                // that is up keeps the microphone on.
+                self.pressDuringRecovery = .released
+                return
+            }
+            self.controller?.stop()
         }
         hotkeyMonitor.onDoubleTap = { [weak self] in
             guard let self else { return }
@@ -2483,6 +2525,7 @@ public final class AppState: ObservableObject {
             // Hold turned out to be a shortcut (Ctrl+C over the selected key):
             // the recording ends quietly - without insertion, without messages and without sound
             // errors. The person pressed the shortcut, rather than dictated.
+            self?.pressDuringRecovery = nil
             self?.controller?.cancel()
         }
         hotkeyMonitor.onEscape = { [weak self] in
@@ -2490,6 +2533,16 @@ public final class AppState: ObservableObject {
             // a regular key, and cannot be intercepted.
             self?.cancelCurrentDictation()
         }
+    }
+
+    /// The dictation key is down: start a take that lasts while it is held.
+    private func beginHoldToTalk() {
+        guard explainIfNotReady() else { return }
+        controller?.begin(
+            handsFree: false,
+            isEnabled: isDictationReady,
+            isModelReady: modelState.isReady
+        )
     }
 
     /// Is it possible to start dictation; if not, say why.

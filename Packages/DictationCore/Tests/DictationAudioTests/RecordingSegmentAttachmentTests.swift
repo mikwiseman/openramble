@@ -30,6 +30,46 @@ final class RecordingSegmentAttachmentTests: XCTestCase {
         }
     }
 
+    /// Frames of the size the HAL I/O proc delivers: 512 frames at 48 kHz,
+    /// 170.67 samples at 16 kHz, so 171 and 170 in turn.
+    private func feedCycles(_ attachment: RecordingSegmentAttachment, _ level: Float, seconds: Double) {
+        var remaining = Int(seconds * 16_000)
+        var cycle = 0
+        while remaining > 0 {
+            let count = min(cycle % 3 == 2 ? 170 : 171, remaining)
+            attachment.submit([Float](repeating: level, count: count))
+            remaining -= count
+            cycle += 1
+        }
+    }
+
+    /// The pause rule was measured on frames of about 100 ms, and a frame
+    /// holding any speech counts as speech, so those frames are part of what
+    /// "700 ms" means. Fed 10.7 ms cycles one by one, the same rule cut at
+    /// pauses it never cut before. Grouped back into blocks of at least 90 ms,
+    /// a 750 ms pause stays uncut whatever the alignment, and a real pause
+    /// still earns its cut.
+    func testTheIOProcsShortCyclesCutAtThePausesTheEngineFramesDid() {
+        let short = Collected()
+        let attachment = RecordingSegmentAttachment(segmenter: mechanism)
+        attachment.setSink { short.append($0) }
+        feedCycles(attachment, 0.5, seconds: 5)
+        feedCycles(attachment, 0, seconds: 0.75)
+        feedCycles(attachment, 0.5, seconds: 3)
+        XCTAssertEqual(attachment.drainConsumedSampleCount(), 0, "a 750 ms pause carries no cut")
+        XCTAssertTrue(short.segments.isEmpty)
+
+        let real = Collected()
+        let realAttachment = RecordingSegmentAttachment(segmenter: mechanism)
+        realAttachment.setSink { real.append($0) }
+        feedCycles(realAttachment, 0.5, seconds: 5)
+        feedCycles(realAttachment, 0, seconds: 1.2)
+        feedCycles(realAttachment, 0.5, seconds: 3)
+        let consumed = realAttachment.drainConsumedSampleCount()
+        XCTAssertEqual(real.segments.count, 1, "a real pause still earns its cut")
+        XCTAssertEqual(real.segments.first?.count, consumed)
+    }
+
     func testWithoutASinkNothingIsSegmentedAtAll() {
         let attachment = RecordingSegmentAttachment()
         feed(attachment, 0.5, seconds: 30)

@@ -40,7 +40,7 @@ final class HotkeyGestureMachineTests: XCTestCase {
             machine.handle(event(.leftControl, flags: Bits.control | Bits.leftControlSide)),
             .press
         )
-        XCTAssertEqual(machine.handleForeignKeyDown(), .abortShortcut)
+        XCTAssertEqual(machine.handleForeignKeyDown(at: start.addingTimeInterval(0.05)), .abortShortcut)
         // Releasing the modifier after the shortcut does not insert anything.
         XCTAssertEqual(machine.handle(event(.leftControl, flags: 0, after: 0.1)), .none)
     }
@@ -51,7 +51,7 @@ final class HotkeyGestureMachineTests: XCTestCase {
         var machine = HotkeyGestureMachine(hotkey: .leftControl)
 
         _ = machine.handle(event(.leftControl, flags: Bits.control | Bits.leftControlSide))
-        XCTAssertEqual(machine.handleForeignKeyDown(), .abortShortcut)
+        XCTAssertEqual(machine.handleForeignKeyDown(at: start.addingTimeInterval(0.05)), .abortShortcut)
         _ = machine.handle(event(.leftControl, flags: 0, after: 0.08))
 
         // The second shortcut immediately follows: press, but NOT doubleTap.
@@ -100,7 +100,45 @@ final class HotkeyGestureMachineTests: XCTestCase {
         var machine = HotkeyGestureMachine(hotkey: .leftControl)
         machine.isHandsFreeActive = true
 
-        XCTAssertEqual(machine.handleForeignKeyDown(), .none)
+        XCTAssertEqual(machine.handleForeignKeyDown(at: start.addingTimeInterval(0.05)), .none)
+    }
+
+    /// A key that lands well into the hold is not a shortcut: a brushed key or
+    /// a reflex in the middle of a sentence. Ending the take on it would throw
+    /// away everything said so far, so the take goes on and the release
+    /// finishes it like any other.
+    func testScenario025() {
+        var machine = HotkeyGestureMachine(hotkey: .rightCommand)
+        let held = Bits.command | Bits.rightCommandSide
+
+        XCTAssertEqual(machine.handle(event(.rightCommand, flags: held)), .press)
+        XCTAssertEqual(machine.handleForeignKeyDown(at: start.addingTimeInterval(0.8)), .none)
+        XCTAssertEqual(machine.handle(event(.rightCommand, flags: 0, after: 2.0)), .release(after: 0))
+        // The finished take opens no double-tap window for the next press.
+        XCTAssertEqual(machine.handle(event(.rightCommand, flags: held, after: 2.1)), .press)
+    }
+
+    /// Just inside the window it is still Ctrl+C.
+    func testScenario026() {
+        var machine = HotkeyGestureMachine(hotkey: .leftControl)
+
+        _ = machine.handle(event(.leftControl, flags: Bits.control | Bits.leftControlSide))
+        XCTAssertEqual(machine.handleForeignKeyDown(at: start.addingTimeInterval(0.79)), .abortShortcut)
+        XCTAssertEqual(machine.handle(event(.leftControl, flags: 0, after: 1.0)), .none)
+    }
+
+    /// A modifier joining late in the hold does not end it either.
+    func testScenario027() {
+        var machine = HotkeyGestureMachine(hotkey: .leftControl)
+
+        _ = machine.handle(event(.leftControl, flags: Bits.control | Bits.leftControlSide))
+        let chord = HotkeyEvent(
+            keyCode: 55,
+            rawFlags: Bits.command | Bits.leftCommandSide | Bits.control | Bits.leftControlSide,
+            at: start.addingTimeInterval(1.0)
+        )
+        XCTAssertEqual(machine.handle(chord), .none)
+        XCTAssertEqual(machine.handle(event(.leftControl, flags: 0, after: 1.5)), .release(after: 0))
     }
 
     // MARK: - Hold

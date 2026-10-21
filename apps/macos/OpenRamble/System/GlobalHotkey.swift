@@ -145,8 +145,9 @@ struct HotkeyGestureMachine {
         case doubleTap
         /// Pressing during recording without holding - please stop.
         case stopHandsFree
-        /// While holding, another key was pressed: this is a shortcut, not
-        /// dictation. The recording that has started must be interrupted quietly - without insertion, without
+        /// Early in the hold (within `shortcutWindow`) another key was
+        /// pressed: this is a shortcut, not dictation. The recording that has
+        /// started must be interrupted quietly - without insertion, without
         /// messages and without double-clicking.
         case abortShortcut
     }
@@ -161,6 +162,16 @@ struct HotkeyGestureMachine {
 
     /// The interval within which the second press is considered a double press.
     let doubleTapWindow: TimeInterval
+
+    /// How far into a hold another key still means a shortcut.
+    ///
+    /// Ctrl+C follows its modifier by a tenth to a third of a second. A key
+    /// that arrives later lands in the middle of speech - a brushed key, a
+    /// reflex - and ending the take on it would throw away everything said so
+    /// far. Past this window the key is ignored and the take finishes at the
+    /// release like any other. Ignored by the take, not swallowed: the front
+    /// app still receives the chord (⌘A, ⌘↓) and acts on it before the paste.
+    static let shortcutWindow: TimeInterval = 0.8
 
     private(set) var isHeld = false
     private var lastTapAt: Date?
@@ -197,13 +208,20 @@ struct HotkeyGestureMachine {
         abortedByShortcut = false
     }
 
-    /// While holding, press a regular key - this is a shortcut.
-    mutating func handleForeignKeyDown() -> Action {
+    /// While holding, press a regular key - early on, this is a shortcut.
+    mutating func handleForeignKeyDown(at time: Date) -> Action {
         guard isHeld, !abortedByShortcut, !isHandsFreeActive else { return .none }
-        return abortCurrentHold()
+        return abortCurrentHold(at: time)
     }
 
-    private mutating func abortCurrentHold() -> Action {
+    private mutating func abortCurrentHold(at time: Date) -> Action {
+        // Past the window the key is not a shortcut; the take goes on.
+        // Whole milliseconds, as for the release: a `Date` sum is not exact,
+        // and 0.8 s must not read as 0.7999.
+        if let pressedAt,
+           (time.timeIntervalSince(pressedAt) * 1_000).rounded() >= Self.shortcutWindow * 1_000 {
+            return .none
+        }
         abortedByShortcut = true
         lastTapAt = nil
         return .abortShortcut
@@ -217,7 +235,7 @@ struct HotkeyGestureMachine {
             if isHeld, !abortedByShortcut, !isHandsFreeActive,
                hotkey.isPressed(in: event.rawFlags),
                !hotkey.isExclusivelyPressed(in: event.rawFlags) {
-                return abortCurrentHold()
+                return abortCurrentHold(at: event.at)
             }
             return .none
         }
@@ -337,11 +355,12 @@ public final class SystemHotkeyEventSource: HotkeyEventSource {
 
     public func addKeyDownMonitor(_ handler: @escaping @MainActor (HotkeyEvent) -> Void) -> Any? {
         let global = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { event in
+            guard !event.isFromThisProcess else { return }
             MainActor.assumeIsolated { handler(HotkeyEvent(event)) }
         }
         guard let global else { return nil }
         let local = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
-            handler(HotkeyEvent(event))
+            if !event.isFromThisProcess { handler(HotkeyEvent(event)) }
             // We don't intercept anything: Escape and other keys continue
             // normal path of the active application.
             return event
@@ -364,8 +383,24 @@ public final class SystemHotkeyEventSource: HotkeyEventSource {
 }
 
 extension HotkeyEvent {
+    /// Timed by when the key moved, not by when the main thread got to it: a
+    /// press that waited behind other work would otherwise make a key late in
+    /// the hold look early, and cancel the take it interrupts.
     init(_ event: NSEvent) {
-        self.init(keyCode: event.keyCode, rawFlags: event.modifierFlags.rawValue, at: Date())
+        self.init(
+            keyCode: event.keyCode,
+            rawFlags: event.modifierFlags.rawValue,
+            at: Date(timeIntervalSinceNow: event.timestamp - ProcessInfo.processInfo.systemUptime)
+        )
+    }
+}
+
+private extension NSEvent {
+    /// The paste's ⌘V or "Send it."'s Return. OpenRamble presses them the way
+    /// a keyboard does, so they come back to its own monitors, stamped with
+    /// this process as their poster. They are never the person's keys.
+    var isFromThisProcess: Bool {
+        cgEvent?.getIntegerValueField(.eventSourceUnixProcessID) == Int64(getpid())
     }
 }
 
@@ -487,9 +522,10 @@ public final class GlobalHotkeyMonitor: HotkeyMonitoring {
             onEscape?()
             return
         }
-        // Any other key while holding the modifier is a shortcut
-        // (Ctrl+C), not dictation: the started gesture ends quietly.
-        deliver(machine.handleForeignKeyDown())
+        // Any other key early in the hold is a shortcut (Ctrl+C), not
+        // dictation: the started gesture ends quietly. Later, the machine
+        // lets the take go on.
+        deliver(machine.handleForeignKeyDown(at: event.at))
     }
 
     private func deliver(_ action: HotkeyGestureMachine.Action) {

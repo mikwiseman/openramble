@@ -178,15 +178,18 @@ private struct HistoryRow: View {
                 .help(entry.isKept ? L10n.tr("Stop keeping this one") : L10n.tr("Keep this one"))
                 .accessibilityLabel(entry.isKept ? L10n.tr("Kept. Stop keeping") : L10n.tr("Keep this dictation"))
 
-                if audioURL != nil {
-                    Button(action: onRetranscribe) {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .buttonStyle(.borderless)
-                    .disabled(isRetranscribing)
-                    .help(L10n.tr("Recognize this recording again"))
-                    .accessibilityLabel(L10n.tr("Recognize this recording again"))
+                // A row whose recording is gone has nothing to recognize, and a
+                // take with no words has nothing to copy. Those icons are hidden,
+                // not removed, so the icons stand in the same column on every row.
+                Button(action: onRetranscribe) {
+                    Image(systemName: "arrow.clockwise")
                 }
+                .buttonStyle(.borderless)
+                .disabled(isRetranscribing || audioURL == nil)
+                .help(L10n.tr("Recognize this recording again"))
+                .accessibilityLabel(L10n.tr("Recognize this recording again"))
+                .opacity(audioURL == nil ? 0 : 1)
+                .accessibilityHidden(audioURL == nil)
 
                 Button(action: onCopy) {
                     Image(systemName: "doc.on.doc")
@@ -194,6 +197,9 @@ private struct HistoryRow: View {
                 .buttonStyle(.borderless)
                 .help(L10n.tr("Copy"))
                 .accessibilityLabel(L10n.tr("Copy this dictation"))
+                .opacity(entry.text.isEmpty ? 0 : 1)
+                .disabled(entry.text.isEmpty)
+                .accessibilityHidden(entry.text.isEmpty)
 
                 Button(role: .destructive, action: onDelete) {
                     Image(systemName: "trash")
@@ -203,10 +209,17 @@ private struct HistoryRow: View {
                 .accessibilityLabel(L10n.tr("Delete this dictation"))
             }
 
-            Text(entry.text)
-                .font(.body)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+            if entry.text.isEmpty {
+                // Kept for its audio: the model found no words in it.
+                Text(L10n.tr("Nothing recognized"))
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(entry.text)
+                    .font(.body)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if let audioURL {
                 Button {

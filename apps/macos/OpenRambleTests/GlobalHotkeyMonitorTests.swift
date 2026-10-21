@@ -300,4 +300,73 @@ final class GlobalHotkeyMonitorTests: XCTestCase {
 
         XCTAssertEqual(escapes, 0)
     }
+
+    /// A stray key well into the hold reaches the machine with its own time,
+    /// and the take is not cut short: nothing happens until the release, which
+    /// finishes it as usual.
+    func testScenario019() {
+        var aborted = 0
+        var released = 0
+        monitor.onAbortShortcut = { aborted += 1 }
+        monitor.onRelease = { released += 1 }
+        monitor.start()
+        let pressedAt = pressedRightCommand.at
+
+        source.sendFlags(pressedRightCommand)
+        source.sendKeyDown(HotkeyEvent(keyCode: 8, rawFlags: 0, at: pressedAt.addingTimeInterval(1.0)))
+        XCTAssertEqual(aborted, 0, "a late key is not a shortcut")
+        XCTAssertEqual(released, 0, "and it does not end the take on its own")
+
+        source.sendFlags(HotkeyEvent(
+            keyCode: DictationHotkey.rightCommand.keyCode,
+            rawFlags: 0,
+            at: pressedAt.addingTimeInterval(1.5)
+        ))
+        XCTAssertEqual(released, 1, "the release finishes the take")
+        XCTAssertEqual(aborted, 0)
+    }
+
+    /// Keys are timed by when they happened, not by when the main thread got
+    /// to them. Here the press waited a second behind other work and the
+    /// stray key, a full second into the hold, was handled at once: timed on
+    /// arrival the two land together, the key looks like an early shortcut,
+    /// and the sentence being spoken is thrown away.
+    func testAKeyLateInTheHoldIsTimedByTheEventNotByWhenItWasHandled() throws {
+        var aborted = 0
+        var released = 0
+        monitor.onAbortShortcut = { aborted += 1 }
+        monitor.onRelease = { released += 1 }
+        monitor.start()
+        let now = ProcessInfo.processInfo.systemUptime
+        let press = try XCTUnwrap(NSEvent.keyEvent(
+            with: .flagsChanged,
+            location: .zero,
+            modifierFlags: NSEvent.ModifierFlags(rawValue: NSEvent.ModifierFlags.command.rawValue | 0x0000_0010),
+            timestamp: now - 1.0,
+            windowNumber: 0,
+            context: nil,
+            characters: "",
+            charactersIgnoringModifiers: "",
+            isARepeat: false,
+            keyCode: DictationHotkey.rightCommand.keyCode
+        ))
+        let key = try XCTUnwrap(NSEvent.keyEvent(
+            with: .keyDown,
+            location: .zero,
+            modifierFlags: .command,
+            timestamp: now,
+            windowNumber: 0,
+            context: nil,
+            characters: "c",
+            charactersIgnoringModifiers: "c",
+            isARepeat: false,
+            keyCode: 8
+        ))
+
+        source.sendFlags(HotkeyEvent(press))
+        source.sendKeyDown(HotkeyEvent(key))
+
+        XCTAssertEqual(aborted, 0, "a key a second into the hold is not a shortcut")
+        XCTAssertEqual(released, 0)
+    }
 }

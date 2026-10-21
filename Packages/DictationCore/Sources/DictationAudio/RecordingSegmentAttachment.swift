@@ -35,6 +35,12 @@ final class RecordingSegmentAttachment: @unchecked Sendable {
     /// the tail nobody has recognized yet.
     private var consumed = 0
     private var closed = false
+    /// The end of `pending` the segmenter has not been shown yet, and its
+    /// peak. Frames reach it in blocks (`CaptureBlock`), because its pauses
+    /// were measured on ~100 ms frames. What is left unshown at freeze is
+    /// simply part of the tail.
+    private var unshownCount = 0
+    private var unshownPeak: Float = 0
 
     init(segmenter: SpeechSegmenter = SpeechSegmenter()) {
         self.segmenter = segmenter
@@ -59,11 +65,17 @@ final class RecordingSegmentAttachment: @unchecked Sendable {
 
     private func ingest(_ samples: [Float]) {
         guard !closed else { return }
-        var peak: Float = 0
+        var peak = unshownPeak
         for value in samples { peak = max(peak, abs(value)) }
 
         pending.append(contentsOf: samples)
-        guard let cut = segmenter.observe(peak: peak, count: samples.count) else { return }
+        unshownCount += samples.count
+        unshownPeak = peak
+        guard unshownCount >= CaptureBlock.minimumSamples else { return }
+        let count = unshownCount
+        unshownCount = 0
+        unshownPeak = 0
+        guard let cut = segmenter.observe(peak: peak, count: count) else { return }
         // A cut can only be offered for audio already in `pending`, because the
         // segmenter counts exactly the frames handed to it.
         guard cut > 0, cut <= pending.count else { return }

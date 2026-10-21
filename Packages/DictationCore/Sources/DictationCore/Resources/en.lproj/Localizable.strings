@@ -38,11 +38,6 @@
 "Add ⌘, ⌃ or ⌥ — a plain key would fire while you type." = "Add ⌘, ⌃ or ⌥ — a plain key would fire while you type.";
 "Adds phrases from an OpenRamble dictionary file" = "Adds phrases from an OpenRamble dictionary file";
 "Adds this replacement to future dictations" = "Adds this replacement to future dictations";
-"After 1 hour" = "After 1 hour";
-"After 10 minutes" = "After 10 minutes";
-"After 15 minutes" = "After 15 minutes";
-"After 2 minutes" = "After 2 minutes";
-"After 5 minutes" = "After 5 minutes";
 "Allow Microphone" = "Allow Microphone";
 "Allow camera access" = "Allow camera access";
 "Allow in Settings" = "Allow in Settings";
@@ -173,7 +168,6 @@
 "Removes OpenRamble's old Accessibility entry and relaunches the app." = "Removes OpenRamble's old Accessibility entry and relaunches the app.";
 "Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT." = "Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT.";
 "For dictating in runs, so the next phrase does not arrive welded to the last word." = "For dictating in runs, so the next phrase does not arrive welded to the last word.";
-"Frees the speech model's memory after this much idle time. It reloads under your voice at the next dictation." = "Frees the speech model's memory after this much idle time. It reloads under your voice at the next dictation.";
 "Frees up disk space. Dictation stops working until the model is downloaded again." = "Frees up disk space. Dictation stops working until the model is downloaded again.";
 "General" = "General";
 "Go back to step %@" = "Go back to step %@";
@@ -193,7 +187,6 @@
 "How many dictations to keep, with their audio" = "How many dictations to keep, with their audio";
 "If access is enabled in Settings and Retry still fails, quit and reopen OpenRamble once." = "If access is enabled in Settings and Retry still fails, quit and reopen OpenRamble once.";
 "If your terminal says 'command not found', add this line to your shell startup file, such as ~/.zshrc, then open a new terminal:" = "If your terminal says 'command not found', add this line to your shell startup file, such as ~/.zshrc, then open a new terminal:";
-"Immediately" = "Immediately";
 "Imported %@, updated %@." = "Imported %@, updated %@.";
 "Imported %@." = "Imported %@.";
 "Import…" = "Import…";
@@ -265,7 +258,6 @@
 "Move to Trash" = "Move to Trash";
 "Neither your microphone nor the other side of this call was captured." = "Neither your microphone nor the other side of this call was captured.";
 "Network, only on your terms" = "Network, only on your terms";
-"Never" = "Never";
 "No account, analytics, or cloud transcription. Reports contain technical events and available crash details, never your speech. Nothing is sent automatically. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder." = "No account, analytics, or cloud transcription. Reports contain technical events and available crash details, never your speech. Nothing is sent automatically. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder.";
 "No accounts, no analytics, no automatic reports. The code is open — you can check." = "No accounts, no analytics, no automatic reports. The code is open — you can check.";
 "No dictations yet" = "No dictations yet";
@@ -570,7 +562,6 @@
 "Two permissions left to grant — Microphone and Accessibility." = "Two permissions left to grant — Microphone and Accessibility.";
 "Unavailable" = "Unavailable";
 "Unavailable on this Mac" = "Unavailable on this Mac";
-"Unload model" = "Unload model";
 "Updated %@ from the file." = "Updated %@ from the file.";
 "Updates" = "Updates";
 "Updates are not working" = "Updates are not working";
@@ -640,11 +631,16 @@
 "Nothing left to insert after cleanup." = "Nothing left to insert after cleanup.";
 "Nothing left after cleanup — the text was kept." = "Nothing left after cleanup — the text was kept.";
 "Nothing new was recognized — the text was kept." = "Nothing new was recognized — the text was kept.";
+"Nothing recognized" = "Nothing recognized";
+"Heard only silence from %@." = "Heard only silence from %@.";
+"Still nothing recognized." = "Still nothing recognized.";
+"Nothing was recognized — the recording is in History." = "Nothing was recognized — the recording is in History.";
 "Insertion couldn't be confirmed in time. The text is saved in the menu and may already have been pasted." = "Insertion couldn't be confirmed in time. The text is saved in the menu and may already have been pasted.";
 "The text was inserted, but pressing Return failed." = "The text was inserted, but pressing Return failed.";
 "Text not inserted: secure input is active. Your text is saved in the menu." = "Text not inserted: secure input is active. Your text is saved in the menu.";
 "A previous paste is still finishing. Your text is saved in the menu." = "A previous paste is still finishing. Your text is saved in the menu.";
 "The text couldn't be inserted. It's saved in the menu." = "The text couldn't be inserted. It's saved in the menu.";
+"The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu." = "The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu.";
 "Couldn't record audio." = "Couldn't record audio.";
 "Couldn't transcribe speech." = "Couldn't transcribe speech.";
 "This file is not an OpenRamble dictionary." = "This file is not an OpenRamble dictionary.";

@@ -7,9 +7,9 @@ import Foundation
 /// Whether another process has hogged the input device.
 ///
 /// Core Audio hog mode is the only true exclusive lock. A conferencing app
-/// that uses Voice Processing I/O does not set it, and still often leaves a
-/// second `AVAudioEngine` tap delivering zeros; that case is silence, not
-/// this enum. This is the case we can name before we start.
+/// that uses Voice Processing I/O does not set it: the microphone stays
+/// shared, as three channels on a Mac's built-in microphones. This is the
+/// case we can name before we start.
 enum MicrophoneHogState: Equatable {
     case free
     case thisProcess
@@ -24,11 +24,13 @@ enum MicrophoneHogState: Equatable {
 /// The microphone, as a long-running source.
 ///
 /// A HAL I/O proc on the input device, not `AVAudioEngine.inputNode`. The
-/// engine tap is the dictation path; it starts without error and delivers
-/// zeros when a conferencing app already has Voice Processing I/O or the
-/// headset is in HFP. Adding an I/O proc is the documented way a second
-/// client shares an input. Hog mode is the one case that still refuses, and
-/// that refusal is an error rather than an hour of silence.
+/// engine tap starts without error and delivers zeros when the headset is in
+/// HFP. Adding an I/O proc is the documented way a second client shares an
+/// input. While a conferencing app holds Voice Processing I/O, a Mac's
+/// built-in microphones are three channels, recorded through the first like
+/// every other input. (The silence once blamed on the engine there came from
+/// a converter that mapped none of the three.) Hog mode is the one case that
+/// still refuses, and that refusal is an error rather than an hour of silence.
 ///
 /// `MicrophoneCapture` is not reused: that actor is built around a two-second
 /// take racing insertion and Escape, and its process-wide gates would fail a
@@ -41,8 +43,8 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
     private var name: String?
     private var session: Session = .idle
     private var defaultInputListener: AudioObjectPropertyListenerBlock?
-    private var deviceAliveListener: AudioObjectPropertyListenerBlock?
-    private var aliveDevice: AudioDeviceID?
+    private var deviceListener: AudioObjectPropertyListenerBlock?
+    private var listenedDevice: AudioDeviceID?
     private let ioQueue = DispatchQueue(label: "is.waiwai.dictation.meeting-microphone")
 
     private enum Session {
@@ -83,8 +85,8 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
                 throw failure
             }
             // HAL refused for some other reason. The engine still hears some
-            // devices the I/O proc does not; hog and VPIO silence are not
-            // among them, which is why exclusive access does not fall here.
+            // devices the I/O proc does not; a hogged one is not among them,
+            // which is why exclusive access does not fall here.
             try startEngine(preferred: preferred, onBlock: onBlock, onFailure: onFailure)
         }
     }
@@ -125,8 +127,7 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
         }
 
         let native = Self.nativeFormat(of: device)
-        var asbd = native.asbd
-        guard let sourceFormat = AVAudioFormat(streamDescription: &asbd),
+        guard let sourceFormat = CaptureInputs.format(of: native.asbd),
               sourceFormat.sampleRate > 0,
               sourceFormat.channelCount > 0,
               let target = AVAudioFormat(
@@ -183,7 +184,7 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
 
         session = .hal(device: device, procID: procID)
         name = Self.name(of: device)
-        listenForChanges(device: device, pinned: preferred != nil, onFailure: onFailure)
+        listenForChanges(device: device, format: sourceFormat, pinned: preferred != nil, onFailure: onFailure)
     }
 
     // MARK: - Engine fallback
@@ -259,8 +260,14 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
 
     // MARK: - Route changes
 
+    /// The default input moving, the device going away, or its stream
+    /// changing under the I/O proc: a call that turns voice processing on or
+    /// off takes the built-in microphones between one channel and three, and
+    /// no cycle after that fits the format the proc was opened with. Each is
+    /// a reason to open the microphone again.
     private func listenForChanges(
         device: AudioDeviceID,
+        format: AVAudioFormat,
         pinned: Bool,
         onFailure: @escaping @Sendable (MeetingSourceFailure) -> Void
     ) {
@@ -272,11 +279,16 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
             )
             defaultInputListener = block
         }
-        var aliveAddress = Self.deviceAliveAddress
-        let alive: AudioObjectPropertyListenerBlock = { _, _ in onFailure(.configurationChanged) }
-        AudioObjectAddPropertyListenerBlock(device, &aliveAddress, nil, alive)
-        deviceAliveListener = alive
-        aliveDevice = device
+        let reported = OnceFlag()
+        let changed: AudioObjectPropertyListenerBlock = { _, _ in
+            guard !CaptureInputs.delivers(format, from: device), reported.claim() else { return }
+            onFailure(.configurationChanged)
+        }
+        for var address in CaptureInputs.watched {
+            AudioObjectAddPropertyListenerBlock(device, &address, nil, changed)
+        }
+        deviceListener = changed
+        listenedDevice = device
     }
 
     private func tearDownListeners() {
@@ -286,13 +298,14 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
                 AudioObjectID(kAudioObjectSystemObject), &address, nil, defaultInputListener
             )
         }
-        if let deviceAliveListener, let aliveDevice {
-            var address = Self.deviceAliveAddress
-            AudioObjectRemovePropertyListenerBlock(aliveDevice, &address, nil, deviceAliveListener)
+        if let deviceListener, let listenedDevice {
+            for var address in CaptureInputs.watched {
+                AudioObjectRemovePropertyListenerBlock(listenedDevice, &address, nil, deviceListener)
+            }
         }
         defaultInputListener = nil
-        deviceAliveListener = nil
-        aliveDevice = nil
+        deviceListener = nil
+        listenedDevice = nil
     }
 
     // MARK: - Core Audio queries
@@ -300,14 +313,6 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
     private static var defaultInputAddress: AudioObjectPropertyAddress {
         AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDefaultInputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-    }
-
-    private static var deviceAliveAddress: AudioObjectPropertyAddress {
-        AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyDeviceIsAlive,
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )

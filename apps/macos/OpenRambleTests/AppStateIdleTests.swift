@@ -224,8 +224,8 @@ final class AppStateIdleTests: XCTestCase {
 
     /// The headphones were taken out mid-sentence.
     ///
-    /// The engine remains running, but frames no longer come into it: person
-    /// speaks into silence and would only know about it by the empty result.
+    /// The microphone says so itself, for its own take. The person would
+    /// otherwise speak into silence and only learn of it by the empty result.
     /// The recording is longer than the recognition minimum — otherwise there
     /// is nothing to rescue.
     func testScenario014() async throws {
@@ -233,7 +233,9 @@ final class AppStateIdleTests: XCTestCase {
         monitor.onPress?()
         try await waitFor("recording has started") { state.dictationState == .listening }
 
-        harness.notifications.post(name: .AVAudioEngineConfigurationChange, object: nil)
+        let recordedSession = await capture.session
+        let session = try XCTUnwrap(recordedSession)
+        harness.captureFailure?(session, .deviceDisconnected)
 
         try await waitFor("dictation ended") { state.dictationState == .idle }
         let recovery = try AppPaths(root: harness.root).audioRecovery()
@@ -253,7 +255,9 @@ final class AppStateIdleTests: XCTestCase {
         monitor.onPress?()
         try await waitFor("recording has started") { state.dictationState == .listening }
 
-        harness.notifications.post(name: .AVAudioEngineConfigurationChange, object: nil)
+        let recordedSession = await capture.session
+        let session = try XCTUnwrap(recordedSession)
+        harness.captureFailure?(session, .deviceDisconnected)
         try await waitFor("dictation ended") { state.dictationState == .idle }
 
         try await waitFor("exact stop reason") {
@@ -270,16 +274,22 @@ final class AppStateIdleTests: XCTestCase {
         )
     }
 
-    /// Devices change and just like that: they connected the monitor, the headphones went into
-    /// sleep. As long as we don't listen, it's none of our business.
+    /// Another audio engine in the process changed its route: History
+    /// playback, or the recorder, when headphones come and go. That says
+    /// nothing about the microphone of the take being spoken, and used to end
+    /// it with "disconnected".
     func testScenario016() async throws {
         let state = try await makeReadyState()
+        monitor.onPress?()
+        try await waitFor("recording has started") { state.dictationState == .listening }
 
         harness.notifications.post(name: .AVAudioEngineConfigurationChange, object: nil)
         try await Task.sleep(for: .milliseconds(50))
 
         XCTAssertNil(state.lastNotice)
-        XCTAssertEqual(state.dictationState, .idle)
+        XCTAssertEqual(state.dictationState, .listening)
+        monitor.onRelease?()
+        try await waitFor("dictation ended") { state.dictationState == .idle }
     }
 
     // MARK: - Loading the model

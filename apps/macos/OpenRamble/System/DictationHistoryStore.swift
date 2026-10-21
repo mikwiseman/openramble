@@ -121,6 +121,11 @@ public struct DictationHistoryStore: Sendable {
     /// Returns the list as it now stands. Audio for evicted entries is removed
     /// here rather than by a sweep: the moment an entry leaves the list is the
     /// only moment its file is provably unreferenced.
+    ///
+    /// Empty text is a take the model found no words in. It is kept for its
+    /// audio, to be played and recognized again, so without the audio there
+    /// is nothing to keep, and an audio copy that fails is thrown rather than
+    /// quietly kept as nothing.
     @discardableResult
     public func record(
         text: String,
@@ -130,7 +135,7 @@ public struct DictationHistoryStore: Sendable {
         appCategory: ApplicationCategory? = nil
     ) throws -> [HistoryEntry] {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty else { return load() }
+        guard !trimmedText.isEmpty || audio != nil else { return load() }
 
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
 
@@ -138,9 +143,11 @@ public struct DictationHistoryStore: Sendable {
         if let audio {
             let name = "\(UUID().uuidString).wav"
             let destination = directory.appending(path: name, directoryHint: .notDirectory)
-            // A missing or unreadable take must not cost the person the text.
-            if (try? fileManager.copyItem(at: audio, to: destination)) != nil {
+            do {
+                try fileManager.copyItem(at: audio, to: destination)
                 storedName = name
+            } catch where !trimmedText.isEmpty {
+                // A missing or unreadable take must not cost the person the text.
             }
         }
 
@@ -168,13 +175,18 @@ public struct DictationHistoryStore: Sendable {
     /// deleted. The limit counts ordinary dictations. A starred one is a
     /// promise that it stays, and a promise that the next dictation can break
     /// is not one, so starred entries neither count against the limit nor
-    /// fall out of it. Order is untouched, so the list still reads by date.
+    /// fall out of it. A take with no words is kept to be heard again, beside
+    /// the dictations rather than instead of one: takes with no words count
+    /// against the same limit among themselves, so they never push a
+    /// dictation out. Order is untouched, so the list still reads by date.
     private func trimmed(_ entries: [HistoryEntry], to limit: Int) -> [HistoryEntry] {
-        var budget = max(1, limit)
+        // Keyed by "has no words".
+        var budget = [false: max(1, limit), true: max(1, limit)]
         let kept = entries.filter { entry in
             if entry.isKept { return true }
-            guard budget > 0 else { return false }
-            budget -= 1
+            let wordless = entry.text.isEmpty
+            guard budget[wordless, default: 0] > 0 else { return false }
+            budget[wordless, default: 0] -= 1
             return true
         }
         let keptIDs = Set(kept.map(\.id))

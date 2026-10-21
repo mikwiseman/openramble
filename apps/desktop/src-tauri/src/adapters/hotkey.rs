@@ -112,8 +112,8 @@ impl HotkeyTracker {
     pub fn key_down(&mut self, key: Key, at: Duration) -> Action {
         self.pressed.insert(key);
         if !is_modifier(key) {
-            // An ordinary key during a hold means this was a shortcut.
-            return self.machine.handle_foreign_key_down();
+            // An ordinary key early in a hold means this was a shortcut.
+            return self.machine.handle_foreign_key_down(at);
         }
         self.feed(key, at)
     }
@@ -210,6 +210,22 @@ mod tests {
         assert_eq!(tracker.key_down(Key::KeyC, at(50)), Action::AbortShortcut);
         assert_eq!(tracker.key_up(Key::KeyC, at(60)), Action::None);
         assert_eq!(tracker.key_up(Key::ControlRight, at(100)), Action::None);
+    }
+
+    /// A letter well into the hold is not a shortcut: the dictation goes on
+    /// and the release finishes it.
+    #[test]
+    fn a_letter_after_a_long_hold_does_not_interrupt_the_dictation() {
+        let mut tracker = tracker();
+        assert_eq!(tracker.key_down(Key::ControlRight, at(0)), Action::Press);
+        assert_eq!(tracker.key_down(Key::KeyC, at(1_000)), Action::None);
+        assert_eq!(tracker.key_up(Key::KeyC, at(1_010)), Action::None);
+        assert_eq!(
+            tracker.key_up(Key::ControlRight, at(1_500)),
+            Action::Release {
+                after: Duration::ZERO
+            }
+        );
     }
 
     /// A second modifier joining mid-hold is the same story.

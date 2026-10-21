@@ -2,7 +2,7 @@
 //! gesture turns out not to have been dictation at all.
 //!
 //! Ported from `HotkeyGestureMachine` in
-//! `apps/macos/OpenRamble/System/GlobalHotkey.swift` and its twenty-four
+//! `apps/macos/OpenRamble/System/GlobalHotkey.swift` and its twenty-seven
 //! scenarios. The Swift type does two jobs: it decodes macOS modifier bits, and
 //! it runs the gesture table. Only the table is portable, so the bit decoding
 //! stays in each platform adapter and this machine consumes the normalized
@@ -14,6 +14,16 @@ use std::time::Duration;
 
 /// The default window in which a second press counts as a double tap.
 pub const DEFAULT_DOUBLE_TAP_WINDOW: Duration = Duration::from_millis(350);
+
+/// How far into a hold another key still means a shortcut.
+///
+/// Ctrl+C follows its modifier by a tenth to a third of a second. A key that
+/// arrives later lands in the middle of speech, and ending the take on it
+/// would throw away everything said so far — so past this window the key is
+/// ignored and the take finishes at the release like any other. Ignored by
+/// the take, not swallowed: the front app still receives the chord and acts
+/// on it before the paste.
+pub const SHORTCUT_WINDOW: Duration = Duration::from_millis(800);
 
 /// A modifier-state change, already decoded by the platform adapter.
 ///
@@ -90,9 +100,9 @@ pub enum Action {
     DoubleTap,
     /// Pressed while hands-free recording is running — stop it.
     StopHandsFree,
-    /// Another key joined the hold: this was a shortcut, not dictation. The
-    /// recording that started must be dropped quietly — no insertion, no
-    /// message, and no double-tap window opened.
+    /// Another key joined the hold within [`SHORTCUT_WINDOW`]: this was a
+    /// shortcut, not dictation. The recording that started must be dropped
+    /// quietly — no insertion, no message, and no double-tap window opened.
     AbortShortcut,
 }
 
@@ -167,15 +177,23 @@ impl GestureMachine {
         self.aborted_by_shortcut = false;
     }
 
-    /// An ordinary key went down during the hold — that makes this a shortcut.
-    pub fn handle_foreign_key_down(&mut self) -> Action {
+    /// An ordinary key went down during the hold — early on, that makes this a
+    /// shortcut.
+    pub fn handle_foreign_key_down(&mut self, at: Duration) -> Action {
         if !self.is_held || self.aborted_by_shortcut || self.is_hands_free_active {
             return Action::None;
         }
-        self.abort_current_hold()
+        self.abort_current_hold(at)
     }
 
-    fn abort_current_hold(&mut self) -> Action {
+    fn abort_current_hold(&mut self, at: Duration) -> Action {
+        // Past the window the key is not a shortcut; the take goes on.
+        if self
+            .pressed_at
+            .is_some_and(|start| at.saturating_sub(start) >= SHORTCUT_WINDOW)
+        {
+            return Action::None;
+        }
         self.aborted_by_shortcut = true;
         // Cleared so the shortcut's release cannot open a double-tap window and
         // turn the *next* shortcut into hands-free recording.
@@ -194,7 +212,7 @@ impl GestureMachine {
                 && event.is_hotkey_down
                 && !event.is_exclusive
             {
-                return self.abort_current_hold();
+                return self.abort_current_hold(event.at);
             }
             return Action::None;
         }
@@ -300,8 +318,45 @@ mod tests {
     fn a_letter_pressed_during_the_hold_makes_it_a_shortcut() {
         let mut machine = GestureMachine::default();
         assert_eq!(machine.handle(down(0)), Action::Press);
-        assert_eq!(machine.handle_foreign_key_down(), Action::AbortShortcut);
+        assert_eq!(
+            machine.handle_foreign_key_down(at(50)),
+            Action::AbortShortcut
+        );
         assert_eq!(machine.handle(up(100)), Action::None);
+    }
+
+    /// A key that lands well into the hold is not a shortcut. Ending the take
+    /// on it would throw away everything said so far; the take goes on and
+    /// finishes at the release like any other.
+    #[test]
+    fn a_key_after_a_long_hold_does_not_interrupt_the_take() {
+        let mut machine = GestureMachine::default();
+        assert_eq!(machine.handle(down(0)), Action::Press);
+        assert_eq!(machine.handle_foreign_key_down(at(800)), Action::None);
+        assert_eq!(machine.handle(up(2_000)), released(0));
+        assert_eq!(machine.handle(down(2_100)), Action::Press);
+    }
+
+    #[test]
+    fn a_key_early_in_the_hold_is_still_a_shortcut() {
+        let mut machine = GestureMachine::default();
+        assert_eq!(machine.handle(down(0)), Action::Press);
+        assert_eq!(
+            machine.handle_foreign_key_down(at(799)),
+            Action::AbortShortcut
+        );
+        assert_eq!(machine.handle(up(1_000)), Action::None);
+    }
+
+    #[test]
+    fn a_modifier_joining_a_long_hold_does_not_interrupt_it() {
+        let mut machine = GestureMachine::default();
+        assert_eq!(machine.handle(down(0)), Action::Press);
+        assert_eq!(
+            machine.handle(ModifierEvent::foreign(true, false, at(1_000))),
+            Action::None
+        );
+        assert_eq!(machine.handle(up(1_500)), released(0));
     }
 
     /// Ctrl+C then Ctrl+V inside the double-tap window. This once turned on
@@ -310,7 +365,10 @@ mod tests {
     fn a_second_shortcut_in_quick_succession_is_not_a_double_tap() {
         let mut machine = GestureMachine::default();
         machine.handle(down(0));
-        assert_eq!(machine.handle_foreign_key_down(), Action::AbortShortcut);
+        assert_eq!(
+            machine.handle_foreign_key_down(at(50)),
+            Action::AbortShortcut
+        );
         machine.handle(up(80));
         assert_eq!(machine.handle(down(150)), Action::Press);
     }
@@ -342,7 +400,7 @@ mod tests {
         // The modifier was released long ago; the person's shortcuts have
         // nothing to do with the running recording.
         let mut machine = hands_free();
-        assert_eq!(machine.handle_foreign_key_down(), Action::None);
+        assert_eq!(machine.handle_foreign_key_down(at(50)), Action::None);
     }
 
     // Holding.

@@ -1486,6 +1486,13 @@ final class RecordingEngineStartContainment: @unchecked Sendable {
         }
     }
 
+    /// Whether the take behind this reservation was cancelled. A running
+    /// operation asks between its native calls, so a take that ended while
+    /// one of them was blocked never makes the next one.
+    func isCancelled(_ reservation: RecordingEngineStartReservation) -> Bool {
+        lock.withLock { entries[reservation]?.isCancelled ?? true }
+    }
+
     /// Cancels only the logical waiter. A running native call keeps its slot,
     /// engine, and eventual exact-generation cleanup closure until completion.
     func cancel(reservation: RecordingEngineStartReservation) {
@@ -1568,11 +1575,9 @@ final class RecordingEngineShutdownContainment: @unchecked Sendable {
 
     func submit(
         reservation: RecordingEngineShutdownReservation,
-        engine: AVAudioEngine,
-        input: AVAudioInputNode
+        microphone: any CaptureInput
     ) {
-        let job = RecordingEngineShutdownJob(engine: engine, input: input)
-        submit(reservation: reservation) { job.run() }
+        submit(reservation: reservation) { microphone.stop() }
     }
 
     func submit(
@@ -1595,9 +1600,10 @@ final class RecordingEngineShutdownContainment: @unchecked Sendable {
 
     /// The one thread in this package allowed to block.
     ///
-    /// `job.operation()` is `engine.stop()` + `input.removeTap(onBus:)`, and
-    /// the comment above this class says what those do: they may block inside
-    /// AVFAudio. This used to run in `Task.detached`, which puts it on Swift's
+    /// `job.operation()` is the microphone's `stop()` (an I/O proc stop, or
+    /// the engine's `stop()` + `removeTap(onBus:)`), and the comment above
+    /// this class says what those do: they may block inside Core Audio. This
+    /// used to run in `Task.detached`, which puts it on Swift's
     /// cooperative pool — the pool that has one thread per core and that Swift
     /// documents you must never block, because a blocked thread is not yielded,
     /// it is simply gone.
@@ -1637,36 +1643,53 @@ final class RecordingEngineShutdownContainment: @unchecked Sendable {
     }
 }
 
-private final class RecordingEngineShutdownJob: @unchecked Sendable {
-    private let engine: AVAudioEngine
-    private let input: AVAudioInputNode
-
-    init(engine: AVAudioEngine, input: AVAudioInputNode) {
-        self.engine = engine
-        self.input = input
-    }
-
-    func run() {
-        engine.stop()
-        input.removeTap(onBus: 0)
-    }
-}
-
-/// AVAudioEngine is not declared Sendable, but this wrapper has one strict
-/// owner: the detached start operation. No stop/removeTap call is permitted
-/// until `run()` returns and the exact shutdown lease is claimed.
+/// The start has one strict owner: the detached start operation. It opens the
+/// microphone too, because opening is a Core Audio call that can wedge just
+/// like starting: run on the capture actor, one wedged open held the
+/// containment of its own take and the next key-down behind it.
+/// No stop is permitted until `run()` returns and the exact shutdown lease is
+/// claimed.
 private final class RecordingEngineStartJob: @unchecked Sendable {
-    private let engine: AVAudioEngine
+    typealias Prepare = @Sendable (any CaptureInput) throws -> Void
 
-    init(engine: AVAudioEngine) {
-        self.engine = engine
+    private let reservation: RecordingEngineStartReservation
+    private let device: AudioDeviceID?
+    private let open: CaptureInputOpener
+    private let lease: RecordingEngineShutdownLease
+    private let prepare: Prepare
+
+    init(
+        reservation: RecordingEngineStartReservation,
+        device: AudioDeviceID?,
+        open: @escaping CaptureInputOpener,
+        lease: RecordingEngineShutdownLease,
+        prepare: @escaping Prepare
+    ) {
+        self.reservation = reservation
+        self.device = device
+        self.open = open
+        self.lease = lease
+        self.prepare = prepare
     }
 
     func run() -> Result<Void, AudioCaptureError> {
         do {
-            engine.prepare()
-            try engine.start()
+            let microphone = try open(device)
+            // From here on, whatever happens, this microphone is closed by
+            // the lease and by nobody else.
+            lease.adopt(microphone)
+            try prepare(microphone)
+            // A take contained while its microphone was opening is over.
+            // Starting now would light the microphone after the person was
+            // told "Dictation was stopped". Its abandon closes it unstarted,
+            // and the containment ignores this result.
+            guard !RecordingEngineStartContainment.shared.isCancelled(reservation) else {
+                return .failure(.engineUnavailable("the take ended before the microphone opened"))
+            }
+            try microphone.start()
             return .success(())
+        } catch let error as AudioCaptureError {
+            return .failure(error)
         } catch {
             return .failure(.engineUnavailable(error.localizedDescription))
         }
@@ -1676,32 +1699,46 @@ private final class RecordingEngineStartJob: @unchecked Sendable {
 /// Exact-once shutdown ownership shared by the start lane and capture actor.
 /// A cancelled start keeps this lease with its native operation; an adopted
 /// start transfers the same lease into normal freeze/abort teardown.
+///
+/// The microphone arrives from inside the start job. A take whose microphone
+/// never opened has nothing to stop and gives its shutdown slot straight
+/// back; otherwise two failed opens would hold both slots and refuse every
+/// later take.
 private final class RecordingEngineShutdownLease: @unchecked Sendable {
     private let lock = NSLock()
-    private let engine: AVAudioEngine
-    private let input: AVAudioInputNode
     private let containment: RecordingEngineShutdownContainment
     private var reservation: RecordingEngineShutdownReservation?
+    private var microphone: (any CaptureInput)?
 
     init(
         reservation: RecordingEngineShutdownReservation,
-        engine: AVAudioEngine,
-        input: AVAudioInputNode,
         containment: RecordingEngineShutdownContainment = .shared
     ) {
         self.reservation = reservation
-        self.engine = engine
-        self.input = input
         self.containment = containment
     }
 
+    /// Called once, by the start job, the moment the microphone is open.
+    func adopt(_ microphone: any CaptureInput) {
+        lock.withLock { self.microphone = microphone }
+    }
+
+    var adopted: (any CaptureInput)? {
+        lock.withLock { microphone }
+    }
+
     func schedule() {
-        let claimed: RecordingEngineShutdownReservation? = lock.withLock {
-            defer { reservation = nil }
-            return reservation
-        }
+        let (claimed, microphone): (RecordingEngineShutdownReservation?, (any CaptureInput)?) =
+            lock.withLock {
+                defer { reservation = nil }
+                return (reservation, self.microphone)
+            }
         guard let claimed else { return }
-        containment.submit(reservation: claimed, engine: engine, input: input)
+        guard let microphone else {
+            containment.release(claimed)
+            return
+        }
+        containment.submit(reservation: claimed, microphone: microphone)
     }
 }
 
@@ -1822,9 +1859,12 @@ final class CoalescingCaptureLimitObserver: @unchecked Sendable {
 /// durability or recognition milestone.
 ///
 /// There is one serial consumer for the lifetime of `MicrophoneCapture` and
-/// at most one pending frame. If a UI callback ever wedges, future frames are
+/// at most one pending block. If a UI callback ever wedges, future blocks are
 /// coalesced into that single slot instead of leaking one drain task and WAV
 /// descriptor per dictation. The audio callback only takes a lock briefly.
+///
+/// The consumer gets blocks of at least `CaptureBlock.minimumSamples`, not
+/// frames: an engine buffer is one block, nine I/O proc cycles are another.
 final class CoalescingSampleObserver: @unchecked Sendable {
     private let lock = NSLock()
     private let queue = DispatchQueue(
@@ -1833,15 +1873,34 @@ final class CoalescingSampleObserver: @unchecked Sendable {
     )
     private let consume: @Sendable ([Float]) -> Void
     private var pending: [Float]?
+    /// Frames gathered toward the next block.
+    private var gathering: [Float] = []
     private var isDraining = false
 
     init(consume: @escaping @Sendable ([Float]) -> Void) {
         self.consume = consume
     }
 
+    /// A new take begins: the end of the last one is not part of its first
+    /// block.
+    func reset() {
+        lock.withLock { gathering = [] }
+    }
+
     func submit(_ samples: [Float]) {
         lock.lock()
-        pending = samples
+        if gathering.isEmpty, samples.count >= CaptureBlock.minimumSamples {
+            pending = samples
+        } else {
+            if gathering.isEmpty { gathering.reserveCapacity(2 * CaptureBlock.minimumSamples) }
+            gathering.append(contentsOf: samples)
+            guard gathering.count >= CaptureBlock.minimumSamples else {
+                lock.unlock()
+                return
+            }
+            pending = gathering
+            gathering = []
+        }
         guard !isDraining else {
             lock.unlock()
             return
@@ -2049,7 +2108,6 @@ private final class RecordingContext: @unchecked Sendable {
 private struct RecordingPendingStart {
     let reservation: RecordingEngineStartReservation
     let context: RecordingContext
-    let engine: AVAudioEngine
 }
 
 /// Pure identity predicate shared with the concurrency regression test. URL
@@ -2521,10 +2579,13 @@ private func scheduleCancelledFreezePreservation(
 
 /// Record from a microphone to a file.
 ///
-/// The engine rises at the moment the key is pressed and turns off immediately after recording:
+/// The microphone opens at the moment the key is pressed and turns off immediately after recording:
 /// the promise “the recording indicator is off while we are not listening” depends on this.
-/// The price for this is a delay in the cold start, so the start is done as much as possible
-/// short, and the confirmation sound plays only after the first frame arrived.
+/// The price for this is a delay in the cold start, so the start does nothing but open the
+/// device: a HAL I/O proc delivers its first sample ~48 ms after the key-down, where an
+/// AVAudioEngine graph took ~130-170 ms. Bluetooth input still goes through the engine.
+/// The built-in microphone then spends ~180 ms more on near silence before the room is
+/// audible, whatever opened it; that part only a microphone left open could hide.
 public actor MicrophoneCapture: AudioCapturing {
     public typealias ConverterFactory = @Sendable (AVAudioFormat, AVAudioFormat) -> AVAudioConverter?
     private let logger = Logger(subsystem: "is.waiwai.dictation", category: "capture")
@@ -2533,10 +2594,9 @@ public actor MicrophoneCapture: AudioCapturing {
     private let directory: URL
     private let sampleRate: Double = 16_000
 
-    private var engine: AVAudioEngine?
-    private var converter: AVAudioConverter?
+    private var microphone: (any CaptureInput)?
     private var activeContext: RecordingContext?
-    /// A generation whose synchronous AVFAudio start call is executing on the
+    /// A generation whose synchronous Core Audio open/start is executing on the
     /// bounded external lane. The actor owns only its logical token/context,
     /// so contain/abort and N+1 admission remain runnable during a native wedge.
     private var pendingStart: RecordingPendingStart?
@@ -2547,7 +2607,7 @@ public actor MicrophoneCapture: AudioCapturing {
     private var legacyBufferedSamples: [Float]?
 
     /// Exact key/start-call acceptance → first committed 16 kHz frame SLO.
-    /// This includes AVAudio format/engine setup, but never waits for the
+    /// This includes opening the microphone and its format setup, but never waits for the
     /// opportunistic disk writer. The snapshot is copied into the recording.
     private var timingSessionID: UUID?
     private var firstBufferAt: ContinuousClock.Instant?
@@ -2588,31 +2648,8 @@ public actor MicrophoneCapture: AudioCapturing {
     /// Which microphone to record through, or `nil` for whatever the system
     /// calls default.
     private let preferredInputDeviceID: AudioDeviceID?
-
-    /// Ask the engine's input unit to use one particular device.
-    ///
-    /// Refuses loudly rather than recording from the wrong microphone. Someone
-    /// who chose a headset and silently got the laptop lid instead would only
-    /// find out from the transcript, which is far too late.
-    private func selectInputDevice(_ id: AudioDeviceID, on input: AVAudioInputNode) throws {
-        guard let unit = input.audioUnit else {
-            throw AudioCaptureError.engineUnavailable("no input unit to choose a microphone on")
-        }
-        var deviceID = id
-        let status = AudioUnitSetProperty(
-            unit,
-            kAudioOutputUnitProperty_CurrentDevice,
-            kAudioUnitScope_Global,
-            0,
-            &deviceID,
-            UInt32(MemoryLayout<AudioDeviceID>.size)
-        )
-        guard status == noErr else {
-            throw AudioCaptureError.engineUnavailable(
-                "the chosen microphone didn't accept the recording (\(status))"
-            )
-        }
-    }
+    /// Opens the microphone for one take, at the key-down and never earlier.
+    private let openInput: CaptureInputOpener
 
     public init(
         directory: URL,
@@ -2622,6 +2659,27 @@ public actor MicrophoneCapture: AudioCapturing {
         converterFactory: @escaping ConverterFactory = { AVAudioConverter(from: $0, to: $1) },
         preferredInputDeviceID: AudioDeviceID? = nil
     ) {
+        self.init(
+            directory: directory,
+            onFailure: onFailure,
+            onSamples: onSamples,
+            onMemoryLimitReached: onMemoryLimitReached,
+            converterFactory: converterFactory,
+            preferredInputDeviceID: preferredInputDeviceID,
+            openInput: CaptureInputs.open
+        )
+    }
+
+    init(
+        directory: URL,
+        onFailure: @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void = { _, _ in },
+        onSamples: @escaping @Sendable ([Float]) -> Void = { _ in },
+        onMemoryLimitReached: @escaping @Sendable (DictationSessionID) -> Void = { _ in },
+        converterFactory: @escaping ConverterFactory = { AVAudioConverter(from: $0, to: $1) },
+        preferredInputDeviceID: AudioDeviceID? = nil,
+        openInput: @escaping CaptureInputOpener
+    ) {
+        self.openInput = openInput
         self.preferredInputDeviceID = preferredInputDeviceID
         self.directory = directory
         failureObserver = CoalescingCaptureFailureObserver(consume: onFailure)
@@ -2646,7 +2704,7 @@ public actor MicrophoneCapture: AudioCapturing {
     /// stopping and interrupting the recording goes through and wakes up those waiting.
     public func waitForFirstFrame() async -> Bool {
         if firstBufferAt != nil { return true }
-        guard engine != nil || pendingStart != nil else { return false }
+        guard microphone != nil || pendingStart != nil else { return false }
         return await withCheckedContinuation { continuation in
             firstFrameWaiters.append(continuation)
         }
@@ -2701,12 +2759,12 @@ public actor MicrophoneCapture: AudioCapturing {
               disposition.state == .active else {
             throw CancellationError()
         }
-        if engine != nil || activeContext != nil || pendingStart != nil {
+        if microphone != nil || activeContext != nil || pendingStart != nil {
             guard detachSupersededRecordingForAdmission(requestedSession: session) else {
                 throw AudioCaptureError.engineUnavailable("recording is already in progress")
             }
         }
-        guard engine == nil, activeContext == nil, pendingStart == nil else {
+        guard microphone == nil, activeContext == nil, pendingStart == nil else {
             throw AudioCaptureError.engineUnavailable("recording is already in progress")
         }
         guard let startReservation = RecordingEngineStartContainment.shared.reserve() else {
@@ -2736,20 +2794,6 @@ public actor MicrophoneCapture: AudioCapturing {
         )
         disposition.register([url])
 
-        let engine = AVAudioEngine()
-        let input = engine.inputNode
-        // Point the engine at the chosen microphone before anything reads a
-        // format from it. After that the node has already negotiated with a
-        // device and changing it is ignored.
-        if let preferredInputDeviceID {
-            try selectInputDevice(preferredInputDeviceID, on: input)
-        }
-        let inputFormat = input.outputFormat(forBus: 0)
-
-        guard inputFormat.sampleRate > 0 else {
-            throw AudioCaptureError.engineUnavailable("microphone unavailable")
-        }
-
         guard let targetFormat = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
             sampleRate: sampleRate,
@@ -2759,18 +2803,6 @@ public actor MicrophoneCapture: AudioCapturing {
             throw AudioCaptureError.engineUnavailable("couldn't create the recording format")
         }
 
-        // Resampling is almost always needed: the built-in microphone outputs 44.1 or 48 kHz,
-        // and recognition waits for 16 kHz.
-        let converter: AVAudioConverter?
-        do {
-            converter = try Self.converter(
-                from: inputFormat,
-                to: targetFormat,
-                factory: converterFactory
-            )
-        } catch {
-            throw error
-        }
         guard let shutdownReservation = RecordingEngineShutdownContainment.shared.reserve() else {
             throw AudioCaptureError.engineUnavailable(
                 "previous microphone shutdowns are still in progress"
@@ -2786,11 +2818,7 @@ public actor MicrophoneCapture: AudioCapturing {
         let freezeRecoveryLease = RecordingFreezeRecoveryLease(
             reservation: freezeRecoveryReservation
         )
-        let shutdownLease = RecordingEngineShutdownLease(
-            reservation: shutdownReservation,
-            engine: engine,
-            input: input
-        )
+        let shutdownLease = RecordingEngineShutdownLease(reservation: shutdownReservation)
 
         let sessionID = UUID()
         let pcm = RecordingPCMBuffer(maximumSamples: 5 * 60 * Int(sampleRate))
@@ -2819,90 +2847,104 @@ public actor MicrophoneCapture: AudioCapturing {
         )
         pendingStart = RecordingPendingStart(
             reservation: startReservation,
-            context: context,
-            engine: engine
+            context: context
         )
         timingSessionID = context.id
-        self.converter = converter
 
         let sampleObserver = sampleObserver
-        input.installTap(onBus: 0, bufferSize: 2048, format: inputFormat) { [weak self] buffer, when in
-            let sampleTime = when.isSampleTimeValid ? when.sampleTime : nil
-            guard let frame = pcm.beginFrame(sampleTime: sampleTime) else { return }
-            defer { pcm.endFrame() }
+        sampleObserver.reset()
+        // The handler for whatever format the microphone turns out to have,
+        // which only opening it can tell, and that happens on the start lane.
+        let makeHandler: @Sendable (AVAudioConverter?) -> CaptureHandler = { [weak self] converter in
+            { [weak self] buffer, when in
+                let sampleTime = when.isSampleTimeValid ? when.sampleTime : nil
+                guard let frame = pcm.beginFrame(sampleTime: sampleTime) else { return }
+                defer { pcm.endFrame() }
 
-            do {
-                let samples = try conversionSequencer.perform(frame: frame) {
-                    let samples = try Self.extractSamples(
-                        from: buffer,
-                        using: converter,
-                        target: targetFormat
-                    )
-                    guard !samples.isEmpty else { return samples }
-                    let at = ContinuousClock.now
-                    let append = diskAttachment.append(
-                        samples,
-                        frame: frame,
-                        at: at,
-                        to: pcm
-                    )
-                    guard !append.wasRejected else {
-                        // Cancelled-freeze recovery already sealed this old
-                        // generation. The late converter result must not reach
-                        // its WAV, metering, or first-frame observer.
-                        return []
-                    }
-                    if append.isFirstFrame {
-                        Task { [weak self] in
-                            await self?.markFirstFrame(sessionID: sessionID, at: at)
+                do {
+                    let samples = try conversionSequencer.perform(frame: frame) {
+                        let samples = try Self.extractSamples(
+                            from: buffer,
+                            using: converter,
+                            target: targetFormat
+                        )
+                        guard !samples.isEmpty else { return samples }
+                        let at = ContinuousClock.now
+                        let append = diskAttachment.append(
+                            samples,
+                            frame: frame,
+                            at: at,
+                            to: pcm
+                        )
+                        guard !append.wasRejected else {
+                            // Cancelled-freeze recovery already sealed this old
+                            // generation. The late converter result must not reach
+                            // its WAV, metering, or first-frame observer.
+                            return []
                         }
+                        if append.isFirstFrame {
+                            Task { [weak self] in
+                                await self?.markFirstFrame(sessionID: sessionID, at: at)
+                            }
+                        }
+                        if append.didReachHardLimit {
+                            // Preserve the complete bounded prefix and prevent
+                            // already-overlapped callbacks from committing behind
+                            // it. This is a graceful controller stop, never a fatal
+                            // ledger entry that would discard recognizer-ready PCM.
+                            conversionSequencer.cancelPending()
+                            diskAttachment.closeForMemoryLimit()
+                            Task { [weak self] in
+                                await self?.reportMemoryLimitReached(
+                                    sessionID: sessionID,
+                                    url: url
+                                )
+                            }
+                            return []
+                        }
+                        // The same committed frames, to the thing that decides where
+                        // this take can be cut. Inside the sequenced turn because
+                        // order is the whole contract: a segmenter fed out of order
+                        // would place seams in the wrong places.
+                        segmentAttachment.submit(samples)
+                        // The turn covers the full lossless commit, not just the
+                        // stateful converter. Otherwise overlapped callbacks could
+                        // reorder the WAV after the five-minute PCM fallback.
+                        return samples
                     }
-                    if append.didReachHardLimit {
-                        // Preserve the complete bounded prefix and prevent
-                        // already-overlapped callbacks from committing behind
-                        // it. This is a graceful controller stop, never a fatal
-                        // ledger entry that would discard recognizer-ready PCM.
-                        conversionSequencer.cancelPending()
-                        diskAttachment.closeForMemoryLimit()
+                    guard !samples.isEmpty else { return }
+                    // Metering is deliberately outside the ordered/lossless turn:
+                    // it coalesces frames and cannot affect captured content.
+                    sampleObserver.submit(samples)
+                } catch is CancellationError {
+                    // Normal for callbacks waiting behind a session that was
+                    // cancelled. The old session owns no live failure UI anymore.
+                } catch {
+                    let failure = AudioCaptureError.unsupportedAudioFormat(
+                        "audio conversion failed: \(error.localizedDescription)"
+                    )
+                    conversionSequencer.cancelPending()
+                    if captureFailure.record(failure) {
                         Task { [weak self] in
-                            await self?.reportMemoryLimitReached(
+                            await self?.reportLiveFailure(
+                                failure,
                                 sessionID: sessionID,
                                 url: url
                             )
                         }
-                        return []
-                    }
-                    // The same committed frames, to the thing that decides where
-                    // this take can be cut. Inside the sequenced turn because
-                    // order is the whole contract: a segmenter fed out of order
-                    // would place seams in the wrong places.
-                    segmentAttachment.submit(samples)
-                    // The turn covers the full lossless commit, not just the
-                    // stateful converter. Otherwise overlapped callbacks could
-                    // reorder the WAV after the five-minute PCM fallback.
-                    return samples
-                }
-                guard !samples.isEmpty else { return }
-                // Metering is deliberately outside the ordered/lossless turn:
-                // it coalesces frames and cannot affect captured content.
-                sampleObserver.submit(samples)
-            } catch is CancellationError {
-                // Normal for callbacks waiting behind a session that was
-                // cancelled. The old session owns no live failure UI anymore.
-            } catch {
-                let failure = AudioCaptureError.unsupportedAudioFormat(
-                    "audio conversion failed: \(error.localizedDescription)"
-                )
-                conversionSequencer.cancelPending()
-                if captureFailure.record(failure) {
-                    Task { [weak self] in
-                        await self?.reportLiveFailure(
-                            failure,
-                            sessionID: sessionID,
-                            url: url
-                        )
                     }
                 }
+            }
+        }
+        // A microphone unplugged, or reformatted, under a running take. Not a
+        // capture failure: everything recorded until now is sound, and the
+        // application keeps it for Retry exactly as it did for an engine
+        // route change. One report per take.
+        let deviceLost = OnceFlag()
+        let onLost: @Sendable () -> Void = { [weak self] in
+            guard deviceLost.claim() else { return }
+            Task { [weak self] in
+                await self?.reportLiveFailure(.deviceDisconnected, sessionID: sessionID, url: url)
             }
         }
 
@@ -2951,7 +2993,27 @@ public actor MicrophoneCapture: AudioCapturing {
             diskAttachment.openFailed()
         }
 
-        let startJob = RecordingEngineStartJob(engine: engine)
+        let converterFactory = converterFactory
+        let startJob = RecordingEngineStartJob(
+            reservation: startReservation,
+            device: preferredInputDeviceID,
+            open: openInput,
+            lease: shutdownLease,
+            prepare: { microphone in
+                let inputFormat = microphone.format
+                guard inputFormat.sampleRate > 0 else {
+                    throw AudioCaptureError.engineUnavailable("microphone unavailable")
+                }
+                // Resampling is almost always needed: the built-in microphone
+                // outputs 44.1 or 48 kHz, and recognition waits for 16 kHz.
+                let converter = try Self.converter(
+                    from: inputFormat,
+                    to: targetFormat,
+                    factory: converterFactory
+                )
+                microphone.install(makeHandler(converter), onLost: onLost)
+            }
+        )
         startWasSubmitted = true
         let startOutcome = await RecordingEngineStartContainment.shared.start(
             reservation: startReservation,
@@ -2993,7 +3055,7 @@ public actor MicrophoneCapture: AudioCapturing {
             }
             pendingStart = nil
             activeContext = context
-            self.engine = engine
+            self.microphone = shutdownLease.adopted
             return url
 
         case let .failed(error):
@@ -3048,7 +3110,6 @@ public actor MicrophoneCapture: AudioCapturing {
         context.pcm.closeAdmission()
         context.conversionSequencer.cancelPending()
         self.pendingStart = nil
-        converter = nil
         legacyBufferedSamples = nil
         if cancelNativeStart {
             RecordingEngineStartContainment.shared.cancel(
@@ -3107,7 +3168,7 @@ public actor MicrophoneCapture: AudioCapturing {
             )
         }
 
-        guard let oldEngine = engine, let context = activeContext else { return false }
+        guard let oldMicrophone = microphone, let context = activeContext else { return false }
         let decision = recordingAdmissionDecision(
             activeSession: context.session,
             activeDisposition: context.disposition.state,
@@ -3121,12 +3182,11 @@ public actor MicrophoneCapture: AudioCapturing {
         wakeFirstFrameWaiters(arrived: false)
         context.pcm.closeAdmission()
         context.conversionSequencer.cancelPending()
-        engine = nil
-        converter = nil
+        microphone = nil
         activeContext = nil
         legacyBufferedSamples = nil
         let pipeline = context.diskAttachment.takePipeline()
-        _ = oldEngine // Context's lease retains the exact adopted generation.
+        _ = oldMicrophone // Context's lease retains the exact adopted generation.
         context.shutdownLease.schedule()
 
         switch decision {
@@ -3242,7 +3302,7 @@ public actor MicrophoneCapture: AudioCapturing {
         expectedSession: DictationSessionID?,
         expectedURL: URL?
     ) async throws -> CapturedRecording {
-        guard engine != nil, let context = activeContext else {
+        guard microphone != nil, let context = activeContext else {
             throw AudioCaptureError.notRecording
         }
         guard captureRequestMatches(
@@ -3262,8 +3322,7 @@ public actor MicrophoneCapture: AudioCapturing {
         // that abandoned generation is contained off-actor so N+1 can start.
         context.pcm.closeAdmission()
         context.conversionSequencer.cancelPending()
-        self.engine = nil
-        self.converter = nil
+        self.microphone = nil
         activeContext = nil
         context.shutdownLease.schedule()
 
@@ -3348,7 +3407,7 @@ public actor MicrophoneCapture: AudioCapturing {
             return
         }
 
-        guard engine != nil, let context = activeContext,
+        guard microphone != nil, let context = activeContext,
               captureRequestMatches(
                   activeSession: context.session,
                   activeURL: context.url,
@@ -3363,8 +3422,7 @@ public actor MicrophoneCapture: AudioCapturing {
         wakeFirstFrameWaiters(arrived: false)
         context.pcm.closeAdmission()
         context.conversionSequencer.cancelPending()
-        self.engine = nil
-        self.converter = nil
+        self.microphone = nil
         activeContext = nil
         legacyBufferedSamples = nil
         context.shutdownLease.schedule()
@@ -3459,8 +3517,7 @@ public actor MicrophoneCapture: AudioCapturing {
         context?.pcm.closeAdmission()
         context?.conversionSequencer.cancelPending()
         activeContext = nil
-        engine = nil
-        converter = nil
+        microphone = nil
         context?.pcm.discard()
         context?.freezeRecoveryLease.release()
         legacyBufferedSamples = nil
@@ -3535,6 +3592,11 @@ public actor MicrophoneCapture: AudioCapturing {
                 "couldn't convert \(Int(source.sampleRate)) Hz / \(source.channelCount) ch to 16 kHz mono"
             )
         }
+        // The first channel, which is what stereo gets by default. Past two
+        // channels the converter has no layout to mix from and maps none:
+        // every sample came out 0, and a take dictated during a call (three
+        // built-in microphones under voice processing) was exact silence.
+        converter.channelMap = [0]
         return converter
     }
 

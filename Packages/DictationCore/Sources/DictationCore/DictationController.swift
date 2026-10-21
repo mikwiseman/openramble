@@ -246,15 +246,25 @@ public final class DictationController {
     /// dead system service. The owner should recycle it so the next dictation
     /// runs on a fresh session instead of the same stuck one.
     public var onTranscriptionStall: (@MainActor () -> Void)?
-    /// A take that produced text, with the audio still on disk, and the app
-    /// the words were shaped for.
+    /// A finished take, with the audio still on disk, and the app the words
+    /// were shaped for.
     ///
     /// Called after insertion is attempted and before the recording is
     /// deleted, so an owner that keeps a history gets both halves of the take
     /// while both still exist. Whether the words actually landed is not the
     /// question here — a person who watched an insertion fail wants that
     /// transcript more than anyone, not less.
-    public var onTakeFinished: (@MainActor (String, URL, TargetApplication?) -> Void)?
+    ///
+    /// Empty text is a take with sound in which the model found no words. It
+    /// is handed over too, so it can be played and recognized again rather
+    /// than lost; only a take of silence is not.
+    ///
+    /// Returns whether the take was kept. With no words, the notice tells the
+    /// person where the take went, and only the owner knows.
+    public var onTakeFinished: (@MainActor (String, URL, TargetApplication?) -> Bool)?
+    /// The name of the microphone the takes are recorded from, for the one
+    /// message that needs it: a take that heard only silence.
+    public var microphoneName: (@MainActor () -> String?)?
     /// The take is finished and the model is not resident yet, so the words are
     /// waiting for a load rather than for recognition.
     ///
@@ -348,7 +358,20 @@ public final class DictationController {
     /// Capture stop owns only the audio-engine handoff and PCM freeze. Disk
     /// drain and fsync are separate milestones and do not consume this budget.
     private let captureFreezeDeadline: Duration
+    /// How long a press shorter than `minimumHoldForSilentInput`, released
+    /// before the microphone opened, may wait for it.
     private let preparingStopDeadline: Duration
+    /// How long the microphone may take to open after the key-down before the
+    /// take ends with a notice, whether or not the key is still held.
+    ///
+    /// Five seconds. The slowest successful start in a week of the journal
+    /// reached listening two whole seconds after preparing (under 3 s), and
+    /// that was beside a model load this change no longer overlaps with the
+    /// start. Bluetooth headsets switching profile are unmeasured on this Mac,
+    /// so the margin is generous: a late notice only delays news about a take
+    /// that is already broken, while an early one would end a real take.
+    /// Retune from `microphoneStartupMilliseconds` in the journal.
+    private let microphoneStartDeadline: Duration
     /// Rare file-only recordings wait for a readable WAV, never for fsync.
     private let recordingReadableDeadline: Duration
     /// Moving a failed take into the support folder is also storage I/O and
@@ -383,10 +406,26 @@ public final class DictationController {
     /// final cleaning. A lost flag leaves recording enabled.
     private var deferredStopRequested = false
 
+    /// A press of the dictation key while the paste was finishing, and
+    /// whether that key is up again. The text was already in place, so the
+    /// person went on: the press starts its take the moment the paste is done.
+    ///
+    /// Kept only by a paste that lands; every other ending clears it in
+    /// final cleaning and speaks for itself.
+    private var pressDuringInsertion: (
+        handsFree: Bool, isEnabled: Bool, isModelReady: Bool, released: Bool
+    )?
+
     private var cancellationRequested = false
     private var isHandsFree = false
     private var finalizationTask: Task<Void, Never>?
-    private var preparingStopWatchdog: Task<Void, Never>?
+    /// One watchdog per take for a microphone that does not open: armed at
+    /// the key-down, pulled in by a short press released before the
+    /// microphone opened, disarmed once it is listening.
+    private var microphoneStartWatchdog: Task<Void, Never>?
+    private var microphoneStartWatchdogDeadline: ContinuousClock.Instant?
+    /// The key-down, on the same clock as the deadlines.
+    private var beganAt: ContinuousClock.Instant?
     private var activeRecoveryTickets: [DictationSessionID: RecordingRecoveryTicket] = [:]
     private var currentDisposition: RecordingDisposition?
     private var recordingStartedAt: Date?
@@ -435,6 +474,7 @@ public final class DictationController {
         enginePreparationNoticeDelay: Duration = .milliseconds(250),
         captureFreezeDeadline: Duration = .seconds(10),
         preparingStopDeadline: Duration = .milliseconds(500),
+        microphoneStartDeadline: Duration = .seconds(5),
         recordingReadableDeadline: Duration = .seconds(10),
         recordingPreserveDeadline: Duration = .seconds(2),
         recoveryForegroundGrace: Duration = .milliseconds(150),
@@ -462,6 +502,7 @@ public final class DictationController {
         self.enginePreparationNoticeDelay = enginePreparationNoticeDelay
         self.captureFreezeDeadline = captureFreezeDeadline
         self.preparingStopDeadline = preparingStopDeadline
+        self.microphoneStartDeadline = microphoneStartDeadline
         self.recordingReadableDeadline = recordingReadableDeadline
         self.recordingPreserveDeadline = recordingPreserveDeadline
         self.recoveryForegroundGrace = recoveryForegroundGrace
@@ -473,6 +514,16 @@ public final class DictationController {
 
     /// Hotkey pressed.
     public func begin(handsFree: Bool, isEnabled: Bool, isModelReady: Bool) {
+        if state == .inserting {
+            // The paste may be waiting for its read: nothing has appeared, so
+            // the person is trying again. End the wait, and a paste nobody read
+            // is said out loud now instead of this press vanishing unheard.
+            inserter.endTheReadWait()
+            // Or it has landed and only holds the clipboard for the restore
+            // floor: then this press starts its take as soon as that is over.
+            pressDuringInsertion = (handsFree, isEnabled, isModelReady, false)
+            return
+        }
         // The first check is synchronous, before any waiting. Between her and
         // the asynchronous start is completed by pressing again.
         guard DictationStopPolicy.canStart(
@@ -497,6 +548,12 @@ public final class DictationController {
         // is launched before callbacks and HUD work so none can clip the first
         // word. Adoption still happens on this actor with the session token.
         launchCapture(session: session, disposition: disposition)
+        let beganAt = ContinuousClock.now
+        self.beganAt = beganAt
+        armMicrophoneStartWatchdog(
+            session: session,
+            until: beganAt.advanced(by: microphoneStartDeadline)
+        )
         // Snapshot the destination before publishing `.preparing`: an observer
         // may activate our own settings window and change focus.
         targetApplication = targetApplicationSnapshot()
@@ -594,6 +651,7 @@ public final class DictationController {
 
         activeRecordingURL = startedURL
         recordingStartedAt = now()
+        cancelMicrophoneStartWatchdog()
         state = .listening
         // `onStateChange` is an external reentrancy point: it may synchronously
         // stop or cancel. Never publish an obsolete Listening command or eat a
@@ -619,6 +677,13 @@ public final class DictationController {
 
     /// The hotkey is released (or pressed a second time in hands-free mode).
     public func stop() {
+        if state == .inserting, pressDuringInsertion != nil {
+            // The release of a press that waits for the paste: it is replayed
+            // with it, so a tap stays a tap and no key that is up keeps the
+            // microphone on.
+            pressDuringInsertion?.released = true
+            return
+        }
         switch DictationStopPolicy.decideStop(state: state, isHandsFree: isHandsFree) {
         case .stopNow:
             markStopRequested()
@@ -626,7 +691,7 @@ public final class DictationController {
         case .deferUntilListening:
             markStopRequested()
             deferredStopRequested = true
-            if let session = currentSession { schedulePreparingStopWatchdog(session: session) }
+            if let session = currentSession { stopArrivedBeforeTheMicrophoneOpened(session: session) }
         case .ignore, .noSession:
             break
         }
@@ -647,7 +712,7 @@ public final class DictationController {
             // nothing more: the microphone would stay on with no one listening.
             markStopRequested()
             deferredStopRequested = true
-            if let session = currentSession { schedulePreparingStopWatchdog(session: session) }
+            if let session = currentSession { stopArrivedBeforeTheMicrophoneOpened(session: session) }
         case .idle, .transcribing, .inserting:
             break
         }
@@ -674,7 +739,7 @@ public final class DictationController {
         case .preparing:
             markStopRequested()
             deferredStopRequested = true
-            if let session = currentSession { schedulePreparingStopWatchdog(session: session) }
+            if let session = currentSession { stopArrivedBeforeTheMicrophoneOpened(session: session) }
         case .idle, .transcribing, .inserting:
             return false
         }
@@ -698,8 +763,16 @@ public final class DictationController {
         // leave the microphone recording forever.
         isHandsFree = true
         deferredStopRequested = false
-        preparingStopWatchdog?.cancel()
-        preparingStopWatchdog = nil
+        // A tap's release may have pulled the watchdog in. That bound belonged
+        // to the tap; a hands-free take is ended only by a microphone that
+        // misses the deadline from its key-down.
+        cancelMicrophoneStartWatchdog()
+        if state == .preparing, let session = currentSession, let beganAt {
+            armMicrophoneStartWatchdog(
+                session: session,
+                until: beganAt.advanced(by: microphoneStartDeadline)
+            )
+        }
         stopRequestedAt = nil
         stopSLORequestedAt = nil
         isHandsFreeActive = true
@@ -712,8 +785,7 @@ public final class DictationController {
         // One input for all four stop paths: stop, stopHandsFree,
         // and delayed release - everyone comes here.
         markStopRequested()
-        preparingStopWatchdog?.cancel()
-        preparingStopWatchdog = nil
+        cancelMicrophoneStartWatchdog()
         guard let session = currentSession else { return }
         let task = Task { [weak self] in
             await self?.finalize(session: session)
@@ -725,41 +797,88 @@ public final class DictationController {
         presentOverlay(.transcribing, elapsed: elapsedSeconds(), session: session)
     }
 
-    private func schedulePreparingStopWatchdog(session: DictationSessionID) {
-        guard preparingStopWatchdog == nil, let stopSLORequestedAt else { return }
-        let deadline = stopSLORequestedAt.advanced(by: preparingStopDeadline)
-        let task = Task { [weak self] in
+    /// A release (or the second press of a hands-free take) arrived before the
+    /// microphone opened.
+    ///
+    /// The take can no longer record anything: it ends at the moment the
+    /// microphone finally opens, so its recording would be empty whatever
+    /// happens next. Which empty take it is, the hold decides, by the same
+    /// rule as any other empty take (`outcomeForShortRecording`). After a
+    /// real hold the person spoke into a microphone that was not there yet,
+    /// and waiting for it only to drop an empty take without a word is how a
+    /// sentence vanished. They hear it now. A shorter press is a change of
+    /// mind; it stays quiet and waits at most `preparingStopDeadline` for the
+    /// microphone.
+    ///
+    /// The bar is not `DictationDurationPolicy.minimum`: the hotkey holds back
+    /// every tap's release until its 0.35 s double-tap window has passed, so
+    /// by that measure every tap would have been a hold.
+    private func stopArrivedBeforeTheMicrophoneOpened(session: DictationSessionID) {
+        guard state == .preparing else { return }
+        let held = (beganAt?.duration(to: .now) ?? .zero).components
+        if DictationDurationPolicy.outcomeForShortRecording(
+            held: Double(held.seconds) + Double(held.attoseconds) / 1e18
+        ) == .reportSilentInput {
+            microphoneStartTookTooLong(session: session)
+        } else if let stopSLORequestedAt {
+            armMicrophoneStartWatchdog(
+                session: session,
+                until: stopSLORequestedAt.advanced(by: preparingStopDeadline)
+            )
+        }
+    }
+
+    /// Keeps the earlier of the current deadline and the new one.
+    private func armMicrophoneStartWatchdog(
+        session: DictationSessionID,
+        until deadline: ContinuousClock.Instant
+    ) {
+        if microphoneStartWatchdog != nil,
+           let current = microphoneStartWatchdogDeadline,
+           current <= deadline {
+            return
+        }
+        microphoneStartWatchdog?.cancel()
+        microphoneStartWatchdogDeadline = deadline
+        microphoneStartWatchdog = Task { [weak self] in
             let remaining = ContinuousClock.now.duration(to: deadline)
             if remaining > .zero { try? await Task.sleep(for: remaining) }
             guard !Task.isCancelled else { return }
-            await self?.preparingStopExpired(session: session)
+            self?.microphoneStartTookTooLong(session: session)
         }
-        preparingStopWatchdog = task
     }
 
-    private func preparingStopExpired(session: DictationSessionID) async {
-        guard isCurrent(session), state == .preparing, deferredStopRequested else { return }
-        let owner = preparingStopWatchdog
-        preparingStopWatchdog = nil
-        finalizationTask = owner
+    private func cancelMicrophoneStartWatchdog() {
+        microphoneStartWatchdog?.cancel()
+        microphoneStartWatchdog = nil
+        microphoneStartWatchdogDeadline = nil
+    }
+
+    /// The microphone did not open in time. The take is contained and kept
+    /// for recovery, never deleted; the notice carries the attention sound.
+    private func microphoneStartTookTooLong(session: DictationSessionID) {
+        guard isCurrent(session), state == .preparing, finalizationTask == nil else { return }
+        cancelMicrophoneStartWatchdog()
         cancellationRequested = true
         streamedSegments?.cancel()
         currentDisposition?.keepInBackground()
-        state = .transcribing
-        guard !Task.isCancelled, isCurrent(session) else { return }
-
         let capture = capture
-        Task.detached(priority: .userInitiated) {
-            await capture.containRecording(session: session, expectedURL: nil)
+        let task = Task { [weak self] in
+            Task.detached(priority: .userInitiated) {
+                await capture.containRecording(session: session, expectedURL: nil)
+            }
+            guard let self else { return }
+            let notice = DictationNotice(
+                kind: .failure,
+                message: L10n.tr("Starting the microphone took too long. Dictation was stopped."),
+                wordsDidNotLand: true,
+                reason: .microphoneStartTimedOut
+            )
+            await self.report(notice, session: session, allowCancellation: true)
+            await self.cleanup(session: session)
         }
-        let notice = DictationNotice(
-            kind: .failure,
-            message: L10n.tr("Starting the microphone took too long. Dictation was stopped."),
-            wordsDidNotLand: true,
-            reason: .microphoneStartTimedOut
-        )
-        await report(notice, session: session, allowCancellation: true)
-        await cleanup(session: session)
+        finalizationTask = task
+        state = .transcribing
     }
 
     /// Whether the panel is currently telling someone that the model is still
@@ -790,8 +909,7 @@ public final class DictationController {
     private func forgetFinalization(session: DictationSessionID) {
         guard isCurrent(session) else { return }
         finalizationTask = nil
-        preparingStopWatchdog?.cancel()
-        preparingStopWatchdog = nil
+        cancelMicrophoneStartWatchdog()
     }
 
     private func freezeCapture(
@@ -931,6 +1049,52 @@ public final class DictationController {
                 L10n.tr(" Local safekeeping is continuing in the background; automatic recovery will keep the take on this Mac even if Retry is not shown immediately.")
             )
         }
+    }
+
+    /// Hand a take with no words to History, and say whether History kept it.
+    ///
+    /// With no words the file is all there is, so History must get it whole:
+    /// from the take's own writer, which may be slow but holds the disk while
+    /// it writes, or else rebuilt from the samples. A take History never got
+    /// is not deleted here, whether History refused it or the file never
+    /// arrived; it stays where automatic recovery looks, and a file that never
+    /// arrived is journaled. After Escape the take was thrown away, not lost.
+    ///
+    /// Synchronous on purpose: nothing can land between the check for Escape
+    /// and History taking its copy.
+    private func keepWordlessTake(
+        _ file: Result<(url: URL, rebuiltFromPCM: Bool), any Error>,
+        of recording: CapturedRecording,
+        target: TargetApplication?,
+        session: DictationSessionID,
+        since started: ContinuousClock.Instant
+    ) -> Bool {
+        let thrownAway = recording.disposition.state == .deleteRequested
+            || (isCurrent(session) && !shouldContinue(session))
+        let source: (url: URL, rebuiltFromPCM: Bool)
+        switch file {
+        case let .success(found):
+            source = found
+        case let .failure(error):
+            if !thrownAway {
+                onStageFailure?(.readableFile, started.duration(to: .now), error is TranscriptionTimeout)
+            }
+            return false
+        }
+        guard !thrownAway else {
+            if source.rebuiltFromPCM { RecordingFileDisposer.shared.submit(source.url) }
+            return false
+        }
+        guard onTakeFinished?("", source.url, target) == true else {
+            // Left where automatic recovery looks. A copy rebuilt from the
+            // samples is the whole take, and the writer's partial file beside
+            // it would come back as a second, shorter one.
+            if source.rebuiltFromPCM { RecordingFileDisposer.shared.submit(recording.url) }
+            return false
+        }
+        // History made its own copy; the take and any rebuilt one are needed by nobody after.
+        RecordingFileDisposer.shared.submit(source.rebuiltFromPCM ? [source.url, recording.url] : [recording.url])
+        return true
     }
 
     /// Put a streamed take together: the pieces already recognized, plus the
@@ -1222,10 +1386,10 @@ public final class DictationController {
                                 transcribe: transcribeSamples
                             )
                         }
+                        // A take with no cuts is the ordinary path, not a
+                        // fallback; only a failed segment is worth reporting.
                         if case let .failed(error) = outcome {
                             fallbackBox.set((.segmentFailed, error))
-                        } else {
-                            fallbackBox.set((.noSegments, nil))
                         }
                         // No cuts were made, or a segment failed. Either way the
                         // whole take is recognized here exactly as it always
@@ -1264,8 +1428,6 @@ public final class DictationController {
                     }
                     if case let .failed(error) = outcome {
                         fallbackBox.set((.segmentFailed, error))
-                    } else {
-                        fallbackBox.set((.noSegments, nil))
                     }
                     return try await transcribe(url)
                 }
@@ -1459,7 +1621,7 @@ public final class DictationController {
             // correction or only hesitation. That is not a failure, so no alarm
             // — and the take stays in History with what was heard, so a
             // take-back the person did not mean can be undone.
-            onTakeFinished?(recognized.text, recording.url, insertionTarget)
+            _ = onTakeFinished?(recognized.text, recording.url, insertionTarget)
             await discard(recording.url, session: session)
             let notice = DictationNotice(
                 kind: .info,
@@ -1476,12 +1638,79 @@ public final class DictationController {
             // a person goes to look for the missing phrase in someone else's window. Too
             // short press does not go here - it is filtered out above and explanations
             // not required.
-            await discard(recording.url, session: session)
-            let notice = DictationNotice(
-                kind: .info,
-                message: L10n.tr("Nothing was recognized — nothing was inserted."),
-                wordsDidNotLand: true
-            )
+            //
+            // Silence is not kept, and it is a warning: a muted, dead or wrong
+            // input needs the person. The microphone's name, when there is
+            // one, says where to look. Sound in which the model found nothing
+            // is kept for History: it may hold words the person still wants,
+            // and recognizing it again is one click.
+            //
+            // A take too long to hold in memory was recognized from its file,
+            // which is therefore whole and answers the same question.
+            var heard = bufferedSamples
+            if heard == nil, let readSamples, let file = try? await readableURL(for: recording) {
+                heard = try? await withTranscriptionDeadline(recordingReadableDeadline) {
+                    try await readSamples(file)
+                }
+            }
+            let notice: DictationNotice
+            if SilentTakePolicy.heardOnlySilence(heard) {
+                await discard(recording.url, session: session)
+                notice = DictationNotice(
+                    kind: .warning,
+                    message: microphoneName?().map { L10n.tr("Heard only silence from %@.", $0) }
+                        ?? L10n.tr("Nothing was recognized — nothing was inserted."),
+                    wordsDidNotLand: true
+                )
+            } else {
+                // History needs the take's file, which may still be on its
+                // way, and the person who was just told nothing was
+                // recognized is about to try again, so the foreground waits
+                // only the grace for it. A file that arrives later goes to
+                // History on its own. The notice says where the take went
+                // only once that is known.
+                let started = ContinuousClock.now
+                let file = Task { [weak self] in
+                    guard let self else { throw CancellationError() }
+                    return try await self.recoverySourceURL(for: recording)
+                }
+                let arrived = try? await withTranscriptionDeadline(recoveryForegroundGrace) {
+                    await file.result
+                }
+                if !shouldContinue(session) {
+                    // Escape: the take is thrown away, wherever its file is.
+                    recording.disposition.requestDelete()
+                }
+                // Handed over here, and nothing suspends between this and the
+                // notice, so an Escape cannot slip between History taking the
+                // take and the person being told.
+                let kept: Bool?
+                if let arrived {
+                    kept = keepWordlessTake(arrived, of: recording, target: insertionTarget, session: session, since: started)
+                } else {
+                    kept = nil
+                    Task { [weak self] in
+                        let late = await file.result
+                        _ = self?.keepWordlessTake(late, of: recording, target: insertionTarget, session: session, since: started)
+                    }
+                }
+                guard shouldContinue(session) else {
+                    await discard(recording.url, session: session)
+                    await finishWithoutInsertion(session: session)
+                    return
+                }
+                let message: String
+                switch kept {
+                case true?:
+                    message = L10n.tr("Nothing was recognized — the recording is in History.")
+                case false?:
+                    message = L10n.tr("Nothing was recognized — nothing was inserted.")
+                        + L10n.tr(" The local take will be checked for automatic recovery on the next launch.")
+                case nil:
+                    message = L10n.tr("Nothing was recognized — nothing was inserted.")
+                }
+                notice = DictationNotice(kind: .info, message: message, wordsDidNotLand: true)
+            }
             await report(notice, session: session)
             await cleanup(session: session)
             return
@@ -1499,10 +1728,18 @@ public final class DictationController {
         // The last moment the take still exists. Whoever keeps a history has to
         // take its copy now; the next line deletes the original, and that
         // deletion is the promise that a recording does not outlive its use.
-        onTakeFinished?(processed.text, recording.url, insertionTarget)
+        _ = onTakeFinished?(processed.text, recording.url, insertionTarget)
         await discard(recording.url, session: session)
         guard case let .ended(notice) = outcome else { return }
+        // A press while a landed paste finished: the text is in place, so the
+        // person went on, and the press starts its take now. Any other ending
+        // speaks for itself, and final cleaning forgets the press.
+        let press = notice == nil ? pressDuringInsertion : nil
         await end(session, saying: notice)
+        if let press {
+            begin(handsFree: press.handsFree, isEnabled: press.isEnabled, isModelReady: press.isModelReady)
+            if press.released { stop() }
+        }
     }
 
     /// The end of a take that produced text, once its owner has kept it: one
@@ -1538,6 +1775,7 @@ public final class DictationController {
                 toRecognizedText: stopRequestedAt.duration(to: recognizedAt),
                 toPasteDispatched: marks.pasteDispatchedAt.map { stopRequestedAt.duration(to: $0) },
                 toClipboardRestored: marks.clipboardRestoredAt.map { stopRequestedAt.duration(to: $0) },
+                toFirstRead: marks.firstReadAt.map { stopRequestedAt.duration(to: $0) },
                 microphoneStartup: microphoneStartup,
                 phases: phases
             )
@@ -1556,8 +1794,8 @@ public final class DictationController {
         guard shouldContinue(session) else { return .abandoned }
         state = .inserting
         // Cmd+V is the meaningful completion feedback. Do not leave a redundant
-        // “Inserting” panel over the destination application while the clipboard is
-        // restored in the background.
+        // “Inserting” panel over the destination application while the inserter
+        // waits for it to read the paste and puts the clipboard back.
         dismissOverlay(session: session)
 
         // Last point where cancellation is still possible. Then the event goes into
@@ -1641,13 +1879,6 @@ public final class DictationController {
 
     /// The text was recognized, but it was not possible to insert it - we save it so that it does not disappear.
     private func insertionFailureNotice(_ error: Error, text: String) -> DictationNotice {
-        if let insertion = error as? TextInsertionError,
-           insertion == .insertedButClipboardRestoreFailed {
-            return DictationNotice(
-                kind: .warning,
-                message: L10n.tr("The text was inserted, but the previous clipboard couldn't be restored.")
-            )
-        }
         pendingRecovery = RecoveredDictation(text: text)
 
         let message: String
@@ -1658,6 +1889,10 @@ public final class DictationController {
                 message = L10n.tr("Text not inserted: secure input is active. Your text is saved in the menu.")
             case .insertionInProgress:
                 message = L10n.tr("A previous paste is still finishing. Your text is saved in the menu.")
+            case .clipboardRestoreFailed:
+                // Nothing was pasted and what the person had copied is gone:
+                // both are theirs to know.
+                message = L10n.tr("The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu.")
             default:
                 message = L10n.tr("The text couldn't be inserted. It's saved in the menu.")
             }
@@ -1677,6 +1912,10 @@ public final class DictationController {
 
     /// Cancel dictation.
     public func cancel() {
+        // A press that waits for the paste is no take yet, so cancelling it
+        // only forgets it. The hotkey monitor swallows the release of a hold
+        // it cancels, and a replayed press would listen with the key up.
+        pressDuringInsertion = nil
         guard DictationStopPolicy.canCancel(state: state) else { return }
         streamedSegments?.cancel()
 
@@ -1740,6 +1979,13 @@ public final class DictationController {
         }
         finalizationTask = task
         state = .transcribing
+    }
+
+    /// The microphone of one take disappeared. Token-scoped like `interrupt`:
+    /// the report hops threads, and a late one must not end the next take.
+    public func preserveActiveRecording(session: DictationSessionID, reason message: String) {
+        guard isCurrent(session) else { return }
+        preserveActiveRecording(reason: message)
     }
 
     /// System permission or device disappeared while recording.
@@ -1908,12 +2154,13 @@ public final class DictationController {
         // to stop recognition, but it must keep the raw take; never infer file
         // deletion from this transient control-flow flag.
         activeRecoveryTickets[session] = nil
-        preparingStopWatchdog?.cancel()
-        preparingStopWatchdog = nil
+        cancelMicrophoneStartWatchdog()
+        beganAt = nil
         currentSession = nil
         currentDisposition = nil
         finalizationTask = nil
         deferredStopRequested = false
+        pressDuringInsertion = nil
         cancellationRequested = false
         isHandsFree = false
         isHandsFreeActive = false
@@ -2051,7 +2298,10 @@ public enum DictationFailureStage: String, Codable, Sendable {
 }
 
 public enum DictationFallbackReason: String, Codable, Sendable {
-    case noSegments, segmentFailed
+    /// No longer reported: a take with no cuts is the ordinary path. Kept so
+    /// journal lines written before that still decode.
+    case noSegments
+    case segmentFailed
 }
 
 private enum RecordingFinalizationStage: Sendable, Equatable {
