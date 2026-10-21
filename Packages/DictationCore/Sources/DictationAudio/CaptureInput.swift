@@ -30,6 +30,20 @@ protocol CaptureInput: AnyObject, Sendable {
 /// the device's own memory, valid only until the handler returns.
 typealias CaptureHandler = @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void
 
+/// The smallest piece of a take that the meter and the segmenter look at.
+///
+/// The engine tap delivers about 100 ms per buffer (1,530-1,600 samples at
+/// 16 kHz on this Mac), and both were tuned on that: the waveform's 24 bars
+/// span about 2.4 s, each the peak of one buffer, and the segmenter's pauses
+/// were measured with whole buffers counting as speech. An I/O proc cycle is
+/// 10.7 ms. Every cycle still goes to the recording the moment it arrives;
+/// only these two gather cycles until they hold at least this much. 90 ms
+/// sits just under the engine's buffer, so each engine buffer still passes
+/// alone and nine I/O proc cycles make one block.
+enum CaptureBlock {
+    static let minimumSamples = 1_440
+}
+
 typealias CaptureInputOpener = @Sendable (AudioDeviceID?) throws -> any CaptureInput
 
 enum CaptureInputs {

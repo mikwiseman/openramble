@@ -1859,9 +1859,12 @@ final class CoalescingCaptureLimitObserver: @unchecked Sendable {
 /// durability or recognition milestone.
 ///
 /// There is one serial consumer for the lifetime of `MicrophoneCapture` and
-/// at most one pending frame. If a UI callback ever wedges, future frames are
+/// at most one pending block. If a UI callback ever wedges, future blocks are
 /// coalesced into that single slot instead of leaking one drain task and WAV
 /// descriptor per dictation. The audio callback only takes a lock briefly.
+///
+/// The consumer gets blocks of at least `CaptureBlock.minimumSamples`, not
+/// frames: an engine buffer is one block, nine I/O proc cycles are another.
 final class CoalescingSampleObserver: @unchecked Sendable {
     private let lock = NSLock()
     private let queue = DispatchQueue(
@@ -1870,15 +1873,34 @@ final class CoalescingSampleObserver: @unchecked Sendable {
     )
     private let consume: @Sendable ([Float]) -> Void
     private var pending: [Float]?
+    /// Frames gathered toward the next block.
+    private var gathering: [Float] = []
     private var isDraining = false
 
     init(consume: @escaping @Sendable ([Float]) -> Void) {
         self.consume = consume
     }
 
+    /// A new take begins: the end of the last one is not part of its first
+    /// block.
+    func reset() {
+        lock.withLock { gathering = [] }
+    }
+
     func submit(_ samples: [Float]) {
         lock.lock()
-        pending = samples
+        if gathering.isEmpty, samples.count >= CaptureBlock.minimumSamples {
+            pending = samples
+        } else {
+            if gathering.isEmpty { gathering.reserveCapacity(2 * CaptureBlock.minimumSamples) }
+            gathering.append(contentsOf: samples)
+            guard gathering.count >= CaptureBlock.minimumSamples else {
+                lock.unlock()
+                return
+            }
+            pending = gathering
+            gathering = []
+        }
         guard !isDraining else {
             lock.unlock()
             return
@@ -2830,6 +2852,7 @@ public actor MicrophoneCapture: AudioCapturing {
         timingSessionID = context.id
 
         let sampleObserver = sampleObserver
+        sampleObserver.reset()
         // The handler for whatever format the microphone turns out to have,
         // which only opening it can tell, and that happens on the start lane.
         let makeHandler: @Sendable (AVAudioConverter?) -> CaptureHandler = { [weak self] converter in
@@ -2948,10 +2971,6 @@ public actor MicrophoneCapture: AudioCapturing {
                 )
                 let sink = FrameSink()
                 let enqueue = sink.start(
-                    // An I/O proc delivers ~94 cycles a second where the
-                    // engine tap delivered ~10, so the queue holds ten times
-                    // as many frames to absorb the same ~6 s of disk stall.
-                    capacity: FrameSink.defaultCapacity * 10,
                     onOverflow: { disk.queueOverflowed() },
                     consume: { disk.append($0) }
                 )

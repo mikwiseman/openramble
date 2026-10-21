@@ -15,7 +15,14 @@ import Foundation
 /// The type is separated from the microphone intentionally: this way it can be checked without sound
 /// hardware that is not in the test environment.
 final class FrameSink: @unchecked Sendable {
-    static let defaultCapacity = 64
+    /// How many frames wait for the disk, and how many a still-opening WAV
+    /// may hold back (`RecordingDiskAttachment`), which the queue must then
+    /// take in one go. Counted in frames, so sized for the shortest: an I/O
+    /// proc delivers ~94 frames a second, and 640 of them are ~6.8 s of disk
+    /// stall or slow open, where 64 engine buffers were ~6.4 s. The engine's
+    /// ~10 a second get far longer, which costs only memory the PCM copy
+    /// already holds.
+    static let defaultCapacity = 640
 
     private let lock = NSLock()
     private var frames: AsyncStream<[Float]>.Continuation?

@@ -371,13 +371,16 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
     func testBlockedLiveSampleObserverKeepsOnlyTheNewestPendingFrame() async throws {
         let consumer = BlockingSampleConsumer()
         let observer = CoalescingSampleObserver(consume: consumer.consume)
-        observer.submit([0])
+        func block(_ value: Float) -> [Float] {
+            [Float](repeating: value, count: CaptureBlock.minimumSamples)
+        }
+        observer.submit(block(0))
         XCTAssertTrue(consumer.waitUntilBlocked())
 
         for value in 1...200 {
-            observer.submit([Float(value)])
+            observer.submit(block(Float(value)))
         }
-        XCTAssertEqual(consumer.snapshots, [[0]], "a blocked meter must have only one active callback")
+        XCTAssertEqual(consumer.snapshots, [block(0)], "a blocked meter must have only one active callback")
 
         consumer.unblock()
         for _ in 0..<200 where consumer.snapshots.count < 2 {
@@ -387,9 +390,68 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
 
         XCTAssertEqual(
             consumer.snapshots,
-            [[0], [200]],
+            [block(0), block(200)],
             "intermediate waveform frames are disposable; only the newest one may remain queued"
         )
+    }
+
+    /// The waveform draws one bar per meter call: 24 bars of about 100 ms
+    /// each, every one the peak of an engine buffer. An I/O proc cycle is
+    /// 10.7 ms, and a call per cycle scrolled the bars ten times faster, each
+    /// a 10 ms peak, with ten times the hops to the main actor. Cycles are
+    /// gathered into blocks of at least 90 ms, and every sample counts toward
+    /// its block's peak.
+    func testTheMeterGetsAboutOneBlockPerHundredMillisecondsWhateverTheCycle() async throws {
+        let cycles = MeterLog()
+        let observer = CoalescingSampleObserver(consume: cycles.append)
+        // One second of I/O proc cycles, with one loud sample inside a block.
+        for cycle in 0..<94 {
+            var samples = [Float](repeating: 0.01, count: cycle % 3 == 2 ? 170 : 171)
+            if cycle == 40 { samples[50] = 0.9 }
+            observer.submit(samples)
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        try await Task.sleep(for: .milliseconds(50))
+        let blocks = cycles.calls
+        XCTAssertTrue((9...11).contains(blocks.count), "\(blocks.count) calls for one second")
+        XCTAssertTrue(
+            blocks.allSatisfy { $0.count >= CaptureBlock.minimumSamples },
+            "\(blocks.map(\.count))"
+        )
+        XCTAssertEqual(blocks.flatMap { $0 }.max(), 0.9, "a peak inside a block reaches the meter")
+
+        // An engine buffer is already a block and passes on its own.
+        let buffers = MeterLog()
+        let engineObserver = CoalescingSampleObserver(consume: buffers.append)
+        for _ in 0..<5 {
+            engineObserver.submit([Float](repeating: 0.1, count: 1_530))
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(buffers.calls.map(\.count), [1_530, 1_530, 1_530, 1_530, 1_530])
+    }
+
+    /// The end of one take is not the start of the next: what was gathered
+    /// short of a block is dropped when a new take begins.
+    func testANewTakeDoesNotInheritThePreviousTakesUnfinishedBlock() async throws {
+        let calls = MeterLog()
+        let observer = CoalescingSampleObserver(consume: calls.append)
+        observer.submit([Float](repeating: 0.9, count: 1_000))
+        observer.reset()
+        observer.submit([Float](repeating: 0.1, count: CaptureBlock.minimumSamples))
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(calls.calls, [[Float](repeating: 0.1, count: CaptureBlock.minimumSamples)])
+    }
+
+    private final class MeterLog: @unchecked Sendable {
+        private let lock = NSLock()
+        private var received: [[Float]] = []
+
+        func append(_ samples: [Float]) {
+            lock.withLock { received.append(samples) }
+        }
+
+        var calls: [[Float]] { lock.withLock { received } }
     }
 
     func testBlockedExternalFailureHandlerNeverHoldsCaptureCallerOrLeaksTasks() async throws {
@@ -1628,6 +1690,26 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
             FileManager.default.fileExists(atPath: url.path),
             "open completion must clean itself even if the capture actor is wedged"
         )
+    }
+
+    /// The opening backlog counts frames, and an I/O proc frame is 10.7 ms
+    /// where an engine buffer was ~100 ms. Sized for engine buffers, it held
+    /// 0.68 s of I/O proc audio, so a WAV that took a second to open left the
+    /// take memory-only: no crash-safe file, no audio in History. It holds at
+    /// least the ~6 s it always held.
+    func testTheOpeningBacklogStillCoversSecondsOfIOProcAudio() {
+        let cancellations = LockedCount()
+        let opening = RecordingDiskAttachment { cancellations.increment() }
+        var buffered = 0
+        var cycle = 0
+        while cancellations.value == 0, cycle < 10_000 {
+            let count = cycle % 3 == 2 ? 170 : 171
+            opening.submit([Float](repeating: 0.1, count: count))
+            if cancellations.value == 0 { buffered += count }
+            cycle += 1
+        }
+        let seconds = Double(buffered) / 16_000
+        XCTAssertGreaterThanOrEqual(seconds, 6, "held \(seconds) s of I/O proc audio")
     }
 
     func testOpeningBacklogIsBoundedAndRejectsWriterMissingItsPrefix() async throws {
