@@ -4447,6 +4447,55 @@
     "input": "Привет, Иван. Новая строка."
   },
   {
+    "name": "send it after a hesitation in a terminal",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "git status. Um, send it."
+  },
+  {
+    "name": "send it after uh in a terminal",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Fix the failing test. Uh, send it."
+  },
+  {
+    "name": "send it after a stutter in a terminal",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "git status. Send, send it."
+  },
+  {
+    "name": "send it after a pause and a hesitation in a terminal",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "git status. Um, send it."
+  },
+  {
+    "name": "russian send after a hesitation in a terminal",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Сделай релиз. Э, отправь."
+  },
+  {
+    "name": "send it after a comma and a hesitation stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Review the doc, um, send it."
+  },
+  {
+    "name": "send it mid-thought after a hesitation stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "and then we, uh, send it"
+  },
+  {
     "name": "dotfile env",
     "dictionary": [],
     "allowPressReturnCommand": false,

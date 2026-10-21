@@ -358,6 +358,18 @@ impl TextPipeline {
             };
             stages = self.transform(recognized);
         }
+        // A hesitation or stutter right before "Send it." hides it from the
+        // parser above ("…first. Um, send it.") and is gone once the text is
+        // clean, so Return is decided once more on the cleaned text, by the
+        // same rules: allowed here, and "Send it." as its own final sentence.
+        if self.allow_press_return_command && parsed.command.is_none() {
+            let cleaned = parse_trailing_command(&stages.1);
+            if cleaned.command == Some(TrailingCommand::PressReturn) && ends_sentence(&cleaned.text)
+            {
+                stages.1 = cleaned.text.trim().to_string();
+                parsed = cleaned;
+            }
+        }
         let (after_dictionary, polished) = stages;
 
         // Stage 9: materializing the newline — strictly last, or the polisher's
@@ -465,6 +477,38 @@ mod tests {
         // Mid-thought it stays words: Return submits irreversibly.
         assert_eq!(allowing.process("and then we send it").command, None);
         assert_eq!(allowing.process("Review the doc, send it.").command, None);
+    }
+
+    /// In a terminal a hesitation or stutter right before "Send it." is gone
+    /// once the text is clean, and what is left is "Send it." as its own final
+    /// sentence: Return, not the words typed at the prompt.
+    #[test]
+    fn a_hesitation_or_stutter_before_send_it_still_presses_return() {
+        let terminal = TextPipeline {
+            allow_press_return_command: true,
+            ..Default::default()
+        };
+        for said in [
+            "git status. Um, send it.",
+            "git status. Uh, send it.",
+            "git status. Send, send it.",
+        ] {
+            let output = terminal.process(said);
+            assert_eq!(output.text, "Git status.", "{said}");
+            assert_eq!(output.command, Some(TrailingCommand::PressReturn), "{said}");
+        }
+        // Every other rule still holds: never mid-sentence, never alone,
+        // never outside a terminal.
+        for said in [
+            "Review the doc, um, send it.",
+            "and then we, uh, send it",
+            "Uh, send it.",
+        ] {
+            assert_eq!(terminal.process(said).command, None, "{said}");
+        }
+        let elsewhere = plain().process("git status. Um, send it.");
+        assert_eq!(elsewhere.command, None);
+        assert_eq!(elsewhere.text, "Git status. Send it.");
     }
 
     /// A line break goes into the text, because pressing Return would send the

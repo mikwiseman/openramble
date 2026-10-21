@@ -890,6 +890,26 @@ final class CleanVerbatimTests: XCTestCase {
         XCTAssertNil(send.command, "never type a hesitation and press Return")
     }
 
+    /// In a terminal a hesitation or stutter right before "Send it." is gone
+    /// once the text is clean, and what is left is "Send it." as its own final
+    /// sentence: Return, not the words typed at the prompt.
+    func testAHesitationOrStutterBeforeSendItStillPressesReturn() {
+        let terminal = TextPipeline(allowPressReturnCommand: true)
+        for said in ["git status. Um, send it.", "git status. Uh, send it.", "git status. Send, send it."] {
+            let output = terminal.process(said)
+            XCTAssertEqual(output.text, "Git status.", said)
+            XCTAssertEqual(output.command, .pressReturn, said)
+        }
+        // Every other rule still holds: never mid-sentence, never alone,
+        // never outside a terminal.
+        for said in ["Review the doc, um, send it.", "and then we, uh, send it", "Uh, send it."] {
+            XCTAssertNil(terminal.process(said).command, said)
+        }
+        let elsewhere = TextPipeline().process("git status. Um, send it.")
+        XCTAssertNil(elsewhere.command)
+        XCTAssertEqual(elsewhere.text, "Git status. Send it.")
+    }
+
     /// The built-in dictionary writes "commit в" and "Docker и в Kubernetes";
     /// only a word written with a capital is a name to protect, so Russian
     /// stutters still collapse in the shipping app.

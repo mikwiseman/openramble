@@ -7557,6 +7557,109 @@
     "text" : "Привет, Иван.\n"
   },
   {
+    "afterDictionary" : "git status. Um, send it.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "git status. Um, send it.",
+    "name" : "send it after a hesitation in a terminal",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Git status."
+  },
+  {
+    "afterDictionary" : "Fix the failing test. Uh, send it.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "Fix the failing test. Uh, send it.",
+    "name" : "send it after uh in a terminal",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Fix the failing test."
+  },
+  {
+    "afterDictionary" : "git status. Send, send it.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "git status. Send, send it.",
+    "name" : "send it after a stutter in a terminal",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Git status."
+  },
+  {
+    "afterDictionary" : "git status. Um, send it.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "git status. Um, send it.",
+    "name" : "send it after a pause and a hesitation in a terminal",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Git status."
+  },
+  {
+    "afterDictionary" : "Сделай релиз. Э, отправь.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "Сделай релиз. Э, отправь.",
+    "name" : "russian send after a hesitation in a terminal",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Сделай релиз."
+  },
+  {
+    "afterDictionary" : "Review the doc, um, send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Review the doc, um, send it.",
+    "name" : "send it after a comma and a hesitation stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Review the doc send it."
+  },
+  {
+    "afterDictionary" : "and then we, uh, send it",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "and then we, uh, send it",
+    "name" : "send it mid-thought after a hesitation stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "And then we send it"
+  },
+  {
     "afterDictionary" : "add the key to .env and restart.",
     "allowPressReturnCommand" : false,
     "dictionary" : [

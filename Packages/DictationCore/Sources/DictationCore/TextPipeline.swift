@@ -242,6 +242,17 @@ public struct TextPipeline: Sendable, TextProcessing {
             parsed = TrailingCommandParser.Result(text: recognized, command: nil)
             stages = transform(recognized)
         }
+        // A hesitation or stutter right before "Send it." hides it from the
+        // parser above ("…first. Um, send it.") and is gone once the text is
+        // clean, so Return is decided once more on the cleaned text, by the
+        // same rules: allowed here, and "Send it." as its own final sentence.
+        if allowPressReturnCommand, parsed.command == nil {
+            let cleaned = TrailingCommandParser.parse(stages.polished)
+            if cleaned.command == .pressReturn, Self.endsSentence(cleaned.text) {
+                parsed = cleaned
+                stages.polished = cleaned.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
         let afterDictionary = stages.afterDictionary
         let polished = stages.polished
 
