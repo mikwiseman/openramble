@@ -82,7 +82,7 @@ final class WordlessTakeOnDiskTests: XCTestCase {
             sounds: NullSounds(),
             recordingReadableDeadline: recordingReadableDeadline
         )
-        controller.onTakeFinished = { [weak self] _, url in
+        controller.onTakeFinished = { [weak self] _, url, _ in
             self?.archived.append(try? AVAudioFile(forReading: url).length)
             return true
         }

@@ -55,7 +55,7 @@ final class EmptyTakeTests: XCTestCase {
             pipeline: { _ in TextPipeline() },
             recordingReadableDeadline: recordingReadableDeadline
         )
-        controller.onTakeFinished = { [weak self] text, url in
+        controller.onTakeFinished = { [weak self] text, url, _ in
             guard let self, historyKeeps else { return false }
             archived.append((text, url))
             handedOverFrames.append(try? AVAudioFile(forReading: url).length)
@@ -278,7 +278,7 @@ final class EmptyTakeTests: XCTestCase {
         await capture.setBufferedSamples(quiet + [0.1] + quiet)
         let escape = EscapeKey()
         escape.controller = controller
-        controller.onTakeFinished = { [weak self] text, url in
+        controller.onTakeFinished = { [weak self] text, url, _ in
             self?.archived.append((text, url))
             // The Escape key event, handled on the main queue right after
             // History made its copy.

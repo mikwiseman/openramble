@@ -897,7 +897,10 @@ final class DictationControllerTests: XCTestCase {
         await inserter.setError(.pasteNotRead)
         let controller = makeController(recognized: "nobody read this")
         var archived: [String] = []
-        controller.onTakeFinished = { text, _ in archived.append(text) }
+        controller.onTakeFinished = { text, _, _ in
+            archived.append(text)
+            return true
+        }
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()

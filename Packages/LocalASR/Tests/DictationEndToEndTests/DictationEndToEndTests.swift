@@ -420,7 +420,7 @@ final class DictationEndToEndTests: EndToEndScenario {
         try await tapTheDesk()
         let controller = makeController()
         controller.microphoneName = { "Test Mic" }
-        controller.onTakeFinished = { [weak self] text, url in
+        controller.onTakeFinished = { [weak self] text, url, _ in
             guard let self else { return false }
             let copy = self.workspace.appending(path: "history-\(self.kept.count).wav")
             do {
