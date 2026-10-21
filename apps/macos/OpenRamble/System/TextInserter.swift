@@ -758,7 +758,9 @@ public struct TextInserter: TextInserting {
     /// One rule for every read: a quiet moment after it, and never before the
     /// floor. A read before ⌘V, or one by a clipboard watcher just after it,
     /// then costs at most the floor - never a false alarm, and never the text
-    /// taken away from a target that reads a moment later.
+    /// taken away from a target that reads within the floor, as every real
+    /// one has. A target slower than that, behind such a watcher, would read
+    /// the person's clipboard: the price of not holding every paste longer.
     ///
     /// A press of the dictation key brings the limit down to the floor:
     /// nothing has appeared and the person is trying again, while every real
