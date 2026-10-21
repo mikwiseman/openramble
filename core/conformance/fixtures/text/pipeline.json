@@ -7675,6 +7675,77 @@
     "text" : "And then we send it"
   },
   {
+    "afterDictionary" : "Um. Um, send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Um. Um, send it.",
+    "name" : "nothing but a hesitation before send it stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Um. Send it."
+  },
+  {
+    "afterDictionary" : "Um. Send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Um. Send it.",
+    "name" : "a lone um before send it stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Um. Send it."
+  },
+  {
+    "afterDictionary" : "Hmm, um. Send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Hmm, um. Send it.",
+    "name" : "hmm um before send it stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Um. Send it."
+  },
+  {
+    "afterDictionary" : "Э. Э, отправь.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Э. Э, отправь.",
+    "name" : "a lone russian hesitation before send stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Э. Отправь."
+  },
+  {
+    "afterDictionary" : "Yes. Um, send it.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "Yes. Um, send it.",
+    "name" : "one real word before um send it is return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Yes."
+  },
+  {
     "afterDictionary" : "Fix the failing test. Send it. Stop, scratch that.",
     "allowPressReturnCommand" : true,
     "dictionary" : [

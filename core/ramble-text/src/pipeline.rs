@@ -350,16 +350,6 @@ impl TextPipeline {
         }
 
         let mut stages = self.transform(&parsed.text);
-        if stages.1.is_empty() && parsed.command.is_some() {
-            // A command with nothing left to act on is just words, as when it is
-            // spoken alone — never an empty insert that reads as "nothing was
-            // recognized" with the command silently gone.
-            parsed = ParsedCommand {
-                text: recognized.to_string(),
-                command: None,
-            };
-            stages = self.transform(recognized);
-        }
         // A hesitation or stutter right before "Send it." hides it from the
         // parser above ("…first. Um, send it.") and is gone once the text is
         // clean, so Return is decided once more on the cleaned text, by the
@@ -373,6 +363,21 @@ impl TextPipeline {
             {
                 stages.1 = cleaned.text.trim().to_string();
                 parsed = cleaned;
+            }
+        }
+        // A command with nothing left to act on is just words, as when it is
+        // spoken alone — never an empty insert that reads as "nothing was
+        // recognized" with the command silently gone. Before a Return, nothing
+        // but hesitation is nothing too: "Um. Send it." never sends "Um.".
+        if let Some(command) = parsed.command {
+            if stages.1.is_empty()
+                || (command == TrailingCommand::PressReturn && clean::is_only_hesitation(&stages.1))
+            {
+                parsed = ParsedCommand {
+                    text: recognized.to_string(),
+                    command: None,
+                };
+                stages = self.transform(recognized);
             }
         }
         let (after_dictionary, polished) = stages;
@@ -514,6 +519,42 @@ mod tests {
         let elsewhere = plain().process("git status. Um, send it.");
         assert_eq!(elsewhere.command, None);
         assert_eq!(elsewhere.text, "Git status. Send it.");
+    }
+
+    /// Cleanup keeps a hesitation that is also a word ("Um.", "Э.") when it
+    /// stands alone, so it can be all that is left before "Send it.". Nothing
+    /// but hesitation is nothing to send: the take is typed as words and
+    /// Return is not pressed. One real word is enough.
+    #[test]
+    fn nothing_but_a_hesitation_is_never_typed_and_sent() {
+        let terminal = TextPipeline {
+            allow_press_return_command: true,
+            ..Default::default()
+        };
+        for said in [
+            "Um. Um, send it.",
+            "Um. Uh, send it.",
+            "Um.\u{2029}Uh, send it.",
+            "Um. Send it.",
+            "Hmm, um. Send it.",
+            "Er. Send it.",
+            "Mmm. Send it.",
+            "\u{042D}. \u{042D}, \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}.",
+            "\u{042D}\u{043C}. \u{042D}, \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}.",
+        ] {
+            assert_eq!(terminal.process(said).command, None, "{said}");
+        }
+        assert_eq!(terminal.process("Um. Um, send it.").text, "Um. Send it.");
+        for said in [
+            "Yes. Um, send it.",
+            "\u{0414}\u{0430}. \u{042D}, \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}.",
+        ] {
+            assert_eq!(
+                terminal.process(said).command,
+                Some(TrailingCommand::PressReturn),
+                "{said}"
+            );
+        }
     }
 
     /// Return is decided on the cleaned text only when "Send it." was the last

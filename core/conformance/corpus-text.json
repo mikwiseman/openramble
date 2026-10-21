@@ -4504,6 +4504,41 @@
     "input": "and then we, uh, send it"
   },
   {
+    "name": "nothing but a hesitation before send it stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Um. Um, send it."
+  },
+  {
+    "name": "a lone um before send it stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Um. Send it."
+  },
+  {
+    "name": "hmm um before send it stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Hmm, um. Send it."
+  },
+  {
+    "name": "a lone russian hesitation before send stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Э. Э, отправь."
+  },
+  {
+    "name": "one real word before um send it is return",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Yes. Um, send it."
+  },
+  {
     "name": "send it taken back with stop scratch that stays words",
     "dictionary": [],
     "allowPressReturnCommand": true,

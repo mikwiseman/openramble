@@ -104,6 +104,13 @@ enum CleanVerbatim {
         })
     }
 
+    /// Whether every word of `text` is a hesitation, counting the ones that
+    /// are also words ("Um.", "Э."), which cleanup keeps when they stand alone.
+    static func isOnlyHesitation(_ text: String) -> Bool {
+        let tokens = Tokens(text)
+        return !tokens.items.isEmpty && tokens.items.indices.allSatisfy { tokens.isAnyFillerWord(at: $0) }
+    }
+
     // MARK: - Vocabulary
 
     /// Hesitation in every language Parakeet speaks: none of these is a word.

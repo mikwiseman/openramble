@@ -661,6 +661,15 @@ pub fn protected_words<'a>(written: impl IntoIterator<Item = &'a str>) -> HashSe
         .collect()
 }
 
+/// Whether every word of `text` is a hesitation, counting the ones that are
+/// also words ("Um.", "Э."), which cleanup keeps when they stand alone.
+pub fn is_only_hesitation(text: &str) -> bool {
+    let protected = HashSet::new();
+    let tokens = Tokens::new(text, &protected);
+    !tokens.items.is_empty()
+        && (0..tokens.items.len()).all(|index| tokens.is_any_filler_word(index))
+}
+
 /// One word, or one protected span, with the whitespace in front of it.
 #[derive(Debug, Clone)]
 struct Token {

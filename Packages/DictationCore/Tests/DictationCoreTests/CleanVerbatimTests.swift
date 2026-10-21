@@ -910,6 +910,26 @@ final class CleanVerbatimTests: XCTestCase {
         XCTAssertEqual(elsewhere.text, "Git status. Send it.")
     }
 
+    /// Cleanup keeps a hesitation that is also a word ("Um.", "Э.") when it
+    /// stands alone, so it can be all that is left before "Send it.". Nothing
+    /// but hesitation is nothing to send: the take is typed as words and
+    /// Return is not pressed. One real word is enough.
+    func testNothingButAHesitationIsNeverTypedAndSent() {
+        let terminal = TextPipeline(allowPressReturnCommand: true)
+        for said in [
+            "Um. Um, send it.", "Um. Uh, send it.", "Um.\u{2029}Uh, send it.", "Um. Send it.",
+            "Hmm, um. Send it.", "Er. Send it.", "Mmm. Send it.",
+            "\u{042D}. \u{042D}, \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}.",
+            "\u{042D}\u{043C}. \u{042D}, \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}.",
+        ] {
+            XCTAssertNil(terminal.process(said).command, said)
+        }
+        XCTAssertEqual(terminal.process("Um. Um, send it.").text, "Um. Send it.")
+        for said in ["Yes. Um, send it.", "\u{0414}\u{0430}. \u{042D}, \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}."] {
+            XCTAssertEqual(terminal.process(said).command, .pressReturn, said)
+        }
+    }
+
     /// Return is decided on the cleaned text only when "Send it." was the last
     /// thing said. Words after it that cleanup takes away ("Stop, scratch
     /// that.") mean the person was taking the send back, and a dictionary

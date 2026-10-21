@@ -239,13 +239,6 @@ public struct TextPipeline: Sendable, TextProcessing {
         }
 
         var stages = transform(parsed.text)
-        if stages.polished.isEmpty, parsed.command != nil {
-            // A command with nothing left to act on is just words, as when it
-            // is spoken alone — never an empty insert that reads as "nothing
-            // was recognized" with the command silently gone.
-            parsed = TrailingCommandParser.Result(text: recognized, command: nil)
-            stages = transform(recognized)
-        }
         // A hesitation or stutter right before "Send it." hides it from the
         // parser above ("…first. Um, send it.") and is gone once the text is
         // clean, so Return is decided once more on the cleaned text, by the
@@ -259,6 +252,15 @@ public struct TextPipeline: Sendable, TextProcessing {
                 parsed = cleaned
                 stages.polished = cleaned.text.trimmingCharacters(in: .whitespacesAndNewlines)
             }
+        }
+        // A command with nothing left to act on is just words, as when it is
+        // spoken alone — never an empty insert that reads as "nothing was
+        // recognized" with the command silently gone. Before a Return, nothing
+        // but hesitation is nothing too: "Um. Send it." never sends "Um.".
+        if let command = parsed.command,
+           stages.polished.isEmpty || (command == .pressReturn && CleanVerbatim.isOnlyHesitation(stages.polished)) {
+            parsed = TrailingCommandParser.Result(text: recognized, command: nil)
+            stages = transform(recognized)
         }
         let afterDictionary = stages.afterDictionary
         let polished = stages.polished
