@@ -930,6 +930,11 @@ public final class AppState: ObservableObject {
     private var isRecoveryOperationActive = false
     /// A message that waits for the end of the session.
     private var noticeAfterSession: DictationNotice?
+    /// History could not keep the take now finishing; said when it ends.
+    private var takeNotKept = false
+    /// What the take now running has told the person, so History's failure
+    /// can join it rather than hide it.
+    private var takeNotice: DictationNotice?
     /// Model preparation is single-flight at the AppState boundary as well as
     /// inside the worker. This keeps UI state and recovery decisions causal
     /// when startup, wake and memory-pressure events arrive together.
@@ -1293,6 +1298,8 @@ public final class AppState: ObservableObject {
             controller.onStateChange = { [weak self] state in
                 self?.dictationState = state
                 self?.flushNoticeAfterSession(state)
+                if state == .preparing { self?.takeNotice = nil }
+                self?.sayTakeNotKept()
                 if state == .idle, self?.modelSwitchPending == true {
                     Task { await self?.refreshModelState() }
                 }
@@ -1330,6 +1337,7 @@ public final class AppState: ObservableObject {
             }
             controller.onNotice = { [weak self] notice in
                 self?.lastNotice = notice
+                self?.takeNotice = notice
                 if notice.recoveryAudio != nil {
                     self?.refreshRecoveredRecordingCount()
                 }
@@ -1700,15 +1708,33 @@ public final class AppState: ObservableObject {
             )
         } catch {
             engineLog.error("history entry not written")
-            notify(
-                DictationNotice(
-                    kind: .warning,
-                    message: L10n.tr("This dictation couldn't be saved to History."),
-                    wordsDidNotLand: false,
-                    reason: .storage
-                )
-            )
+            takeNotKept = true
+            sayTakeNotKept()
         }
+    }
+
+    /// Say that History could not keep the take, once the take has said
+    /// everything else. One notice per take: a take with a notice of its own
+    /// gets History's sentence added to it, so neither replaces the other.
+    private func sayTakeNotKept() {
+        guard takeNotKept, dictationState == .idle else { return }
+        takeNotKept = false
+        let notKept = L10n.tr("This dictation couldn't be saved to History.")
+        guard let said = takeNotice else {
+            notify(DictationNotice(kind: .warning, message: notKept, wordsDidNotLand: false, reason: .storage))
+            return
+        }
+        notify(
+            DictationNotice(
+                // Words History could not keep are no longer mere info.
+                kind: said.kind == .info ? .warning : said.kind,
+                message: said.message + " " + notKept,
+                recoverableText: said.recoverableText,
+                recoveryAudio: said.recoveryAudio,
+                wordsDidNotLand: said.wordsDidNotLand,
+                reason: said.reason ?? .storage
+            )
+        )
     }
 
     /// The take's audio, if it is still on disk.

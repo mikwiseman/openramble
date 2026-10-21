@@ -2099,4 +2099,52 @@ final class RecoveredFileTests: XCTestCase {
         let shown = await harness.overlay.notices
         XCTAssertTrue(shown.contains { $0.message == notice.message })
     }
+
+    /// One notice per take. When History cannot keep a take that has its own
+    /// notice, History's sentence joins that notice instead of replacing it.
+    func testAHistoryFailureJoinsAFailedInsertionsNotice() async throws {
+        try harness.installModelMarker()
+        let support = try AppPaths(root: harness.root).support()
+        FileManager.default.createFile(atPath: support.appending(path: "History").path, contents: Data())
+        let state = harness.makeState()
+        await state.refreshModelState()
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+
+        await dictate(state)
+
+        let joined = "The text couldn't be inserted. It's saved in the menu. This dictation couldn't be saved to History."
+        let notice = try XCTUnwrap(state.lastNotice)
+        XCTAssertEqual(notice.message, joined)
+        XCTAssertEqual(notice.recoverableText, "Ping test")
+        XCTAssertTrue(notice.wordsDidNotLand)
+        XCTAssertEqual(state.recoveredText, "Ping test")
+        let shown = await harness.overlay.notices.map(\.message)
+        XCTAssertTrue(shown.contains(joined), "\(shown)")
+        XCTAssertFalse(
+            shown.contains("This dictation couldn't be saved to History."),
+            "History's warning alone hides the take's own notice: \(shown)"
+        )
+    }
+
+    /// A take-back is archived before its notice is reported. History's
+    /// sentence still lands inside it, and a take whose heard words are now
+    /// kept nowhere is no longer mere info.
+    func testAHistoryFailureJoinsATakenBackTakesNotice() async throws {
+        try harness.installModelMarker()
+        let support = try AppPaths(root: harness.root).support()
+        FileManager.default.createFile(atPath: support.appending(path: "History").path, contents: Data())
+        harness.transcription.text = "Scratch that."
+        let state = harness.makeState()
+        await state.refreshModelState()
+
+        await dictate(state)
+
+        let joined = "Nothing left to insert after cleanup. This dictation couldn't be saved to History."
+        let notice = try XCTUnwrap(state.lastNotice)
+        XCTAssertEqual(notice.message, joined)
+        XCTAssertEqual(notice.kind, .warning)
+        let shown = await harness.overlay.notices.map(\.message)
+        XCTAssertTrue(shown.contains(joined), "\(shown)")
+        XCTAssertFalse(shown.contains("This dictation couldn't be saved to History."), "\(shown)")
+    }
 }
