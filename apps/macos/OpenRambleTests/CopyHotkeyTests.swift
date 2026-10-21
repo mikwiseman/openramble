@@ -179,5 +179,26 @@ final class CopyHotkeyTests: XCTestCase {
         let state = harness.makeState()
         state.copyLastDictation()
         XCTAssertNil(state.lastDictation)
+        XCTAssertNil(state.lastDictationText)
+    }
+
+    /// History outlives a relaunch, and the menu lists it with Copy Last
+    /// Dictation right below. The item copies what the list shows on top,
+    /// instead of answering "Nothing dictated yet." beside it.
+    func testCopyLastReachesHistoryAfterARelaunch() async throws {
+        try harness.installModelMarker()
+        let first = harness.makeState()
+        await first.refreshModelState()
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+        XCTAssertEqual(first.history.first?.text, "Ping test")
+
+        let relaunched = harness.makeState()
+
+        XCTAssertNil(relaunched.lastDictation, "in memory only")
+        XCTAssertEqual(relaunched.recentDictations.first?.text, "Ping test", "the menu offers Copy Last")
+        XCTAssertEqual(relaunched.lastDictationText, "Ping test")
     }
 }
