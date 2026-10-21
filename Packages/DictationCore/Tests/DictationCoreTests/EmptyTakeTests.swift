@@ -89,6 +89,25 @@ final class EmptyTakeTests: XCTestCase {
         try await waitUntil { [sounds] in await sounds!.attentionPlays >= 1 }
     }
 
+    /// The disposer deletes in the order it is given files, so once a file
+    /// handed to it now is gone, anything the take handed it earlier is gone
+    /// too. A file still on disk after this was never handed over.
+    private func waitForTheDisposer() async throws {
+        let marker = FileManager.default.temporaryDirectory
+            .appending(path: "disposer-marker-\(UUID().uuidString).wav")
+        FileManager.default.createFile(atPath: marker.path, contents: Data([0]))
+        RecordingFileDisposer.shared.submit(marker)
+        try await waitUntil { !FileManager.default.fileExists(atPath: marker.path) }
+    }
+
+    private func rebuiltCopies(in directory: URL) -> [String] {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+        return names.filter { $0.hasPrefix("memory-recovery-") && $0.hasSuffix(".wav") }
+    }
+
+    private static let leftForRecovery = "Nothing was recognized — nothing was inserted."
+        + " The local take will be checked for automatic recovery on the next launch."
+
     func testAnEmptyTakeWithSoundIsKeptInHistoryWithoutText() async throws {
         await capture.setBufferedSamples(quiet + [0.1] + quiet)
 
@@ -183,8 +202,9 @@ final class EmptyTakeTests: XCTestCase {
     }
 
     /// When neither the file nor a rebuild from the samples can be had, the
-    /// take cannot reach History. That loss is journaled, numbers only, as the
-    /// file stage failing, so it never happens in silence.
+    /// take cannot reach History. That is journaled, numbers only, as the
+    /// file stage failing, so it never happens in silence, and whatever the
+    /// writer left is for automatic recovery to judge.
     func testAWordlessTakeThatCannotBeKeptIsJournaledAsAFileFailure() async throws {
         let takes = FileManager.default.temporaryDirectory
             .appending(path: "unkept-\(UUID().uuidString)", directoryHint: .isDirectory)
@@ -203,23 +223,76 @@ final class EmptyTakeTests: XCTestCase {
         XCTAssertEqual(failures.map(\.stage), [.readableFile], "the lost take leaves a trace")
         XCTAssertEqual(failures.map(\.timedOut), [false])
         let notices = await overlay.notices
-        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — nothing was inserted. The recording couldn't be kept."], "the person hears it too")
+        XCTAssertEqual(notices.map(\.message), [Self.leftForRecovery], "the person hears it too")
         XCTAssertEqual(notices.first?.kind, .info)
     }
 
     /// History can refuse the take — a full disk, a folder it may not write
-    /// to. The notice then says the recording is gone rather than pointing
+    /// to. A refusal comes back at once, and the take must not be deleted for
+    /// being quick: it is left where automatic recovery looks, exactly as a
+    /// slow handover leaves it, and the notice says so rather than pointing
     /// at a row that does not exist.
-    func testAWordlessTakeHistoryRefusesSaysTheRecordingWasNotKept() async throws {
-        await capture.setBufferedSamples(quiet + [0.1] + quiet)
+    func testAWordlessTakeHistoryRefusesIsLeftForAutomaticRecovery() async throws {
+        let ready = Gate()
+        await ready.open()
+        let capture = MilestoneCapture(samples: quiet + [0.1] + quiet, readable: ready, durable: ready)
+        defer { try? FileManager.default.removeItem(at: capture.fileURL) }
         historyKeeps = false
 
-        try await dictate()
+        try await dictate(makeController(capture: capture))
+        try await waitForTheDisposer()
 
         let notices = await overlay.notices
         XCTAssertTrue(archived.isEmpty)
-        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — nothing was inserted. The recording couldn't be kept."])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: capture.fileURL.path), "the take History refused was deleted")
+        XCTAssertEqual(notices.map(\.message), [Self.leftForRecovery])
         XCTAssertEqual(notices.first?.wordsDidNotLand, true)
+    }
+
+    /// A take whose file never reached disk exists only as the copy rebuilt
+    /// from its samples. When History refuses it, that copy is the take, and
+    /// it stays for automatic recovery too.
+    func testAWordlessTakeHistoryRefusesKeepsItsRebuiltCopyForAutomaticRecovery() async throws {
+        let takes = FileManager.default.temporaryDirectory
+            .appending(path: "refused-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: takes, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: takes) }
+        historyKeeps = false
+        let controller = makeController(
+            capture: try MemoryOnlyCapture(directory: takes, samples: quiet + [0.1] + quiet),
+            transcribeSamples: { _ in Self.nothing }
+        )
+
+        try await dictate(controller)
+        try await waitForTheDisposer()
+
+        XCTAssertTrue(archived.isEmpty)
+        XCTAssertEqual(rebuiltCopies(in: takes).count, 1, "the only copy of the take was deleted")
+    }
+
+    /// Escape that lands just after History took the take, before the
+    /// controller is back to say so. The take is finished at that point, as
+    /// a pasted one is, so History keeps it and the person is told where it
+    /// went: never a row in History with no word about it.
+    func testEscapeJustAfterHistoryTookTheWordlessTakeStillSaysWhereItWent() async throws {
+        await capture.setBufferedSamples(quiet + [0.1] + quiet)
+        let escape = EscapeKey()
+        escape.controller = controller
+        controller.onTakeFinished = { [weak self] text, url in
+            self?.archived.append((text, url))
+            // The Escape key event, handled on the main queue right after
+            // History made its copy.
+            DispatchQueue.main.async { MainActor.assumeIsolated { escape.press() } }
+            return true
+        }
+
+        try await dictate()
+        try await waitUntil { escape.pressed }
+        try await Task.sleep(for: .milliseconds(100))
+
+        let notices = await overlay.notices
+        XCTAssertEqual(archived.map(\.text), [""])
+        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — the recording is in History."])
     }
 
     func testAnEmptyTakeOfSilenceNamesTheMicrophoneAndKeepsNothing() async throws {

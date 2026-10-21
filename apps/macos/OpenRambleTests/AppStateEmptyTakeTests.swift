@@ -59,7 +59,9 @@ final class AppStateEmptyTakeTests: XCTestCase {
     }
 
     /// The journal counts a wordless take only once History holds it, so the
-    /// count can be checked against the rows rather than proving itself.
+    /// count can be checked against the rows rather than proving itself. The
+    /// take History could not store stays in Takes, where automatic recovery
+    /// looks.
     func testAWordlessTakeHistoryCouldNotStoreIsNotCounted() async throws {
         await harness.capture.setBufferedSamples(quiet + [0.1] + quiet)
         let history = try AppPaths(root: harness.root).support()
@@ -72,9 +74,21 @@ final class AppStateEmptyTakeTests: XCTestCase {
         try await dictate(state)
 
         XCTAssertTrue(state.history.isEmpty)
-        XCTAssertEqual(state.lastNotice?.message, "Nothing was recognized — nothing was inserted. The recording couldn't be kept.", "never points at a row that is not there")
+        XCTAssertEqual(
+            state.lastNotice?.message,
+            "Nothing was recognized — nothing was inserted. The local take will be checked for automatic recovery on the next launch.",
+            "never points at a row that is not there"
+        )
         let journal = String(decoding: state.diagnostics.snapshot().data, as: UTF8.self)
         XCTAssertFalse(journal.contains("dictationUnrecognized"), "counted a row that does not exist")
+        // The disposer deletes in order: once a file handed to it now is
+        // gone, anything the take handed it earlier is gone too.
+        let marker = harness.root.appending(path: "disposer-marker.wav")
+        try Data([0]).write(to: marker)
+        RecordingFileDisposer.shared.submit(marker)
+        try await waitUntil { !FileManager.default.fileExists(atPath: marker.path) }
+        let take = try AppPaths(root: harness.root).takes().appending(path: "test-take.wav")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: take.path), "the take History could not store was deleted")
     }
 
     /// The menu's recent dictations are there to be copied, and a take with
