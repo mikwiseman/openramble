@@ -266,6 +266,15 @@ public final class DictationController {
     /// seconds. `true` opens the wait, `false` closes it on every exit,
     /// including a throw.
     public var onEnginePreparationWait: (@MainActor (Bool) -> Void)?
+    /// What a take that reached `onTakeFinished` says as it ends.
+    ///
+    /// Called right after `onTakeFinished`, with the notice the take is about
+    /// to show, or nil when its words landed and it has nothing to say. The
+    /// take shows what this returns, through the same ordered queue as
+    /// everything else it showed. One notice per take: an owner that could
+    /// not keep the take adds that here instead of posting a second notice
+    /// that would hide the first, or be hidden by it.
+    public var amendTakeNotice: (@MainActor (DictationNotice?) -> DictationNotice?)?
 
     /// Whether recording occurs without holding down a key.
     public private(set) var isHandsFreeActive = false {
@@ -1457,8 +1466,7 @@ public final class DictationController {
                 message: L10n.tr("Nothing left to insert after cleanup."),
                 wordsDidNotLand: false
             )
-            await report(notice, session: session)
-            await cleanup(session: session)
+            await end(session, saying: notice)
             return
         }
         guard !processed.text.isEmpty else {
@@ -1479,7 +1487,7 @@ public final class DictationController {
             return
         }
 
-        await insert(
+        let outcome = await insert(
             processed,
             provenance: run.provenance,
             recognizedAt: recognizedAt,
@@ -1493,6 +1501,25 @@ public final class DictationController {
         // deletion is the promise that a recording does not outlive its use.
         onTakeFinished?(processed.text, recording.url, insertionTarget)
         await discard(recording.url, session: session)
+        guard case let .ended(notice) = outcome else { return }
+        await end(session, saying: notice)
+    }
+
+    /// The end of a take that produced text, once its owner has kept it: one
+    /// notice, with whatever the owner adds to it, then cleanup.
+    private func end(_ session: DictationSessionID, saying notice: DictationNotice?) async {
+        if let said = amendTakeNotice.map({ $0(notice) }) ?? notice {
+            await report(said, session: session)
+        }
+        await cleanup(session: session)
+    }
+
+    /// How an insertion attempt left its take.
+    private enum InsertionOutcome {
+        /// The take is over. It says this, or nothing when the words landed.
+        case ended(DictationNotice?)
+        /// The session was cancelled or replaced; whoever did that ends it.
+        case abandoned
     }
 
     /// Collect a speed report and send it outside.
@@ -1525,8 +1552,8 @@ public final class DictationController {
         phases: DictationPhaseBreakdown?,
         target: TargetApplication?,
         session: DictationSessionID
-    ) async {
-        guard shouldContinue(session) else { return }
+    ) async -> InsertionOutcome {
+        guard shouldContinue(session) else { return .abandoned }
         state = .inserting
         // Cmd+V is the meaningful completion feedback. Do not leave a redundant
         // “Inserting” panel over the destination application while the clipboard is
@@ -1537,7 +1564,7 @@ public final class DictationController {
         // someone else's application and does not respond.
         guard shouldContinue(session) else {
             await finishWithoutInsertion(session: session)
-            return
+            return .abandoned
         }
 
         let marks: InsertionMarks
@@ -1547,18 +1574,16 @@ public final class DictationController {
                 try await inserter.insertReportingMarks(output.text, into: target)
             }
         } catch is TranscriptionTimeout {
-            guard shouldContinue(session) else { return }
-            await handleInsertionTimeout(text: output.text, session: session)
-            return
+            guard shouldContinue(session) else { return .abandoned }
+            return .ended(insertionTimeoutNotice(text: output.text))
         } catch {
-            guard shouldContinue(session) else { return }
-            await handleInsertionFailure(error, text: output.text, session: session)
-            return
+            guard shouldContinue(session) else { return .abandoned }
+            return .ended(insertionFailureNotice(error, text: output.text))
         }
 
         // Paste may already be irreversible, but a late completion from an old
         // session must not mutate callbacks, history, UI, or the next session.
-        guard shouldContinue(session) else { return }
+        guard shouldContinue(session) else { return .abandoned }
         onTextInserted?(output.text)
         // Origin - only after a successful insertion: unsuccessful insertion does not
         // “what the person saw” and “copy verbatim” she has nothing to give.
@@ -1580,29 +1605,26 @@ public final class DictationController {
                     try await inserter.pressReturn(into: target)
                 }
             } catch {
-                guard shouldContinue(session) else { return }
-                await reportReturnFailure(session: session)
-                return
+                guard shouldContinue(session) else { return .abandoned }
+                return .ended(returnFailureNotice())
             }
-            guard shouldContinue(session) else { return }
+            guard shouldContinue(session) else { return .abandoned }
         }
-        await cleanup(session: session)
+        return .ended(nil)
     }
 
     /// The system edge did not return, so we cannot truthfully claim either
     /// success or failure: a synchronous event post may have crossed its
     /// irreversible boundary before the watchdog fired. Keep a copy and tell
     /// the person exactly that, while freeing the next dictation immediately.
-    private func handleInsertionTimeout(text: String, session: DictationSessionID) async {
+    private func insertionTimeoutNotice(text: String) -> DictationNotice {
         pendingRecovery = RecoveredDictation(text: text)
-        let notice = DictationNotice(
+        return DictationNotice(
             kind: .warning,
             message: L10n.tr("Insertion couldn't be confirmed in time. The text is saved in the menu and may already have been pasted."),
             recoverableText: text,
             wordsDidNotLand: true
         )
-        await report(notice, session: session)
-        await cleanup(session: session)
     }
 
     /// The text was inserted, but pressing Return failed.
@@ -1610,30 +1632,21 @@ public final class DictationController {
     /// The general denial thread would lie twice here: it would say “the text is not
     /// inserted" when it is in place, and would save a second copy of the dictated
     /// to disk. The private tool does not add up what is said without reason.
-    private func reportReturnFailure(session: DictationSessionID) async {
-        let notice = DictationNotice(
+    private func returnFailureNotice() -> DictationNotice {
+        DictationNotice(
             kind: .warning,
             message: L10n.tr("The text was inserted, but pressing Return failed.")
         )
-        await report(notice, session: session)
-        await cleanup(session: session)
     }
 
     /// The text was recognized, but it was not possible to insert it - we save it so that it does not disappear.
-    private func handleInsertionFailure(
-        _ error: Error,
-        text: String,
-        session: DictationSessionID
-    ) async {
+    private func insertionFailureNotice(_ error: Error, text: String) -> DictationNotice {
         if let insertion = error as? TextInsertionError,
            insertion == .insertedButClipboardRestoreFailed {
-            let notice = DictationNotice(
+            return DictationNotice(
                 kind: .warning,
                 message: L10n.tr("The text was inserted, but the previous clipboard couldn't be restored.")
             )
-            await report(notice, session: session)
-            await cleanup(session: session)
-            return
         }
         pendingRecovery = RecoveredDictation(text: text)
 
@@ -1652,14 +1665,12 @@ public final class DictationController {
             message = L10n.tr("The text couldn't be inserted. It's saved in the menu.")
         }
 
-        let notice = DictationNotice(
+        return DictationNotice(
             kind: .warning,
             message: message,
             recoverableText: text,
             wordsDidNotLand: true
         )
-        await report(notice, session: session)
-        await cleanup(session: session)
     }
 
     // MARK: - Cancel
@@ -2020,7 +2031,7 @@ public final class DictationController {
 ///
 /// Insertion failure is not included here intentionally: the text at this moment is already recognized and
 /// remains in memory, and the person should be told not “failed”, but how to get
-/// it via Copy/Retry. This does `handleInsertionFailure`.
+/// it via Copy/Retry. This does `insertionFailureNotice`.
 public enum DictationError: Error, Sendable, Equatable {
     case capture(String)
     case recognition(String)

@@ -2100,17 +2100,34 @@ final class RecoveredFileTests: XCTestCase {
         XCTAssertTrue(shown.contains { $0.message == notice.message })
     }
 
-    /// One notice per take. When History cannot keep a take that has its own
-    /// notice, History's sentence joins that notice instead of replacing it.
-    func testAHistoryFailureJoinsAFailedInsertionsNotice() async throws {
-        try harness.installModelMarker()
+    /// A file where the History folder should be: every write fails.
+    private func breakHistory() throws {
         let support = try AppPaths(root: harness.root).support()
         FileManager.default.createFile(atPath: support.appending(path: "History").path, contents: Data())
+    }
+
+    /// The take is over and the panel has had time for anything late.
+    private func waitForTheTakeToEnd(_ state: AppState) async throws {
+        for _ in 0..<400 {
+            let shown = await harness.overlay.notices
+            if state.dictationState == .idle, !shown.isEmpty { break }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        try await Task.sleep(for: .milliseconds(400))
+    }
+
+    /// One notice per take. When History cannot keep a take that has its own
+    /// notice, History's sentence joins that notice: the panel gets one
+    /// notice and VoiceOver says it once.
+    func testAHistoryFailureJoinsAFailedInsertionsNotice() async throws {
+        try harness.installModelMarker()
+        try breakHistory()
         let state = harness.makeState()
         await state.refreshModelState()
         await harness.inserter.setError(.accessibilityPermissionDenied)
 
         await dictate(state)
+        try await waitForTheTakeToEnd(state)
 
         let joined = "The text couldn't be inserted. It's saved in the menu. This dictation couldn't be saved to History."
         let notice = try XCTUnwrap(state.lastNotice)
@@ -2119,32 +2136,91 @@ final class RecoveredFileTests: XCTestCase {
         XCTAssertTrue(notice.wordsDidNotLand)
         XCTAssertEqual(state.recoveredText, "Ping test")
         let shown = await harness.overlay.notices.map(\.message)
-        XCTAssertTrue(shown.contains(joined), "\(shown)")
-        XCTAssertFalse(
-            shown.contains("This dictation couldn't be saved to History."),
-            "History's warning alone hides the take's own notice: \(shown)"
-        )
+        XCTAssertEqual(shown, [joined], "one notice per take")
     }
 
-    /// A take-back is archived before its notice is reported. History's
-    /// sentence still lands inside it, and a take whose heard words are now
-    /// kept nowhere is no longer mere info.
+    /// A take whose heard words are now kept nowhere is no longer mere info.
     func testAHistoryFailureJoinsATakenBackTakesNotice() async throws {
         try harness.installModelMarker()
-        let support = try AppPaths(root: harness.root).support()
-        FileManager.default.createFile(atPath: support.appending(path: "History").path, contents: Data())
+        try breakHistory()
         harness.transcription.text = "Scratch that."
         let state = harness.makeState()
         await state.refreshModelState()
 
         await dictate(state)
+        try await waitForTheTakeToEnd(state)
 
         let joined = "Nothing left to insert after cleanup. This dictation couldn't be saved to History."
         let notice = try XCTUnwrap(state.lastNotice)
         XCTAssertEqual(notice.message, joined)
         XCTAssertEqual(notice.kind, .warning)
         let shown = await harness.overlay.notices.map(\.message)
-        XCTAssertTrue(shown.contains(joined), "\(shown)")
-        XCTAssertFalse(shown.contains("This dictation couldn't be saved to History."), "\(shown)")
+        XCTAssertEqual(shown, [joined], "one notice per take")
+    }
+
+    /// A full disk stops the take and keeps History from copying it. Both are
+    /// said, in one notice.
+    func testAHistoryFailureJoinsTheDiskStopNotice() async throws {
+        try harness.installModelMarker()
+        try breakHistory()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        harness.monitor.onPress?()
+        for _ in 0..<200 where state.dictationState != .listening {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        let active = await harness.capture.session
+        let session = try XCTUnwrap(active)
+        let signalLimit = try XCTUnwrap(harness.captureMemoryLimit)
+
+        signalLimit(session)
+        try await waitForTheTakeToEnd(state)
+
+        let joined = "Recording stopped because audio couldn't be saved to disk. The audio held in memory was kept for transcription. This dictation couldn't be saved to History."
+        XCTAssertEqual(state.lastNotice?.message, joined)
+        XCTAssertEqual(state.lastNotice?.kind, .warning)
+        let shown = await harness.overlay.notices.map(\.message)
+        XCTAssertEqual(shown, [joined], "one notice per take")
+    }
+
+    /// The Mac sleeping stops the take; History failing too is the same take.
+    func testAHistoryFailureJoinsTheSleepStopNotice() async throws {
+        try harness.installModelMarker()
+        try breakHistory()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        harness.monitor.onPress?()
+        for _ in 0..<200 where state.dictationState != .listening {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        harness.workspaceNotifications.post(name: NSWorkspace.willSleepNotification, object: nil)
+        try await waitForTheTakeToEnd(state)
+
+        let joined = "The Mac went to sleep — recording had to stop. This dictation couldn't be saved to History."
+        XCTAssertEqual(state.lastNotice?.message, joined)
+        XCTAssertEqual(state.lastNotice?.kind, .warning)
+        let shown = await harness.overlay.notices.map(\.message)
+        XCTAssertEqual(shown, [joined], "one notice per take")
+    }
+
+    /// The panel can draw late, which is why the controller queues its
+    /// commands in order. History's sentence rides in that queue, so a slow
+    /// draw cannot put the take's notice on top of it.
+    func testAHistoryFailureSurvivesASlowPanel() async throws {
+        try harness.installModelMarker()
+        try breakHistory()
+        await harness.overlay.drawSlowly(.transcribing, taking: .milliseconds(300))
+        let state = harness.makeState()
+        await state.refreshModelState()
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+
+        await dictate(state)
+        try await waitForTheTakeToEnd(state)
+
+        let joined = "The text couldn't be inserted. It's saved in the menu. This dictation couldn't be saved to History."
+        XCTAssertEqual(state.lastNotice?.message, joined)
+        let shown = await harness.overlay.notices.map(\.message)
+        XCTAssertEqual(shown, [joined], "one notice per take, and the last one on screen")
     }
 }

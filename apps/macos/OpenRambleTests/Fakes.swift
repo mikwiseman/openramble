@@ -346,9 +346,19 @@ actor FakeOverlay: OverlayPresenting {
     private(set) var presentedStates: [DictationState] = []
     private(set) var notices: [DictationNotice] = []
     private(set) var dismissCount = 0
+    /// A panel that takes this long to draw one state, as a busy window
+    /// server does: whatever is queued behind it lands late.
+    private var slowDraw: (state: DictationState, delay: Duration)?
+
+    func drawSlowly(_ state: DictationState, taking delay: Duration) {
+        slowDraw = (state, delay)
+    }
 
     func present(_ state: DictationState, elapsed: TimeInterval) async {
         presentedStates.append(state)
+        if let slowDraw, slowDraw.state == state {
+            try? await Task.sleep(for: slowDraw.delay)
+        }
     }
 
     func dismiss() async { dismissCount += 1 }
