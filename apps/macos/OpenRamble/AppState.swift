@@ -93,8 +93,8 @@ public struct AppEnvironment {
     /// suite from sleeping production-scale intervals (nil = the real ladder).
     public var engineWarmupRetryDelay: Duration?
     /// Warning-tier rewarm settle window; injectable for the same reason.
-    /// Test-only override for the idle-unload countdown: the policy's real
-    /// options start at two minutes, and suites never sleep that long.
+    /// Test-only override for the one-hour idle-unload countdown, which
+    /// suites never sleep through.
     public var idleUnloadDelayOverride: Duration?
     /// Crash-recovery timing is injectable so launch-to-idle maintenance can
     /// be proven without sleeping for the production compatibility window.

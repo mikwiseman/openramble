@@ -943,6 +943,13 @@ final class AppStateTests: XCTestCase {
         }
     }
 
+    /// The engine stays an hour after the last dictation, for everyone. Every
+    /// other residency test shortens the countdown, so this is the one that
+    /// notices if the hour itself changes.
+    func testTheEngineStaysLoadedForAnHourAfterTheLastDictation() {
+        XCTAssertEqual(AppState.engineIdleUnloadDelay, .seconds(60 * 60))
+    }
+
     /// The "Unload model" picker is gone. Somebody who once chose "Never"
     /// gets the same hour as everyone else, and one reload after an idle hour.
     func testALegacyNeverSettingNoLongerKeepsTheEngineForever() async throws {

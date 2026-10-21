@@ -112,8 +112,8 @@ automatically.
 Each record carries durations (`captureFreeze`, `enginePreparation`,
 `recognition`, `engineProcessing`, `stopToText`, `stopToPaste`), the take's
 audio duration, whether the engine was ready when the person stopped speaking,
-the memory-pressure tier, the unload policy in force, and a `machineAtStop` /
-`machineAtText` pair with the delta between them.
+the memory-pressure tier, and a `machineAtStop` / `machineAtText` pair with the
+delta between them.
 
 `recognition` minus `engineProcessing` is everything the recognition round trip
 cost that was not recognition: transport, scheduling, and page faults.
