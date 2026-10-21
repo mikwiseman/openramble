@@ -158,9 +158,10 @@ public enum DictationDurationPolicy {
 /// Whether a take that the model found no words in heard anything at all.
 ///
 /// Asked only after recognition came back empty, so quiet speech never gets
-/// here: the installed model wrote a spoken sentence out word for word at a
-/// peak of 0.015 and of 0.005, also over a room-noise floor, while zeros,
-/// noise and a lone click came back empty. A take that came back empty and
+/// here: the installed model wrote a spoken sentence out at peaks of 0.015,
+/// 0.01 and 0.005, with and without a room-noise floor - word for word in five
+/// of the six, one word changed in the quietest - while zeros, noise and a
+/// lone click came back empty. A take that came back empty and
 /// never reached the floor heard silence - a muted, dead or wrong microphone,
 /// or a person who said nothing - and keeping it would fill History with rows
 /// of nothing.

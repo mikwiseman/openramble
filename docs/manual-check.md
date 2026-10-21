@@ -45,12 +45,10 @@ for the check.
    nowhere to act on, and in any other field a late chord (⌘A, ⌘↓) acts
    before the paste lands.
    Set the input volume to zero and hold the key for 2 s: the orange panel
-   names the microphone and History gains nothing. With the volume still at
-   zero, pick another microphone in Settings and, without relaunching,
-   dictate a sentence: it is inserted, because the take records from the
-   microphone just picked. Restore the volume, hold the key and tap the desk
-   once without speaking: History shows "Nothing recognized" with Play, the ↻
-   button ("Recognise this recording again") and Delete, and no Copy.
+   names the microphone and History gains nothing. Restore the volume, hold
+   the key and tap the desk once without speaking: the panel says the
+   recording is in History, and History shows "Nothing recognized" with Play,
+   the ↻ button ("Recognize this recording again") and Delete, and no Copy.
 8. Switch focus during transcription and verify insertion returns to the field
    where dictation began. Cover rich text, a multiline field, an empty field, a
    secure field, and a destination that rejects paste.
