@@ -146,7 +146,7 @@ Application data is stored under
 | Recordings: two-channel audio, optional screen video, transcript and metadata | Until you delete them. Not bounded by count or age. Audio is about 230 MB per hour; screen video size depends on display and activity. Each recording's size is under More ▸ Recording Details |
 | Local technical journal (`SupportLogs`) | Enabled by default; at most 7 days / 5 MB total. Removed when switched off. |
 | Settings and replacement dictionary | Stored in macOS defaults |
-| Text that could not be inserted | Memory only, until the next dictation or app exit |
+| Text that could not be inserted | Kept in Dictation history with its audio, like every take. The copy behind Insert Last Dictation is memory only, until the next dictation or app exit |
 
 **Settings → About → Save Error Report…** saves a local ZIP you can send to the
 developer. It includes predefined technical events, timings, numeric error
