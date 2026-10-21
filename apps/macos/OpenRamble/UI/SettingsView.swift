@@ -327,7 +327,7 @@ private struct SetupSettings: View {
             } header: {
                 Text(L10n.tr("Speech model"))
             } footer: {
-                Text(L10n.tr("The speech model runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. History keeps your recent dictations with their audio, as many as you choose to keep. Other audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings."))
+                Text(L10n.tr("The speech model runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. History keeps your recent dictations with their audio, as many as you choose to keep. Other dictation audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings."))
             }
             .confirmationDialog(
                 L10n.tr("Delete the recognition model?"),
