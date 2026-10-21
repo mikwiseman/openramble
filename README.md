@@ -61,7 +61,7 @@ Clean Verbatim removes filler words in English, Russian, German and French, and 
 
 ### Dictation for Claude Code and the terminal
 
-OpenRamble pastes into Claude Code, Codex, Cursor and any terminal the same way it pastes into any other app. When it applies your dictionary or its other text fixes, it leaves text in backticks, file paths and code identifiers alone. The `openramble` command-line tool and the `openramble-transcribe` skill let an agent transcribe audio files, as [described below](#transcribe-audio-files-from-the-command-line).
+OpenRamble pastes into Claude Code, Codex, Cursor and any terminal the same way it pastes into any other app. Its cleanup and other text fixes, including dictionary matches by sound, leave text in backticks, file paths and code identifiers alone. A dictionary entry that matches a word exactly applies there too. The `openramble` command-line tool and the `openramble-transcribe` skill let an agent transcribe audio files, as [described below](#transcribe-audio-files-from-the-command-line).
 
 OpenRamble also checks which app you are dictating into, and it decides from that whether to add line breaks or press Return.
 
@@ -152,7 +152,7 @@ OpenRamble stores audio and text from your dictations and recordings only on you
 | Settings and dictionary | Until you change or delete them |
 | The copy of text that could not be pasted, kept for Insert Last Dictation | In memory only, until a later dictation is pasted, you delete its History entry, or you quit. Dictation history keeps its own copy. |
 
-To report a problem, choose Settings → About → Save Error Report. OpenRamble saves a ZIP file on your Mac, and you decide whether to send it to the developer. The file holds technical events, timings, error codes, the app and macOS versions, your Mac's processor type, and up to five recent Apple crash reports rebuilt without your file paths or device identifiers. It never holds audio, transcripts or clipboard contents, and OpenRamble does not upload it. [docs/diagnostics.md](docs/diagnostics.md) lists exactly what it contains.
+To report a problem, choose Settings → About → Save Error Report. OpenRamble saves a ZIP file on your Mac, and you decide whether to send it to the developer. The file holds technical events, timings, error codes, the app and macOS versions, the app's architecture (arm64 or x86_64), and up to five recent Apple crash reports rebuilt without your file paths or device identifiers. It never holds audio, transcripts or clipboard contents, and OpenRamble does not upload it. [docs/diagnostics.md](docs/diagnostics.md) lists exactly what it contains.
 
 ## How OpenRamble compares
 
@@ -188,8 +188,8 @@ Word error rate (WER) is the share of words that are wrong, missing or added com
 
 - Each hour row comes from a single run. On the alternating hour, Ultra's 8-bit file scored 39.79%, so the two models are about the same there. Both drop about a third of the words in that hour.
 - The 199 clips were made to reproduce a known problem, so they show that Ultra fixed it on those clips, not how often it happens in daily use.
-- On a sample of 100 English and 100 Russian FLEURS recordings, whisper.cpp with Whisper Large v3 Turbo had a WER of 5.10% in English and 5.15% in Russian, against 5.57% and 5.95% for Parakeet v3. On the same sample, Parakeet Ultra's 8-bit file scored 5.05% in English and 5.37% in Russian, so Whisper Turbo still made fewer errors on Russian read sentences. The 4-bit file the Mac downloads was not run on this sample.
-- With the model loaded, half of the recordings shorter than 15 seconds took 75 ms or less to recognize, and 95% took 125 ms or less. The time does not include recording or pasting. The times come from Ultra's 8-bit file, and the 4-bit file that the Mac downloads stayed within 3% of the 8-bit file's 95% figure.
+- On a sample of 100 English and 100 Russian FLEURS recordings, whisper.cpp with Whisper Large v3 Turbo had a WER of 5.10% in English and 5.15% in Russian, against 5.57% and 5.95% for Parakeet v3. On the same sample, Parakeet Ultra's 8-bit file scored 5.05% in English and 5.37% in Russian, so Whisper Turbo still made fewer errors on Russian read sentences.
+- With the model loaded, four recordings shorter than 15 seconds were each recognized ten times, and half of those 40 runs took 75 ms or less and 95% took 125 ms or less. The time does not include recording or pasting. The times come from Ultra's 8-bit file, and the 4-bit file that the Mac downloads stayed within 3% of the 8-bit file's 95% figure.
 - Transcribing one hour of English took 46.5 seconds in one run. Loading the model took 0.19 seconds when macOS already had the model file in memory. The recognition process peaked at 842 MB of memory.
 
 ## FAQ
@@ -204,7 +204,7 @@ Yes, OpenRamble works offline once the model is installed, because it turns spee
 
 ### How is OpenRamble different from Handy?
 
-Both are free and MIT licensed, and OpenRamble runs on transcribe.cpp, the speech engine that CJ Pais and the Handy team make. Handy runs on Windows, macOS and Linux and lets you choose Whisper or Parakeet models. OpenRamble is a native Mac app with one Parakeet model. The Mac app also has "scratch that" to remove what you just said, "Send it." to press Return in a terminal, a meeting and screen recorder, and a command-line tool that writes SRT, VTT and JSON. If Handy works well for you, keep using it.
+Both are free and MIT licensed, and OpenRamble runs on transcribe.cpp, the speech engine that CJ Pais and the Handy team make. Handy runs on Windows, macOS and Linux and lets you choose Whisper or Parakeet models. OpenRamble is a native Mac app with one Parakeet model. The Mac app also has "scratch that" to remove what you just said, a spoken "Send it." that presses Return in a terminal only on the takes where you say it, a meeting and screen recorder, and a command-line tool that writes SRT, VTT and JSON. If Handy works well for you, keep using it.
 
 ### Why not use the built-in macOS dictation?
 
@@ -232,7 +232,7 @@ Yes. OpenRamble's Clean Verbatim removes filler words such as "uh" and "um", sho
 
 ### Can I dictate into Claude Code, Cursor or the terminal? Can OpenRamble press Enter?
 
-Yes. OpenRamble pastes into any app, and it leaves text in backticks, file paths and code identifiers alone. Terminals and code editors such as Cursor never get a line break you did not ask for. In a terminal app such as Terminal, iTerm2, Warp or Ghostty, end a take with "Send it." as its own sentence, and OpenRamble presses Return (Enter) for you. The terminal panel inside a code editor does not get a Return.
+Yes. OpenRamble pastes into any app, and its cleanup leaves text in backticks, file paths and code identifiers alone. Terminals and code editors such as Cursor never get a line break you did not ask for. In a terminal app such as Terminal, iTerm2, Warp or Ghostty, end a take with "Send it." as its own sentence, and OpenRamble presses Return (Enter) for you. The terminal panel inside a code editor does not get a Return.
 
 ### Can OpenRamble record and transcribe meetings? Does it tell the other people?
 
@@ -244,7 +244,7 @@ Yes. The `openramble` command-line tool comes with the app and writes plain text
 
 ### How accurate and how fast is OpenRamble?
 
-On all 1,422 English and Russian FLEURS test recordings of read speech, OpenRamble's model, Parakeet Ultra, had a word error rate of 4.85%. On a sample of 200 of those recordings, Whisper Large v3 Turbo made fewer errors than Parakeet v3, the model OpenRamble used before, and about as many as Parakeet Ultra's 8-bit file. Once the model is loaded, recognizing a recording under 15 seconds took a median of 75 ms on an M4 Pro MacBook Pro, measured with Ultra's 8-bit file. The 75 ms covers the speech model alone, without recording or pasting, so it is not the time until text appears. [Accuracy and speed](#accuracy-and-speed) and [the scorecard](research/scorecard/README.md) have the method and the limits.
+On all 1,422 English and Russian FLEURS test recordings of read speech, OpenRamble's model, Parakeet Ultra, had a word error rate of 4.85%. On a sample of 200 of those recordings, Whisper Large v3 Turbo made fewer errors than Parakeet v3, the model OpenRamble used before, and about as many as Parakeet Ultra's 8-bit file. Once the model is loaded, recognizing four recordings under 15 seconds, ten times each, took a median of 75 ms on an M4 Pro MacBook Pro, measured with Ultra's 8-bit file. The 75 ms covers the speech model alone, without recording or pasting, so it is not the time until text appears. [Accuracy and speed](#accuracy-and-speed) and [the scorecard](research/scorecard/README.md) have the method and the limits.
 
 ### What does OpenRamble store, and for how long?
 
@@ -268,7 +268,7 @@ An early Windows and Linux version is in [`apps/desktop`](apps/desktop), and its
 - Permissions:
   - Microphone, to hear you.
   - Accessibility, to notice the dictation key and paste the text.
-  - System Audio Recording, only when you record a meeting, so that the other people in the call are recorded too. OpenRamble asks for it the first time you record, and dictation works without it.
+  - System Audio Recording, only when a meeting or screen recording includes what your Mac plays, so that the other people in a call are recorded too. OpenRamble asks for it the first time you record, and dictation works without it.
   - Screen Recording, only when you record your screen.
   - Camera, only for the camera bubble.
 
