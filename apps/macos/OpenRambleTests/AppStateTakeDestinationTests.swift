@@ -141,6 +141,39 @@ final class AppStateTakeDestinationTests: XCTestCase {
         XCTAssertEqual(pressed, 1, "recognizing a take again never presses anything")
     }
 
+    // MARK: - Insert Last Dictation
+
+    private func failedProseTake(_ state: AppState) async throws {
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        try await dictate(heard("Para one. New paragraph. Para two."), into: Self.mail, state)
+        XCTAssertEqual(state.recoveredText, "Para one.\n\nPara two.")
+        await harness.inserter.setError(nil)
+    }
+
+    func testInsertLastDictationFoldsAProseTakesParagraphsForATerminal() async throws {
+        let state = try await readyState()
+        try await failedProseTake(state)
+
+        harness.inserter.frontmost = Self.terminal
+        state.retryRecoveredText()
+        try await waitUntil { state.recoveredText == nil }
+
+        let inserted = await harness.inserter.insertedTexts
+        XCTAssertEqual(inserted, ["Para one. Para two."])
+    }
+
+    func testInsertLastDictationKeepsTheParagraphsForAProseApp() async throws {
+        let state = try await readyState()
+        try await failedProseTake(state)
+
+        harness.inserter.frontmost = Self.notes
+        state.retryRecoveredText()
+        try await waitUntil { state.recoveredText == nil }
+
+        let inserted = await harness.inserter.insertedTexts
+        XCTAssertEqual(inserted, ["Para one.\n\nPara two."])
+    }
+
     // MARK: - Return
 
     /// Apple's Console is named like a terminal and is a log viewer.

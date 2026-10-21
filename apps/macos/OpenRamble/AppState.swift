@@ -1865,6 +1865,10 @@ public final class AppState: ObservableObject {
         // NSWorkspace synchronously here can wedge MainActor and permanently
         // lock both Retry and the dictation hotkey.
         let target = targetApplicationSnapshot()
+        // The words were shaped for the app they were dictated into; the app
+        // in front now may be a terminal, which never gets a paragraph break.
+        // The menu keeps them as they were, for a retry into a prose app.
+        let text = ParagraphBreaks.fit(recoveredText, to: PromptModePolicy().mode(for: target))
         isRecoveryOperationActive = true
         dictationState = .inserting
         Task { [weak self] in
@@ -1876,7 +1880,7 @@ public final class AppState: ObservableObject {
             do {
                 let inserter = inserter
                 try await withTranscriptionDeadline(recoveryInsertionDeadline) {
-                    try await inserter.insert(recoveredText, into: target)
+                    try await inserter.insert(text, into: target)
                 }
                 // The words already joined History at failure time;
                 // appending again here would duplicate them. The provenance

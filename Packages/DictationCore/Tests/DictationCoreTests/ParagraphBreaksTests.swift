@@ -86,6 +86,16 @@ final class ParagraphBreaksTests: XCTestCase {
         )
     }
 
+    /// Words shaped for a prose app that end up in a verbatim one ("Insert
+    /// Last Dictation" into a terminal) lose their paragraph breaks — each
+    /// becomes the space the pipeline puts there — and keep the line break a
+    /// spoken "New line." asked for.
+    func testFittingProseTextToAVerbatimAppFoldsItsParagraphs() {
+        XCTAssertEqual(ParagraphBreaks.fit("Para one.\n\nPara two.", to: .verbatim), "Para one. Para two.")
+        XCTAssertEqual(ParagraphBreaks.fit("Para one.\n\nPara two.\n", to: .verbatim), "Para one. Para two.\n")
+        XCTAssertEqual(ParagraphBreaks.fit("Para one.\n\nPara two.", to: .prose), "Para one.\n\nPara two.")
+    }
+
     /// A person who pauses before saying "New line." still gets a line break,
     /// not the words under a blank line.
     func testNewLineSaidAfterALongPauseIsStillALineBreak() {
