@@ -24,8 +24,9 @@
 //!    after a name, and in any other take, it goes only when punctuation sets
 //!    it apart on both sides. "э" and "эм", bare or before a comma, go
 //!    wherever they stand unless a letter is meant: in a list of letters
-//!    written with commas ("а, о, э, ы"), next to a letter's name ("эс",
-//!    "бэ"), or after "буква". "mmm" goes only when punctuation sets it apart
+//!    written with commas ("а, о, э, ы"), after a single letter and a comma,
+//!    next to a letter's name ("эс", "бэ"), after "буква", or set against
+//!    another letter ("пишется э, а не е"). "mmm" goes only when punctuation sets it apart
 //!    on both sides, and never in a date format. Acronyms and
 //!    "uh huh", "uh oh", "mm hmm" and "um hmm" are words.
 //!    The comma after a hesitation goes with it; the one before stays unless

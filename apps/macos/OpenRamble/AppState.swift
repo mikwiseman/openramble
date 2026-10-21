@@ -483,8 +483,15 @@ public final class AppState: ObservableObject {
     public var fullModelDownloadMegabytes: Int {
         Int((mainModelBytes + 500_000) / 1_000_000)
     }
-    /// Text of unsuccessful insertion. Never written to disk.
-    @Published public private(set) var recoveredText: String?
+    /// Text of unsuccessful insertion. Never written to disk by this slot;
+    /// the take's words also reach History, and when that entry is deleted
+    /// the slot goes with it, as Copy Last's does.
+    @Published public private(set) var recoveredText: String? {
+        didSet { recoveredEntryID = recoveredText.flatMap(historyEntryID(holding:)) }
+    }
+    /// The History entry holding the words behind Insert Last. Nil while the
+    /// entry is not written yet, or could not be: then nothing deletes them.
+    private var recoveredEntryID: HistoryEntry.ID?
     /// Technical-failure audio retained under the documented age/count/size
     /// limits. The menu exposes the count and an exact Finder destination;
     /// crash recovery is never a hidden disk write.
@@ -666,6 +673,9 @@ public final class AppState: ObservableObject {
         didSet {
             if let kept = lastDictation?.historyEntryID, !history.contains(where: { $0.id == kept }) {
                 lastDictation = nil
+            }
+            if let kept = recoveredEntryID, !history.contains(where: { $0.id == kept }) {
+                recoveredText = nil
             }
         }
     }
@@ -1726,6 +1736,11 @@ public final class AppState: ObservableObject {
             if lastDictation?.historyEntryID == nil {
                 lastDictation?.historyEntryID = history.first?.id
             }
+            // A failed insertion may have filled Insert Last before its entry
+            // existed; tie the two now.
+            if recoveredEntryID == nil, let recoveredText {
+                recoveredEntryID = historyEntryID(holding: recoveredText)
+            }
         } catch {
             engineLog.error("history entry not written")
             takeNotKept = true
@@ -1841,6 +1856,13 @@ public final class AppState: ObservableObject {
     public func setHistoryEntryKept(_ isKept: Bool, for entry: HistoryEntry) {
         guard let historyStore else { return }
         history = (try? historyStore.setKept(isKept, for: entry)) ?? history
+    }
+
+    /// The newest History entry whose words are `text`, trimmed as History
+    /// trims them.
+    private func historyEntryID(holding text: String) -> HistoryEntry.ID? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return history.first(where: { $0.text == trimmed })?.id
     }
 
     public func deleteHistoryEntry(_ entry: HistoryEntry) {

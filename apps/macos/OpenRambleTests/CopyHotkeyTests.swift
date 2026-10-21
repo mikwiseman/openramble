@@ -242,6 +242,23 @@ final class CopyHotkeyTests: XCTestCase {
         XCTAssertFalse(offersCopyLast(state))
     }
 
+    /// Insert Last holds a failed take's words in memory. Deleting the take's
+    /// History entry deletes that copy too.
+    func testDeletingAFailedTakesHistoryEntryDeletesInsertLast() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        try await dictate(state, untilHistoryHas: 1)
+        XCTAssertEqual(state.recoveredText, "Ping test")
+        XCTAssertTrue(MenuSections.sections(for: state).joined().contains(.insertLastDictation))
+
+        state.deleteHistoryEntry(state.history[0])
+
+        XCTAssertNil(state.recoveredText, "the only copy left of deleted words")
+        XCTAssertFalse(MenuSections.sections(for: state).joined().contains(.insertLastDictation))
+    }
+
     /// Lowering Keep deletes what falls out of it, Copy Last's copy included.
     func testTheKeepLimitDeletesCopyLastWithItsEntry() async throws {
         try harness.installModelMarker()

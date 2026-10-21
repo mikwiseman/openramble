@@ -226,6 +226,28 @@ final class KeptHistoryEntryTests: XCTestCase {
         )
     }
 
+    /// A new dictation trims the list the same way: the starred entry stays,
+    /// with its audio, however many takes come after it.
+    func testANewDictationNeverEvictsAStarredOne() throws {
+        let store = store()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let audio = directory.appending(path: "keep.wav", directoryHint: .notDirectory)
+        try Data("fake wav".utf8).write(to: audio)
+        _ = try store.record(text: "keep me", audio: audio, limit: 2)
+        let starred = try XCTUnwrap(store.load().first)
+        _ = try store.setKept(true, for: starred)
+
+        for index in 0..<5 {
+            _ = try store.record(text: "dictation \(index)", audio: nil, limit: 2)
+        }
+
+        let entries = store.load()
+        let kept = try XCTUnwrap(entries.first { $0.id == starred.id }, "five later takes pushed out a starred one")
+        XCTAssertNotNil(kept.audioFileName)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: store.audioURL(for: kept)?.path ?? ""), "its audio was deleted")
+        XCTAssertEqual(entries.filter { !$0.isKept }.count, 2)
+    }
+
     /// Re-running recognition replaces the text and nothing else.
     ///
     /// The audio has to survive, or a second attempt would be impossible; the

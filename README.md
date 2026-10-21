@@ -146,7 +146,7 @@ Application data is stored under
 | Recordings: two-channel audio, optional screen video, transcript and metadata | Until you delete them. Not bounded by count or age. Audio is about 230 MB per hour; screen video size depends on display and activity. Each recording's size is under More ▸ Recording Details |
 | Local technical journal (`SupportLogs`) | Enabled by default; at most 7 days / 5 MB total. Removed when switched off. |
 | Settings and replacement dictionary | Stored in macOS defaults |
-| Text that could not be inserted | Kept in Dictation history with its audio, like every take. The copy behind Insert Last Dictation is memory only, until the next dictation or app exit |
+| Text that could not be inserted | Kept in Dictation history with its audio, like every take. The copy behind Insert Last Dictation is memory only: it lasts until a dictation inserts text, you delete its History entry, or the app quits |
 
 **Settings → About → Save Error Report…** saves a local ZIP you can send to the
 developer. It includes predefined technical events, timings, numeric error
@@ -190,8 +190,9 @@ Application Support directory automatically. The bundle identifier remains
   word could be real it stays: "um" stays in a take with German or
   Portuguese in it, and after a name or in any other take it goes only when
   punctuation sets it apart, "э" and "эм" stay in a list of letters written
-  with commas ("а, о, э, ы"), next to a letter's name such as "эс" and after
-  "буква", acronyms such as HMM and MR stay, "mm" stays a millimetre, names
+  with commas ("а, о, э, ы"), after a single letter and a comma, next to a
+  letter's name such as "эс", after "буква", and when set against another
+  letter ("пишется э, а не е"), acronyms such as HMM and MR stay, "mm" stays a millimetre, names
   from your dictionary stay, and doubles that mean something ("what it is
   is", "log in in", "very very", "да да") stay. The commas around a
   hesitation go with it, unless a careful writer would keep the one before
