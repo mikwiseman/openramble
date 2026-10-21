@@ -338,9 +338,11 @@ impl TextPipeline {
         // for a command said as its own final sentence: "…first. Send it." One
         // false trigger submits irreversibly, so "…and then we send it"
         // mid-thought stays words.
+        let mut refused_only_as_mid_sentence = false;
         if parsed.command == Some(TrailingCommand::PressReturn)
             && (!self.allow_press_return_command || !ends_sentence(&parsed.text))
         {
+            refused_only_as_mid_sentence = self.allow_press_return_command;
             parsed = ParsedCommand {
                 text: recognized.to_string(),
                 command: None,
@@ -362,7 +364,10 @@ impl TextPipeline {
         // parser above ("…first. Um, send it.") and is gone once the text is
         // clean, so Return is decided once more on the cleaned text, by the
         // same rules: allowed here, and "Send it." as its own final sentence.
-        if self.allow_press_return_command && parsed.command.is_none() {
+        // Only when "Send it." was the last thing said: words after it that
+        // cleanup removed ("Stop, scratch that.") were taking the send back,
+        // and a dictionary entry that writes "send it" was never the command.
+        if refused_only_as_mid_sentence && parsed.command.is_none() {
             let cleaned = parse_trailing_command(&stages.1);
             if cleaned.command == Some(TrailingCommand::PressReturn) && ends_sentence(&cleaned.text)
             {
@@ -509,6 +514,34 @@ mod tests {
         let elsewhere = plain().process("git status. Um, send it.");
         assert_eq!(elsewhere.command, None);
         assert_eq!(elsewhere.text, "Git status. Send it.");
+    }
+
+    /// Return is decided on the cleaned text only when "Send it." was the last
+    /// thing said. Words after it that cleanup takes away ("Stop, scratch
+    /// that.") mean the person was taking the send back, and a dictionary
+    /// entry that writes "send it" was never the command said aloud.
+    #[test]
+    fn send_it_is_return_only_when_it_was_the_last_thing_said() {
+        let terminal = TextPipeline {
+            allow_press_return_command: true,
+            ..Default::default()
+        };
+        for said in [
+            "Fix the failing test. Send it. Stop, scratch that.",
+            "git push --force. Send it. Hold on, scratch that.",
+            "git push --force. Send it. Not yet. Scratch that.",
+            "rm -rf build. Send it. Uh, hold on, scratch that.",
+        ] {
+            assert_eq!(terminal.process(said).command, None, "{said}");
+        }
+        let ship_it = TextPipeline {
+            replacements: vec![entry("ship it", "send it")],
+            allow_press_return_command: true,
+            ..Default::default()
+        };
+        for said in ["git status. Ship it.", "git status. Um, ship it."] {
+            assert_eq!(ship_it.process(said).command, None, "{said}");
+        }
     }
 
     /// A line break goes into the text, because pressing Return would send the

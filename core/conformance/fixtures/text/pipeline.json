@@ -7660,6 +7660,96 @@
     "text" : "And then we send it"
   },
   {
+    "afterDictionary" : "Fix the failing test. Send it. Stop, scratch that.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Fix the failing test. Send it. Stop, scratch that.",
+    "name" : "send it taken back with stop scratch that stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Fix the failing test. Send it."
+  },
+  {
+    "afterDictionary" : "git push --force. Send it. Hold on, scratch that.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "git push --force. Send it. Hold on, scratch that.",
+    "name" : "send it taken back with hold on scratch that stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 16,
+        "kind" : "flag",
+        "start" : 9,
+        "text" : "--force"
+      }
+    ],
+    "text" : "Git push --force. Send it."
+  },
+  {
+    "afterDictionary" : "git push --force. Send it. Not yet. Scratch that.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "git push --force. Send it. Not yet. Scratch that.",
+    "name" : "send it taken back with not yet scratch that stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 16,
+        "kind" : "flag",
+        "start" : 9,
+        "text" : "--force"
+      }
+    ],
+    "text" : "Git push --force. Send it."
+  },
+  {
+    "afterDictionary" : "git status. send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "ship it",
+        "written" : "send it"
+      }
+    ],
+    "input" : "git status. Ship it.",
+    "name" : "a dictionary entry written send it is not return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Git status. send it."
+  },
+  {
+    "afterDictionary" : "git status. Um, send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "ship it",
+        "written" : "send it"
+      }
+    ],
+    "input" : "git status. Um, ship it.",
+    "name" : "a dictionary entry written send it after a hesitation is not return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Git status. Send it."
+  },
+  {
     "afterDictionary" : "add the key to .env and restart.",
     "allowPressReturnCommand" : false,
     "dictionary" : [

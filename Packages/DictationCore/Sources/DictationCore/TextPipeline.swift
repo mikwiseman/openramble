@@ -229,8 +229,10 @@ public struct TextPipeline: Sendable, TextProcessing {
         // only for a command said as its own final sentence: "…first. Send it."
         // One false trigger submits irreversibly, so "…and then we send it"
         // mid-thought stays words.
+        var refusedOnlyAsMidSentence = false
         if parsed.command == .pressReturn,
            !allowPressReturnCommand || !Self.endsSentence(parsed.text) {
+            refusedOnlyAsMidSentence = allowPressReturnCommand
             parsed = TrailingCommandParser.Result(text: recognized, command: nil)
         }
 
@@ -246,7 +248,10 @@ public struct TextPipeline: Sendable, TextProcessing {
         // parser above ("…first. Um, send it.") and is gone once the text is
         // clean, so Return is decided once more on the cleaned text, by the
         // same rules: allowed here, and "Send it." as its own final sentence.
-        if allowPressReturnCommand, parsed.command == nil {
+        // Only when "Send it." was the last thing said: words after it that
+        // cleanup removed ("Stop, scratch that.") were taking the send back,
+        // and a dictionary entry that writes "send it" was never the command.
+        if refusedOnlyAsMidSentence, parsed.command == nil {
             let cleaned = TrailingCommandParser.parse(stages.polished)
             if cleaned.command == .pressReturn, Self.endsSentence(cleaned.text) {
                 parsed = cleaned

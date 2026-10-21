@@ -4496,6 +4496,55 @@
     "input": "and then we, uh, send it"
   },
   {
+    "name": "send it taken back with stop scratch that stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Fix the failing test. Send it. Stop, scratch that."
+  },
+  {
+    "name": "send it taken back with hold on scratch that stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "git push --force. Send it. Hold on, scratch that."
+  },
+  {
+    "name": "send it taken back with not yet scratch that stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "git push --force. Send it. Not yet. Scratch that."
+  },
+  {
+    "name": "a dictionary entry written send it is not return",
+    "dictionary": [
+      {
+        "spoken": "ship it",
+        "written": "send it",
+        "inflects": false,
+        "allowsPhoneticMatching": false
+      }
+    ],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "git status. Ship it."
+  },
+  {
+    "name": "a dictionary entry written send it after a hesitation is not return",
+    "dictionary": [
+      {
+        "spoken": "ship it",
+        "written": "send it",
+        "inflects": false,
+        "allowsPhoneticMatching": false
+      }
+    ],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "git status. Um, ship it."
+  },
+  {
     "name": "dotfile env",
     "dictionary": [],
     "allowPressReturnCommand": false,

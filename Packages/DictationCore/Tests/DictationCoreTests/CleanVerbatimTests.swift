@@ -910,6 +910,29 @@ final class CleanVerbatimTests: XCTestCase {
         XCTAssertEqual(elsewhere.text, "Git status. Send it.")
     }
 
+    /// Return is decided on the cleaned text only when "Send it." was the last
+    /// thing said. Words after it that cleanup takes away ("Stop, scratch
+    /// that.") mean the person was taking the send back, and a dictionary
+    /// entry that writes "send it" was never the command said aloud.
+    func testSendItIsReturnOnlyWhenItWasTheLastThingSaid() {
+        let terminal = TextPipeline(allowPressReturnCommand: true)
+        for said in [
+            "Fix the failing test. Send it. Stop, scratch that.",
+            "git push --force. Send it. Hold on, scratch that.",
+            "git push --force. Send it. Not yet. Scratch that.",
+            "rm -rf build. Send it. Uh, hold on, scratch that.",
+        ] {
+            XCTAssertNil(terminal.process(said).command, said)
+        }
+        let shipIt = TextPipeline(
+            replacements: [DictionaryReplacement(spoken: "ship it", written: "send it", inflects: false)],
+            allowPressReturnCommand: true
+        )
+        for said in ["git status. Ship it.", "git status. Um, ship it."] {
+            XCTAssertNil(shipIt.process(said).command, said)
+        }
+    }
+
     /// The built-in dictionary writes "commit в" and "Docker и в Kubernetes";
     /// only a word written with a capital is a name to protect, so Russian
     /// stutters still collapse in the shipping app.
