@@ -1,3 +1,4 @@
+import DictationCore
 import Foundation
 
 /// One finished dictation, kept so it can be heard and reused.
@@ -15,19 +16,29 @@ public struct HistoryEntry: Identifiable, Equatable, Codable, Sendable {
     /// earlier versions still load. A store that refused its own older files
     /// would lose the very dictations this flag exists to protect.
     public var isKept: Bool
+    /// The kind of app the take went to, so recognizing it again shapes the
+    /// text the same way: paragraphs where it went to prose, "Send it." left
+    /// off where it went to a terminal.
+    ///
+    /// Absent on entries written before it was kept, and on a kind a later
+    /// version added; those are recognized again verbatim, as they always
+    /// were, rather than failing the whole history.
+    public let appCategory: ApplicationCategory?
 
     public init(
         id: UUID = UUID(),
         date: Date,
         text: String,
         audioFileName: String?,
-        isKept: Bool = false
+        isKept: Bool = false,
+        appCategory: ApplicationCategory? = nil
     ) {
         self.id = id
         self.date = date
         self.text = text
         self.audioFileName = audioFileName
         self.isKept = isKept
+        self.appCategory = appCategory
     }
 
     public init(from decoder: any Decoder) throws {
@@ -37,6 +48,7 @@ public struct HistoryEntry: Identifiable, Equatable, Codable, Sendable {
         text = try container.decode(String.self, forKey: .text)
         audioFileName = try container.decodeIfPresent(String.self, forKey: .audioFileName)
         isKept = try container.decodeIfPresent(Bool.self, forKey: .isKept) ?? false
+        appCategory = (try? container.decodeIfPresent(ApplicationCategory.self, forKey: .appCategory)) ?? nil
     }
 }
 
@@ -114,7 +126,8 @@ public struct DictationHistoryStore: Sendable {
         text: String,
         audio: URL?,
         limit: Int,
-        date: Date = Date()
+        date: Date = Date(),
+        appCategory: ApplicationCategory? = nil
     ) throws -> [HistoryEntry] {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return load() }
@@ -133,7 +146,7 @@ public struct DictationHistoryStore: Sendable {
 
         var entries = load()
         entries.insert(
-            HistoryEntry(date: date, text: trimmedText, audioFileName: storedName),
+            HistoryEntry(date: date, text: trimmedText, audioFileName: storedName, appCategory: appCategory),
             at: 0
         )
         let kept = Array(entries.prefix(max(1, limit)))
@@ -168,7 +181,10 @@ public struct DictationHistoryStore: Sendable {
         return kept
     }
 
-    /// Put new text on an entry, leaving its audio and star alone.
+    /// Put new text on an entry, leaving its audio, star and app kind alone.
+    ///
+    /// Trimmed exactly as `record` trims, so recognizing a take again stores
+    /// what the take itself would have stored.
     @discardableResult
     public func replaceText(_ text: String, for entry: HistoryEntry) throws -> [HistoryEntry] {
         var entries = load()
@@ -177,9 +193,10 @@ public struct DictationHistoryStore: Sendable {
         entries[index] = HistoryEntry(
             id: existing.id,
             date: existing.date,
-            text: text,
+            text: text.trimmingCharacters(in: .whitespacesAndNewlines),
             audioFileName: existing.audioFileName,
-            isKept: existing.isKept
+            isKept: existing.isKept,
+            appCategory: existing.appCategory
         )
         try write(entries)
         return entries

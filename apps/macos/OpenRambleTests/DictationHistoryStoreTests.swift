@@ -1,3 +1,4 @@
+import DictationCore
 import XCTest
 
 /// The history is the first thing in this product that keeps dictated text
@@ -261,5 +262,39 @@ final class KeptHistoryEntryTests: XCTestCase {
         XCTAssertEqual(loaded.count, 1)
         XCTAssertEqual(loaded.first?.text, "from an older build")
         XCTAssertEqual(loaded.first?.isKept, false)
+    }
+
+    /// The kind of app a take went to stays with it, so recognizing it again
+    /// shapes the text the same way, and the new text is stored the way a
+    /// take's text is.
+    func testTheAppKindStaysWithTheEntryAndReRecognitionIsTrimmedLikeATake() throws {
+        let store = store()
+        _ = try store.record(text: "Dear John.", audio: nil, limit: 10, appCategory: .mail)
+        let entry = try XCTUnwrap(DictationHistoryStore(directory: directory).load().first)
+        XCTAssertEqual(entry.appCategory, .mail)
+
+        let updated = try store.replaceText("Dear John,\n\nthanks. ", for: entry)
+        let changed = try XCTUnwrap(updated.first { $0.id == entry.id })
+        XCTAssertEqual(changed.appCategory, .mail)
+        XCTAssertEqual(changed.text, "Dear John,\n\nthanks.")
+    }
+
+    /// A history written before the app kind was kept, or by a later version
+    /// that knows a kind this one does not, still loads; such an entry is
+    /// recognized again verbatim, as it always was.
+    func testAHistoryWithoutAKnownAppKindStillLoads() throws {
+        let older = """
+        [{"id":"\(UUID().uuidString)","date":0,"text":"from an older build","audioFileName":null},
+         {"id":"\(UUID().uuidString)","date":0,"text":"from a newer build","audioFileName":null,"appCategory":"hologram"}]
+        """
+        try older.write(
+            to: directory.appending(path: "history.json"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        let loaded = store().load()
+        XCTAssertEqual(loaded.map(\.text), ["from an older build", "from a newer build"])
+        XCTAssertEqual(loaded.map(\.appCategory), [nil, nil])
     }
 }

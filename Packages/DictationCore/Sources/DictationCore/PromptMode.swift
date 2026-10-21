@@ -16,7 +16,10 @@ public enum PromptMode: String, Sendable, Equatable, CaseIterable {
 /// Nine categories - seed transferred from wai-computer. category, not
 /// flat list bundle id, because that's how the person thinks:
 /// “literally in terminals” - one solution, not twenty.
-public enum ApplicationCategory: String, Sendable, Equatable, CaseIterable {
+///
+/// Codable because History keeps it with each take, so recognizing the take
+/// again shapes its text for the same kind of app.
+public enum ApplicationCategory: String, Sendable, Equatable, CaseIterable, Codable {
     case terminal
     case codeEditor
     case notes

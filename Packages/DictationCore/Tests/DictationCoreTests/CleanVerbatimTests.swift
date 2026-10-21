@@ -941,7 +941,7 @@ final class TakenBackDictationTests: XCTestCase {
             pipeline: { _ in TextPipeline() }
         )
         var archived: [String] = []
-        controller.onTakeFinished = { text, _ in archived.append(text) }
+        controller.onTakeFinished = { text, _, _ in archived.append(text) }
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         for _ in 0..<12 { await Task.yield(); try? await Task.sleep(for: .milliseconds(5)) }

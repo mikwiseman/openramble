@@ -1284,7 +1284,7 @@ public final class AppState: ObservableObject {
                 sounds: sounds,
                 recordingRecovery: recordingRecovery,
                 pipeline: { [weak self] target in
-                    self?.makePipeline(for: target) ?? TextPipeline()
+                    self?.makePipeline(for: PromptModePolicy.category(for: target)) ?? TextPipeline()
                 },
                 prepareForTranscription: makePrepareForTranscription(
                     engineDirectory: engineDirectory
@@ -1414,8 +1414,8 @@ public final class AppState: ObservableObject {
                     characterCount: self?.lastDictation?.insertedText.count ?? 0
                 )
             }
-            controller.onTakeFinished = { [weak self] text, audio in
-                self?.archive(text: text, audio: audio)
+            controller.onTakeFinished = { [weak self] text, audio, target in
+                self?.archive(text: text, audio: audio, appCategory: PromptModePolicy.category(for: target))
             }
             controller.onDictationCompleted = { [weak self] provenance in
                 self?.lastDictation = LastDictation(
@@ -1692,10 +1692,12 @@ public final class AppState: ObservableObject {
     /// Failures here are reported rather than swallowed. A history that
     /// silently stops recording looks exactly like a history of someone who
     /// stopped dictating.
-    private func archive(text: String, audio: URL) {
+    private func archive(text: String, audio: URL, appCategory: ApplicationCategory) {
         guard let historyStore else { return }
         do {
-            history = try historyStore.record(text: text, audio: audio, limit: historyLimit)
+            history = try historyStore.record(
+                text: text, audio: audio, limit: historyLimit, appCategory: appCategory
+            )
         } catch {
             engineLog.error("history entry not written")
             notify(
@@ -1738,6 +1740,11 @@ public final class AppState: ObservableObject {
     /// where it is, so this can be done repeatedly, and a run that fails leaves
     /// the previous text intact rather than blanking a record of something the
     /// person actually said.
+    ///
+    /// The text is shaped for the kind of app the take went to, exactly as the
+    /// take was: paragraphs (spoken and at pauses) where it went to prose,
+    /// "Send it." left off where it went to a terminal. Only the text is kept;
+    /// nothing is pressed or inserted.
     public func retranscribeHistoryEntry(_ entry: HistoryEntry) {
         guard !isRetranscribing else { return }
         guard let audio = historyAudioURL(for: entry) else {
@@ -1753,7 +1760,9 @@ public final class AppState: ObservableObject {
             defer { Task { @MainActor in self?.isRetranscribing = false } }
             do {
                 let result = try await transcriber.transcribe(fileURL: audio)
-                let text = self?.makePipeline().run(result.text).output.text ?? result.text
+                let text = self?.makePipeline(for: entry.appCategory ?? .unknown)
+                    .run(ParagraphBreaks.mark(result.text, words: result.words))
+                    .output.text ?? result.text
                 await MainActor.run {
                     guard let self, let store = self.historyStore else { return }
                     // An empty run keeps the words already there rather than
@@ -4428,12 +4437,13 @@ public final class AppState: ObservableObject {
     /// Generic assembly makes "both paths are the same" a property of the code, not something that
     /// must be remembered when ruling one of two places.
     ///
-    /// `target` is where the words are going. Prose apps get paragraph breaks;
-    /// terminals get verbatim text and may honour a spoken "Send it."; an
-    /// unknown app is treated as verbatim. Without a target (meetings, a
-    /// re-recognized take) the text is verbatim and nothing is ever pressed.
+    /// `category` is the kind of app the words are going to. Prose apps get
+    /// paragraph breaks; terminals get verbatim text and may honour a spoken
+    /// "Send it."; an unknown app is treated as verbatim. Meetings have no app:
+    /// verbatim, and nothing is ever pressed. A take recognized again from
+    /// History uses the kind its take went to.
     private func makePipeline(
-        for target: TargetApplication? = nil,
+        for category: ApplicationCategory = .unknown,
         spokenCorrections: Bool = true
     ) -> any TextProcessing {
         // Safe built-in technical vocabulary is part of recognition, not a
@@ -4448,10 +4458,9 @@ public final class AppState: ObservableObject {
         TrailingSpacePipeline(
             wrapped: SharedCorePipeline(
                 replacements: StarterDictionary.missing(from: replacements) + replacements,
-                allowPressReturnCommand: target != nil
-                    && PromptModePolicy.category(for: target) == .terminal,
+                allowPressReturnCommand: category == .terminal,
                 spokenCorrections: spokenCorrections,
-                mode: PromptModePolicy().mode(for: target)
+                mode: category.defaultMode
             ),
             appendsSpace: appendsTrailingSpace
         )

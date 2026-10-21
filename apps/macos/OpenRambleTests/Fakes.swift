@@ -602,6 +602,7 @@ final class AppHarness {
                         if let error = transcription.error { throw error }
                         return ASRResult(
                             text: transcription.text,
+                            words: transcription.words,
                             audioDuration: 2,
                             processingDuration: 0.05
                         )
@@ -821,6 +822,8 @@ final class FakeHotkeyMonitor: HotkeyMonitoring {
 /// Pre-known recognition response.
 final class FakeTranscription: @unchecked Sendable {
     var text = "Ping test"
+    /// Word timings, for the takes where a pause matters.
+    var words: [ASRResult.Word] = []
     var error: (any Error)?
     var delay: Duration?
 }
@@ -910,8 +913,15 @@ actor ReadinessControlledRecognizer: DictationRecognizing {
 
     func prepare(modelDirectory: URL) async throws { prepares += 1 }
 
+    /// What a file decode answers: "Recognize again" reads a take's kept audio.
+    private var fileResult = ASRResult(text: "", audioDuration: 1, processingDuration: 0)
+    private(set) var fileDecodes = 0
+
+    func setFileResult(_ result: ASRResult) { fileResult = result }
+
     func transcribe(fileURL: URL) async throws -> ASRResult {
-        ASRResult(text: "", audioDuration: 1, processingDuration: 0)
+        fileDecodes += 1
+        return fileResult
     }
 
     /// What a sample-based decode answers, and whether it fails instead.
