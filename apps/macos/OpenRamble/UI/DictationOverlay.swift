@@ -398,6 +398,14 @@ final class OverlayModel: ObservableObject {
 
     /// Show dictation status.
     func show(_ state: DictationState, elapsed: TimeInterval) {
+        // Opening a closed microphone starts a take, even while the last
+        // take's notice is still up and its hiding never ran: the new take
+        // gets its tone, and the same notice ending it is news again.
+        if state == .preparing || state == .listening, !isMicrophoneOpen {
+            lastAnnouncement = nil
+            hasCuedThisTake = false
+            hasCuedHandsFree = false
+        }
         cancelAutoHide()
         dismissAfterNotice = false
         // A wait belongs to exactly one take. Leaving the flag set would let a

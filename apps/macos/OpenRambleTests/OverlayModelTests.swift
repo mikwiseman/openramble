@@ -374,6 +374,42 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(announcer.cues, 1)
     }
 
+    /// The natural retry after "Nothing left to insert" starts while that
+    /// notice is still on screen. It is a new take all the same: the
+    /// microphone opens with a tone, and the same notice ending it is news.
+    func testATakeStartedUnderTheLastNoticeIsANewTake() {
+        let model = OverlayModel(announcer: announcer, noticeDuration: .seconds(4), titleDelay: .seconds(4))
+        let takenBack = DictationNotice(
+            kind: .info,
+            message: "Nothing left to insert after cleanup.",
+            wordsDidNotLand: false
+        )
+        for _ in 0..<2 {
+            model.show(.preparing, elapsed: 0)
+            model.show(.listening, elapsed: 0)
+            model.show(.transcribing, elapsed: 2)
+            model.showNotice(takenBack)
+            model.hide()
+        }
+
+        XCTAssertEqual(announcer.cues, 2, "the second take opened the microphone too")
+        XCTAssertEqual(announcer.messages, [takenBack.message, takenBack.message])
+    }
+
+    /// Preparing can be merged into listening on the way to the panel. A take
+    /// that arrives as listening after a closed microphone still opens it.
+    func testATakeArrivingAsListeningUnderTheLastNoticeStillCues() {
+        let model = OverlayModel(announcer: announcer, noticeDuration: .seconds(4))
+        model.show(.listening, elapsed: 0)
+        model.show(.transcribing, elapsed: 1)
+        model.showNotice(DictationNotice(kind: .failure, message: "Recognition failed."))
+        model.hide()
+
+        model.show(.listening, elapsed: 0)
+
+        XCTAssertEqual(announcer.cues, 2)
+    }
+
     // MARK: - Waveform
 
     func testScenario024() {
