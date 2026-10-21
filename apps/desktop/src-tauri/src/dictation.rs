@@ -317,16 +317,14 @@ impl Dictation {
             return Outcome::DroppedSilently;
         }
         if effects.contains(&Effect::ReportTakenBack) {
-            // What was heard, not what cleanup left: that is what a person
-            // needs to undo a take-back they did not mean.
-            self.remember(&text, &samples);
-            return Outcome::TakenBack;
+            return self.keep_taken_back(&text, &samples);
         }
 
         // Recorded before insertion is attempted: if putting the text into the
         // other application fails, the words are the one thing that must not be
-        // lost, and history is where a person goes to find them.
-        self.remember(&output.text, &samples);
+        // lost, and history is where a person goes to find them. A failed write
+        // is not reported here: the words are about to appear in the app.
+        let _ = self.remember(&output.text, &samples);
 
         if let Err(error) = inject::insert(&output.text) {
             self.advance(Event::InsertionFailed);
@@ -338,6 +336,23 @@ impl Dictation {
             Outcome::Truncated
         } else {
             Outcome::Inserted
+        }
+    }
+
+    /// Keep a take whose every word cleanup took back.
+    ///
+    /// Nothing was inserted, so History is the only copy of what was heard. A
+    /// write that fails is reported: telling the person the take was kept
+    /// when it was not would discard it silently.
+    fn keep_taken_back(&self, heard: &str, samples: &[f32]) -> Outcome {
+        // What was heard, not what cleanup left: that is what a person
+        // needs to undo a take-back they did not mean.
+        match self.remember(heard, samples) {
+            Ok(()) => Outcome::TakenBack,
+            Err(_) => Outcome::Failed(
+                "Nothing left to insert after cleanup, and the take couldn't be saved to History."
+                    .into(),
+            ),
         }
     }
 
@@ -357,11 +372,12 @@ impl Dictation {
 
     /// Keep the take, with the audio that produced it.
     ///
-    /// Failures here are swallowed on purpose. History is a convenience; losing
-    /// it must never cost someone the dictation they just made, and an error
-    /// dialog about a bookkeeping file at the moment their words are about to
-    /// appear would be worse than the missing row.
-    fn remember(&self, text: &str, samples: &[f32]) {
+    /// The caller decides what a failure means. Where the words are about to
+    /// appear in the app, History is a convenience: losing it must never cost
+    /// someone the dictation they just made, and an error about a bookkeeping
+    /// file at that moment would be worse than the missing row. Where nothing
+    /// is inserted, History is the only copy, and a failure has to be said.
+    fn remember(&self, text: &str, samples: &[f32]) -> std::io::Result<()> {
         let limit = ramble_history::DEFAULT_LIMIT;
         let id = format!(
             "{:x}",
@@ -375,7 +391,7 @@ impl Dictation {
         let recorded = ramble_audio::write_wav(&audio, samples, ramble_audio::ENGINE_SAMPLE_RATE);
         let source = recorded.is_ok().then_some(audio.as_path());
 
-        let _ = self.history.record(
+        let kept = self.history.record(
             text,
             source,
             limit,
@@ -383,6 +399,7 @@ impl Dictation {
             id,
         );
         let _ = std::fs::remove_file(&audio);
+        kept.map(|_| ())
     }
 
     fn transcribe(&self, samples: &[f32]) -> Result<String, String> {
@@ -450,6 +467,57 @@ mod tests {
         };
         dictation.shutdown();
         dictation.shutdown();
+    }
+
+    fn dictation_keeping_history_in(history: PathBuf, root: &Path) -> Dictation {
+        Dictation {
+            machine: Mutex::new(SessionMachine::new()),
+            capture: Mutex::new(None),
+            engine: Mutex::new(None),
+            pipeline: Mutex::new(TextPipeline::default()),
+            store: ModelStore::new(
+                Manifest::parse(SHIPPING_MANIFEST).expect("the shipping manifest parses"),
+                root.join("Models"),
+            ),
+            history: HistoryStore::new(history),
+            dictionary_directory: root.to_path_buf(),
+        }
+    }
+
+    /// A take whose every word cleanup took back inserts nothing, so History
+    /// is the only copy of what was heard. A write that fails is said, never
+    /// swallowed: the person must not be told the take is kept when it is not.
+    #[test]
+    fn a_taken_back_take_history_cannot_keep_is_reported_not_dropped() {
+        let root = std::env::temp_dir().join(format!(
+            "openramble-taken-back-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        // A file where the History folder belongs: nothing can be written there.
+        let blocked = root.join("Blocked");
+        std::fs::write(&blocked, b"not a folder").unwrap();
+        let samples = [0.0_f32; 1_600];
+
+        let failing = dictation_keeping_history_in(blocked, &root);
+        assert!(
+            matches!(
+                failing.keep_taken_back("Ship it Friday. Scratch that.", &samples),
+                Outcome::Failed(_)
+            ),
+            "a take-back History could not keep must not read as kept"
+        );
+
+        let kept = dictation_keeping_history_in(root.join("History"), &root);
+        assert_eq!(
+            kept.keep_taken_back("Ship it Friday. Scratch that.", &samples),
+            Outcome::TakenBack
+        );
+        assert_eq!(kept.history().load().len(), 1);
+
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     /// A held key with a silent microphone must read as no audio, not as a
