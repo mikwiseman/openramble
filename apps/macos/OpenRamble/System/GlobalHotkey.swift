@@ -383,8 +383,15 @@ public final class SystemHotkeyEventSource: HotkeyEventSource {
 }
 
 extension HotkeyEvent {
+    /// Timed by when the key moved, not by when the main thread got to it: a
+    /// press that waited behind other work would otherwise make a key late in
+    /// the hold look early, and cancel the take it interrupts.
     init(_ event: NSEvent) {
-        self.init(keyCode: event.keyCode, rawFlags: event.modifierFlags.rawValue, at: Date())
+        self.init(
+            keyCode: event.keyCode,
+            rawFlags: event.modifierFlags.rawValue,
+            at: Date(timeIntervalSinceNow: event.timestamp - ProcessInfo.processInfo.systemUptime)
+        )
     }
 }
 
