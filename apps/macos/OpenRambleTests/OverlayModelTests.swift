@@ -1,4 +1,6 @@
+import AppKit
 import DictationCore
+import SwiftUI
 import XCTest
 
 /// The behavior of the panel: when it is on the screen, when it disappears and what it says out loud.
@@ -300,6 +302,19 @@ final class OverlayModelTests: XCTestCase {
 
         XCTAssertEqual(model.content.title, "Turning on the microphone…")
         XCTAssertEqual(announcer.messages, [], "the microphone is opening: nothing is said")
+    }
+
+    /// A title takes the waveform's place at the waveform's height, so the
+    /// drawn panel keeps one size and nothing beside it moves.
+    func testATitleKeepsThePanelsHeight() async throws {
+        model.show(.transcribing, elapsed: 2)
+        let before = NSHostingView(rootView: OverlayView(model: model)).fittingSize
+
+        try await waitUntil { self.model.hasLingered }
+        let after = NSHostingView(rootView: OverlayView(model: model)).fittingSize
+
+        XCTAssertEqual(model.content.title, "Transcribing…")
+        XCTAssertEqual(after, before)
     }
 
     /// Waiting for the model is news the moment it is true.

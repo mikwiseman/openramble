@@ -602,8 +602,10 @@ final class OverlayModel: ObservableObject {
     }
 }
 
-private struct OverlayView: View {
+struct OverlayView: View {
     @ObservedObject var model: OverlayModel
+
+    private static let waveformHeight: CGFloat = 28
 
     var body: some View {
         if let content = model.visibleContent {
@@ -646,15 +648,17 @@ private struct OverlayView: View {
                 .frame(width: 12)
                 .accessibilityHidden(true)
                 if let title = content.title {
-                    // Takes the place of the waveform and the clock, so the
-                    // panel keeps its size and nothing beside it moves.
+                    // Takes the place of the waveform and the clock at the
+                    // waveform's height, so the panel keeps its size and
+                    // nothing beside it moves.
                     Text(title)
                         .font(.callout.weight(.medium))
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
+                        .frame(height: Self.waveformHeight)
                 } else {
                     RecordingWaveform(samples: model.waveformSamples, color: color)
-                        .frame(width: 136, height: 28)
+                        .frame(width: 136, height: Self.waveformHeight)
                     Text(elapsedText)
                         .font(.caption.weight(.medium).monospacedDigit())
                         .foregroundStyle(.secondary)
