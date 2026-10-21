@@ -109,11 +109,12 @@ sees the failure.
 one JSON object per line. Nothing is ever uploaded; nothing is deleted
 automatically.
 
-Each record carries durations (`captureFreeze`, `enginePreparation`,
-`recognition`, `engineProcessing`, `stopToText`, `stopToPaste`), the take's
-audio duration, whether the engine was ready when the person stopped speaking,
-the memory-pressure tier, and a `machineAtStop` / `machineAtText` pair with the
-delta between them.
+Each record carries durations (`microphoneStartup`, `captureFreeze`,
+`enginePreparation`, `recognition`, `engineProcessing`, `engineDispatch`,
+`poolReturn`, `mainActorReturn`, `stopToText`, `stopToPaste`), the take's audio
+duration and character count, whether the engine was ready when the person
+stopped speaking, and a `machineAtStop` / `machineAtText` pair with the delta
+between them.
 
 `recognition` minus `engineProcessing` is everything the recognition round trip
 cost that was not recognition: transport, scheduling, and page faults.
