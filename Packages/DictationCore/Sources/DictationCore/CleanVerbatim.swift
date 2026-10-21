@@ -29,13 +29,14 @@ import Foundation
 ///    "mmm" are words too (a German particle, the Portuguese "one", a Russian
 ///    letter, a date format), so each goes only where it cannot be the word.
 ///    "um" never goes from a take with German or Portuguese in it. In a take
-///    that reads as English it goes wherever it stands, except right after a
-///    name; there, and in any other take, it goes only when punctuation sets
-///    it apart on both sides. "э" and "эм", bare or before a comma, go
-///    wherever they stand unless a letter is meant: next to another letter or
-///    a letter's name, or after "буква". "mmm" goes only when punctuation sets
-///    it apart on both sides, and never in a date format.
-///    An all-caps token is an acronym; "uh huh" and "uh oh" are words. The
+///    that reads as English it goes wherever it stands, except in "um hmm"
+///    and right after a name; after a name, and in any other take, it goes
+///    only when punctuation sets it apart on both sides. "э" and "эм", bare
+///    or before a comma, go wherever they stand unless a letter is meant:
+///    next to another letter or a letter's name, or after "буква". "mmm" goes
+///    only when punctuation sets it apart on both sides, and never in a date
+///    format. An all-caps token is an acronym; "uh huh", "uh oh", "mm hmm"
+///    and "um hmm" are words. The
 ///    comma after a hesitation goes with it; the one before stays, because the
 ///    recognizer wrote it, unless it can only be the pause: after a word that
 ///    cannot end a phrase ("should, um,"), in "Thanks, um, for", or after the
@@ -127,7 +128,8 @@ enum CleanVerbatim {
 
     /// Hesitations that are also words: "um" (a German particle, the
     /// Portuguese "one", the Slavic "mind"), "э" (a Russian letter), "mmm"
-    /// (a date format). Removed only when punctuation sets them apart.
+    /// (a date format). Each goes only where it cannot be the word, as the
+    /// type's doc comment spells out.
     static let guardedFillers: Set<String> = ["um", "er", "э", "эм", "mmm", "ммм"]
 
     /// Hesitations that are words in German or Portuguese ("um", the German

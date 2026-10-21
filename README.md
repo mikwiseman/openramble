@@ -185,16 +185,17 @@ Application Support directory automatically. The bundle identifier remains
 - Hesitations and stutters disappear on their own: "uh", "ээ", "ähm", a
   "the the" said while the next word loads. The cleanup only ever deletes. It
   never rewords, reorders or adds a word. In an English take "um" goes
-  wherever it stands, except right after a name. When a word could be real it
-  stays: "um" stays in a take with German or Portuguese in it, and after a
-  name or in any other take it goes only when punctuation sets it apart, "э"
-  and "эм" stay next to a letter or after "буква", acronyms such as HMM and
-  MR stay, "mm" stays a millimetre, names from your dictionary stay, and
-  doubles that mean something ("what it is is", "log in in", "very very",
-  "да да") stay. The commas around a hesitation go with it, unless a careful
-  writer would keep the one before it: "We should, um, ship it" becomes "We
-  should ship it", while "Invite Anna, um, Maria, and Bob" keeps its commas.
-  A restart keeps one copy: "It's a, uh, a leak" becomes "It's a leak".
+  wherever it stands, except in "um hmm" and right after a name. When a word
+  could be real it stays: "um" stays in a take with German or Portuguese in
+  it, and after a name or in any other take it goes only when punctuation
+  sets it apart, "э" and "эм" stay next to a letter or after "буква",
+  acronyms such as HMM and MR stay, "mm" stays a millimetre, names from your
+  dictionary stay, and doubles that mean something ("what it is is", "log in
+  in", "very very", "да да") stay. The commas around a hesitation go with
+  it, unless a careful writer would keep the one before it: "We should, um,
+  ship it" becomes "We should ship it", while "Invite Anna, um, Maria, and
+  Bob" keeps its commas. A restart keeps one copy: "It's a, uh, a leak"
+  becomes "It's a leak".
 - Say "Scratch that." as its own sentence to remove the sentence before it,
   or end a sentence with ", scratch that" (or put it between commas) to remove
   what came before it in that sentence. It works within one take. When it is

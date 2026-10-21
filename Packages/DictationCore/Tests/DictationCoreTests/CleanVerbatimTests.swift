@@ -67,9 +67,13 @@ final class CleanVerbatimTests: XCTestCase {
         XCTAssertEqual(CleanVerbatim.clean("I think , uh ."), "I think.")
     }
 
-    /// Two-word interjections are words: "uh huh" means yes.
+    /// Two-word interjections are words: "uh huh" means yes. "um hmm" stays
+    /// even in a take that reads as English, where a lone "um" goes.
     func testKeepsTwoWordInterjections() {
-        for text in ["Uh huh, ship it.", "Uh huh.", "Mm hmm, sounds good.", "Uh oh, the deploy failed.", "Um hmm.", "Um hmm, sounds good."] {
+        for text in [
+            "Uh huh, ship it.", "Uh huh.", "Mm hmm, sounds good.", "Uh oh, the deploy failed.", "Um hmm.",
+            "Um hmm, sounds good.", "Um hmm, that's the plan you know.",
+        ] {
             XCTAssertEqual(CleanVerbatim.clean(text), text, text)
         }
     }
