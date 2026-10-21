@@ -149,6 +149,16 @@ impl SessionMachine {
         match decide_stop(self.state, self.is_hands_free) {
             DeferredStopDecision::StopNow => vec![Effect::StopCapture],
             DeferredStopDecision::DeferUntilListening => {
+                // Nothing was recorded and nothing can be: the take would end
+                // the moment the microphone opens. Which empty take it is, the
+                // hold decides, by the same rule as any other. After a real
+                // hold the person spoke into a microphone that was not there
+                // yet, and is told now rather than never.
+                if DurationPolicy::outcome_for_short_recording(held.as_secs_f64())
+                    == ShortRecordingOutcome::ReportSilentInput
+                {
+                    return self.finish(vec![Effect::DiscardCapture, Effect::ReportFailure]);
+                }
                 self.deferred_stop = true;
                 Vec::new()
             }
@@ -296,6 +306,41 @@ mod tests {
         // The moment recording actually starts, the release takes effect.
         assert_eq!(
             machine.handle(Event::CaptureStarted, true),
+            vec![Effect::StopCapture]
+        );
+    }
+
+    /// Held long enough to have spoken, and released before the microphone
+    /// opened. Nothing was recorded and nothing can be, so waiting for the
+    /// microphone only to finish an empty take is pointless: the take ends at
+    /// the release, and the person is told. The same hold that makes any empty
+    /// take a broken microphone decides it.
+    #[test]
+    fn a_long_hold_that_beats_the_microphone_ends_the_take_and_says_so() {
+        let mut machine = SessionMachine::new();
+        machine.handle(Event::Pressed, true);
+        assert_eq!(
+            machine.handle(Event::Released { held: seconds(2.0) }, true),
+            vec![Effect::DiscardCapture, Effect::ReportFailure]
+        );
+        assert_eq!(machine.state(), DictationState::Idle);
+        // The microphone that opens afterwards belongs to no take.
+        assert_eq!(machine.handle(Event::CaptureStarted, true), vec![]);
+        assert_eq!(
+            machine.handle(Event::Pressed, true),
+            vec![Effect::StartCapture]
+        );
+
+        // A shorter press is a change of mind and still waits for it. The
+        // hotkey delivers a tap's release at the end of its 0.35 s window.
+        let mut tap = SessionMachine::new();
+        tap.handle(Event::Pressed, true);
+        assert_eq!(
+            tap.handle(Event::Released { held: seconds(0.4) }, true),
+            vec![]
+        );
+        assert_eq!(
+            tap.handle(Event::CaptureStarted, true),
             vec![Effect::StopCapture]
         );
     }

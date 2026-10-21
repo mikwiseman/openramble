@@ -348,7 +348,8 @@ public final class DictationController {
     /// Capture stop owns only the audio-engine handoff and PCM freeze. Disk
     /// drain and fsync are separate milestones and do not consume this budget.
     private let captureFreezeDeadline: Duration
-    /// How long a tap released before the microphone opened may wait for it.
+    /// How long a press shorter than `minimumHoldForSilentInput`, released
+    /// before the microphone opened, may wait for it.
     private let preparingStopDeadline: Duration
     /// How long the microphone may take to open after the key-down before the
     /// take ends with a notice, whether or not the key is still held.
@@ -399,8 +400,8 @@ public final class DictationController {
     private var isHandsFree = false
     private var finalizationTask: Task<Void, Never>?
     /// One watchdog per take for a microphone that does not open: armed at
-    /// the key-down, pulled in by a tap released before the microphone opened,
-    /// disarmed once it is listening.
+    /// the key-down, pulled in by a short press released before the
+    /// microphone opened, disarmed once it is listening.
     private var microphoneStartWatchdog: Task<Void, Never>?
     private var microphoneStartWatchdogDeadline: ContinuousClock.Instant?
     /// The key-down, on the same clock as the deadlines.
@@ -764,15 +765,23 @@ public final class DictationController {
     ///
     /// The take can no longer record anything: it ends at the moment the
     /// microphone finally opens, so its recording would be empty whatever
-    /// happens next. After a real hold the person spoke into a microphone that
-    /// was not there yet, and waiting for it only to drop an empty take
-    /// without a word is how a sentence vanished. They hear it now. A tap
-    /// shorter than any take is a change of mind; it stays quiet and waits at
-    /// most `preparingStopDeadline` for the microphone.
+    /// happens next. Which empty take it is, the hold decides, by the same
+    /// rule as any other empty take (`outcomeForShortRecording`). After a
+    /// real hold the person spoke into a microphone that was not there yet,
+    /// and waiting for it only to drop an empty take without a word is how a
+    /// sentence vanished. They hear it now. A shorter press is a change of
+    /// mind; it stays quiet and waits at most `preparingStopDeadline` for the
+    /// microphone.
+    ///
+    /// The bar is not `DictationDurationPolicy.minimum`: the hotkey holds back
+    /// every tap's release until its 0.35 s double-tap window has passed, so
+    /// by that measure every tap would have been a hold.
     private func stopArrivedBeforeTheMicrophoneOpened(session: DictationSessionID) {
         guard state == .preparing else { return }
-        if let beganAt,
-           beganAt.duration(to: .now) >= .seconds(DictationDurationPolicy.minimum) {
+        let held = (beganAt?.duration(to: .now) ?? .zero).components
+        if DictationDurationPolicy.outcomeForShortRecording(
+            held: Double(held.seconds) + Double(held.attoseconds) / 1e18
+        ) == .reportSilentInput {
             microphoneStartTookTooLong(session: session)
         } else if let stopSLORequestedAt {
             armMicrophoneStartWatchdog(
