@@ -79,6 +79,54 @@ final class OnboardingStepTests: XCTestCase {
         XCTAssertEqual(OnboardingStep.tryIt.progressAccessibilityLabel, "Step 3 of 3")
     }
 
+    /// The first button starts the 740 MB download and says so: it then runs
+    /// while the person makes the two System Settings round-trips, instead of
+    /// starting only once they find the button on the next screen.
+    func testWelcomeStartsTheDownload() {
+        XCTAssertEqual(
+            OnboardingStep.welcome.continueTitle(modelState: .notInstalled, downloadMegabytes: 740),
+            "Continue and download 740 MB"
+        )
+        XCTAssertTrue(OnboardingStep.welcome.downloadsOnContinue(modelState: .notInstalled))
+    }
+
+    /// Only a model that is not there yet: never a second download, and never
+    /// from any other step.
+    func testOnlyAMissingModelIsDownloadedFromWelcome() {
+        let ready = ModelState.ready(directory: URL(fileURLWithPath: "/tmp"))
+        let downloading = ModelState.downloading(receivedBytes: 1, totalBytes: 2)
+        for state in [ready, downloading, .verifying(checked: 1, total: 2)] {
+            XCTAssertFalse(OnboardingStep.welcome.downloadsOnContinue(modelState: state))
+            XCTAssertEqual(OnboardingStep.welcome.continueTitle(modelState: state, downloadMegabytes: 740), "Continue")
+        }
+        XCTAssertFalse(OnboardingStep.setup.downloadsOnContinue(modelState: .notInstalled))
+        XCTAssertEqual(OnboardingStep.setup.continueTitle(modelState: .notInstalled, downloadMegabytes: 740), "Continue")
+        XCTAssertEqual(OnboardingStep.tryIt.continueTitle(modelState: .notInstalled, downloadMegabytes: 740), "Done")
+    }
+
+    /// The try-out suggests one sentence that shows Clean Verbatim at work:
+    /// what lands is visibly cleaner than what was said. "Scratch that" is
+    /// English only, and Russian speech heard "Зачеркни" as "Зачерпни" in 2 of
+    /// 2 runs, so the Russian interface suggests a hesitation instead.
+    func testTheTryOutSuggestsASentenceThatShowsTheCleanup() {
+        XCTAssertEqual(
+            OnboardingStep.tryOutSuggestion(language: .english),
+            "“Let’s meet Tuesday. Scratch that. Let’s meet Wednesday.”"
+        )
+        let russian = OnboardingStep.tryOutSuggestion(language: .russian)
+        XCTAssertFalse(russian.localizedCaseInsensitiveContains("scratch"))
+        XCTAssertTrue(russian.contains(", ээ,"), "a hesitation Clean Verbatim removes with its commas")
+    }
+
+    /// A relaunch mid-setup — a repair, a crash, a quit — resumes at the
+    /// setup step rather than replaying the pitch. A grant is the evidence:
+    /// it survives the relaunch, and only setup produces one.
+    func testSetupResumesWhereItWasLeft() {
+        XCTAssertEqual(OnboardingStep.first(microphoneGranted: false, accessibilityGranted: false), .welcome)
+        XCTAssertEqual(OnboardingStep.first(microphoneGranted: true, accessibilityGranted: false), .setup)
+        XCTAssertEqual(OnboardingStep.first(microphoneGranted: false, accessibilityGranted: true), .setup)
+    }
+
     // MARK: - Who lets in next
 
     func testScenario005() {

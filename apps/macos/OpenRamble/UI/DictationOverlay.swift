@@ -36,6 +36,16 @@ public protocol EngineWaitPresenting: AnyObject {
     func setWaitingForEngine(_ waiting: Bool)
 }
 
+/// A panel that can say the microphone stays live after the key is let go.
+///
+/// Outside the session fence for the same reason as `EngineWaitPresenting`:
+/// it changes what the current panel shows, not which session owns it.
+@MainActor
+public protocol HandsFreePresenting: AnyObject {
+    /// The key that finishes the take, or `nil` once it is no longer hands-free.
+    func setHandsFree(finishKey: String?)
+}
+
 /// A small panel showing what's happening with dictation.
 ///
 /// The panel does not take focus: the user dictates to another application, and the
@@ -44,7 +54,7 @@ public protocol EngineWaitPresenting: AnyObject {
 /// decoration: the application does not have its own window, and there is no other way to find out what
 /// the microphone is on, the blind person doesn’t have one either.
 @MainActor
-public final class DictationOverlay: OverlayPresenting, EngineWaitPresenting {
+public final class DictationOverlay: OverlayPresenting, EngineWaitPresenting, HandsFreePresenting {
     private var panel: NSPanel?
     private let model: OverlayModel
     /// Synchronous issue-order fence shared with nonisolated protocol calls.
@@ -103,6 +113,11 @@ public final class DictationOverlay: OverlayPresenting, EngineWaitPresenting {
     @MainActor
     public func setWaitingForEngine(_ waiting: Bool) {
         model.setWaitingForEngine(waiting)
+    }
+
+    @MainActor
+    public func setHandsFree(finishKey: String?) {
+        model.setHandsFree(finishKey: finishKey)
     }
 
     nonisolated public func presentNotice(_ notice: DictationNotice) async {
@@ -296,12 +311,21 @@ final class OverlayModel: ObservableObject {
     /// recognition. Only the transcribing panel reads it.
     @Published private(set) var isWaitingForEngine = false
 
+    /// The current state has outlasted `OverlayContent.titleDelay` and may
+    /// now say what it is.
+    @Published private(set) var hasLingered = false
+
+    /// The key that finishes a hands-free take, while one runs.
+    @Published private(set) var handsFreeFinishKey: String?
+
     var content: OverlayContent {
         OverlayContent.make(
             state: state,
             notice: notice,
             elapsed: elapsed,
-            isWaitingForEngine: isWaitingForEngine
+            isWaitingForEngine: isWaitingForEngine,
+            hasLingered: hasLingered,
+            handsFreeFinishKey: handsFreeFinishKey
         )
     }
 
@@ -314,6 +338,8 @@ final class OverlayModel: ObservableObject {
 
     private let announcer: any AccessibilityAnnouncing
     private let noticeDuration: Duration
+    private let titleDelay: Duration
+    private var reveal: Task<Void, Never>?
     /// Marked `nonisolated(unsafe)` because the timer removes `deinit`, and it has
     /// isolated class - outside of isolation. They touch him only from the main
     /// stream: the panel lives entirely on it.
@@ -324,15 +350,23 @@ final class OverlayModel: ObservableObject {
     /// long enough to be read, then honor that deferred dismissal.
     private var dismissAfterNotice = false
     /// What has already been said out loud. The seconds counter ticks twice per second, and without
-    /// of this memory, VoiceOver would repeat “recording” until the end of the dictation.
+    /// of this memory, VoiceOver would repeat the same words until the end of the dictation.
     private var lastAnnouncement: String?
+    /// The microphone-open tone belongs to the take, not to each redraw or
+    /// each return from a notice.
+    private var hasCuedThisTake = false
+    /// Going hands-free is the one other moment worth a tone: the key is up
+    /// and the microphone stays live.
+    private var hasCuedHandsFree = false
 
     init(
         announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
-        noticeDuration: Duration = .seconds(4)
+        noticeDuration: Duration = .seconds(4),
+        titleDelay: Duration = OverlayContent.titleDelay
     ) {
         self.announcer = announcer
         self.noticeDuration = noticeDuration
+        self.titleDelay = titleDelay
     }
 
     deinit {
@@ -340,6 +374,7 @@ final class OverlayModel: ObservableObject {
         // after the death of the owner.
         timer?.invalidate()
         autoHide?.cancel()
+        reveal?.cancel()
     }
 
     /// The take is waiting for a model that is still loading.
@@ -353,6 +388,14 @@ final class OverlayModel: ObservableObject {
         announceContent()
     }
 
+    /// The take went hands-free, or stopped being so.
+    func setHandsFree(finishKey: String?) {
+        guard handsFreeFinishKey != finishKey else { return }
+        handsFreeFinishKey = finishKey
+        guard state == .listening, notice == nil, isVisible else { return }
+        announceContent()
+    }
+
     /// Show dictation status.
     func show(_ state: DictationState, elapsed: TimeInterval) {
         cancelAutoHide()
@@ -360,6 +403,7 @@ final class OverlayModel: ObservableObject {
         // A wait belongs to exactly one take. Leaving the flag set would let a
         // finished load narrate the next dictation.
         if state != .transcribing { isWaitingForEngine = false }
+        if state != self.state { restartReveal(for: state) }
         self.state = state
         notice = nil
         // Once text is recognized, the destination application is the only
@@ -368,7 +412,10 @@ final class OverlayModel: ObservableObject {
             hide()
             return
         }
-        if state == .listening {
+        // A new take starts flat. Transcribing keeps the last shape: the
+        // waveform and the clock freeze at release, which is what says the
+        // microphone has closed.
+        if state == .preparing || state == .listening {
             waveformSamples = Array(repeating: 0, count: Self.waveformSampleCount)
         }
         setElapsed(elapsed, ticking: state == .listening)
@@ -447,10 +494,15 @@ final class OverlayModel: ObservableObject {
         dismissAfterNotice = false
         state = .idle
         isWaitingForEngine = false
+        restartReveal(for: .idle)
         setVisible(false)
         // The next dictation must appear again, even if the state
         // matches the previous one.
         lastAnnouncement = nil
+        hasCuedThisTake = false
+        hasCuedHandsFree = false
+        // Hands-free belongs to one take, like the model wait.
+        handsFreeFinishKey = nil
     }
 
     /// Show elapsed time.
@@ -477,6 +529,25 @@ final class OverlayModel: ObservableObject {
         }
     }
 
+    /// Titles and words wait out `titleDelay`: nine takes in ten are done by
+    /// then, and those never show or say more than the take's shape.
+    private func restartReveal(for state: DictationState) {
+        reveal?.cancel()
+        reveal = nil
+        hasLingered = false
+        guard state == .preparing || state == .transcribing else { return }
+        let delay = titleDelay
+        reveal = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            // The same rule as the notice timer: a cancelled sleep returns at
+            // once, and must not reveal the next state's title early.
+            guard let self, !Task.isCancelled else { return }
+            self.hasLingered = true
+            guard self.notice == nil, self.isVisible else { return }
+            self.announceContent()
+        }
+    }
+
     /// Delayed hiding of the past impression no longer works.
     private func cancelAutoHide() {
         autoHide?.cancel()
@@ -490,10 +561,28 @@ final class OverlayModel: ObservableObject {
     }
 
     private func announceContent() {
-        let content = self.content
-        guard let announcement = content.announcement, announcement != lastAnnouncement else { return }
-        lastAnnouncement = announcement
-        announcer.announce(announcement, urgent: content.isAnnouncementUrgent)
+        switch content.voice {
+        case nil:
+            return
+        case .cue:
+            if !hasCuedThisTake {
+                hasCuedThisTake = true
+                announcer.playCue()
+            } else if content.mark == .handsFree, !hasCuedHandsFree {
+                hasCuedHandsFree = true
+                announcer.playCue()
+            }
+        case let .speech(text, urgent):
+            // Never into an open microphone, notices included: whatever
+            // VoiceOver says now ends up in the transcript.
+            guard !isMicrophoneOpen, text != lastAnnouncement else { return }
+            lastAnnouncement = text
+            announcer.announce(text, urgent: urgent)
+        }
+    }
+
+    private var isMicrophoneOpen: Bool {
+        state == .preparing || state == .listening
     }
 }
 
@@ -508,57 +597,59 @@ private struct OverlayView: View {
             // removing every animated and composited child from the retained
             // host view. In bottom placement, collapsing the height would put
             // the first expanded frame below the visible screen.
-            Color.clear.frame(width: preferredWidth, height: 52)
+            Color.clear.frame(width: model.content.panelWidth, height: 52)
         }
     }
 
     private func panel(_ content: OverlayContent) -> some View {
         HStack(spacing: 10) {
-            if model.notice != nil {
-                Image(systemName: content.tone.iconName)
-                    .foregroundStyle(toneColor(content.tone))
+            if let tone = content.tone {
+                Image(systemName: tone.iconName)
+                    .foregroundStyle(tone.colorRole.color)
                     .font(.body.weight(.semibold))
-                Text(content.title)
+                Text(content.title ?? "")
                     .font(.callout.weight(.medium))
                     .fixedSize(horizontal: false, vertical: true)
-            } else if model.state == .listening {
-                Circle()
-                    .fill(StatusColorRole.recording.color)
-                    .frame(width: 8, height: 8)
-                    .accessibilityHidden(true)
-                RecordingWaveform(
-                    samples: model.waveformSamples,
-                    color: StatusColorRole.recording.color
-                )
-                .frame(width: 136, height: 28)
-                Text(elapsedText)
-                    .font(.caption.weight(.medium).monospacedDigit())
-                    .foregroundStyle(.secondary)
-            } else if model.state == .transcribing {
-                // The same blue as the menu bar dot: one color for "working
-                // on speech" everywhere. Keep the symbol static: this panel is
-                // visible while the recognition result waits for the main actor,
-                // and an iterative symbol effect drove a RenderBox/CA commit on
-                // every display refresh through the glass surface.
-                Image(systemName: "waveform")
-                    .foregroundStyle(StatusColorRole.processing.color)
-                    .font(.body.weight(.semibold))
-                    .accessibilityHidden(true)
-                Text(content.title)
-                    .font(.callout.weight(.medium))
-            } else {
-                ProgressView()
-                    .controlSize(.small)
-                    .accessibilityHidden(true)
-                Text(content.title)
-                    .font(.callout.weight(.medium))
+            } else if let mark = content.mark {
+                // Static on purpose, in every state: this panel is visible
+                // while the recognition result waits for the main actor, and an
+                // iterative effect drove a RenderBox/CA commit on every display
+                // refresh through the glass surface.
+                let color = mark.colorRole?.color ?? .secondary
+                Group {
+                    if mark == .handsFree {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(color)
+                    } else {
+                        Circle()
+                            .fill(color)
+                            .frame(width: 8, height: 8)
+                    }
+                }
+                .frame(width: 12)
+                .accessibilityHidden(true)
+                if let title = content.title {
+                    // Takes the place of the waveform and the clock, so the
+                    // panel keeps its size and nothing beside it moves.
+                    Text(title)
+                        .font(.callout.weight(.medium))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                } else {
+                    RecordingWaveform(samples: model.waveformSamples, color: color)
+                        .frame(width: 136, height: 28)
+                    Text(elapsedText)
+                        .font(.caption.weight(.medium).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
             }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .frame(
-            width: preferredWidth,
+            width: content.panelWidth,
             alignment: .leading
         )
         .glassSurface(RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -568,19 +659,9 @@ private struct OverlayView: View {
         .accessibilityLabel(model.accessibilityLabel)
     }
 
-    private var preferredWidth: CGFloat {
-        if model.notice != nil { return 320 }
-        if model.state == .listening { return 244 }
-        return 220
-    }
-
     private var elapsedText: String {
         let total = Int(max(0, model.elapsed).rounded(.down))
         return String(format: "%d:%02d", total / 60, total % 60)
-    }
-
-    private func toneColor(_ tone: OverlayContent.Tone) -> Color {
-        tone.colorRole?.color ?? .secondary
     }
 }
 

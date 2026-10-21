@@ -34,11 +34,15 @@ final class DictationReadinessTests: XCTestCase {
         XCTAssertTrue(message?.contains("20–40 seconds") == true, "without a deadline it is not clear whether to wait or restart")
     }
 
+    /// Every "go and fix it" points at the one pane that holds the model,
+    /// both permissions and the command-line tool.
     func testScenario003() {
         XCTAssertEqual(
             reason(microphone: false),
-            "Dictation needs microphone access. Open Settings → General → Permissions."
+            "Dictation needs microphone access. Open Settings → Setup."
         )
+        XCTAssertTrue(reason(accessibility: false)?.hasSuffix("Open Settings → Setup.") == true)
+        XCTAssertTrue(reason(model: .notInstalled)?.hasSuffix("Open Settings → Setup.") == true)
     }
 
     func testScenario004() {

@@ -246,52 +246,73 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(state.accessibilityState, .waitingForSettings)
     }
 
+    /// Coming back from System Settings without the grant is not a reason to
+    /// relaunch. A relaunch threw away the 740 MB download, which cannot
+    /// resume across launches, and then often led to a second one for repair.
+    /// The grant is read live; the person just has not turned it on yet.
     func testScenario004() async {
         permissions.accessibilityGranted = false
         let state = makeState()
         state.requestAccessibility()
+        XCTAssertFalse(state.accessibilityReturnedWithoutGrant)
 
         harness.notifications.post(name: NSApplication.didBecomeActiveNotification, object: nil)
-        await Task.yield()
+        for _ in 0..<5 { await Task.yield() }
 
-        XCTAssertEqual(state.accessibilityState, .restartRequired)
+        XCTAssertEqual(state.accessibilityState, .waitingForSettings)
+        XCTAssertTrue(
+            state.accessibilityReturnedWithoutGrant,
+            "the one quiet way out, Repair, is offered only now"
+        )
+        XCTAssertEqual(accessibilityManager.relaunchCount, 0)
     }
 
-    func testScenario005() async {
+    /// The toggle turned on in System Settings brings the window back, as the
+    /// microphone grant already does: one fewer window to hunt for.
+    func testTheAccessibilityGrantBringsTheWindowBackOnce() {
+        permissions.accessibilityGranted = false
+        let state = makeState()
+        state.requestAccessibility()
+
+        permissions.accessibilityGranted = true
+        state.refreshPermissions()
+        state.refreshPermissions()
+
+        XCTAssertEqual(state.accessibilityState, .granted)
+        XCTAssertEqual(harness.microphonePermissionFlow.activationCount, 1)
+        XCTAssertFalse(state.accessibilityReturnedWithoutGrant)
+        XCTAssertEqual(accessibilityManager.relaunchCount, 0, "a live grant needs no relaunch")
+    }
+
+    /// Only a grant the person went to System Settings for raises the app.
+    func testAGrantNobodyAskedForDoesNotRaiseTheApp() {
         permissions.accessibilityGranted = false
         let state = makeState()
 
-        state.restartForAccessibility()
-        await Task.yield()
+        permissions.accessibilityGranted = true
+        state.refreshPermissions()
 
-        XCTAssertEqual(accessibilityManager.relaunchCount, 1)
-        XCTAssertTrue(defaults.bool(forKey: AppState.accessibilityRelaunchPendingKey))
+        XCTAssertEqual(state.accessibilityState, .granted)
+        XCTAssertEqual(harness.microphonePermissionFlow.activationCount, 0)
     }
 
+    /// Older versions left a relaunch marker behind. It no longer means
+    /// anything, so it must not trap a new launch in a repair state.
     func testScenario006() {
         permissions.accessibilityGranted = false
-        defaults.set(true, forKey: AppState.accessibilityRelaunchPendingKey)
+        defaults.set(true, forKey: "accessibilityRelaunchPending")
 
         let state = makeState()
 
-        XCTAssertEqual(state.accessibilityState, .repairRequired)
+        XCTAssertEqual(state.accessibilityState, .denied)
         XCTAssertEqual(accessibilityManager.resetCount, 0)
     }
 
-    func testScenario007() {
-        permissions.accessibilityGranted = true
-        defaults.set(true, forKey: AppState.accessibilityRelaunchPendingKey)
-
-        let state = makeState()
-
-        XCTAssertEqual(state.accessibilityState, .granted)
-        XCTAssertFalse(defaults.bool(forKey: AppState.accessibilityRelaunchPendingKey))
-    }
-
+    /// "Already on? Repair": remove this app's stale entry and relaunch, once.
     func testScenario008() async {
         permissions.accessibilityGranted = false
-        defaults.set(true, forKey: AppState.accessibilityRelaunchPendingKey)
         let state = makeState()
+        state.requestAccessibility()
         XCTAssertEqual(accessibilityManager.resetCount, 0)
 
         state.repairAccessibility()
@@ -301,7 +322,6 @@ final class AppStateTests: XCTestCase {
 
         XCTAssertEqual(accessibilityManager.resetCount, 1)
         XCTAssertEqual(accessibilityManager.relaunchCount, 1)
-        XCTAssertFalse(defaults.bool(forKey: AppState.accessibilityRelaunchPendingKey))
     }
 
     func testMicrophoneGrantReturnsFocusToOpenRamble() async throws {
@@ -1847,12 +1867,12 @@ final class RecoveredFileTests: XCTestCase {
         XCTAssertEqual(state.recoveredText, "Ping test")
     }
 
-    /// Failed-insert words join Recent Dictations at failure time.
+    /// Failed-insert words join History, and so the menu, at failure time.
     ///
     /// The single recovery slot is overwritten by the next failure; without
-    /// this copy the first failure's words would silently vanish. This is
-    /// also why the menu needs no Copy/Delete items for saved text: the words
-    /// are copyable from Recent Dictations like any other dictation.
+    /// this the first failure's words would silently vanish. This is also why
+    /// the menu needs no Copy/Delete items for saved text: the words are
+    /// copyable from Recent Dictations like any other dictation.
     func testScenario055() async throws {
         try harness.installModelMarker()
         let state = harness.makeState()
@@ -1865,6 +1885,7 @@ final class RecoveredFileTests: XCTestCase {
         await settle()
 
         XCTAssertEqual(state.recoveredText, "Ping test")
+        XCTAssertEqual(state.history.map(\.text), ["Ping test"])
         XCTAssertEqual(state.recentDictations.map(\.text), ["Ping test"])
     }
 
@@ -1886,7 +1907,7 @@ final class RecoveredFileTests: XCTestCase {
 
         XCTAssertEqual(state.recoveredText, "Ping test", "the words stay recoverable")
         XCTAssertEqual(
-            state.recentDictations.map(\.text), ["Ping test"],
+            state.history.map(\.text), ["Ping test"],
             "repeat failures of the same words keep one history entry"
         )
     }
@@ -1910,7 +1931,7 @@ final class RecoveredFileTests: XCTestCase {
 
         XCTAssertNil(state.recoveredText)
         XCTAssertEqual(
-            state.recentDictations.map(\.text), ["Ping test"],
+            state.history.map(\.text), ["Ping test"],
             "the words entered history at failure time; success must not append again"
         )
         XCTAssertNil(
@@ -1999,5 +2020,83 @@ final class RecoveredFileTests: XCTestCase {
 
         XCTAssertNil(state.recoveredText)
         XCTAssertEqual(state.recentDictations.first?.text, "Ping test")
+    }
+
+    // MARK: - One history
+
+    private func dictate(_ state: AppState) async {
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+    }
+
+    /// The menu lists History, so the Keep limit is the menu's limit too. It
+    /// used to keep its own eight in memory whatever Keep said.
+    func testTheMenuListsHistoryWithinTheKeepLimit() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        state.historyLimit = 5
+
+        for _ in 0..<8 { await dictate(state) }
+
+        XCTAssertEqual(state.history.count, 5)
+        XCTAssertEqual(state.recentDictations.map(\.id), state.history.map(\.id))
+    }
+
+    func testDeletingARowRemovesItFromTheMenu() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        await dictate(state)
+        await dictate(state)
+        let doomed = try XCTUnwrap(state.history.first)
+
+        state.deleteHistoryEntry(doomed)
+
+        XCTAssertFalse(state.recentDictations.contains { $0.id == doomed.id })
+        XCTAssertEqual(state.recentDictations.count, 1)
+    }
+
+    /// "Delete All" means every copy of what was said: the menu, Copy Last
+    /// and the failed-insertion slot, not just the History window.
+    func testDeleteAllForgetsEveryCopy() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        await dictate(state)
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        await dictate(state)
+        XCTAssertNotNil(state.lastDictation)
+        XCTAssertNotNil(state.recoveredText)
+        XCTAssertFalse(state.recentDictations.isEmpty)
+
+        state.clearHistory()
+
+        XCTAssertTrue(state.history.isEmpty)
+        XCTAssertTrue(state.recentDictations.isEmpty)
+        XCTAssertNil(state.lastDictation, "Copy Last must have nothing left to copy")
+        XCTAssertNil(state.recoveredText, "Insert Last must have nothing left to insert")
+    }
+
+    /// A history that silently stops recording looks exactly like a history
+    /// of someone who stopped dictating.
+    func testAHistoryWriteFailureIsShown() async throws {
+        try harness.installModelMarker()
+        // A file where the History folder should be: every write fails.
+        let support = try AppPaths(root: harness.root).support()
+        FileManager.default.createFile(atPath: support.appending(path: "History").path, contents: Data())
+        let state = harness.makeState()
+        await state.refreshModelState()
+
+        await dictate(state)
+
+        let notice = try XCTUnwrap(state.lastNotice)
+        XCTAssertEqual(notice.kind, .warning)
+        XCTAssertEqual(notice.message, "This dictation couldn't be saved to History.")
+        XCTAssertFalse(notice.wordsDidNotLand, "the words reached the field; only the record of them failed")
+        let shown = await harness.overlay.notices
+        XCTAssertTrue(shown.contains { $0.message == notice.message })
     }
 }

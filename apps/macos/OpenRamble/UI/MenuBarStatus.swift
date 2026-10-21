@@ -6,16 +6,16 @@ import SwiftUI
 enum MenuBarActivity: Equatable {
     case hidden
     case recording
-    case working
 }
 
 /// The dot over the brand mark. One shape, one meaning per color — see
-/// `StatusColorRole`: red = the microphone is capturing, blue = working on
-/// speech, orange = something waits for the person.
+/// `StatusColorRole`: red = the microphone is capturing, orange = something
+/// waits for the person. Nothing else: work on speech lasts a fraction of a
+/// second after release, and a dot that blinks blue for it was a third color
+/// nobody could read.
 enum MenuBarBadge: Equatable {
     case hidden
     case recording
-    case working
     case attention
 }
 
@@ -34,17 +34,15 @@ enum MenuBarStatus {
     static let brandIconName = "BrandIconMenuBar"
 
     /// `isRecordingMeeting`: a meeting or voice note is being recorded. That
-    /// is the microphone capturing, so it wears the same red as dictation;
-    /// dictation's own work outranks it for the seconds it lasts.
+    /// is the microphone capturing, so it wears the same red as dictation.
     static func activity(state: DictationState, isRecordingMeeting: Bool = false) -> MenuBarActivity {
         switch state {
         // No dot until audio is actually being captured: the red dot must
         // never lie about the microphone, and the overlay already answers the
         // key press instantly.
-        case .preparing: return isRecordingMeeting ? .recording : .hidden
         case .listening: return .recording
-        case .transcribing, .inserting: return .working
-        case .idle: return isRecordingMeeting ? .recording : .hidden
+        case .idle, .preparing, .transcribing, .inserting:
+            return isRecordingMeeting ? .recording : .hidden
         }
     }
 
@@ -64,7 +62,7 @@ enum MenuBarStatus {
         return line
     }
 
-    /// Recording and working stay distinguishable without color through the
+    /// Recording and attention stay distinguishable without color through the
     /// accessibility label and the menu's first line; the two dots also differ
     /// strongly in luminance for color-blind users.
     /// `recordingIsDegraded`: a meeting whose other side is not arriving. Orange
@@ -77,10 +75,9 @@ enum MenuBarStatus {
         needsAttention: Bool = false,
         recordingIsDegraded: Bool = false
     ) -> MenuBarBadge {
-        if recordingIsDegraded, activity != .working { return .attention }
+        if recordingIsDegraded { return .attention }
         switch activity {
         case .recording: return .recording
-        case .working: return .working
         case .hidden: return needsAttention ? .attention : .hidden
         }
     }
@@ -98,7 +95,7 @@ enum MenuBarStatus {
     ) -> Bool {
         if !microphoneGranted { return true }
         switch accessibilityState {
-        case .denied, .waitingForSettings, .restartRequired, .repairRequired, .failed:
+        case .denied, .waitingForSettings, .failed:
             return true
         case .repairing, .granted:
             break

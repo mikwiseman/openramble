@@ -13,6 +13,29 @@ enum ScreenBubbleGeometry {
         return min(max(value, minimumScale), maximumScale)
     }
 
+    /// The scale a bubble of this diameter has on a display of this size —
+    /// how a size the person set on screen becomes the size that records.
+    static func scale(forDiameter diameter: CGFloat, in size: CGSize) -> Double {
+        let side = min(size.width, size.height)
+        guard side > 0 else { return clampedScale(.nan) }
+        return clampedScale(diameter / side)
+    }
+
+    /// The diameters the recorder draws on a display of this size.
+    static func diameterRange(in size: CGSize) -> ClosedRange<CGFloat> {
+        let side = min(size.width, size.height)
+        return side * minimumScale...side * maximumScale
+    }
+
+    /// The corner drag: grows towards the pointer with the top left held,
+    /// following whichever direction moved further. AppKit's y grows upward,
+    /// so `drag.height` is the pointer's downward travel.
+    static func resized(_ frame: CGRect, drag: CGSize) -> CGRect {
+        let growth = abs(drag.width) >= abs(drag.height) ? drag.width : drag.height
+        let side = max(1, frame.width + growth)
+        return CGRect(x: frame.minX, y: frame.maxY - side, width: side, height: side)
+    }
+
     static func clampedPosition(_ value: NormalizedPoint, scale: Double, in size: CGSize) -> NormalizedPoint {
         guard size.width > 0, size.height > 0 else { return NormalizedPoint(x: 0.5, y: 0.5) }
         let radius = min(size.width, size.height) * clampedScale(scale) / 2

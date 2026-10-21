@@ -57,24 +57,41 @@ final class PermissionStatusTests: XCTestCase {
     }
 
 
+    /// Waiting keeps sending the person to System Settings; it never asks
+    /// for a relaunch.
     func testScenario006() {
         let status = PermissionStatus.accessibility(
-            state: .restartRequired,
+            state: .waitingForSettings,
             detail: "To hear the hotkey."
         )
 
-        XCTAssertEqual(status.actionTitle, "Relaunch")
-        XCTAssertEqual(status.accessibilityValue, "App relaunch required")
+        XCTAssertEqual(status.actionTitle, "Open System Settings")
+        XCTAssertEqual(status.accessibilityValue, "Waiting for permission in System Settings")
     }
 
     func testScenario007() {
         let status = PermissionStatus.accessibility(
-            state: .repairRequired,
+            state: .failed("boom"),
             detail: "To hear the hotkey."
         )
 
         XCTAssertEqual(status.actionTitle, "Repair")
-        XCTAssertEqual(status.accessibilityValue, "The system permission entry needs repair")
+        XCTAssertEqual(status.accessibilityValue, "Permission repair failed")
+    }
+
+    /// "Already on? Repair" appears only after a return without the grant,
+    /// and waits for the download: the repair relaunches the app, and a
+    /// relaunch restarts a 740 MB download from zero.
+    func testTheRepairLinkWaitsForAReturnAndForTheDownload() {
+        XCTAssertFalse(AccessibilityRepairLink.isShown(state: .waitingForSettings, returnedWithoutGrant: false))
+        XCTAssertTrue(AccessibilityRepairLink.isShown(state: .waitingForSettings, returnedWithoutGrant: true))
+        XCTAssertFalse(AccessibilityRepairLink.isShown(state: .granted, returnedWithoutGrant: true))
+        XCTAssertFalse(AccessibilityRepairLink.isShown(state: .repairing, returnedWithoutGrant: true))
+
+        XCTAssertFalse(AccessibilityRepairLink.isEnabled(modelState: .downloading(receivedBytes: 1, totalBytes: 2)))
+        XCTAssertFalse(AccessibilityRepairLink.isEnabled(modelState: .verifying(checked: 1, total: 2)))
+        XCTAssertTrue(AccessibilityRepairLink.isEnabled(modelState: .notInstalled))
+        XCTAssertTrue(AccessibilityRepairLink.isEnabled(modelState: .ready(directory: URL(fileURLWithPath: "/tmp"))))
     }
 
     func testScenario008() {

@@ -3,7 +3,7 @@ import DictationCore
 import SwiftUI
 
 /// The menu bar presence: the brand mark, with a small colored dot over its
-/// corner while the app records, works on speech, or needs the person.
+/// corner while the microphone is live or something needs the person.
 ///
 /// The label owns no clock and no animation: state arrives from outside and
 /// each state maps to one static image, so the menu bar costs nothing at rest.
@@ -64,13 +64,11 @@ enum MenuBarLabelArt {
         switch badge {
         case .hidden: return nil
         case .recording: return recording
-        case .working: return working
         case .attention: return attention
         }
     }
 
     static let recording = composite(dot: StatusColorRole.recording.nsColor)
-    static let working = composite(dot: StatusColorRole.processing.nsColor)
     static let attention = composite(dot: StatusColorRole.attention.nsColor)
 
     private static let canvas = NSSize(width: 22, height: 22)

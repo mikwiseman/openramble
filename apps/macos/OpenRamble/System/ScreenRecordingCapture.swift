@@ -192,13 +192,6 @@ public final class ScreenRecordingCapture: NSObject, ScreenRecordingCapturing, S
         onBubbleChange(options)
     }
 
-    public func updateBubbleScale(_ scale: Double) {
-        options.bubbleScale = ScreenBubbleGeometry.clampedScale(scale)
-        media.setBubble(scale: options.bubbleScale, position: options.bubblePosition)
-        overlay?.updateScale(options.bubbleScale)
-        onBubbleChange(options)
-    }
-
     public func updateBubblePosition(_ position: NormalizedPoint) {
         options.bubblePosition = position
         media.setBubble(scale: options.bubbleScale, position: position)

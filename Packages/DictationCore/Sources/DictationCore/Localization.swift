@@ -8,6 +8,15 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
     public var id: Self { self }
     public var title: String { self == .english ? "English" : "Русский" }
     public var locale: Locale { Locale(identifier: rawValue) }
+
+    /// The first of the Mac's preferred languages the app speaks, or English.
+    public static func preferred(by identifiers: [String]) -> AppLanguage {
+        for identifier in identifiers {
+            let code = Locale(identifier: identifier).language.languageCode?.identifier
+            if let language = code.flatMap(AppLanguage.init(rawValue:)) { return language }
+        }
+        return .english
+    }
 }
 
 /// One preference for SwiftUI, AppKit and messages produced off the main thread.
@@ -40,6 +49,17 @@ public final class L10n: Observable, Sendable {
                 defaults.set([newValue.rawValue], forKey: "AppleLanguages")
             }
         }
+    }
+
+    /// Until the person chooses, speak the Mac's language. Registered, not
+    /// stored: the registration domain lives only in this process, so a Mac
+    /// switched to another language is followed at the next launch, and a
+    /// choice made in Settings outranks it. Called once by the app at launch —
+    /// not by tests, which keep the English fallback whatever Mac runs them.
+    public func followTheMacUntilChosen(preferredLanguages: [String] = Locale.preferredLanguages) {
+        defaults.register(defaults: [
+            Self.preferenceKey: AppLanguage.preferred(by: preferredLanguages).rawValue,
+        ])
     }
 
     public static func tr(_ key: String, _ arguments: CVarArg..., language: AppLanguage? = nil) -> String {
