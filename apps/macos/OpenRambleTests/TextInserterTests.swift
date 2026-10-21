@@ -887,6 +887,7 @@ private final class BoardReader: @unchecked Sendable {
 private final class OtherProcessPaste: @unchecked Sendable {
     private let process = Process()
     private let output = Pipe()
+    private let exited = DispatchSemaphore(value: 0)
 
     init(board name: String) {
         process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
@@ -898,6 +899,9 @@ private final class OtherProcessPaste: @unchecked Sendable {
                 ? ObjC.unwrap(view.string) : 'nothing';
             """]
         process.standardOutput = output
+        // Not waitUntilExit: it waits on the calling thread's run loop, and on
+        // a Swift concurrency thread it can miss the exit and block forever.
+        process.terminationHandler = { [exited] _ in exited.signal() }
     }
 
     func paste() {
@@ -905,7 +909,7 @@ private final class OtherProcessPaste: @unchecked Sendable {
     }
 
     func pasted() -> String {
-        process.waitUntilExit()
+        guard exited.wait(timeout: .now() + 10) == .success else { return "still pasting" }
         let data = output.fileHandleForReading.readDataToEndOfFile()
         return String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
     }
