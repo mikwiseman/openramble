@@ -337,11 +337,12 @@ public final class SystemHotkeyEventSource: HotkeyEventSource {
 
     public func addKeyDownMonitor(_ handler: @escaping @MainActor (HotkeyEvent) -> Void) -> Any? {
         let global = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { event in
+            guard !event.isFromThisProcess else { return }
             MainActor.assumeIsolated { handler(HotkeyEvent(event)) }
         }
         guard let global else { return nil }
         let local = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
-            handler(HotkeyEvent(event))
+            if !event.isFromThisProcess { handler(HotkeyEvent(event)) }
             // We don't intercept anything: Escape and other keys continue
             // normal path of the active application.
             return event
@@ -366,6 +367,15 @@ public final class SystemHotkeyEventSource: HotkeyEventSource {
 extension HotkeyEvent {
     init(_ event: NSEvent) {
         self.init(keyCode: event.keyCode, rawFlags: event.modifierFlags.rawValue, at: Date())
+    }
+}
+
+private extension NSEvent {
+    /// The paste's ⌘V or "Send it."'s Return. OpenRamble presses them the way
+    /// a keyboard does, so they come back to its own monitors, stamped with
+    /// this process as their poster. They are never the person's keys.
+    var isFromThisProcess: Bool {
+        cgEvent?.getIntegerValueField(.eventSourceUnixProcessID) == Int64(getpid())
     }
 }
 

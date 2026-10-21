@@ -347,7 +347,8 @@ public protocol InputSystem: Sendable {
     /// window, panels included (Spotlight, Raycast), which a post to a process
     /// would miss. ⌘V and Return take this one route, so a dictation never
     /// splits between two windows; the caller checks the target is still in
-    /// front right before each press.
+    /// front right before each press. Our own key monitors see the press too,
+    /// and pass over it as this process's.
     func post(keyCode: CGKeyCode, flags: CGEventFlags) throws
 }
 
