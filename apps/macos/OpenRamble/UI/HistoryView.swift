@@ -188,15 +188,17 @@ private struct HistoryRow: View {
                     .accessibilityLabel(L10n.tr("Recognize this recording again"))
                 }
 
-                // A take with no words has nothing to copy.
-                if !entry.text.isEmpty {
-                    Button(action: onCopy) {
-                        Image(systemName: "doc.on.doc")
-                    }
-                    .buttonStyle(.borderless)
-                    .help(L10n.tr("Copy"))
-                    .accessibilityLabel(L10n.tr("Copy this dictation"))
+                // A take with no words has nothing to copy. The icon is hidden,
+                // not removed, so the icons stand in the same column on every row.
+                Button(action: onCopy) {
+                    Image(systemName: "doc.on.doc")
                 }
+                .buttonStyle(.borderless)
+                .help(L10n.tr("Copy"))
+                .accessibilityLabel(L10n.tr("Copy this dictation"))
+                .opacity(entry.text.isEmpty ? 0 : 1)
+                .disabled(entry.text.isEmpty)
+                .accessibilityHidden(entry.text.isEmpty)
 
                 Button(role: .destructive, action: onDelete) {
                     Image(systemName: "trash")
