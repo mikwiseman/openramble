@@ -535,8 +535,9 @@ public final class AppState: ObservableObject {
     ///
     /// Read from History rather than kept beside it. A second list in memory
     /// ignored the Keep limit and survived "Delete All", which made both of
-    /// History's promises false.
-    public var recentDictations: [HistoryEntry] { Array(history.prefix(8)) }
+    /// History's promises false. A take with no words has nothing to copy:
+    /// offered here, it would put an empty string over the person's clipboard.
+    public var recentDictations: [HistoryEntry] { Array(history.lazy.filter { !$0.text.isEmpty }.prefix(8)) }
 
     // MARK: - Recordings
 
