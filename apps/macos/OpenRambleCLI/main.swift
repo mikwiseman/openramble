@@ -90,7 +90,17 @@ func resolveEngineDirectory(explicit: String?) async throws -> URL {
         .map { URL(fileURLWithPath: $0, isDirectory: true) }
     let layout = try ModelInstallLayout(manifest: manifest, root: root)
     let store = ModelStore(manifest: manifest, layout: layout)
-    switch await store.inspectInstalledState() {
+    let state = await store.inspectInstalledState()
+    // The app keeps the model the current one replaced until the new one is
+    // ready; the command line uses it in the meantime, exactly as the app does.
+    if !state.isReady, let previousManifest = try ModelManifest.bundledPrevious() {
+        let previousLayout = try ModelInstallLayout(manifest: previousManifest, root: root)
+        let previous = await ModelStore(manifest: previousManifest, layout: previousLayout).inspectInstalledState()
+        if ModelLineup(current: state, previous: previous).recognizer == .previous {
+            return previousLayout.engineDirectory
+        }
+    }
+    switch state {
     case .ready: return layout.engineDirectory
     case .notInstalled:
         throw CLIError(code: 69, message: "Model is not installed. Open OpenRamble and install it in Settings.")

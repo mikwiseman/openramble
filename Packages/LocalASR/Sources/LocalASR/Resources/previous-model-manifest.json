@@ -1,0 +1,19 @@
+{
+  "modelID": "parakeet-tdt-0.6b-v3-gguf",
+  "repository": "handy-computer/parakeet-tdt-0.6b-v3-gguf",
+  "revision": "85ac09ea12fc4b1112fa76810059364bc6adc9de",
+  "runtimeVersion": "transcribe.cpp 0.4.0",
+  "quantization": "Q8_0",
+  "license": "CC-BY-4.0",
+  "files": [
+    {
+      "path": "parakeet-tdt-0.6b-v3-Q8_0.gguf",
+      "byteCount": 739508576,
+      "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+    }
+  ],
+  "mirror": {
+    "repository": "mikwiseman/openramble",
+    "releaseTag": "models-85ac09ea"
+  }
+}

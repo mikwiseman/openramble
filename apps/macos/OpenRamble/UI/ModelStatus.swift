@@ -90,6 +90,59 @@ struct ModelStatus: Equatable {
         action.hint(downloadMegabytes: downloadMegabytes)
     }
 
+    /// The card for a newer model while the previous one keeps dictating.
+    ///
+    /// Only the newer model's own state is shown here; whether dictation works
+    /// is the main card's business, and during an upgrade it always does.
+    static func upgrade(state: ModelState, downloadMegabytes: Int) -> ModelStatus {
+        var status: ModelStatus
+        switch state {
+        case let .downloading(received, total):
+            let label = L10n.tr("%@ of %@ MB", String(describing: megabytes(received)), String(describing: megabytes(total)))
+            status = ModelStatus(
+                title: L10n.tr("Downloading Parakeet Ultra…"),
+                detail: L10n.tr("Dictation keeps using the current model until the new one is ready."),
+                progress: total > 0 ? Double(received) / Double(total) : nil,
+                progressLabel: label,
+                actions: [.cancel],
+                tone: .neutral,
+                announcement: L10n.tr("Downloading Parakeet Ultra…")
+            )
+        case let .verifying(checked, total):
+            status = ModelStatus(
+                title: L10n.tr("Checking Parakeet Ultra…"),
+                detail: nil,
+                progress: total > 0 ? Double(checked) / Double(total) : nil,
+                progressLabel: nil,
+                actions: [],
+                tone: .neutral,
+                announcement: L10n.tr("Checking Parakeet Ultra…")
+            )
+        case .failed, .repairRequired:
+            status = ModelStatus(
+                title: L10n.tr("Parakeet Ultra didn't download"),
+                detail: L10n.tr("Dictation keeps using the current model. Nothing was changed."),
+                progress: nil,
+                progressLabel: nil,
+                actions: [.retry],
+                tone: .failure,
+                announcement: L10n.tr("Parakeet Ultra didn't download")
+            )
+        case .notInstalled, .ready, .deleting:
+            status = ModelStatus(
+                title: L10n.tr("Parakeet Ultra is available"),
+                detail: L10n.tr("A newer version of the same model with fewer recognition mistakes in English and Russian. Dictation keeps working while it downloads, and the current model is removed once Ultra is ready."),
+                progress: nil,
+                progressLabel: nil,
+                actions: [.install],
+                tone: .neutral,
+                announcement: L10n.tr("Parakeet Ultra is available")
+            )
+        }
+        status.downloadMegabytes = downloadMegabytes
+        return status
+    }
+
     /// The card reads three facts, and never guesses: is the recognizer
     /// usable, is preparation actually running right now, and how far along it
     /// is. Claiming "preparing" from readiness alone is what once left a fresh
@@ -100,7 +153,8 @@ struct ModelStatus: Equatable {
         place: Place,
         downloadMegabytes: Int = 586,
         isEngineReady: Bool = true,
-        isPreparingEngine: Bool = false
+        isPreparingEngine: Bool = false,
+        hasMirror: Bool = true
     ) -> ModelStatus {
         var status = makeStatus(
             state: state,
@@ -108,7 +162,8 @@ struct ModelStatus: Equatable {
             place: place,
             downloadMegabytes: downloadMegabytes,
             isEngineReady: isEngineReady,
-            isPreparingEngine: isPreparingEngine
+            isPreparingEngine: isPreparingEngine,
+            hasMirror: hasMirror
         )
         status.downloadMegabytes = downloadMegabytes
         return status
@@ -120,13 +175,16 @@ struct ModelStatus: Equatable {
         place: Place,
         downloadMegabytes: Int,
         isEngineReady: Bool = true,
-        isPreparingEngine: Bool = false
+        isPreparingEngine: Bool = false,
+        hasMirror: Bool = true
     ) -> ModelStatus {
         switch state {
         case .notInstalled:
             return ModelStatus(
                 title: L10n.tr("Model not installed"),
-                detail: L10n.tr("%@ MB from the GitHub release mirror; the Hugging Face CDN if it's unavailable. After verification, recognition works without the network.", String(describing: downloadMegabytes)),
+                detail: hasMirror
+                    ? L10n.tr("%@ MB from the GitHub release mirror; the Hugging Face CDN if it's unavailable. After verification, recognition works without the network.", String(describing: downloadMegabytes))
+                    : L10n.tr("%@ MB from Hugging Face. After verification, recognition works without the network.", String(describing: downloadMegabytes)),
                 progress: nil,
                 progressLabel: nil,
                 actions: [.install],

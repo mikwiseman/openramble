@@ -84,7 +84,7 @@ public struct AppEnvironment {
     /// at all - the tests only reached the start of recording.
     /// Recognition factory: give it the engine folder, get back the call that
     /// recognizes one recording.
-    public var transcribe: (URL) -> @Sendable (URL) async throws -> ASRResult
+    public var transcribe: (@escaping @Sendable () -> URL) -> @Sendable (URL) async throws -> ASRResult
     /// Retry insertion is a system edge too. Keep it injectable so the app
     /// and tests share the same bounded state transition.
     public var recoveryInsertionDeadline: Duration
@@ -209,7 +209,7 @@ public struct AppEnvironment {
             @escaping @Sendable (DictationSessionID) -> Void,
             AudioDeviceID?
         ) -> any AudioCapturing,
-        transcribe: @escaping (URL) -> @Sendable (URL) async throws -> ASRResult,
+        transcribe: @escaping (@escaping @Sendable () -> URL) -> @Sendable (URL) async throws -> ASRResult,
         recoveryInsertionDeadline: Duration = .seconds(2),
         engineWarmupRetryDelay: Duration? = nil,
         idleUnloadDelayOverride: Duration? = nil,
@@ -344,7 +344,7 @@ public struct AppEnvironment {
                     // speed line is a different call on a different path — so
                     // this one could take seconds while that one read 0.00.
                     let readyAt = ContinuousClock.now
-                    try await transcriber.prepare(modelDirectory: engineDirectory)
+                    try await transcriber.prepare(modelDirectory: engineDirectory())
                     let prepared = readyAt.duration(to: .now)
                     let result = try await transcriber.transcribe(fileURL: url)
                     return ASRResult(
@@ -459,6 +459,13 @@ public final class AppState: ObservableObject {
     /// nothing to recognize with yet) and a residency unload (recording must
     /// start instantly; the reload rides under the voice).
     public private(set) var hasEngineBeenReady = false
+    /// The newer model while it is on offer or on its way, and nil otherwise.
+    ///
+    /// Dictation keeps using the previous model the whole time, so this is a
+    /// separate state from `modelState`, which describes the model in use.
+    @Published public private(set) var upgradeState: ModelState?
+    /// Whether the current model has a GitHub release mirror besides Hugging Face.
+    public private(set) var modelHasMirror = true
     /// How much the installation button will download: the full volume or additional volume after the update.
     /// Published from the bundled manifest as soon as it is read, before any
     /// view can draw the button.
@@ -866,7 +873,7 @@ public final class AppState: ObservableObject {
         @escaping @Sendable (DictationSessionID) -> Void,
         AudioDeviceID?
     ) -> any AudioCapturing
-    private let transcribe: (URL) -> @Sendable (URL) async throws -> ASRResult
+    private let transcribe: (@escaping @Sendable () -> URL) -> @Sendable (URL) async throws -> ASRResult
     private let recoveryInsertionDeadline: Duration
     private let engineWarmupRetryDelayOverride: Duration?
     private let recordingRecoveryCompatibilityGrace: TimeInterval
@@ -897,6 +904,15 @@ public final class AppState: ObservableObject {
     public let updater = SparkleUpdater()
 
     private var store: ModelStore?
+    /// The model the current one replaced, if this Mac still holds it. It
+    /// keeps dictation working until the current model verifies and loads.
+    private var previousStore: ModelStore?
+    private var currentEngineDirectory: URL?
+    private var previousEngineDirectory: URL?
+    /// Which of the two folders recognition loads from; see `ModelLineup`.
+    private var activeModel: ActiveModelDirectory?
+    /// The lineup chose another model while a dictation was running.
+    private var modelSwitchPending = false
     private var historyStore: DictationHistoryStore?
     private var mainModelBytes: Int64 = 0
     private var mainModelFileCount = 0
@@ -904,7 +920,6 @@ public final class AppState: ObservableObject {
     private var recordingRecovery: RecordingRecoveryStore?
     private var recordingRecoveryMaintenanceTask: Task<Void, Never>?
     private var engineReadinessTask: Task<Void, Never>?
-    private var engineDirectory: URL?
     private var controller: DictationController?
     /// Is the model being installed right now?
     private var isInstalling = false
@@ -1190,6 +1205,12 @@ public final class AppState: ObservableObject {
             self.store = store
             mainModelBytes = manifest.totalByteCount
             mainModelFileCount = manifest.files.count
+            modelHasMirror = manifest.mirror != nil
+            if let previousManifest = try ModelManifest.bundledPrevious() {
+                let previousLayout = try ModelInstallLayout(manifest: previousManifest, root: try paths.models())
+                previousStore = ModelStore(manifest: previousManifest, layout: previousLayout, downloader: modelDownloader)
+                previousEngineDirectory = previousLayout.engineDirectory
+            }
             publishRemainingDownload(main: modelState)
 
             let historyStore = DictationHistoryStore(
@@ -1216,8 +1237,10 @@ public final class AppState: ObservableObject {
                 ))
             }
 
-            let engineDirectory = layout.engineDirectory
-            self.engineDirectory = engineDirectory
+            currentEngineDirectory = layout.engineDirectory
+            let activeModel = ActiveModelDirectory(layout.engineDirectory)
+            self.activeModel = activeModel
+            let engineDirectory: @Sendable () -> URL = { activeModel.current }
             let transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)?
             if let transcriber {
                 transcribeSamples = { samples in
@@ -1270,6 +1293,9 @@ public final class AppState: ObservableObject {
             controller.onStateChange = { [weak self] state in
                 self?.dictationState = state
                 self?.flushNoticeAfterSession(state)
+                if state == .idle, self?.modelSwitchPending == true {
+                    Task { await self?.refreshModelState() }
+                }
                 do {
                     try self?.dictationPriority.get().setActive(state != .idle)
                 } catch {
@@ -1460,7 +1486,7 @@ public final class AppState: ObservableObject {
     /// coalesces this with the reload already in flight. Test environments
     /// (transcriber == nil) keep the old shape: no separate prepare phase.
     private func makePrepareForTranscription(
-        engineDirectory: URL
+        engineDirectory: @escaping @Sendable () -> URL
     ) -> (@Sendable () async throws -> Void)? {
         guard let transcriber else { return nil }
         return {
@@ -1470,7 +1496,7 @@ public final class AppState: ObservableObject {
             // deadline kills a healthy almost-ready generation and guarantees
             // another cold start on the next dictation.
             try await awaitOwnedEnginePreparation {
-                try await transcriber.prepare(modelDirectory: engineDirectory)
+                try await transcriber.prepare(modelDirectory: engineDirectory())
             }
         }
     }
@@ -3837,7 +3863,8 @@ public final class AppState: ObservableObject {
         // exactly when the person opened the settings to look at it.
         guard !isInstalling else { return }
         let mainState = await store.refreshState()
-        var refreshed = mainState
+        let previousState = await previousStore?.refreshState() ?? .notInstalled
+        var refreshed = applyLineup(current: mainState, previous: previousState)
         // Inspection of the disk does not see a Core ML failure: the files are intact, but the model has not risen.
         // Until the person explicitly requests restoration, the refusal remains on the screen -
         // otherwise the recovery button disappears and dictation still doesn't work.
@@ -3854,6 +3881,58 @@ public final class AppState: ObservableObject {
             isEngineReady = modelState.isReady
         } else if !modelState.isReady {
             isEngineReady = false
+        }
+    }
+
+    /// Point recognition at the model the lineup chooses and publish both states.
+    ///
+    /// Returns the state of the model in use, which is what readiness, the
+    /// menu and onboarding describe. The newer model's own state goes to
+    /// `upgradeState` while the previous one still serves.
+    private func applyLineup(current: ModelState, previous: ModelState) -> ModelState {
+        let lineup = ModelLineup(current: current, previous: previous)
+        let folder = lineup.recognizer == .previous ? previousEngineDirectory : currentEngineDirectory
+        if let folder, let activeModel, activeModel.current != folder {
+            // Never under a dictation: the switch waits for idle, and the
+            // model that was serving keeps serving until then.
+            guard dictationState == .idle else {
+                modelSwitchPending = true
+                upgradeState = lineup.recognizer == .current ? nil : current
+                return activeModel.current == previousEngineDirectory ? previous : current
+            }
+            activeModel.set(folder)
+            modelSwitchPending = false
+            // The engine still holds the other model; the next preparation
+            // loads this one.
+            isEngineReady = false
+            Task { [transcriber] in await transcriber?.unload() }
+        }
+        switch lineup.recognizer {
+        case .previous:
+            upgradeState = current
+            return previous
+        case .current, .none:
+            upgradeState = nil
+            if lineup.removesPrevious, lineup.recognizer == .none { removePreviousModel() }
+            return current
+        }
+    }
+
+    /// Delete the previous model once the current one has loaded and warmed up.
+    ///
+    /// Verified files are not yet a working engine; the old copy is the only
+    /// fallback until the new one has recognized something, so it goes after
+    /// the first successful warm-up and not at the end of the download.
+    private func removePreviousModelOnceReplaced() {
+        guard let activeModel, let currentEngineDirectory, activeModel.current == currentEngineDirectory else { return }
+        removePreviousModel()
+    }
+
+    private func removePreviousModel() {
+        guard let previousStore else { return }
+        Task {
+            guard await previousStore.inspectInstalledState() != .notInstalled else { return }
+            await previousStore.delete()
         }
     }
 
@@ -3878,7 +3957,10 @@ public final class AppState: ObservableObject {
         // twice as simple as it seems.
         guard let store, !isInstalling else { return }
         isInstalling = true
-        isEngineReady = false
+        // An upgrade downloads beside a working model: dictation keeps using
+        // the previous one and only the upgrade card shows progress.
+        let upgrading = upgradeState != nil
+        if !upgrading { isEngineReady = false }
         // Core ML failure leaves files on disk “intact” - both storages
         // they will say “ready”. Explicit restoration is required to keep the promise of
         // messages and re-download, rather than silently repeat the warm-up.
@@ -3897,7 +3979,9 @@ public final class AppState: ObservableObject {
             if !mainLatest.isReady || engineRejectedModels {
                 let states = await store.states()
                 let monitor = Task { @MainActor in
-                    for await state in states { modelState = state }
+                    for await state in states {
+                        if upgrading { upgradeState = state } else { modelState = state }
+                    }
                 }
                 if mainLatest.isReady || mainLatest.requiresRepair {
                     await store.repair()
@@ -3911,9 +3995,16 @@ public final class AppState: ObservableObject {
             // a failure finds no ready marker and used to erase the detailed error with
             // `.notInstalled` before the user could read it or press Retry.
             let finalMain = await store.currentState()
-            modelState = finalMain
-            publishRemainingDownload(main: finalMain)
             isInstalling = false
+            if upgrading {
+                // The lineup decides whether the new model now serves; a
+                // failed upgrade leaves the previous model in charge and the
+                // card offering a retry.
+                await refreshModelState()
+            } else {
+                modelState = finalMain
+                publishRemainingDownload(main: finalMain)
+            }
 
             // The first load compiles the model for this Mac and takes tens of
             // seconds. It starts here so that nobody pays for it under their
@@ -3981,9 +4072,10 @@ public final class AppState: ObservableObject {
         // is where the revoking happens, so deletion is where it is undone.
         isPreparingEngine = false
         endPreparationCountdown()
-        Task {
+        Task { [previousStore] in
             await transcriber?.unload()
             await store.delete()
+            await previousStore?.delete()
             await refreshModelState()
         }
     }
@@ -4093,9 +4185,8 @@ public final class AppState: ObservableObject {
         do {
             let clock = ContinuousClock()
             let preparationStart = clock.now
-            let manifest = try ModelManifest.bundled()
-            let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
-            try await transcriber.prepare(modelDirectory: layout.engineDirectory)
+            guard let activeModel else { return .skipped }
+            try await transcriber.prepare(modelDirectory: activeModel.current)
             try Task.checkCancellation()
             engineLog.info(
                 "engine prepared in \(preparationStart.duration(to: clock.now).appSeconds, format: .fixed(precision: 2))s"
@@ -4114,6 +4205,7 @@ public final class AppState: ObservableObject {
             engineWarmupRetryTask?.cancel()
             engineWarmupRetryTask = nil
             rescheduleIdleUnload()
+            removePreviousModelOnceReplaced()
             return .ready
         } catch is CancellationError {
             return .skipped

@@ -302,7 +302,8 @@ private struct SetupSettings: View {
                         place: .settings,
                         downloadMegabytes: state.remainingDownloadMegabytes,
                         isEngineReady: state.isEngineReady,
-                        isPreparingEngine: state.isPreparingEngine
+                        isPreparingEngine: state.isPreparingEngine,
+                        hasMirror: state.modelHasMirror
                     ),
                     install: state.installModel,
                     cancel: state.cancelModelInstall,
@@ -326,7 +327,7 @@ private struct SetupSettings: View {
             } header: {
                 Text(L10n.tr("Speech model"))
             } footer: {
-                Text(L10n.tr("Parakeet TDT 0.6B v3 runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings."))
+                Text(L10n.tr("The speech model runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. Audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings."))
             }
             .confirmationDialog(
                 L10n.tr("Delete the recognition model?"),
@@ -337,6 +338,17 @@ private struct SetupSettings: View {
                 Button(L10n.tr("Cancel"), role: .cancel) {}
             } message: {
                 Text(L10n.tr("Dictation stops working until you download the model again — that's another %@ MB over the network.", String(describing: state.fullModelDownloadMegabytes)))
+            }
+
+            if let upgrade = state.upgradeState {
+                Section {
+                    ModelStatusView(
+                        status: ModelStatus.upgrade(state: upgrade, downloadMegabytes: state.remainingDownloadMegabytes),
+                        install: state.installModel,
+                        cancel: state.cancelModelInstall,
+                        delete: {}
+                    )
+                }
             }
 
             Section {
@@ -861,7 +873,7 @@ private struct AboutView: View {
                 DisclosureGroup(L10n.tr("Model and library credits"), isExpanded: $showsCredits) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(L10n.tr("Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT."))
-                        Text(L10n.tr("Parakeet TDT 0.6B v3 © NVIDIA, licensed under CC BY 4.0. GGUF conversion by handy-computer."))
+                        Text(L10n.tr("Parakeet Ultra © Moondream and Parakeet TDT 0.6B v3 © NVIDIA, licensed under CC BY 4.0. GGUF conversions by handy-computer."))
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)

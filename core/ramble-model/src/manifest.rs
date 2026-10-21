@@ -219,13 +219,13 @@ mod tests {
     #[test]
     fn the_shipping_manifest_parses() {
         let manifest = Manifest::parse(SHIPPING).expect("shipping manifest must parse");
-        assert_eq!(manifest.model_id, "parakeet-tdt-0.6b-v3-gguf");
+        assert_eq!(manifest.model_id, "parakeet-ultra-gguf");
         assert_eq!(
             manifest.revision,
-            "85ac09ea12fc4b1112fa76810059364bc6adc9de"
+            "a1539be1b849ea7463b88343e5277b373d0c4ea9"
         );
         assert_eq!(manifest.files.len(), 1);
-        assert_eq!(manifest.total_byte_count(), 739_508_576);
+        assert_eq!(manifest.total_byte_count(), 486_280_096);
         assert_eq!(manifest.license, "CC-BY-4.0");
         assert!(manifest.mirror.is_some());
     }
@@ -244,14 +244,14 @@ mod tests {
         let file = &manifest.files[0];
         let sources = manifest.sources();
         assert!(sources[0].url(file).starts_with(
-            "https://github.com/mikwiseman/openramble/releases/download/models-85ac09ea/"
+            "https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/"
         ));
         assert!(sources[1]
             .url(file)
             .contains("huggingface.co/handy-computer/"));
         assert!(sources[1]
             .url(file)
-            .contains("85ac09ea12fc4b1112fa76810059364bc6adc9de"));
+            .contains("a1539be1b849ea7463b88343e5277b373d0c4ea9"));
         assert_eq!(sources[0].host(), "github.com");
         assert_eq!(sources[1].host(), "huggingface.co");
     }
@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn an_escaping_path_is_refused_at_parse_time_not_only_on_disk() {
         let json = SHIPPING.replace(
-            "parakeet-tdt-0.6b-v3-Q8_0.gguf",
+            "parakeet-ultra-Q4_K_M.gguf",
             "../../../../etc/authorized_keys",
         );
         assert!(matches!(

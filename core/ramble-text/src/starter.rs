@@ -111,6 +111,23 @@ mod tests {
         );
     }
 
+    /// Parakeet Ultra's own spellings, the same cases as the Swift
+    /// `testFixesParakeetUltraSpellings`.
+    #[test]
+    fn parakeet_ultra_spellings_come_back_as_terms() {
+        let pipeline = TextPipeline::with_replacements(developer());
+        assert_eq!(
+            pipeline.process("\u{0412}\u{043A}\u{043B}\u{044E}\u{0447}\u{0438} \u{0444}\u{0438}\u{0447}\u{0435}\u{0440}\u{0444}\u{043B}\u{044D}\u{0433} \u{043D}\u{0430} staging.").text,
+            "\u{0412}\u{043A}\u{043B}\u{044E}\u{0447}\u{0438} feature flag \u{043D}\u{0430} staging."
+        );
+        assert_eq!(
+            pipeline
+                .process("\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} commit \u{0432} branch, \u{043F}\u{043E}\u{0442}\u{043E}\u{043C} Rebace \u{0438} Mordge.")
+                .text,
+            "\u{0421}\u{0434}\u{0435}\u{043B}\u{0430}\u{0439} commit \u{0432} branch, \u{043F}\u{043E}\u{0442}\u{043E}\u{043C} rebase \u{0438} merge."
+        );
+    }
+
     /// And the guard that matters more: ordinary speech is left alone.
     #[test]
     fn ordinary_russian_speech_is_not_rewritten_into_terms() {

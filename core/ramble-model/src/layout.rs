@@ -141,7 +141,7 @@ mod tests {
         let layout = layout();
         assert_eq!(
             layout.installed_directory(),
-            Path::new("/models/parakeet-tdt-0.6b-v3-gguf/85ac09ea12fc4b1112fa76810059364bc6adc9de")
+            Path::new("/models/parakeet-ultra-gguf/a1539be1b849ea7463b88343e5277b373d0c4ea9")
         );
         assert_eq!(
             layout.ready_marker(),
@@ -149,13 +149,13 @@ mod tests {
         );
         assert_eq!(
             layout.engine_directory(),
-            layout
-                .installed_directory()
-                .join("parakeet-tdt-0.6b-v3-gguf")
+            layout.installed_directory().join("parakeet-ultra-gguf")
         );
         assert_eq!(
             layout.backup_directory(),
-            Path::new("/models/parakeet-tdt-0.6b-v3-gguf/.backup-85ac09ea12fc4b1112fa76810059364bc6adc9de")
+            Path::new(
+                "/models/parakeet-ultra-gguf/.backup-a1539be1b849ea7463b88343e5277b373d0c4ea9"
+            )
         );
     }
 
@@ -197,7 +197,7 @@ mod tests {
     fn the_model_files_live_one_level_down_inside_the_engine_folder() {
         let layout = layout();
         let file = crate::manifest::ManifestFile {
-            path: "parakeet-tdt-0.6b-v3-Q8_0.gguf".into(),
+            path: "parakeet-ultra-Q4_K_M.gguf".into(),
             byte_count: 1,
             sha256: "a".repeat(64),
         };
@@ -206,8 +206,8 @@ mod tests {
                 .destination(&file, &layout.engine_directory())
                 .unwrap(),
             Path::new(
-                "/models/parakeet-tdt-0.6b-v3-gguf/85ac09ea12fc4b1112fa76810059364bc6adc9de\
-/parakeet-tdt-0.6b-v3-gguf/parakeet-tdt-0.6b-v3-Q8_0.gguf"
+                "/models/parakeet-ultra-gguf/a1539be1b849ea7463b88343e5277b373d0c4ea9\
+/parakeet-ultra-gguf/parakeet-ultra-Q4_K_M.gguf"
             )
         );
     }

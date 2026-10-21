@@ -241,8 +241,8 @@ Recent Dictations — instead.
 
 **Both**
 
-- About 740 MB for the recognition model, plus temporary space while it is
-  downloaded and verified
+- About 490 MB for the recognition model on macOS and 740 MB on Windows and
+  Linux, plus temporary space while it is downloaded and verified
 
 Model files are downloaded from pinned revisions and verified against committed
 SHA-256 checksums before installation.
@@ -336,10 +336,12 @@ the separate name `OpenRambleDev` and bundle identifier
 ## Credits
 
 Recognition runs on [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp)
-by CJ Pais and the [Handy](https://handy.computer) team, with NVIDIA's
+by CJ Pais and the [Handy](https://handy.computer) team, with Moondream's
+[Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra), a
+post-trained version of NVIDIA's
 [Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3)
-(CC BY 4.0) in handy-computer's
-[GGUF conversion](https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf).
+(both CC BY 4.0), in handy-computer's
+[GGUF conversion](https://huggingface.co/handy-computer/parakeet-ultra-gguf).
 
 ## License
 

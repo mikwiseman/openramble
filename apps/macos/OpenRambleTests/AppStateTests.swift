@@ -714,7 +714,7 @@ final class AppStateTests: XCTestCase {
         await state.refreshModelState()
 
         XCTAssertEqual(state.remainingDownloadMegabytes, 0, "nothing is missing from disk")
-        XCTAssertEqual(state.fullModelDownloadMegabytes, 740)
+        XCTAssertEqual(state.fullModelDownloadMegabytes, 486)
     }
 
     /// The download button is drawn before the disk has been read. Its first
@@ -723,7 +723,7 @@ final class AppStateTests: XCTestCase {
     func testTheFirstDownloadSizeShownIsTheManifests() {
         let state = makeState()
 
-        XCTAssertEqual(state.remainingDownloadMegabytes, 740)
+        XCTAssertEqual(state.remainingDownloadMegabytes, 486)
     }
 
     // MARK: - Failure journal

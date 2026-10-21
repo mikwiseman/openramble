@@ -1,19 +1,19 @@
 {
-  "modelID": "parakeet-tdt-0.6b-v3-gguf",
-  "repository": "handy-computer/parakeet-tdt-0.6b-v3-gguf",
-  "revision": "85ac09ea12fc4b1112fa76810059364bc6adc9de",
+  "modelID": "parakeet-ultra-gguf",
+  "repository": "handy-computer/parakeet-ultra-gguf",
+  "revision": "a1539be1b849ea7463b88343e5277b373d0c4ea9",
   "runtimeVersion": "transcribe.cpp 0.4.0",
-  "quantization": "Q8_0",
+  "quantization": "Q4_K_M",
   "license": "CC-BY-4.0",
   "files": [
     {
-      "path": "parakeet-tdt-0.6b-v3-Q8_0.gguf",
-      "byteCount": 739508576,
-      "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+      "path": "parakeet-ultra-Q4_K_M.gguf",
+      "byteCount": 486280096,
+      "sha256": "c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9"
     }
   ],
   "mirror": {
     "repository": "mikwiseman/openramble",
-    "releaseTag": "models-85ac09ea"
+    "releaseTag": "models-a1539be1"
   }
 }

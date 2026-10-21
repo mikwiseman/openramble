@@ -15,8 +15,22 @@ use ramble_text::pipeline::TextPipeline;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 
-const SHIPPING_MANIFEST: &str =
+/// The model the Mac ships, Parakeet Ultra in Q4_K_M.
+const MAC_MANIFEST: &str =
     include_str!("../../../../Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json");
+
+/// The same Ultra revision in Q8_0. Windows and Linux recognize on the CPU
+/// backend, where Q4_K_M measured 1.29 times slower than v3 and Q8_0 within 3%
+/// of it (`research/model-upgrade-2026-10/HYPOTHESES.md`, H13 and H13b).
+const CPU_MANIFEST: &str = include_str!("../model-manifest.json");
+
+/// A Mac running this app shares the Swift app's install, which is keyed by
+/// model and revision rather than by file, so it must ask for the same file.
+const SHIPPING_MANIFEST: &str = if cfg!(target_os = "macos") {
+    MAC_MANIFEST
+} else {
+    CPU_MANIFEST
+};
 
 /// The application's own directory for things it keeps.
 fn support_root() -> Option<PathBuf> {
@@ -28,7 +42,7 @@ fn support_root() -> Option<PathBuf> {
 /// Where installed models live on this platform.
 ///
 /// The macOS path matches what the Swift app already uses, so a Mac running both
-/// shares one 739 MB download rather than keeping two.
+/// shares one model download rather than keeping two.
 pub fn models_root() -> Option<PathBuf> {
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
@@ -410,6 +424,21 @@ impl Dictation {
 mod tests {
     use super::*;
 
+    /// Windows and Linux follow the Mac's model and revision, differing only
+    /// in the file, and keep a mirror like every shipped manifest.
+    #[test]
+    fn the_cpu_manifest_is_the_macs_model_in_q8() {
+        let mac = Manifest::parse(MAC_MANIFEST).expect("the Mac manifest must parse");
+        let cpu = Manifest::parse(CPU_MANIFEST).expect("the CPU manifest must parse");
+        assert_eq!(cpu.model_id, mac.model_id);
+        assert_eq!(cpu.revision, mac.revision);
+        assert_eq!(cpu.mirror, mac.mirror);
+        assert_eq!(cpu.quantization, "Q8_0");
+        assert_eq!(cpu.files.len(), 1);
+        assert_eq!(cpu.files[0].path, "parakeet-ultra-Q8_0.gguf");
+        assert_eq!(cpu.total_byte_count(), 740_363_168);
+    }
+
     /// Quitting calls this from the tray menu, and the exit handler calls it
     /// again. Both paths exist on purpose — a person can quit either way — so
     /// the second call must be harmless rather than a double free of a model.
@@ -447,7 +476,7 @@ mod tests {
         );
     }
 
-    /// A Mac running both apps must share one 739 MB download, not keep two.
+    /// A Mac running both apps must share one model download, not keep two.
     #[cfg(target_os = "macos")]
     #[test]
     fn macos_uses_the_same_location_as_the_swift_app() {
