@@ -220,6 +220,45 @@ final class CopyHotkeyTests: XCTestCase {
         XCTAssertFalse(offersCopyLast(relaunched), "nothing inserted in this run")
     }
 
+    /// Copy Last's words live as long as the History entry that keeps them.
+    /// Deleting another entry leaves them; deleting theirs takes them too, as
+    /// Delete All does, even when that entry was the only one.
+    func testDeletingTheTakesHistoryEntryDeletesCopyLast() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        try await dictate(state, untilHistoryHas: 1)
+        harness.transcription.text = "Ship it Friday. Scratch that."
+        try await dictate(state, untilHistoryHas: 2)
+
+        state.deleteHistoryEntry(state.history[0])
+        XCTAssertEqual(state.history.map(\.text), ["Ping test"])
+        XCTAssertEqual(state.lastDictation?.insertedText, "Ping test", "its entry is still in History")
+        XCTAssertTrue(offersCopyLast(state))
+
+        state.deleteHistoryEntry(state.history[0])
+        XCTAssertEqual(state.history, [])
+        XCTAssertNil(state.lastDictation, "the only copy left of deleted words")
+        XCTAssertFalse(offersCopyLast(state))
+    }
+
+    /// Lowering Keep deletes what falls out of it, Copy Last's copy included.
+    func testTheKeepLimitDeletesCopyLastWithItsEntry() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        try await dictate(state, untilHistoryHas: 1)
+        harness.transcription.text = "Ship it Friday. Scratch that."
+        try await dictate(state, untilHistoryHas: 2)
+        XCTAssertTrue(offersCopyLast(state))
+
+        state.historyLimit = 1
+
+        XCTAssertEqual(state.history.map(\.text), ["Ship it Friday. Scratch that."])
+        XCTAssertNil(state.lastDictation)
+        XCTAssertFalse(offersCopyLast(state))
+    }
+
     /// A take-back as the first take of a run inserts nothing, so Copy Last
     /// still has nothing to copy and is not offered.
     func testATakeBackFirstLeavesNothingToCopy() async throws {

@@ -512,6 +512,9 @@ public final class AppState: ObservableObject {
         /// training on edits recognizes protected spans - another honest one
         /// it has no source, it only sees the inserted text.
         public let provenance: PipelineProvenance
+        /// The History entry that keeps these words, once History has them.
+        /// They live only as long as it does: see `history`.
+        public fileprivate(set) var historyEntryID: HistoryEntry.ID?
     }
     @Published public private(set) var lastDictation: LastDictation?
 
@@ -655,7 +658,17 @@ public final class AppState: ObservableObject {
     private var lastAnnouncedMicrophoneHealth: String?
 
     /// Finished dictations kept on disk, newest first, with their audio.
-    @Published public private(set) var history: [HistoryEntry] = []
+    ///
+    /// Copy Last holds a copy of one entry's words. When that entry goes, by
+    /// a delete, Delete All or the Keep limit, the copy goes with it: a
+    /// deletion that left the words one click away would not be one.
+    @Published public private(set) var history: [HistoryEntry] = [] {
+        didSet {
+            if let kept = lastDictation?.historyEntryID, !history.contains(where: { $0.id == kept }) {
+                lastDictation = nil
+            }
+        }
+    }
 
     /// How many takes the history keeps. Changing it trims what is already
     /// stored, so lowering the number is a deletion the person can rely on.
@@ -1707,6 +1720,12 @@ public final class AppState: ObservableObject {
             history = try historyStore.record(
                 text: text, audio: audio, limit: historyLimit, appCategory: appCategory
             )
+            // This take's insertion set Copy Last a moment ago, so the entry
+            // just recorded keeps its words. One an earlier failed write left
+            // untied ties here too, which only lets a delete take it sooner.
+            if lastDictation?.historyEntryID == nil {
+                lastDictation?.historyEntryID = history.first?.id
+            }
         } catch {
             engineLog.error("history entry not written")
             takeNotKept = true
