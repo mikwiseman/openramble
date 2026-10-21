@@ -40,6 +40,10 @@ import Foundation
 ///    pass.
 /// 3. **Stutters.** A short function word said twice in a row, from a list of
 ///    words whose doubles are never grammatical ("the the", "я я", "I, I").
+/// 4. **"New paragraph"** ("Новый абзац"), set apart by punctuation, becomes a
+///    paragraph break — in prose apps only. In a terminal a newline can run a
+///    command, so verbatim apps keep the words. Last, so a hesitation after the
+///    command is already gone and cannot take the break with it.
 ///
 /// Protected spans and every name the person's own dictionary wrote are never
 /// touched. A removal capitalizes what follows only when the removed piece
@@ -51,7 +55,8 @@ enum CleanVerbatim {
     static func clean(
         _ text: String,
         spokenCorrections: Bool = true,
-        protectedWords: Set<String> = []
+        protectedWords: Set<String> = [],
+        mode: PromptMode = .verbatim
     ) -> String {
         var tokens = Tokens(text, protectedWords: protectedWords)
         guard !tokens.items.isEmpty else { return text }
@@ -75,7 +80,8 @@ enum CleanVerbatim {
             tokens.items.removeAll()
             unfilled = true
         }
-        guard corrected || unfilled || unstuttered else { return text }
+        let broken = mode == .prose && tokens.applyParagraphCommands()
+        guard corrected || unfilled || unstuttered || broken else { return text }
         if !spokenCorrections, tokens.items.isEmpty { return text }
         return tokens.rendered
     }
@@ -327,6 +333,12 @@ enum CleanVerbatim {
     /// answer being corrected: "Is it ready? No, scratch that, yes."
     static let correctionLeadIns: Set<String> = [
         "ah", "oh", "okay", "ok", "so", "well", "sorry", "no", "actually", "wait", "oops",
+    ]
+
+    /// Spoken paragraph breaks, as consecutive words.
+    static let paragraphCommands: [[String]] = [
+        ["new", "paragraph"],
+        ["новый", "абзац"],
     ]
 
     /// Titles whose full stop does not end a sentence, written exactly so:
@@ -1131,6 +1143,55 @@ extension CleanVerbatim {
             let scalars = items[index].text.unicodeScalars
             guard let first = scalars.first, first.properties.isLowercase else { return }
             items[index].text = String(first).uppercased() + String(String.UnicodeScalarView(scalars.dropFirst()))
+        }
+
+        // MARK: Pass 4: paragraph commands
+
+        mutating func applyParagraphCommands() -> Bool {
+            var changed = false
+            var index = 0
+            while index < items.count {
+                guard let length = paragraphCommandLength(at: index) else {
+                    index += 1
+                    continue
+                }
+                let last = index + length - 1
+                let hasBefore = index > 0
+                let hasAfter = last + 1 < items.count
+
+                if hasBefore, !items[index - 1].isProtected, !endsSentence(at: index - 1) {
+                    stripClosingPauses(at: index - 1)
+                    items[index - 1].text += "."
+                }
+                remove(index...last)
+                if hasBefore, hasAfter {
+                    items[index].separator = "\n\n"
+                }
+                if index < items.count, !items[index].isProtected {
+                    capitalizeFirstLetter(at: index)
+                }
+                changed = true
+            }
+            return changed
+        }
+
+        /// How many tokens a paragraph command starting at `index` spans, when
+        /// punctuation sets it apart: "…point. New paragraph. Second…" is a
+        /// command, "added a new paragraph about…" is a sentence.
+        private func paragraphCommandLength(at index: Int) -> Int? {
+            for command in CleanVerbatim.paragraphCommands {
+                let last = index + command.count - 1
+                guard last < items.count else { continue }
+                let tokens = items[index...last]
+                guard tokens.allSatisfy({ !$0.isProtected }),
+                      tokens.map(\.word) == command,
+                      tokens.dropLast().allSatisfy({ $0.punctuation.isEmpty })
+                else { continue }
+                let apartBefore = index == 0 || !items[index - 1].punctuation.isEmpty
+                let apartAfter = last == items.count - 1 || !items[last].punctuation.isEmpty
+                if apartBefore, apartAfter { return command.count }
+            }
+            return nil
         }
 
         // MARK: Pass 3: stutters

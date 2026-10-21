@@ -14,5 +14,6 @@ pub mod span;
 pub mod starter;
 pub mod typography;
 
+pub use clean::PromptMode;
 pub use pipeline::{Output, Provenance, Run, TextPipeline, TrailingCommand};
 pub use span::{detect, ProtectedSpan, SpanKind};

@@ -83,7 +83,7 @@ final class StreamedDictationTests: XCTestCase {
             inserter: inserter,
             overlay: FakeOverlay(),
             sounds: FakeSounds(),
-            pipeline: { TextPipeline() }
+            pipeline: { _ in TextPipeline() }
         )
     }
 
@@ -99,6 +99,51 @@ final class StreamedDictationTests: XCTestCase {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(5))
         }
+    }
+
+    /// Word timings survive the stream: each piece's words move onto the
+    /// take's clock, so a long pause at the end of the first piece still
+    /// becomes a paragraph in a prose app.
+    func testWordTimingsAcrossPiecesMarkAParagraph() async {
+        let samples = [Float](repeating: 0.5, count: 30 * 16_000)
+        let capture = StreamingCapture(samples: samples, segments: [8 * 16_000, 8 * 16_000, 8 * 16_000])
+        let inserter = FakeInserter()
+        let pieces: [ASRResult] = [
+            ASRResult(text: "First piece.", words: [
+                .init(text: "First", start: 0.0, end: 0.4), .init(text: "piece.", start: 0.4, end: 0.9),
+            ], audioDuration: 8, processingDuration: 0.01),
+            ASRResult(text: "Second piece.", words: [
+                .init(text: "Second", start: 0.0, end: 7.0), .init(text: "piece.", start: 7.0, end: 7.9),
+            ], audioDuration: 8, processingDuration: 0.01),
+            ASRResult(text: "Third piece.", words: [
+                .init(text: "Third", start: 0.0, end: 7.0), .init(text: "piece.", start: 7.0, end: 7.9),
+            ], audioDuration: 8, processingDuration: 0.01),
+            ASRResult(text: "And the tail.", words: [
+                .init(text: "And", start: 0.0, end: 0.2), .init(text: "the", start: 0.2, end: 0.4),
+                .init(text: "tail.", start: 0.4, end: 0.8),
+            ], audioDuration: 6, processingDuration: 0.01),
+        ]
+        let calls = UncheckedBox(0)
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in ASRResult(text: "", audioDuration: 0, processingDuration: 0) },
+            transcribeSamples: { _ in
+                // One decode runs at a time, so the count needs no lock.
+                let index = calls.value
+                calls.value += 1
+                return pieces[min(index, pieces.count - 1)]
+            },
+            readSamples: { _ in await capture.readSamples() },
+            inserter: inserter,
+            overlay: FakeOverlay(),
+            sounds: FakeSounds(),
+            pipeline: { _ in TextPipeline(mode: .prose) }
+        )
+
+        await run(controller)
+
+        let inserted = await inserter.insertedTexts
+        XCTAssertEqual(inserted, ["First piece.\n\nSecond piece. Third piece. And the tail."])
     }
 
     func testTheStreamedPiecesAndTheTailBecomeOneSentence() async {

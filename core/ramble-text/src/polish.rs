@@ -127,6 +127,21 @@ pub fn fix_spacing_around_punctuation(text: &str, spans: &[ProtectedSpan]) -> St
 
         let character = characters[index];
 
+        // A dot with a space before it and a letter or digit right after opens a
+        // word — ".gitignore", ".env", ".NET" — and is not the end of the word
+        // before it. Kept as written.
+        if character == '.'
+            && index > 0
+            && characters[index - 1] == ' '
+            && characters
+                .get(index + 1)
+                .is_some_and(|next| next.is_alphabetic() || next.is_numeric())
+        {
+            result.push(character);
+            index += 1;
+            continue;
+        }
+
         if CLOSING.contains(&character) {
             // A space before punctuation is a recognition artefact.
             while result.ends_with(' ') {

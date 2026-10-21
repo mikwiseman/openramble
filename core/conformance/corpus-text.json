@@ -4293,5 +4293,190 @@
     "allowPressReturnCommand": false,
     "phoneticMatching": true,
     "input": "Use the format dd, mmm."
+  },
+  {
+    "name": "prose new paragraph as its own sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First point. New paragraph. Second point.",
+    "mode": "prose"
+  },
+  {
+    "name": "prose new paragraph between commas",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First point, new paragraph, second point.",
+    "mode": "prose"
+  },
+  {
+    "name": "prose russian new paragraph",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Первый пункт. Новый абзац. Второй пункт.",
+    "mode": "prose"
+  },
+  {
+    "name": "prose new paragraph after a filler",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First point. New paragraph. Um, second point.",
+    "mode": "prose"
+  },
+  {
+    "name": "prose new paragraph inside a sentence stays text",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I added a new paragraph about pricing.",
+    "mode": "prose"
+  },
+  {
+    "name": "verbatim new paragraph stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "First point. New paragraph. Second point.",
+    "mode": "verbatim"
+  },
+  {
+    "name": "send it as its own sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Ship it. Send it."
+  },
+  {
+    "name": "send it mid-thought stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "and then we send it"
+  },
+  {
+    "name": "send it after a comma stays words",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Review the doc, send it."
+  },
+  {
+    "name": "command-send-standalone",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Привет. Отправь."
+  },
+  {
+    "name": "command-enter-standalone",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Текст. Энтер."
+  },
+  {
+    "name": "command-press-enter-standalone",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Some text. Press enter."
+  },
+  {
+    "name": "dictionary-then-standalone-command",
+    "dictionary": [
+      {
+        "spoken": "релиз",
+        "written": "release",
+        "inflects": true,
+        "allowsPhoneticMatching": true
+      }
+    ],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "Сделай релиз. Отправь."
+  },
+  {
+    "name": "paragraph mark in prose",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "mode": "prose",
+    "input": "The tests are green. Next, we ship."
+  },
+  {
+    "name": "paragraph mark in a terminal",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "mode": "verbatim",
+    "input": "The tests are green. Next, we ship."
+  },
+  {
+    "name": "paragraph mark before a filler in prose",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "mode": "prose",
+    "input": "First point. Um, second point."
+  },
+  {
+    "name": "paragraph mark and send it",
+    "dictionary": [],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "mode": "prose",
+    "input": "Ship it. Send it."
+  },
+  {
+    "name": "dotfile env",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "add the key to .env and restart."
+  },
+  {
+    "name": "dotfile zshrc",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "open .zshrc"
+  },
+  {
+    "name": "dotfile gitignore",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "it is listed in .gitignore"
+  },
+  {
+    "name": "dotfile ds store",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "delete the .DS_Store files."
+  },
+  {
+    "name": "dot net",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "we moved from .NET to Go."
+  },
+  {
+    "name": "file extensions",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "convert the .png files to .webp"
+  },
+  {
+    "name": "stray space before a full stop",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "it works ."
   }
 ]

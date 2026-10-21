@@ -137,6 +137,18 @@ pub fn parse_trailing_command(text: &str) -> ParsedCommand {
     }
 }
 
+/// Marks a paragraph in recognized text: U+2029 PARAGRAPH SEPARATOR.
+pub const PARAGRAPH_MARK: char = '\u{2029}';
+
+/// Whether `text` closes with a full stop, question mark, exclamation or
+/// ellipsis — what makes a trailing command its own sentence.
+fn ends_sentence(text: &str) -> bool {
+    text.trim_end()
+        .chars()
+        .last()
+        .is_some_and(|c| matches!(c, '.' | '!' | '?' | '…'))
+}
+
 fn ends_with(haystack: &[char], needle: &[char]) -> bool {
     haystack.len() >= needle.len() && haystack[haystack.len() - needle.len()..] == *needle
 }
@@ -238,6 +250,9 @@ pub struct TextPipeline {
     /// "Scratch that" removes a sentence when dictating; a meeting transcript
     /// keeps what was said. See [`crate::clean`].
     pub spoken_corrections: bool,
+    /// Where the text is going: prose apps get paragraph breaks, verbatim apps
+    /// never receive a newline they did not ask for.
+    pub mode: clean::PromptMode,
 }
 
 impl Default for TextPipeline {
@@ -247,6 +262,7 @@ impl Default for TextPipeline {
             allow_press_return_command: false,
             phonetic_matching: true,
             spoken_corrections: true,
+            mode: clean::PromptMode::Verbatim,
         }
     }
 }
@@ -279,7 +295,12 @@ impl TextPipeline {
                 .iter()
                 .map(|replacement| replacement.written.as_str()),
         );
-        let cleaned = clean::clean(&after_dictionary, self.spoken_corrections, &protected);
+        let cleaned = clean::clean(
+            &after_dictionary,
+            self.spoken_corrections,
+            &protected,
+            self.mode,
+        );
 
         // Stage 7: folding typography outside spans.
         let folded = typography::fold(&cleaned, &span::detect(&cleaned));
@@ -298,8 +319,25 @@ impl TextPipeline {
     /// There is one path: `process` calls `run` and discards the record, so a
     /// "branch without provenance" does not exist in the product.
     pub fn run(&self, recognized: &str) -> Run {
+        // Stage 0: a paragraph mark (U+2029, set where a long pause followed a
+        // sentence) is a blank line where prose is going and a plain space
+        // everywhere else.
+        let marked = recognized.replace(
+            PARAGRAPH_MARK,
+            if self.mode == clean::PromptMode::Prose {
+                "\n\n"
+            } else {
+                " "
+            },
+        );
+        let recognized = marked.as_str();
         let mut parsed = parse_trailing_command(recognized);
-        if parsed.command == Some(TrailingCommand::PressReturn) && !self.allow_press_return_command
+        // Return is pressed only where the caller allows it (terminals) and only
+        // for a command said as its own final sentence: "…first. Send it." One
+        // false trigger submits irreversibly, so "…and then we send it"
+        // mid-thought stays words.
+        if parsed.command == Some(TrailingCommand::PressReturn)
+            && (!self.allow_press_return_command || !ends_sentence(&parsed.text))
         {
             parsed = ParsedCommand {
                 text: recognized.to_string(),
@@ -419,9 +457,12 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            allowing.process("\u{043F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442} \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}").command,
+            allowing.process("\u{043F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}. \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}").command,
             Some(TrailingCommand::PressReturn)
         );
+        // Mid-thought it stays words: Return submits irreversibly.
+        assert_eq!(allowing.process("and then we send it").command, None);
+        assert_eq!(allowing.process("Review the doc, send it.").command, None);
     }
 
     /// A line break goes into the text, because pressing Return would send the

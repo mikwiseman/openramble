@@ -18,15 +18,20 @@ struct SharedCorePipeline: TextProcessing {
     /// "Scratch that" removes a sentence when dictating; a meeting transcript
     /// keeps what was said.
     let spokenCorrections: Bool
+    /// Prose apps get paragraph breaks; verbatim apps never get a newline they
+    /// did not ask for.
+    let mode: PromptMode
 
     init(
         replacements: [DictionaryReplacement],
         allowPressReturnCommand: Bool = false,
-        spokenCorrections: Bool = true
+        spokenCorrections: Bool = true,
+        mode: PromptMode = .verbatim
     ) {
         self.replacements = replacements
         self.allowPressReturnCommand = allowPressReturnCommand
         self.spokenCorrections = spokenCorrections
+        self.mode = mode
     }
 
     func run(_ recognized: String) -> TextPipeline.Run {
@@ -44,7 +49,8 @@ struct SharedCorePipeline: TextProcessing {
             },
             allowPressReturnCommand: allowPressReturnCommand,
             phoneticMatching: true,
-            spokenCorrections: spokenCorrections
+            spokenCorrections: spokenCorrections,
+            mode: mode == .prose ? .prose : .verbatim
         )
 
         return TextPipeline.Run(

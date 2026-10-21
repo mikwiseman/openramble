@@ -199,6 +199,17 @@ Application Support directory automatically. The bundle identifier remains
   only a hesitation, nothing is inserted and OpenRamble says so. Meeting
   transcripts drop hesitations too but keep "scratch that" and one-word
   replies, because in a meeting they are something a person said.
+- OpenRamble knows where the words are going. In prose apps (Mail, Notes,
+  Slack, browsers, documents) say "New paragraph." ("Новый абзац.") to break
+  the text. Terminals, code editors and apps it does not recognize get
+  verbatim text and never receive a newline you did not ask for.
+- In prose apps a long pause after a sentence (about a second and a half)
+  starts a new paragraph, so a rambling email arrives in paragraphs. Terminals
+  and editors still get one line.
+- In a terminal, end a take with "Send it." ("Отправь.") as its own sentence
+  to press Return after the text, so a prompt to Claude Code or Codex goes out
+  hands-free. Said mid-sentence ("…and then we send it") it stays words, and
+  no other app ever gets a Return it did not ask for.
 - Dictation continues beyond five minutes, using a local audio file to keep
   memory bounded. If disk storage is unavailable, OpenRamble preserves and
   transcribes the audio still held in memory and explains why recording stopped.

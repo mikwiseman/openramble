@@ -39,7 +39,7 @@ final class SoundPolicyTests: XCTestCase {
             inserter: inserter,
             overlay: overlay,
             sounds: sounds,
-            pipeline: { TextPipeline(allowPressReturnCommand: allowPressReturnCommand) }
+            pipeline: { _ in TextPipeline(allowPressReturnCommand: allowPressReturnCommand) }
         )
     }
 
@@ -116,7 +116,7 @@ final class SoundPolicyTests: XCTestCase {
     func testLandedTextWithFailedReturnStaysSilent() async throws {
         await inserter.setReturnError(.modifiersStillHeld)
         let controller = makeController(
-            recognized: "\u{0433}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E} \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}",
+            recognized: "\u{0433}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E}. \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}",
             allowPressReturnCommand: true
         )
         await runFullDictation(controller)

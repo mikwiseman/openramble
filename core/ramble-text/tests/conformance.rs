@@ -51,6 +51,9 @@ struct Fixture {
     /// Absent means on, as in the shipping dictation path.
     #[serde(default)]
     spoken_corrections: Option<bool>,
+    /// "prose" or "verbatim"; absent means verbatim, the safe default.
+    #[serde(default)]
+    mode: Option<String>,
     input: String,
     text: String,
     command: Option<String>,
@@ -110,6 +113,10 @@ fn the_rust_pipeline_matches_what_macos_produced() {
             allow_press_return_command: fixture.allow_press_return_command,
             phonetic_matching: fixture.phonetic_matching,
             spoken_corrections: fixture.spoken_corrections.unwrap_or(true),
+            mode: match fixture.mode.as_deref() {
+                Some("prose") => ramble_text::PromptMode::Prose,
+                _ => ramble_text::PromptMode::Verbatim,
+            },
         };
         let run = pipeline.run(&fixture.input);
 

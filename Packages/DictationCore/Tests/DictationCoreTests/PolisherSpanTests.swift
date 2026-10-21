@@ -112,4 +112,24 @@ final class PolisherSpanTests: XCTestCase {
             "\u{041D}\u{0430}\u{043F}\u{0438}\u{0448}\u{0438} \"`a  b`\" \u{0432}\u{043E}\u{0442} \u{0442}\u{0430}\u{043A}"
         )
     }
+
+    /// A dot that opens a word — a dotfile, an extension, .NET — is not the end
+    /// of the word before it. The model writes "in .gitignore"; the polisher
+    /// used to glue it into "in.gitignore".
+    func testADotThatOpensAWordKeepsItsSpace() {
+        let unchanged = [
+            "Add the key to .env and restart.",
+            "Open .zshrc",
+            "It is listed in .gitignore",
+            "Delete the .DS_Store files.",
+            "We moved from .NET to Go.",
+            "Convert the .png files to .webp",
+        ]
+        for text in unchanged {
+            XCTAssertEqual(TranscriptPolisher.polish(text), text, text)
+        }
+        // A real stray space before a full stop still goes.
+        XCTAssertEqual(TranscriptPolisher.polish("It works ."), "It works.")
+        XCTAssertEqual(TranscriptPolisher.polish("Done . Next step"), "Done. Next step")
+    }
 }

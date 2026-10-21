@@ -305,7 +305,9 @@ public final class DictationController {
     private let overlayDispatcher: DictationOverlayDispatcher
     private let soundDispatcher: DictationSoundDispatcher
     private let recordingRecovery: any RecordingRecoveryStoring
-    private let pipeline: () -> any TextProcessing
+    /// Built per take, for the app the words are going to: a terminal gets
+    /// verbatim text and may honour "Send it.", a mail window gets paragraphs.
+    private let pipeline: (TargetApplication?) -> any TextProcessing
     /// Session hours. A separate dependence for exactly the same reason as
     /// microphone.
     private let now: @Sendable () -> Date
@@ -411,7 +413,7 @@ public final class DictationController {
         overlay: any OverlayPresenting,
         sounds: any Sounding,
         recordingRecovery: any RecordingRecoveryStoring = DiscardingRecordingRecovery(),
-        pipeline: @escaping () -> any TextProcessing = { TextPipeline() },
+        pipeline: @escaping (TargetApplication?) -> any TextProcessing = { _ in TextPipeline() },
         now: @escaping @Sendable () -> Date = { Date() },
         monotonicNow: @escaping @Sendable () -> ContinuousClock.Instant = { .now },
         transcriptionDeadline: @escaping @Sendable (TimeInterval) -> Duration = TranscriptionDeadline.deadline(forAudioDuration:),
@@ -931,6 +933,7 @@ public final class DictationController {
     /// recognized together rather than shipping a fragment.
     private static func joinStreamed(
         texts: [String],
+        segmentWords: [[ASRResult.Word]] = [],
         segmentSampleCounts: [Int],
         consumedSamples: Int,
         samples: [Float],
@@ -953,12 +956,30 @@ public final class DictationController {
             tailStart = max(0, tailStart - last)
         }
 
+        // Word timings on the take's own clock, for paragraph breaks. Kept
+        // only while every piece with text brought its words; otherwise none,
+        // because a partial list cannot be matched to the text.
+        var words: [ASRResult.Word]? = segmentWords.count == texts.count ? [] : nil
+        var offset = 0
+        for (index, piece) in pieces.enumerated() {
+            let pieceWords = index < segmentWords.count ? segmentWords[index] : []
+            if piece.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false, pieceWords.isEmpty {
+                words = nil
+            }
+            words?.append(contentsOf: Self.shift(pieceWords, by: offset))
+            offset += segmentSampleCounts[index]
+        }
+
         var processing = 0.0
         var dispatch = 0.0
         let tail = Array(samples[tailStart...])
         if !tail.isEmpty {
             let result = try await transcribe(tail)
             pieces.append(result.text)
+            if !result.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, result.words.isEmpty {
+                words = nil
+            }
+            words?.append(contentsOf: Self.shift(result.words, by: tailStart))
             processing = result.processingDuration
             dispatch = result.engineDispatchDuration
         }
@@ -974,12 +995,20 @@ public final class DictationController {
         // nobody had.
         return ASRResult(
             text: text,
-            words: [],
+            words: words ?? [],
             audioDuration: Double(samples.count) / Double(sampleRate),
             processingDuration: processing,
             engineDispatchDuration: dispatch,
             decodingDuration: decodingDuration
         )
+    }
+
+    /// Move a piece's word timings onto the take's clock.
+    private static func shift(_ words: [ASRResult.Word], by samples: Int) -> [ASRResult.Word] {
+        let seconds = Double(samples) / Double(sampleRate)
+        return words.map {
+            ASRResult.Word(text: $0.text, start: $0.start + seconds, end: $0.end + seconds, confidence: $0.confidence)
+        }
     }
 
     private func finalize(session: DictationSessionID) async {
@@ -1176,6 +1205,7 @@ public final class DictationController {
                         if case let .recognized(texts) = outcome, !texts.isEmpty {
                             return try await Self.joinStreamed(
                                 texts: texts,
+                                segmentWords: streamed?.recognizedWords ?? [],
                                 segmentSampleCounts: streamed?.submittedSampleCounts ?? [],
                                 consumedSamples: consumedSamples,
                                 samples: bufferedSamples,
@@ -1213,6 +1243,7 @@ public final class DictationController {
                         }
                         return try await Self.joinStreamed(
                             texts: texts,
+                            segmentWords: streamed?.recognizedWords ?? [],
                             segmentSampleCounts: streamed?.submittedSampleCounts ?? [],
                             consumedSamples: consumedSamples,
                             samples: samples,
@@ -1409,7 +1440,9 @@ public final class DictationController {
             return
         }
 
-        let run = pipeline().run(recognized.text)
+        // A long pause after a sentence marks a paragraph; the pipeline decides
+        // whether the app the words are going to wants one.
+        let run = pipeline(insertionTarget).run(ParagraphBreaks.mark(recognized.text, words: recognized.words))
         let processed = run.output
         if processed.text.isEmpty, !recognized.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             // Words were heard and cleanup left nothing: a take that was only a
