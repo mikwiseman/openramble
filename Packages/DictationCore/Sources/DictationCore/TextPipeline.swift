@@ -42,11 +42,13 @@ public enum TrailingCommandParser {
             for phrase in command.phrases where strippedTail.hasSuffix(phrase) {
                 // The command must be a separate word, not the tail of another.
                 // Any whitespace sets it apart: after a long pause in prose the
-                // paragraph mark has already become a blank line.
+                // paragraph mark has already become a blank line. What touches
+                // the command is the last scalar before it: " \u{0301}" is one
+                // Character that starts with a space and ends with a mark.
                 let cutoff = strippedTail.index(strippedTail.endIndex, offsetBy: -phrase.count)
                 if cutoff > strippedTail.startIndex {
                     let preceding = strippedTail[strippedTail.index(before: cutoff)]
-                    guard preceding.isWhitespace else { continue }
+                    guard preceding.unicodeScalars.last?.properties.isWhitespace == true else { continue }
                 }
 
                 let withoutCommand = stripSuffix(phrase, from: trimmed)

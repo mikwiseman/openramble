@@ -4447,6 +4447,14 @@
     "input": "Привет, Иван. Новая строка."
   },
   {
+    "name": "a mark on the space before new line keeps the words",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "mode": "prose",
+    "input": "Dear John. \u0301new line."
+  },
+  {
     "name": "send it after a hesitation in a terminal",
     "dictionary": [],
     "allowPressReturnCommand": true,

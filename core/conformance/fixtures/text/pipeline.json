@@ -7557,6 +7557,21 @@
     "text" : "Привет, Иван.\n"
   },
   {
+    "afterDictionary" : "Dear John. ́new line.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Dear John. ́new line.",
+    "mode" : "prose",
+    "name" : "a mark on the space before new line keeps the words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Dear John. ́new line."
+  },
+  {
     "afterDictionary" : "git status. Um, send it.",
     "allowPressReturnCommand" : true,
     "command" : "pressReturn",
