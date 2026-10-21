@@ -578,6 +578,9 @@ final class OverlayModel: ObservableObject {
         case .cue:
             if !hasCuedThisTake {
                 hasCuedThisTake = true
+                // Locked before the microphone opened: this tone is the
+                // hands-free one as well.
+                if content.mark == .handsFree { hasCuedHandsFree = true }
                 announcer.playCue()
             } else if content.mark == .handsFree, !hasCuedHandsFree {
                 hasCuedHandsFree = true

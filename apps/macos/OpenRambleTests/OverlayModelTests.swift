@@ -410,6 +410,18 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(announcer.cues, 2)
     }
 
+    /// Locking while the microphone was still starting makes the first tone
+    /// the hands-free one. A notice expiring later does not play it again.
+    func testHandsFreeFromTheStartIsOneTone() async throws {
+        model.show(.preparing, elapsed: 0)
+        model.setHandsFree(finishKey: "Right Command")
+        model.show(.listening, elapsed: 0)
+        model.showNotice(DictationNotice(kind: .info, message: "Copied — to this Mac only."))
+        try await waitForNoticeToHide()
+
+        XCTAssertEqual(announcer.cues, 1)
+    }
+
     // MARK: - Waveform
 
     func testScenario024() {
