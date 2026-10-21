@@ -24,15 +24,15 @@ enum DictationReadiness {
         engineWasReadyBefore: Bool = false
     ) -> String? {
         guard accessibilityGranted else {
-            return L10n.tr("Dictation needs Accessibility access. Open Settings → General → Permissions.")
+            return L10n.tr("Dictation needs Accessibility access. Open Settings → Setup.")
         }
         guard microphoneGranted else {
-            return L10n.tr("Dictation needs microphone access. Open Settings → General → Permissions.")
+            return L10n.tr("Dictation needs microphone access. Open Settings → Setup.")
         }
 
         switch modelState {
         case .notInstalled:
-            return L10n.tr("The recognition model isn't downloaded yet. Open Settings → Model.")
+            return L10n.tr("The recognition model isn't downloaded yet. Open Settings → Setup.")
         case .downloading:
             return L10n.tr("The recognition model is still downloading.")
         case .verifying:
@@ -40,7 +40,7 @@ enum DictationReadiness {
         case .deleting:
             return L10n.tr("The recognition model is being deleted.")
         case .repairRequired, .failed:
-            return L10n.tr("The recognition model needs repair. Open Settings → Model.")
+            return L10n.tr("The recognition model needs repair. Open Settings → Setup.")
         case .ready:
             break
         }

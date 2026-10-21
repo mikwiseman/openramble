@@ -1,3 +1,5 @@
+import LocalASR
+
 /// Permission line - the same in onboarding and settings.
 ///
 /// Both buttons on the screen are called “Issue”, and they are indistinguishable by ear: without
@@ -52,22 +54,6 @@ struct PermissionStatus: Equatable {
                 granted: false,
                 value: L10n.tr("Waiting for permission in System Settings"),
                 actionTitle: L10n.tr("Open System Settings")
-            )
-        case .restartRequired:
-            return .init(
-                title: L10n.tr("Accessibility"),
-                detail: L10n.tr("If OpenRamble is already turned on, relaunch the app so macOS applies the access to the new process."),
-                granted: false,
-                value: L10n.tr("App relaunch required"),
-                actionTitle: L10n.tr("Relaunch")
-            )
-        case .repairRequired:
-            return .init(
-                title: L10n.tr("Accessibility"),
-                detail: L10n.tr("macOS keeps an old or duplicate entry for OpenRamble. Remove just that entry and grant access again."),
-                granted: false,
-                value: L10n.tr("The system permission entry needs repair"),
-                actionTitle: L10n.tr("Repair")
             )
         case .repairing:
             return .init(
@@ -154,6 +140,26 @@ struct PermissionStatus: Equatable {
     var actionAccessibilityLabel: String? {
         actionTitle.map { action in
             action == L10n.tr("Grant") ? L10n.tr("Grant access: %@", String(describing: title)) : "\(action): \(title)"
+        }
+    }
+}
+
+/// "Already on? Repair": the one way out when System Settings shows OpenRamble
+/// switched on and the running app is still not trusted — a stale entry from
+/// an older build that macOS keeps matching instead of this one.
+enum AccessibilityRepairLink {
+    /// Only after the person came back from System Settings without the
+    /// grant. Before that, the live grant is the whole story.
+    static func isShown(state: AccessibilityPermissionState, returnedWithoutGrant: Bool) -> Bool {
+        returnedWithoutGrant && state == .waitingForSettings
+    }
+
+    /// The repair relaunches the app, and a relaunch restarts a download in
+    /// progress from zero.
+    static func isEnabled(modelState: ModelState) -> Bool {
+        switch modelState {
+        case .downloading, .verifying: return false
+        case .notInstalled, .ready, .repairRequired, .failed, .deleting: return true
         }
     }
 }

@@ -99,6 +99,9 @@ fn report(outcome: &session::Outcome) {
         session::Outcome::SilentInput => eprintln!(
             "Nothing was recorded. The microphone may be muted or in use by another application."
         ),
+        session::Outcome::TakenBack => {
+            eprintln!("Nothing left to insert after cleanup.")
+        }
         session::Outcome::DroppedSilently => {}
         session::Outcome::Failed(error) => eprintln!("{error}"),
     }

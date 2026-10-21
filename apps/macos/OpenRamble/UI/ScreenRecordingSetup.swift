@@ -156,18 +156,6 @@ struct ScreenRecordingSetup: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 190)
                 .padding(.top, 2)
-
-                HStack(spacing: 10) {
-                    Text(L10n.tr("Smaller"))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Slider(value: $state.screenRecordingOptions.bubbleScale, in: 0.12...0.34)
-                        .accessibilityLabel(L10n.tr("Camera bubble size"))
-                    Text(L10n.tr("Larger"))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             if let issue = permissionIssue {

@@ -48,11 +48,15 @@ final class SharedCorePipelineTests: XCTestCase {
             let swift = TextPipeline(
                 replacements: replacements,
                 allowPressReturnCommand: testCase.allowPressReturnCommand,
-                phoneticMatching: testCase.phoneticMatching
+                phoneticMatching: testCase.phoneticMatching,
+                spokenCorrections: testCase.spokenCorrections ?? true,
+                mode: testCase.promptMode
             ).run(testCase.input)
             let shared = SharedCorePipeline(
                 replacements: replacements,
-                allowPressReturnCommand: testCase.allowPressReturnCommand
+                allowPressReturnCommand: testCase.allowPressReturnCommand,
+                spokenCorrections: testCase.spokenCorrections ?? true,
+                mode: testCase.promptMode
             ).run(testCase.input)
 
             // Phonetic matching is always on in the shared path, so the two
@@ -99,7 +103,11 @@ final class SharedCorePipelineTests: XCTestCase {
         let dictionary: [Entry]
         let allowPressReturnCommand: Bool
         let phoneticMatching: Bool
+        let spokenCorrections: Bool?
+        let mode: String?
         let input: String
+
+        var promptMode: PromptMode { mode.flatMap(PromptMode.init(rawValue:)) ?? .verbatim }
     }
 
     private static func corpus() throws -> [Case] {

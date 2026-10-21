@@ -11,6 +11,13 @@ enum OnboardingStep: Int, CaseIterable, Sendable {
     case setup
     case tryIt
 
+    /// Where the window opens. A relaunch mid-setup — a repair, a crash, a
+    /// quit — resumes at setup instead of replaying the pitch; a grant is the
+    /// evidence, because it survives the relaunch and only setup produces one.
+    static func first(microphoneGranted: Bool, accessibilityGranted: Bool) -> OnboardingStep {
+        microphoneGranted || accessibilityGranted ? .setup : .welcome
+    }
+
     var next: OnboardingStep? { OnboardingStep(rawValue: rawValue + 1) }
     var previous: OnboardingStep? { OnboardingStep(rawValue: rawValue - 1) }
 
@@ -24,6 +31,27 @@ enum OnboardingStep: Int, CaseIterable, Sendable {
 
     /// Signature of the transition button.
     var nextButtonTitle: String { isLast ? L10n.tr("Done") : L10n.tr("Continue") }
+
+    /// Welcome's button starts the model download when there is none: it then
+    /// runs during the two System Settings round-trips instead of waiting for
+    /// the person to find a button on the next screen.
+    func downloadsOnContinue(modelState: ModelState) -> Bool {
+        guard self == .welcome, case .notInstalled = modelState else { return false }
+        return true
+    }
+
+    /// The button says what it costs before it is pressed.
+    func continueTitle(modelState: ModelState, downloadMegabytes: Int) -> String {
+        guard downloadsOnContinue(modelState: modelState) else { return nextButtonTitle }
+        return L10n.tr("Continue and download %@ MB", String(describing: downloadMegabytes))
+    }
+
+    /// One sentence to say in the try-out, chosen to land visibly cleaner than
+    /// it was said. "Scratch that" is English only; Russian heard "Зачеркни"
+    /// as "Зачерпни", so it gets a hesitation instead.
+    static func tryOutSuggestion(language: AppLanguage? = nil) -> String {
+        L10n.tr("“Let’s meet Tuesday. Scratch that. Let’s meet Wednesday.”", language: language)
+    }
 
     var progressText: String { L10n.tr("%@ of %@", String(describing: rawValue + 1), String(describing: Self.allCases.count)) }
 

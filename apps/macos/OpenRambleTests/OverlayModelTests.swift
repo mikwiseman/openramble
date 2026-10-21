@@ -13,7 +13,11 @@ final class OverlayModelTests: XCTestCase {
 
     override func setUp() async throws {
         announcer = FakeAnnouncer()
-        model = OverlayModel(announcer: announcer, noticeDuration: .milliseconds(120))
+        model = OverlayModel(
+            announcer: announcer,
+            noticeDuration: .milliseconds(120),
+            titleDelay: .milliseconds(60)
+        )
         visibility = []
         model.onVisibilityChange = { [weak self] visible in self?.visibility.append(visible) }
     }
@@ -38,6 +42,20 @@ final class OverlayModelTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(10))
         }
         XCTFail("сообщение не убралось само за \(timeout)", file: file, line: line)
+    }
+
+    private func waitUntil(
+        timeout: Duration = .seconds(3),
+        file: StaticString = #filePath,
+        line: UInt = #line,
+        _ condition: @escaping @MainActor () -> Bool
+    ) async throws {
+        let deadline = ContinuousClock.now.advanced(by: timeout)
+        while ContinuousClock.now < deadline {
+            if condition() { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTFail("condition not met within \(timeout)", file: file, line: line)
     }
 
     // MARK: - Showing and cleaning
@@ -140,7 +158,7 @@ final class OverlayModelTests: XCTestCase {
         model.show(.listening, elapsed: 0)
 
         XCTAssertNil(model.notice)
-        XCTAssertEqual(model.content.title, "Listening")
+        XCTAssertEqual(model.content.mark, .recording)
     }
 
     /// Delayed hiding belongs to its display.
@@ -157,29 +175,24 @@ final class OverlayModelTests: XCTestCase {
 
     // MARK: - Voice
 
+    /// The microphone opening is a tone, never words. Speech played into an
+    /// open microphone was measured in 100% of transcripts: a VoiceOver user's
+    /// every dictation began with "Recording."
     func testScenario010() {
         model.show(.listening, elapsed: 0)
 
-        XCTAssertEqual(
-            announcer.messages,
-            ["Recording."]
-        )
-        XCTAssertEqual(announcer.announcements.first?.urgent, true)
+        XCTAssertEqual(announcer.messages, [], "nothing is spoken into an open microphone")
+        XCTAssertEqual(announcer.cues, 1)
     }
 
-    /// The counter ticks twice per second.
-    ///
-    /// Without memory of what was said, VoiceOver would repeat “recording” until the end
-    /// dictation and would drown out everything else.
+    /// The counter ticks twice per second; the tone belongs to the take.
     func testScenario011() {
         model.show(.listening, elapsed: 0)
         model.show(.listening, elapsed: 1)
         model.show(.listening, elapsed: 2)
 
-        XCTAssertEqual(
-            announcer.messages,
-            ["Recording."]
-        )
+        XCTAssertEqual(announcer.cues, 1)
+        XCTAssertEqual(announcer.messages, [])
     }
 
     func testScenario012() {
@@ -188,13 +201,7 @@ final class OverlayModelTests: XCTestCase {
 
         model.show(.listening, elapsed: 0)
 
-        XCTAssertEqual(
-            announcer.messages,
-            [
-                "Recording.",
-                "Recording.",
-            ]
-        )
+        XCTAssertEqual(announcer.cues, 2, "every take opens the microphone again")
     }
 
     func testScenario013() {
@@ -206,20 +213,140 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(announcer.announcements.first?.urgent, true)
     }
 
-    func testScenario014() {
+    /// A take that lands inside half a second of release is one tone, no
+    /// words: about nine words per take used to be spoken around it.
+    func testScenario014() async throws {
         model.show(.preparing, elapsed: 0)
         model.show(.listening, elapsed: 0)
         model.show(.transcribing, elapsed: 3)
         model.show(.inserting, elapsed: 3)
+        try await Task.sleep(for: .milliseconds(150))
 
-        XCTAssertEqual(
-            announcer.messages,
-            [
-                "Turning on the microphone",
-                "Recording.",
-                "Recording stopped, transcribing speech",
-            ]
-        )
+        XCTAssertEqual(announcer.messages, [])
+        XCTAssertEqual(announcer.cues, 1)
+    }
+
+    // MARK: - Hands-free
+
+    /// Going hands-free is one more tone for VoiceOver and a lock on screen.
+    func testHandsFreeIsASecondToneAndALock() {
+        model.show(.listening, elapsed: 0)
+
+        model.setHandsFree(finishKey: "Right Command")
+
+        XCTAssertEqual(model.content.mark, .handsFree)
+        XCTAssertEqual(model.content.panelWidth, 244)
+        XCTAssertEqual(announcer.cues, 2)
+        XCTAssertEqual(announcer.messages, [])
+    }
+
+    func testHandsFreeBelongsToOneTake() {
+        model.show(.listening, elapsed: 0)
+        model.setHandsFree(finishKey: "Right Command")
+        model.hide()
+
+        model.show(.listening, elapsed: 0)
+
+        XCTAssertEqual(model.content.mark, .recording)
+    }
+
+    func testLeavingHandsFreeUnlocks() {
+        model.show(.listening, elapsed: 0)
+        model.setHandsFree(finishKey: "Right Command")
+
+        model.setHandsFree(finishKey: nil)
+
+        XCTAssertEqual(model.content.mark, .recording)
+        XCTAssertEqual(announcer.cues, 2, "unlocking is not news; the take ending is")
+    }
+
+    // MARK: - One shape per take
+
+    /// Preparing, listening and transcribing are one panel: only the mark's
+    /// color moves, so the panel never changes size or re-centres mid-take.
+    func testTheTakeKeepsOneShape() {
+        model.show(.preparing, elapsed: 0)
+        XCTAssertEqual(model.content.mark, .starting)
+        XCTAssertNil(model.content.title)
+        XCTAssertEqual(model.content.panelWidth, 244)
+
+        model.show(.listening, elapsed: 0)
+        XCTAssertEqual(model.content.mark, .recording)
+        XCTAssertNil(model.content.title)
+        XCTAssertEqual(model.content.panelWidth, 244)
+
+        model.show(.transcribing, elapsed: 2)
+        XCTAssertEqual(model.content.mark, .working)
+        XCTAssertNil(model.content.title)
+        XCTAssertEqual(model.content.panelWidth, 244)
+    }
+
+    /// A state that outlasts the delay earns its title, and only then words.
+    func testATitleWaitsOutTheDelay() async throws {
+        model.show(.transcribing, elapsed: 2)
+        XCTAssertNil(model.content.title)
+
+        try await waitUntil { self.model.hasLingered }
+
+        XCTAssertEqual(model.content.title, "Transcribing…")
+        XCTAssertEqual(model.content.panelWidth, 244)
+        XCTAssertEqual(announcer.messages, ["Transcribing…"])
+    }
+
+    func testASlowMicrophoneEarnsATitleButNoWords() async throws {
+        model.show(.preparing, elapsed: 0)
+
+        try await waitUntil { self.model.hasLingered }
+
+        XCTAssertEqual(model.content.title, "Turning on the microphone…")
+        XCTAssertEqual(announcer.messages, [], "the microphone is opening: nothing is said")
+    }
+
+    /// Waiting for the model is news the moment it is true.
+    func testWaitingForTheModelSaysSoAtOnce() {
+        model.show(.transcribing, elapsed: 2)
+        model.setWaitingForEngine(true)
+
+        XCTAssertEqual(model.content.title, "Waking the model…")
+        XCTAssertEqual(announcer.messages, ["Waiting for the speech model to load"])
+    }
+
+    /// The waveform and the clock freeze at release: that is what says the
+    /// microphone closed.
+    func testTheWaveformAndClockFreezeAtRelease() {
+        model.show(.listening, elapsed: 4)
+        model.updateInputLevel(0.5)
+
+        model.show(.transcribing, elapsed: 4)
+        model.updateInputLevel(0.9)
+
+        XCTAssertEqual(model.waveformSamples.last, 0.5)
+        XCTAssertFalse(model.isTicking)
+        XCTAssertEqual(model.elapsed, 4)
+    }
+
+    func testANewTakeStartsFlat() {
+        model.show(.listening, elapsed: 0)
+        model.updateInputLevel(0.5)
+        model.show(.transcribing, elapsed: 1)
+        model.hide()
+
+        model.show(.preparing, elapsed: 0)
+
+        XCTAssertTrue(model.waveformSamples.allSatisfy { $0 == 0 })
+    }
+
+    /// VoiceOver never speaks while the microphone is open — not the state,
+    /// and not a notice that happens to arrive mid-take either.
+    func testVoiceOverNeverSpeaksWhileTheMicrophoneIsOpen() async throws {
+        model.show(.preparing, elapsed: 0)
+        model.showNotice(DictationNotice(kind: .info, message: "Copied."))
+        model.show(.listening, elapsed: 0)
+        model.showNotice(DictationNotice(kind: .warning, message: "Check the microphone."))
+        try await waitForNoticeToHide()
+
+        XCTAssertEqual(announcer.messages, [])
+        XCTAssertEqual(announcer.cues, 1, "a notice expiring mid-take does not re-open the take")
     }
 
     // MARK: - Waveform
@@ -289,7 +416,7 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertNil(model.notice)
         XCTAssertTrue(model.isVisible)
         XCTAssertTrue(model.isTicking)
-        XCTAssertEqual(model.content.title, "Listening")
+        XCTAssertEqual(model.content.mark, .recording)
         XCTAssertGreaterThan(model.elapsed, 3.4, "notice time must remain part of recording time")
     }
 

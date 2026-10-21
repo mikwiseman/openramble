@@ -24,6 +24,7 @@ use ramble_core::session;
 use ramble_text::dictionary::DictionaryReplacement;
 use ramble_text::pipeline::{TextPipeline, TrailingCommand};
 use ramble_text::span::SpanKind;
+use ramble_text::PromptMode;
 
 uniffi::setup_scaffolding!();
 
@@ -58,6 +59,22 @@ pub enum FfiStopDecision {
     DeferUntilListening,
     Ignore,
     NoSession,
+}
+
+/// Where dictated text is going. Mirrors [`ramble_text::PromptMode`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum FfiPromptMode {
+    Verbatim,
+    Prose,
+}
+
+impl From<FfiPromptMode> for PromptMode {
+    fn from(value: FfiPromptMode) -> Self {
+        match value {
+            FfiPromptMode::Verbatim => PromptMode::Verbatim,
+            FfiPromptMode::Prose => PromptMode::Prose,
+        }
+    }
 }
 
 /// What to do with a recording too short to recognize.
@@ -437,11 +454,15 @@ pub fn process_text(
     replacements: Vec<FfiReplacement>,
     allow_press_return_command: bool,
     phonetic_matching: bool,
+    spoken_corrections: bool,
+    mode: FfiPromptMode,
 ) -> FfiTextResult {
     let pipeline = TextPipeline {
         replacements: replacements.into_iter().map(Into::into).collect(),
         allow_press_return_command,
         phonetic_matching,
+        spoken_corrections,
+        mode: mode.into(),
     };
     let run = pipeline.run(&recognized);
     FfiTextResult {
@@ -514,6 +535,8 @@ mod tests {
             Vec::new(),
             false,
             true,
+            true,
+            FfiPromptMode::Verbatim,
         );
         assert_eq!(
             result.text,

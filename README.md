@@ -5,10 +5,11 @@ Private, local dictation and meeting recording for Macs.
 Hold a hotkey, speak, and release it. OpenRamble transcribes the recording on
 your Mac and inserts the text at the current cursor.
 
-The interface starts in English. Choose **Русский** on the welcome screen or
-in **Settings → General → Language** to use Russian. The app changes language
-immediately and remembers your choice; macOS dialogs and system menus use it
-after the next launch. This setting does not change speech recognition.
+The interface follows your Mac: Russian when it comes before English in your
+preferred languages, English otherwise. Choose another in **Settings → General
+→ Interface language**; the app changes language immediately and remembers
+your choice, and macOS dialogs and system menus use it after the next launch.
+This setting does not change speech recognition.
 
 There are no engine knobs to tune: model choice, memory residency, timing
 budgets, and paste behavior are automatic and covered by tests. Under memory
@@ -179,6 +180,37 @@ Application Support directory automatically. The bundle identifier remains
 - Hold the configured hotkey, speak, and release it to insert text.
 - Double-press the hotkey to record without holding it; press again to stop.
 - Press Escape while recording to cancel.
+- Hesitations and stutters disappear on their own: "uh", "ээ", "ähm", a
+  "the the" said while the next word loads. The cleanup only ever deletes. It
+  never rewords, reorders or adds a word. When a word could be real it stays:
+  "um" and "э" go only when commas set them apart (in an English sentence
+  also after a word, as in "to um, fix"), "um" never goes from a German or
+  Portuguese take, acronyms such as HMM and MR stay, "mm" stays a millimetre,
+  names from your dictionary stay, and doubles that mean something ("what it
+  is is", "log in in", "very very", "да да") stay. The commas around a
+  hesitation go with it, unless a careful writer would keep the one before
+  it: "We should, um, ship it" becomes "We should ship it", while "Invite
+  Anna, um, Maria, and Bob" keeps its commas. A restart keeps one copy: "It's
+  a, uh, a leak" becomes "It's a leak".
+- Say "Scratch that." as its own sentence to remove the sentence before it,
+  or end a sentence with ", scratch that" (or put it between commas) to remove
+  what came before it in that sentence. It works within one take. When it is
+  unclear where a sentence ended, it takes back too little rather than too
+  much. If cleanup leaves nothing, because the take was only a correction or
+  only a hesitation, nothing is inserted and OpenRamble says so. Meeting
+  transcripts drop hesitations too but keep "scratch that" and one-word
+  replies, because in a meeting they are something a person said.
+- OpenRamble knows where the words are going. In prose apps (Mail, Notes,
+  Slack, browsers, documents) say "New paragraph." ("Новый абзац.") to break
+  the text. Terminals, code editors and apps it does not recognize get
+  verbatim text and never receive a newline you did not ask for.
+- In prose apps a long pause after a sentence (about a second and a half)
+  starts a new paragraph, so a rambling email arrives in paragraphs. Terminals
+  and editors still get one line.
+- In a terminal, end a take with "Send it." ("Отправь.") as its own sentence
+  to press Return after the text, so a prompt to Claude Code or Codex goes out
+  hands-free. Said mid-sentence ("…and then we send it") it stays words, and
+  no other app ever gets a Return it did not ask for.
 - Dictation continues beyond five minutes, using a local audio file to keep
   memory bounded. If disk storage is unavailable, OpenRamble preserves and
   transcribes the audio still held in memory and explains why recording stopped.
@@ -218,7 +250,7 @@ SHA-256 checksums before installation.
 ## Command-line transcription on macOS
 
 The app includes an `openramble` command-line executable. After moving the app
-to Applications, open Settings → General → Install command-line tool. This
+to Applications, open Settings → Setup → Install command-line tool. This
 creates `~/.local/bin/openramble` as a link to the executable inside the app,
 needs no administrator access, and does not change shell startup files. If
 `~/.local/bin` is not on your PATH, add `export PATH="$HOME/.local/bin:$PATH"`

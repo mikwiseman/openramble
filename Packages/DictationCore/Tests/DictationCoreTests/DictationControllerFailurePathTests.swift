@@ -122,7 +122,7 @@ final class DictationControllerFailurePathTests: XCTestCase {
             inserter: inserter,
             overlay: overlay,
             sounds: SilentSounds(),
-            pipeline: { TextPipeline(allowPressReturnCommand: allowPressReturnCommand) },
+            pipeline: { _ in TextPipeline(allowPressReturnCommand: allowPressReturnCommand) },
             now: { clock?.now ?? Date() }
         )
     }
@@ -195,14 +195,14 @@ final class DictationControllerFailurePathTests: XCTestCase {
         // no one needs it - the private tool does not add the dictated text
         // for no reason.
         await inserter.setReturnError(.modifiersStillHeld)
-        let controller = makeController(recognized: "\u{0433}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E} \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}", allowPressReturnCommand: true)
+        let controller = makeController(recognized: "\u{0433}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E}. \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}", allowPressReturnCommand: true)
 
         await runFullDictation(controller)
 
         let inserted = await inserter.insertedTexts
         let notices = await overlay.notices
 
-        XCTAssertEqual(inserted, ["\u{0413}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E}"], "\u{0422}\u{0435}\u{043A}\u{0441}\u{0442} \u{043E}\u{0431}\u{044F}\u{0437}\u{0430}\u{043D} \u{043E}\u{0441}\u{0442}\u{0430}\u{0442}\u{044C}\u{0441}\u{044F} \u{0432}\u{0441}\u{0442}\u{0430}\u{0432}\u{043B}\u{0435}\u{043D}\u{043D}\u{044B}\u{043C}")
+        XCTAssertEqual(inserted, ["\u{0413}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E}."], "\u{0422}\u{0435}\u{043A}\u{0441}\u{0442} \u{043E}\u{0431}\u{044F}\u{0437}\u{0430}\u{043D} \u{043E}\u{0441}\u{0442}\u{0430}\u{0442}\u{044C}\u{0441}\u{044F} \u{0432}\u{0441}\u{0442}\u{0430}\u{0432}\u{043B}\u{0435}\u{043D}\u{043D}\u{044B}\u{043C}")
         XCTAssertEqual(notices.first?.kind, .warning)
         XCTAssertTrue(
             notices.contains { $0.message.contains("Return") },
@@ -213,7 +213,7 @@ final class DictationControllerFailurePathTests: XCTestCase {
     }
 
     func testSuccessfulReturnLeavesNoNotice() async throws {
-        let controller = makeController(recognized: "\u{0433}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E} \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}", allowPressReturnCommand: true)
+        let controller = makeController(recognized: "\u{0433}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E}. \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}", allowPressReturnCommand: true)
 
         await runFullDictation(controller)
 

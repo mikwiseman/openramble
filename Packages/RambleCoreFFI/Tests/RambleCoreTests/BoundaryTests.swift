@@ -13,7 +13,9 @@ final class BoundaryTests: XCTestCase {
             recognized: "  привет ,  мир  ",
             replacements: [],
             allowPressReturnCommand: false,
-            phoneticMatching: true
+            phoneticMatching: true,
+            spokenCorrections: true,
+            mode: .verbatim
         )
         XCTAssertEqual(result.text, "Привет, мир")
         XCTAssertNil(result.command)
@@ -26,7 +28,9 @@ final class BoundaryTests: XCTestCase {
             recognized: "смотри TextPipeline.Output",
             replacements: [],
             allowPressReturnCommand: false,
-            phoneticMatching: true
+            phoneticMatching: true,
+            spokenCorrections: true,
+            mode: .verbatim
         )
         XCTAssertEqual(result.spans.count, 1)
         XCTAssertEqual(result.spans[0].kind, .identifier)
@@ -49,7 +53,9 @@ final class BoundaryTests: XCTestCase {
             recognized: "ошибка в сентри",
             replacements: [entry],
             allowPressReturnCommand: false,
-            phoneticMatching: true
+            phoneticMatching: true,
+            spokenCorrections: true,
+            mode: .verbatim
         )
         XCTAssertEqual(result.text, "Ошибка в Sentry")
     }
