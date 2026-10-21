@@ -634,6 +634,7 @@
 "Nothing recognized" = "Речь не распознана";
 "Heard only silence from %@." = "С устройства «%@» пришла только тишина.";
 "Still nothing recognized." = "Речь по-прежнему не распознана.";
+"Nothing was recognized — the recording is in History." = "Речь не распознана — запись сохранена в истории.";
 "Insertion couldn't be confirmed in time. The text is saved in the menu and may already have been pasted." = "Не удалось вовремя подтвердить вставку. Текст сохранён в меню и, возможно, уже вставлен.";
 "The text was inserted, but pressing Return failed." = "Текст вставлен, но нажать Return не удалось.";
 "Text not inserted: secure input is active. Your text is saved in the menu." = "Текст не вставлен: включён защищённый ввод. Ваш текст сохранён в меню.";

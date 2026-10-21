@@ -19,6 +19,9 @@ final class EmptyTakeTests: XCTestCase {
     /// What the handed-over file held at the moment of the handover, which is
     /// the only moment History gets to copy it.
     private var handedOverFrames: [AVAudioFramePosition?] = []
+    /// Whether History takes what it is handed. It can refuse: a full disk,
+    /// a folder it may not write to.
+    private var historyKeeps = true
 
     /// Room noise, well under the speech floor.
     private let quiet = [Float](repeating: 0.001, count: 16_000)
@@ -31,6 +34,7 @@ final class EmptyTakeTests: XCTestCase {
         sounds = FakeSounds()
         archived = []
         handedOverFrames = []
+        historyKeeps = true
         controller = makeController(capture: capture)
     }
 
@@ -48,8 +52,10 @@ final class EmptyTakeTests: XCTestCase {
             pipeline: { _ in TextPipeline() }
         )
         controller.onTakeFinished = { [weak self] text, url in
-            self?.archived.append((text, url))
-            self?.handedOverFrames.append(try? AVAudioFile(forReading: url).length)
+            guard let self, historyKeeps else { return false }
+            archived.append((text, url))
+            handedOverFrames.append(try? AVAudioFile(forReading: url).length)
+            return true
         }
         return controller
     }
@@ -93,7 +99,7 @@ final class EmptyTakeTests: XCTestCase {
         XCTAssertEqual(archived.map(\.url.lastPathComponent), ["fake-take.wav"])
         XCTAssertEqual(notices.count, 1, "\(notices)")
         XCTAssertEqual(notices.first?.kind, .info)
-        XCTAssertEqual(notices.first?.message, "Nothing was recognized — nothing was inserted.")
+        XCTAssertEqual(notices.first?.message, "Nothing was recognized — the recording is in History.", "says where the take went")
         XCTAssertEqual(notices.first?.wordsDidNotLand, true)
         XCTAssertEqual(plays, 1)
     }
@@ -123,7 +129,7 @@ final class EmptyTakeTests: XCTestCase {
             "History gets the whole take while it still exists"
         )
         let notices = await overlay.notices
-        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — nothing was inserted."])
+        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — the recording is in History."])
         try await waitUntil {
             let names = (try? FileManager.default.contentsOfDirectory(atPath: takes.path)) ?? []
             return !names.contains { $0.hasPrefix("memory-recovery-") }
@@ -191,7 +197,23 @@ final class EmptyTakeTests: XCTestCase {
         XCTAssertEqual(failures.map(\.stage), [.readableFile], "the lost take leaves a trace")
         XCTAssertEqual(failures.map(\.timedOut), [false])
         let notices = await overlay.notices
-        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — nothing was inserted."])
+        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — nothing was inserted. The recording couldn't be kept."], "the person hears it too")
+        XCTAssertEqual(notices.first?.kind, .info)
+    }
+
+    /// History can refuse the take — a full disk, a folder it may not write
+    /// to. The notice then says the recording is gone rather than pointing
+    /// at a row that does not exist.
+    func testAWordlessTakeHistoryRefusesSaysTheRecordingWasNotKept() async throws {
+        await capture.setBufferedSamples(quiet + [0.1] + quiet)
+        historyKeeps = false
+
+        try await dictate()
+
+        let notices = await overlay.notices
+        XCTAssertTrue(archived.isEmpty)
+        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — nothing was inserted. The recording couldn't be kept."])
+        XCTAssertEqual(notices.first?.wordsDidNotLand, true)
     }
 
     func testAnEmptyTakeOfSilenceNamesTheMicrophoneAndKeepsNothing() async throws {
@@ -238,7 +260,7 @@ final class EmptyTakeTests: XCTestCase {
 
         let notices = await overlay.notices
         XCTAssertEqual(archived.map(\.text), [""])
-        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — nothing was inserted."])
+        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — the recording is in History."])
     }
 }
 

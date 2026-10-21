@@ -258,7 +258,10 @@ public final class DictationController {
     /// Empty text is a take with sound in which the model found no words. It
     /// is handed over too, so it can be played and recognized again rather
     /// than lost; only a take of silence is not.
-    public var onTakeFinished: (@MainActor (String, URL, TargetApplication?) -> Void)?
+    ///
+    /// Returns whether the take was kept. With no words, the notice tells the
+    /// person where the take went, and only the owner knows.
+    public var onTakeFinished: (@MainActor (String, URL, TargetApplication?) -> Bool)?
     /// The name of the microphone the takes are recorded from, for the one
     /// message that needs it: a take that heard only silence.
     public var microphoneName: (@MainActor () -> String?)?
@@ -1576,7 +1579,7 @@ public final class DictationController {
             // correction or only hesitation. That is not a failure, so no alarm
             // — and the take stays in History with what was heard, so a
             // take-back the person did not mean can be undone.
-            onTakeFinished?(recognized.text, recording.url, insertionTarget)
+            _ = onTakeFinished?(recognized.text, recording.url, insertionTarget)
             await discard(recording.url, session: session)
             let notice = DictationNotice(
                 kind: .info,
@@ -1617,20 +1620,26 @@ public final class DictationController {
                 // needs once History has its own. A take with no samples was
                 // recognized from its file, which is therefore already there.
                 // With neither, the take is lost, and the journal says so.
+                // The notice says where the take went, so it is only claimed
+                // once History has really kept it.
                 let handover = ContinuousClock.now
+                var kept = false
                 do {
                     let source = try await recoverySourceURL(
                         for: recording,
                         readableWithin: recoveryForegroundGrace
                     )
-                    if shouldContinue(session) { onTakeFinished?("", source.url, insertionTarget) }
+                    if shouldContinue(session) { kept = onTakeFinished?("", source.url, insertionTarget) ?? false }
                     if source.rebuiltFromPCM { await discard(source.url, session: session) }
                 } catch {
                     onStageFailure?(.readableFile, handover.duration(to: .now), error is TranscriptionTimeout)
                 }
                 notice = DictationNotice(
                     kind: .info,
-                    message: L10n.tr("Nothing was recognized — nothing was inserted."),
+                    message: kept
+                        ? L10n.tr("Nothing was recognized — the recording is in History.")
+                        : L10n.tr("Nothing was recognized — nothing was inserted.")
+                            + L10n.tr(" The recording couldn't be kept."),
                     wordsDidNotLand: true
                 )
             }
@@ -1652,7 +1661,7 @@ public final class DictationController {
         // The last moment the take still exists. Whoever keeps a history has to
         // take its copy now; the next line deletes the original, and that
         // deletion is the promise that a recording does not outlive its use.
-        onTakeFinished?(processed.text, recording.url, insertionTarget)
+        _ = onTakeFinished?(processed.text, recording.url, insertionTarget)
         await discard(recording.url, session: session)
         guard case let .ended(notice) = outcome else { return }
         // A press while a landed paste finished: the text is in place, so the

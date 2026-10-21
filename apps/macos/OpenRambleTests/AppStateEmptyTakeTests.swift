@@ -53,7 +53,7 @@ final class AppStateEmptyTakeTests: XCTestCase {
         XCTAssertEqual(entry.text, "")
         XCTAssertNotNil(state.historyAudioURL(for: entry), "with its audio, to play and recognize again")
         XCTAssertEqual(state.lastNotice?.kind, .info)
-        XCTAssertEqual(state.lastNotice?.message, "Nothing was recognized — nothing was inserted.")
+        XCTAssertEqual(state.lastNotice?.message, "Nothing was recognized — the recording is in History.")
         let journal = String(decoding: state.diagnostics.snapshot().data, as: UTF8.self)
         XCTAssertTrue(journal.contains("dictationUnrecognized"), "the kept take is counted, numbers only")
     }
@@ -72,9 +72,22 @@ final class AppStateEmptyTakeTests: XCTestCase {
         try await dictate(state)
 
         XCTAssertTrue(state.history.isEmpty)
-        XCTAssertEqual(state.lastNotice?.message, "Nothing was recognized — nothing was inserted.")
+        XCTAssertEqual(state.lastNotice?.message, "Nothing was recognized — nothing was inserted. The recording couldn't be kept.", "never points at a row that is not there")
         let journal = String(decoding: state.diagnostics.snapshot().data, as: UTF8.self)
         XCTAssertFalse(journal.contains("dictationUnrecognized"), "counted a row that does not exist")
+    }
+
+    /// The menu's recent dictations are there to be copied, and a take with
+    /// no words has nothing to copy: offered there, it would put an empty
+    /// string over whatever the person had on the clipboard.
+    func testAWordlessTakeIsNotOfferedAmongRecentDictations() async throws {
+        await harness.capture.setBufferedSamples(quiet + [0.1] + quiet)
+        let state = harness.makeState()
+
+        try await dictate(state)
+
+        XCTAssertEqual(state.history.map(\.text), [""])
+        XCTAssertEqual(state.recentDictations.map(\.text), [])
     }
 
     /// The name is the microphone the capture was built with: the one chosen

@@ -1459,12 +1459,12 @@ public final class AppState: ObservableObject {
             }
             controller.onTakeFinished = { [weak self] text, audio, target in
                 guard let self,
-                      self.archive(text: text, audio: audio, appCategory: PromptModePolicy.category(for: target)),
-                      text.isEmpty
-                else { return }
+                      self.archive(text: text, audio: audio, appCategory: PromptModePolicy.category(for: target))
+                else { return false }
                 // Counted, never described: a take kept with no words, once
                 // History really holds it.
-                self.diagnostics.record(.dictationUnrecognized)
+                if text.isEmpty { self.diagnostics.record(.dictationUnrecognized) }
+                return true
             }
             controller.amendTakeNotice = { [weak self] notice in
                 self?.takeEndingNotice(notice) ?? notice

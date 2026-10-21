@@ -421,13 +421,15 @@ final class DictationEndToEndTests: EndToEndScenario {
         let controller = makeController()
         controller.microphoneName = { "Test Mic" }
         controller.onTakeFinished = { [weak self] text, url in
-            guard let self else { return }
+            guard let self else { return false }
             let copy = self.workspace.appending(path: "history-\(self.kept.count).wav")
             do {
                 try FileManager.default.copyItem(at: url, to: copy)
                 self.kept.append((text, copy))
+                return true
             } catch {
                 self.kept.append((text, nil))
+                return false
             }
         }
 
@@ -450,6 +452,6 @@ final class DictationEndToEndTests: EndToEndScenario {
         await waitUntil("the notice") { await !self.overlay.notices.isEmpty }
         let notices = await overlay.notices
         XCTAssertEqual(notices.map(\.kind), [.info])
-        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — nothing was inserted."])
+        XCTAssertEqual(notices.map(\.message), ["Nothing was recognized — the recording is in History."])
     }
 }
