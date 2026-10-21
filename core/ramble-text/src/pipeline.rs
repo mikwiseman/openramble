@@ -27,6 +27,8 @@
 //! protection" — no separate precedence rule needs writing, because the order
 //! *is* the rule.
 
+use std::collections::HashSet;
+
 use crate::clean;
 use crate::dictionary::{self, DictionaryReplacement};
 use crate::phonetic;
@@ -103,8 +105,10 @@ pub fn parse_trailing_command(text: &str) -> ParsedCommand {
             }
 
             // The command has to be a separate word, not the tail of another one.
+            // Any whitespace sets it apart: after a long pause in prose the
+            // paragraph mark has already become a blank line.
             let cutoff = stripped_tail.len() - phrase_chars.len();
-            if cutoff > 0 && stripped_tail[cutoff - 1] != ' ' {
+            if cutoff > 0 && !stripped_tail[cutoff - 1].is_whitespace() {
                 continue;
             }
 
@@ -336,9 +340,11 @@ impl TextPipeline {
         // for a command said as its own final sentence: "…first. Send it." One
         // false trigger submits irreversibly, so "…and then we send it"
         // mid-thought stays words.
+        let mut refused_only_as_mid_sentence = false;
         if parsed.command == Some(TrailingCommand::PressReturn)
             && (!self.allow_press_return_command || !ends_sentence(&parsed.text))
         {
+            refused_only_as_mid_sentence = self.allow_press_return_command;
             parsed = ParsedCommand {
                 text: recognized.to_string(),
                 command: None,
@@ -346,15 +352,47 @@ impl TextPipeline {
         }
 
         let mut stages = self.transform(&parsed.text);
-        if stages.1.is_empty() && parsed.command.is_some() {
-            // A command with nothing left to act on is just words, as when it is
-            // spoken alone — never an empty insert that reads as "nothing was
-            // recognized" with the command silently gone.
-            parsed = ParsedCommand {
-                text: recognized.to_string(),
-                command: None,
-            };
-            stages = self.transform(recognized);
+        // A hesitation or stutter right before "Send it." hides it from the
+        // parser above ("…first. Um, send it.") and is gone once the text is
+        // clean, so Return is decided once more on the cleaned text, by the
+        // same rules: allowed here, and "Send it." as its own final sentence.
+        // Only when "Send it." was the last thing said: words after it that
+        // cleanup removed ("Stop, scratch that.") were taking the send back,
+        // and a dictionary entry that writes "send it" was never the command.
+        // The sentence end has to be said as well, so it is checked again on
+        // what was said, cleaned the same way but without the dictionary: a
+        // full stop an entry writes ("Acme Inc.") is not one.
+        if refused_only_as_mid_sentence && parsed.command.is_none() {
+            let said = parse_trailing_command(&clean::clean(
+                recognized,
+                self.spoken_corrections,
+                &HashSet::new(),
+                self.mode,
+            ));
+            let cleaned = parse_trailing_command(&stages.1);
+            if said.command == Some(TrailingCommand::PressReturn)
+                && ends_sentence(&said.text)
+                && cleaned.command == Some(TrailingCommand::PressReturn)
+                && ends_sentence(&cleaned.text)
+            {
+                stages.1 = cleaned.text.trim().to_string();
+                parsed = cleaned;
+            }
+        }
+        // A command with nothing left to act on is just words, as when it is
+        // spoken alone — never an empty insert that reads as "nothing was
+        // recognized" with the command silently gone. Before a Return, nothing
+        // but hesitation is nothing too: "Um. Send it." never sends "Um.".
+        if let Some(command) = parsed.command {
+            if stages.1.is_empty()
+                || (command == TrailingCommand::PressReturn && clean::is_only_hesitation(&stages.1))
+            {
+                parsed = ParsedCommand {
+                    text: recognized.to_string(),
+                    command: None,
+                };
+                stages = self.transform(recognized);
+            }
         }
         let (after_dictionary, polished) = stages;
 
@@ -465,6 +503,128 @@ mod tests {
         assert_eq!(allowing.process("Review the doc, send it.").command, None);
     }
 
+    /// In a terminal a hesitation or stutter right before "Send it." is gone
+    /// once the text is clean, and what is left is "Send it." as its own final
+    /// sentence: Return, not the words typed at the prompt.
+    #[test]
+    fn a_hesitation_or_stutter_before_send_it_still_presses_return() {
+        let terminal = TextPipeline {
+            allow_press_return_command: true,
+            ..Default::default()
+        };
+        for said in [
+            "git status. Um, send it.",
+            "git status. Uh, send it.",
+            "git status. Send, send it.",
+        ] {
+            let output = terminal.process(said);
+            assert_eq!(output.text, "Git status.", "{said}");
+            assert_eq!(output.command, Some(TrailingCommand::PressReturn), "{said}");
+        }
+        // Every other rule still holds: never mid-sentence, never alone,
+        // never outside a terminal.
+        for said in [
+            "Review the doc, um, send it.",
+            "and then we, uh, send it",
+            "Uh, send it.",
+        ] {
+            assert_eq!(terminal.process(said).command, None, "{said}");
+        }
+        let elsewhere = plain().process("git status. Um, send it.");
+        assert_eq!(elsewhere.command, None);
+        assert_eq!(elsewhere.text, "Git status. Send it.");
+    }
+
+    /// Cleanup keeps a hesitation that is also a word ("Um.", "Э.") when it
+    /// stands alone, so it can be all that is left before "Send it.". Nothing
+    /// but hesitation is nothing to send: the take is typed as words and
+    /// Return is not pressed. One real word is enough.
+    #[test]
+    fn nothing_but_a_hesitation_is_never_typed_and_sent() {
+        let terminal = TextPipeline {
+            allow_press_return_command: true,
+            ..Default::default()
+        };
+        for said in [
+            "Um. Um, send it.",
+            "Um. Uh, send it.",
+            "Um.\u{2029}Uh, send it.",
+            "Um. Send it.",
+            "Hmm, um. Send it.",
+            "Er. Send it.",
+            "Mmm. Send it.",
+            "\u{042D}. \u{042D}, \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}.",
+            "\u{042D}\u{043C}. \u{042D}, \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}.",
+        ] {
+            assert_eq!(terminal.process(said).command, None, "{said}");
+        }
+        assert_eq!(terminal.process("Um. Um, send it.").text, "Um. Send it.");
+        for said in [
+            "Yes. Um, send it.",
+            "\u{0414}\u{0430}. \u{042D}, \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}.",
+        ] {
+            assert_eq!(
+                terminal.process(said).command,
+                Some(TrailingCommand::PressReturn),
+                "{said}"
+            );
+        }
+    }
+
+    /// Return is decided on the cleaned text only when "Send it." was the last
+    /// thing said. Words after it that cleanup takes away ("Stop, scratch
+    /// that.") mean the person was taking the send back, and a dictionary
+    /// entry that writes "send it" was never the command said aloud.
+    #[test]
+    fn send_it_is_return_only_when_it_was_the_last_thing_said() {
+        let terminal = TextPipeline {
+            allow_press_return_command: true,
+            ..Default::default()
+        };
+        for said in [
+            "Fix the failing test. Send it. Stop, scratch that.",
+            "git push --force. Send it. Hold on, scratch that.",
+            "git push --force. Send it. Not yet. Scratch that.",
+            "rm -rf build. Send it. Uh, hold on, scratch that.",
+        ] {
+            assert_eq!(terminal.process(said).command, None, "{said}");
+        }
+        let ship_it = TextPipeline {
+            replacements: vec![entry("ship it", "send it")],
+            allow_press_return_command: true,
+            ..Default::default()
+        };
+        for said in ["git status. Ship it.", "git status. Um, ship it."] {
+            assert_eq!(ship_it.process(said).command, None, "{said}");
+        }
+    }
+
+    /// The sentence end before "Send it." has to be one the person said. A
+    /// dictionary entry that writes one ("Acme Inc.", ".") is not a sentence
+    /// ending in what was said, so "tell acme send it" stays words.
+    #[test]
+    fn a_sentence_end_the_dictionary_wrote_does_not_press_return() {
+        let acme = TextPipeline {
+            replacements: vec![entry("acme", "Acme Inc.")],
+            allow_press_return_command: true,
+            ..Default::default()
+        };
+        for said in ["tell acme send it", "ask acme, um, send it"] {
+            assert_eq!(acme.process(said).command, None, "{said}");
+        }
+        let dot = TextPipeline {
+            replacements: vec![entry("dot", ".")],
+            allow_press_return_command: true,
+            ..Default::default()
+        };
+        assert_eq!(dot.process("git add dot send it").command, None);
+        assert_eq!(
+            acme.process("tell acme. Um, send it.").command,
+            Some(TrailingCommand::PressReturn),
+            "a sentence end that was said"
+        );
+    }
+
     /// A line break goes into the text, because pressing Return would send the
     /// message instead of breaking the line.
     #[test]
@@ -473,6 +633,28 @@ mod tests {
         assert_eq!(output.command, None);
         assert!(output.text.ends_with('\n'), "got {:?}", output.text);
         assert!(!output.text.to_lowercase().contains("\u{043D}\u{043E}\u{0432}\u{0430}\u{044F} \u{0441}\u{0442}\u{0440}\u{043E}\u{043A}\u{0430}"));
+    }
+
+    /// A person who pauses before saying "New line." still gets a line break,
+    /// not the words under a blank line.
+    #[test]
+    fn new_line_said_after_a_long_pause_is_still_a_line_break() {
+        let prose = TextPipeline {
+            mode: clean::PromptMode::Prose,
+            ..Default::default()
+        };
+        assert_eq!(
+            prose.process("Dear John.\u{2029}New line.").text,
+            "Dear John.\n"
+        );
+        assert_eq!(
+            prose.process("\u{041F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}.\u{2029}\u{041D}\u{043E}\u{0432}\u{0430}\u{044F} \u{0441}\u{0442}\u{0440}\u{043E}\u{043A}\u{0430}.").text,
+            "\u{041F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}.\n"
+        );
+        assert_eq!(
+            plain().process("Dear John.\u{2029}New line.").text,
+            "Dear John.\n"
+        );
     }
 
     /// Stage 9 runs after the polisher on purpose: the polisher trims trailing

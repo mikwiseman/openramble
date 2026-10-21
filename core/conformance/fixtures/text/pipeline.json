@@ -7511,8 +7511,9 @@
     "text" : "First point.\n\nSecond point."
   },
   {
-    "afterDictionary" : "Ship it.\n\nSend it.",
+    "afterDictionary" : "Ship it.\n\n",
     "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
     "dictionary" : [
 
     ],
@@ -7523,7 +7524,393 @@
     "spans" : [
 
     ],
-    "text" : "Ship it.\n\nSend it."
+    "text" : "Ship it."
+  },
+  {
+    "afterDictionary" : "Dear John.\n\n",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Dear John. New line.",
+    "mode" : "prose",
+    "name" : "paragraph mark before new line in prose",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Dear John.\n"
+  },
+  {
+    "afterDictionary" : "Привет, Иван.\n\n",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Привет, Иван. Новая строка.",
+    "mode" : "prose",
+    "name" : "paragraph mark before russian new line in prose",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Привет, Иван.\n"
+  },
+  {
+    "afterDictionary" : "Dear John. ́new line.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Dear John. ́new line.",
+    "mode" : "prose",
+    "name" : "a mark on the space before new line keeps the words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Dear John. ́new line."
+  },
+  {
+    "afterDictionary" : "git status. Um, send it.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "git status. Um, send it.",
+    "name" : "send it after a hesitation in a terminal",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Git status."
+  },
+  {
+    "afterDictionary" : "Fix the failing test. Uh, send it.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "Fix the failing test. Uh, send it.",
+    "name" : "send it after uh in a terminal",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Fix the failing test."
+  },
+  {
+    "afterDictionary" : "git status. Send, send it.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "git status. Send, send it.",
+    "name" : "send it after a stutter in a terminal",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Git status."
+  },
+  {
+    "afterDictionary" : "git status. Um, send it.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "git status. Um, send it.",
+    "name" : "send it after a pause and a hesitation in a terminal",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Git status."
+  },
+  {
+    "afterDictionary" : "Сделай релиз. Э, отправь.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "Сделай релиз. Э, отправь.",
+    "name" : "russian send after a hesitation in a terminal",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Сделай релиз."
+  },
+  {
+    "afterDictionary" : "Review the doc, um, send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Review the doc, um, send it.",
+    "name" : "send it after a comma and a hesitation stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Review the doc send it."
+  },
+  {
+    "afterDictionary" : "and then we, uh, send it",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "and then we, uh, send it",
+    "name" : "send it mid-thought after a hesitation stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "And then we send it"
+  },
+  {
+    "afterDictionary" : "Um. Um, send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Um. Um, send it.",
+    "name" : "nothing but a hesitation before send it stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Um. Send it."
+  },
+  {
+    "afterDictionary" : "Um. Send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Um. Send it.",
+    "name" : "a lone um before send it stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Um. Send it."
+  },
+  {
+    "afterDictionary" : "Hmm, um. Send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Hmm, um. Send it.",
+    "name" : "hmm um before send it stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Um. Send it."
+  },
+  {
+    "afterDictionary" : "Э. Э, отправь.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Э. Э, отправь.",
+    "name" : "a lone russian hesitation before send stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Э. Отправь."
+  },
+  {
+    "afterDictionary" : "Yes. Um, send it.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+
+    ],
+    "input" : "Yes. Um, send it.",
+    "name" : "one real word before um send it is return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Yes."
+  },
+  {
+    "afterDictionary" : "Fix the failing test. Send it. Stop, scratch that.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "Fix the failing test. Send it. Stop, scratch that.",
+    "name" : "send it taken back with stop scratch that stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Fix the failing test. Send it."
+  },
+  {
+    "afterDictionary" : "git push --force. Send it. Hold on, scratch that.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "git push --force. Send it. Hold on, scratch that.",
+    "name" : "send it taken back with hold on scratch that stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 16,
+        "kind" : "flag",
+        "start" : 9,
+        "text" : "--force"
+      }
+    ],
+    "text" : "Git push --force. Send it."
+  },
+  {
+    "afterDictionary" : "git push --force. Send it. Not yet. Scratch that.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+
+    ],
+    "input" : "git push --force. Send it. Not yet. Scratch that.",
+    "name" : "send it taken back with not yet scratch that stays words",
+    "phoneticMatching" : true,
+    "spans" : [
+      {
+        "end" : 16,
+        "kind" : "flag",
+        "start" : 9,
+        "text" : "--force"
+      }
+    ],
+    "text" : "Git push --force. Send it."
+  },
+  {
+    "afterDictionary" : "git status. send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "ship it",
+        "written" : "send it"
+      }
+    ],
+    "input" : "git status. Ship it.",
+    "name" : "a dictionary entry written send it is not return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Git status. send it."
+  },
+  {
+    "afterDictionary" : "git status. Um, send it.",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "ship it",
+        "written" : "send it"
+      }
+    ],
+    "input" : "git status. Um, ship it.",
+    "name" : "a dictionary entry written send it after a hesitation is not return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Git status. Send it."
+  },
+  {
+    "afterDictionary" : "tell Acme Inc. send it",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "acme",
+        "written" : "Acme Inc."
+      }
+    ],
+    "input" : "tell acme send it",
+    "name" : "a full stop the dictionary wrote before send it is not return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Tell Acme Inc. send it"
+  },
+  {
+    "afterDictionary" : "ask Acme Inc., um, send it",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "acme",
+        "written" : "Acme Inc."
+      }
+    ],
+    "input" : "ask acme, um, send it",
+    "name" : "a full stop the dictionary wrote before um send it is not return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Ask Acme Inc. send it"
+  },
+  {
+    "afterDictionary" : "git add . send it",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "dot",
+        "written" : "."
+      }
+    ],
+    "input" : "git add dot send it",
+    "name" : "a dictionary entry written as a dot before send it is not return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Git add. send it"
+  },
+  {
+    "afterDictionary" : "tell Acme Inc.. Um, send it.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "acme",
+        "written" : "Acme Inc."
+      }
+    ],
+    "input" : "tell acme. Um, send it.",
+    "name" : "a full stop said after a dictionary name before um send it is return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Tell Acme Inc.."
   },
   {
     "afterDictionary" : "add the key to .env and restart.",

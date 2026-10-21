@@ -17,10 +17,18 @@
 //!    ends a sentence except a title's ("Dr. Smith", written so, before a
 //!    name), so a wrong guess takes back too little, never a sentence the
 //!    person meant to keep.
-//! 2. **Fillers.** Hesitation words. "um", "э" and "mmm" are words too, so they
-//!    go only when punctuation sets them apart on both sides. "um" also goes
-//!    after a word in a take that reads as English, and never from a take with
-//!    German or Portuguese in it. Acronyms and "uh huh"/"uh oh" are words.
+//! 2. **Fillers.** Hesitation words. "um", "э" and "mmm" are words too, so
+//!    each goes only where it cannot be the word. "um" never goes from a take
+//!    with German or Portuguese in it. In a take that reads as English it
+//!    goes wherever it stands, except in "um hmm" and right after a name;
+//!    after a name, and in any other take, it goes only when punctuation sets
+//!    it apart on both sides. "э" and "эм", bare or before a comma, go
+//!    wherever they stand unless a letter is meant: in a list of letters
+//!    written with commas ("а, о, э, ы"), after a single letter and a comma,
+//!    next to a letter's name ("эс", "бэ"), after "буква", or set against
+//!    another letter ("пишется э, а не е"). "mmm" goes only when punctuation sets it apart
+//!    on both sides, and never in a date format. Acronyms and
+//!    "uh huh", "uh oh", "mm hmm" and "um hmm" are words.
 //!    The comma after a hesitation goes with it; the one before stays unless
 //!    it can only be the pause: after a word that cannot end a phrase
 //!    ("should, um,"), in "Thanks, um, for", or after the sentence's opening
@@ -59,8 +67,8 @@ const FILLERS: &[&str] = &[
     "uh", "uhh", "uhm", "umm", "erm", "hmm", "hm", "ээ", "эээ", "эмм", "äh", "ähm", "euh",
 ];
 
-/// Hesitations that are also words: removed only when punctuation sets them
-/// apart.
+/// Hesitations that are also words: each goes only where it cannot be the
+/// word, as the module doc spells out.
 const GUARDED_FILLERS: &[&str] = &["um", "er", "э", "эм", "mmm", "ммм"];
 
 /// Hesitations that are words in German or Portuguese ("um", the German
@@ -659,6 +667,15 @@ pub fn protected_words<'a>(written: impl IntoIterator<Item = &'a str>) -> HashSe
                 .collect::<Vec<_>>()
         })
         .collect()
+}
+
+/// Whether every word of `text` is a hesitation, counting the ones that are
+/// also words ("Um.", "Э."), which cleanup keeps when they stand alone.
+pub fn is_only_hesitation(text: &str) -> bool {
+    let protected = HashSet::new();
+    let tokens = Tokens::new(text, &protected);
+    !tokens.items.is_empty()
+        && (0..tokens.items.len()).all(|index| tokens.is_any_filler_word(index))
 }
 
 /// One word, or one protected span, with the whitespace in front of it.
@@ -2226,6 +2243,10 @@ mod tests {
             ("Then I I moved to Paris.", "Then I moved to Paris."),
             ("Um hmm.", "Um hmm."),
             ("Um hmm, sounds good.", "Um hmm, sounds good."),
+            (
+                "Um hmm, that's the plan you know.",
+                "Um hmm, that's the plan you know.",
+            ),
             ("Read the the report", "Read the the report"),
             (
                 "First paragraph. Uh, second paragraph.",

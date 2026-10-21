@@ -32,7 +32,9 @@ and the app contains no analytics or crash-reporting SDK.
 Transcripts are never written to logs. Recent dictations **are** kept on this
 Mac, with their audio, so you can replay, copy or delete them: the last 5 by
 default, adjustable in Settings ▸ History, deletable individually or all at
-once. Earlier versions kept transcripts in memory only; this is a deliberate
+once. Each one also notes the kind of app it went to (mail, chat, terminal and
+so on, never the app's name), so recognizing it again shapes the text the same
+way. Earlier versions kept transcripts in memory only; this is a deliberate
 change, and it is the one thing this app stores that it previously did not.
 Nothing leaves the Mac either way.
 
@@ -140,11 +142,11 @@ Application data is stored under
 | Recognition models | Until removed in Settings |
 | Current recording | Queued for local deletion after success or explicit cancellation |
 | Recovery audio after a technical failure | Up to 10 WAV files, seven days, and 1 GiB |
-| Dictation history: transcripts and their audio | The last 5 by default (5–50 in Settings ▸ History); older entries and their recordings are deleted when they fall off |
+| Dictation history: transcripts, their audio, and the kind of app each went to | The last 5 by default (5–50 in Settings ▸ History); older entries and their recordings are deleted when they fall off |
 | Recordings: two-channel audio, optional screen video, transcript and metadata | Until you delete them. Not bounded by count or age. Audio is about 230 MB per hour; screen video size depends on display and activity. Each recording's size is under More ▸ Recording Details |
 | Local technical journal (`SupportLogs`) | Enabled by default; at most 7 days / 5 MB total. Removed when switched off. |
 | Settings and replacement dictionary | Stored in macOS defaults |
-| Text that could not be inserted | Memory only, until the next dictation or app exit |
+| Text that could not be inserted | Kept in Dictation history with its audio, like every take. The copy behind Insert Last Dictation is memory only: it lasts until a dictation inserts text, you delete its History entry, or the app quits |
 
 **Settings → About → Save Error Report…** saves a local ZIP you can send to the
 developer. It includes predefined technical events, timings, numeric error
@@ -182,16 +184,21 @@ Application Support directory automatically. The bundle identifier remains
 - Press Escape while recording to cancel.
 - Hesitations and stutters disappear on their own: "uh", "ээ", "ähm", a
   "the the" said while the next word loads. The cleanup only ever deletes. It
-  never rewords, reorders or adds a word. When a word could be real it stays:
-  "um" and "э" go only when commas set them apart (in an English sentence
-  also after a word, as in "to um, fix"), "um" never goes from a German or
-  Portuguese take, acronyms such as HMM and MR stay, "mm" stays a millimetre,
-  names from your dictionary stay, and doubles that mean something ("what it
-  is is", "log in in", "very very", "да да") stay. The commas around a
+  never rewords, reorders or adds a word. In a take that reads as English,
+  because it has a common English word such as "the", "you" or "that", "um"
+  goes wherever it stands, except in "um hmm" and right after a name. When a
+  word could be real it stays: "um" stays in a take with German or
+  Portuguese in it, and after a name or in any other take it goes only when
+  punctuation sets it apart, "э" and "эм" stay in a list of letters written
+  with commas ("а, о, э, ы"), after a single letter and a comma, next to a
+  letter's name such as "эс", after "буква", and when set against another
+  letter ("пишется э, а не е"), acronyms such as HMM and MR stay, "mm" stays a millimetre, names
+  from your dictionary stay, and doubles that mean something ("what it is
+  is", "log in in", "very very", "да да") stay. The commas around a
   hesitation go with it, unless a careful writer would keep the one before
   it: "We should, um, ship it" becomes "We should ship it", while "Invite
-  Anna, um, Maria, and Bob" keeps its commas. A restart keeps one copy: "It's
-  a, uh, a leak" becomes "It's a leak".
+  Anna, um, Maria, and Bob" keeps its commas. A restart keeps one copy:
+  "It's a, uh, a leak" becomes "It's a leak".
 - Say "Scratch that." as its own sentence to remove the sentence before it,
   or end a sentence with ", scratch that" (or put it between commas) to remove
   what came before it in that sentence. It works within one take. When it is

@@ -1,3 +1,4 @@
+import DictationCore
 import XCTest
 
 /// The history is the first thing in this product that keeps dictated text
@@ -225,6 +226,28 @@ final class KeptHistoryEntryTests: XCTestCase {
         )
     }
 
+    /// A new dictation trims the list the same way: the starred entry stays,
+    /// with its audio, however many takes come after it.
+    func testANewDictationNeverEvictsAStarredOne() throws {
+        let store = store()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let audio = directory.appending(path: "keep.wav", directoryHint: .notDirectory)
+        try Data("fake wav".utf8).write(to: audio)
+        _ = try store.record(text: "keep me", audio: audio, limit: 2)
+        let starred = try XCTUnwrap(store.load().first)
+        _ = try store.setKept(true, for: starred)
+
+        for index in 0..<5 {
+            _ = try store.record(text: "dictation \(index)", audio: nil, limit: 2)
+        }
+
+        let entries = store.load()
+        let kept = try XCTUnwrap(entries.first { $0.id == starred.id }, "five later takes pushed out a starred one")
+        XCTAssertNotNil(kept.audioFileName)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: store.audioURL(for: kept)?.path ?? ""), "its audio was deleted")
+        XCTAssertEqual(entries.filter { !$0.isKept }.count, 2)
+    }
+
     /// Re-running recognition replaces the text and nothing else.
     ///
     /// The audio has to survive, or a second attempt would be impossible; the
@@ -261,5 +284,39 @@ final class KeptHistoryEntryTests: XCTestCase {
         XCTAssertEqual(loaded.count, 1)
         XCTAssertEqual(loaded.first?.text, "from an older build")
         XCTAssertEqual(loaded.first?.isKept, false)
+    }
+
+    /// The kind of app a take went to stays with it, so recognizing it again
+    /// shapes the text the same way, and the new text is stored the way a
+    /// take's text is.
+    func testTheAppKindStaysWithTheEntryAndReRecognitionIsTrimmedLikeATake() throws {
+        let store = store()
+        _ = try store.record(text: "Dear John.", audio: nil, limit: 10, appCategory: .mail)
+        let entry = try XCTUnwrap(DictationHistoryStore(directory: directory).load().first)
+        XCTAssertEqual(entry.appCategory, .mail)
+
+        let updated = try store.replaceText("Dear John,\n\nthanks. ", for: entry)
+        let changed = try XCTUnwrap(updated.first { $0.id == entry.id })
+        XCTAssertEqual(changed.appCategory, .mail)
+        XCTAssertEqual(changed.text, "Dear John,\n\nthanks.")
+    }
+
+    /// A history written before the app kind was kept, or by a later version
+    /// that knows a kind this one does not, still loads; such an entry is
+    /// recognized again verbatim, as it always was.
+    func testAHistoryWithoutAKnownAppKindStillLoads() throws {
+        let older = """
+        [{"id":"\(UUID().uuidString)","date":0,"text":"from an older build","audioFileName":null},
+         {"id":"\(UUID().uuidString)","date":0,"text":"from a newer build","audioFileName":null,"appCategory":"hologram"}]
+        """
+        try older.write(
+            to: directory.appending(path: "history.json"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        let loaded = store().load()
+        XCTAssertEqual(loaded.map(\.text), ["from an older build", "from a newer build"])
+        XCTAssertEqual(loaded.map(\.appCategory), [nil, nil])
     }
 }

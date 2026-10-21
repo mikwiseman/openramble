@@ -483,8 +483,15 @@ public final class AppState: ObservableObject {
     public var fullModelDownloadMegabytes: Int {
         Int((mainModelBytes + 500_000) / 1_000_000)
     }
-    /// Text of unsuccessful insertion. Never written to disk.
-    @Published public private(set) var recoveredText: String?
+    /// Text of unsuccessful insertion. Never written to disk by this slot;
+    /// the take's words also reach History, and when that entry is deleted
+    /// the slot goes with it, as Copy Last's does.
+    @Published public private(set) var recoveredText: String? {
+        didSet { recoveredEntryID = recoveredText.flatMap(historyEntryID(holding:)) }
+    }
+    /// The History entry holding the words behind Insert Last. Nil while the
+    /// entry is not written yet, or could not be: then nothing deletes them.
+    private var recoveredEntryID: HistoryEntry.ID?
     /// Technical-failure audio retained under the documented age/count/size
     /// limits. The menu exposes the count and an exact Finder destination;
     /// crash recovery is never a hidden disk write.
@@ -512,6 +519,9 @@ public final class AppState: ObservableObject {
         /// training on edits recognizes protected spans - another honest one
         /// it has no source, it only sees the inserted text.
         public let provenance: PipelineProvenance
+        /// The History entry that keeps these words, once History has them.
+        /// They live only as long as it does: see `history`.
+        public fileprivate(set) var historyEntryID: HistoryEntry.ID?
     }
     @Published public private(set) var lastDictation: LastDictation?
 
@@ -655,7 +665,20 @@ public final class AppState: ObservableObject {
     private var lastAnnouncedMicrophoneHealth: String?
 
     /// Finished dictations kept on disk, newest first, with their audio.
-    @Published public private(set) var history: [HistoryEntry] = []
+    ///
+    /// Copy Last holds a copy of one entry's words. When that entry goes, by
+    /// a delete, Delete All or the Keep limit, the copy goes with it: a
+    /// deletion that left the words one click away would not be one.
+    @Published public private(set) var history: [HistoryEntry] = [] {
+        didSet {
+            if let kept = lastDictation?.historyEntryID, !history.contains(where: { $0.id == kept }) {
+                lastDictation = nil
+            }
+            if let kept = recoveredEntryID, !history.contains(where: { $0.id == kept }) {
+                recoveredText = nil
+            }
+        }
+    }
 
     /// How many takes the history keeps. Changing it trims what is already
     /// stored, so lowering the number is a deletion the person can rely on.
@@ -930,6 +953,9 @@ public final class AppState: ObservableObject {
     private var isRecoveryOperationActive = false
     /// A message that waits for the end of the session.
     private var noticeAfterSession: DictationNotice?
+    /// History could not keep the take now ending. Said inside the take's
+    /// one notice, by `takeEndingNotice`.
+    private var takeNotKept = false
     /// Model preparation is single-flight at the AppState boundary as well as
     /// inside the worker. This keeps UI state and recovery decisions causal
     /// when startup, wake and memory-pressure events arrive together.
@@ -1284,7 +1310,7 @@ public final class AppState: ObservableObject {
                 sounds: sounds,
                 recordingRecovery: recordingRecovery,
                 pipeline: { [weak self] target in
-                    self?.makePipeline(for: target) ?? TextPipeline()
+                    self?.makePipeline(for: PromptModePolicy.category(for: target)) ?? TextPipeline()
                 },
                 prepareForTranscription: makePrepareForTranscription(
                     engineDirectory: engineDirectory
@@ -1293,6 +1319,9 @@ public final class AppState: ObservableObject {
             controller.onStateChange = { [weak self] state in
                 self?.dictationState = state
                 self?.flushNoticeAfterSession(state)
+                // A take that ended without saying anything leaves nothing
+                // for the next one to say.
+                if state == .preparing { self?.takeNotKept = false }
                 if state == .idle, self?.modelSwitchPending == true {
                     Task { await self?.refreshModelState() }
                 }
@@ -1414,8 +1443,11 @@ public final class AppState: ObservableObject {
                     characterCount: self?.lastDictation?.insertedText.count ?? 0
                 )
             }
-            controller.onTakeFinished = { [weak self] text, audio in
-                self?.archive(text: text, audio: audio)
+            controller.onTakeFinished = { [weak self] text, audio, target in
+                self?.archive(text: text, audio: audio, appCategory: PromptModePolicy.category(for: target))
+            }
+            controller.amendTakeNotice = { [weak self] notice in
+                self?.takeEndingNotice(notice) ?? notice
             }
             controller.onDictationCompleted = { [weak self] provenance in
                 self?.lastDictation = LastDictation(
@@ -1692,21 +1724,50 @@ public final class AppState: ObservableObject {
     /// Failures here are reported rather than swallowed. A history that
     /// silently stops recording looks exactly like a history of someone who
     /// stopped dictating.
-    private func archive(text: String, audio: URL) {
+    private func archive(text: String, audio: URL, appCategory: ApplicationCategory) {
         guard let historyStore else { return }
         do {
-            history = try historyStore.record(text: text, audio: audio, limit: historyLimit)
+            history = try historyStore.record(
+                text: text, audio: audio, limit: historyLimit, appCategory: appCategory
+            )
+            // This take's insertion set Copy Last a moment ago, so the entry
+            // just recorded keeps its words. One an earlier failed write left
+            // untied ties here too, which only lets a delete take it sooner.
+            if lastDictation?.historyEntryID == nil {
+                lastDictation?.historyEntryID = history.first?.id
+            }
+            // A failed insertion may have filled Insert Last before its entry
+            // existed; tie the two now.
+            if recoveredEntryID == nil, let recoveredText {
+                recoveredEntryID = historyEntryID(holding: recoveredText)
+            }
         } catch {
             engineLog.error("history entry not written")
-            notify(
-                DictationNotice(
-                    kind: .warning,
-                    message: L10n.tr("This dictation couldn't be saved to History."),
-                    wordsDidNotLand: false,
-                    reason: .storage
-                )
-            )
+            takeNotKept = true
         }
+    }
+
+    /// What the take ends by saying. One notice per take: when History could
+    /// not keep it, History's sentence joins the take's own notice, or the
+    /// reason this app stopped the take, instead of hiding it or being hidden
+    /// by it.
+    private func takeEndingNotice(_ notice: DictationNotice?) -> DictationNotice? {
+        guard takeNotKept else { return notice }
+        takeNotKept = false
+        let notKept = L10n.tr("This dictation couldn't be saved to History.")
+        guard let said = notice ?? noticeAfterSession else {
+            return DictationNotice(kind: .warning, message: notKept, wordsDidNotLand: false, reason: .storage)
+        }
+        noticeAfterSession = nil
+        return DictationNotice(
+            // Words History could not keep are no longer mere info.
+            kind: said.kind == .info ? .warning : said.kind,
+            message: said.message + " " + notKept,
+            recoverableText: said.recoverableText,
+            recoveryAudio: said.recoveryAudio,
+            wordsDidNotLand: said.wordsDidNotLand,
+            reason: said.reason ?? .storage
+        )
     }
 
     /// The take's audio, if it is still on disk.
@@ -1738,6 +1799,11 @@ public final class AppState: ObservableObject {
     /// where it is, so this can be done repeatedly, and a run that fails leaves
     /// the previous text intact rather than blanking a record of something the
     /// person actually said.
+    ///
+    /// The text is shaped for the kind of app the take went to, exactly as the
+    /// take was: paragraphs (spoken and at pauses) where it went to prose,
+    /// "Send it." left off where it went to a terminal. Only the text is kept;
+    /// nothing is pressed or inserted.
     public func retranscribeHistoryEntry(_ entry: HistoryEntry) {
         guard !isRetranscribing else { return }
         guard let audio = historyAudioURL(for: entry) else {
@@ -1753,7 +1819,9 @@ public final class AppState: ObservableObject {
             defer { Task { @MainActor in self?.isRetranscribing = false } }
             do {
                 let result = try await transcriber.transcribe(fileURL: audio)
-                let text = self?.makePipeline().run(result.text).output.text ?? result.text
+                let text = self?.makePipeline(for: entry.appCategory ?? .unknown)
+                    .run(ParagraphBreaks.mark(result.text, words: result.words))
+                    .output.text ?? result.text
                 await MainActor.run {
                     guard let self, let store = self.historyStore else { return }
                     // An empty run keeps the words already there rather than
@@ -1788,6 +1856,13 @@ public final class AppState: ObservableObject {
     public func setHistoryEntryKept(_ isKept: Bool, for entry: HistoryEntry) {
         guard let historyStore else { return }
         history = (try? historyStore.setKept(isKept, for: entry)) ?? history
+    }
+
+    /// The newest History entry whose words are `text`, trimmed as History
+    /// trims them.
+    private func historyEntryID(holding text: String) -> HistoryEntry.ID? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return history.first(where: { $0.text == trimmed })?.id
     }
 
     public func deleteHistoryEntry(_ entry: HistoryEntry) {
@@ -1856,6 +1931,10 @@ public final class AppState: ObservableObject {
         // NSWorkspace synchronously here can wedge MainActor and permanently
         // lock both Retry and the dictation hotkey.
         let target = targetApplicationSnapshot()
+        // The words were shaped for the app they were dictated into; the app
+        // in front now may be a terminal, which never gets a paragraph break.
+        // The menu keeps them as they were, for a retry into a prose app.
+        let text = ParagraphBreaks.fit(recoveredText, to: PromptModePolicy().mode(for: target))
         isRecoveryOperationActive = true
         dictationState = .inserting
         Task { [weak self] in
@@ -1867,7 +1946,7 @@ public final class AppState: ObservableObject {
             do {
                 let inserter = inserter
                 try await withTranscriptionDeadline(recoveryInsertionDeadline) {
-                    try await inserter.insert(recoveredText, into: target)
+                    try await inserter.insert(text, into: target)
                 }
                 // The words already joined History at failure time;
                 // appending again here would duplicate them. The provenance
@@ -4428,12 +4507,13 @@ public final class AppState: ObservableObject {
     /// Generic assembly makes "both paths are the same" a property of the code, not something that
     /// must be remembered when ruling one of two places.
     ///
-    /// `target` is where the words are going. Prose apps get paragraph breaks;
-    /// terminals get verbatim text and may honour a spoken "Send it."; an
-    /// unknown app is treated as verbatim. Without a target (meetings, a
-    /// re-recognized take) the text is verbatim and nothing is ever pressed.
+    /// `category` is the kind of app the words are going to. Prose apps get
+    /// paragraph breaks; terminals get verbatim text and may honour a spoken
+    /// "Send it."; an unknown app is treated as verbatim. Meetings have no app:
+    /// verbatim, and nothing is ever pressed. A take recognized again from
+    /// History uses the kind its take went to.
     private func makePipeline(
-        for target: TargetApplication? = nil,
+        for category: ApplicationCategory = .unknown,
         spokenCorrections: Bool = true
     ) -> any TextProcessing {
         // Safe built-in technical vocabulary is part of recognition, not a
@@ -4448,10 +4528,9 @@ public final class AppState: ObservableObject {
         TrailingSpacePipeline(
             wrapped: SharedCorePipeline(
                 replacements: StarterDictionary.missing(from: replacements) + replacements,
-                allowPressReturnCommand: target != nil
-                    && PromptModePolicy.category(for: target) == .terminal,
+                allowPressReturnCommand: category == .terminal,
                 spokenCorrections: spokenCorrections,
-                mode: PromptModePolicy().mode(for: target)
+                mode: category.defaultMode
             ),
             appendsSpace: appendsTrailingSpace
         )

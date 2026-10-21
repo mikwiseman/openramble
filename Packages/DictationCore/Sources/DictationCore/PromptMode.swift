@@ -16,7 +16,10 @@ public enum PromptMode: String, Sendable, Equatable, CaseIterable {
 /// Nine categories - seed transferred from wai-computer. category, not
 /// flat list bundle id, because that's how the person thinks:
 /// “literally in terminals” - one solution, not twenty.
-public enum ApplicationCategory: String, Sendable, Equatable, CaseIterable {
+///
+/// Codable because History keeps it with each take, so recognizing the take
+/// again shapes its text for the same kind of app.
+public enum ApplicationCategory: String, Sendable, Equatable, CaseIterable, Codable {
     case terminal
     case codeEditor
     case notes
@@ -107,13 +110,13 @@ public struct PromptModePolicy: Sendable, Equatable {
         "notion.id": .notes,
         "md.obsidian": .notes,
         "com.agiletortoise.drafts-osx": .notes,
-        "com.bear-writer": .notes,
+        "net.shinyfrog.bear": .notes,
         // Messengers
         "com.tinyspeck.slackmacgap": .messaging,
         "com.hnc.discord": .messaging,
         "ru.keepcoder.telegram": .messaging,
         "net.whatsapp.whatsapp": .messaging,
-        "com.apple.messages": .messaging,
+        "com.apple.mobilesms": .messaging,
         "us.zoom.xos": .messaging,
         // Mail
         "com.apple.mail": .mail,
@@ -139,7 +142,11 @@ public struct PromptModePolicy: Sendable, Equatable {
         guard let name = name?.lowercased(), !name.isEmpty else { return .unknown }
         // Only those words that themselves mean a category. "Code"
         // not included here intentionally: too many things are called that way.
-        if name.contains("terminal") || name.contains("console") { return .terminal }
+        //
+        // A name never makes a terminal. A terminal gets a real Return for
+        // "Send it.", and a name cannot earn that: Apple's Console is a log
+        // viewer, and a web app called "… console" is a web page. An unknown
+        // app is verbatim anyway, so nothing else is lost.
         if name.contains("mail") { return .mail }
         return .unknown
     }

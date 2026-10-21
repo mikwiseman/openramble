@@ -40,6 +40,9 @@ enum MenuRow: Equatable {
 ///   recovery-storage fault: when safe cleanup cannot be persisted, hiding
 ///   retained voice data would break the privacy promise, so that state keeps
 ///   its menu row until it is resolved.
+/// - Copy Last Dictation copies what this run inserted, so it appears only
+///   while there is such a take. History outlives a relaunch and keeps a
+///   take-back's raw words, so it is listed, never copied from by this row.
 enum MenuSections {
     static func sections(
         state: DictationState,
@@ -47,6 +50,7 @@ enum MenuSections {
         hasRecoveredText: Bool,
         recoveryStorageFaulted: Bool,
         hasRecents: Bool,
+        hasLastDictation: Bool,
         recordingState: AppState.MeetingState = .idle
     ) -> [[MenuRow]] {
         var sections: [[MenuRow]] = []
@@ -83,8 +87,10 @@ enum MenuSections {
             if recoveryStorageFaulted {
                 sections.append([.revealRecoveredRecordings])
             }
-            if hasRecents {
-                sections.append([.recentDictations, .copyLast])
+            let dictations: [MenuRow] = (hasRecents ? [.recentDictations] : [])
+                + (hasLastDictation ? [.copyLast] : [])
+            if !dictations.isEmpty {
+                sections.append(dictations)
             }
             if recordingState == .idle {
                 sections.append([.startRecording, .startScreenRecording])

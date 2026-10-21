@@ -180,4 +180,114 @@ final class CopyHotkeyTests: XCTestCase {
         state.copyLastDictation()
         XCTAssertNil(state.lastDictation)
     }
+
+    private func dictate(_ state: AppState, untilHistoryHas count: Int) async throws {
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        for _ in 0..<400 where state.history.count < count || state.dictationState != .idle {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(state.history.count, count)
+    }
+
+    private func offersCopyLast(_ state: AppState) -> Bool {
+        MenuSections.sections(for: state).joined().contains(.copyLast)
+    }
+
+    /// Copy Last puts back the text this run inserted, and the menu offers
+    /// it only then. History cannot stand in: it outlives a relaunch and
+    /// keeps a take-back's raw words, "Scratch that." included, so the row
+    /// would copy words the person took back, and copy something else after
+    /// a relaunch. Recent Dictations still copies any entry.
+    func testCopyLastIsOfferedOnlyForTextThisRunInserted() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        XCTAssertFalse(offersCopyLast(state), "nothing dictated yet")
+
+        try await dictate(state, untilHistoryHas: 1)
+        harness.transcription.text = "Ship it Friday. Scratch that."
+        try await dictate(state, untilHistoryHas: 2)
+
+        XCTAssertEqual(state.history.map(\.text), ["Ship it Friday. Scratch that.", "Ping test"])
+        XCTAssertEqual(state.lastDictation?.insertedText, "Ping test", "a take-back inserts nothing")
+        XCTAssertTrue(offersCopyLast(state))
+
+        let relaunched = harness.makeState()
+        XCTAssertNil(relaunched.lastDictation, "in memory only")
+        XCTAssertTrue(MenuSections.sections(for: relaunched).joined().contains(.recentDictations))
+        XCTAssertFalse(offersCopyLast(relaunched), "nothing inserted in this run")
+    }
+
+    /// Copy Last's words live as long as the History entry that keeps them.
+    /// Deleting another entry leaves them; deleting theirs takes them too, as
+    /// Delete All does, even when that entry was the only one.
+    func testDeletingTheTakesHistoryEntryDeletesCopyLast() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        try await dictate(state, untilHistoryHas: 1)
+        harness.transcription.text = "Ship it Friday. Scratch that."
+        try await dictate(state, untilHistoryHas: 2)
+
+        state.deleteHistoryEntry(state.history[0])
+        XCTAssertEqual(state.history.map(\.text), ["Ping test"])
+        XCTAssertEqual(state.lastDictation?.insertedText, "Ping test", "its entry is still in History")
+        XCTAssertTrue(offersCopyLast(state))
+
+        state.deleteHistoryEntry(state.history[0])
+        XCTAssertEqual(state.history, [])
+        XCTAssertNil(state.lastDictation, "the only copy left of deleted words")
+        XCTAssertFalse(offersCopyLast(state))
+    }
+
+    /// Insert Last holds a failed take's words in memory. Deleting the take's
+    /// History entry deletes that copy too.
+    func testDeletingAFailedTakesHistoryEntryDeletesInsertLast() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        try await dictate(state, untilHistoryHas: 1)
+        XCTAssertEqual(state.recoveredText, "Ping test")
+        XCTAssertTrue(MenuSections.sections(for: state).joined().contains(.insertLastDictation))
+
+        state.deleteHistoryEntry(state.history[0])
+
+        XCTAssertNil(state.recoveredText, "the only copy left of deleted words")
+        XCTAssertFalse(MenuSections.sections(for: state).joined().contains(.insertLastDictation))
+    }
+
+    /// Lowering Keep deletes what falls out of it, Copy Last's copy included.
+    func testTheKeepLimitDeletesCopyLastWithItsEntry() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        try await dictate(state, untilHistoryHas: 1)
+        harness.transcription.text = "Ship it Friday. Scratch that."
+        try await dictate(state, untilHistoryHas: 2)
+        XCTAssertTrue(offersCopyLast(state))
+
+        state.historyLimit = 1
+
+        XCTAssertEqual(state.history.map(\.text), ["Ship it Friday. Scratch that."])
+        XCTAssertNil(state.lastDictation)
+        XCTAssertFalse(offersCopyLast(state))
+    }
+
+    /// A take-back as the first take of a run inserts nothing, so Copy Last
+    /// still has nothing to copy and is not offered.
+    func testATakeBackFirstLeavesNothingToCopy() async throws {
+        try harness.installModelMarker()
+        harness.transcription.text = "Ship it Friday. Scratch that."
+        let state = harness.makeState()
+        await state.refreshModelState()
+
+        try await dictate(state, untilHistoryHas: 1)
+
+        XCTAssertNil(state.lastDictation)
+        XCTAssertTrue(MenuSections.sections(for: state).joined().contains(.recentDictations))
+        XCTAssertFalse(offersCopyLast(state))
+    }
 }

@@ -29,6 +29,16 @@ final class TrailingCommandEdgeCaseTests: XCTestCase {
         XCTAssertEqual(result.text, "\u{0433}\u{043E}\u{0442}\u{043E}\u{0432}\u{043E}\u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}")
     }
 
+    func testAMarkOnTheSpaceBeforeTheCommandGluesItToThatSpace() {
+        // Swift reads " \u{0301}" as one character that starts with a space;
+        // what touches the command is the mark, so it is not set apart, as in
+        // the shared core, which looks at that last scalar.
+        let result = TrailingCommandParser.parse("Dear John. \u{0301}new line.")
+
+        XCTAssertNil(result.command)
+        XCTAssertEqual(result.text, "Dear John. \u{0301}new line.")
+    }
+
     // MARK: - Register
 
     func testCommandIsRecognizedRegardlessOfCase() {

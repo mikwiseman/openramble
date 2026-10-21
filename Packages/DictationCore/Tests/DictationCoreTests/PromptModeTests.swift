@@ -100,6 +100,20 @@ final class PromptModeTests: XCTestCase {
         )
     }
 
+    /// A terminal gets a real Return for "Send it.", so only a terminal known
+    /// by its bundle id is one. A name never is: Apple's Console is a log
+    /// viewer, and a web app called "… console" is a web page.
+    func testANameNeverMakesATerminal() {
+        for app in [
+            target("com.apple.Console", name: "Console"),
+            target("com.apple.Safari.WebApp.6F1D7A2C", name: "Google Cloud console"),
+            target("com.unknown.thing", name: "Some Terminal"),
+        ] {
+            XCTAssertNotEqual(PromptModePolicy.category(for: app), .terminal, app.localizedName ?? "")
+            XCTAssertEqual(PromptModePolicy().mode(for: app), .verbatim, app.localizedName ?? "")
+        }
+    }
+
     /// “Code” is deliberately not a sign: too many things are called that way.
     func testGenericWordsInNamesDoNotDecide() {
         let policy = PromptModePolicy()
@@ -108,6 +122,16 @@ final class PromptModeTests: XCTestCase {
     }
 
     // MARK: - Map
+
+    /// The bundle ids macOS reports for these apps, not guesses at them.
+    func testMessagesAndBearAreProse() {
+        let messages = target("com.apple.MobileSMS", name: "Messages")
+        let bear = target("net.shinyfrog.bear", name: "Bear")
+        XCTAssertEqual(PromptModePolicy.category(for: messages), .messaging)
+        XCTAssertEqual(PromptModePolicy.category(for: bear), .notes)
+        XCTAssertEqual(PromptModePolicy().mode(for: messages), .prose)
+        XCTAssertEqual(PromptModePolicy().mode(for: bear), .prose)
+    }
 
     func testCategoryIsExposedForSettings() {
         XCTAssertEqual(PromptModePolicy.category(for: target("com.apple.Terminal")), .terminal)

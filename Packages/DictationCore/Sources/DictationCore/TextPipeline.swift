@@ -41,10 +41,14 @@ public enum TrailingCommandParser {
         for command in TrailingCommand.allCases {
             for phrase in command.phrases where strippedTail.hasSuffix(phrase) {
                 // The command must be a separate word, not the tail of another.
+                // Any whitespace sets it apart: after a long pause in prose the
+                // paragraph mark has already become a blank line. What touches
+                // the command is the last scalar before it: " \u{0301}" is one
+                // Character that starts with a space and ends with a mark.
                 let cutoff = strippedTail.index(strippedTail.endIndex, offsetBy: -phrase.count)
                 if cutoff > strippedTail.startIndex {
                     let preceding = strippedTail[strippedTail.index(before: cutoff)]
-                    guard preceding == " " else { continue }
+                    guard preceding.unicodeScalars.last?.properties.isWhitespace == true else { continue }
                 }
 
                 let withoutCommand = stripSuffix(phrase, from: trimmed)
@@ -227,16 +231,41 @@ public struct TextPipeline: Sendable, TextProcessing {
         // only for a command said as its own final sentence: "…first. Send it."
         // One false trigger submits irreversibly, so "…and then we send it"
         // mid-thought stays words.
+        var refusedOnlyAsMidSentence = false
         if parsed.command == .pressReturn,
            !allowPressReturnCommand || !Self.endsSentence(parsed.text) {
+            refusedOnlyAsMidSentence = allowPressReturnCommand
             parsed = TrailingCommandParser.Result(text: recognized, command: nil)
         }
 
         var stages = transform(parsed.text)
-        if stages.polished.isEmpty, parsed.command != nil {
-            // A command with nothing left to act on is just words, as when it
-            // is spoken alone — never an empty insert that reads as "nothing
-            // was recognized" with the command silently gone.
+        // A hesitation or stutter right before "Send it." hides it from the
+        // parser above ("…first. Um, send it.") and is gone once the text is
+        // clean, so Return is decided once more on the cleaned text, by the
+        // same rules: allowed here, and "Send it." as its own final sentence.
+        // Only when "Send it." was the last thing said: words after it that
+        // cleanup removed ("Stop, scratch that.") were taking the send back,
+        // and a dictionary entry that writes "send it" was never the command.
+        // The sentence end has to be said as well, so it is checked again on
+        // what was said, cleaned the same way but without the dictionary: a
+        // full stop an entry writes ("Acme Inc.") is not one.
+        if refusedOnlyAsMidSentence, parsed.command == nil {
+            let said = TrailingCommandParser.parse(
+                CleanVerbatim.clean(recognized, spokenCorrections: spokenCorrections, mode: mode)
+            )
+            let cleaned = TrailingCommandParser.parse(stages.polished)
+            if said.command == .pressReturn, Self.endsSentence(said.text),
+               cleaned.command == .pressReturn, Self.endsSentence(cleaned.text) {
+                parsed = cleaned
+                stages.polished = cleaned.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        // A command with nothing left to act on is just words, as when it is
+        // spoken alone — never an empty insert that reads as "nothing was
+        // recognized" with the command silently gone. Before a Return, nothing
+        // but hesitation is nothing too: "Um. Send it." never sends "Um.".
+        if let command = parsed.command,
+           stages.polished.isEmpty || (command == .pressReturn && CleanVerbatim.isOnlyHesitation(stages.polished)) {
             parsed = TrailingCommandParser.Result(text: recognized, command: nil)
             stages = transform(recognized)
         }

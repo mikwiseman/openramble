@@ -27,10 +27,18 @@ import Foundation
 ///    keep.
 /// 2. **Fillers.** Words that are hesitation and nothing else. "um", "э" and
 ///    "mmm" are words too (a German particle, the Portuguese "one", a Russian
-///    letter, a date format), so they go only when punctuation sets them apart
-///    on both sides. "um" also goes after a word in a take that reads as
-///    English, and never from a take with German or Portuguese in it.
-///    An all-caps token is an acronym; "uh huh" and "uh oh" are words. The
+///    letter, a date format), so each goes only where it cannot be the word.
+///    "um" never goes from a take with German or Portuguese in it. In a take
+///    that reads as English it goes wherever it stands, except in "um hmm"
+///    and right after a name; after a name, and in any other take, it goes
+///    only when punctuation sets it apart on both sides. "э" and "эм", bare
+///    or before a comma, go wherever they stand unless a letter is meant: in
+///    a list of letters written with commas ("а, о, э, ы"), after a single
+///    letter and a comma, next to a letter's name ("эс", "бэ"), after
+///    "буква", or set against another letter ("пишется э, а не е"). "mmm" goes only when
+///    punctuation sets it apart on both sides, and never in a date format.
+///    An all-caps token is an acronym; "uh huh", "uh oh", "mm hmm" and
+///    "um hmm" are words. The
 ///    comma after a hesitation goes with it; the one before stays, because the
 ///    recognizer wrote it, unless it can only be the pause: after a word that
 ///    cannot end a phrase ("should, um,"), in "Thanks, um, for", or after the
@@ -104,6 +112,13 @@ enum CleanVerbatim {
         })
     }
 
+    /// Whether every word of `text` is a hesitation, counting the ones that
+    /// are also words ("Um.", "Э."), which cleanup keeps when they stand alone.
+    static func isOnlyHesitation(_ text: String) -> Bool {
+        let tokens = Tokens(text)
+        return !tokens.items.isEmpty && tokens.items.indices.allSatisfy { tokens.isAnyFillerWord(at: $0) }
+    }
+
     // MARK: - Vocabulary
 
     /// Hesitation in every language Parakeet speaks: none of these is a word.
@@ -115,7 +130,8 @@ enum CleanVerbatim {
 
     /// Hesitations that are also words: "um" (a German particle, the
     /// Portuguese "one", the Slavic "mind"), "э" (a Russian letter), "mmm"
-    /// (a date format). Removed only when punctuation sets them apart.
+    /// (a date format). Each goes only where it cannot be the word, as the
+    /// type's doc comment spells out.
     static let guardedFillers: Set<String> = ["um", "er", "э", "эм", "mmm", "ммм"]
 
     /// Hesitations that are words in German or Portuguese ("um", the German

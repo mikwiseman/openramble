@@ -1,4 +1,6 @@
+import AppKit
 import DictationCore
+import SwiftUI
 import XCTest
 
 /// The behavior of the panel: when it is on the screen, when it disappears and what it says out loud.
@@ -302,6 +304,19 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(announcer.messages, [], "the microphone is opening: nothing is said")
     }
 
+    /// A title takes the waveform's place at the waveform's height, so the
+    /// drawn panel keeps one size and nothing beside it moves.
+    func testATitleKeepsThePanelsHeight() async throws {
+        model.show(.transcribing, elapsed: 2)
+        let before = NSHostingView(rootView: OverlayView(model: model)).fittingSize
+
+        try await waitUntil { self.model.hasLingered }
+        let after = NSHostingView(rootView: OverlayView(model: model)).fittingSize
+
+        XCTAssertEqual(model.content.title, "Transcribing…")
+        XCTAssertEqual(after, before)
+    }
+
     /// Waiting for the model is news the moment it is true.
     func testWaitingForTheModelSaysSoAtOnce() {
         model.show(.transcribing, elapsed: 2)
@@ -347,6 +362,79 @@ final class OverlayModelTests: XCTestCase {
 
         XCTAssertEqual(announcer.messages, [])
         XCTAssertEqual(announcer.cues, 1, "a notice expiring mid-take does not re-open the take")
+    }
+
+    /// A failure that ends the take while the panel still shows an open
+    /// microphone — capture never started, the device went away, access was
+    /// revoked — waits out the open microphone and is said once the take ends.
+    func testAFailureThatEndsTheTakeIsSpokenOnceTheMicrophoneCloses() {
+        model.show(.preparing, elapsed: 0)
+        model.showNotice(DictationNotice(kind: .failure, message: "Couldn't record audio."))
+        XCTAssertEqual(announcer.messages, [], "not into the opening microphone")
+
+        model.hide()
+
+        XCTAssertEqual(announcer.messages, ["Couldn't record audio."])
+        XCTAssertEqual(announcer.announcements.first?.urgent, true)
+    }
+
+    func testADisconnectMidTakeIsSpokenOnceTheTakeEnds() async throws {
+        model.show(.preparing, elapsed: 0)
+        model.show(.listening, elapsed: 0)
+        model.showNotice(DictationNotice(kind: .failure, message: "The microphone was disconnected."))
+        model.hide()
+        try await waitForNoticeToHide()
+
+        XCTAssertEqual(announcer.messages, ["The microphone was disconnected."], "once, not again as it expires")
+        XCTAssertEqual(announcer.cues, 1)
+    }
+
+    /// The natural retry after "Nothing left to insert" starts while that
+    /// notice is still on screen. It is a new take all the same: the
+    /// microphone opens with a tone, and the same notice ending it is news.
+    func testATakeStartedUnderTheLastNoticeIsANewTake() {
+        let model = OverlayModel(announcer: announcer, noticeDuration: .seconds(4), titleDelay: .seconds(4))
+        let takenBack = DictationNotice(
+            kind: .info,
+            message: "Nothing left to insert after cleanup.",
+            wordsDidNotLand: false
+        )
+        for _ in 0..<2 {
+            model.show(.preparing, elapsed: 0)
+            model.show(.listening, elapsed: 0)
+            model.show(.transcribing, elapsed: 2)
+            model.showNotice(takenBack)
+            model.hide()
+        }
+
+        XCTAssertEqual(announcer.cues, 2, "the second take opened the microphone too")
+        XCTAssertEqual(announcer.messages, [takenBack.message, takenBack.message])
+    }
+
+    /// Preparing can be merged into listening on the way to the panel. A take
+    /// that arrives as listening after a closed microphone still opens it.
+    func testATakeArrivingAsListeningUnderTheLastNoticeStillCues() {
+        let model = OverlayModel(announcer: announcer, noticeDuration: .seconds(4))
+        model.show(.listening, elapsed: 0)
+        model.show(.transcribing, elapsed: 1)
+        model.showNotice(DictationNotice(kind: .failure, message: "Recognition failed."))
+        model.hide()
+
+        model.show(.listening, elapsed: 0)
+
+        XCTAssertEqual(announcer.cues, 2)
+    }
+
+    /// Locking while the microphone was still starting makes the first tone
+    /// the hands-free one. A notice expiring later does not play it again.
+    func testHandsFreeFromTheStartIsOneTone() async throws {
+        model.show(.preparing, elapsed: 0)
+        model.setHandsFree(finishKey: "Right Command")
+        model.show(.listening, elapsed: 0)
+        model.showNotice(DictationNotice(kind: .info, message: "Copied — to this Mac only."))
+        try await waitForNoticeToHide()
+
+        XCTAssertEqual(announcer.cues, 1)
     }
 
     // MARK: - Waveform

@@ -19,11 +19,16 @@ for the check.
    at 200%/the largest macOS Text Size and confirm content remains reachable
    without clipped labels or controls.
 5. Repeat the transient HUD check with Reduce Motion, Reduce Transparency, and
-   Increase Contrast enabled. Confirm recording is identifiable without color,
-   VoiceOver announces recording/transcribing/errors once, and no text is exposed
-   in the HUD or screen sharing. Click through the visible HUD into the app below;
-   it must never intercept the click. Let an identical warning auto-hide twice
-   and confirm VoiceOver announces both impressions.
+   Increase Contrast enabled. Confirm recording is identifiable without color
+   and no text is exposed in the HUD or screen sharing. With VoiceOver on,
+   confirm the microphone opening is a tone, not words; nothing is spoken while
+   it is open; "Transcribing…" is spoken only when it lasts longer than half a
+   second; and an error that ends a take, such as unplugging the microphone, is
+   spoken once, after the microphone closes. Start the next take while a notice
+   is still showing and confirm it still gets its tone. Click through the
+   visible HUD into the app below; it must never intercept the click. Let an
+   identical warning auto-hide twice and confirm VoiceOver announces both
+   impressions.
 6. Dictate short, long, Russian, English, mixed-language, punctuation, technical
    vocabulary, silence, and immediate-release samples into TextEdit, Safari, and
    a code editor using hold-to-talk. Confirm the compact HUD disappears as soon

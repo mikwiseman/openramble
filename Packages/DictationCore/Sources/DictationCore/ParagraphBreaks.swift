@@ -46,6 +46,15 @@ public enum ParagraphBreaks {
         return changed ? result : text
     }
 
+    /// Text already shaped for one app, made fit for the app it reaches
+    /// instead ("Insert Last Dictation" goes to whatever is in front). A
+    /// verbatim app never receives a paragraph break it did not ask for: each
+    /// becomes the space the pipeline would have put there. A line break the
+    /// person asked for with "New line." stays.
+    public static func fit(_ text: String, to mode: PromptMode) -> String {
+        mode == .prose ? text : text.replacingOccurrences(of: "\n\n", with: " ")
+    }
+
     /// How long a word takes to say, generously: a quarter second plus 70 ms
     /// a letter.
     static func spokenLength(of word: String) -> TimeInterval {

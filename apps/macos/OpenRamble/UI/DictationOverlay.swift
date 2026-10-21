@@ -398,6 +398,14 @@ final class OverlayModel: ObservableObject {
 
     /// Show dictation status.
     func show(_ state: DictationState, elapsed: TimeInterval) {
+        // Opening a closed microphone starts a take, even while the last
+        // take's notice is still up and its hiding never ran: the new take
+        // gets its tone, and the same notice ending it is news again.
+        if state == .preparing || state == .listening, !isMicrophoneOpen {
+            lastAnnouncement = nil
+            hasCuedThisTake = false
+            hasCuedHandsFree = false
+        }
         cancelAutoHide()
         dismissAfterNotice = false
         // A wait belongs to exactly one take. Leaving the flag set would let a
@@ -482,6 +490,9 @@ final class OverlayModel: ObservableObject {
         setElapsed(elapsed, ticking: false)
         guard notice == nil else {
             dismissAfterNotice = true
+            // The take is over, and its microphone with it: a notice held
+            // back while the microphone was open can be said now.
+            announceContent()
             return
         }
         cancelAutoHide()
@@ -567,6 +578,9 @@ final class OverlayModel: ObservableObject {
         case .cue:
             if !hasCuedThisTake {
                 hasCuedThisTake = true
+                // Locked before the microphone opened: this tone is the
+                // hands-free one as well.
+                if content.mark == .handsFree { hasCuedHandsFree = true }
                 announcer.playCue()
             } else if content.mark == .handsFree, !hasCuedHandsFree {
                 hasCuedHandsFree = true
@@ -581,13 +595,17 @@ final class OverlayModel: ObservableObject {
         }
     }
 
+    /// A dismissal waiting behind a notice means the take has ended, whatever
+    /// state the panel last drew.
     private var isMicrophoneOpen: Bool {
-        state == .preparing || state == .listening
+        (state == .preparing || state == .listening) && !dismissAfterNotice
     }
 }
 
-private struct OverlayView: View {
+struct OverlayView: View {
     @ObservedObject var model: OverlayModel
+
+    private static let waveformHeight: CGFloat = 28
 
     var body: some View {
         if let content = model.visibleContent {
@@ -630,15 +648,17 @@ private struct OverlayView: View {
                 .frame(width: 12)
                 .accessibilityHidden(true)
                 if let title = content.title {
-                    // Takes the place of the waveform and the clock, so the
-                    // panel keeps its size and nothing beside it moves.
+                    // Takes the place of the waveform and the clock at the
+                    // waveform's height, so the panel keeps its size and
+                    // nothing beside it moves.
                     Text(title)
                         .font(.callout.weight(.medium))
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
+                        .frame(height: Self.waveformHeight)
                 } else {
                     RecordingWaveform(samples: model.waveformSamples, color: color)
-                        .frame(width: 136, height: 28)
+                        .frame(width: 136, height: Self.waveformHeight)
                     Text(elapsedText)
                         .font(.caption.weight(.medium).monospacedDigit())
                         .foregroundStyle(.secondary)

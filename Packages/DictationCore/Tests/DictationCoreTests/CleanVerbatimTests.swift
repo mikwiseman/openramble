@@ -67,9 +67,13 @@ final class CleanVerbatimTests: XCTestCase {
         XCTAssertEqual(CleanVerbatim.clean("I think , uh ."), "I think.")
     }
 
-    /// Two-word interjections are words: "uh huh" means yes.
+    /// Two-word interjections are words: "uh huh" means yes. "um hmm" stays
+    /// even in a take that reads as English, where a lone "um" goes.
     func testKeepsTwoWordInterjections() {
-        for text in ["Uh huh, ship it.", "Uh huh.", "Mm hmm, sounds good.", "Uh oh, the deploy failed.", "Um hmm.", "Um hmm, sounds good."] {
+        for text in [
+            "Uh huh, ship it.", "Uh huh.", "Mm hmm, sounds good.", "Uh oh, the deploy failed.", "Um hmm.",
+            "Um hmm, sounds good.", "Um hmm, that's the plan you know.",
+        ] {
             XCTAssertEqual(CleanVerbatim.clean(text), text, text)
         }
     }
@@ -890,6 +894,88 @@ final class CleanVerbatimTests: XCTestCase {
         XCTAssertNil(send.command, "never type a hesitation and press Return")
     }
 
+    /// In a terminal a hesitation or stutter right before "Send it." is gone
+    /// once the text is clean, and what is left is "Send it." as its own final
+    /// sentence: Return, not the words typed at the prompt.
+    func testAHesitationOrStutterBeforeSendItStillPressesReturn() {
+        let terminal = TextPipeline(allowPressReturnCommand: true)
+        for said in ["git status. Um, send it.", "git status. Uh, send it.", "git status. Send, send it."] {
+            let output = terminal.process(said)
+            XCTAssertEqual(output.text, "Git status.", said)
+            XCTAssertEqual(output.command, .pressReturn, said)
+        }
+        // Every other rule still holds: never mid-sentence, never alone,
+        // never outside a terminal.
+        for said in ["Review the doc, um, send it.", "and then we, uh, send it", "Uh, send it."] {
+            XCTAssertNil(terminal.process(said).command, said)
+        }
+        let elsewhere = TextPipeline().process("git status. Um, send it.")
+        XCTAssertNil(elsewhere.command)
+        XCTAssertEqual(elsewhere.text, "Git status. Send it.")
+    }
+
+    /// Cleanup keeps a hesitation that is also a word ("Um.", "Э.") when it
+    /// stands alone, so it can be all that is left before "Send it.". Nothing
+    /// but hesitation is nothing to send: the take is typed as words and
+    /// Return is not pressed. One real word is enough.
+    func testNothingButAHesitationIsNeverTypedAndSent() {
+        let terminal = TextPipeline(allowPressReturnCommand: true)
+        for said in [
+            "Um. Um, send it.", "Um. Uh, send it.", "Um.\u{2029}Uh, send it.", "Um. Send it.",
+            "Hmm, um. Send it.", "Er. Send it.", "Mmm. Send it.",
+            "\u{042D}. \u{042D}, \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}.",
+            "\u{042D}\u{043C}. \u{042D}, \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}.",
+        ] {
+            XCTAssertNil(terminal.process(said).command, said)
+        }
+        XCTAssertEqual(terminal.process("Um. Um, send it.").text, "Um. Send it.")
+        for said in ["Yes. Um, send it.", "\u{0414}\u{0430}. \u{042D}, \u{043E}\u{0442}\u{043F}\u{0440}\u{0430}\u{0432}\u{044C}."] {
+            XCTAssertEqual(terminal.process(said).command, .pressReturn, said)
+        }
+    }
+
+    /// Return is decided on the cleaned text only when "Send it." was the last
+    /// thing said. Words after it that cleanup takes away ("Stop, scratch
+    /// that.") mean the person was taking the send back, and a dictionary
+    /// entry that writes "send it" was never the command said aloud.
+    func testSendItIsReturnOnlyWhenItWasTheLastThingSaid() {
+        let terminal = TextPipeline(allowPressReturnCommand: true)
+        for said in [
+            "Fix the failing test. Send it. Stop, scratch that.",
+            "git push --force. Send it. Hold on, scratch that.",
+            "git push --force. Send it. Not yet. Scratch that.",
+            "rm -rf build. Send it. Uh, hold on, scratch that.",
+        ] {
+            XCTAssertNil(terminal.process(said).command, said)
+        }
+        let shipIt = TextPipeline(
+            replacements: [DictionaryReplacement(spoken: "ship it", written: "send it", inflects: false)],
+            allowPressReturnCommand: true
+        )
+        for said in ["git status. Ship it.", "git status. Um, ship it."] {
+            XCTAssertNil(shipIt.process(said).command, said)
+        }
+    }
+
+    /// The sentence end before "Send it." has to be one the person said. A
+    /// dictionary entry that writes one ("Acme Inc.", ".") is not a sentence
+    /// ending in what was said, so "tell acme send it" stays words.
+    func testASentenceEndTheDictionaryWroteDoesNotPressReturn() {
+        let acme = TextPipeline(
+            replacements: [DictionaryReplacement(spoken: "acme", written: "Acme Inc.")],
+            allowPressReturnCommand: true
+        )
+        for said in ["tell acme send it", "ask acme, um, send it"] {
+            XCTAssertNil(acme.process(said).command, said)
+        }
+        let dot = TextPipeline(
+            replacements: [DictionaryReplacement(spoken: "dot", written: ".")],
+            allowPressReturnCommand: true
+        )
+        XCTAssertNil(dot.process("git add dot send it").command)
+        XCTAssertEqual(acme.process("tell acme. Um, send it.").command, .pressReturn, "a sentence end that was said")
+    }
+
     /// The built-in dictionary writes "commit в" and "Docker и в Kubernetes";
     /// only a word written with a capital is a name to protect, so Russian
     /// stutters still collapse in the shipping app.
@@ -921,7 +1007,7 @@ final class TakenBackDictationTests: XCTestCase {
             pipeline: { _ in TextPipeline() }
         )
         var archived: [String] = []
-        controller.onTakeFinished = { text, _ in archived.append(text) }
+        controller.onTakeFinished = { text, _, _ in archived.append(text) }
 
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         for _ in 0..<12 { await Task.yield(); try? await Task.sleep(for: .milliseconds(5)) }
