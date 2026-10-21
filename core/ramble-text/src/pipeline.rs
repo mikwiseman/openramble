@@ -27,6 +27,8 @@
 //! protection" — no separate precedence rule needs writing, because the order
 //! *is* the rule.
 
+use std::collections::HashSet;
+
 use crate::clean;
 use crate::dictionary::{self, DictionaryReplacement};
 use crate::phonetic;
@@ -357,9 +359,21 @@ impl TextPipeline {
         // Only when "Send it." was the last thing said: words after it that
         // cleanup removed ("Stop, scratch that.") were taking the send back,
         // and a dictionary entry that writes "send it" was never the command.
+        // The sentence end has to be said as well, so it is checked again on
+        // what was said, cleaned the same way but without the dictionary: a
+        // full stop an entry writes ("Acme Inc.") is not one.
         if refused_only_as_mid_sentence && parsed.command.is_none() {
+            let said = parse_trailing_command(&clean::clean(
+                recognized,
+                self.spoken_corrections,
+                &HashSet::new(),
+                self.mode,
+            ));
             let cleaned = parse_trailing_command(&stages.1);
-            if cleaned.command == Some(TrailingCommand::PressReturn) && ends_sentence(&cleaned.text)
+            if said.command == Some(TrailingCommand::PressReturn)
+                && ends_sentence(&said.text)
+                && cleaned.command == Some(TrailingCommand::PressReturn)
+                && ends_sentence(&cleaned.text)
             {
                 stages.1 = cleaned.text.trim().to_string();
                 parsed = cleaned;
@@ -583,6 +597,32 @@ mod tests {
         for said in ["git status. Ship it.", "git status. Um, ship it."] {
             assert_eq!(ship_it.process(said).command, None, "{said}");
         }
+    }
+
+    /// The sentence end before "Send it." has to be one the person said. A
+    /// dictionary entry that writes one ("Acme Inc.", ".") is not a sentence
+    /// ending in what was said, so "tell acme send it" stays words.
+    #[test]
+    fn a_sentence_end_the_dictionary_wrote_does_not_press_return() {
+        let acme = TextPipeline {
+            replacements: vec![entry("acme", "Acme Inc.")],
+            allow_press_return_command: true,
+            ..Default::default()
+        };
+        for said in ["tell acme send it", "ask acme, um, send it"] {
+            assert_eq!(acme.process(said).command, None, "{said}");
+        }
+        let dot = TextPipeline {
+            replacements: vec![entry("dot", ".")],
+            allow_press_return_command: true,
+            ..Default::default()
+        };
+        assert_eq!(dot.process("git add dot send it").command, None);
+        assert_eq!(
+            acme.process("tell acme. Um, send it.").command,
+            Some(TrailingCommand::PressReturn),
+            "a sentence end that was said"
+        );
     }
 
     /// A line break goes into the text, because pressing Return would send the

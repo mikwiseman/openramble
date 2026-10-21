@@ -4588,6 +4588,62 @@
     "input": "git status. Um, ship it."
   },
   {
+    "name": "a full stop the dictionary wrote before send it is not return",
+    "dictionary": [
+      {
+        "spoken": "acme",
+        "written": "Acme Inc.",
+        "inflects": false,
+        "allowsPhoneticMatching": false
+      }
+    ],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "tell acme send it"
+  },
+  {
+    "name": "a full stop the dictionary wrote before um send it is not return",
+    "dictionary": [
+      {
+        "spoken": "acme",
+        "written": "Acme Inc.",
+        "inflects": false,
+        "allowsPhoneticMatching": false
+      }
+    ],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "ask acme, um, send it"
+  },
+  {
+    "name": "a dictionary entry written as a dot before send it is not return",
+    "dictionary": [
+      {
+        "spoken": "dot",
+        "written": ".",
+        "inflects": false,
+        "allowsPhoneticMatching": false
+      }
+    ],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "git add dot send it"
+  },
+  {
+    "name": "a full stop said after a dictionary name before um send it is return",
+    "dictionary": [
+      {
+        "spoken": "acme",
+        "written": "Acme Inc.",
+        "inflects": false,
+        "allowsPhoneticMatching": false
+      }
+    ],
+    "allowPressReturnCommand": true,
+    "phoneticMatching": true,
+    "input": "tell acme. Um, send it."
+  },
+  {
     "name": "dotfile env",
     "dictionary": [],
     "allowPressReturnCommand": false,

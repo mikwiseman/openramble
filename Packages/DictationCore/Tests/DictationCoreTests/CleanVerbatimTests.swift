@@ -953,6 +953,25 @@ final class CleanVerbatimTests: XCTestCase {
         }
     }
 
+    /// The sentence end before "Send it." has to be one the person said. A
+    /// dictionary entry that writes one ("Acme Inc.", ".") is not a sentence
+    /// ending in what was said, so "tell acme send it" stays words.
+    func testASentenceEndTheDictionaryWroteDoesNotPressReturn() {
+        let acme = TextPipeline(
+            replacements: [DictionaryReplacement(spoken: "acme", written: "Acme Inc.")],
+            allowPressReturnCommand: true
+        )
+        for said in ["tell acme send it", "ask acme, um, send it"] {
+            XCTAssertNil(acme.process(said).command, said)
+        }
+        let dot = TextPipeline(
+            replacements: [DictionaryReplacement(spoken: "dot", written: ".")],
+            allowPressReturnCommand: true
+        )
+        XCTAssertNil(dot.process("git add dot send it").command)
+        XCTAssertEqual(acme.process("tell acme. Um, send it.").command, .pressReturn, "a sentence end that was said")
+    }
+
     /// The built-in dictionary writes "commit в" and "Docker и в Kubernetes";
     /// only a word written with a capital is a name to protect, so Russian
     /// stutters still collapse in the shipping app.

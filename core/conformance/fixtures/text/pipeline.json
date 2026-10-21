@@ -7836,6 +7836,83 @@
     "text" : "Git status. Send it."
   },
   {
+    "afterDictionary" : "tell Acme Inc. send it",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "acme",
+        "written" : "Acme Inc."
+      }
+    ],
+    "input" : "tell acme send it",
+    "name" : "a full stop the dictionary wrote before send it is not return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Tell Acme Inc. send it"
+  },
+  {
+    "afterDictionary" : "ask Acme Inc., um, send it",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "acme",
+        "written" : "Acme Inc."
+      }
+    ],
+    "input" : "ask acme, um, send it",
+    "name" : "a full stop the dictionary wrote before um send it is not return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Ask Acme Inc. send it"
+  },
+  {
+    "afterDictionary" : "git add . send it",
+    "allowPressReturnCommand" : true,
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "dot",
+        "written" : "."
+      }
+    ],
+    "input" : "git add dot send it",
+    "name" : "a dictionary entry written as a dot before send it is not return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Git add. send it"
+  },
+  {
+    "afterDictionary" : "tell Acme Inc.. Um, send it.",
+    "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
+    "dictionary" : [
+      {
+        "allowsPhoneticMatching" : false,
+        "inflects" : false,
+        "spoken" : "acme",
+        "written" : "Acme Inc."
+      }
+    ],
+    "input" : "tell acme. Um, send it.",
+    "name" : "a full stop said after a dictionary name before um send it is return",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Tell Acme Inc.."
+  },
+  {
     "afterDictionary" : "add the key to .env and restart.",
     "allowPressReturnCommand" : false,
     "dictionary" : [

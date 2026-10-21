@@ -246,9 +246,16 @@ public struct TextPipeline: Sendable, TextProcessing {
         // Only when "Send it." was the last thing said: words after it that
         // cleanup removed ("Stop, scratch that.") were taking the send back,
         // and a dictionary entry that writes "send it" was never the command.
+        // The sentence end has to be said as well, so it is checked again on
+        // what was said, cleaned the same way but without the dictionary: a
+        // full stop an entry writes ("Acme Inc.") is not one.
         if refusedOnlyAsMidSentence, parsed.command == nil {
+            let said = TrailingCommandParser.parse(
+                CleanVerbatim.clean(recognized, spokenCorrections: spokenCorrections, mode: mode)
+            )
             let cleaned = TrailingCommandParser.parse(stages.polished)
-            if cleaned.command == .pressReturn, Self.endsSentence(cleaned.text) {
+            if said.command == .pressReturn, Self.endsSentence(said.text),
+               cleaned.command == .pressReturn, Self.endsSentence(cleaned.text) {
                 parsed = cleaned
                 stages.polished = cleaned.text.trimmingCharacters(in: .whitespacesAndNewlines)
             }
