@@ -575,14 +575,14 @@ final class TextInserterTests: XCTestCase {
     /// waits for it. Putting the person's clipboard back in the meantime would
     /// hand that read the person's clipboard: pasted where the dictation
     /// belongs, while we say nothing was. The read is served once the thread
-    /// is free, and the dictation lands.
+    /// is free, within its turn, and the dictation lands.
     func testATargetWaitingForOurBusyMainThreadGetsTheDictation() async throws {
         await MainActor.run { _ = NSApplication.shared }
         let board = RealBoard(holding: "what the person copied")
         defer { board.release() }
         let otherApp = OtherProcessPaste(board: board.name)
         system.onPost = {
-            DispatchQueue.main.async { Thread.sleep(forTimeInterval: 2.5) }
+            DispatchQueue.main.async { Thread.sleep(forTimeInterval: 1.6) }
             otherApp.paste()
         }
 
@@ -601,6 +601,46 @@ final class TextInserterTests: XCTestCase {
 
         XCTAssertEqual(outcome, "landed")
         XCTAssertEqual(pasted, "DICTATED", "what the target pasted")
+        XCTAssertEqual(board.contents, "what the person copied")
+    }
+
+    /// Our main thread stays busy long after the limit, and nobody reads.
+    /// Waiting the stall out would outlive the clipboard snapshot and the
+    /// controller's deadline: the person's clipboard would be deleted, with
+    /// nobody left to say so. The main thread gets its turn limit; then the
+    /// clipboard comes back whole and the paste counts as not read.
+    func testAPasteNobodyReadsWhileOurMainThreadStaysBusyGivesTheClipboardBack() async throws {
+        await MainActor.run { _ = NSApplication.shared }
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
+        let freed = expectation(description: "our main thread is free again")
+        system.onPost = {
+            DispatchQueue.main.async {
+                Thread.sleep(forTimeInterval: 3)
+                freed.fulfill()
+            }
+        }
+        let inserter = TextInserter(
+            system: system,
+            pasteboard: HostOnlyPasteboard(name: board.name, snapshotLifetime: 2),
+            readQuiet: TextInserter.readQuiet,
+            readFloor: TextInserter.readFloor,
+            readLimit: .milliseconds(300),
+            operationLane: TextInsertionLane()
+        )
+
+        let started = ContinuousClock.now
+        var outcome = "landed"
+        do {
+            try await inserter.insert("DICTATED", into: target)
+        } catch {
+            outcome = "\(error)"
+        }
+        let waited = started.duration(to: .now)
+        await fulfillment(of: [freed], timeout: 10)
+
+        XCTAssertEqual(outcome, "pasteNotRead")
+        XCTAssertLessThan(waited, .milliseconds(300) + TextInserter.mainThreadTurnLimit + .milliseconds(400))
         XCTAssertEqual(board.contents, "what the person copied")
     }
 

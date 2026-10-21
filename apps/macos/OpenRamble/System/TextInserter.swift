@@ -565,8 +565,15 @@ public struct TextInserter: TextInserting {
     /// No read by then means nothing was pasted.
     static let readLimit = Duration.seconds(3)
     static let readPollInterval = Duration.milliseconds(5)
-    /// How long a caller may wait for an insertion: the read limit, plus room
-    /// to activate the target and release the modifiers before ⌘V.
+    /// How long our main thread may take, after the limit, to serve a read
+    /// that waits for it. The limit, this turn, the quiet moment and the
+    /// restore stay inside both five-second budgets: the clipboard snapshot's,
+    /// and the caller's insertion deadline, which also spends up to 0.6 s
+    /// before ⌘V activating the target and waiting for the modifiers.
+    static let mainThreadTurnLimit = Duration.seconds(1)
+    /// How long a caller may wait for an insertion: the read limit and the
+    /// main thread's turn after it, plus room to activate the target and
+    /// release the modifiers before ⌘V.
     public static let insertionDeadline = readLimit + .seconds(2)
 
     private let system: any InputSystem
@@ -772,22 +779,27 @@ public struct TextInserter: TextInserting {
     /// target's read is still waiting for it at the limit, and the restore
     /// would hand it the person's clipboard. So nobody has read only once the
     /// main thread has had a turn after the limit, and a quiet moment after it.
+    /// A main thread still busy after `mainThreadTurnLimit` gets no longer:
+    /// waiting it out would outlive the clipboard snapshot, and the person's
+    /// clipboard would be lost with nobody left to say so.
     private func waitForTheRead(
         of transaction: PasteboardTransaction,
         pastedAt: ContinuousClock.Instant
     ) async -> Bool {
-        var mainThreadFreeAt: ContinuousClock.Instant?
+        var turn: MainThreadTurn?
         while true {
             let now = ContinuousClock.now
             if let read = pasteboard.firstRead(of: transaction) {
                 if now >= max(read + readQuiet, pastedAt + readFloor) { return false }
-            } else if now >= pastedAt + (operationLane.wasPressedAgain ? readFloor : readLimit) {
-                guard let free = mainThreadFreeAt else {
-                    await mainThreadTurn()
-                    mainThreadFreeAt = .now
-                    continue
+            } else if let turn {
+                if let free = turn.cameAt {
+                    if now >= free + readQuiet { return false }
+                } else if now >= turn.askedAt + Self.mainThreadTurnLimit {
+                    return false
                 }
-                if now >= free + readQuiet { return false }
+            } else if now >= pastedAt + (operationLane.wasPressedAgain ? readFloor : readLimit) {
+                turn = MainThreadTurn()
+                continue
             }
             do {
                 try await Task.sleep(for: Self.readPollInterval)
@@ -797,22 +809,33 @@ public struct TextInserter: TextInserting {
         }
     }
 
-    /// Returns once our main thread runs its loop where a paste is served: the
-    /// common modes, panels and menus included. Not the main actor, whose
-    /// queue waits while a panel runs inside one of its jobs.
-    private func mainThreadTurn() async {
-        await withCheckedContinuation { (turn: CheckedContinuation<Void, Never>) in
-            let main = CFRunLoopGetMain()
-            CFRunLoopPerformBlock(main, CFRunLoopMode.commonModes.rawValue) { turn.resume() }
-            CFRunLoopWakeUp(main)
-        }
-    }
-
     private func waitForModifiersRelease() async throws {
         for _ in 0..<Self.releasePollLimit {
             if system.heldModifiers().intersection(Self.watchedModifiers).isEmpty { return }
             try await Task.sleep(for: Self.releasePollInterval)
         }
         throw TextInsertionError.modifiersStillHeld
+    }
+}
+
+/// One turn of our main thread's loop where a paste is served: the common
+/// modes, panels and menus included. Not the main actor, whose queue waits
+/// while a panel runs inside one of its jobs.
+private final class MainThreadTurn: @unchecked Sendable {
+    let askedAt = ContinuousClock.now
+    private let lock = NSLock()
+    private var came: ContinuousClock.Instant?
+
+    init() {
+        let main = CFRunLoopGetMain()
+        CFRunLoopPerformBlock(main, CFRunLoopMode.commonModes.rawValue) { [self] in
+            lock.withLock { came = .now }
+        }
+        CFRunLoopWakeUp(main)
+    }
+
+    /// When the main thread took it, if it has.
+    var cameAt: ContinuousClock.Instant? {
+        lock.withLock { came }
     }
 }
