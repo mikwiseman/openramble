@@ -530,6 +530,47 @@ final class TextInserterTests: XCTestCase {
         XCTAssertEqual(board.contents, "what the person copied")
     }
 
+    /// A save panel or alert of ours holds the main thread in the modal panel
+    /// mode, a menu or a drag in the event tracking mode, while the person
+    /// dictates into another application. The app has an NSApplication, which
+    /// makes both of them common modes, so the target's read is served at
+    /// once there too. (This bundle has no host app: without the line below,
+    /// neither mode serves the read and the target waits for the panel.)
+    func testAModalPanelOrMenuOfOursDoesNotHoldUpTheTargetsRead() async throws {
+        await MainActor.run { _ = NSApplication.shared }
+        for mode in [RunLoop.Mode.modalPanel, .eventTracking] {
+            let board = RealBoard(holding: "what the person copied")
+            defer { board.release() }
+            let otherApp = OtherProcessPaste(board: board.name)
+            let spin = MainThreadSpin(mode)
+            system.onPost = {
+                spin.start()
+                otherApp.paste()
+            }
+
+            let inserter = board.inserter(
+                system: system,
+                readQuiet: TextInserter.readQuiet,
+                readFloor: TextInserter.readFloor,
+                readLimit: .seconds(10)
+            )
+            // The spin outlasts the read limit and ends only after the insert
+            // returns, so a read that lands was served inside the mode.
+            let marks: InsertionMarks
+            do {
+                marks = try await inserter.insertReportingMarks("DICTATED", into: target)
+            } catch {
+                await spin.stop()
+                throw error
+            }
+            await spin.stop()
+
+            XCTAssertEqual(otherApp.pasted(), "DICTATED", mode.rawValue)
+            XCTAssertNotNil(marks.firstReadAt, mode.rawValue)
+            XCTAssertEqual(board.contents, "what the person copied")
+        }
+    }
+
     /// The controller's deadline cancels the insertion while it waits for the
     /// read. The person gets their clipboard back, the dictation never stays
     /// on the board, the lane is free, and the cancellation is not dressed up
@@ -867,6 +908,37 @@ private final class OtherProcessPaste: @unchecked Sendable {
         process.waitUntilExit()
         let data = output.fileHandleForReading.readDataToEndOfFile()
         return String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+/// Holds this process's main thread in one run-loop mode, the way a modal
+/// panel or an open menu does, until told to stop.
+private final class MainThreadSpin: @unchecked Sendable {
+    private let mode: String
+    private let lock = NSLock()
+    private var stopped = false
+    private var ended = false
+
+    init(_ mode: RunLoop.Mode) {
+        self.mode = mode.rawValue
+    }
+
+    func start() {
+        DispatchQueue.main.async {
+            let mode = RunLoop.Mode(self.mode)
+            let limit = Date().addingTimeInterval(12)
+            while !self.lock.withLock({ self.stopped }), Date() < limit {
+                _ = RunLoop.main.run(mode: mode, before: Date().addingTimeInterval(0.01))
+            }
+            self.lock.withLock { self.ended = true }
+        }
+    }
+
+    func stop() async {
+        lock.withLock { stopped = true }
+        while !lock.withLock({ ended }) {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
     }
 }
 

@@ -11,8 +11,11 @@ public protocol DictationPasteboard: Sendable {
     func beginHostOnlyWrite(_ text: String) throws -> PasteboardTransaction
     /// When an application first read the dictated text; `nil` while nobody has.
     ///
-    /// The receipt that a paste landed. Once the transaction is restored no read
-    /// can be added, so asking after `restore` gives the final answer.
+    /// The receipt that a paste landed: no read means nothing was pasted. A
+    /// read does not say who made it, so an app that polls the clipboard
+    /// during the wait (Claude does, every 500 ms in bursts) spends it as well.
+    /// Once the transaction is restored no read can be added, so asking after
+    /// `restore` gives the final answer.
     func firstRead(of transaction: PasteboardTransaction) -> ContinuousClock.Instant?
     /// Return the original content only if the post still belongs to us.
     func restore(_ transaction: PasteboardTransaction) throws
@@ -118,7 +121,9 @@ private final class PasteboardTransactionStorage: @unchecked Sendable {
 /// Serves the dictated text to whichever application reads it first.
 ///
 /// AppKit asks for the data at most once per write and caches the answer, and
-/// it asks on the main thread. That single call is the read receipt.
+/// it asks on the main thread. That single call is the read receipt. It comes
+/// in the common run-loop modes, so a save panel, alert or menu of ours does
+/// not hold it up; only a main thread that is busy does.
 private final class DictationDataProvider: NSObject, NSPasteboardItemDataProvider, @unchecked Sendable {
     private let text: String
     private let id: UUID
@@ -544,12 +549,15 @@ public struct TextInserter: TextInserting {
     static let releasePollInterval = Duration.milliseconds(10)
 
     /// The person's clipboard comes back this long after the target's read.
-    /// The target's follow-up reads (Chromium's source types) end within 9 ms.
+    /// On 29 of 31 real takes the paste's own reads (Chromium asks for several
+    /// types) ended within 9 ms of the first. The other two were the app
+    /// looking at the clipboard again later (ChatGPT at +961 ms, Claude
+    /// polling), not the paste.
     static let readQuiet = Duration.milliseconds(50)
-    /// ...and never sooner than this after ⌘V: twice the slowest first read on
-    /// real takes (122 ms). A read cannot say which application made it, so a
-    /// clipboard watcher that reads first must not take the text away from a
-    /// target that is about to.
+    /// ...and never sooner than this after ⌘V: the slowest first read on those
+    /// 31 takes came at 149 ms (p50 23 ms). A read cannot say which application
+    /// made it, so a clipboard watcher that reads first must not take the text
+    /// away from a target that is about to.
     static let readFloor = Duration.milliseconds(250)
     /// No read by then means nothing was pasted.
     static let readLimit = Duration.seconds(3)
