@@ -68,9 +68,42 @@ final class WordlessTakeOnDiskTests: XCTestCase {
         XCTAssertEqual(try? AVAudioFile(forReading: take).length, 32_001, "the take was deleted")
     }
 
+    /// The writer failed part-way, so the take was rebuilt whole from its
+    /// samples, and then History could not keep it. The rebuilt copy is the
+    /// take; the writer's partial file beside it would come back from
+    /// automatic recovery as a second, shorter one.
+    func testAWordlessTakeHistoryRefusesAfterItsWriterFailedIsRecoveredOnce() async throws {
+        let capture = try FailedWriterCapture(directory: directory)
+        let controller = makeController(capture: capture, historyKeeps: false)
+
+        _ = try await dictate(controller)
+        try await drainTheDisposer()
+        let old = Date().addingTimeInterval(-600)
+        for name in try FileManager.default.contentsOfDirectory(atPath: directory.path) {
+            try FileManager.default.setAttributes([.modificationDate: old], ofItemAtPath: directory.appending(path: name).path)
+        }
+        let recovered = directory.deletingLastPathComponent()
+            .appending(path: "wordless-recovered-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: recovered) }
+        let result = try await RecordingRecoveryStore(directory: recovered).importAbandoned(from: directory)
+
+        XCTAssertEqual(result.recordings.count, 1, "one take, recovered once")
+        XCTAssertEqual(result.recordings.first.flatMap { try? AVAudioFile(forReading: $0).length }, 32_001)
+    }
+
+    /// The disposer works in order: once a marker handed to it is gone, so is
+    /// everything handed to it before.
+    private func drainTheDisposer() async throws {
+        let marker = directory.appending(path: "zz-marker-\(UUID().uuidString).wav")
+        FileManager.default.createFile(atPath: marker.path, contents: Data([0]))
+        RecordingFileDisposer.shared.submit(marker)
+        try await waitUntil(.seconds(5)) { !FileManager.default.fileExists(atPath: marker.path) }
+    }
+
     private func makeController(
         capture: any AudioCapturing,
-        recordingReadableDeadline: Duration = .seconds(10)
+        recordingReadableDeadline: Duration = .seconds(10),
+        historyKeeps: Bool = true
     ) -> DictationController {
         let nothing = ASRResult(text: "", audioDuration: 2, processingDuration: 0.1)
         let controller = DictationController(
@@ -83,6 +116,7 @@ final class WordlessTakeOnDiskTests: XCTestCase {
             recordingReadableDeadline: recordingReadableDeadline
         )
         controller.onTakeFinished = { [weak self] _, url, _ in
+            guard historyKeeps else { return false }
             self?.archived.append(try? AVAudioFile(forReading: url).length)
             return true
         }
@@ -170,6 +204,53 @@ private actor SlowWriterCapture: AudioCapturing {
             frozen: frozen,
             sampleRate: 16_000,
             disposition: disposition
+        )
+    }
+
+    func abortRecording() async {}
+}
+
+/// A take whose writer failed part-way through: half the take is in its
+/// file, the header never sealed, the way a writer abandoned for recovery
+/// leaves it. The samples are rebuilt into a whole copy.
+private actor FailedWriterCapture: AudioCapturing {
+    private let take: URL
+    private let rebuilt: URL
+    private let samples: [Float]
+
+    init(directory: URL) throws {
+        take = directory.appending(path: "take.wav")
+        rebuilt = directory.appending(path: "memory-recovery-\(UUID().uuidString).wav")
+        let room = [Float](repeating: 0.001, count: 16_000)
+        samples = room + [0.1] + room
+        let writer = WAVWriter(url: take)
+        try writer.open()
+        try writer.append(Array(samples.prefix(16_000)))
+        writer.abandonForRecovery()
+    }
+
+    func startRecording() async throws -> URL { take }
+
+    func stopRecording() async throws -> (url: URL, duration: TimeInterval) {
+        throw AudioCaptureError.writeFailed("file-only stop is not used")
+    }
+
+    func freezeRecording() async throws -> CapturedRecording {
+        let readable = Task<URL, Error> { throw AudioCaptureError.writeFailed("the disk write failed") }
+        let rebuilt = rebuilt
+        let samples = samples
+        return CapturedRecording(
+            url: take,
+            duration: Double(samples.count) / 16_000,
+            samples: samples,
+            readableTask: readable,
+            durableTask: readable,
+            materializeRecovery: { @Sendable in
+                let writer = WAVWriter(url: rebuilt)
+                try writer.open()
+                try writer.append(samples)
+                return try writer.close()
+            }
         )
     }
 

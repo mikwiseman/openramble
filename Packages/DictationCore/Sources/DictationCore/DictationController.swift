@@ -1085,7 +1085,13 @@ public final class DictationController {
             if source.rebuiltFromPCM { RecordingFileDisposer.shared.submit(source.url) }
             return false
         }
-        guard onTakeFinished?("", source.url, target) == true else { return false }
+        guard onTakeFinished?("", source.url, target) == true else {
+            // Left where automatic recovery looks. A copy rebuilt from the
+            // samples is the whole take, and the writer's partial file beside
+            // it would come back as a second, shorter one.
+            if source.rebuiltFromPCM { RecordingFileDisposer.shared.submit(recording.url) }
+            return false
+        }
         // History made its own copy; the take and any rebuilt one are needed by nobody after.
         RecordingFileDisposer.shared.submit(source.rebuiltFromPCM ? [source.url, recording.url] : [recording.url])
         return true
