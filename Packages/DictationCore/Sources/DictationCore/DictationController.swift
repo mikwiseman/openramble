@@ -1631,8 +1631,17 @@ public final class DictationController {
             // one, says where to look. Sound in which the model found nothing
             // is kept for History: it may hold words the person still wants,
             // and recognizing it again is one click.
+            //
+            // A take too long to hold in memory was recognized from its file,
+            // which is therefore whole and answers the same question.
+            var heard = bufferedSamples
+            if heard == nil, let readSamples, let file = try? await readableURL(for: recording) {
+                heard = try? await withTranscriptionDeadline(recordingReadableDeadline) {
+                    try await readSamples(file)
+                }
+            }
             let notice: DictationNotice
-            if SilentTakePolicy.heardOnlySilence(bufferedSamples) {
+            if SilentTakePolicy.heardOnlySilence(heard) {
                 await discard(recording.url, session: session)
                 notice = DictationNotice(
                     kind: .warning,

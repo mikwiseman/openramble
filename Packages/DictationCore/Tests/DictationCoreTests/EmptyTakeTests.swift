@@ -41,12 +41,14 @@ final class EmptyTakeTests: XCTestCase {
     private func makeController(
         capture: any AudioCapturing,
         transcribeSamples: (@Sendable ([Float]) async throws -> ASRResult)? = nil,
+        readSamples: (@Sendable (URL) async throws -> [Float])? = nil,
         recordingReadableDeadline: Duration = .seconds(10)
     ) -> DictationController {
         let controller = DictationController(
             capture: capture,
             transcribe: { _ in Self.nothing },
             transcribeSamples: transcribeSamples,
+            readSamples: readSamples,
             inserter: inserter,
             overlay: overlay,
             sounds: sounds,
@@ -254,7 +256,24 @@ final class EmptyTakeTests: XCTestCase {
         XCTAssertEqual(notices.first?.wordsDidNotLand, true)
     }
 
-    /// Without the samples (a take longer than the in-memory bound) there is
+    /// A take longer than the in-memory bound was recognized from its file,
+    /// so its file is whole and answers the same question. Hands-free into a
+    /// muted microphone for six minutes is exactly when the name matters.
+    func testALongTakeOfSilenceIsReadBackFromItsFileAndNamesTheMicrophone() async throws {
+        await capture.setBufferedSamples(nil)
+        let quiet = quiet
+        controller = makeController(capture: capture, readSamples: { _ in quiet })
+        controller.microphoneName = { "Test Mic" }
+
+        try await dictate()
+
+        let notices = await overlay.notices
+        XCTAssertTrue(archived.isEmpty, "silence is not kept, however long")
+        XCTAssertEqual(notices.map(\.message), ["Heard only silence from Test Mic."])
+        XCTAssertEqual(notices.first?.kind, .warning)
+    }
+
+    /// Without the samples, and without a way to read them back, there is
     /// no telling silence from sound, so the take is kept.
     func testAnEmptyTakeWithoutPCMIsKeptRatherThanCalledSilence() async throws {
         await capture.setBufferedSamples(nil)
