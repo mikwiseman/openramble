@@ -53,7 +53,7 @@ final class TakeEndingNoticeTests: XCTestCase {
         var reported: [DictationNotice] = []
 
         let controller = await dictate("Ship it Friday.", inserter: inserter, overlay: overlay) { controller in
-            controller.onTakeFinished = { _, _ in events.append("kept") }
+            controller.onTakeFinished = { _, _, _ in events.append("kept") }
             controller.amendTakeNotice = { notice in
                 events.append("amended")
                 return notice.map { Self.adding("Not kept.", to: $0) }
@@ -108,7 +108,7 @@ final class TakeEndingNoticeTests: XCTestCase {
         var events: [String] = []
 
         _ = await dictate("Ship it Friday. Scratch that.", inserter: inserter, overlay: overlay) { controller in
-            controller.onTakeFinished = { _, _ in events.append("kept") }
+            controller.onTakeFinished = { _, _, _ in events.append("kept") }
             controller.amendTakeNotice = { notice in
                 events.append("amended")
                 return notice.map { Self.adding("Not kept.", to: $0) }
