@@ -136,8 +136,14 @@ final class MicrophoneCaptureInputTests: XCTestCase {
         interleaved: true
     )!
 
-    /// One I/O cycle of a 440 Hz tone, the same on both channels.
-    private func cycle(from start: Int, frames: Int, format: AVAudioFormat) -> AVAudioPCMBuffer {
+    /// One I/O cycle of a 440 Hz tone, at 0.5 on the first channel and at
+    /// `otherChannels` times that on the rest.
+    private func cycle(
+        from start: Int,
+        frames: Int,
+        format: AVAudioFormat,
+        otherChannels: Float = 1
+    ) -> AVAudioPCMBuffer {
         let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames))!
         buffer.frameLength = AVAudioFrameCount(frames)
         let channels = Int(format.channelCount)
@@ -147,7 +153,7 @@ final class MicrophoneCaptureInputTests: XCTestCase {
             let t = Double(start + frame) / format.sampleRate
             let value = Float(0.5 * sin(2 * Double.pi * 440 * t))
             for channel in 0..<channels {
-                data[frame * channels + channel] = value
+                data[frame * channels + channel] = channel == 0 ? value : value * otherChannels
             }
         }
         return buffer
@@ -218,6 +224,51 @@ final class MicrophoneCaptureInputTests: XCTestCase {
         let crossings = zip(steady, steady.dropFirst()).filter { $0 < 0 && $1 >= 0 }.count
         let seconds = Double(steady.count) / 16_000
         XCTAssertEqual(Double(crossings) / seconds, 440, accuracy: 5)
+    }
+
+    /// While a call holds voice processing, a Mac's built-in microphones are
+    /// three interleaved channels. AVAudioFormat will not describe more than
+    /// two without a layout, so the I/O proc gave up on the device, and the
+    /// engine it fell back to recorded exact silence: every word of a take
+    /// dictated during a call was lost.
+    func testThreeMicrophonesUnderACallAreHeardThroughTheFirst() async throws {
+        let description = AudioStreamBasicDescription(
+            mSampleRate: 48_000,
+            mFormatID: kAudioFormatLinearPCM,
+            mFormatFlags: kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked,
+            mBytesPerPacket: 12,
+            mFramesPerPacket: 1,
+            mBytesPerFrame: 12,
+            mChannelsPerFrame: 3,
+            mBitsPerChannel: 32,
+            mReserved: 0
+        )
+        let format = try XCTUnwrap(CaptureInputs.format(of: description), "the I/O proc describes three channels")
+        XCTAssertEqual(format.channelCount, 3)
+        XCTAssertTrue(format.isInterleaved)
+        XCTAssertEqual(format.sampleRate, 48_000)
+
+        let opener = Opener(format: format)
+        let capture = MicrophoneCapture(directory: directory, openInput: opener.open)
+        let session = DictationSessionID()
+        let url = try await capture.startRecording(session: session, disposition: RecordingDisposition())
+        let input = try XCTUnwrap(opener.opened.first)
+        for start in stride(from: 0, to: 48_000, by: 512) {
+            input.deliver(
+                cycle(from: start, frames: min(512, 48_000 - start), format: format, otherChannels: 0.2),
+                sampleTime: AVAudioFramePosition(start)
+            )
+        }
+        let arrived = await capture.waitForFirstFrame()
+        XCTAssertTrue(arrived)
+        let recording = try await capture.freezeRecording(session: session, expectedURL: url)
+        _ = try? await recording.durableURL()
+
+        let samples = try XCTUnwrap(recording.samples)
+        XCTAssertEqual(Double(samples.count), 16_000, accuracy: 64, "one second at 16 kHz")
+        let steady = samples.dropFirst(800).dropLast(800)
+        let rms = (steady.reduce(0) { $0 + Double($1) * Double($1) } / Double(steady.count)).squareRoot()
+        XCTAssertEqual(rms, 0.5 / 2.0.squareRoot(), accuracy: 0.02, "the first microphone, as itself")
     }
 
     /// Opening the device is a Core Audio call, and Core Audio calls wedge

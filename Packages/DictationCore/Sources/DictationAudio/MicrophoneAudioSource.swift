@@ -7,9 +7,9 @@ import Foundation
 /// Whether another process has hogged the input device.
 ///
 /// Core Audio hog mode is the only true exclusive lock. A conferencing app
-/// that uses Voice Processing I/O does not set it, and still often leaves a
-/// second `AVAudioEngine` tap delivering zeros; that case is silence, not
-/// this enum. This is the case we can name before we start.
+/// that uses Voice Processing I/O does not set it: the microphone stays
+/// shared, as three channels on a Mac's built-in microphones. This is the
+/// case we can name before we start.
 enum MicrophoneHogState: Equatable {
     case free
     case thisProcess
@@ -24,11 +24,13 @@ enum MicrophoneHogState: Equatable {
 /// The microphone, as a long-running source.
 ///
 /// A HAL I/O proc on the input device, not `AVAudioEngine.inputNode`. The
-/// engine tap is the dictation path; it starts without error and delivers
-/// zeros when a conferencing app already has Voice Processing I/O or the
-/// headset is in HFP. Adding an I/O proc is the documented way a second
-/// client shares an input. Hog mode is the one case that still refuses, and
-/// that refusal is an error rather than an hour of silence.
+/// engine tap starts without error and delivers zeros when the headset is in
+/// HFP. Adding an I/O proc is the documented way a second client shares an
+/// input. While a conferencing app holds Voice Processing I/O, a Mac's
+/// built-in microphones are three channels, recorded through the first like
+/// every other input. (The silence once blamed on the engine there came from
+/// a converter that mapped none of the three.) Hog mode is the one case that
+/// still refuses, and that refusal is an error rather than an hour of silence.
 ///
 /// `MicrophoneCapture` is not reused: that actor is built around a two-second
 /// take racing insertion and Escape, and its process-wide gates would fail a
@@ -83,8 +85,8 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
                 throw failure
             }
             // HAL refused for some other reason. The engine still hears some
-            // devices the I/O proc does not; hog and VPIO silence are not
-            // among them, which is why exclusive access does not fall here.
+            // devices the I/O proc does not; a hogged one is not among them,
+            // which is why exclusive access does not fall here.
             try startEngine(preferred: preferred, onBlock: onBlock, onFailure: onFailure)
         }
     }
@@ -125,8 +127,7 @@ public final class MicrophoneAudioSource: MeetingAudioSource, @unchecked Sendabl
         }
 
         let native = Self.nativeFormat(of: device)
-        var asbd = native.asbd
-        guard let sourceFormat = AVAudioFormat(streamDescription: &asbd),
+        guard let sourceFormat = CaptureInputs.format(of: native.asbd),
               sourceFormat.sampleRate > 0,
               sourceFormat.channelCount > 0,
               let target = AVAudioFormat(

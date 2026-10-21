@@ -53,6 +53,21 @@ enum CaptureInputs {
         if let input = HALCaptureInput(device: device) { return input }
         return try EngineCaptureInput(device: device)
     }
+
+    /// The device's own stream format, as an I/O proc hands it over.
+    ///
+    /// AVAudioFormat describes more than two channels only with a layout, and
+    /// a device's input channels have none to give: a Mac's built-in
+    /// microphones while a call holds voice processing (three), or a
+    /// multi-input interface. They are named as what they are, discrete.
+    static func format(of description: AudioStreamBasicDescription) -> AVAudioFormat? {
+        var description = description
+        guard description.mChannelsPerFrame > 2 else { return AVAudioFormat(streamDescription: &description) }
+        guard let layout = AVAudioChannelLayout(
+            layoutTag: kAudioChannelLayoutTag_DiscreteInOrder | description.mChannelsPerFrame
+        ) else { return nil }
+        return AVAudioFormat(streamDescription: &description, channelLayout: layout)
+    }
 }
 
 /// Runs a closure once, from whichever thread gets there first.
@@ -147,8 +162,8 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
         guard transport != kAudioDeviceTransportTypeBluetooth,
               transport != kAudioDeviceTransportTypeBluetoothLE,
               Self.inputStreamCount(of: device) == 1,
-              var description = Self.inputFormat(of: device),
-              let format = AVAudioFormat(streamDescription: &description),
+              let description = Self.inputFormat(of: device),
+              let format = CaptureInputs.format(of: description),
               format.sampleRate > 0,
               format.channelCount > 0
         else { return nil }

@@ -3592,6 +3592,11 @@ public actor MicrophoneCapture: AudioCapturing {
                 "couldn't convert \(Int(source.sampleRate)) Hz / \(source.channelCount) ch to 16 kHz mono"
             )
         }
+        // The first channel, which is what stereo gets by default. Past two
+        // channels the converter has no layout to mix from and maps none:
+        // every sample came out 0, and a take dictated during a call (three
+        // built-in microphones under voice processing) was exact silence.
+        converter.channelMap = [0]
         return converter
     }
 

@@ -191,6 +191,71 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
         XCTAssertNotNil(converter)
     }
 
+    /// Past two channels a converter has no layout to mix from, and by
+    /// default it mapped no channel at all: every sample came out 0. A Mac's
+    /// built-in microphones become three channels while a call holds voice
+    /// processing, so a take during a call recorded exact silence. Every
+    /// channel count gives the first channel, which is what stereo always got.
+    func testEveryChannelCountBecomesTheFirstChannel() throws {
+        let target = try format(rate: 16_000, channels: 1)
+        let sources: [(String, AVAudioFormat)] = try [
+            ("mono", format(rate: 48_000, channels: 1)),
+            ("interleaved stereo", XCTUnwrap(AVAudioFormat(
+                commonFormat: .pcmFormatFloat32, sampleRate: 48_000, channels: 2, interleaved: true
+            ))),
+            ("the engine during a call", discrete(3, interleaved: false)),
+            ("an I/O proc during a call", discrete(3, interleaved: true)),
+            ("an eight-input interface", discrete(8, interleaved: false)),
+        ]
+        for (name, source) in sources {
+            let converter = try MicrophoneCapture.converter(
+                from: source,
+                to: target,
+                factory: { AVAudioConverter(from: $0, to: $1) }
+            )
+            let samples = try MicrophoneCapture.extractSamples(
+                from: tone(source, frames: 4_800),
+                using: converter,
+                target: target
+            )
+            let steady = samples.dropFirst(200)
+            XCTAssertGreaterThan(steady.count, 1_000, name)
+            let rms = (steady.reduce(0) { $0 + Double($1) * Double($1) } / Double(max(1, steady.count))).squareRoot()
+            XCTAssertEqual(rms, 0.5 / 2.0.squareRoot(), accuracy: 0.02, "\(name): the first channel, as itself")
+        }
+    }
+
+    private func discrete(_ channels: UInt32, interleaved: Bool) throws -> AVAudioFormat {
+        let layout = try XCTUnwrap(AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_DiscreteInOrder | channels))
+        return AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: 48_000,
+            interleaved: interleaved,
+            channelLayout: layout
+        )
+    }
+
+    /// A 440 Hz tone at 0.5 on the first channel and at 0.1 on every other,
+    /// so a mix of the channels cannot pass for the first one.
+    private func tone(_ format: AVAudioFormat, frames: Int) throws -> AVAudioPCMBuffer {
+        let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames)))
+        buffer.frameLength = AVAudioFrameCount(frames)
+        let channels = Int(format.channelCount)
+        for frame in 0..<frames {
+            let wave = Float(sin(2 * Double.pi * 440 * Double(frame) / format.sampleRate))
+            for channel in 0..<channels {
+                let value = (channel == 0 ? 0.5 : 0.1) * wave
+                if format.isInterleaved {
+                    let data = try XCTUnwrap(buffer.mutableAudioBufferList.pointee.mBuffers.mData)
+                    data.assumingMemoryBound(to: Float.self)[frame * channels + channel] = value
+                } else {
+                    try XCTUnwrap(buffer.floatChannelData)[channel][frame] = value
+                }
+            }
+        }
+        return buffer
+    }
+
     func testSameRateMonoInt16StillRequiresConverter() throws {
         let source = try XCTUnwrap(
             AVAudioFormat(
