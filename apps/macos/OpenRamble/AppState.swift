@@ -957,6 +957,11 @@ public final class AppState: ObservableObject {
     private var engineLoadFailure: String?
     /// Retry/Delete recovery are performed one at a time and block the hotkey.
     private var isRecoveryOperationActive = false
+    /// A press of the dictation key while "Insert Last Dictation" finishes
+    /// its paste, and whether that key is up again. If the text landed, the
+    /// person went on: the press starts its take once the paste is done.
+    private var pressDuringRecovery: KeyPress?
+    private enum KeyPress { case held, released }
     /// A message that waits for the end of the session.
     private var noticeAfterSession: DictationNotice?
     /// History could not keep the take now ending. Said inside the take's
@@ -1945,15 +1950,25 @@ public final class AppState: ObservableObject {
         dictationState = .inserting
         Task { [weak self] in
             guard let self else { return }
+            var landed = false
             defer {
                 self.dictationState = .idle
                 self.isRecoveryOperationActive = false
+                let press = self.pressDuringRecovery
+                self.pressDuringRecovery = nil
+                // Every other ending says what happened, and the press goes
+                // with it, as it does after a dictation.
+                if landed, let press {
+                    self.beginHoldToTalk()
+                    if press == .released { self.controller?.stop() }
+                }
             }
             do {
                 let inserter = inserter
                 try await withTranscriptionDeadline(recoveryInsertionDeadline) {
                     try await inserter.insert(text, into: target)
                 }
+                landed = true
                 // The words already joined History at failure time;
                 // appending again here would duplicate them. The provenance
                 // slot is cleared too: it still holds the PREVIOUS dictation,
@@ -1969,6 +1984,16 @@ public final class AppState: ObservableObject {
                     DictationNotice(
                         kind: .warning,
                         message: L10n.tr("Insertion couldn't be confirmed in time. The text stays in the menu and may already have been pasted."),
+                        recoverableText: recoveredText
+                    )
+                )
+            } catch TextInsertionError.clipboardRestoreFailed {
+                // Nothing was pasted and what the person had copied is gone:
+                // both are theirs to know.
+                notify(
+                    DictationNotice(
+                        kind: .warning,
+                        message: L10n.tr("The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu."),
                         recoverableText: recoveredText
                     )
                 )
@@ -2433,19 +2458,24 @@ public final class AppState: ObservableObject {
             // word lives. A cold engine reloads once the take is listening.
             guard !self.isRecoveryOperationActive else {
                 // "Insert Last Dictation" may be waiting for its paste to be
-                // read: nothing appeared, so end the wait and say so now.
+                // read: nothing appeared, so end the wait and say so now. Or
+                // the text has landed and only the restore floor is left:
+                // then the press starts its take once that is over.
                 self.inserter.endTheReadWait()
+                self.pressDuringRecovery = .held
                 return
             }
-            guard self.explainIfNotReady() else { return }
-            self.controller?.begin(
-                handsFree: false,
-                isEnabled: self.isDictationReady,
-                isModelReady: self.modelState.isReady
-            )
+            self.beginHoldToTalk()
         }
         hotkeyMonitor.onRelease = { [weak self] in
-            self?.controller?.stop()
+            guard let self else { return }
+            guard self.pressDuringRecovery == nil else {
+                // Replayed with its press, so a tap stays a tap and no key
+                // that is up keeps the microphone on.
+                self.pressDuringRecovery = .released
+                return
+            }
+            self.controller?.stop()
         }
         hotkeyMonitor.onDoubleTap = { [weak self] in
             guard let self else { return }
@@ -2474,6 +2504,7 @@ public final class AppState: ObservableObject {
             // Hold turned out to be a shortcut (Ctrl+C over the selected key):
             // the recording ends quietly - without insertion, without messages and without sound
             // errors. The person pressed the shortcut, rather than dictated.
+            self?.pressDuringRecovery = nil
             self?.controller?.cancel()
         }
         hotkeyMonitor.onEscape = { [weak self] in
@@ -2481,6 +2512,16 @@ public final class AppState: ObservableObject {
             // a regular key, and cannot be intercepted.
             self?.cancelCurrentDictation()
         }
+    }
+
+    /// The dictation key is down: start a take that lasts while it is held.
+    private func beginHoldToTalk() {
+        guard explainIfNotReady() else { return }
+        controller?.begin(
+            handsFree: false,
+            isEnabled: isDictationReady,
+            isModelReady: modelState.isReady
+        )
     }
 
     /// Is it possible to start dictation; if not, say why.

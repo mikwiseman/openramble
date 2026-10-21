@@ -2008,9 +2008,109 @@ final class RecoveredFileTests: XCTestCase {
         harness.monitor.onPress?()
 
         XCTAssertEqual(harness.inserter.readWaitEnds, endsBeforeTheRetry + 1)
+        await harness.inserter.setError(.pasteNotRead)
         await harness.inserter.releaseInsertions()
         await settle()
         XCTAssertEqual(state.dictationState, .idle)
+        let starts = await harness.capture.startCount
+        XCTAssertEqual(starts, 1, "a paste nobody read speaks for itself; the press starts nothing")
+    }
+
+    /// The recovered text has landed, and "Insert Last Dictation" holds the
+    /// clipboard only for the restore floor. A press of the dictation key then
+    /// is the person going on: it starts its take as soon as the paste is
+    /// done, as it does after a dictation, and is never lost.
+    func testAPressWhileALandedRecoveredPasteFinishesStartsItsTake() async throws {
+        let state = try await recoveredTextWaitingForItsPaste()
+
+        harness.monitor.onPress?()
+        await harness.inserter.releaseInsertions()
+        await settle()
+
+        XCTAssertNil(state.recoveredText, "the recovered text landed")
+        let starts = await harness.capture.startCount
+        XCTAssertEqual(starts, 2, "the press started its take")
+        XCTAssertEqual(state.dictationState, .listening)
+        harness.monitor.onRelease?()
+        await settle()
+    }
+
+    /// A press and release inside that hold is the tap it would have been a
+    /// moment later: its take starts and stops, and the microphone is never
+    /// left on for a key that is already up.
+    func testATapWhileALandedRecoveredPasteFinishesIsStillATap() async throws {
+        let state = try await recoveredTextWaitingForItsPaste()
+
+        harness.monitor.onPress?()
+        harness.monitor.onRelease?()
+        await harness.inserter.releaseInsertions()
+        await settle()
+
+        let starts = await harness.capture.startCount
+        let stops = await harness.capture.stopCount
+        XCTAssertEqual(starts, 2)
+        XCTAssertEqual(stops, 2, "the tap's take was stopped, not left listening")
+        XCTAssertNotEqual(state.dictationState, .listening)
+    }
+
+    /// A press inside the hold that turns out to be a shortcut is no take:
+    /// the hotkey monitor cancels it and swallows its release.
+    func testAShortcutPressedWhileARecoveredPasteFinishesStartsNothing() async throws {
+        let state = try await recoveredTextWaitingForItsPaste()
+
+        harness.monitor.onPress?()
+        harness.monitor.onAbortShortcut?()
+        await harness.inserter.releaseInsertions()
+        await settle()
+
+        let starts = await harness.capture.startCount
+        XCTAssertEqual(starts, 1, "the shortcut started no take")
+        XCTAssertEqual(state.dictationState, .idle)
+    }
+
+    /// Nothing read the recovered paste, and the person's clipboard could not
+    /// be put back either. Both are said, as after a dictation.
+    func testARecoveredPasteThatAlsoLostTheClipboardSaysSo() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+        XCTAssertEqual(state.recoveredText, "Ping test")
+
+        await harness.inserter.setError(.clipboardRestoreFailed)
+        state.retryRecoveredText()
+        await settle()
+
+        XCTAssertEqual(
+            state.lastNotice?.message,
+            "The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu."
+        )
+        XCTAssertEqual(state.recoveredText, "Ping test")
+    }
+
+    /// One failed dictation keeps its text, then "Insert Last Dictation" is
+    /// clicked and its paste is held open, as it is until the restore floor.
+    private func recoveredTextWaitingForItsPaste() async throws -> AppState {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+        XCTAssertEqual(state.recoveredText, "Ping test")
+
+        await harness.inserter.setError(nil)
+        await harness.inserter.holdInsertions()
+        state.retryRecoveredText()
+        await settle()
+        XCTAssertEqual(state.dictationState, .inserting)
+        return state
     }
 
     func testRetryInsertionDeadlineReturnsIdleAndKeepsTextRecoverable() async throws {
