@@ -185,9 +185,10 @@ Application Support directory automatically. The bundle identifier remains
 - Hesitations and stutters disappear on their own: "uh", "ээ", "ähm", a
   "the the" said while the next word loads. The cleanup only ever deletes. It
   never rewords, reorders or adds a word. When a word could be real it stays:
-  "um" and "э" go only when commas set them apart (in an English sentence
-  also after a word, as in "to um, fix"), "um" never goes from a German or
-  Portuguese take, acronyms such as HMM and MR stay, "mm" stays a millimetre,
+  "um" goes only when commas set it apart (in an English sentence also after
+  a word, as in "to um, fix") and never from a German or Portuguese take, "э"
+  and "эм" stay next to a letter or after "буква", acronyms such as HMM and MR
+  stay, "mm" stays a millimetre,
   names from your dictionary stay, and doubles that mean something ("what it
   is is", "log in in", "very very", "да да") stay. The commas around a
   hesitation go with it, unless a careful writer would keep the one before
