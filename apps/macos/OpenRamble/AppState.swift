@@ -2431,7 +2431,12 @@ public final class AppState: ObservableObject {
             guard let self else { return }
             // Nothing before `begin`: the microphone start is where the first
             // word lives. A cold engine reloads once the take is listening.
-            guard !self.isRecoveryOperationActive else { return }
+            guard !self.isRecoveryOperationActive else {
+                // "Insert Last Dictation" may be waiting for its paste to be
+                // read: nothing appeared, so end the wait and say so now.
+                self.inserter.endTheReadWait()
+                return
+            }
             guard self.explainIfNotReady() else { return }
             self.controller?.begin(
                 handsFree: false,

@@ -890,15 +890,20 @@ final class PasteKeyTests: XCTestCase {
             "com.apple.keylayout.Turkish": 8,
             "com.apple.keylayout.Turkish-Standard": 8,
         ]
-        for (identifier, keyCode) in expected {
+        var missing: [String] = []
+        for (identifier, keyCode) in expected.sorted(by: { $0.key < $1.key }) {
             guard let layout = Self.layoutData(identifier) else {
-                throw XCTSkip("\(identifier) is not installed on this Mac")
+                missing.append(identifier)
+                continue
             }
             XCTAssertEqual(
                 PasteKey.keyCode(translating: PasteKey.characters(in: layout)),
                 keyCode,
                 identifier
             )
+        }
+        if !missing.isEmpty {
+            throw XCTSkip("not installed on this Mac: \(missing.joined(separator: ", "))")
         }
     }
 

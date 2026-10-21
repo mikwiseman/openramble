@@ -391,6 +391,12 @@ actor FakeInserter: TextInserting {
     func pressReturn() async throws { returnPresses += 1 }
 
     nonisolated func frontmostApplication() -> TargetApplication? { frontmost }
+
+    private let readWaitLock = NSLock()
+    nonisolated(unsafe) private var readWaitEndCount = 0
+    /// How many times a press asked the insertion to stop waiting for a read.
+    nonisolated var readWaitEnds: Int { readWaitLock.withLock { readWaitEndCount } }
+    nonisolated func endTheReadWait() { readWaitLock.withLock { readWaitEndCount += 1 } }
 }
 
 actor FakeOverlay: OverlayPresenting {

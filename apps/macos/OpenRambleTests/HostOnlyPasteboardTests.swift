@@ -138,7 +138,7 @@ final class HostOnlyPasteboardTests: XCTestCase {
         XCTAssertEqual(board.string(forType: .string), "new user")
     }
 
-    /// Privacy budget erases the snapshot after two seconds. If by this moment
+    /// Privacy budget erases the snapshot after five seconds. If by this moment
     /// clipboard is still ours, the previous contents of the person are lost forever -
     /// You cannot remain silent about this, and the dictation should not remain in the buffer.
     func testScenario008() throws {

@@ -1982,6 +1982,37 @@ final class RecoveredFileTests: XCTestCase {
         XCTAssertNil(state.recoveredText)
     }
 
+    /// "Insert Last Dictation" waits for its paste to be read just as a
+    /// dictation does. A press of the dictation key during that wait means
+    /// nothing appeared and the person is trying again: it ends the wait, so
+    /// an unread paste is reported now rather than the press vanishing.
+    func testAPressWhileARecoveredPasteWaitsForItsReadEndsTheWait() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+
+        await harness.inserter.setError(.accessibilityPermissionDenied)
+        harness.monitor.onPress?()
+        await settle()
+        harness.monitor.onRelease?()
+        await settle()
+        XCTAssertEqual(state.recoveredText, "Ping test")
+        let endsBeforeTheRetry = harness.inserter.readWaitEnds
+
+        await harness.inserter.setError(nil)
+        await harness.inserter.holdInsertions()
+        state.retryRecoveredText()
+        await settle()
+        XCTAssertEqual(state.dictationState, .inserting)
+
+        harness.monitor.onPress?()
+
+        XCTAssertEqual(harness.inserter.readWaitEnds, endsBeforeTheRetry + 1)
+        await harness.inserter.releaseInsertions()
+        await settle()
+        XCTAssertEqual(state.dictationState, .idle)
+    }
+
     func testRetryInsertionDeadlineReturnsIdleAndKeepsTextRecoverable() async throws {
         harness.recoveryInsertionDeadline = .milliseconds(50)
         try harness.installModelMarker()
