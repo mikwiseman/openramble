@@ -396,6 +396,16 @@ public final class DictationController {
     /// final cleaning. A lost flag leaves recording enabled.
     private var deferredStopRequested = false
 
+    /// A press of the dictation key while the paste was finishing, and
+    /// whether that key is up again. The text was already in place, so the
+    /// person went on: the press starts its take the moment the paste is done.
+    ///
+    /// Kept only by a paste that lands; every other ending clears it in
+    /// final cleaning and speaks for itself.
+    private var pressDuringInsertion: (
+        handsFree: Bool, isEnabled: Bool, isModelReady: Bool, released: Bool
+    )?
+
     private var cancellationRequested = false
     private var isHandsFree = false
     private var finalizationTask: Task<Void, Never>?
@@ -499,6 +509,10 @@ public final class DictationController {
             // the person is trying again. End the wait, and a paste nobody read
             // is said out loud now instead of this press vanishing unheard.
             inserter.endTheReadWait()
+            // Or it has landed and only holds the clipboard for the restore
+            // floor: then this press starts its take as soon as that is over.
+            pressDuringInsertion = (handsFree, isEnabled, isModelReady, false)
+            return
         }
         // The first check is synchronous, before any waiting. Between her and
         // the asynchronous start is completed by pressing again.
@@ -653,6 +667,13 @@ public final class DictationController {
 
     /// The hotkey is released (or pressed a second time in hands-free mode).
     public func stop() {
+        if state == .inserting, pressDuringInsertion != nil {
+            // The release of a press that waits for the paste: it is replayed
+            // with it, so a tap stays a tap and no key that is up keeps the
+            // microphone on.
+            pressDuringInsertion?.released = true
+            return
+        }
         switch DictationStopPolicy.decideStop(state: state, isHandsFree: isHandsFree) {
         case .stopNow:
             markStopRequested()
@@ -1587,7 +1608,15 @@ public final class DictationController {
         onTakeFinished?(processed.text, recording.url, insertionTarget)
         await discard(recording.url, session: session)
         guard case let .ended(notice) = outcome else { return }
+        // A press while a landed paste finished: the text is in place, so the
+        // person went on, and the press starts its take now. Any other ending
+        // speaks for itself, and final cleaning forgets the press.
+        let press = notice == nil ? pressDuringInsertion : nil
         await end(session, saying: notice)
+        if let press {
+            begin(handsFree: press.handsFree, isEnabled: press.isEnabled, isModelReady: press.isModelReady)
+            if press.released { stop() }
+        }
     }
 
     /// The end of a take that produced text, once its owner has kept it: one
@@ -1737,6 +1766,10 @@ public final class DictationController {
                 message = L10n.tr("Text not inserted: secure input is active. Your text is saved in the menu.")
             case .insertionInProgress:
                 message = L10n.tr("A previous paste is still finishing. Your text is saved in the menu.")
+            case .clipboardRestoreFailed:
+                // Nothing was pasted and what the person had copied is gone:
+                // both are theirs to know.
+                message = L10n.tr("The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu.")
             default:
                 message = L10n.tr("The text couldn't be inserted. It's saved in the menu.")
             }
@@ -2000,6 +2033,7 @@ public final class DictationController {
         currentDisposition = nil
         finalizationTask = nil
         deferredStopRequested = false
+        pressDuringInsertion = nil
         cancellationRequested = false
         isHandsFree = false
         isHandsFreeActive = false

@@ -237,6 +237,38 @@ private final class ReadWaitingInserter: TextInserting, @unchecked Sendable {
     func frontmostApplication() -> TargetApplication? { nil }
 }
 
+/// A paste the target reads 18 ms after ⌘V, held to the restore floor the
+/// way the real inserter holds it: the text is already in place while the
+/// insertion still has 250 ms to go.
+private final class LandedPasteInserter: TextInserting, @unchecked Sendable {
+    private let lock = NSLock()
+    private var pastes: [ContinuousClock.Instant] = []
+
+    var lastPaste: ContinuousClock.Instant? { lock.withLock { pastes.last } }
+    var pasteCount: Int { lock.withLock { pastes.count } }
+
+    func insert(_ text: String, into target: TargetApplication?) async throws {
+        _ = try await insertReportingMarks(text, into: target)
+    }
+
+    func insertReportingMarks(
+        _ text: String,
+        into target: TargetApplication?
+    ) async throws -> InsertionMarks {
+        let paste = ContinuousClock.now
+        lock.withLock { pastes.append(paste) }
+        try await Task.sleep(until: paste + .milliseconds(250))
+        return InsertionMarks(
+            pasteDispatchedAt: paste,
+            clipboardRestoredAt: .now,
+            firstReadAt: paste + .milliseconds(18)
+        )
+    }
+
+    func pressReturn() async throws {}
+    func frontmostApplication() -> TargetApplication? { nil }
+}
+
 actor FakeOverlay: OverlayPresenting {
     private(set) var presentedStates: [DictationState] = []
     private(set) var dismissCount = 0
@@ -286,7 +318,8 @@ final class DictationControllerTests: XCTestCase {
         recognized: String = "\u{043F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442} \u{043C}\u{0438}\u{0440}",
         transcribeDelay: Duration = .zero,
         transcribeError: Error? = nil,
-        replacements: [DictionaryReplacement] = []
+        replacements: [DictionaryReplacement] = [],
+        inserter: (any TextInserting)? = nil
     ) -> DictationController {
         DictationController(
             capture: capture,
@@ -295,7 +328,7 @@ final class DictationControllerTests: XCTestCase {
                 if let transcribeError { throw transcribeError }
                 return ASRResult(text: recognized, audioDuration: 2, processingDuration: 0.1)
             },
-            inserter: inserter,
+            inserter: inserter ?? self.inserter,
             overlay: overlay,
             sounds: sounds,
             pipeline: { _ in TextPipeline(replacements: replacements) }
@@ -923,6 +956,97 @@ final class DictationControllerTests: XCTestCase {
         await settle()
         let startsAfterTheNextPress = await capture.startCount
         XCTAssertEqual(startsAfterTheNextPress, 2, "the next press starts normally")
+    }
+
+    /// The text is already in place, but the insertion holds on to the
+    /// restore floor. The person presses again and speaks: that press is
+    /// late by at most the floor, never lost.
+    func testAPressWhileALandedPasteFinishesStartsItsTake() async throws {
+        let landed = LandedPasteInserter()
+        let controller = makeController(inserter: landed)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        let pasted = try await waitForPaste(landed, count: 1)
+        try await Task.sleep(until: pasted + .milliseconds(100))
+        XCTAssertEqual(controller.state, .inserting)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        let deadline = ContinuousClock.now + .seconds(1)
+        while await capture.startCount < 2, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        let starts = await capture.startCount
+        XCTAssertEqual(starts, 2, "the press starts its take once the paste is done")
+        XCTAssertTrue([.preparing, .listening].contains(controller.state), "\(controller.state)")
+
+        controller.stop()
+        _ = try await waitForPaste(landed, count: 2)
+    }
+
+    /// A press and release inside the hold is the tap it would have been a
+    /// moment later: its take starts and stops, and the microphone is never
+    /// left on for a key that is already up.
+    func testATapWhileALandedPasteFinishesIsStillATap() async throws {
+        let landed = LandedPasteInserter()
+        let controller = makeController(inserter: landed)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        let pasted = try await waitForPaste(landed, count: 1)
+        try await Task.sleep(until: pasted + .milliseconds(100))
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        try await Task.sleep(until: pasted + .milliseconds(150))
+        controller.stop()
+        XCTAssertEqual(controller.state, .inserting)
+
+        _ = try await waitForPaste(landed, count: 2)
+        let deadline = ContinuousClock.now + .seconds(1)
+        while controller.state != .idle, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(controller.state, .idle)
+        let starts = await capture.startCount
+        let stops = await capture.stopCount
+        XCTAssertEqual(starts, 2)
+        XCTAssertEqual(stops, 2, "the tap's take was stopped, not left listening")
+    }
+
+    /// Nothing was pasted, and putting the person's clipboard back failed
+    /// too. Both are said: the text is in the menu, and what they had copied
+    /// is gone.
+    func testAFailedPasteThatAlsoLostTheClipboardSaysSo() async throws {
+        await inserter.setError(.clipboardRestoreFailed)
+        let controller = makeController(recognized: "lost both")
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        await settle()
+
+        let notices = await overlay.notices
+        let notice = try XCTUnwrap(notices.last)
+        XCTAssertEqual(notice.kind, .warning)
+        XCTAssertTrue(notice.wordsDidNotLand)
+        XCTAssertEqual(notice.recoverableText, "Lost both")
+        XCTAssertEqual(
+            notice.message,
+            L10n.tr("The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu.")
+        )
+    }
+
+    private func waitForPaste(
+        _ inserter: LandedPasteInserter,
+        count: Int
+    ) async throws -> ContinuousClock.Instant {
+        let deadline = ContinuousClock.now + .seconds(2)
+        while inserter.pasteCount < count, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(2))
+        }
+        XCTAssertEqual(inserter.pasteCount, count)
+        return try XCTUnwrap(inserter.lastPaste)
     }
 
     // MARK: Insertion target

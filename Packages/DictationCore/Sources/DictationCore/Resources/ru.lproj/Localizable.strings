@@ -636,6 +636,7 @@
 "Text not inserted: secure input is active. Your text is saved in the menu." = "Текст не вставлен: включён защищённый ввод. Ваш текст сохранён в меню.";
 "A previous paste is still finishing. Your text is saved in the menu." = "Предыдущая вставка ещё завершается. Ваш текст сохранён в меню.";
 "The text couldn't be inserted. It's saved in the menu." = "Не удалось вставить текст. Он сохранён в меню.";
+"The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu." = "Не удалось вставить текст и вернуть прежнее содержимое буфера обмена. Текст сохранён в меню.";
 "Couldn't record audio." = "Не удалось записать звук.";
 "Couldn't transcribe speech." = "Не удалось распознать речь.";
 "This file is not an OpenRamble dictionary." = "Это не файл словаря OpenRamble.";

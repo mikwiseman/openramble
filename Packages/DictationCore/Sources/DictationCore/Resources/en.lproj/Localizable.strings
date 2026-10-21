@@ -636,6 +636,7 @@
 "Text not inserted: secure input is active. Your text is saved in the menu." = "Text not inserted: secure input is active. Your text is saved in the menu.";
 "A previous paste is still finishing. Your text is saved in the menu." = "A previous paste is still finishing. Your text is saved in the menu.";
 "The text couldn't be inserted. It's saved in the menu." = "The text couldn't be inserted. It's saved in the menu.";
+"The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu." = "The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu.";
 "Couldn't record audio." = "Couldn't record audio.";
 "Couldn't transcribe speech." = "Couldn't transcribe speech.";
 "This file is not an OpenRamble dictionary." = "This file is not an OpenRamble dictionary.";
