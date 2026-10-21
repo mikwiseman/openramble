@@ -18,6 +18,7 @@ final class MenuSectionsTests: XCTestCase {
         recoveredText: Bool = false,
         recoveryFaulted: Bool = false,
         recents: Bool = false,
+        lastDictation: Bool = false,
         recording: AppState.MeetingState = .idle
     ) -> [[MenuRow]] {
         MenuSections.sections(
@@ -26,6 +27,7 @@ final class MenuSectionsTests: XCTestCase {
             hasRecoveredText: recoveredText,
             recoveryStorageFaulted: recoveryFaulted,
             hasRecents: recents,
+            hasLastDictation: lastDictation,
             recordingState: recording
         )
     }
@@ -99,7 +101,7 @@ final class MenuSectionsTests: XCTestCase {
     /// Everything on at once — still at most five top-level row units.
     func testScenario002() {
         XCTAssertEqual(
-            sections(recoveredText: true, recents: true),
+            sections(recoveredText: true, recents: true, lastDictation: true),
             [
                 [.statusLine],
                 [.insertLastDictation],
@@ -149,7 +151,7 @@ final class MenuSectionsTests: XCTestCase {
     /// A person mid-setup keeps access to recovery and history.
     func testScenario006() {
         XCTAssertEqual(
-            sections(ready: false, recoveredText: true, recents: true),
+            sections(ready: false, recoveredText: true, recents: true, lastDictation: true),
             [
                 [.statusLine],
                 [.setupHints, .finishSetup],
@@ -158,6 +160,24 @@ final class MenuSectionsTests: XCTestCase {
                 [.startRecording, .startScreenRecording],
                 [.openRecordings, .settings, .quit],
             ]
+        )
+    }
+
+    /// History is listed after a relaunch, but Copy Last copies only what
+    /// this run inserted: no such take, no row.
+    func testCopyLastNeedsATakeThisRunInserted() {
+        XCTAssertEqual(
+            sections(recents: true),
+            [[.statusLine], [.recentDictations], [.startRecording, .startScreenRecording], [.openRecordings, .settings, .quit]]
+        )
+        XCTAssertEqual(
+            sections(recents: true, lastDictation: true)[1],
+            [.recentDictations, .copyLast]
+        )
+        XCTAssertEqual(
+            sections(lastDictation: true)[1],
+            [.copyLast],
+            "History kept nothing, but this run inserted a take"
         )
     }
 
@@ -178,7 +198,7 @@ final class MenuSectionsTests: XCTestCase {
     /// or delete item.
     func testScenario009() {
         let everything: Set<MenuRow> = Set(
-            sections(ready: false, recoveredText: true, recents: true)
+            sections(ready: false, recoveredText: true, recents: true, lastDictation: true)
                 .flatMap(\.self)
             + sections(state: .listening, recoveredText: true).flatMap(\.self)
             + sections(state: .transcribing, recoveredText: true).flatMap(\.self)

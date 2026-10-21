@@ -16,14 +16,7 @@ struct MenuContent: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        let sections = MenuSections.sections(
-            state: state.dictationState,
-            isDictationReady: state.isDictationReady,
-            hasRecoveredText: state.recoveredText != nil,
-            recoveryStorageFaulted: state.recordingRecoveryStorageFaulted,
-            hasRecents: !state.recentDictations.isEmpty,
-            recordingState: state.meetingState
-        )
+        let sections = MenuSections.sections(for: state)
 
         ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
             if index > 0 { Divider() }
@@ -250,5 +243,22 @@ private extension HistoryEntry {
             .joined(separator: " ")
         guard singleLine.count > 56 else { return singleLine }
         return String(singleLine.prefix(55)) + "…"
+    }
+}
+
+extension MenuSections {
+    /// The rows for the app as it is now: the one place the menu reads its
+    /// inputs, so a test can check the real wiring.
+    @MainActor
+    static func sections(for state: AppState) -> [[MenuRow]] {
+        sections(
+            state: state.dictationState,
+            isDictationReady: state.isDictationReady,
+            hasRecoveredText: state.recoveredText != nil,
+            recoveryStorageFaulted: state.recordingRecoveryStorageFaulted,
+            hasRecents: !state.recentDictations.isEmpty,
+            hasLastDictation: state.lastDictation != nil,
+            recordingState: state.meetingState
+        )
     }
 }

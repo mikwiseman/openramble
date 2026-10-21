@@ -179,26 +179,59 @@ final class CopyHotkeyTests: XCTestCase {
         let state = harness.makeState()
         state.copyLastDictation()
         XCTAssertNil(state.lastDictation)
-        XCTAssertNil(state.lastDictationText)
     }
 
-    /// History outlives a relaunch, and the menu lists it with Copy Last
-    /// Dictation right below. The item copies what the list shows on top,
-    /// instead of answering "Nothing dictated yet." beside it.
-    func testCopyLastReachesHistoryAfterARelaunch() async throws {
-        try harness.installModelMarker()
-        let first = harness.makeState()
-        await first.refreshModelState()
+    private func dictate(_ state: AppState, untilHistoryHas count: Int) async throws {
         harness.monitor.onPress?()
         await settle()
         harness.monitor.onRelease?()
-        await settle()
-        XCTAssertEqual(first.history.first?.text, "Ping test")
+        for _ in 0..<400 where state.history.count < count || state.dictationState != .idle {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(state.history.count, count)
+    }
+
+    private func offersCopyLast(_ state: AppState) -> Bool {
+        MenuSections.sections(for: state).joined().contains(.copyLast)
+    }
+
+    /// Copy Last puts back the text this run inserted, and the menu offers
+    /// it only then. History cannot stand in: it outlives a relaunch and
+    /// keeps a take-back's raw words, "Scratch that." included, so the row
+    /// would copy words the person took back, and copy something else after
+    /// a relaunch. Recent Dictations still copies any entry.
+    func testCopyLastIsOfferedOnlyForTextThisRunInserted() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        XCTAssertFalse(offersCopyLast(state), "nothing dictated yet")
+
+        try await dictate(state, untilHistoryHas: 1)
+        harness.transcription.text = "Ship it Friday. Scratch that."
+        try await dictate(state, untilHistoryHas: 2)
+
+        XCTAssertEqual(state.history.map(\.text), ["Ship it Friday. Scratch that.", "Ping test"])
+        XCTAssertEqual(state.lastDictation?.insertedText, "Ping test", "a take-back inserts nothing")
+        XCTAssertTrue(offersCopyLast(state))
 
         let relaunched = harness.makeState()
-
         XCTAssertNil(relaunched.lastDictation, "in memory only")
-        XCTAssertEqual(relaunched.recentDictations.first?.text, "Ping test", "the menu offers Copy Last")
-        XCTAssertEqual(relaunched.lastDictationText, "Ping test")
+        XCTAssertTrue(MenuSections.sections(for: relaunched).joined().contains(.recentDictations))
+        XCTAssertFalse(offersCopyLast(relaunched), "nothing inserted in this run")
+    }
+
+    /// A take-back as the first take of a run inserts nothing, so Copy Last
+    /// still has nothing to copy and is not offered.
+    func testATakeBackFirstLeavesNothingToCopy() async throws {
+        try harness.installModelMarker()
+        harness.transcription.text = "Ship it Friday. Scratch that."
+        let state = harness.makeState()
+        await state.refreshModelState()
+
+        try await dictate(state, untilHistoryHas: 1)
+
+        XCTAssertNil(state.lastDictation)
+        XCTAssertTrue(MenuSections.sections(for: state).joined().contains(.recentDictations))
+        XCTAssertFalse(offersCopyLast(state))
     }
 }

@@ -522,11 +522,6 @@ public final class AppState: ObservableObject {
     /// History's promises false.
     public var recentDictations: [HistoryEntry] { Array(history.prefix(8)) }
 
-    /// What Copy Last Dictation copies: the take inserted in this run, or
-    /// else the newest in History, the entry the menu lists right above it.
-    /// History outlives a relaunch; the in-memory slot does not.
-    public var lastDictationText: String? { lastDictation?.insertedText ?? history.first?.text }
-
     // MARK: - Recordings
 
     /// What the recorder is doing. Orthogonal to `dictationState`: a person
@@ -1870,7 +1865,7 @@ public final class AppState: ObservableObject {
     /// The text as it was inserted, not the raw words: this is the "I need that
     /// again" action, and what the person saw appear is what they mean.
     public func copyLastDictation() {
-        guard let text = lastDictationText,
+        guard let text = lastDictation?.insertedText,
               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else {
             notify(DictationNotice(kind: .info, message: L10n.tr("Nothing dictated yet.")))
