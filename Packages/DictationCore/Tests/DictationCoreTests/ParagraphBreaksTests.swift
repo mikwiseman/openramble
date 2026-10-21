@@ -85,6 +85,17 @@ final class ParagraphBreaksTests: XCTestCase {
             "First point.\n\nSecond point."
         )
     }
+
+    /// A person who pauses before saying "New line." still gets a line break,
+    /// not the words under a blank line.
+    func testNewLineSaidAfterALongPauseIsStillALineBreak() {
+        XCTAssertEqual(TextPipeline(mode: .prose).process("Dear John.\u{2029}New line.").text, "Dear John.\n")
+        XCTAssertEqual(
+            TextPipeline(mode: .prose).process("\u{041F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}.\u{2029}\u{041D}\u{043E}\u{0432}\u{0430}\u{044F} \u{0441}\u{0442}\u{0440}\u{043E}\u{043A}\u{0430}.").text,
+            "\u{041F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}.\n"
+        )
+        XCTAssertEqual(TextPipeline(mode: .verbatim).process("Dear John.\u{2029}New line.").text, "Dear John.\n")
+    }
 }
 
 /// The whole path: a take with a long pause reaches a prose app as two

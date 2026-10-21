@@ -103,8 +103,10 @@ pub fn parse_trailing_command(text: &str) -> ParsedCommand {
             }
 
             // The command has to be a separate word, not the tail of another one.
+            // Any whitespace sets it apart: after a long pause in prose the
+            // paragraph mark has already become a blank line.
             let cutoff = stripped_tail.len() - phrase_chars.len();
-            if cutoff > 0 && stripped_tail[cutoff - 1] != ' ' {
+            if cutoff > 0 && !stripped_tail[cutoff - 1].is_whitespace() {
                 continue;
             }
 
@@ -473,6 +475,28 @@ mod tests {
         assert_eq!(output.command, None);
         assert!(output.text.ends_with('\n'), "got {:?}", output.text);
         assert!(!output.text.to_lowercase().contains("\u{043D}\u{043E}\u{0432}\u{0430}\u{044F} \u{0441}\u{0442}\u{0440}\u{043E}\u{043A}\u{0430}"));
+    }
+
+    /// A person who pauses before saying "New line." still gets a line break,
+    /// not the words under a blank line.
+    #[test]
+    fn new_line_said_after_a_long_pause_is_still_a_line_break() {
+        let prose = TextPipeline {
+            mode: clean::PromptMode::Prose,
+            ..Default::default()
+        };
+        assert_eq!(
+            prose.process("Dear John.\u{2029}New line.").text,
+            "Dear John.\n"
+        );
+        assert_eq!(
+            prose.process("\u{041F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}.\u{2029}\u{041D}\u{043E}\u{0432}\u{0430}\u{044F} \u{0441}\u{0442}\u{0440}\u{043E}\u{043A}\u{0430}.").text,
+            "\u{041F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442}.\n"
+        );
+        assert_eq!(
+            plain().process("Dear John.\u{2029}New line.").text,
+            "Dear John.\n"
+        );
     }
 
     /// Stage 9 runs after the polisher on purpose: the polisher trims trailing

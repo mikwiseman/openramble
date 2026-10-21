@@ -41,10 +41,12 @@ public enum TrailingCommandParser {
         for command in TrailingCommand.allCases {
             for phrase in command.phrases where strippedTail.hasSuffix(phrase) {
                 // The command must be a separate word, not the tail of another.
+                // Any whitespace sets it apart: after a long pause in prose the
+                // paragraph mark has already become a blank line.
                 let cutoff = strippedTail.index(strippedTail.endIndex, offsetBy: -phrase.count)
                 if cutoff > strippedTail.startIndex {
                     let preceding = strippedTail[strippedTail.index(before: cutoff)]
-                    guard preceding == " " else { continue }
+                    guard preceding.isWhitespace else { continue }
                 }
 
                 let withoutCommand = stripSuffix(phrase, from: trimmed)

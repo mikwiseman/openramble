@@ -7511,8 +7511,9 @@
     "text" : "First point.\n\nSecond point."
   },
   {
-    "afterDictionary" : "Ship it.\n\nSend it.",
+    "afterDictionary" : "Ship it.\n\n",
     "allowPressReturnCommand" : true,
+    "command" : "pressReturn",
     "dictionary" : [
 
     ],
@@ -7523,7 +7524,37 @@
     "spans" : [
 
     ],
-    "text" : "Ship it.\n\nSend it."
+    "text" : "Ship it."
+  },
+  {
+    "afterDictionary" : "Dear John.\n\n",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Dear John. New line.",
+    "mode" : "prose",
+    "name" : "paragraph mark before new line in prose",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Dear John.\n"
+  },
+  {
+    "afterDictionary" : "Привет, Иван.\n\n",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Привет, Иван. Новая строка.",
+    "mode" : "prose",
+    "name" : "paragraph mark before russian new line in prose",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Привет, Иван.\n"
   },
   {
     "afterDictionary" : "add the key to .env and restart.",

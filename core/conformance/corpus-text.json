@@ -4431,6 +4431,22 @@
     "input": "Ship it. Send it."
   },
   {
+    "name": "paragraph mark before new line in prose",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "mode": "prose",
+    "input": "Dear John. New line."
+  },
+  {
+    "name": "paragraph mark before russian new line in prose",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "mode": "prose",
+    "input": "Привет, Иван. Новая строка."
+  },
+  {
     "name": "dotfile env",
     "dictionary": [],
     "allowPressReturnCommand": false,
