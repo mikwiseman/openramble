@@ -178,18 +178,19 @@ private struct HistoryRow: View {
                 .help(entry.isKept ? L10n.tr("Stop keeping this one") : L10n.tr("Keep this one"))
                 .accessibilityLabel(entry.isKept ? L10n.tr("Kept. Stop keeping") : L10n.tr("Keep this dictation"))
 
-                if audioURL != nil {
-                    Button(action: onRetranscribe) {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .buttonStyle(.borderless)
-                    .disabled(isRetranscribing)
-                    .help(L10n.tr("Recognize this recording again"))
-                    .accessibilityLabel(L10n.tr("Recognize this recording again"))
-                }
-
-                // A take with no words has nothing to copy. The icon is hidden,
+                // A row whose recording is gone has nothing to recognize, and a
+                // take with no words has nothing to copy. Those icons are hidden,
                 // not removed, so the icons stand in the same column on every row.
+                Button(action: onRetranscribe) {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .buttonStyle(.borderless)
+                .disabled(isRetranscribing || audioURL == nil)
+                .help(L10n.tr("Recognize this recording again"))
+                .accessibilityLabel(L10n.tr("Recognize this recording again"))
+                .opacity(audioURL == nil ? 0 : 1)
+                .accessibilityHidden(audioURL == nil)
+
                 Button(action: onCopy) {
                     Image(systemName: "doc.on.doc")
                 }
