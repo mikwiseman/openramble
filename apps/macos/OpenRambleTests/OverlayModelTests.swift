@@ -349,6 +349,31 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(announcer.cues, 1, "a notice expiring mid-take does not re-open the take")
     }
 
+    /// A failure that ends the take while the panel still shows an open
+    /// microphone — capture never started, the device went away, access was
+    /// revoked — waits out the open microphone and is said once the take ends.
+    func testAFailureThatEndsTheTakeIsSpokenOnceTheMicrophoneCloses() {
+        model.show(.preparing, elapsed: 0)
+        model.showNotice(DictationNotice(kind: .failure, message: "Couldn't record audio."))
+        XCTAssertEqual(announcer.messages, [], "not into the opening microphone")
+
+        model.hide()
+
+        XCTAssertEqual(announcer.messages, ["Couldn't record audio."])
+        XCTAssertEqual(announcer.announcements.first?.urgent, true)
+    }
+
+    func testADisconnectMidTakeIsSpokenOnceTheTakeEnds() async throws {
+        model.show(.preparing, elapsed: 0)
+        model.show(.listening, elapsed: 0)
+        model.showNotice(DictationNotice(kind: .failure, message: "The microphone was disconnected."))
+        model.hide()
+        try await waitForNoticeToHide()
+
+        XCTAssertEqual(announcer.messages, ["The microphone was disconnected."], "once, not again as it expires")
+        XCTAssertEqual(announcer.cues, 1)
+    }
+
     // MARK: - Waveform
 
     func testScenario024() {

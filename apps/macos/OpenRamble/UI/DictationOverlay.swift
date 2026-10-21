@@ -482,6 +482,9 @@ final class OverlayModel: ObservableObject {
         setElapsed(elapsed, ticking: false)
         guard notice == nil else {
             dismissAfterNotice = true
+            // The take is over, and its microphone with it: a notice held
+            // back while the microphone was open can be said now.
+            announceContent()
             return
         }
         cancelAutoHide()
@@ -581,8 +584,10 @@ final class OverlayModel: ObservableObject {
         }
     }
 
+    /// A dismissal waiting behind a notice means the take has ended, whatever
+    /// state the panel last drew.
     private var isMicrophoneOpen: Bool {
-        state == .preparing || state == .listening
+        (state == .preparing || state == .listening) && !dismissAfterNotice
     }
 }
 
