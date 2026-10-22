@@ -8,6 +8,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "apps/cli",
   "apps/desktop/src-tauri",
   "core/ramble-audio",
   "core/ramble-core",

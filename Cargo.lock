@@ -3145,6 +3145,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "openramble-cli"
+version = "0.23.0"
+dependencies = [
+ "ramble-engine",
+ "serde_json",
+]
+
+[[package]]
 name = "openramble-desktop"
 version = "0.23.0"
 dependencies = [
