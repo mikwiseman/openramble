@@ -37,6 +37,9 @@ final class DictationLogFile: @unchecked Sendable {
     struct Recognition: Codable, Sendable {
         let audioMilliseconds: Int?
         let engineMilliseconds: Int?
+        /// `engineMilliseconds` is the tail; this adds the pieces recognized
+        /// while the person was still speaking.
+        var engineTotalMilliseconds: Int? = nil
         let decodingMilliseconds: Int?
         let streamedSegments: Int
         let fileBacked: Bool
@@ -50,6 +53,10 @@ final class DictationLogFile: @unchecked Sendable {
         /// Key-up → ⌘V sent. Sent, not landed: the target app may take the
         /// paste later, or never.
         var pasteMilliseconds: Int? = nil
+        /// Bytes this process read from disk between key-down and the text.
+        var diskReadBytes: UInt64? = nil
+        /// How long the engine had been idle when the key went down.
+        var engineIdleSeconds: Int? = nil
     }
 
     static func milliseconds(_ seconds: Double) -> Int? {
@@ -263,12 +270,13 @@ final class LevelUpdateGate: @unchecked Sendable {
 extension DictationLogFile.Recognition {
     /// A finished take's numbers, and nothing of the take itself. `nil` for a
     /// report built without its breakdown, as the journal always did.
-    init?(report: DictationSpeedReport) {
+    init?(report: DictationSpeedReport, paging: TakePaging? = nil) {
         guard let phases = report.phases else { return nil }
         let ms = DictationLogFile.milliseconds
         self.init(
             audioMilliseconds: ms(phases.audioDuration.appSeconds),
             engineMilliseconds: phases.engineProcessing.flatMap { ms($0.appSeconds) },
+            engineTotalMilliseconds: phases.engineProcessingTotal.flatMap { ms($0.appSeconds) },
             decodingMilliseconds: phases.audioDecoding.flatMap { ms($0.appSeconds) },
             streamedSegments: phases.streamedSegments,
             fileBacked: phases.recordingReadable != nil,
@@ -276,7 +284,9 @@ extension DictationLogFile.Recognition {
             readableMilliseconds: phases.recordingReadable.flatMap { ms($0.appSeconds) },
             preparationMilliseconds: phases.enginePreparation.flatMap { ms($0.appSeconds) },
             microphoneStartupMilliseconds: report.microphoneStartup.flatMap { ms($0.appSeconds) },
-            pasteMilliseconds: report.toPasteDispatched.flatMap { ms($0.appSeconds) }
+            pasteMilliseconds: report.toPasteDispatched.flatMap { ms($0.appSeconds) },
+            diskReadBytes: paging?.diskReadBytes,
+            engineIdleSeconds: paging?.engineIdle.map { Int($0.components.seconds) }
         )
     }
 }

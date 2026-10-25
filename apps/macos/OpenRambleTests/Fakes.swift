@@ -979,6 +979,12 @@ actor ReadinessControlledRecognizer: DictationRecognizing {
     var isPrepared: Bool { prepared }
     var isBusy: Bool { false }
 
+    /// How long the engine says it has rested. `nil`, like an engine that has
+    /// never run, unless a test scripts it.
+    private(set) var idleDuration: Duration?
+
+    func setIdle(_ idle: Duration?) { idleDuration = idle }
+
     func readinessChanges() -> AsyncStream<Bool> {
         AsyncStream { continuation in
             observer = continuation

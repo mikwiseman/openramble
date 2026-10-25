@@ -1166,7 +1166,8 @@ public final class DictationController {
         // The durations describe the tail, and that is deliberate: they are what
         // the person waited for after letting go of the key. Reporting the sum
         // of every segment would be arithmetically true and describe a wait
-        // nobody had.
+        // nobody had. The segments' own engine time is reported beside it, as
+        // `engineProcessingTotal`: one still running at key-up is waited for.
         return ASRResult(
             text: text,
             words: words ?? [],
@@ -1560,6 +1561,7 @@ public final class DictationController {
         // distinguish "fast because it was short" from "fast because most of it
         // was already done".
         let streamedSegmentCount = streamedSegments?.recognizedCount ?? 0
+        let engineTotal = recognized.processingDuration + (streamedSegments?.recognizedProcessingDuration ?? 0)
         let phases = stopRequestedAt.map { stopMark in
             DictationPhaseBreakdown(
                 captureFreeze: stopMark.duration(to: freezeCompletedAt),
@@ -1570,6 +1572,7 @@ public final class DictationController {
                 engineProcessing: recognized.processingDuration > 0
                     ? .seconds(recognized.processingDuration)
                     : nil,
+                engineProcessingTotal: engineTotal > 0 ? .seconds(engineTotal) : nil,
                 engineQueueing: recognized.queueingDuration > 0
                     ? .seconds(recognized.queueingDuration)
                     : nil,

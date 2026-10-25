@@ -9,13 +9,19 @@ import LocalASR
 /// as the first dictation after launch is. Each request is a JSON object:
 ///
 ///     {"id": "...", "path": "/abs/file.wav", "mode": "dictation" | "file"}
+///     {"id": "...", "mode": "warm"}
 ///
 /// `dictation` decodes the file first, outside the timed interval, and then
 /// times `LocalTranscriber.transcribe(samples:)`: the engine call a finished
 /// take reaches. `file` times `transcribe(fileURL:)`, the import path, including
-/// its own decoding. One JSON line answers each request. Text is printed
-/// because scoring needs it; the harness, not this tool, decides what of it
-/// may be kept. The process exits on end of input.
+/// its own decoding. `warm` is the app's key-down hook: when the engine has
+/// been idle past `LocalTranscriber.idleWarmupThreshold` it starts the warm-up
+/// and answers at once; a `warmed` event follows when the warm-up ends, and a
+/// `dictation` sent meanwhile waits for it exactly as a take does. One JSON
+/// line answers each request. Text is printed because scoring needs it; the
+/// harness, not this tool, decides what of it may be kept. Every answer
+/// carries `idleSeconds` from before the request and the process's cumulative
+/// `diskReadBytes`. The process exits on end of input.
 func serve(directory: URL) async throws {
     let transcriber = LocalTranscriber(engine: TranscribeCppAdapter())
     let loadStarted = ContinuousClock.now
@@ -38,11 +44,33 @@ func serve(directory: URL) async throws {
         guard !line.isEmpty else { continue }
         var reply: [String: Any] = [:]
         do {
-            guard let request = try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
-                  let path = request["path"] as? String else {
-                throw ASREngineError.unsupportedAudioFormat("expected {\"path\": ...}")
+            guard let request = try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any] else {
+                throw ASREngineError.unsupportedAudioFormat("expected a JSON object")
             }
             reply["id"] = request["id"] ?? NSNull()
+            let idle = await transcriber.idleDuration
+            reply["idleSeconds"] = idle.map(seconds) ?? NSNull()
+            if request["mode"] as? String == "warm" {
+                let due = LocalTranscriber.shouldWarmUnderVoice(afterIdle: idle)
+                reply["warming"] = due
+                if due {
+                    let id = request["id"] as? String ?? ""
+                    Task {
+                        let started = ContinuousClock.now
+                        var event: [String: Any] = ["event": "warmed", "id": id]
+                        do { try await transcriber.warmUpInference() } catch { event["error"] = String(describing: error) }
+                        event["seconds"] = seconds(started.duration(to: .now))
+                        event["diskReadBytes"] = ProcessDiskReads.bytesRead() ?? 0
+                        emit(event)
+                    }
+                }
+                reply["diskReadBytes"] = ProcessDiskReads.bytesRead() ?? 0
+                emit(reply)
+                continue
+            }
+            guard let path = request["path"] as? String else {
+                throw ASREngineError.unsupportedAudioFormat("expected {\"path\": ...}")
+            }
             let url = URL(fileURLWithPath: path)
             let result: ASRResult
             let started: ContinuousClock.Instant
@@ -64,6 +92,7 @@ func serve(directory: URL) async throws {
         } catch {
             reply["error"] = String(describing: error)
         }
+        reply["diskReadBytes"] = ProcessDiskReads.bytesRead() ?? 0
         reply["peakMemoryBytes"] = peakMemoryBytes()
         let footprint = footprintBytes()
         reply["footprintBytes"] = footprint.current

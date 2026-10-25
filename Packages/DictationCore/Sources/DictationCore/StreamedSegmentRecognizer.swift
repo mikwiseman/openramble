@@ -37,6 +37,8 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
     /// `texts`.
     private var words: [[ASRResult.Word]] = []
     private var sampleCounts: [Int] = []
+    /// Engine seconds spent on the segments recognized so far.
+    private var processing: TimeInterval = 0
     private var failure: (any Error)?
     private var stopped = false
     private var cancelled = false
@@ -67,7 +69,7 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
             do {
                 let result = try await transcribe(samples)
                 let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                self.append(text, words: result.words)
+                self.append(text, words: result.words, processing: result.processingDuration)
             } catch {
                 self.recordFailure(error)
             }
@@ -78,9 +80,10 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
 
     private var isAbandoned: Bool { lock.withLock { failure != nil || cancelled } }
 
-    private func append(_ text: String, words segmentWords: [ASRResult.Word]) {
+    private func append(_ text: String, words segmentWords: [ASRResult.Word], processing seconds: TimeInterval) {
         lock.withLock {
             guard failure == nil, !cancelled else { return }
+            processing += seconds
             // Appended even when empty. A segment of pure breath recognizes as
             // nothing, and dropping it here would misalign the transcripts from
             // the sample counts — which is what the owner uses to take the last
@@ -134,6 +137,13 @@ public final class StreamedSegmentRecognizer: @unchecked Sendable {
     /// How many segments have finished. For the speed report, and for tests
     /// that need to know the stream actually ran.
     public var recognizedCount: Int { lock.withLock { texts.count } }
+
+    /// Engine time the recognized segments took, together.
+    ///
+    /// The tail's own result describes only the tail. A segment still running
+    /// when the key comes up is waited for, so without this number a slow one
+    /// shows up as a long take beside a fast engine.
+    public var recognizedProcessingDuration: TimeInterval { lock.withLock { processing } }
 
     /// Word timings of the recognized segments, each on its segment's own
     /// clock, aligned with the texts `finish()` returns.

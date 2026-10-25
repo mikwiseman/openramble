@@ -20,6 +20,9 @@ import LocalASR
 public protocol DictationRecognizing: Sendable {
     var isPrepared: Bool { get async }
     var isBusy: Bool { get async }
+    /// How long since the engine last ran inference: `nil` if it never has,
+    /// zero while it runs.
+    var idleDuration: Duration? { get async }
     /// Causal changes to inference readiness, for owners that can lose it
     /// without being asked. An in-process recognizer never does.
     func readinessChanges() async -> AsyncStream<Bool>
@@ -35,6 +38,8 @@ extension DictationRecognizing {
     public func readinessChanges() async -> AsyncStream<Bool> {
         AsyncStream { $0.finish() }
     }
+
+    public var idleDuration: Duration? { get async { nil } }
 }
 
 extension LocalTranscriber: DictationRecognizing {}
