@@ -166,11 +166,7 @@ fn transcribe(pool: &Pool, input: &Path, options: &Options, model: &str) -> Resu
         options.gate,
     );
     let rate = decode::RATE as f64;
-    let voiced: f64 = pieces
-        .iter()
-        .map(|(r, _)| (r.end - r.start) as f64)
-        .sum::<f64>()
-        / rate;
+    let voiced = pieces.iter().map(|(r, _)| r.end - r.start).sum::<u64>() as f64 / rate;
     eprintln!(
         "{}: {:.0} s of audio, {voiced:.0} s to recognize in {} pieces, {} engines",
         input.display(),

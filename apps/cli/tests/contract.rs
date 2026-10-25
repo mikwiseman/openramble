@@ -535,6 +535,8 @@ fn silence_is_empty_text_without_calling_the_engine() {
     assert_eq!(response.body["text"], "");
     assert_eq!(response.body["words"], serde_json::json!([]));
     assert_eq!(harness.calls.load(Ordering::SeqCst), 0);
+    let log = harness.log_text();
+    assert!(log.contains(" voiced=0.0s pieces=0 "), "{log}");
 }
 
 #[test]

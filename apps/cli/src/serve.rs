@@ -573,7 +573,8 @@ fn transcribe(
     );
     let pieces: Vec<Range<u64>> = planned.iter().map(|(range, _)| range.clone()).collect();
     record.pieces = pieces.len();
-    record.voiced_s = pieces.iter().map(|r| (r.end - r.start) as f64).sum::<f64>() / rate;
+    // summed in samples: an empty f64 sum is -0.0, which the log would print
+    record.voiced_s = pieces.iter().map(|r| r.end - r.start).sum::<u64>() as f64 / rate;
 
     let elapsed = started.elapsed().as_secs_f64();
     match pool.admit(
