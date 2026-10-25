@@ -14,8 +14,8 @@ use std::ops::Range;
 use ramble_engine::Recognized;
 use serde_json::{json, Value};
 
-/// The budget a request gets when it names none: within the meetings
-/// caller's 30-minute timeout, with room for the upload.
+/// The budget a request gets when neither it nor its key names one: within
+/// the meetings caller's 30-minute timeout, with room for the upload.
 pub const DEFAULT_DEADLINE_S: f64 = 1620.0;
 pub const MAX_DEADLINE_S: f64 = 86_400.0;
 
@@ -40,8 +40,8 @@ pub struct Params {
     /// Clean Verbatim: hesitations and stutters removed.
     pub no_verbatim: bool,
     pub format: Format,
-    /// How long the caller waits in all, upload included.
-    pub deadline_s: f64,
+    /// How long the caller waits in all, upload included, if it said.
+    pub deadline_s: Option<f64>,
 }
 
 /// An error response.
@@ -173,7 +173,7 @@ pub fn params(fields: &[(String, String)]) -> Result<Params, ApiError> {
         granularity: Granularity::Word,
         no_verbatim: false,
         format: Format::Scribe,
-        deadline_s: DEFAULT_DEADLINE_S,
+        deadline_s: None,
     };
     let flag = |value: &str| boolean(value).ok_or(ApiError::invalid(BAD_BOOLEAN));
     for (name, value) in fields {
@@ -242,14 +242,16 @@ pub fn params(fields: &[(String, String)]) -> Result<Params, ApiError> {
                 }
             }
             "deadline_s" => {
-                params.deadline_s = value
-                    .trim()
-                    .parse::<f64>()
-                    .ok()
-                    .filter(|s| s.is_finite() && *s > 0.0 && *s <= MAX_DEADLINE_S)
-                    .ok_or(ApiError::invalid(
-                        "deadline_s must be a number of seconds above 0 and at most 86400.",
-                    ))?;
+                params.deadline_s = Some(
+                    value
+                        .trim()
+                        .parse::<f64>()
+                        .ok()
+                        .filter(|s| s.is_finite() && *s > 0.0 && *s <= MAX_DEADLINE_S)
+                        .ok_or(ApiError::invalid(
+                            "deadline_s must be a number of seconds above 0 and at most 86400.",
+                        ))?,
+                );
             }
             // model_id, language_code, num_speakers, keyterms and anything
             // else: accepted and ignored
@@ -405,7 +407,7 @@ mod tests {
                 granularity: Granularity::Word,
                 no_verbatim: true,
                 format: Format::Scribe,
-                deadline_s: 14_400.0,
+                deadline_s: Some(14_400.0),
             })
         );
         let note = fields(&[
@@ -421,7 +423,7 @@ mod tests {
                 granularity: Granularity::None,
                 no_verbatim: false,
                 format: Format::OpenRamble,
-                deadline_s: DEFAULT_DEADLINE_S,
+                deadline_s: None,
             })
         );
         assert_eq!(params(&[]).unwrap().granularity, Granularity::Word);

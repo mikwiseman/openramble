@@ -19,6 +19,8 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 const KEY: &str = "contract-test-key";
+/// The key of a caller who waits 170 s in all, as OpenStrudel does.
+const NOTE_KEY: &str = "contract-note-key";
 
 fn ffmpeg() -> bool {
     let found = Command::new("ffmpeg")
@@ -117,15 +119,22 @@ impl Harness {
                 }) as Box<dyn Recognize>
             })
             .collect();
-        let digest: String = Sha256::digest(KEY.as_bytes())
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect();
+        let digest = |key: &str| -> String {
+            Sha256::digest(key.as_bytes())
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect()
+        };
         let sink = log.clone();
         let server = Server::start(
             Config {
                 listen: "127.0.0.1:0".into(),
-                keys: Keys::parse(&format!("tests {digest}\n")).unwrap(),
+                keys: Keys::parse(&format!(
+                    "tests {}\nnotes {} 170\n",
+                    digest(KEY),
+                    digest(NOTE_KEY)
+                ))
+                .unwrap(),
                 temp: temp.path().to_path_buf(),
                 model: "fake-model".into(),
                 log: Arc::new(move |line: &str| sink.lock().unwrap().push(line.to_string())),
@@ -489,7 +498,7 @@ fn a_deadline_the_queue_cannot_keep_gets_429_and_an_impossible_one_422() {
     if !ffmpeg() {
         return;
     }
-    let harness = Harness::new(2, WORDS, Duration::ZERO);
+    let harness = Harness::new(1, WORDS, Duration::ZERO);
     let wav = std::fs::read(harness.audio("track.wav", 700, true, &[])).unwrap();
     harness.gate.set(false);
     let address = harness.address();
@@ -500,16 +509,17 @@ fn a_deadline_the_queue_cannot_keep_gets_429_and_an_impossible_one_422() {
     harness.wait_for("the first track to queue", |h| {
         h.server().health().queued_seconds > 600.0
     });
-    // 1.15 * (700 + 700) * 0.45 / 2 engines = 362 s > 300
+    // 1.15 * (700 + 700) * 0.45 / 1 engine = 724.5 s > 650
     let busy = exchange(
         &address,
-        &post_form(Some(KEY), &[("deadline_s", "300")], "t.wav", &wav),
+        &post_form(Some(KEY), &[("deadline_s", "650")], "t.wav", &wav),
     );
     assert_eq!(busy.status, 429, "{busy:?}");
     assert_eq!(busy.detail(), "system_busy");
     let retry: u64 = busy.header("Retry-After").unwrap().parse().unwrap();
-    assert!((175..=185).contains(&retry), "Retry-After {retry}");
-    // 1.15 * 700 * 0.45 / 2 = 181 s > 100, even with nothing ahead
+    assert!((358..=368).contains(&retry), "Retry-After {retry}");
+    // a caller who waits 100 s goes ahead of the track, but 1.15 * 700 *
+    // 0.45 = 362 s > 100 even with nothing ahead
     let impossible = exchange(
         &address,
         &post_form(Some(KEY), &[("deadline_s", "100")], "t.wav", &wav),
@@ -518,6 +528,35 @@ fn a_deadline_the_queue_cannot_keep_gets_429_and_an_impossible_one_422() {
     assert_eq!(impossible.detail(), "audio_too_long_for_deadline");
     harness.gate.set(true);
     assert_eq!(first.join().unwrap().status, 200);
+}
+
+#[test]
+fn a_caller_who_waits_briefly_is_interactive_whatever_its_audio() {
+    if !ffmpeg() {
+        return;
+    }
+    let harness = Harness::new(1, WORDS, Duration::ZERO);
+    let wav = std::fs::read(harness.audio("short.wav", 5, true, &[])).unwrap();
+    for key in [KEY, NOTE_KEY] {
+        let response = exchange(
+            &harness.address(),
+            &post_form(Some(key), &[], "s.wav", &wav),
+        );
+        assert_eq!(response.status, 200, "{response:?}");
+    }
+    // a request's own deadline_s wins over its key's
+    let response = exchange(
+        &harness.address(),
+        &post_form(Some(NOTE_KEY), &[("deadline_s", "14400")], "s.wav", &wav),
+    );
+    assert_eq!(response.status, 200, "{response:?}");
+    let log = harness.log_text();
+    let classes: Vec<&str> = log
+        .lines()
+        .filter_map(|line| line.split(" class=").nth(1))
+        .map(|rest| rest.split(' ').next().unwrap())
+        .collect();
+    assert_eq!(classes, ["batch", "interactive", "batch"], "{log}");
 }
 
 #[test]

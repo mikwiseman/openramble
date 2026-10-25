@@ -54,15 +54,25 @@ const LINGER: Duration = Duration::from_secs(2);
 const ACCEPT_POLL: Duration = Duration::from_millis(20);
 const WARM_UP_SAMPLES: usize = 32_000;
 
-/// Who may call: labels with the SHA-256 of their key.
+/// One caller, as the keys file names it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Caller {
+    /// Who it is, for the log.
+    pub label: String,
+    /// How long it waits in all, for requests that send no `deadline_s`.
+    pub deadline_s: Option<f64>,
+}
+
+/// Who may call: callers with the SHA-256 of their key.
 #[derive(Debug, Clone)]
 pub struct Keys {
-    entries: Vec<(String, Vec<u8>)>,
+    entries: Vec<(Caller, Vec<u8>)>,
 }
 
 impl Keys {
-    /// Lines of `label sha256hex`; blank lines and `#` comments are skipped.
-    /// Errors name the line, never its contents.
+    /// Lines of `label sha256hex [seconds]`, the seconds being how long that
+    /// caller waits in all; blank lines and `#` comments are skipped. Errors
+    /// name the line, never its contents.
     pub fn parse(text: &str) -> Result<Keys, String> {
         let mut entries = Vec::new();
         for (number, line) in text.lines().enumerate() {
@@ -70,17 +80,35 @@ impl Keys {
             if line.is_empty() || line.starts_with('#') {
                 continue;
             }
+            let number = number + 1;
             let mut parts = line.split_whitespace();
-            let (Some(label), Some(digest), None) = (parts.next(), parts.next(), parts.next())
+            let (Some(label), Some(digest), wait, None) =
+                (parts.next(), parts.next(), parts.next(), parts.next())
             else {
-                return Err(format!("keys line {} is not `label sha256hex`", number + 1));
+                return Err(format!(
+                    "keys line {number} is not `label sha256hex [seconds]`"
+                ));
             };
             let digest = hex(digest)
                 .filter(|bytes| bytes.len() == 32)
-                .ok_or_else(|| {
-                    format!("keys line {} does not hold a SHA-256 in hex", number + 1)
-                })?;
-            entries.push((label.to_string(), digest));
+                .ok_or_else(|| format!("keys line {number} does not hold a SHA-256 in hex"))?;
+            let deadline_s = wait
+                .map(|wait| {
+                    wait.parse::<f64>()
+                        .ok()
+                        .filter(|s| s.is_finite() && *s > 0.0 && *s <= scribe::MAX_DEADLINE_S)
+                        .ok_or_else(|| {
+                            format!(
+                                "keys line {number}: the wait must be seconds above 0 and at most 86400"
+                            )
+                        })
+                })
+                .transpose()?;
+            let caller = Caller {
+                label: label.to_string(),
+                deadline_s,
+            };
+            entries.push((caller, digest));
         }
         if entries.is_empty() {
             return Err("the keys file holds no keys".into());
@@ -88,8 +116,8 @@ impl Keys {
         Ok(Keys { entries })
     }
 
-    /// The label of the caller whose key this is.
-    pub fn check(&self, presented: &str) -> Option<&str> {
+    /// The caller whose key this is.
+    pub fn check(&self, presented: &str) -> Option<&Caller> {
         let digest = Sha256::digest(presented.trim().as_bytes());
         self.entries
             .iter()
@@ -101,7 +129,7 @@ impl Keys {
                         .fold(0u8, |differ, (a, b)| differ | (a ^ b))
                         == 0
             })
-            .map(|(label, _)| label.as_str())
+            .map(|(caller, _)| caller)
     }
 }
 
@@ -474,13 +502,13 @@ fn transcribe(
     record: &mut Record,
 ) {
     let pool = &shared.pool;
-    let Some(label) = head
+    let Some(caller) = head
         .header("xi-api-key")
         .and_then(|key| shared.config.keys.check(key))
     else {
         return fail_early(input, id, &ApiError::invalid_key(), record);
     };
-    record.label = label.to_string();
+    record.label = caller.label.clone();
     if head
         .content_length()
         .is_some_and(|length| length > UPLOAD_CAP)
@@ -582,7 +610,10 @@ fn transcribe(
         Arc::new(decoded.pcm),
         pieces.clone(),
         elapsed,
-        params.deadline_s,
+        params
+            .deadline_s
+            .or(caller.deadline_s)
+            .unwrap_or(scribe::DEFAULT_DEADLINE_S),
     ) {
         Ok(class) => {
             record.class = match class {
@@ -649,15 +680,35 @@ mod tests {
             digest("strudel-secret")
         );
         let keys = Keys::parse(&text).unwrap();
-        assert_eq!(keys.check("meet-secret"), Some("meetings"));
-        assert_eq!(keys.check(" strudel-secret "), Some("openstrudel"));
-        assert_eq!(keys.check("meet-secret2"), None);
-        assert_eq!(keys.check(""), None);
+        let label = |key: &str| keys.check(key).map(|caller| caller.label.clone());
+        assert_eq!(label("meet-secret").as_deref(), Some("meetings"));
+        assert_eq!(label(" strudel-secret ").as_deref(), Some("openstrudel"));
+        assert_eq!(label("meet-secret2"), None);
+        assert_eq!(label(""), None);
         assert_eq!(
-            keys.check(&digest("meet-secret")),
+            label(&digest("meet-secret")),
             None,
             "the digest is not the key"
         );
+    }
+
+    #[test]
+    fn a_key_can_say_how_long_its_caller_waits() {
+        let text = format!(
+            "meetings {}\nopenstrudel {} 170\n",
+            digest("meet-secret"),
+            digest("strudel-secret")
+        );
+        let keys = Keys::parse(&text).unwrap();
+        assert_eq!(keys.check("meet-secret").unwrap().deadline_s, None);
+        assert_eq!(
+            keys.check("strudel-secret").unwrap().deadline_s,
+            Some(170.0)
+        );
+        for bad in ["0", "86401", "soon", "NaN", "170 extra"] {
+            let error = Keys::parse(&format!("a {} {bad}\n", digest("x"))).unwrap_err();
+            assert!(error.contains("line 1"), "{error}");
+        }
     }
 
     #[test]

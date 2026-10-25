@@ -11,7 +11,7 @@ This page describes the API, how to install and run the server, what the callers
 3. Silence is left out. A per-participant meeting track is mostly other people talking, which reaches that track as silence, so this removes most of the work.
 4. What is left is cut at pauses into pieces of at most 20 seconds.
 5. One engine per core recognizes pieces in parallel. Each engine is a separate copy of the model on one thread, because one loaded model runs one piece at a time.
-6. A voice note (at most 10 minutes of speech) always goes ahead of a meeting track at the next piece boundary, so it never waits behind a long job for more than one piece.
+6. A request whose caller waits at most 10 minutes, such as a voice note, is interactive: it goes ahead of every meeting track at the next piece boundary, so it never waits behind a long job for more than the pieces already running. The class comes from how long the caller waits, never from how much speech the file has, so a quiet participant's meeting track still queues as a meeting track.
 7. The response carries the text and, if asked, every word with its time in the file.
 
 ## API
@@ -36,7 +36,7 @@ Every response closes its connection.
 | `tag_audio_events`, `num_speakers`, `language_code`, `keyterms` | Accepted and ignored. Key terms are never logged. |
 | `cloud_storage_url`, `webhook=true`, `use_multi_channel=true`, `file_format` other than `other` | 400 `unsupported_parameter`. |
 | `output_format` | `openramble` returns the command-line tool's JSON instead of Scribe's shape. |
-| `deadline_s` | How long the caller waits in all, upload included. Default 1620, at most 86400. A meeting job that cannot finish in time is refused at once rather than timing out. |
+| `deadline_s` | How long the caller waits in all, upload included, at most 86400. Without it, the wait set for the caller's key applies, and without that, 1620. At most 600 makes the request interactive. A request that cannot finish in time is refused at once rather than timing out. |
 | Anything else | Ignored. |
 
 Booleans accept `true`, `false`, `1`, `0`, `yes` and `no` in any case. Anything else gets 400.
@@ -80,12 +80,13 @@ A wrong key and a declared upload over 2 GiB are answered before the body is rea
 
 ### Admission
 
-The server counts the speech ahead of a meeting job and its measured speed, and promises only what it can keep:
+The server counts the speech ahead of a job in its class and its measured speed, and promises only what it can keep:
 
 ```
 cost  = running average of engine seconds per audio second (starts at 0.45)
-ahead = speech of meeting jobs already queued or running
-voice note (at most 600 s of speech)              → accepted
+class = interactive if deadline ≤ 600, otherwise batch
+ahead = speech of the jobs of the same class already queued or running
+        (meeting work is never ahead of an interactive job)
 elapsed + 1.15 × mine × cost / engines > deadline → 422 audio_too_long_for_deadline
 elapsed + 1.15 × (ahead + mine) × cost / engines > deadline → 429, Retry-After = 1.15 × ahead × cost / engines
 otherwise                                         → accepted
@@ -103,7 +104,13 @@ printf 'meetings %s\n' "$(printf %s "$key" | sha256sum | cut -d' ' -f1)" >> /etc
 echo "$key"   # give this to the caller, once
 ```
 
-Use one label per caller: `meetings`, `openstrudel` and `ssh`. The label appears in the log, so you can tell the callers apart. After editing the file, restart the service.
+Use one label per caller: `meetings`, `openstrudel` and `ssh`. The label appears in the log, so you can tell the callers apart. A third column sets how long that caller waits in all, in seconds, for requests that send no `deadline_s`. Give OpenStrudel `170`, a little under its 180-second limit, so its voice notes are interactive without any change on its side:
+
+```
+openstrudel 5f0c…e1 170
+```
+
+After editing the file, restart the service.
 
 The `ssh` key goes in `/etc/openramble/ssh.header` as the line `xi-api-key: <key>`, owned by root with mode 0600.
 
@@ -150,11 +157,11 @@ WaiWeb reaches the server with ssh and the forced command `/opt/openramble/bin/t
 - Label the model `openramble-parakeet-ultra`.
 - Stop sending `diarize=true` for single mixed files: it now gets 400.
 
-**OpenStrudel.** Point speech-to-text at the server with its own key and keep text-to-speech and key checks on ElevenLabs. Telegram voice notes (Ogg Opus), m4a and mp4 video notes work as they are. A 30-second note takes about 7 seconds on 4 engines.
+**OpenStrudel.** Point speech-to-text at the server with its own key, which carries the 170-second wait (see Keys), and keep text-to-speech and key checks on ElevenLabs. A note that the queue of other notes would make late gets 429 at once instead of a timeout. Telegram voice notes (Ogg Opus), m4a and mp4 video notes work as they are. A 30-second note takes about 7 seconds on 4 engines.
 
 ## Capacity
 
-Defaults for a 4-core, 8 GB machine (Hetzner CAX21): 4 engines with Q4_K_M, pieces of up to 20 seconds, voice notes up to 600 s of speech, 8 jobs, 32 connections, uploads up to 2 GiB and audio up to 12 hours. Each engine takes about 1.15 GB on transcribe.cpp 0.2.0, so four take about 5 GB. Disk use per job is the upload until it is decoded, plus 230 MB per hour of audio.
+Defaults for a 4-core, 8 GB machine (Hetzner CAX21): 4 engines with Q4_K_M, pieces of up to 20 seconds, callers who wait up to 600 s treated as interactive, 8 jobs, 32 connections, uploads up to 2 GiB and audio up to 12 hours. Each engine takes about 1.15 GB on transcribe.cpp 0.2.0, so four take about 5 GB. Disk use per job is the upload until it is decoded, plus 230 MB per hour of audio.
 
 Estimates at 4 engines and 0.44 engine seconds per audio second, from the 20.8-minute track that took 184 s on 3 engines:
 

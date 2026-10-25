@@ -3,17 +3,20 @@
 //! Pure: no threads, no clock, no files. The pool calls it under one lock and
 //! passes in the measured times.
 //!
-//! - **Two classes.** A job with at most 10 minutes of voiced audio is
-//!   interactive (a voice note); anything longer is batch (a meeting track).
-//!   Interactive pieces go first at every piece boundary, so a voice note
-//!   never waits behind a nine-hour track for more than the piece already
-//!   running. Within a class jobs go in the order they were admitted, and a
-//!   job's pieces in file order. Every engine takes whatever is next, so one
-//!   job alone uses all of them.
-//! - **Admission is a promise.** A batch job is admitted only when the work
-//!   ahead of it plus its own fits its caller's budget at the measured speed.
-//!   Otherwise it gets 429 with the time the queue needs, which callers retry,
-//!   rather than a timeout, which they do not.
+//! - **Two classes, by how long the caller waits.** A job whose caller waits
+//!   at most 10 minutes in all is interactive (a voice note); any other is
+//!   batch (a meeting track). How much speech a job has says nothing about
+//!   who is waiting: a quiet participant's track has little, a long voice
+//!   note has a lot. Interactive pieces go first at every piece boundary, so
+//!   a voice note never waits behind a nine-hour track for more than the
+//!   piece already running. Within a class jobs go in the order they were
+//!   admitted, and a job's pieces in file order. Every engine takes whatever
+//!   is next, so one job alone uses all of them.
+//! - **Admission is a promise.** A job is admitted only when the work ahead
+//!   of it in its own class plus its own fits its caller's budget at the
+//!   measured speed (batch work is not ahead of an interactive job).
+//!   Otherwise it gets 429 with the time the queue needs, which callers
+//!   retry, rather than a timeout, which they do not.
 //! - **Cancel drops queued pieces.** A piece already running finishes (the
 //!   runtime cannot stop mid-piece) and its result is thrown away.
 
@@ -24,8 +27,8 @@ use ramble_engine::Recognized;
 
 pub type JobId = u64;
 
-/// Voiced seconds up to which a job is interactive.
-pub const INTERACTIVE_S: f64 = 600.0;
+/// A job whose caller waits at most this many seconds in all is interactive.
+pub const INTERACTIVE_BUDGET_S: f64 = 600.0;
 /// Most jobs open at once, uploads and decodes included.
 pub const MAX_JOBS: usize = 8;
 /// Compute seconds per audio second before anything has been measured: what
@@ -157,26 +160,27 @@ impl<S: Clone> Scheduler<S> {
             return Err(Refusal::ShuttingDown);
         }
         let mine: f64 = pieces.iter().map(seconds).sum();
-        let class = if mine <= INTERACTIVE_S {
+        let class = if budget_s <= INTERACTIVE_BUDGET_S {
             Class::Interactive
         } else {
             Class::Batch
         };
-        if class == Class::Batch {
-            let ahead: f64 = self
-                .batch
-                .iter()
-                .filter_map(|id| self.jobs.get(id))
-                .map(|job| job.remaining_s)
-                .sum();
-            if elapsed_s + self.estimate_s(mine) > budget_s {
-                return Err(Refusal::TooLongForDeadline);
-            }
-            if elapsed_s + self.estimate_s(ahead + mine) > budget_s {
-                return Err(Refusal::Busy {
-                    retry_after_s: self.wait_s(ahead),
-                });
-            }
+        let queue = match class {
+            Class::Interactive => &self.interactive,
+            Class::Batch => &self.batch,
+        };
+        let ahead: f64 = queue
+            .iter()
+            .filter_map(|id| self.jobs.get(id))
+            .map(|job| job.remaining_s)
+            .sum();
+        if elapsed_s + self.estimate_s(mine) > budget_s {
+            return Err(Refusal::TooLongForDeadline);
+        }
+        if elapsed_s + self.estimate_s(ahead + mine) > budget_s {
+            return Err(Refusal::Busy {
+                retry_after_s: self.wait_s(ahead),
+            });
         }
         let job = self.jobs.get_mut(&id).expect("checked above");
         job.queued = (0..pieces.len()).collect();
@@ -362,11 +366,15 @@ mod tests {
     #[test]
     fn interactive_pieces_go_before_queued_batch_pieces() {
         let mut scheduler = Scheduler::new(2);
-        admitted(&mut scheduler, 'B', pieces(40, 16)); // 640 s: batch
+        admitted(&mut scheduler, 'B', pieces(40, 16)); // a caller who waits hours
         let first = scheduler.next_task().unwrap();
         assert_eq!(first.source, 'B');
-        admitted(&mut scheduler, 'i', pieces(3, 10)); // 30 s: interactive
-                                                      // the very next free engine takes the voice note
+        let note = scheduler.open().unwrap();
+        // a caller who waits three minutes
+        scheduler
+            .admit(note, 'i', pieces(3, 10), 0.0, 180.0)
+            .unwrap();
+        // the very next free engine takes the voice note
         assert_eq!(
             drain_order(&mut scheduler),
             format!("iii{}", "B".repeat(39))
@@ -462,7 +470,7 @@ mod tests {
         let mine = pieces(100, 16); // 1600 s: 1.15 * 1600 * 0.45 / 4 = 207 s
         let id = scheduler.open().unwrap();
         assert_eq!(
-            scheduler.admit(id, 'm', mine.clone(), 10.0, 600.0),
+            scheduler.admit(id, 'm', mine.clone(), 10.0, 700.0),
             Err(Refusal::Busy { retry_after_s: 518 })
         );
         // the same job fits a caller who waits longer
@@ -475,20 +483,95 @@ mod tests {
         // a job that could not finish even on an empty server is told so
         let id = scheduler.open().unwrap();
         assert_eq!(
-            scheduler.admit(id, 'm', pieces(400, 16), 10.0, 600.0),
+            scheduler.admit(id, 'm', pieces(400, 16), 10.0, 700.0),
             Err(Refusal::TooLongForDeadline)
         );
         // once the queue has drained the same request is accepted
         scheduler.close(ahead);
         assert_eq!(
-            scheduler.admit(id, 'm', mine, 10.0, 600.0),
+            scheduler.admit(id, 'm', mine, 10.0, 700.0),
             Ok(Class::Batch)
         );
-        // interactive work is always taken
+        // the meeting work queued is not ahead of a voice note
         let note = scheduler.open().unwrap();
         assert_eq!(
             scheduler.admit(note, 'n', pieces(4, 15), 590.0, 600.0),
             Ok(Class::Interactive)
+        );
+    }
+
+    /// `count` pieces of `each_ms` milliseconds, back to back.
+    fn pieces_ms(count: u64, each_ms: u64) -> Vec<Range<u64>> {
+        (0..count)
+            .map(|i| i * each_ms * 16..(i + 1) * each_ms * 16)
+            .collect()
+    }
+
+    #[test]
+    fn a_meeting_track_with_little_speech_does_not_hold_up_a_voice_note() {
+        // A 9.2-hour track from a participant who spoke 9.5 minutes: 36
+        // pieces of 15.8 s, under 600 s of speech, from a caller who waits
+        // four hours.
+        let mut scheduler = Scheduler::new(4);
+        let track = scheduler.open().unwrap();
+        assert_eq!(
+            scheduler.admit(track, 'T', pieces_ms(36, 15_800), 0.0, 14_400.0),
+            Ok(Class::Batch)
+        );
+        for _ in 0..4 {
+            assert_eq!(scheduler.next_task().unwrap().source, 'T');
+        }
+        // a 30 s voice note from a caller who waits 170 s
+        let note = scheduler.open().unwrap();
+        assert_eq!(
+            scheduler.admit(note, 'n', pieces(2, 15), 1.0, 170.0),
+            Ok(Class::Interactive)
+        );
+        assert_eq!(scheduler.next_task().unwrap().source, 'n');
+        assert_eq!(scheduler.next_task().unwrap().source, 'n');
+    }
+
+    #[test]
+    fn a_long_voice_note_still_goes_first_when_its_caller_waits_briefly() {
+        let mut scheduler = Scheduler::new(4);
+        let track = scheduler.open().unwrap();
+        scheduler
+            .admit(track, 'T', pieces(100, 16), 0.0, 14_400.0)
+            .unwrap();
+        scheduler.next_task().unwrap();
+        // 11 minutes of speech: 1.15 * 660 * 0.45 / 4 = 85 s, within 170 s
+        let note = scheduler.open().unwrap();
+        assert_eq!(
+            scheduler.admit(note, 'n', pieces(44, 15), 1.0, 170.0),
+            Ok(Class::Interactive)
+        );
+        assert_eq!(scheduler.next_task().unwrap().source, 'n');
+    }
+
+    #[test]
+    fn a_voice_note_is_promised_only_what_the_notes_ahead_of_it_leave() {
+        let mut scheduler = Scheduler::new(4);
+        // a meeting track ahead does not count: notes go before its pieces
+        let track = scheduler.open().unwrap();
+        scheduler
+            .admit(track, 'T', pieces(250, 16), 0.0, 14_400.0)
+            .unwrap();
+        // a 4-minute note: 1.15 * 240 * 0.45 / 4 = 31 s
+        let first = scheduler.open().unwrap();
+        assert_eq!(
+            scheduler.admit(first, 'a', pieces(16, 15), 0.0, 60.0),
+            Ok(Class::Interactive)
+        );
+        // the second would finish after 62 s, past its caller's 60
+        let second = scheduler.open().unwrap();
+        assert_eq!(
+            scheduler.admit(second, 'b', pieces(16, 15), 0.0, 60.0),
+            Err(Refusal::Busy { retry_after_s: 32 })
+        );
+        // and one that could not finish even alone is told so
+        assert_eq!(
+            scheduler.admit(second, 'b', pieces(160, 15), 0.0, 60.0),
+            Err(Refusal::TooLongForDeadline)
         );
     }
 
