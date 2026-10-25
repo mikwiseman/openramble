@@ -785,6 +785,205 @@ fn other_paths_methods_and_shapes() {
 }
 
 // ---------------------------------------------------------------------------
+// The ssh path: deploy/transcribe-stdin, run as sshd would run it, against
+// the real server.
+
+const TRANSCRIBE_STDIN: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/deploy/transcribe-stdin");
+
+fn have(tool: &str) -> bool {
+    let found = Command::new(tool)
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success());
+    if !found {
+        eprintln!("no {tool}; skipping");
+    }
+    found
+}
+
+fn ssh_path_tools() -> bool {
+    ffmpeg() && have("curl") && have("python3")
+}
+
+impl Harness {
+    /// The ssh key's header file, as install.sh leaves it.
+    fn ssh_header(&self) -> PathBuf {
+        let path = self.files.path().join("ssh.header");
+        std::fs::write(&path, format!("xi-api-key: {KEY}\n")).unwrap();
+        path
+    }
+
+    /// transcribe-stdin with every stream piped, as sshd runs a forced
+    /// command without a terminal.
+    fn transcribe_stdin(&self, header: &Path, args: &[&str]) -> std::process::Child {
+        Command::new(TRANSCRIBE_STDIN)
+            .args(args)
+            .env("OPENRAMBLE_SERVER", format!("http://{}", self.address()))
+            .env("OPENRAMBLE_SSH_HEADER", header)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap()
+    }
+}
+
+/// Waits up to `limit` for the child to exit.
+fn exited(child: &mut std::process::Child, limit: Duration) -> Option<std::process::ExitStatus> {
+    let deadline = Instant::now() + limit;
+    loop {
+        if let Some(status) = child.try_wait().unwrap() {
+            return Some(status);
+        }
+        if Instant::now() > deadline {
+            return None;
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
+#[test]
+fn transcribe_stdin_turns_standard_input_into_openramble_json() {
+    if !ssh_path_tools() {
+        return;
+    }
+    let harness = Harness::new(2, WORDS, Duration::ZERO);
+    let m4a = std::fs::read(harness.audio("track.m4a", 30, true, &["-c:a", "aac"])).unwrap();
+    let mut child = harness.transcribe_stdin(&harness.ssh_header(), &[]);
+    child.stdin.take().unwrap().write_all(&m4a).unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let body: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(body["text"], "alpha beta alpha beta");
+    assert_eq!(body["segments"].as_array().unwrap().len(), 2);
+    assert!(harness.log_text().contains(" tests 200 ok "));
+}
+
+#[test]
+fn an_ssh_session_that_ends_while_the_server_works_cancels_the_job() {
+    if !ssh_path_tools() {
+        return;
+    }
+    let harness = Harness::new(1, WORDS, Duration::ZERO);
+    let wav = std::fs::read(harness.audio("track.wav", 60, true, &[])).unwrap();
+    harness.gate.set(false);
+    let mut child = harness.transcribe_stdin(&harness.ssh_header(), &[]);
+    child.stdin.take().unwrap().write_all(&wav).unwrap();
+    harness.wait_for("a piece to run", |h| h.calls.load(Ordering::SeqCst) > 0);
+    // sshd closes its ends of the session's pipes and signals nothing
+    drop(child.stdout.take());
+    drop(child.stderr.take());
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while harness.server().health().jobs > 0 && Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    let jobs = harness.server().health().jobs;
+    harness.gate.set(true);
+    let status = exited(&mut child, Duration::from_secs(5));
+    let _ = child.kill();
+    assert_eq!(jobs, 0, "the job ran on after the session ended");
+    assert!(harness.log_text().contains("client_left"));
+    assert_eq!(status.and_then(|s| s.code()), Some(129));
+}
+
+#[test]
+fn an_ssh_session_that_ends_mid_upload_sends_nothing() {
+    if !ssh_path_tools() {
+        return;
+    }
+    let harness = Harness::new(1, WORDS, Duration::ZERO);
+    let wav = std::fs::read(harness.audio("track.wav", 60, true, &[])).unwrap();
+    let mut child = harness.transcribe_stdin(&harness.ssh_header(), &[]);
+    let mut stdin = child.stdin.take().unwrap();
+    stdin.write_all(&wav[..wav.len() / 2]).unwrap();
+    // the connection drops: sshd closes every pipe of the session at once
+    drop(child.stdout.take());
+    drop(child.stderr.take());
+    drop(stdin);
+    let status = exited(&mut child, Duration::from_secs(5));
+    std::thread::sleep(Duration::from_millis(300));
+    let _ = child.kill();
+    assert_eq!(
+        harness.calls.load(Ordering::SeqCst),
+        0,
+        "{}",
+        harness.log_text()
+    );
+    assert!(
+        !harness.log_text().contains(" 200 "),
+        "half a file was transcribed: {}",
+        harness.log_text()
+    );
+    assert_eq!(status.and_then(|s| s.code()), Some(129));
+}
+
+#[test]
+fn transcribe_stdin_says_why_when_it_cannot_read_the_key() {
+    if !ssh_path_tools() {
+        return;
+    }
+    let harness = Harness::new(1, WORDS, Duration::ZERO);
+    let header = harness.files.path().join("missing.header");
+    let mut child = harness.transcribe_stdin(&header, &[]);
+    drop(child.stdin.take());
+    let output = child.wait_with_output().unwrap();
+    assert_eq!(output.status.code(), Some(1), "{output:?}");
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        said.contains(&*header.to_string_lossy()) && said.contains("cannot read"),
+        "{said}"
+    );
+    assert!(harness.log_text().is_empty(), "{}", harness.log_text());
+}
+
+#[test]
+fn the_school_transport_runs_it_in_place_of_the_command_line_tool() {
+    if !ssh_path_tools() {
+        return;
+    }
+    let harness = Harness::new(2, WORDS, Duration::ZERO);
+    let audio = harness.audio("audio.m4a", 30, true, &["-c:a", "aac"]);
+    let out = harness.files.path().join("out");
+    std::fs::create_dir(&out).unwrap();
+    // exactly how stt-ssh calls its engine, with stdout and stderr discarded
+    let status = Command::new(TRANSCRIBE_STDIN)
+        .args(["--workers", "3", "--max-chunk", "20", "--format", "json"])
+        .args(["--model-dir", "/opt/openramble/models/parakeet-ultra-gguf"])
+        .arg("--output-dir")
+        .arg(&out)
+        .arg(&audio)
+        .env("OPENRAMBLE_SERVER", format!("http://{}", harness.address()))
+        .env("OPENRAMBLE_SSH_HEADER", harness.ssh_header())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .unwrap();
+    assert_eq!(status.code(), Some(0));
+    let body: Value =
+        serde_json::from_slice(&std::fs::read(out.join("audio.json")).unwrap()).unwrap();
+    assert_eq!(body["text"], "alpha beta alpha beta");
+    assert!(body["segments"].as_array().unwrap()[0]["start"].is_number());
+}
+
+#[test]
+fn a_busy_or_restarting_server_is_exit_75_try_again_later() {
+    if !ssh_path_tools() {
+        return;
+    }
+    let harness = Harness::new(1, WORDS, Duration::ZERO);
+    let wav = std::fs::read(harness.audio("note.wav", 5, true, &[])).unwrap();
+    harness.server().drain();
+    let mut child = harness.transcribe_stdin(&harness.ssh_header(), &[]);
+    let _ = child.stdin.take().unwrap().write_all(&wav);
+    let output = child.wait_with_output().unwrap();
+    assert_eq!(output.status.code(), Some(75), "{output:?}");
+    assert!(output.stdout.is_empty());
+}
+
+// ---------------------------------------------------------------------------
 // The real binary and model.
 
 fn model_directory() -> Option<PathBuf> {

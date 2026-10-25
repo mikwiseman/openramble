@@ -151,7 +151,9 @@ Caddy needs port 80 or 443 reachable once from Let's Encrypt to get its certific
 
 ### The ssh path
 
-WaiWeb reaches the server with ssh and the forced command `/opt/openramble/bin/transcribe-stdin`: one audio file on standard input, OpenRamble JSON on standard output. That script is now a curl client of the local server ([`apps/cli/deploy/transcribe-stdin`](../apps/cli/deploy/transcribe-stdin)), so the ssh path shares the server's engines instead of loading its own copies, which would not fit in memory next to them. Nothing changes for WaiWeb. A hung-up ssh session cancels its job.
+WaiWeb reaches the server with ssh and the forced command `/opt/openramble/bin/transcribe-stdin`: one audio file on standard input, OpenRamble JSON on standard output. That script is now a client of the local server ([`apps/cli/deploy/transcribe-stdin`](../apps/cli/deploy/transcribe-stdin), Python 3 and curl), so the ssh path shares the server's engines instead of loading its own copies, which would not fit in memory next to them. Nothing changes for WaiWeb.
+
+When an ssh session without a terminal ends, sshd closes its pipes and sends the command no signal, so `transcribe-stdin` watches for that itself, as the school's `stt-ssh` does. It reads the whole upload into a file with no name before it sends anything, so a session that ends mid-upload sends nothing. While the server works, it notices within a fifth of a second that sshd has closed its end of the output, or that its parent has gone, and stops curl; the connection closes and the server cancels the job. Its exit status follows `stt-ssh`'s: 0 done, 64 bad arguments, 65 no audio, 75 busy, starting or stopping (try again later), 129 the session ended, 1 anything else.
 
 ## What the callers change
 

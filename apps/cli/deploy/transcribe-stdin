@@ -1,13 +1,203 @@
-#!/bin/sh
-# One audio file on standard input, OpenRamble JSON on standard output.
-#
-# The ssh forced command WaiWeb uses, now a client of the local server, so it
-# shares the server's engines instead of loading its own. The key is read
-# from a root-only header file and never appears on a command line. If the
-# ssh session hangs up, curl dies, the connection closes and the server
-# cancels the job.
-exec curl --silent --show-error --fail-with-body --max-time 14400 \
-  -X POST -T - \
-  -H @/etc/openramble/ssh.header \
-  -H 'Content-Type: application/octet-stream' \
-  'http://127.0.0.1:8080/v1/speech-to-text?output_format=openramble&timestamps_granularity=none&deadline_s=14400'
+#!/usr/bin/env python3
+"""One audio file to the OpenRamble server on this machine, OpenRamble JSON back.
+
+The ssh path into the server. Two forced commands run it, and neither loads
+engines of its own, which would not fit in memory next to the server's:
+
+- WaiWeb runs it with no arguments: the audio on standard input, the JSON on
+  standard output.
+- The school's stt-ssh runs it in place of the command-line tool
+  (BIN=/opt/openramble/bin/transcribe-stdin in /etc/openramble-stt.env) as
+  `transcribe-stdin [--workers N] [--max-chunk S] [--format json]
+  [--model-dir D] --output-dir DIR FILE` and reads DIR/<name>.json. stt-ssh
+  keeps its own lock, limits and clean-up.
+
+Standard input is read whole into a file with no name before anything is
+sent, so a session that ends mid-upload sends nothing. When an ssh session
+without a terminal ends, sshd closes its pipes and signals nothing, so the
+session is watched instead, as stt-ssh does: once sshd has closed its end of
+our output, or our parent has gone, curl is stopped, its connection closes
+and the server cancels the job.
+
+The key is read by curl from a header file and never appears on a command
+line. Nothing here names the audio or repeats what the server heard.
+
+Exit status, as stt-ssh's: 0 done, 64 bad arguments, 65 no audio, 75 the
+server is busy, starting or stopping (try again later), 129 the session
+ended, 1 anything else.
+"""
+import json
+import os
+import select
+import signal
+import subprocess
+import sys
+import tempfile
+
+SERVER = os.environ.get('OPENRAMBLE_SERVER', 'http://127.0.0.1:8080')
+HEADER = os.environ.get('OPENRAMBLE_SSH_HEADER', '/etc/openramble/ssh.header')
+QUERY = ('/v1/speech-to-text?output_format=openramble'
+         '&timestamps_granularity=none&deadline_s=14400')
+TIMEOUT_S = 14400
+WATCH_MS = 200
+USAGE, NO_AUDIO, BUSY, GONE = 64, 65, 75, 129
+# The command-line tool's options that stt-ssh passes and the server decides.
+IGNORED = {'--workers', '--max-chunk', '--model-dir'}
+
+
+class Gone(Exception):
+    """The ssh session ended."""
+
+
+class Failed(Exception):
+    def __init__(self, code, message):
+        super().__init__(message)
+        self.code = code
+
+
+class Session:
+    """Whether the ssh session that started us is still there."""
+
+    def __init__(self):
+        self.parent = os.getppid()
+        self.outputs = select.poll()
+        for fd in (1, 2):
+            self.outputs.register(fd, select.POLLERR | select.POLLHUP)
+
+    def check(self):
+        if os.getppid() != self.parent or self.outputs.poll(0):
+            raise Gone()
+
+
+def interrupted(_signum, _frame):
+    raise Gone()
+
+
+def arguments(argv):
+    """(output directory, file) for stt-ssh's form, (None, None) for WaiWeb's."""
+    output_dir, path = None, None
+    rest = list(argv)
+    while rest:
+        arg = rest.pop(0)
+        if arg in IGNORED or arg in ('--format', '--output-dir'):
+            if not rest:
+                raise Failed(USAGE, f'{arg} needs a value')
+            value = rest.pop(0)
+            if arg == '--format' and value != 'json':
+                raise Failed(USAGE, 'only --format json is supported')
+            if arg == '--output-dir':
+                output_dir = value
+        elif arg.startswith('-'):
+            raise Failed(USAGE, f'unknown option {arg}')
+        elif path is None:
+            path = arg
+        else:
+            raise Failed(USAGE, 'one file at a time')
+    if (output_dir is None) != (path is None):
+        raise Failed(USAGE, 'a file needs --output-dir, and --output-dir a file')
+    return output_dir, path
+
+
+def receive(session):
+    """Standard input, whole, in a file with no name on disk."""
+    upload = tempfile.TemporaryFile(dir='/var/tmp')
+    incoming = select.poll()
+    incoming.register(0, select.POLLIN | select.POLLHUP)
+    while True:
+        session.check()
+        if not incoming.poll(WATCH_MS):
+            continue
+        chunk = os.read(0, 1 << 20)
+        if not chunk:
+            break
+        upload.write(chunk)
+    # the end of the input is also what a dropped session looks like
+    session.check()
+    upload.flush()
+    upload.seek(0)
+    return upload
+
+
+def post(audio, session):
+    """The server's (status, body) for the audio."""
+    curl = subprocess.Popen(
+        ['curl', '--silent', '--show-error', '--max-time', str(TIMEOUT_S),
+         '-X', 'POST', '-T', '-', '-H', f'@{HEADER}',
+         '-H', 'Content-Type: application/octet-stream',
+         '--write-out', '\n%{http_code}', SERVER + QUERY],
+        stdin=audio, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        while True:
+            try:
+                out, _ = curl.communicate(timeout=WATCH_MS / 1000)
+                break
+            except subprocess.TimeoutExpired:
+                session.check()
+    finally:
+        if curl.poll() is None:
+            curl.kill()
+            curl.wait()
+    if curl.returncode == 7:
+        raise Failed(BUSY, 'the server is not running; try again later')
+    if curl.returncode != 0:
+        raise Failed(1, f'curl failed with exit status {curl.returncode}')
+    body, _, status = out.rpartition(b'\n')
+    return int(status), body
+
+
+def detail(body):
+    try:
+        return str(json.loads(body)['detail']['status'])
+    except (ValueError, KeyError, TypeError):
+        return 'no detail'
+
+
+def deliver(body, output_dir, path):
+    if output_dir is None:
+        view = memoryview(body)
+        while view:
+            try:
+                view = view[os.write(1, view):]
+            except BrokenPipeError:
+                raise Gone() from None
+        return
+    name = os.path.splitext(os.path.basename(path))[0]
+    with open(os.path.join(output_dir, name + '.json'), 'wb') as output:
+        output.write(body)
+
+
+def main(argv):
+    for signum in (signal.SIGHUP, signal.SIGINT, signal.SIGTERM):
+        signal.signal(signum, interrupted)
+    try:
+        output_dir, path = arguments(argv)
+        if not os.access(HEADER, os.R_OK):
+            raise Failed(1, f'cannot read the key in {HEADER}: it must be readable by '
+                            f'the ssh user (uid {os.getuid()}); see docs/server.md')
+        session = Session()
+        with (open(path, 'rb') if path else receive(session)) as audio:
+            if os.fstat(audio.fileno()).st_size == 0:
+                raise Failed(NO_AUDIO, 'no audio arrived')
+            status, body = post(audio, session)
+        if status == 200:
+            deliver(body, output_dir, path)
+            return 0
+        if status in (429, 503):
+            raise Failed(BUSY, f'the server is busy ({detail(body)}); try again later')
+        raise Failed(1, f'the server answered {status} ({detail(body)})')
+    except Gone:
+        return GONE
+    except Failed as failure:
+        message, code = str(failure), failure.code
+    except OSError as error:
+        # strerror alone: the error itself would name the file
+        message, code = error.strerror or 'input or output failed', 1
+    try:
+        os.write(2, f'transcribe-stdin: {message}\n'.encode())
+    except OSError:
+        pass
+    return code
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

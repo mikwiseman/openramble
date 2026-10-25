@@ -181,7 +181,9 @@ jobs:
       - name: Lint
         run: cargo clippy -p openramble-cli -p ramble-engine --all-targets -- -D warnings
 
-      # The contract tests run the real server on loopback with real ffmpeg.
+      # The contract tests run the real server on loopback with real ffmpeg,
+      # and deploy/transcribe-stdin against it with the runner's python3 and
+      # curl, as sshd would run it.
       - name: Test
         run: cargo test -p openramble-cli -p ramble-engine
 
@@ -189,7 +191,7 @@ jobs:
       # freshly built binary stands in at the installed path.
       - name: Deployment files
         run: |
-          shellcheck apps/cli/deploy/install.sh apps/cli/deploy/transcribe-stdin
+          shellcheck apps/cli/deploy/install.sh
           sudo install -D -m 0755 target/debug/openramble /opt/openramble/bin/openramble
           sudo systemd-analyze verify apps/cli/deploy/openramble.service
 
