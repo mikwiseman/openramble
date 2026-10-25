@@ -3,6 +3,9 @@
 //! One decoder, one planner and one engine pool, shared by file mode
 //! (`openramble FILE…`) and the server (`openramble serve`).
 
+// No raw system calls: a socket can only be the listener in listen.rs.
+#![forbid(unsafe_code)]
+
 pub mod decode;
 pub mod engines;
 pub mod http;

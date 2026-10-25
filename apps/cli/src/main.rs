@@ -10,6 +10,9 @@
 //! so parallelism comes from several engines rather than from threads inside
 //! one.
 
+// No raw system calls: a socket can only be the listener in listen.rs.
+#![forbid(unsafe_code)]
+
 use std::fs::File;
 use std::io::Write;
 use std::ops::Range;

@@ -328,6 +328,10 @@ jobs:
       - name: Check that the network is only where it is allowed
         run: ./scripts/check-network-surface.sh
 
+      # And the gate itself catches each way around it that has been found.
+      - name: Check the gate
+        run: ./scripts/tests/test-network-gate.sh
+
   universal-build:
     name: Apple Silicon and Intel
     runs-on: macos-26
