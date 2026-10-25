@@ -1,5 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
+import CoreAudio
 import DictationAudio
 import DictationCore
 import Foundation
@@ -644,6 +645,19 @@ final class AppHarness {
     /// is a suite nobody can run while working.
     let sounds = SilentSounds()
 
+    /// Real edges for the stress lab, which runs the shipping path end to end.
+    /// Every other suite leaves them nil and gets the fakes above.
+    var makeCaptureOverride: ((
+        URL,
+        @escaping @Sendable (DictationSessionID, AudioCaptureError) -> Void,
+        @escaping @Sendable ([Float]) -> Void,
+        @escaping @Sendable (DictationSessionID) -> Void,
+        AudioDeviceID?
+    ) -> any AudioCapturing)?
+    var inserterOverride: (any TextInserting)?
+    var overlayOverride: (any OverlayPresenting)?
+    var targetOverride: TargetApplication?
+
     func makeState() -> AppState {
         AppState(
             environment: AppEnvironment(
@@ -654,17 +668,17 @@ final class AppHarness {
                 hotkeyMonitor: monitor,
                 copyShortcutMonitor: copyMonitor,
                 recordingShortcutMonitor: recordingMonitor,
-                inserter: inserter,
-                targetApplicationSnapshot: { [inserter] in
-                    inserter.frontmostApplication()
+                inserter: inserterOverride ?? inserter,
+                targetApplicationSnapshot: { [inserter, targetOverride] in
+                    targetOverride ?? inserter.frontmostApplication()
                 },
-                overlay: overlay,
+                overlay: overlayOverride ?? overlay,
                 // Silent by design. The application sources are compiled into
                 // this bundle, so a real `SystemSounds` here plays Submarine
                 // through the speakers of whoever runs the suite — once per
                 // failure path, across hundreds of tests.
                 makeSounds: { [sounds] _ in sounds },
-                makeCapture: { [weak self, capture] _, failure, _, memoryLimit, _ in
+                makeCapture: makeCaptureOverride ?? { [weak self, capture] _, failure, _, memoryLimit, _ in
                     self?.captureFailure = failure
                     self?.captureMemoryLimit = memoryLimit
                     return capture
@@ -746,6 +760,12 @@ final class AppHarness {
         try installMarker(for: try ModelManifest.bundled())
     }
 
+    /// The real model, cloned from an installed engine folder. A clone on APFS
+    /// costs no space and leaves the source untouched.
+    func installModel(cloningFrom engineDirectory: URL) throws {
+        try installMarker(for: try ModelManifest.bundled(), cloningFrom: engineDirectory)
+    }
+
     /// A Mac updated from the release before: only the model the current one replaced.
     func installPreviousModelMarker() throws {
         guard let previous = try ModelManifest.bundledPrevious() else { throw CocoaError(.fileNoSuchFile) }
@@ -758,7 +778,7 @@ final class AppHarness {
         return try ModelInstallLayout(manifest: manifest, root: try AppPaths(root: root).models()).modelDirectory
     }
 
-    private func installMarker(for manifest: ModelManifest) throws {
+    private func installMarker(for manifest: ModelManifest, cloningFrom source: URL? = nil) throws {
         let paths = AppPaths(root: root)
         let layout = try ModelInstallLayout(manifest: manifest, root: try paths.models())
         try FileManager.default.createDirectory(
@@ -772,10 +792,14 @@ final class AppHarness {
                 at: url.deletingLastPathComponent(),
                 withIntermediateDirectories: true
             )
-            _ = FileManager.default.createFile(atPath: url.path, contents: nil)
-            let handle = try FileHandle(forWritingTo: url)
-            try handle.truncate(atOffset: UInt64(file.byteCount))
-            try handle.close()
+            if let source {
+                try FileManager.default.copyItem(at: source.appending(path: file.path), to: url)
+            } else {
+                _ = FileManager.default.createFile(atPath: url.path, contents: nil)
+                let handle = try FileHandle(forWritingTo: url)
+                try handle.truncate(atOffset: UInt64(file.byteCount))
+                try handle.close()
+            }
             let values = try url.resourceValues(forKeys: [.contentModificationDateKey])
             installedFiles.append(
                 .init(
