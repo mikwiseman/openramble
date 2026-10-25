@@ -18,7 +18,12 @@ const SHIPPING_MANIFEST: &str =
 
 const SPOKEN: &str = "Checking work without the Internet";
 
+/// `OPENRAMBLE_MODEL_DIR` names a folder holding a `.gguf` directly (a Linux
+/// server, or one of the cached quantizations); otherwise the Mac app's store.
 fn installed_model() -> Option<PathBuf> {
+    if let Ok(directory) = std::env::var("OPENRAMBLE_MODEL_DIR") {
+        return Some(PathBuf::from(directory));
+    }
     let root = match std::env::var("OPENRAMBLE_SUPPORT_ROOT") {
         Ok(root) => PathBuf::from(root).join("Models"),
         Err(_) => PathBuf::from(std::env::var("HOME").ok()?)
@@ -118,5 +123,50 @@ fn a_clip_too_short_to_contain_speech_does_not_poison_the_engine() {
         .transcribe(&vec![0.0_f32; 200])
         .expect("a short clip must not fail");
     assert!(!text.contains("NaN"), "got {text:?}");
+    engine.shutdown();
+}
+
+/// Word times are what a server caller reads; the text must not change
+/// because they were asked for.
+#[test]
+fn words_come_back_with_times_inside_the_clip_and_the_same_text() {
+    let Some(model_directory) = installed_model() else {
+        eprintln!("no installed model; skipping");
+        return;
+    };
+    let Some((samples, rate)) = speech() else {
+        eprintln!("no speech to transcribe; skipping");
+        return;
+    };
+    let samples = ramble_audio::resample(&samples, rate).expect("resample");
+    let clip_ms = (samples.len() * 1000 / 16_000) as u32;
+
+    let engine = Engine::load(&model_directory).expect("the model must load");
+    let recognized = engine
+        .recognize(&samples)
+        .expect("recognition must succeed");
+    assert!(!recognized.truncated);
+    assert!(!recognized.words.is_empty(), "no words for {recognized:?}");
+
+    let (mut last_start, mut last_end) = (0, 0);
+    for word in &recognized.words {
+        assert!(!word.text.is_empty() && word.text.trim() == word.text);
+        assert!(word.start_ms <= word.end_ms, "{word:?}");
+        assert!(word.end_ms <= clip_ms, "{word:?} beyond {clip_ms} ms");
+        assert!(
+            word.start_ms >= last_start && word.end_ms >= last_end,
+            "{word:?}"
+        );
+        (last_start, last_end) = (word.start_ms, word.end_ms);
+    }
+
+    let joined: Vec<&str> = recognized.words.iter().map(|w| w.text.as_str()).collect();
+    assert_eq!(joined.join(" "), recognized.text.trim());
+    assert_eq!(
+        recognized.text,
+        engine
+            .transcribe(&samples)
+            .expect("recognition must succeed")
+    );
     engine.shutdown();
 }
