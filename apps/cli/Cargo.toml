@@ -17,6 +17,7 @@ path = "src/main.rs"
 [dependencies]
 ramble-engine = { path = "../../core/ramble-engine" }
 ramble-model = { path = "../../core/ramble-model" }
+ramble-text = { path = "../../core/ramble-text" }
 serde_json = "1"
 tempfile = "3"
 

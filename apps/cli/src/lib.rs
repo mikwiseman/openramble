@@ -10,3 +10,4 @@ pub mod plan;
 pub mod pool;
 pub mod schedule;
 pub mod scribe;
+pub mod verbatim;

@@ -3150,6 +3150,7 @@ version = "0.23.0"
 dependencies = [
  "ramble-engine",
  "ramble-model",
+ "ramble-text",
  "serde_json",
  "tempfile",
 ]
