@@ -62,6 +62,34 @@ pub fn plan(envelope: &[f32], span: Range<usize>, cap_s: f32, gate: bool) -> Vec
         .collect()
 }
 
+/// The pieces of several spans of a file, in samples, each with the index of
+/// its span. A piece never leaves its span, so a span's exact edges hold.
+pub fn pieces_of_spans(
+    envelope: &[f32],
+    samples: u64,
+    spans: &[Range<u64>],
+    cap_s: f32,
+    gate: bool,
+) -> Vec<(Range<u64>, usize)> {
+    let frame = FRAME as u64;
+    let mut pieces = Vec::new();
+    for (index, span) in spans.iter().enumerate() {
+        let span = span.start.min(samples)..span.end.min(samples);
+        if span.is_empty() {
+            continue;
+        }
+        let frames = (span.start / frame) as usize..span.end.div_ceil(frame) as usize;
+        for piece in plan(envelope, frames, cap_s, gate) {
+            let start = (piece.start as u64 * frame).max(span.start);
+            let end = (piece.end as u64 * frame).min(span.end);
+            if start < end {
+                pieces.push((start..end, index));
+            }
+        }
+    }
+    pieces
+}
+
 /// The loudness above which a frame counts as voiced, from the whole recording.
 fn threshold(envelope: &[f32]) -> f32 {
     let mut sorted = envelope.to_vec();
@@ -307,6 +335,33 @@ mod tests {
             plan(&envelope, 95 * S..200 * S, 20.0, false),
             vec![95 * S..100 * S]
         );
+    }
+
+    #[test]
+    fn spans_keep_their_exact_edges_and_their_index() {
+        let mut envelope = room(100);
+        put(&mut envelope, 10.0, &speech(30, 5));
+        put(&mut envelope, 70.0, &speech(5, 6));
+        let samples = 100 * 16_000 - 77;
+        let spans = [5 * 16_000 + 123..45 * 16_000, 69 * 16_000..200 * 16_000];
+        let pieces = pieces_of_spans(&envelope, samples, &spans, 20.0, false);
+        let first: Vec<_> = pieces.iter().filter(|(_, i)| *i == 0).collect();
+        let second: Vec<_> = pieces.iter().filter(|(_, i)| *i == 1).collect();
+        assert_eq!(first.first().unwrap().0.start, 5 * 16_000 + 123);
+        assert_eq!(first.last().unwrap().0.end, 45 * 16_000);
+        assert_eq!(second.first().unwrap().0.start, 69 * 16_000);
+        assert_eq!(second.last().unwrap().0.end, samples);
+        for pair in first.windows(2) {
+            assert_eq!(pair[0].0.end, pair[1].0.start);
+        }
+        // with the gate on, the second span keeps only its speech
+        let gated = pieces_of_spans(&envelope, samples, &spans, 20.0, true);
+        let second: Vec<_> = gated.iter().filter(|(_, i)| *i == 1).collect();
+        assert_eq!(second.len(), 1);
+        assert_eq!(second[0].0, 69 * 16_000..76 * 16_000);
+        // a span past the end of the audio gives nothing
+        let beyond = samples..samples + 9;
+        assert!(pieces_of_spans(&envelope, samples, &[beyond], 20.0, false).is_empty());
     }
 
     #[test]

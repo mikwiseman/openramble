@@ -39,6 +39,46 @@ impl Recognize for Engine {
     }
 }
 
+/// Load `count` engines side by side. If any fails, the ones that loaded are
+/// dropped properly and the first failure is returned.
+pub fn load(
+    model_directory: &std::path::Path,
+    count: usize,
+) -> Result<Vec<Box<dyn Recognize>>, String> {
+    let loaded: Vec<Result<Engine, EngineError>> = std::thread::scope(|scope| {
+        let loading: Vec<_> = (0..count)
+            .map(|_| scope.spawn(|| Engine::load(model_directory)))
+            .collect();
+        loading
+            .into_iter()
+            .map(|handle| {
+                handle
+                    .join()
+                    .unwrap_or_else(|_| Err(EngineError::Load("loading panicked".into())))
+            })
+            .collect()
+    });
+    let mut engines: Vec<Box<dyn Recognize>> = Vec::new();
+    let mut failure = None;
+    for result in loaded {
+        match result {
+            Ok(engine) => engines.push(Box::new(engine)),
+            Err(error) => {
+                failure.get_or_insert(error.to_string());
+            }
+        }
+    }
+    match failure {
+        None => Ok(engines),
+        Some(error) => {
+            for engine in engines {
+                engine.shutdown();
+            }
+            Err(error)
+        }
+    }
+}
+
 /// A job's decoded audio, shared by the engines working on it.
 pub type Pcm = Arc<File>;
 

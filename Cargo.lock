@@ -3149,6 +3149,7 @@ name = "openramble-cli"
 version = "0.23.0"
 dependencies = [
  "ramble-engine",
+ "ramble-model",
  "serde_json",
  "tempfile",
 ]
