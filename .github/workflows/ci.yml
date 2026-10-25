@@ -192,6 +192,7 @@ jobs:
       - name: Deployment files
         run: |
           shellcheck apps/cli/deploy/install.sh
+          ./scripts/tests/test-server-install.sh
           sudo install -D -m 0755 target/debug/openramble /opt/openramble/bin/openramble
           sudo systemd-analyze verify apps/cli/deploy/openramble.service
 

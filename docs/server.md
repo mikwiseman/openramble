@@ -116,7 +116,7 @@ openstrudel 5f0c…e1 170
 
 After editing the file, restart the service.
 
-The `ssh` key goes in `/etc/openramble/ssh.header` as the line `xi-api-key: <key>`, owned by root with mode 0600.
+The `ssh` key goes in `/etc/openramble/ssh.header` as the line `xi-api-key: <key>`. The ssh forced commands run as their login user (`stt` on wai-stt) and curl reads the key file itself, so the file belongs to root and to that user's group, with mode 0640. `install.sh` sets this, for the user named by `SSH_USER` (default `stt`), and refuses to start if that user does not exist.
 
 ## Install
 
@@ -127,7 +127,7 @@ git clone https://github.com/mikwiseman/openramble.git && cd openramble
 apps/cli/deploy/install.sh
 ```
 
-`install.sh` builds on the machine itself (ggml tunes itself to the processor), checks the model's size and SHA-256 with the new binary before replacing the old one, keeps the previous binary as `.prev`, installs and enables `openramble.service`, restarts it only once no job is running, waits for `/health`, and only then replaces `transcribe-stdin`.
+`install.sh` builds on the machine itself (ggml tunes itself to the processor), checks the model's size and SHA-256 with the new binary before replacing the old one, keeps the previous binary as `.prev`, installs and enables `openramble.service`, restarts it only once no job is running, waits for `/health`, and only then switches the ssh path (below).
 
 The server is the only process on the machine that keeps engines loaded. A second set, such as a command-line run with `--workers 3`, would not fit in memory next to its four, and the kernel would kill the server. `install.sh` creates `/var/lib/openramble/engines.lock` for that: the server holds it while its engines are loaded, a file-mode run of the command-line tool refuses to start while the server holds it, and a server that starts while a file-mode run is going waits for it to finish, answering 429 `starting` meanwhile. Send files to the server instead, as `transcribe-stdin` does.
 
@@ -154,6 +154,10 @@ Caddy needs port 80 or 443 reachable once from Let's Encrypt to get its certific
 WaiWeb reaches the server with ssh and the forced command `/opt/openramble/bin/transcribe-stdin`: one audio file on standard input, OpenRamble JSON on standard output. That script is now a client of the local server ([`apps/cli/deploy/transcribe-stdin`](../apps/cli/deploy/transcribe-stdin), Python 3 and curl), so the ssh path shares the server's engines instead of loading its own copies, which would not fit in memory next to them. Nothing changes for WaiWeb.
 
 When an ssh session without a terminal ends, sshd closes its pipes and sends the command no signal, so `transcribe-stdin` watches for that itself, as the school's `stt-ssh` does. It reads the whole upload into a file with no name before it sends anything, so a session that ends mid-upload sends nothing. While the server works, it notices within a fifth of a second that sshd has closed its end of the output, or that its parent has gone, and stops curl; the connection closes and the server cancels the job. Its exit status follows `stt-ssh`'s: 0 done, 64 bad arguments, 65 no audio, 75 busy, starting or stopping (try again later), 129 the session ended, 1 anything else.
+
+The school reaches the same machine through its own forced command, `stt-ssh` (waiwai `deploy/openramble-stt`), which takes `/var/lib/stt/engine.lock` around each job and ran the command-line tool with three engines of its own. `transcribe-stdin` also accepts the command-line tool's arguments (`--output-dir DIR FILE`, the rest ignored), so `stt-ssh` can run it in place of the tool: `install.sh` sets `BIN=/opt/openramble/bin/transcribe-stdin` in `/etc/openramble-stt.env` (the old file is kept as `.prev`; a `BIN` it does not recognise is left alone). `stt-ssh` keeps its lock, limits, exit codes and clean-up, and its jobs run on the server's engines.
+
+`install.sh` holds `/var/lib/stt/engine.lock` from before the restart until the ssh path is switched, so an ssh job that is running finishes first and none starts in between. Before it replaces `transcribe-stdin`, it sends a second of silence through the new script as the ssh user and expects JSON back, which proves the key, its permissions, curl and the server together; if that fails, nothing on the ssh path changes. An ssh job that was already waiting for the lock with the old command runs afterwards, finds the server holding the engines, and fails with a message instead of loading engines next to them; its caller sends it again.
 
 ## What the callers change
 
@@ -189,14 +193,15 @@ Meeting time and long notes scale with 1/engines; a single piece still takes abo
 
 These are for the operator after review, on the real server:
 
-1. `/usr/bin/time -v openramble --workers 3` and `--workers 4` on the 20.8-minute track, with Q4_K_M and with Q8_0. Choose the engine count and quantization from the wall time and the maximum resident memory.
+1. With the service stopped (file mode refuses to run next to it), `/usr/bin/time -v openramble --workers 3` and `--workers 4` on the 20.8-minute track, with Q4_K_M and with Q8_0. Choose the engine count and quantization from the wall time and the maximum resident memory.
 2. Compare the server with today's command-line run on that track: word differences and wall time.
 3. Three real Zoom tracks with `--no-gate` and without it: the gate must keep at least 99% of the words.
 4. 30-second, 60-second and 4-minute Opus notes, on an idle server and with a 9-hour job running.
-5. A client that disconnects through Caddy cancels its job.
-6. `kill -9` during a job: the service is back within 10 seconds and no disk space is left behind.
-7. `systemctl show -p IPAddressDeny,IPAddressAllow openramble`, and an outbound `curl` from inside the sandbox that must fail: `systemd-run -p IPAddressDeny=any -p IPAddressAllow=localhost --wait --pty curl -sS https://example.com`.
-8. `systemctl restart openramble` during a job: the job finishes, then the service restarts.
+5. A client that disconnects through Caddy cancels its job, and so does an ssh client killed during a job (`kill -9` on WaiWeb's side): the server logs `client_left` within a second.
+6. A school lesson through `stt-ssh` after the switch: the server logs it under the `ssh` label, and `ps` shows no `openramble --workers` process.
+7. `kill -9` during a job: the service is back within 10 seconds and no disk space is left behind.
+8. `systemctl show -p IPAddressDeny,IPAddressAllow openramble`, and an outbound `curl` from inside the sandbox that must fail: `systemd-run -p IPAddressDeny=any -p IPAddressAllow=localhost --wait --pty curl -sS https://example.com`.
+9. `systemctl restart openramble` during a job: the job finishes, then the service restarts.
 
 ## Not done yet
 
