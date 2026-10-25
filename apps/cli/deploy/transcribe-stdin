@@ -1,0 +1,13 @@
+#!/bin/sh
+# One audio file on standard input, OpenRamble JSON on standard output.
+#
+# The ssh forced command WaiWeb uses, now a client of the local server, so it
+# shares the server's engines instead of loading its own. The key is read
+# from a root-only header file and never appears on a command line. If the
+# ssh session hangs up, curl dies, the connection closes and the server
+# cancels the job.
+exec curl --silent --show-error --fail-with-body --max-time 14400 \
+  -X POST -T - \
+  -H @/etc/openramble/ssh.header \
+  -H 'Content-Type: application/octet-stream' \
+  'http://127.0.0.1:8080/v1/speech-to-text?output_format=openramble&timestamps_granularity=none&deadline_s=14400'
