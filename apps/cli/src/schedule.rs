@@ -300,7 +300,10 @@ impl<S: Clone> Scheduler<S> {
 
     /// Seconds of audio queued or running.
     pub fn queued_seconds(&self) -> f64 {
-        self.jobs.values().map(|job| job.remaining_s).sum()
+        // folded from +0.0: an empty f64 sum is -0.0, which /health would print
+        self.jobs
+            .values()
+            .fold(0.0, |total, job| total + job.remaining_s)
     }
 
     pub fn cost(&self) -> f64 {

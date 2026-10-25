@@ -24,6 +24,11 @@ The desktop app (Windows, Linux) has one:
 3. Explicit model downloads through
    `apps/desktop/src-tauri/src/adapters/download.rs`.
 
+The Linux server has one, inbound only:
+
+4. `apps/cli/src/listen.rs`. ffmpeg is spawned only from
+   `apps/cli/src/decode.rs` with a file-only protocol whitelist.
+
 No other shipping code may access the network. The complete denied API list is
 maintained in `scripts/check-network-surface.sh` and enforced by CI — by
 filename on both sides, so the promise is checked rather than intended. Update
@@ -64,6 +69,8 @@ No package depends on the application layer.
   effects leave as values. `SessionMachine` is the whole dictation flow in that
   shape — feed it events, carry out the effects it returns — which is why the
   desktop runner decides nothing itself.
+- `apps/cli` is the Linux tool and transcription server on ramble-engine;
+  unix-only; it keeps only unnamed temporary files.
 - `apps/desktop` is the Tauri app for Windows and Linux. Its network use is one
   module and the gate checks it by filename.
 - `scripts/build-ffi.sh` produces `Packages/RambleCoreFFI`, a Swift package whose

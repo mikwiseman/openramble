@@ -41,10 +41,7 @@ impl Recognize for Engine {
 
 /// Load `count` engines side by side. If any fails, the ones that loaded are
 /// dropped properly and the first failure is returned.
-pub fn load(
-    model_directory: &std::path::Path,
-    count: usize,
-) -> Result<Vec<Box<dyn Recognize>>, String> {
+pub fn load(model_directory: &std::path::Path, count: usize) -> Result<Vec<Engine>, String> {
     let loaded: Vec<Result<Engine, EngineError>> = std::thread::scope(|scope| {
         let loading: Vec<_> = (0..count)
             .map(|_| scope.spawn(|| Engine::load(model_directory)))
@@ -58,11 +55,11 @@ pub fn load(
             })
             .collect()
     });
-    let mut engines: Vec<Box<dyn Recognize>> = Vec::new();
+    let mut engines = Vec::new();
     let mut failure = None;
     for result in loaded {
         match result {
-            Ok(engine) => engines.push(Box::new(engine)),
+            Ok(engine) => engines.push(engine),
             Err(error) => {
                 failure.get_or_insert(error.to_string());
             }
@@ -114,7 +111,7 @@ pub struct Health {
 
 pub struct Pool {
     shared: Arc<Shared>,
-    workers: Vec<JoinHandle<()>>,
+    workers: Mutex<Vec<JoinHandle<()>>>,
 }
 
 impl Pool {
@@ -145,7 +142,10 @@ impl Pool {
                     .expect("spawn an engine thread")
             })
             .collect();
-        Pool { shared, workers }
+        Pool {
+            shared,
+            workers: Mutex::new(workers),
+        }
     }
 
     /// Start a job when its request arrives.
@@ -228,11 +228,18 @@ impl Pool {
     }
 
     /// Stop every engine thread once its current piece is done, and drop
-    /// every model.
-    pub fn stop(self) {
-        self.shared.lock().stopping = true;
+    /// every model. Jobs still open afterwards end with `ShuttingDown`.
+    pub fn stop(&self) {
+        {
+            let mut state = self.shared.lock();
+            state.stopping = true;
+            state.scheduler.drain();
+            state.scheduler.abort_all();
+        }
         self.shared.changed.notify_all();
-        for worker in self.workers {
+        let workers =
+            std::mem::take(&mut *self.workers.lock().unwrap_or_else(PoisonError::into_inner));
+        for worker in workers {
             // a panicking engine aborts the process, so a join error cannot
             // happen; there is nothing more to do if it somehow did
             let _ = worker.join();

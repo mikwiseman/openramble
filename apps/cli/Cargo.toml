@@ -20,6 +20,8 @@ ramble-engine = { path = "../../core/ramble-engine" }
 ramble-model = { path = "../../core/ramble-model" }
 ramble-text = { path = "../../core/ramble-text" }
 serde_json = "1"
+sha2 = "0.11"
+signal-hook = "0.3"
 tempfile = "3"
 
 [lints]

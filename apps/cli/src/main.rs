@@ -19,6 +19,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use openramble_cli::pool::Pool;
+use openramble_cli::serve::{Config, Keys, Log, Server, DRAIN_GRACE};
 use openramble_cli::{decode, model, output, plan, pool};
 use ramble_engine::Engine;
 
@@ -36,6 +37,7 @@ struct Options {
 
 fn usage() -> &'static str {
     "usage: openramble [options] <audio>...\n\
+            openramble serve --keys FILE [--listen HOST:PORT] [--engines N] [--model-dir DIR]\n\
      \n\
      options:\n\
        --format text|json|srt   output format (default text)\n\
@@ -47,30 +49,43 @@ fn usage() -> &'static str {
                                 (e.g. speaker turns), long spans still cut at pauses; labels are kept\n\
        --model-dir DIR          folder with the .gguf model\n\
                                 (default $OPENRAMBLE_MODEL_DIR or ~/opt/openramble-models/parakeet-ultra-gguf)\n\
-       --check-model            check the model's size and SHA-256, load it, report the backend and exit\n"
+       --check-model            check the model's size and SHA-256, load it, report the backend and exit\n\
+     \n\
+     serve: answer POST /v1/speech-to-text (ElevenLabs Scribe's shape) and GET /health\n\
+       --keys FILE              lines of `label sha256-of-key`; callers send the key as xi-api-key\n\
+       --listen HOST:PORT       where to listen (default 127.0.0.1:8080)\n\
+       --engines N              parallel engines (default: one per core)\n\
+       --model-dir DIR          as above\n"
 }
 
-fn parse() -> Result<Options, String> {
-    let home = std::env::var("HOME").unwrap_or_default();
-    let cores = std::thread::available_parallelism()
+fn default_model_dir() -> PathBuf {
+    std::env::var("OPENRAMBLE_MODEL_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            PathBuf::from(std::env::var("HOME").unwrap_or_default())
+                .join("opt/openramble-models/parakeet-ultra-gguf")
+        })
+}
+
+fn cores() -> usize {
+    std::thread::available_parallelism()
         .map(|n| n.get())
-        .unwrap_or(2);
+        .unwrap_or(2)
+}
+
+fn parse(args: Vec<String>) -> Result<Options, String> {
     let mut options = Options {
         inputs: Vec::new(),
-        model_dir: std::env::var("OPENRAMBLE_MODEL_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                PathBuf::from(&home).join("opt/openramble-models/parakeet-ultra-gguf")
-            }),
+        model_dir: default_model_dir(),
         format: "text".into(),
-        workers: (cores / 2).clamp(1, 4),
+        workers: (cores() / 2).clamp(1, 4),
         max_chunk: 20.0,
         gate: true,
         output_dir: None,
         segments: None,
         check_model: false,
     };
-    let mut args = std::env::args().skip(1);
+    let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         let mut value = |name: &str| args.next().ok_or_else(|| format!("{name} needs a value"));
         match arg.as_str() {
@@ -210,7 +225,13 @@ fn run(options: Options) -> Result<(), String> {
             return Ok(());
         }
     }
-    let pool = Pool::start(pool::load(&options.model_dir, options.workers)?);
+    let engines = pool::load(&options.model_dir, options.workers)?;
+    let pool = Pool::start(
+        engines
+            .into_iter()
+            .map(|engine| Box::new(engine) as Box<dyn pool::Recognize>)
+            .collect(),
+    );
     let model = model::stem(&model_file);
     let done = options.inputs.iter().try_for_each(|input| {
         let started = Instant::now();
@@ -248,8 +269,83 @@ fn run(options: Options) -> Result<(), String> {
     done
 }
 
+/// `openramble serve`: load and warm the engines, listen, and on SIGTERM or
+/// SIGINT drain before dropping every model and exiting 0.
+fn serve(args: Vec<String>) -> Result<(), String> {
+    let mut listen = "127.0.0.1:8080".to_string();
+    let mut model_dir = default_model_dir();
+    let mut engines = cores();
+    let mut keys_file = None;
+    let mut args = args.into_iter();
+    while let Some(arg) = args.next() {
+        let mut value = |name: &str| args.next().ok_or_else(|| format!("{name} needs a value"));
+        match arg.as_str() {
+            "-h" | "--help" => return Err(String::new()),
+            "--listen" => listen = value("--listen")?,
+            "--model-dir" => model_dir = PathBuf::from(value("--model-dir")?),
+            "--engines" => {
+                engines = value("--engines")?
+                    .parse()
+                    .ok()
+                    .filter(|n| *n > 0)
+                    .ok_or("--engines must be at least 1")?
+            }
+            "--keys" => keys_file = Some(PathBuf::from(value("--keys")?)),
+            other => return Err(format!("serve does not take {other}")),
+        }
+    }
+    let keys_file = keys_file.ok_or("serve needs --keys FILE")?;
+    let keys = std::fs::read_to_string(&keys_file)
+        .map_err(|e| format!("cannot read the keys file: {e}"))
+        .and_then(|text| Keys::parse(&text))?;
+    let model_file = ramble_engine::model_file(&model_dir)
+        .ok_or_else(|| format!("no .gguf model in {}", model_dir.display()))?;
+    let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    for signal in [signal_hook::consts::SIGTERM, signal_hook::consts::SIGINT] {
+        signal_hook::flag::register(signal, stop.clone()).map_err(|e| e.to_string())?;
+    }
+    let loaded = pool::load(&model_dir, engines)?;
+    let device = loaded
+        .first()
+        .map(|engine| engine.report().device.clone())
+        .unwrap_or_default();
+    let log: Log = Arc::new(|line: &str| eprintln!("{line}"));
+    let model = model::stem(&model_file);
+    let server = Server::start(
+        Config {
+            listen,
+            keys,
+            temp: std::env::temp_dir(),
+            model: model.clone(),
+            log: log.clone(),
+        },
+        loaded
+            .into_iter()
+            .map(|engine| Box::new(engine) as Box<dyn pool::Recognize>)
+            .collect(),
+    )?;
+    log(&format!(
+        "openramble serve: {engines} engines on {device}, model {model}, listening on {}",
+        server.address()
+    ));
+    while !stop.load(std::sync::atomic::Ordering::SeqCst) {
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    log("stopping: new jobs get 429; jobs in flight have up to 25 minutes");
+    server.stop(DRAIN_GRACE);
+    log("stopped");
+    Ok(())
+}
+
 fn main() -> ExitCode {
-    match parse().and_then(run) {
+    let mut args: Vec<String> = std::env::args().skip(1).collect();
+    let outcome = if args.first().map(String::as_str) == Some("serve") {
+        args.remove(0);
+        serve(args)
+    } else {
+        parse(args).and_then(run)
+    };
+    match outcome {
         Ok(()) => ExitCode::SUCCESS,
         Err(message) if message.is_empty() => {
             print!("{}", usage());
