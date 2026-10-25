@@ -23,29 +23,12 @@ use crate::plan::FRAME;
 /// Samples per second of the decoded audio.
 pub const RATE: u64 = 16_000;
 
-/// The whole ffmpeg command line after the program name.
+/// The whole ffmpeg command line after the program name, on one line so the
+/// network gate can see both whitelists.
+const ARGS: &str = "-nostdin -v error -threads 1 -protocol_whitelist file -format_whitelist mov,ogg,matroska,wav,mp3,flac,aac,caf,aiff,asf,amr -i /dev/stdin -vn -ac 1 -ar 16000 -f f32le -";
+
 pub fn argv() -> Vec<&'static str> {
-    vec![
-        "-nostdin",
-        "-v",
-        "error",
-        "-threads",
-        "1",
-        "-protocol_whitelist",
-        "file",
-        "-format_whitelist",
-        "mov,ogg,matroska,wav,mp3,flac,aac,caf,aiff,asf,amr",
-        "-i",
-        "/dev/stdin",
-        "-vn",
-        "-ac",
-        "1",
-        "-ar",
-        "16000",
-        "-f",
-        "f32le",
-        "-",
-    ]
+    ARGS.split(' ').collect()
 }
 
 /// Decoded audio: `samples` f32le samples in `pcm`, and their envelope.

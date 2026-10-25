@@ -7,6 +7,11 @@
 # • SparkleUpdater.swift — update checks (on by default, can be turned off)
 #   and update downloads, which always need a click
 #
+# The Linux transcription server (apps/cli) accepts connections and makes
+# none: exactly one file, apps/cli/src/listen.rs, may name a socket, and it
+# may only listen. ffmpeg, the one program the server runs, is started only
+# from apps/cli/src/decode.rs, and only with a file-only protocol whitelist.
+#
 # A third file is allowlisted without being a network place:
 # LocalRecordingAsset.swift is the one spelling of `AVURLAsset(` in the app,
 # and it refuses anything but a local file URL, so playing a recording can
@@ -270,8 +275,97 @@ if [[ -d core ]]; then
   done < <(grep -rnE "$RUST_FORBIDDEN_SYMBOLS" core --include=*.rs || true)
 fi
 
+# ---------------------------------------------------------------------------
+# The Linux transcription server: one inbound listener, nothing outbound.
+#
+# Unlike the apps, this program is reached over the network on purpose — other
+# applications send it audio. What must stay true is that it only ever
+# listens. `unsafe_code` is denied workspace-wide, so a socket cannot be opened
+# through a raw system call; it has to be spelled with std::net, which only
+# listen.rs may do, and listen.rs may not connect. The one child process it
+# starts is ffmpeg, from one file, with a whitelist that lets it open plain
+# files only — a playlist naming a URL is refused rather than fetched.
+if [[ -d apps/cli/src ]]; then
+  echo ""
+  echo "Checking the Linux transcription server..."
+
+  CLI_LISTENER='^apps/cli/src/listen\.rs$'
+  CLI_SOCKETS='std::net|TcpListener|TcpStream|UdpSocket|UnixListener|UnixStream|ToSocketAddrs|SocketAddr'
+  while IFS= read -r hit; do
+    file="${hit%%:*}"
+    [[ "$file" =~ $CLI_LISTENER ]] && continue
+    if [[ $status -eq 0 ]]; then
+      echo ""
+      echo "VIOLATION: server code outside listen.rs names a socket."
+      status=1
+    fi
+    echo "  $hit"
+  done < <(grep -rnE "$CLI_SOCKETS" apps/cli/src --include=*.rs \
+             | grep -vE "^[^:]+:[0-9]+:[[:space:]]*(//|\*)" || true)
+
+  if [[ -f apps/cli/src/listen.rs ]]; then
+    while IFS= read -r hit; do
+      if [[ $status -eq 0 ]]; then
+        echo ""
+        echo "VIOLATION: the server's listener opens an outbound or local socket."
+        status=1
+      fi
+      echo "  apps/cli/src/listen.rs:$hit"
+    done < <(grep -nE 'connect(_timeout)?\(|UdpSocket|Unix(Listener|Stream)' apps/cli/src/listen.rs \
+               | grep -vE "^[0-9]+:[[:space:]]*(//|\*)" || true)
+  fi
+
+  while IFS= read -r hit; do
+    if [[ "$hit" =~ ^apps/cli/src/decode\.rs:[0-9]+:.*Command::new\(\"ffmpeg\"\) ]]; then
+      continue
+    fi
+    if [[ $status -eq 0 ]]; then
+      echo ""
+      echo "VIOLATION: the server starts a program other than ffmpeg from decode.rs."
+      status=1
+    fi
+    echo "  $hit"
+  done < <(grep -rnE 'Command::new\(' apps/cli/src --include=*.rs \
+             | grep -vE "^[^:]+:[0-9]+:[[:space:]]*(//|\*)" || true)
+
+  for required in '-protocol_whitelist file ' '-format_whitelist '; do
+    if ! grep -qF -- "$required" apps/cli/src/decode.rs 2>/dev/null; then
+      if [[ $status -eq 0 ]]; then
+        echo ""
+        echo "VIOLATION: ffmpeg runs without its whitelists."
+        status=1
+      fi
+      echo "  apps/cli/src/decode.rs does not pass '$required'"
+    fi
+  done
+
+  # The server is std-only, so even an HTTP server crate is a violation: the
+  # list above names client crates, and hyper is both.
+  while IFS= read -r hit; do
+    if [[ $status -eq 0 ]]; then
+      echo ""
+      echo "VIOLATION: the server declares a networking dependency."
+      status=1
+    fi
+    echo "  $hit"
+  done < <(grep -nE "^[[:space:]]*($RUST_FORBIDDEN_CRATES)[[:space:]]*=" apps/cli/Cargo.toml \
+             | sed 's|^|apps/cli/Cargo.toml:|' || true)
+  if command -v cargo > /dev/null && [[ -f Cargo.lock ]]; then
+    while IFS= read -r hit; do
+      if [[ $status -eq 0 ]]; then
+        echo ""
+        echo "VIOLATION: a networking crate reached the server."
+        status=1
+      fi
+      echo "  openramble-cli depends on $hit"
+    done < <(cargo tree --package openramble-cli --target all --edges normal --prefix none 2>/dev/null \
+               | awk '{print $1}' | sort -u \
+               | grep -xE "$RUST_FORBIDDEN_CRATES" || true)
+  fi
+fi
+
 if [[ $status -eq 0 ]]; then
   echo ""
-  echo "Network source surface is limited to model downloads and update checks; the inference runtime and the shared Rust core cannot reach the network at all."
+  echo "Network source surface is limited to model downloads and update checks; the inference runtime and the shared Rust core cannot reach the network at all; the Linux server only accepts connections, in apps/cli/src/listen.rs, and makes none."
 fi
 exit $status
