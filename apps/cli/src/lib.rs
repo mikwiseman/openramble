@@ -4,6 +4,7 @@
 //! (`openramble FILE…`) and the server (`openramble serve`).
 
 pub mod decode;
+pub mod http;
 pub mod model;
 pub mod output;
 pub mod plan;

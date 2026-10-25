@@ -15,6 +15,7 @@ name = "openramble"
 path = "src/main.rs"
 
 [dependencies]
+httparse = "1"
 ramble-engine = { path = "../../core/ramble-engine" }
 ramble-model = { path = "../../core/ramble-model" }
 ramble-text = { path = "../../core/ramble-text" }
