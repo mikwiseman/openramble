@@ -135,6 +135,17 @@ impl ApiError {
         }
     }
 
+    pub fn starting() -> Self {
+        ApiError {
+            retry_after_s: Some(15),
+            ..ApiError::new(
+                429,
+                "starting",
+                "The server is loading its engines. Retry after the Retry-After seconds.",
+            )
+        }
+    }
+
     pub fn shutting_down() -> Self {
         ApiError {
             retry_after_s: Some(60),

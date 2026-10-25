@@ -300,13 +300,12 @@ fn serve(args: Vec<String>) -> Result<(), String> {
     for signal in [signal_hook::consts::SIGTERM, signal_hook::consts::SIGINT] {
         signal_hook::flag::register(signal, stop.clone()).map_err(|e| e.to_string())?;
     }
-    let loaded = pool::load(&model_dir, engines)?;
-    let device = loaded
-        .first()
-        .map(|engine| engine.report().device.clone())
-        .unwrap_or_default();
     let log: Log = Arc::new(|line: &str| eprintln!("{line}"));
     let model = model::stem(&model_file);
+    log(&format!(
+        "openramble serve: loading {engines} engines; {listen} answers 429 until they are ready"
+    ));
+    let mut device = String::new();
     let server = Server::start(
         Config {
             listen,
@@ -315,10 +314,17 @@ fn serve(args: Vec<String>) -> Result<(), String> {
             model: model.clone(),
             log: log.clone(),
         },
-        loaded
-            .into_iter()
-            .map(|engine| Box::new(engine) as Box<dyn pool::Recognize>)
-            .collect(),
+        || {
+            let loaded = pool::load(&model_dir, engines)?;
+            device = loaded
+                .first()
+                .map(|engine| engine.report().device.clone())
+                .unwrap_or_default();
+            Ok(loaded
+                .into_iter()
+                .map(|engine| Box::new(engine) as Box<dyn pool::Recognize>)
+                .collect())
+        },
     )?;
     log(&format!(
         "openramble serve: {engines} engines on {device}, model {model}, listening on {}",

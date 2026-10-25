@@ -139,7 +139,7 @@ impl Harness {
                 model: "fake-model".into(),
                 log: Arc::new(move |line: &str| sink.lock().unwrap().push(line.to_string())),
             },
-            fakes,
+            || Ok(fakes),
         )
         .unwrap();
         Harness {
@@ -557,6 +557,101 @@ fn a_caller_who_waits_briefly_is_interactive_whatever_its_audio() {
         .map(|rest| rest.split(' ').next().unwrap())
         .collect();
     assert_eq!(classes, ["batch", "interactive", "batch"], "{log}");
+}
+
+/// Warms up slowly, as real engines load slowly.
+struct Slow(Duration);
+
+impl Recognize for Slow {
+    fn recognize(&self, _samples: &[f32]) -> Result<Recognized, EngineError> {
+        std::thread::sleep(self.0);
+        Ok(Recognized::default())
+    }
+
+    fn shutdown(self: Box<Self>) {}
+}
+
+fn free_address() -> String {
+    let probe = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    probe.local_addr().unwrap().to_string()
+}
+
+fn keys() -> Keys {
+    let digest: String = Sha256::digest(KEY.as_bytes())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    Keys::parse(&format!("tests {digest}\n")).unwrap()
+}
+
+#[test]
+fn a_starting_server_says_so_instead_of_refusing_connections() {
+    let address = free_address();
+    let temp = tempfile::tempdir().unwrap();
+    let config = Config {
+        listen: address.clone(),
+        keys: keys(),
+        temp: temp.path().to_path_buf(),
+        model: "fake-model".into(),
+        log: Arc::new(|_: &str| {}),
+    };
+    let starting = std::thread::spawn(move || {
+        Server::start(config, || {
+            Ok(vec![
+                Box::new(Slow(Duration::from_millis(1500))) as Box<dyn Recognize>
+            ])
+        })
+    });
+    let deadline = Instant::now() + Duration::from_secs(1);
+    while let Err(error) = TcpStream::connect(&address) {
+        assert!(
+            Instant::now() < deadline,
+            "the port refused connections while the engines loaded: {error}"
+        );
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    // a caller retries a 429, and the meetings caller keeps its 5xx locked
+    let early = exchange(&address, &post_form(Some(KEY), &[], "a.wav", b"RIFF"));
+    assert_eq!(early.status, 429, "{early:?}");
+    assert_eq!(early.detail(), "starting");
+    assert!(early.header("Retry-After").is_some());
+    let health = exchange(&address, b"GET /health HTTP/1.1\r\n\r\n");
+    assert_eq!(health.status, 503, "{health:?}");
+    let server = starting.join().unwrap().unwrap();
+    let health = exchange(&address, b"GET /health HTTP/1.1\r\n\r\n");
+    assert_eq!(health.status, 200, "{health:?}");
+    server.stop(Duration::ZERO);
+}
+
+#[test]
+fn a_stopping_server_answers_until_its_engines_are_gone() {
+    if !ffmpeg() {
+        return;
+    }
+    let mut harness = Harness::new(1, WORDS, Duration::ZERO);
+    let wav = std::fs::read(harness.audio("track.wav", 60, true, &[])).unwrap();
+    harness.gate.set(false);
+    let address = harness.address();
+    let client = {
+        let (address, wav) = (address.clone(), wav.clone());
+        std::thread::spawn(move || exchange(&address, &post_form(Some(KEY), &[], "t.wav", &wav)))
+    };
+    harness.wait_for("a piece to run", |h| h.calls.load(Ordering::SeqCst) > 0);
+    // the engine is held mid-piece, so stopping waits for it
+    let server = harness.server.take().unwrap();
+    let stopping = std::thread::spawn(move || server.stop(Duration::ZERO));
+    assert_eq!(client.join().unwrap().detail(), "shutting_down");
+    std::thread::sleep(Duration::from_millis(300));
+    let late = TcpStream::connect(&address).map(|mut stream| {
+        stream
+            .write_all(&post_form(Some(KEY), &[], "a.wav", b"RIFF"))
+            .unwrap();
+        read_response(&mut stream)
+    });
+    harness.gate.set(true);
+    stopping.join().unwrap();
+    let late = late.expect("the port closed while an engine was still finishing its piece");
+    assert_eq!((late.status, late.detail()), (429, "shutting_down"));
 }
 
 #[test]

@@ -19,7 +19,7 @@ This page describes the API, how to install and run the server, what the callers
 ### Routes
 
 - `POST /v1/speech-to-text`, with the key in the `xi-api-key` header. The body is either `multipart/form-data` with the audio in the field `file` (its file name and content type are ignored), or the raw audio with the parameters in the query string.
-- `GET /health` needs no key and returns `{"draining":false,"engines":4,"jobs":0,"queued_seconds":0.0}`. `jobs` counts requests in progress, uploads included. `queued_seconds` is the speech still waiting or being recognized.
+- `GET /health` needs no key and returns `{"draining":false,"engines":4,"jobs":0,"queued_seconds":0.0}`. `jobs` counts requests in progress, uploads included. `queued_seconds` is the speech still waiting or being recognized. While the engines load it answers 503 `starting`.
 - Any other path gets 404 `not_found`, and a wrong method gets 405 `method_not_allowed`.
 
 Every response closes its connection.
@@ -73,8 +73,12 @@ Every error body is `{"detail":{"status":"…","code":"…","message":"…"}}`. 
 | 401 | `invalid_api_key` | The key is missing or wrong. |
 | 413 | `file_too_large` | The upload is over 2 GiB. |
 | 422 | `invalid_audio`, `audio_too_long`, `audio_too_long_for_deadline` | No audio in the file, more than 12 hours, or too long to finish within `deadline_s` even on an idle server. |
-| 429 | `system_busy`, `shutting_down` | Retry after the `Retry-After` seconds. |
-| 500 | `internal_error` | The recognizer failed. |
+| 429 | `system_busy`, `starting`, `shutting_down` | Retry after the `Retry-After` seconds. |
+| 500 | `internal_error` | The recognizer, ffmpeg or the disk failed. |
+
+The server never bills and keeps nothing, so no response is ever an outcome to reconcile: after a 5xx, a 502 from the proxy or a dropped connection, nothing happened and the same request can be sent again.
+
+The port answers from the moment the process starts until it exits: 429 `starting` while the engines load, and 429 `shutting_down` while it stops. Between the old process and the new one during a restart the port is closed for well under a second, and Caddy retries the connection meanwhile instead of answering 502 ([`Caddyfile`](../apps/cli/deploy/Caddyfile)).
 
 A wrong key and a declared upload over 2 GiB are answered before the body is read. A 429 for a full server comes after the body has been read, so a caller always sees it, unless the caller sent `Expect: 100-continue`.
 
@@ -156,6 +160,7 @@ WaiWeb reaches the server with ssh and the forced command `/opt/openramble/bin/t
 - Send `deadline_s` equal to the timeout in seconds.
 - Label the model `openramble-parakeet-ultra`.
 - Stop sending `diarize=true` for single mixed files: it now gets 400.
+- Clear the pending receipt after any response from this server, 5xx included, and after a dropped connection. Today only some 4xx and 429 clear it, and anything else locks the track for 24 hours as an outcome that cannot be confirmed. This server never bills, so there is nothing to confirm: a 500 or a crash would otherwise lock the track for a day for no reason.
 
 **OpenStrudel.** Point speech-to-text at the server with its own key, which carries the 170-second wait (see Keys), and keep text-to-speech and key checks on ElevenLabs. A note that the queue of other notes would make late gets 429 at once instead of a timeout. Telegram voice notes (Ogg Opus), m4a and mp4 video notes work as they are. A 30-second note takes about 7 seconds on 4 engines.
 

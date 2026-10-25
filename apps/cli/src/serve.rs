@@ -1,5 +1,10 @@
 //! `openramble serve`: the transcription server.
 //!
+//! The port answers from the moment the server starts until it exits: while
+//! the engines load, requests get 429 `starting` and `/health` 503, and while
+//! it stops, 429 `shutting_down`, so a caller behind the proxy sees something
+//! it retries rather than a 502.
+//!
 //! One thread per connection and one request per connection. A request goes
 //! head → key → size → job slot → 100 Continue → upload into an unnamed file
 //! → parameters → decode into unnamed PCM (the upload is freed) → plan →
@@ -22,7 +27,7 @@ use std::io::{self, BufWriter, Read, Write};
 use std::ops::Range;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Condvar, Mutex, PoisonError};
+use std::sync::{Arc, Condvar, Mutex, OnceLock, PoisonError};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
@@ -159,7 +164,8 @@ pub struct Config {
 
 struct Shared {
     config: Config,
-    pool: Pool,
+    /// Set once the engines are loaded and warm.
+    pool: OnceLock<Pool>,
     connections: Mutex<usize>,
     freed: Condvar,
     stopping: AtomicBool,
@@ -172,9 +178,42 @@ pub struct Server {
 }
 
 impl Server {
-    /// Warm every engine up, then listen. The engines are dropped properly if
-    /// anything fails.
-    pub fn start(config: Config, recognizers: Vec<Box<dyn Recognize>>) -> Result<Server, String> {
+    /// Listen, then load the engines with `load` and warm every one up,
+    /// answering 429 `starting` meanwhile. Returns once they are ready. The
+    /// engines are dropped properly if anything fails.
+    pub fn start(
+        config: Config,
+        load: impl FnOnce() -> Result<Vec<Box<dyn Recognize>>, String>,
+    ) -> Result<Server, String> {
+        let listener = Listener::bind(&config.listen)
+            .map_err(|error| format!("cannot listen on {}: {error}", config.listen))?;
+        let address = listener.address();
+        let shared = Arc::new(Shared {
+            config,
+            pool: OnceLock::new(),
+            connections: Mutex::new(0),
+            freed: Condvar::new(),
+            stopping: AtomicBool::new(false),
+        });
+        let acceptor = {
+            let shared = shared.clone();
+            std::thread::Builder::new()
+                .name("accept".into())
+                .spawn(move || accept(&shared, &listener))
+                .map_err(|error| error.to_string())?
+        };
+        let server = Server {
+            shared,
+            address,
+            acceptor: Some(acceptor),
+        };
+        let recognizers = match load() {
+            Ok(recognizers) => recognizers,
+            Err(error) => {
+                server.stop(Duration::ZERO);
+                return Err(error);
+            }
+        };
         let warmed: Vec<(Box<dyn Recognize>, Result<(), String>)> = std::thread::scope(|scope| {
             let warming: Vec<_> = recognizers
                 .into_iter()
@@ -198,40 +237,24 @@ impl Server {
             .into_iter()
             .map(|(recognizer, _)| recognizer)
             .collect();
-        let listener = match failure {
-            Some(error) => Err(format!("an engine failed to warm up: {error}")),
-            None => Listener::bind(&config.listen)
-                .map_err(|error| format!("cannot listen on {}: {error}", config.listen)),
-        };
-        let listener = match listener {
-            Ok(listener) => listener,
-            Err(error) => {
-                for recognizer in recognizers {
-                    recognizer.shutdown();
-                }
-                return Err(error);
+        if let Some(error) = failure {
+            for recognizer in recognizers {
+                recognizer.shutdown();
             }
-        };
-        let address = listener.address();
-        let shared = Arc::new(Shared {
-            config,
-            pool: Pool::start(recognizers),
-            connections: Mutex::new(0),
-            freed: Condvar::new(),
-            stopping: AtomicBool::new(false),
-        });
-        let acceptor = {
-            let shared = shared.clone();
-            std::thread::Builder::new()
-                .name("accept".into())
-                .spawn(move || accept(&shared, &listener))
-                .map_err(|error| error.to_string())?
-        };
-        Ok(Server {
-            shared,
-            address,
-            acceptor: Some(acceptor),
-        })
+            server.stop(Duration::ZERO);
+            return Err(format!("an engine failed to warm up: {error}"));
+        }
+        if server.shared.pool.set(Pool::start(recognizers)).is_err() {
+            unreachable!("the engines are set once");
+        }
+        Ok(server)
+    }
+
+    fn pool(&self) -> &Pool {
+        self.shared
+            .pool
+            .get()
+            .expect("a started server has its engines")
     }
 
     /// The address actually listened on.
@@ -240,41 +263,46 @@ impl Server {
     }
 
     pub fn health(&self) -> Health {
-        self.shared.pool.health()
+        self.pool().health()
     }
 
     /// Refuse new jobs with 429 `shutting_down`; jobs in flight carry on.
     pub fn drain(&self) {
-        self.shared.pool.drain();
+        self.pool().drain();
     }
 
     /// Drain, give the jobs in flight up to `grace`, end the rest with 429
-    /// `shutting_down`, stop accepting and drop every engine.
+    /// `shutting_down`, drop every engine and only then stop listening, so
+    /// the port answers until the process exits.
     pub fn stop(mut self, grace: Duration) {
-        self.drain();
-        let deadline = Instant::now() + grace;
-        while self.shared.pool.health().jobs > 0 && Instant::now() < deadline {
-            std::thread::sleep(Duration::from_millis(100));
+        if let Some(pool) = self.shared.pool.get() {
+            pool.drain();
+            let deadline = Instant::now() + grace;
+            while pool.health().jobs > 0 && Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(100));
+            }
+            pool.abort_all();
+            // let the connections whose jobs just ended write their 429
+            let deadline = Instant::now() + Duration::from_secs(5);
+            let mut open = lock(&self.shared.connections);
+            while *open > 0 && Instant::now() < deadline {
+                open = self
+                    .shared
+                    .freed
+                    .wait_timeout(open, Duration::from_millis(100))
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .0;
+            }
+            drop(open);
+            // each engine finishes the piece it holds; new requests still get
+            // 429 shutting_down meanwhile
+            pool.stop();
         }
-        self.shared.pool.abort_all();
-        // let the connections whose jobs just ended write their 429
-        let deadline = Instant::now() + Duration::from_secs(5);
-        let mut open = lock(&self.shared.connections);
-        while *open > 0 && Instant::now() < deadline {
-            open = self
-                .shared
-                .freed
-                .wait_timeout(open, Duration::from_millis(100))
-                .unwrap_or_else(PoisonError::into_inner)
-                .0;
-        }
-        drop(open);
         self.shared.stopping.store(true, Ordering::SeqCst);
         self.shared.freed.notify_all();
         if let Some(acceptor) = self.acceptor.take() {
             let _ = acceptor.join();
         }
-        self.shared.pool.stop();
     }
 }
 
@@ -378,7 +406,14 @@ fn handle(shared: &Shared, conn: Conn) {
     let mut record = Record::default();
     match (head.method.as_str(), head.path.as_str()) {
         ("GET", "/health") => {
-            let health = shared.pool.health();
+            let Some(pool) = shared.pool.get() else {
+                let starting = ApiError {
+                    status: 503,
+                    ..ApiError::starting()
+                };
+                return answer_early(&mut input, &id, &starting);
+            };
+            let health = pool.health();
             let body = serde_json::json!({
                 "engines": health.engines,
                 "jobs": health.jobs,
@@ -501,7 +536,6 @@ fn transcribe(
     started: Instant,
     record: &mut Record,
 ) {
-    let pool = &shared.pool;
     let Some(caller) = head
         .header("xi-api-key")
         .and_then(|key| shared.config.keys.check(key))
@@ -515,10 +549,13 @@ fn transcribe(
     {
         return fail_early(input, id, &ApiError::too_large(), record);
     }
-    let job = match pool.open() {
-        Ok(job) => Job { pool, id: job },
-        Err(refused) => {
-            let error = refusal(refused);
+    let opened = match shared.pool.get() {
+        Some(pool) => pool.open().map(|job| (pool, job)).map_err(refusal),
+        None => Err(ApiError::starting()),
+    };
+    let (pool, job) = match opened {
+        Ok((pool, job)) => (pool, Job { pool, id: job }),
+        Err(error) => {
             if head.expects_continue() {
                 return fail_early(input, id, &error, record);
             }
