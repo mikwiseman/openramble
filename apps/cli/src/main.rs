@@ -56,12 +56,16 @@ fn usage() -> &'static str {
 
 fn parse() -> Result<Options, String> {
     let home = std::env::var("HOME").unwrap_or_default();
-    let cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(2);
+    let cores = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(2);
     let mut options = Options {
         inputs: Vec::new(),
         model_dir: std::env::var("OPENRAMBLE_MODEL_DIR")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from(&home).join("opt/openramble-models/parakeet-ultra-gguf")),
+            .unwrap_or_else(|_| {
+                PathBuf::from(&home).join("opt/openramble-models/parakeet-ultra-gguf")
+            }),
         format: "text".into(),
         workers: (cores / 2).clamp(1, 4),
         max_chunk: 25.0,
@@ -75,8 +79,14 @@ fn parse() -> Result<Options, String> {
         match arg.as_str() {
             "-h" | "--help" => return Err(String::new()),
             "--format" => options.format = value("--format")?,
-            "--workers" => options.workers = value("--workers")?.parse().map_err(|_| "bad --workers")?,
-            "--max-chunk" => options.max_chunk = value("--max-chunk")?.parse().map_err(|_| "bad --max-chunk")?,
+            "--workers" => {
+                options.workers = value("--workers")?.parse().map_err(|_| "bad --workers")?
+            }
+            "--max-chunk" => {
+                options.max_chunk = value("--max-chunk")?
+                    .parse()
+                    .map_err(|_| "bad --max-chunk")?
+            }
             "--output-dir" => options.output_dir = Some(PathBuf::from(value("--output-dir")?)),
             "--model-dir" => options.model_dir = PathBuf::from(value("--model-dir")?),
             "--segments" => options.segments = Some(PathBuf::from(value("--segments")?)),
@@ -108,12 +118,24 @@ fn decode(path: &Path) -> Result<Vec<f32>, String> {
         .spawn()
         .map_err(|e| format!("ffmpeg: {e}"))?;
     let mut bytes = Vec::new();
-    child.stdout.take().unwrap().read_to_end(&mut bytes).map_err(|e| e.to_string())?;
+    child
+        .stdout
+        .take()
+        .unwrap()
+        .read_to_end(&mut bytes)
+        .map_err(|e| e.to_string())?;
     let output = child.wait_with_output().map_err(|e| e.to_string())?;
     if !output.status.success() {
-        return Err(format!("ffmpeg could not read {}: {}", path.display(), String::from_utf8_lossy(&output.stderr).trim()));
+        return Err(format!(
+            "ffmpeg could not read {}: {}",
+            path.display(),
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
     }
-    Ok(bytes.chunks_exact(4).map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]])).collect())
+    Ok(bytes
+        .chunks_exact(4)
+        .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+        .collect())
 }
 
 /// Cut at pauses: every piece is at most `max` seconds, and a cut lands on the
@@ -139,14 +161,23 @@ fn pieces(samples: &[f32], max: f32) -> Vec<Piece> {
             // inside a word is not mistaken for a pause
             end = (from..end)
                 .min_by(|&a, &b| {
-                    let around = |i: usize| rms[i.saturating_sub(5)..(i + 5).min(rms.len())].iter().sum::<f32>();
+                    let around = |i: usize| {
+                        rms[i.saturating_sub(5)..(i + 5).min(rms.len())]
+                            .iter()
+                            .sum::<f32>()
+                    };
                     around(a).total_cmp(&around(b))
                 })
                 .unwrap_or(end);
         }
         let speech = rms[start..end].iter().filter(|&&r| r > voiced).count();
         if speech * 50 >= (end - start) * 2 && speech >= 10 {
-            out.push(Piece { start: start * FRAME, end: (end * FRAME).min(samples.len()), label: None, text: String::new() });
+            out.push(Piece {
+                start: start * FRAME,
+                end: (end * FRAME).min(samples.len()),
+                label: None,
+                text: String::new(),
+            });
         }
         start = end;
     }
@@ -156,16 +187,24 @@ fn pieces(samples: &[f32], max: f32) -> Vec<Piece> {
 /// Pieces inside the given spans only, each carrying its span's label.
 fn spans(file: &Path, samples: &[f32], max: f32) -> Result<Vec<Piece>, String> {
     let text = std::fs::read_to_string(file).map_err(|e| format!("{}: {e}", file.display()))?;
-    let list: Vec<serde_json::Value> = serde_json::from_str(&text).map_err(|e| format!("{}: {e}", file.display()))?;
+    let list: Vec<serde_json::Value> =
+        serde_json::from_str(&text).map_err(|e| format!("{}: {e}", file.display()))?;
     let mut out = Vec::new();
     for span in list {
-        let second = |key: &str| span.get(key).and_then(|v| v.as_f64()).ok_or_else(|| format!("segment without {key}"));
+        let second = |key: &str| {
+            span.get(key)
+                .and_then(|v| v.as_f64())
+                .ok_or_else(|| format!("segment without {key}"))
+        };
         let a = ((second("start")? * RATE as f64) as usize).min(samples.len());
         let b = ((second("end")? * RATE as f64) as usize).min(samples.len());
         if b <= a {
             continue;
         }
-        let label = span.get("label").and_then(|v| v.as_str()).map(str::to_string);
+        let label = span
+            .get("label")
+            .and_then(|v| v.as_str())
+            .map(str::to_string);
         for mut piece in pieces(&samples[a..b], max) {
             piece.start += a;
             piece.end += a;
@@ -176,22 +215,35 @@ fn spans(file: &Path, samples: &[f32], max: f32) -> Result<Vec<Piece>, String> {
     Ok(out)
 }
 
-fn transcribe(samples: Arc<Vec<f32>>, mut work: Vec<Piece>, options: &Options) -> Result<Vec<Piece>, String> {
+fn transcribe(
+    samples: Arc<Vec<f32>>,
+    mut work: Vec<Piece>,
+    options: &Options,
+) -> Result<Vec<Piece>, String> {
     let total = work.len();
-    let queue = Arc::new(Mutex::new(work.drain(..).enumerate().collect::<VecDeque<_>>()));
+    let queue = Arc::new(Mutex::new(
+        work.drain(..).enumerate().collect::<VecDeque<_>>(),
+    ));
     let results = Arc::new(Mutex::new(vec![None::<Piece>; total]));
     let done = Arc::new(Mutex::new(0usize));
     let started = Instant::now();
     let workers = options.workers.min(total.max(1));
     let handles: Vec<_> = (0..workers)
         .map(|_| {
-            let (queue, results, done, samples) = (queue.clone(), results.clone(), done.clone(), samples.clone());
+            let (queue, results, done, samples) = (
+                queue.clone(),
+                results.clone(),
+                done.clone(),
+                samples.clone(),
+            );
             let dir = options.model_dir.clone();
             std::thread::spawn(move || -> Result<(), String> {
                 let engine = Engine::load(&dir).map_err(|e| e.to_string())?;
                 loop {
                     let next = queue.lock().unwrap().pop_front();
-                    let Some((index, mut piece)) = next else { break };
+                    let Some((index, mut piece)) = next else {
+                        break;
+                    };
                     piece.text = match engine.transcribe(&samples[piece.start..piece.end]) {
                         Ok(text) => text.trim().to_string(),
                         Err(e) => {
@@ -202,7 +254,12 @@ fn transcribe(samples: Arc<Vec<f32>>, mut work: Vec<Piece>, options: &Options) -
                     results.lock().unwrap()[index] = Some(piece);
                     let mut n = done.lock().unwrap();
                     *n += 1;
-                    eprint!("\rTranscribing: {}/{} pieces, {:.0} s", *n, total, started.elapsed().as_secs_f32());
+                    eprint!(
+                        "\rTranscribing: {}/{} pieces, {:.0} s",
+                        *n,
+                        total,
+                        started.elapsed().as_secs_f32()
+                    );
                 }
                 engine.shutdown();
                 Ok(())
@@ -210,17 +267,30 @@ fn transcribe(samples: Arc<Vec<f32>>, mut work: Vec<Piece>, options: &Options) -
         })
         .collect();
     for handle in handles {
-        handle.join().map_err(|_| "a worker crashed".to_string())??;
+        handle
+            .join()
+            .map_err(|_| "a worker crashed".to_string())??;
     }
     eprintln!();
-    let results = Arc::try_unwrap(results).map_err(|_| "results still shared")?.into_inner().unwrap();
-    Ok(results.into_iter().flatten().filter(|p| !p.text.is_empty()).collect())
+    let results = Arc::try_unwrap(results)
+        .map_err(|_| "results still shared")?
+        .into_inner()
+        .unwrap();
+    Ok(results
+        .into_iter()
+        .flatten()
+        .filter(|p| !p.text.is_empty())
+        .collect())
 }
 
 fn clock(samples: usize, srt: bool) -> String {
     let ms = samples * 1000 / RATE;
     let (h, m, s, rest) = (ms / 3_600_000, ms / 60_000 % 60, ms / 1000 % 60, ms % 1000);
-    if srt { format!("{h:02}:{m:02}:{s:02},{rest:03}") } else { format!("{h:02}:{m:02}:{s:02}") }
+    if srt {
+        format!("{h:02}:{m:02}:{s:02},{rest:03}")
+    } else {
+        format!("{h:02}:{m:02}:{s:02}")
+    }
 }
 
 fn render(pieces: &[Piece], format: &str, duration: usize, elapsed: f32) -> String {
@@ -230,7 +300,11 @@ fn render(pieces: &[Piece], format: &str, duration: usize, elapsed: f32) -> Stri
                 .iter()
                 .map(|p| serde_json::json!({"start": p.start as f64 / RATE as f64, "end": p.end as f64 / RATE as f64, "label": p.label, "text": p.text}))
                 .collect();
-            let text = pieces.iter().map(|p| p.text.as_str()).collect::<Vec<_>>().join(" ");
+            let text = pieces
+                .iter()
+                .map(|p| p.text.as_str())
+                .collect::<Vec<_>>()
+                .join(" ");
             serde_json::to_string_pretty(&serde_json::json!({
                 "model": "parakeet-ultra-Q4_K_M",
                 "duration": duration as f64 / RATE as f64,
@@ -244,7 +318,15 @@ fn render(pieces: &[Piece], format: &str, duration: usize, elapsed: f32) -> Stri
         "srt" => pieces
             .iter()
             .enumerate()
-            .map(|(i, p)| format!("{}\n{} --> {}\n{}\n\n", i + 1, clock(p.start, true), clock(p.end, true), p.text))
+            .map(|(i, p)| {
+                format!(
+                    "{}\n{} --> {}\n{}\n\n",
+                    i + 1,
+                    clock(p.start, true),
+                    clock(p.end, true),
+                    p.text
+                )
+            })
             .collect(),
         _ => pieces
             .iter()
@@ -273,21 +355,44 @@ fn run(options: Options) -> Result<(), String> {
             Some(file) => spans(file, &samples, options.max_chunk)?,
             None => pieces(&samples, options.max_chunk),
         };
-        eprintln!("{}: {:.0} s of audio, {} pieces, {} workers", input.display(), samples.len() as f32 / RATE as f32, work.len(), options.workers);
+        eprintln!(
+            "{}: {:.0} s of audio, {} pieces, {} workers",
+            input.display(),
+            samples.len() as f32 / RATE as f32,
+            work.len(),
+            options.workers
+        );
         let done = transcribe(samples.clone(), work, &options)?;
-        let text = render(&done, &options.format, samples.len(), started.elapsed().as_secs_f32());
+        let text = render(
+            &done,
+            &options.format,
+            samples.len(),
+            started.elapsed().as_secs_f32(),
+        );
         match &options.output_dir {
             Some(dir) => {
                 std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-                let stem = input.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| "transcript".into());
-                let path = dir.join(format!("{stem}.{}", if options.format == "text" { "txt" } else { &options.format }));
+                let stem = input
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "transcript".into());
+                let path = dir.join(format!(
+                    "{stem}.{}",
+                    if options.format == "text" {
+                        "txt"
+                    } else {
+                        &options.format
+                    }
+                ));
                 if path.exists() {
                     return Err(format!("{} exists; not overwriting", path.display()));
                 }
                 std::fs::write(&path, text).map_err(|e| e.to_string())?;
                 eprintln!("wrote {}", path.display());
             }
-            None => std::io::stdout().write_all(text.as_bytes()).map_err(|e| e.to_string())?,
+            None => std::io::stdout()
+                .write_all(text.as_bytes())
+                .map_err(|e| e.to_string())?,
         }
         eprintln!("done in {:.0} s", started.elapsed().as_secs_f32());
     }
