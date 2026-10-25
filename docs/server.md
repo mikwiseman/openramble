@@ -129,6 +129,8 @@ apps/cli/deploy/install.sh
 
 `install.sh` builds on the machine itself (ggml tunes itself to the processor), checks the model's size and SHA-256 with the new binary before replacing the old one, keeps the previous binary as `.prev`, installs and enables `openramble.service`, restarts it only once no job is running, waits for `/health`, and only then replaces `transcribe-stdin`.
 
+The server is the only process on the machine that keeps engines loaded. A second set, such as a command-line run with `--workers 3`, would not fit in memory next to its four, and the kernel would kill the server. `install.sh` creates `/var/lib/openramble/engines.lock` for that: the server holds it while its engines are loaded, a file-mode run of the command-line tool refuses to start while the server holds it, and a server that starts while a file-mode run is going waits for it to finish, answering 429 `starting` meanwhile. Send files to the server instead, as `transcribe-stdin` does.
+
 The service ([`apps/cli/deploy/openramble.service`](../apps/cli/deploy/openramble.service)) runs as a dynamic user with a read-only system, no home, no devices and `IPAddressDeny=any` except localhost, so neither the server nor ffmpeg can reach another machine. It reads the keys through `LoadCredential`, keeps its temporary files in a private `/var/tmp`, and is limited to 7 GB of memory. On a stop, new jobs get 429 `shutting_down` and jobs in flight get up to 25 minutes.
 
 ### HTTPS and the firewall

@@ -20,7 +20,7 @@ use std::time::Instant;
 
 use openramble_cli::pool::Pool;
 use openramble_cli::serve::{Config, Keys, Log, Server, DRAIN_GRACE};
-use openramble_cli::{decode, model, output, plan, pool};
+use openramble_cli::{decode, engines, model, output, plan, pool};
 use ramble_engine::Engine;
 
 struct Options {
@@ -221,6 +221,8 @@ fn run(options: Options) -> Result<(), String> {
             return Ok(());
         }
     }
+    // released once every engine below is dropped
+    let _engines_lock = engines::share(Path::new(engines::LOCK))?;
     let engines = pool::load(&options.model_dir, options.workers)?;
     let pool = Pool::start(
         engines
@@ -306,6 +308,7 @@ fn serve(args: Vec<String>) -> Result<(), String> {
         "openramble serve: loading {engines} engines; {listen} answers 429 until they are ready"
     ));
     let mut device = String::new();
+    let mut engines_lock = None;
     let server = Server::start(
         Config {
             listen,
@@ -315,6 +318,11 @@ fn serve(args: Vec<String>) -> Result<(), String> {
             log: log.clone(),
         },
         || {
+            engines_lock = engines::own(
+                Path::new(engines::LOCK),
+                &|| stop.load(std::sync::atomic::Ordering::SeqCst),
+                &|line| log(line),
+            )?;
             let loaded = pool::load(&model_dir, engines)?;
             device = loaded
                 .first()
@@ -335,6 +343,7 @@ fn serve(args: Vec<String>) -> Result<(), String> {
     }
     log("stopping: new jobs get 429; jobs in flight have up to 25 minutes");
     server.stop(DRAIN_GRACE);
+    drop(engines_lock);
     log("stopped");
     Ok(())
 }

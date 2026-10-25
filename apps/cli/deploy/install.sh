@@ -42,6 +42,12 @@ if [[ -e "$BIN/openramble" ]]; then
 fi
 mv "$BIN/openramble.new" "$BIN/openramble"
 
+# One owner of the engines on this machine (apps/cli/src/engines.rs): the
+# server holds this lock while its engines are loaded, and a file-mode run
+# refuses to load engines next to them, since both would not fit in memory.
+install -d -m 0755 /var/lib/openramble
+[[ -e /var/lib/openramble/engines.lock ]] || install -m 0644 /dev/null /var/lib/openramble/engines.lock
+
 install -m 0644 apps/cli/deploy/openramble.service "$UNIT"
 systemctl daemon-reload
 systemctl enable openramble.service

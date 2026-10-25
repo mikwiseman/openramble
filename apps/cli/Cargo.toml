@@ -3,7 +3,9 @@ name = "openramble-cli"
 description = "Transcribe audio files with the OpenRamble engine on Linux"
 version.workspace = true
 edition.workspace = true
-rust-version.workspace = true
+# File locks (std::fs::File::try_lock) arrived in 1.89; the rest of the
+# workspace still builds on 1.85.
+rust-version = "1.89"
 license.workspace = true
 publish = false
 
