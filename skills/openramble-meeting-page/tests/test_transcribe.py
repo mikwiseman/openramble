@@ -1,6 +1,7 @@
 """transcribe.py tests against a fake CLI and a local fake server: python3 -m unittest discover -s skills/openramble-meeting-page/tests"""
 import array
 import http.server
+import io
 import json
 import math
 import os
@@ -28,9 +29,14 @@ for a in "$@"; do
   if [ "$prev" = "--output-dir" ]; then out="$a"; fi
   prev="$a"
 done
+i=0
 for a in "$@"; do
   case "$a" in
-    *.m4a) n=$(basename "$a" .m4a); [ "$n" = "broken" ] && continue
+    *.m4a) i=$((i+1)); n=$(basename "$a" .m4a)
+           for p in 5 10 15 50 100; do printf 'Transcribing %s/2: %s%%\n' "$i" "$p" >&2; done
+           [ "$n" = "broken" ] && continue
+           echo "Saved: $out/$n.json" >&2
+           [ "$n" = "quiet" ] && { printf '{"schemaVersion":1,"text":"","duration":3.0,"words":[]}' > "$out/$n.json"; continue; }
            printf '{"schemaVersion":1,"text":"Hi.","duration":3.0,"words":[{"text":"Hi.","start":0.5,"end":0.9}]}' > "$out/$n.json";;
   esac
 done
@@ -127,7 +133,13 @@ class TranscribeTests(unittest.TestCase):
         cli.chmod(cli.stat().st_mode | stat.S_IEXEC)
         files = [self.audio("audioAnnaBelova1.m4a"), self.audio("audioDima2.m4a")]
         out = self.dir / "asr"
-        self.assertEqual(transcribe.main([str(f) for f in files] + ["--out", str(out), "--cli", str(cli)]), 0)
+        with mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+            self.assertEqual(transcribe.main([str(f) for f in files] + ["--out", str(out), "--cli", str(cli)]), 0)
+        # the CLI's percent-by-percent progress becomes one line per file, and no temporary paths
+        said = err.getvalue().splitlines()
+        self.assertEqual([l for l in said if l.startswith("transcribing")], ["transcribing 1/2", "transcribing 2/2"])
+        self.assertFalse(any("%" in l or "Saved:" in l for l in said), said)
+        self.assertEqual(len(said), 4, said)
         calls = (self.dir / "calls.txt").read_text().splitlines()
         self.assertEqual(calls[:2], ["--check-model", "--help"])
         self.assertEqual(len(calls), 3)
@@ -142,6 +154,10 @@ class TranscribeTests(unittest.TestCase):
         last = (self.dir / "calls.txt").read_text().splitlines()[-1]
         self.assertTrue(last.endswith("broken.m4a"))
         self.assertNotIn("audioDima2", last)
+        # someone who never spoke has a silent track: no words is a result, not a crash
+        quiet = self.audio("quiet.m4a")
+        self.assertEqual(transcribe.main([str(quiet), "--out", str(out), "--cli", str(cli)]), 0)
+        self.assertEqual(json.loads((out / "quiet.json").read_text())["words"], [])
 
     @unittest.skipUnless(shutil.which("ffmpeg"), "needs ffmpeg, as the Linux CLI does")
     def test_linux_cli_transcribes_speech_spans_one_run_per_file(self):

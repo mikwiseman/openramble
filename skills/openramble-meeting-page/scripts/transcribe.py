@@ -29,6 +29,7 @@ import math
 import operator
 import os
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -109,7 +110,7 @@ def write_normalized(out_dir, audio, asr, raw):
     tmp.write_text(json.dumps(doc, ensure_ascii=False) + "\n", encoding="utf-8")
     os.chmod(tmp, 0o600)
     tmp.replace(target)
-    n = len(doc.get("words") or doc.get("segments"))
+    n = len(doc["words"] if "words" in doc else doc["segments"])  # zero for someone who never spoke
     log(f"ok {Path(audio).name} -> {target} ({n} {'words' if 'words' in doc else 'pieces'}, {doc['duration']:.0f} s)")
     return target
 
@@ -191,6 +192,34 @@ def speech_spans(path):
     return spans
 
 
+PROGRESS = re.compile(r"^Transcribing\b(?: (\d+/\d+):)?")
+
+
+def run_quiet(cmd):
+    """Run the CLI with its progress cut to one line per file. It prints a line per few percent (macOS) or
+    rewrites one with \\r (Linux), and "Saved:" lines name a temporary folder: none of it helps whoever waits.
+    Other lines, such as errors, pass through. stdout is dropped, so no transcript text can reach the log."""
+    shown, rest = set(), b""
+
+    def say(raw):
+        line = raw.decode("utf-8", "replace").strip()
+        m = PROGRESS.match(line)
+        if m:
+            if m.group(1) and m.group(1) not in shown:
+                shown.add(m.group(1))
+                log(f"transcribing {m.group(1)}")
+        elif line and not line.startswith(("Saved: ", "wrote ")):
+            log(line)
+
+    with subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE) as proc:
+        for chunk in iter(lambda: proc.stderr.read1(4096), b""):
+            *lines, rest = re.split(rb"[\r\n]", rest + chunk)
+            for line in lines:
+                say(line)
+        say(rest)
+    return proc.returncode
+
+
 def run_cli(cli, files, out_dir):
     check = subprocess.run([cli, "--check-model"], capture_output=True, text=True)
     if check.returncode != 0:
@@ -209,11 +238,11 @@ def run_cli(cli, files, out_dir):
                 spans_file = Path(raw_dir) / (Path(f).stem + ".spans.json")
                 spans_file.write_text(json.dumps(spans), encoding="utf-8")
                 log(f"{Path(f).name}: {len(spans)} speech spans, {sum(s['end'] - s['start'] for s in spans):.0f} s")
-                codes.append(subprocess.run([cli, "--format", "json", "--output-dir", raw_dir,
-                                             "--segments", str(spans_file), path]).returncode)
+                codes.append(run_quiet([cli, "--format", "json", "--output-dir", raw_dir,
+                                        "--segments", str(spans_file), path]))
         else:
-            # one run for every file, so the model loads once; progress streams to stderr
-            codes.append(subprocess.run([cli, "--format", "json", "--output-dir", raw_dir] + paths).returncode)
+            # one run for every file, so the model loads once
+            codes.append(run_quiet([cli, "--format", "json", "--output-dir", raw_dir] + paths))
         failed = []
         for f in files:
             raw = Path(raw_dir) / (Path(f).stem + ".json")
