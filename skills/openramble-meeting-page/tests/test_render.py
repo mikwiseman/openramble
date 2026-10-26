@@ -111,6 +111,12 @@ class RenderTests(unittest.TestCase):
         self.assertIn("распознано в тишине", page)
         self.assertEqual(warnings, [])
 
+    def test_evidence_gives_the_quote_its_own_line(self):
+        # time and speaker sit on a line above the quote, so the quote keeps the column's full width
+        page, _ = render_page(transcript(), analysis())
+        self.assertRegex(page, r'<li class="evs[^"]*"><a class="jump" href="#s0005">[^<]+</a>'
+                               r'<span class="who sp\d+">[^<]+</span><span class="eq">Ниже 99,5 не выпускаем\.</span></li>')
+
     def test_minimal_analysis(self):
         an = {"schemaVersion": 1, "language": "en", "meeting": {"title": "Sync"},
               "lead": [{"text": "We ship.", "evidence": ["s0004"]}], "chapters": [{"title": "All", "start": "s0001"}]}

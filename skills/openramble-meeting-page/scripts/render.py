@@ -529,7 +529,7 @@ class Page:
             pri = sid == primary and len(ids) > 1
             mark = f'<span class="sr">({esc(self.L["primary"])}) </span>' if pri else ""
             rows.append(f'<li class="evs{" pri" if pri else ""}">{play}<a class="jump" href="#{sid}">{self.at(sid)}</a>'
-                        f'<span class="eq">{mark}{who_html(name, cls)}<span class="vb">{esc(s["text"])}</span></span></li>')
+                        f'{who_html(name, cls)}<span class="eq">{mark}{esc(s["text"])}</span></li>')
         return f'<ol class="evl">{"".join(rows)}</ol>'
 
     def ev_attr(self, ids):

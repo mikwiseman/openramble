@@ -146,9 +146,9 @@ summary:hover .txt{text-decoration:underline;text-decoration-color:var(--rule);t
 .res{margin-top:8px}
 .caution{margin:0 0 10px;padding:8px 10px;border-radius:4px;background:var(--open-bg);font:400 .875rem/1.5 var(--sans)}
 .evl{margin-top:4px}
-.evs{display:flex;gap:8px;align-items:baseline;padding:4px 0}
-.eq{flex:1;min-width:0;font:400 1.0625rem/1.6 var(--serif);overflow-wrap:break-word}
-.evs .who{margin-right:6px}
+.evs{display:grid;grid-template-columns:auto auto minmax(0,1fr);column-gap:10px;align-items:center;padding:6px 0}
+.eq{grid-column:1/-1;margin-top:2px;font:400 1rem/1.55 var(--serif);overflow-wrap:break-word}
+.evs .pl{margin:0}
 .who{font:600 .75rem var(--sans);letter-spacing:.02em}
 .jump{font:400 .75rem var(--mono);text-decoration:none;white-space:nowrap;position:relative}
 .jump::after{content:"";position:absolute;inset:-9px -4px}

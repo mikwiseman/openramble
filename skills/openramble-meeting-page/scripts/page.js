@@ -62,15 +62,16 @@
     }
     const a = d.createElement('a');
     a.className = 'jump'; a.href = '#' + id; a.textContent = label(seg);
+    li.append(a);
+    const sp = D.speakers[speakerOf(seg)];
+    if (sp) { const w = d.createElement('span'); w.className = 'who ' + sp.cls; w.textContent = sp.short; li.append(w); }
     const q = d.createElement('span');
     q.className = 'eq';
     if (id === primary && many) {
       const sr = d.createElement('span'); sr.className = 'sr'; sr.textContent = `(${T.primary}) `; q.append(sr);
     }
-    const sp = D.speakers[speakerOf(seg)];
-    if (sp) { const w = d.createElement('span'); w.className = 'who ' + sp.cls; w.textContent = sp.short; q.append(w); }
-    const v = d.createElement('span'); v.className = 'vb'; v.textContent = seg.textContent; q.append(v);
-    li.append(a, q);
+    q.append(seg.textContent);
+    li.append(q);
     return li;
   }
   function togglePanel(a) {
