@@ -446,7 +446,7 @@ class Page:
             e = extra.get(p["id"], {})
             first = firsts[i]
             short = e.get("short") or (first if firsts.count(first) == 1 else p["name"])
-            self.sp[p["id"]] = {"id": p["id"], "name": p["name"], "short": short, "cls": f"sp{i % 6 + 1}",
+            self.sp[p["id"]] = {"id": p["id"], "name": p["name"], "short": short, "cls": f"sp{i % 10 + 1}",
                                 "role": e.get("role"), "roleEv": e.get("evidence"), "aliases": e.get("aliases", []),
                                 "audio": self.rel_audio(p.get("audio"))}
         self.audio = self.rel_audio(audio or tr.get("audio"))
@@ -621,8 +621,7 @@ class Page:
         pct = lambda t: f"{100 * max(0.0, min(t, D)) / D:.3f}%"
         lanes = [p for p in self.sp.values()] if self.kind != "mixed" else [None]
         n = max(1, len(lanes))
-        pitch = max(5, min(12, int(52 / n)))
-        lane_h = max(3, pitch - 4)
+        pitch, lane_h = 12, 8  # a lane per person, as far apart as its 11 px label needs, however many there are
         band_h, top = 16, 22
         ticks_y = top + n * pitch + 4
         H = ticks_y + 20

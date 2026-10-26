@@ -191,6 +191,27 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(page.count('class="sg'), n)
         self.assertGreater(page.count('class="chunk"'), n // 3 // 40)
 
+    def test_a_big_call_keeps_lanes_legible_and_colours_apart(self):
+        # a Zoom call gives one track per person: ten people get ten lanes 12 px apart, one colour each
+        tr = transcript()
+        tr["speakers"] = [{"id": f"p{i}", "name": f"Человек{i}", "from": "track", "audio": None} for i in range(1, 11)]
+        for k, s in enumerate(tr["segments"]):
+            s["speaker"] = f"p{k % 8 + 1}"
+        an = analysis()
+        an["participants"] = []
+        page, _ = render_page(tr, an)
+        ys = [float(y) for y in re.findall(r'<text class="ln sp\d+" x="0" y="([\d.]+)"', page)]
+        self.assertEqual(len(ys), 10)
+        self.assertGreaterEqual(min(b - a for a, b in zip(ys, ys[1:])), 12)  # lane labels are 11 px text
+        classes = re.findall(r'<text class="ln (sp\d+)"', page)
+        self.assertEqual(len(set(classes)), 10)
+        css = (ROOT / "scripts" / "page.css").read_text(encoding="utf-8")
+        light, dark, printed = css.split(":root{")[1], css.split("prefers-color-scheme:dark")[1], css.split("@media print")[1]
+        for c in set(classes):
+            for scope in (light, dark, printed):
+                self.assertRegex(scope.split("}")[0], rf"--{c}:#[0-9a-f]{{6}}")
+            self.assertIn(f".{c}{{color:var(--{c})}}", css)
+
     def test_an_unfinished_transcription_is_said_on_the_page(self):
         tr = transcript()
         tr["incomplete"] = "partial"
