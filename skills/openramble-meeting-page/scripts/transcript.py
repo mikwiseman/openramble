@@ -22,6 +22,7 @@ kept, marked silent, and can never be cited. Nothing here prints transcript
 text: the files are the output.
 """
 import argparse
+import datetime as dt
 import json
 import os
 import re
@@ -162,6 +163,26 @@ def audio_beside(json_path, doc):
 
 
 ZOOM_MIX = re.compile(r"audio[_\- ]?only", re.I)
+ZOOM_FOLDER = re.compile(r"^(\d{4}-\d{2}-\d{2}) (\d{2})\.(\d{2})\.(\d{2}) ")
+
+
+def zoom_started(paths):
+    """Zoom names a local recording's folder by its start, e.g. "2026-11-17 14.00.12 Pilot 81234567890".
+    That is the meeting's date; a file's modified time is not."""
+    for path in paths:
+        for part in reversed(Path(path).parts) if path else ():
+            m = ZOOM_FOLDER.match(part)
+            if m:
+                return f"{m[1]}T{m[2]}:{m[3]}:{m[4]}"
+    return None
+
+
+def recorded(iso):
+    try:
+        d = dt.datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except ValueError:
+        return iso
+    return f"{(d.astimezone() if d.tzinfo else d):%a %Y-%m-%d %H:%M}"
 
 
 def repeats_others(docs, i):
@@ -353,6 +374,7 @@ def build(inputs, overrides=None, me=None, other=None, lang=None):
             t = track_inputs(paths, overrides)
     else:
         raise Fail("give one folder, one VTT/SRT/TXT file, or one or more transcription JSON files")
+    t["recordedAt"] = t.get("recordedAt") or zoom_started([t.get("audio")] + [p.get("audio") for p in t["speakers"]])
     timed = t.get("timed", True)
     segs = t["segments"]
     if timed:
@@ -446,6 +468,9 @@ def main(argv=None):
     print(f"{out / 'transcript.json'}: {doc['kind']}, {len(doc['speakers'])} speakers, {len(segs)} segments, "
           f"{sum(words)} words, {doc['duration'] / 60:.1f} min; "
           f"{sum(s['silent'] for s in segs)} silent, {sum(s['failed'] for s in segs)} failed", file=sys.stderr)
+    if doc.get("recordedAt"):
+        print(f"recorded {recorded(doc['recordedAt'])}: the meeting date, to resolve \"by Friday\" against",
+              file=sys.stderr)
     print(f"read transcript.txt in {len(windows)} line window(s), one at a time: "
           + ", ".join(f"{a}-{b}" for a, b in windows), file=sys.stderr)
     if doc.get("incomplete"):

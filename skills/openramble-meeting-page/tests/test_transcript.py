@@ -1,4 +1,6 @@
 """transcript.py tests: python3 -m unittest discover -s skills/openramble-meeting-page/tests"""
+import contextlib
+import io
 import json
 import sys
 import tempfile
@@ -77,6 +79,20 @@ class TranscriptTests(unittest.TestCase):
         self.assertEqual(doc["speakers"][0]["audio"], "/x/audioAnnaBelova1.m4a")
         self.assertEqual([(s["speaker"], s["turn"]) for s in doc["segments"]], [("p1", 1), ("p1", 1), ("p2", 2), ("p1", 3)])
         self.assertEqual(doc["duration"], 21)
+
+    def test_a_zoom_folder_dates_the_meeting(self):
+        # Zoom names a local recording's folder by its start; a file's modified time says nothing about the meeting
+        zoom = "/Users/x/Documents/Zoom/2026-11-17 14.00.12 Northmoor pilot 81234567890/Audio Record"
+        a = self.f.json("audioMayaOkafor1.json", {"audio": f"{zoom}/audioMayaOkafor1.m4a", "words": words(("Hi.", 0, 1))})
+        t = self.f.json("audioTomReyes2.json", {"audio": f"{zoom}/audioTomReyes2.m4a", "words": words(("Yes.", 2, 3))})
+        self.assertEqual(T.build([a, t])["recordedAt"], "2026-11-17T14:00:12")
+        out = self.f.path / "work"
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            self.assertEqual(T.main([str(a), str(t), "--out", str(out)]), 0)
+        self.assertIn("recorded Tue 2026-11-17 14:00", err.getvalue())
+        plain = self.f.json("audio-dima.json", {"audio": "/x/audio-dima.m4a", "words": words(("Да.", 4, 5))})
+        self.assertNotIn("recordedAt", T.build([plain]))
 
     def test_a_mixed_recording_among_tracks_is_refused(self):
         # Zoom's audio_only.m4a passed with the tracks would be a speaker who repeats every line
