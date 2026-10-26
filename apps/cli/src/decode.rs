@@ -151,17 +151,37 @@ pub fn pump(
     Ok((samples, envelope.finish()))
 }
 
-/// The RMS of every 20 ms frame, fed one sample at a time.
+/// The RMS of every 20 ms frame above about 100 Hz, fed one sample at a time.
+///
+/// A second-order high-pass at 100 Hz comes before the RMS. Speech lives
+/// above it. Below it are rumble, mains hum and the slow swell of pink and
+/// brown noise, which lift single frames of a steady floor 12 to 17 dB over
+/// its 20th percentile, so the gate kept a participant's whole track. Above
+/// 100 Hz one frame in a thousand rises 2.5 to 5.5 dB over it.
 #[derive(Default)]
 pub struct Envelope {
     frames: Vec<f32>,
     sum: f32,
     count: usize,
+    /// The high-pass's last two inputs and outputs, newest first.
+    inputs: [f32; 2],
+    outputs: [f32; 2],
 }
+
+// The high-pass, GAIN (1 - z^-1)^2 / (1 + A1 z^-1 + A2 z^-2): a Butterworth
+// filter at 100 Hz through the bilinear transform at 16 kHz.
+const GAIN: f32 = 0.972_613_9;
+const A1: f32 = -1.944_477_7;
+const A2: f32 = 0.945_978;
 
 impl Envelope {
     pub fn push(&mut self, sample: f32) {
-        self.sum += sample * sample;
+        let [x1, x2] = self.inputs;
+        let [y1, y2] = self.outputs;
+        let high = GAIN * (sample - 2.0 * x1 + x2) - A1 * y1 - A2 * y2;
+        self.inputs = [sample, x1];
+        self.outputs = [high, y1];
+        self.sum += high * high;
         self.count += 1;
         if self.count == FRAME {
             self.close();
@@ -213,10 +233,35 @@ mod tests {
     }
 
     fn one_pass(samples: &[f32]) -> Vec<f32> {
-        samples
-            .chunks(FRAME)
-            .map(|frame| (frame.iter().map(|x| x * x).sum::<f32>() / frame.len() as f32).sqrt())
+        let mut envelope = Envelope::default();
+        samples.iter().for_each(|x| envelope.push(*x));
+        envelope.finish()
+    }
+
+    fn tone(hz: f32) -> Vec<f32> {
+        (0..16_000)
+            .map(|i| 0.1 * (std::f32::consts::TAU * hz * i as f32 / 16_000.0).sin())
             .collect()
+    }
+
+    #[test]
+    fn the_envelope_leaves_out_what_is_below_100_hz() {
+        let level = |hz: f32| {
+            let mut envelope = Envelope::default();
+            tone(hz).iter().for_each(|x| envelope.push(*x));
+            envelope.finish()[25]
+        };
+        // a 0.1 sine is 0.0707 RMS: speech frequencies pass whole, mains hum
+        // loses 12 dB and the rumble under it 27 dB and more
+        for (hz, from, to) in [
+            (1000.0, 0.0705, 0.0709),
+            (300.0, 0.0702, 0.0709),
+            (50.0, 0.0, 0.018),
+            (20.0, 0.0, 0.0032),
+        ] {
+            let level = level(hz);
+            assert!((from..to).contains(&level), "{hz} Hz: {level}");
+        }
     }
 
     #[test]
