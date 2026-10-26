@@ -18,40 +18,45 @@ meeting of the fictional family budget app «Грошик». The rendered page i
 
 ## Fields
 
-R is required and O is optional.
+R is required and O is optional. "id" is a short lower case word such as `d1`,
+`a3` or `x1`, and no two items share one. `evidence` is always a list of
+segment ids, and `cautions` on an item is a list of caution ids. "date" is an
+ISO date, `"2026-11-20"`. Text is a string.
 
-| Field | | What it holds |
-|---|---|---|
-| `schemaVersion` | R | `1` |
-| `language` | R | The meeting's language, e.g. `"ru"` or `"en"`. The page interface is Russian for `ru` and English otherwise. |
-| `synthetic` | O | `true` shows a "synthetic sample" badge. |
-| `meeting.title` | R | At most 60 characters. The topic as people named it in the meeting, or as the user named it. |
-| `meeting.kind`, `meeting.date`, `meeting.timezone` | O | The date only from file metadata (`recordedAt` in a Recordings transcript), the user, or the words of the meeting. |
-| `lead` | R | 1 to 4 sentences, at most 60 words, with the outcome and not the agenda. Each is `{text, evidence}`. |
-| `participants` | O | `{speaker, short, aliases, role, evidence}` for speakers in the transcript, e.g. `"p2"`. A role only when someone said it (cite it) or the user gave it. A mixed recording has no participants. |
-| `mentioned` | O | `{name, aliases, note, evidence}` for people named in the meeting. In a tracks or labelled transcript they were not present. In a mixed recording or a Recordings folder, `mentioned` is how you name people the words name, and the name must be said in the evidence. |
-| `dates` | O | `{date, said, text, evidence}` for dates people said. `said` is the spoken words and must appear in the evidence. |
-| `decisions` | R items | `{id, text, detail, evidence, disagreement, cautions}`. `disagreement` links the debate that ended in this decision. |
-| `actions` | R items | `{id, owner, task, detail, due, dueSaid, blocker, taken, evidence, cautions}`. `owner` is a speaker id, a `mentioned` name, or `null`. |
-| `questions` | R items | `{id, text, status, evidence, cautions}`. |
-| `risks` | R items | `{id, text, detail, mitigation, evidence, cautions}`. A mitigation only if someone said it. |
-| `disagreements` | R items | `{id, topic, decision, positions, resolution}`. Each position is `{speaker, name, view, evidence}`. `resolution` is `{text, evidence}`, or `null` while it is unresolved. |
-| `facts` | R items | `{id, text, evidence}` for numbers and facts people will want later. |
-| `chapters` | R | At least one `{title, start, gist, aside}`. The first starts at the first segment, and the rest follow in order. `aside: true` marks small talk. |
-| `quotes` | O | At most 6 `{segment, text}`. `text` is an exact substring of the segment. The page shows each quote inside its chapter. |
-| `cautions` | O | `{id, segment, heard, meant, why, evidence}` where the recognized text breaks the meaning. `heard` is an exact substring of the segment. |
-| `glossary` | O | `{meant, heard}`, e.g. `{"meant": "paywall", "heard": ["Payval", "PVAL"]}`. Every `heard` spelling occurs in the transcript, and search on the page finds all of them. |
+| Field | | Type | What it holds |
+|---|---|---|---|
+| `schemaVersion` | R | `1` | |
+| `language` | R | text | The meeting's language, e.g. `"ru"` or `"en"`. The page interface is Russian for `ru` and English otherwise. |
+| `synthetic` | O | `true` | Shows a "synthetic sample" badge. |
+| `meeting.title` | R | text, at most 60 characters | The topic as people named it in the meeting, or as the user named it. |
+| `meeting.kind` | O | text, at most 60 characters | The kind of meeting, e.g. "Weekly sync", as people or the user called it. |
+| `meeting.date` | O | date | From `recordedAt` in transcript.json (a Recordings folder's start, or the name of a Zoom folder), the user, or the words of the meeting. Never a file's modified time. |
+| `meeting.timezone` | O | text | e.g. `"Europe/Moscow"`, only when known. |
+| `lead` | R | 1 to 4 `{text, evidence}` | The outcome, not the agenda, in at most 60 words in all. The renderer refuses more. |
+| `participants` | O | list of `{speaker, short, aliases, role, evidence}` | `speaker` is a transcript speaker such as `"p2"`; `short` is the name to show, e.g. "Катя"; `aliases` is a list of other names. `role` is a job or a side as someone said it, e.g. "IT manager", or "Fieldnote" for "Maya and Tom from Fieldnote", with that sentence in `evidence`, or as the user gave it. A mixed recording has no participants. |
+| `mentioned` | O | list of `{name, aliases, note, evidence}` | People named in the meeting. In a tracks or labelled transcript they were not present. In a mixed recording or a Recordings folder, `mentioned` is how you name people the words name, and the name must be said in the evidence. |
+| `dates` | O | list of `{date, said, text, evidence}` | Dates people said. `said` is the spoken words and must appear in the evidence. A day and month said without a year take the meeting's year. Without a meeting date, use a year only when a said weekday fixes it ("Monday 7 December" is 2026), and otherwise leave the date out. |
+| `decisions` | items | list of `{id, text, detail, evidence, disagreement, cautions}` | `disagreement` is the id of the debate that ended in this decision. |
+| `actions` | items | list of `{id, owner, task, detail, due, dueSaid, blocker, taken, evidence, cautions}` | `owner` is a speaker id, a `mentioned` name, or `null`. `due` is a date or `null`, and `dueSaid` the spoken words. `blocker` is `true` only when people said other work waits on this task. `taken` is `true` only with `owner: null`; see below. |
+| `questions` | items | list of `{id, text, status, evidence, cautions}` | `status` is text: what people said happens next, e.g. "Maya asks the finance lead first". Leave it out rather than writing "open", because everything in that column is open. |
+| `risks` | items | list of `{id, text, detail, mitigation, evidence, cautions}` | `mitigation` is text, only if someone said it. |
+| `disagreements` | items | list of `{id, topic, decision, positions, resolution}` | `decision` is a decision id or `null`. Each position is `{speaker, name, view, evidence}`, with a speaker id or a `name`. `resolution` is `{text, evidence}`, or `null` while it is unresolved. |
+| `facts` | items | list of `{id, text, evidence, cautions}` | Numbers and facts people will want later. |
+| `chapters` | R | at least one `{title, start, gist, aside}` | `start` is a segment id: the first chapter starts at the first segment, and the rest follow in order. `gist` is one line of text. `aside: true` marks small talk. |
+| `quotes` | O | at most 6 `{segment, text}` | `text` is an exact substring of the segment. The page shows each quote inside its chapter. |
+| `cautions` | O | list of `{id, segment, heard, meant, why, evidence}` | Places where the recognized text changes what a sentence means: a lost "не", a wrong number, the wrong person. `heard` is an exact substring of the segment. A name or term that is only spelled wrong goes in the glossary instead. |
+| `glossary` | O | list of `{meant, heard}` | `heard` is a list of spellings, e.g. `{"meant": "paywall", "heard": ["Payval", "PVAL"]}`. Every spelling occurs in the transcript, and search on the page finds all of them. |
 
-"R items" means the list is optional, but each item in it needs `id`, its text
-and `evidence`. Ids are short lower case words such as `d1`, `a3` or `x1`, and
-no two items share one.
+"items" means the list is optional, but each item in it needs `id`, its text
+and `evidence`. The exact contract is
+[analysis.schema.json](analysis.schema.json).
 
 ## Owners and dates
 
-- `owner: null` shows the task under "Никто не взял" (nobody took it).
-- `owner: null` with `taken: true` means someone took the task but the words do not say who. It happens in a mixed recording when a person says "I'll do it", and the page groups such tasks as taken by a person whose name was not said.
+- `owner: null` shows the task under "Nobody took it" ("Никто не взял" on a Russian page).
+- `owner: null` with `taken: true` means someone took the task but the words do not say who. It happens in a mixed recording when a person says "I'll do it", and the page groups such tasks as taken by a person whose name was not said. The renderer refuses `taken` on a task that has an owner.
 - In a mixed recording, and for anyone on the system channel of a Recordings folder, an owner who is not a speaker id must be named in the task's own evidence, e.g. "Дима, тогда этот фикс на тебе" for the owner "Дима". The same holds for the `name` of a disagreement position. The renderer accepts the name or a case form of it (Дима, Диме, Диму) written with a capital, as names are, and not a word that only looks like it.
-- `due` is an ISO date, and `dueSaid` is the spoken words, e.g. `"до вторника, 24 ноября"`. The renderer looks for `dueSaid` in the task's evidence after ignoring case, ё and punctuation, and fails if the words are not there. Without a meeting date you cannot resolve "by Friday", so keep only `dueSaid`, which the renderer checks the same way.
+- `due` is a date, and `dueSaid` is the spoken words, e.g. `"до вторника, 24 ноября"`. The renderer looks for `dueSaid` in the task's evidence after ignoring case, ё and punctuation, and fails if the words are not there. Without a meeting date you cannot resolve "by Friday", so keep only `dueSaid`: the task then shows the words in quotes, and the count of tasks with a due date said includes it. Copy any spoken deadline, e.g. "after the call" or "in the week before launch", not only a day.
 
 ## Example
 
