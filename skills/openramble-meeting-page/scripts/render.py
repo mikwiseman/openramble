@@ -2,6 +2,10 @@
 """Render a meeting page: transcript.json + analysis.json -> one self-contained HTML file.
 
     render.py transcript.json analysis.json [--audio FILE] [--out PAGE.html]
+    render.py transcript.json analysis.json --claims
+
+--claims writes nothing and prints every claim beside the sentence it cites
+first, so the analysis can be read against the transcript in one pass.
 
 The analysis is validated first. Every problem is listed and nothing is written
 until all of them are fixed: an unknown or silent segment, a claim without
@@ -268,15 +272,27 @@ def data_json(obj):
 # ------------------------------------------------------------------ validation
 
 def validate(tr, an, audio=None):
-    """Return (errors, warnings). Nothing is dropped silently: any error stops the render."""
+    """Return (errors, warnings). Nothing is dropped silently: any error stops the render.
+    A schema error does not hide the rest: the other checks still run as far as the analysis's shape allows,
+    so one round of fixes can clear everything."""
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     errors = schema_errors(an, schema, schema)
-    for k in ("schemaVersion", "kind", "timed", "duration", "speakers", "segments"):
-        if k not in tr:
-            errors.append(f"transcript: missing \"{k}\" (write it with transcript.py)")
-    if errors:
+    missing = [k for k in ("schemaVersion", "kind", "timed", "duration", "speakers", "segments") if k not in tr]
+    errors += [f"transcript: missing \"{k}\" (write it with transcript.py)" for k in missing]
+    if missing:
         return errors, []
     warnings = []
+    if not errors:
+        checks(tr, an, audio, errors, warnings)
+        return errors, warnings
+    try:
+        checks(tr, an, audio, errors, warnings)
+    except (KeyError, TypeError, AttributeError, ValueError, IndexError):
+        pass  # the shape is too broken to go on; the schema errors above say what to fix first
+    return errors, []
+
+
+def checks(tr, an, audio, errors, warnings):
     segs = {s["id"]: s for s in tr["segments"]}
     index = {s["id"]: i for i, s in enumerate(tr["segments"])}
     speakers = {p["id"]: p for p in tr["speakers"]}
@@ -286,7 +302,9 @@ def validate(tr, an, audio=None):
     unnamed = "where voices are not told apart (a mixed recording, a Recordings system channel)"
 
     def cite(path, ids):
-        for i in ids or []:
+        if not isinstance(ids, list):
+            return  # the schema has reported it
+        for i in ids:
             s = segs.get(i)
             if s is None:
                 errors.append(f"{path}: unknown segment {i}")
@@ -402,11 +420,10 @@ def validate(tr, an, audio=None):
         errors.append(f"--audio: {audio} does not exist")
     words = sum(len(x["text"].split()) for x in an.get("lead", []))
     if words > 60:
-        warnings.append(f"lead: {words} words; keep it to 60, the outcome only")
+        errors.append(f"lead: {words} words, at most 60; keep the outcome only")
     for path, text in model_texts(an):
         if MARKDOWN.search(text):
             warnings.append(f"{path}: looks like Markdown; the page shows plain text")
-    return errors, warnings
 
 
 def model_texts(an):
@@ -421,6 +438,49 @@ def model_texts(an):
             for f in fields:
                 if x.get(f):
                     out.append((f"{kind}[{n}].{f}", x[f]))
+    return out
+
+
+def claims(tr, an):
+    """Every claim beside the sentence it cites first, to read in one pass before rendering: does it say that?"""
+    segs = {s["id"]: s for s in tr["segments"]}
+    index = {s["id"]: i for i, s in enumerate(tr["segments"], 1)}
+    names = {p["id"]: p["name"] for p in tr["speakers"]}
+    long = tr["duration"] >= 3600
+    out = []
+
+    def add(label, text, evidence):
+        sid = evidence[0]
+        s = segs.get(sid)
+        out.append(f"{label}  {text}")
+        if s is None:
+            out.append(f"    {sid} is not in the transcript")
+            return
+        at = clock(s["start"], long) if tr["timed"] else f"¶{index[sid]}"
+        who = names.get(s["speaker"])
+        out.append(f"    {sid} {at} {who + ': ' if who else ''}{s['text']}")
+
+    for n, x in enumerate(an.get("lead", [])):
+        add(f"lead[{n}]", x["text"], x["evidence"])
+    for p in an.get("participants", []):
+        if p.get("role") and p.get("evidence"):
+            add(p["speaker"], f"[{names.get(p['speaker'], p['speaker'])}] {p['role']}", p["evidence"])
+    for d in an.get("dates", []):
+        add(d["date"], f"{d['text']} · {d['said']}", d["evidence"])
+    for kind, field in (("decisions", "text"), ("actions", "task"), ("questions", "text"), ("risks", "text"),
+                        ("facts", "text")):
+        for x in an.get(kind, []):
+            text = x[field]
+            if kind == "actions":
+                o = x["owner"]
+                owner = names.get(o, o) if o else ("taken, no name said" if x.get("taken") else "nobody")
+                text = f"[{owner}] {text}" + (f" · {x['dueSaid']}" if x.get("dueSaid") else "")
+            add(x["id"], text, x["evidence"])
+    for x in an.get("disagreements", []):
+        for p in x["positions"]:
+            add(x["id"], f"[{names.get(p.get('speaker')) or p.get('name') or '?'}] {p['view']}", p["evidence"])
+        if x.get("resolution"):
+            add(x["id"], x["resolution"]["text"], x["resolution"]["evidence"])
     return out
 
 
@@ -565,6 +625,9 @@ class Page:
                 f'<span class="txt">{body}{sub}</span>'
                 f'<span class="at">{self.at(primary)}</span></summary>'
                 f'<div class="fold">{fold}{self.evlist(evidence)}</div></details></li>')
+
+    def said(self, words):
+        return f"«{words}»" if self.lang == "ru" else f"“{words}”"
 
     def pill(self, text, cls=""):
         return f' <span class="pill {cls}">{esc(text)}</span>'
@@ -783,7 +846,7 @@ class Page:
 
         owned, unowned = self.task_groups()
         n_owned = sum(len(t) for _, t in owned)
-        k_due = sum(1 for _, ts in owned for a in ts if a.get("due"))
+        k_due = sum(1 for _, ts in owned for a in ts if a.get("due") or a.get("dueSaid"))
         groups, copy = [], self.copy_text(owned, unowned)
         for o, tasks in owned:
             name, cls, note = self.owner_name(o)
@@ -836,10 +899,12 @@ class Page:
         pills = (self.pill(L["blocker"], "warn") if a.get("blocker") else "")
         if a.get("due"):
             pills += self.pill(L["due"].format(d=self.date_short(a["due"])), "due")
+        elif a.get("dueSaid"):  # no date to resolve it against: the spoken words, as words
+            pills += self.pill(self.said(a["dueSaid"]), "due said")
         if cs:
             pills += self.pill(L["check"], "chk")
         fold = (f'<p class="detail">{self.tx(a["detail"])}</p>' if a.get("detail") else "")
-        if a.get("dueSaid"):
+        if a.get("due") and a.get("dueSaid"):
             fold += f'<p class="detail">{esc(L["dueSaid"].format(s=a["dueSaid"]))}</p>'
         fold += self.caution_html(cs)
         cls = "act" if a["owner"] is not None or a.get("taken") else "act none"
@@ -861,6 +926,8 @@ class Page:
                     bits[0] += f" ({L['blocker']})"
                 if a.get("due"):
                     bits.append(L["due"].format(d=self.date_short(a["due"])))
+                elif a.get("dueSaid"):
+                    bits.append(self.said(a["dueSaid"]))
                 bits.append(self.at(a["evidence"][0]))
                 lines.append("- [ ] " + " — ".join(bits))
             lines.append("")
@@ -1150,7 +1217,24 @@ def main(argv=None):
     ap.add_argument("--audio", help="one file with everyone (Zoom's mixed audio, a Recordings audio.m4a)")
     ap.add_argument("--out", help="page path; default: <title>.html next to the recording (or next to transcript.json "
                                   "when there is no audio), never over another file")
+    ap.add_argument("--claims", action="store_true",
+                    help="write nothing: print every claim beside the sentence it cites first, then any problems")
     a = ap.parse_args(argv)
+    if a.claims:
+        try:
+            tr = json.loads(Path(a.transcript).read_text(encoding="utf-8"))
+            an = json.loads(Path(a.analysis).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 1
+        errors, _ = validate(tr, an)
+        try:
+            print("\n".join(claims(tr, an)))
+        except (KeyError, TypeError, AttributeError, IndexError):
+            pass  # too broken to list; the problems below say why
+        for err in errors:
+            print(f"  - {err}", file=sys.stderr)
+        return 1 if errors else 0
     try:
         out, warnings = render_file(a.transcript, a.analysis, a.out, a.audio)
     except Invalid as e:

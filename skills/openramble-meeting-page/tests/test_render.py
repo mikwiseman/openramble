@@ -1,8 +1,10 @@
 """Renderer tests: python3 -m unittest discover -s skills/openramble-meeting-page/tests"""
 import base64
+import contextlib
 import copy
 import hashlib
 import html.parser
+import io
 import json
 import os
 import re
@@ -110,6 +112,21 @@ class RenderTests(unittest.TestCase):
         self.assertIn('id="s0006"', page)  # silent text is shown, greyed and unattributed
         self.assertIn("распознано в тишине", page)
         self.assertEqual(warnings, [])
+
+    def test_a_spoken_due_counts_and_shows_without_a_date(self):
+        # Zoom tracks carry no meeting date, so "by Friday" stays words; the page still says a due was named
+        tr, an = transcript(), analysis()
+        an["actions"][0].update(due=None, dueSaid="до пятницы")
+        page, _ = render_page(tr, an)
+        self.assertIn("срок назван у 1 из 2", page)
+        summary = re.search(r'id="i-a1"><summary>(.*?)</summary>', page, re.S).group(1)
+        self.assertIn('<span class="pill due said">«до пятницы»</span>', summary)
+        copy = json.loads(re.search(r'<script type="application/json" id="data">(.*?)</script>', page, re.S).group(1))["copy"]
+        self.assertIn("«до пятницы»", copy)
+        an["language"] = "en"
+        page, _ = render_page(tr, an)
+        self.assertIn("due date said for 1 of 2", page)
+        self.assertIn('<span class="pill due said">“до пятницы”</span>', page)
 
     def test_evidence_gives_the_quote_its_own_line(self):
         # time and speaker sit on a line above the quote, so the quote keeps the column's full width
@@ -435,12 +452,47 @@ class ValidationTests(unittest.TestCase):
         an["quotes"][0]["text"] = "нет"
         self.assertEqual(len(errors_of(tr, an)), 3)
 
+    def test_a_schema_error_does_not_hide_the_other_problems(self):
+        # one render round shows a wrong type and a wrong use of a field together
+        tr, an = transcript(), analysis()
+        an["actions"][0].update(blocker="без него релиза нет", taken=True)
+        an["decisions"][0]["evidence"] = "s0004"  # a string, not a list: one schema error, not one per letter
+        errs = errors_of(tr, an)
+        self.assertTrue(any("actions[0].blocker: must be boolean" in e for e in errs), errs)
+        self.assertTrue(any("actions[0].taken: only for a task with owner null" in e for e in errs), errs)
+        self.assertFalse(any("unknown segment" in e for e in errs), errs)
+        an["actions"][1].pop("id")  # a missing field ends the other checks, never the schema report
+        self.assertTrue(any('missing "id"' in e for e in errors_of(tr, an)))
+
+    def test_lead_over_60_words_is_refused(self):
+        self.expect_lead(61, "61 words")
+        tr, an = transcript(), analysis()
+        an["lead"][0]["text"] = " ".join(["слово"] * 60)
+        self.assertEqual(errors_of(tr, an), [])
+
+    def expect_lead(self, n, needle):
+        tr, an = transcript(), analysis()
+        an["lead"][0]["text"] = " ".join(["слово"] * n)
+        self.assertTrue(any(needle in e for e in errors_of(tr, an)))
+
+    def test_claims_shows_each_claim_beside_its_sentence(self):
+        with tempfile.TemporaryDirectory() as d:
+            tp, ap = Path(d) / "transcript.json", Path(d) / "analysis.json"
+            tp.write_text(json.dumps(transcript(), ensure_ascii=False), encoding="utf-8")
+            ap.write_text(json.dumps(analysis(), ensure_ascii=False), encoding="utf-8")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(render.main([str(tp), str(ap), "--claims"]), 0)
+            lines = out.getvalue().splitlines()
+            self.assertIn("a1  [Дмитрий Орлов] Фикс · до пятницы, 20 ноября", lines)
+            self.assertIn("    s0003 00:08 Анна Белова: Да, беру.", lines)
+            self.assertIn("d1  Релиз в четверг", lines)
+            self.assertEqual(sorted(p.name for p in Path(d).iterdir()), ["analysis.json", "transcript.json"])
+
     def test_warnings(self):
         tr, an = transcript(), analysis()
-        an["lead"][0]["text"] = " ".join(["слово"] * 61)
         an["decisions"][0]["text"] = "**жирно**"
         _, warnings = render.validate(tr, an)
-        self.assertTrue(any("61 words" in w for w in warnings))
         self.assertTrue(any("Markdown" in w for w in warnings))
 
 

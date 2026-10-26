@@ -51,7 +51,8 @@ h1 .kind{font-weight:400;color:var(--ink-2)}
 sup{line-height:0;vertical-align:super}
 a.ts{position:relative;font:500 .75rem var(--mono);color:var(--ev);text-decoration:none;white-space:nowrap;border-radius:3px;padding:0 .15em}
 a.ts::after{content:"";position:absolute;inset:-9px -6px}
-.lead sup a.ts{font-size:.6875rem;margin-left:.12em;letter-spacing:0}
+.lead sup{margin-left:.2em}
+.lead sup a.ts{font-size:.6875rem;letter-spacing:0}
 a.ts:hover{text-decoration:underline}
 a.ts[aria-expanded="true"]{background:var(--ev);color:var(--paper)}
 .evp{margin:16px 0 0;padding:4px 0 4px 16px;border-left:2px solid var(--ev);max-width:760px}
@@ -136,6 +137,7 @@ summary:hover .txt{text-decoration:underline;text-decoration-color:var(--rule);t
 .pill.warn{color:var(--open)}
 .pill.chk{color:var(--ev)}
 .pill.due{background:var(--due-bg);color:var(--due-ink);border-color:var(--due-bg)}
+.pill.due.said{background:none;color:var(--ink);border-color:var(--ink);white-space:normal;max-width:100%}
 .fold{padding:0 0 16px 26px}
 .detail{margin:0 0 8px;font:400 .875rem/1.5 var(--sans);color:var(--ink-2)}
 .detail b{color:var(--ink);font-weight:600}
