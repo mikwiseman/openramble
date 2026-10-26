@@ -1,0 +1,38 @@
+# The OpenRamble transcription server. See docs/server.md.
+#
+# It listens on 127.0.0.1:8080 behind Caddy, which provides HTTPS. The
+# sandbox below lets it reach no address outside this machine, for the
+# server and for the ffmpeg it runs, and gives it no home, no devices and a
+# read-only system.
+[Unit]
+Description=OpenRamble transcription server
+Documentation=https://github.com/mikwiseman/openramble/blob/main/docs/server.md
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/openramble/bin/openramble serve --listen 127.0.0.1:8080 --model-dir /opt/openramble/models/parakeet-ultra-gguf --engines 4 --keys %d/keys
+LoadCredential=keys:/etc/openramble/keys
+DynamicUser=yes
+# Uploads and decoded audio go to unnamed files here, freed on any exit.
+Environment=TMPDIR=/var/tmp
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=localhost
+# Four engines take about 1.15 GB each on transcribe.cpp 0.2.0.
+MemoryMax=7G
+LimitCORE=0
+# SIGTERM goes to the server alone, so a running ffmpeg is not killed while
+# the server drains: jobs in flight get up to 25 minutes.
+KillMode=mixed
+TimeoutStopSec=1560
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+# HTTPS in front of the OpenRamble server. Replace stt.example.com with the
+# name that points at this machine; Caddy obtains its certificate itself.
+# The firewall should allow 443 only from the callers' addresses.
+stt.example.com {
+	request_body {
+		max_size 2GiB
+	}
+	reverse_proxy 127.0.0.1:8080 {
+		# During a restart the old process has closed the port and the new one
+		# has not opened it yet, for well under a second (two after a crash).
+		# Caddy retries a refused connection for this long instead of
+		# answering 502, which the meetings caller cannot tell from a lost
+		# result. Once open, the port answers 429 until the engines are ready.
+		lb_try_duration 15s
+	}
+}

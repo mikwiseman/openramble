@@ -144,6 +144,58 @@ jobs:
           cargo test -p ramble-core -p ramble-text -p ramble-model -p ramble-audio -p ramble-history \
             --all-features
 
+  linux-server:
+    name: Linux server
+    # The server's target is an Arm VPS with no graphics card, so it is built
+    # and tested on Arm Linux, with the ffmpeg it runs in production.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # The inference runtime is C++ compiled by cmake, and rebuilding it from
+      # source on every run is what makes these jobs take half an hour. Cached
+      # on the lockfile, so a dependency change still rebuilds and everything
+      # else does not.
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          workspaces: ". -> target"
+
+      - name: System tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg cmake shellcheck
+
+      # rust-toolchain.toml pins the version; rustup honours it. Installed here
+      # only if this runner image does not ship rustup.
+      - name: Rust version
+        run: |
+          if ! command -v rustup > /dev/null; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.cargo/bin:$PATH"
+          fi
+          rustc --version
+          cargo --version
+
+      - name: Lint
+        run: cargo clippy -p openramble-cli -p ramble-engine --all-targets -- -D warnings
+
+      # The contract tests run the real server on loopback with real ffmpeg,
+      # and deploy/transcribe-stdin against it with the runner's python3 and
+      # curl, as sshd would run it.
+      - name: Test
+        run: cargo test -p openramble-cli -p ramble-engine
+
+      # systemd-analyze checks that ExecStart names an executable, so the
+      # freshly built binary stands in at the installed path.
+      - name: Deployment files
+        run: |
+          shellcheck apps/cli/deploy/install.sh
+          ./scripts/tests/test-server-install.sh
+          sudo install -D -m 0755 target/debug/openramble /opt/openramble/bin/openramble
+          sudo systemd-analyze verify apps/cli/deploy/openramble.service
+
   desktop:
     name: Desktop app
     strategy:
@@ -275,6 +327,10 @@ jobs:
       # The main promise of the product is verified automatically, not by word of mouth.
       - name: Check that the network is only where it is allowed
         run: ./scripts/check-network-surface.sh
+
+      # And the gate itself catches each way around it that has been found.
+      - name: Check the gate
+        run: ./scripts/tests/test-network-gate.sh
 
   universal-build:
     name: Apple Silicon and Intel

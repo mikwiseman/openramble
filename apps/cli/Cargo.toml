@@ -1,0 +1,30 @@
+[package]
+name = "openramble-cli"
+description = "Transcribe audio files with the OpenRamble engine on Linux"
+version.workspace = true
+edition.workspace = true
+# File locks (std::fs::File::try_lock) arrived in 1.89; the rest of the
+# workspace still builds on 1.85.
+rust-version = "1.89"
+license.workspace = true
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "openramble"
+path = "src/main.rs"
+
+[dependencies]
+httparse = "1"
+ramble-engine = { path = "../../core/ramble-engine" }
+ramble-model = { path = "../../core/ramble-model" }
+ramble-text = { path = "../../core/ramble-text" }
+serde_json = "1"
+sha2 = "0.11"
+signal-hook = "0.3"
+tempfile = "3"
+
+[lints]
+workspace = true

@@ -130,7 +130,7 @@ The Mac app connects to the internet only to download the speech model and to ch
 | Check for updates | About once a day, unless you turn it off in Settings → About | GitHub Pages | Your IP address and the app version |
 | Download an update | Only after you click | GitHub Releases | Your IP address and the download request |
 
-The update check sends no report about your Mac, its system version or its language. OpenRamble downloads fixed versions of the model files and checks each file against its SHA-256 checksum before it installs the model. The early Windows and Linux version connects to the internet only to download the speech model when you start the download.
+The update check sends no report about your Mac, its system version or its language. OpenRamble downloads fixed versions of the model files and checks each file against its SHA-256 checksum before it installs the model. The early Windows and Linux version connects to the internet only to download the speech model when you start the download. The Linux transcription server in `apps/cli` accepts connections from your own applications and makes none.
 
 You can verify the network limits yourself. On every pull request and every push to main, an automated check runs [`scripts/check-network-surface.sh`](scripts/check-network-surface.sh). The check fails the build if any app code uses a network API outside the model download code, the update code and one file that opens local recordings for playback. With a model installed, the first script below runs recognition with the network blocked. The second script records every network call and fails if recognition makes one.
 
@@ -155,6 +155,10 @@ OpenRamble stores audio and text from your dictations and recordings only on you
 | The copy of text that could not be pasted, kept for Insert Last Dictation | In memory only, until a later dictation is pasted, you delete its History entry, or you quit. Dictation history keeps its own copy. |
 
 To report a problem, choose Settings → About → Save Error Report. OpenRamble saves a ZIP file on your Mac, and you decide whether to send it to the developer. The file holds technical events, timings, error codes, the app and macOS versions, the app's architecture (arm64 or x86_64), and up to five recent Apple crash reports rebuilt without your file paths or device identifiers. It never holds audio, transcripts or clipboard contents, and OpenRamble does not upload it. [docs/diagnostics.md](docs/diagnostics.md) lists exactly what it contains.
+
+### The Linux transcription server
+
+`openramble serve` in [`apps/cli`](apps/cli) is a separate program you run on your own Linux server so your other applications can turn audio into text. Unlike the Mac app, it receives audio over the network. Your applications send each file to it, and a reverse proxy on the same machine provides HTTPS. It accepts connections on one local port and opens none. It writes each upload and its decoded audio only to temporary files that have no name on disk, and the system frees them when the request ends, even if the server crashes. Its ssh client, `transcribe-stdin`, keeps an upload it receives the same way until it has sent it. It keeps no audio, no transcripts and no history. Its log records the caller's key label, lengths, timings and status codes, never text, words, key terms or file names. The automated network check allows exactly one file, `apps/cli/src/listen.rs`, to accept connections, and forbids the unsafe code a raw socket would need and any dependency not on its list; the systemd service blocks every address outside the machine, for the server and for the ffmpeg decoder it runs. [docs/server.md](docs/server.md) describes its API and how to run it.
 
 ## How OpenRamble compares
 

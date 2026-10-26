@@ -53,6 +53,26 @@ impl std::fmt::Display for EngineError {
 
 impl std::error::Error for EngineError {}
 
+/// One recognized word and where it lies in the clip, in milliseconds.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Word {
+    pub text: String,
+    pub start_ms: u32,
+    pub end_ms: u32,
+}
+
+/// The text of a clip with its words and their times.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Recognized {
+    /// Exactly what [`Engine::transcribe`] returns for the same clip.
+    pub text: String,
+    /// The raw words in order, each trimmed and never empty.
+    pub words: Vec<Word>,
+    /// The decode hit the runtime's output budget; the words are what came
+    /// before it.
+    pub truncated: bool,
+}
+
 /// A loaded recognizer.
 ///
 /// The session is behind a mutex because the runtime's session is `Send` but not
@@ -75,7 +95,7 @@ impl Engine {
     /// the filename.
     pub fn load(model_directory: &Path) -> Result<Self, EngineError> {
         install_logging_policy();
-        let model_path = find_model_file(model_directory)
+        let model_path = model_file(model_directory)
             .ok_or_else(|| EngineError::NoModel(model_directory.to_path_buf()))?;
 
         let requested = preferred_backend();
@@ -137,6 +157,26 @@ impl Engine {
         Ok(transcript.text)
     }
 
+    /// Recognize 16 kHz mono audio and say where each word lies.
+    ///
+    /// The text is the same as [`Engine::transcribe`] gives: Parakeet builds
+    /// its words either way and only drops them when no times were asked for.
+    /// Padding goes at the end of a short clip, so it moves no time; times are
+    /// clamped to the clip so the padding can never hold a word.
+    pub fn recognize(&self, samples: &[f32]) -> Result<Recognized, EngineError> {
+        let prepared = ramble_audio::prepare_for_engine(samples);
+        let options = RunOptions {
+            timestamps: TimestampKind::Word,
+            ..Default::default()
+        };
+        let mut session = self
+            .session
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let outcome = session.run(&prepared, &options);
+        recognized(outcome, session.was_aborted(), clip_ms(samples.len()))
+    }
+
     /// Drop the model before the process exits.
     ///
     /// Not tidiness. ggml registers static destructors that abort the process —
@@ -147,6 +187,54 @@ impl Engine {
     pub fn shutdown(self) {
         drop(self);
     }
+}
+
+/// The length of a 16 kHz clip in whole milliseconds.
+fn clip_ms(samples: usize) -> u32 {
+    let ms = samples as u64 * 1000 / u64::from(ramble_audio::ENGINE_SAMPLE_RATE);
+    u32::try_from(ms).unwrap_or(u32::MAX)
+}
+
+/// What a run produced, in this crate's terms.
+///
+/// A truncated decode is still an answer: its words are real and the caller
+/// is told the rest is missing. An abort is the caller's own cancellation.
+fn recognized(
+    outcome: Result<transcribe_cpp::Transcript, transcribe_cpp::Error>,
+    aborted: bool,
+    clip_ms: u32,
+) -> Result<Recognized, EngineError> {
+    let (transcript, truncated) = match outcome {
+        _ if aborted => return Err(EngineError::Cancelled),
+        Ok(transcript) => (transcript, false),
+        Err(transcribe_cpp::Error::OutputTruncated { partial, .. }) => {
+            (partial.map(|partial| *partial).unwrap_or_default(), true)
+        }
+        Err(transcribe_cpp::Error::Aborted { .. }) => return Err(EngineError::Cancelled),
+        Err(error) => return Err(EngineError::Run(error.to_string())),
+    };
+    let clamp = |ms: i64| ms.clamp(0, i64::from(clip_ms)) as u32;
+    let words = transcript
+        .words
+        .into_iter()
+        .filter_map(|word| {
+            let text = word.text.trim();
+            if text.is_empty() {
+                return None;
+            }
+            let start_ms = clamp(word.t0_ms);
+            Some(Word {
+                text: text.to_string(),
+                start_ms,
+                end_ms: clamp(word.t1_ms).max(start_ms),
+            })
+        })
+        .collect();
+    Ok(Recognized {
+        text: transcript.text,
+        words,
+        truncated,
+    })
 }
 
 /// Decide once what the runtime is allowed to print.
@@ -216,8 +304,8 @@ fn load_with_fallback(path: &Path, requested: Backend) -> Result<(Model, Backend
     }
 }
 
-/// The single `.gguf` in a directory.
-fn find_model_file(directory: &Path) -> Option<PathBuf> {
+/// The `.gguf` in a directory: the first by name if there are several.
+pub fn model_file(directory: &Path) -> Option<PathBuf> {
     let mut candidates: Vec<PathBuf> = std::fs::read_dir(directory)
         .ok()?
         .flatten()
@@ -238,6 +326,134 @@ fn find_model_file(directory: &Path) -> Option<PathBuf> {
 mod tests {
     use super::*;
 
+    fn runtime_word(text: &str, t0_ms: i64, t1_ms: i64) -> transcribe_cpp::Word {
+        transcribe_cpp::Word {
+            t0_ms,
+            t1_ms,
+            text: text.into(),
+            ..Default::default()
+        }
+    }
+
+    fn transcript(text: &str, words: Vec<transcribe_cpp::Word>) -> transcribe_cpp::Transcript {
+        transcribe_cpp::Transcript {
+            text: text.into(),
+            words,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn word_times_are_clamped_into_the_clip_and_never_end_before_they_start() {
+        let outcome = Ok(transcript(
+            "early late inverted",
+            vec![
+                runtime_word("early", -40, 300),
+                runtime_word("late", 900, 1_400),
+                runtime_word("inverted", 700, 650),
+            ],
+        ));
+        let clamped = recognized(outcome, false, 1_000).unwrap();
+        assert_eq!(
+            clamped.words,
+            vec![
+                Word {
+                    text: "early".into(),
+                    start_ms: 0,
+                    end_ms: 300
+                },
+                Word {
+                    text: "late".into(),
+                    start_ms: 900,
+                    end_ms: 1_000
+                },
+                Word {
+                    text: "inverted".into(),
+                    start_ms: 700,
+                    end_ms: 700
+                },
+            ]
+        );
+        assert_eq!(clamped.text, "early late inverted");
+        assert!(!clamped.truncated);
+    }
+
+    #[test]
+    fn empty_words_are_dropped_and_the_order_is_kept() {
+        let outcome = Ok(transcript(
+            "one two",
+            vec![
+                runtime_word(" one", 0, 100),
+                runtime_word("  ", 100, 120),
+                runtime_word("", 120, 130),
+                runtime_word("two ", 130, 300),
+            ],
+        ));
+        let words: Vec<String> = recognized(outcome, false, 1_000)
+            .unwrap()
+            .words
+            .into_iter()
+            .map(|word| word.text)
+            .collect();
+        assert_eq!(words, ["one", "two"]);
+    }
+
+    #[test]
+    fn a_truncated_decode_keeps_its_partial_words() {
+        let outcome = Err(transcribe_cpp::Error::OutputTruncated {
+            message: "budget".into(),
+            partial: Some(Box::new(transcript(
+                "cut",
+                vec![runtime_word("cut", 0, 200)],
+            ))),
+        });
+        let partial = recognized(outcome, false, 1_000).unwrap();
+        assert!(partial.truncated);
+        assert_eq!(partial.text, "cut");
+        assert_eq!(partial.words.len(), 1);
+
+        let without_partial = Err(transcribe_cpp::Error::OutputTruncated {
+            message: "budget".into(),
+            partial: None,
+        });
+        let empty = recognized(without_partial, false, 1_000).unwrap();
+        assert_eq!(
+            empty,
+            Recognized {
+                truncated: true,
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn an_abort_is_a_cancellation_and_other_failures_stay_failures() {
+        let aborted = Err(transcribe_cpp::Error::Aborted {
+            message: "stop".into(),
+            partial: None,
+        });
+        assert!(matches!(
+            recognized(aborted, true, 1_000),
+            Err(EngineError::Cancelled)
+        ));
+        assert!(matches!(
+            recognized(Ok(transcript("x", vec![])), true, 1_000),
+            Err(EngineError::Cancelled)
+        ));
+        let failed = Err(transcribe_cpp::Error::InvalidArgument("bad".into()));
+        assert!(matches!(
+            recognized(failed, false, 1_000),
+            Err(EngineError::Run(_))
+        ));
+    }
+
+    #[test]
+    fn the_clip_length_is_counted_in_milliseconds_of_16_khz_audio() {
+        assert_eq!(clip_ms(16_000), 1_000);
+        assert_eq!(clip_ms(8), 0);
+        assert_eq!(clip_ms(24_000), 1_500);
+    }
+
     #[test]
     fn a_directory_without_a_model_says_so_rather_than_panicking() {
         let directory = tempfile::tempdir().unwrap();
@@ -251,16 +467,13 @@ mod tests {
     fn the_model_file_is_found_by_extension_and_chosen_deterministically() {
         let directory = tempfile::tempdir().unwrap();
         std::fs::write(directory.path().join("notes.txt"), b"x").unwrap();
-        assert_eq!(find_model_file(directory.path()), None);
+        assert_eq!(model_file(directory.path()), None);
 
         std::fs::write(directory.path().join("b-model.gguf"), b"x").unwrap();
         std::fs::write(directory.path().join("a-model.gguf"), b"x").unwrap();
         // The same answer every launch, not whatever the filesystem listed first.
         assert_eq!(
-            find_model_file(directory.path())
-                .unwrap()
-                .file_name()
-                .unwrap(),
+            model_file(directory.path()).unwrap().file_name().unwrap(),
             "a-model.gguf"
         );
     }
