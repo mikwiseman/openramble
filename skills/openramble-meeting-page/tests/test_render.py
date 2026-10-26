@@ -209,6 +209,20 @@ class RenderTests(unittest.TestCase):
         self.assertIn(">¶4<", page)
         self.assertNotIn('class="strip"', page)
         self.assertNotIn('id="player"', page)
+        # ¶ is a sentence's position here, so no mark that links back to a claim may look like one
+        marks = re.findall(r'<a class="bk [^"]+"[^>]*>([^<]+)</a>', page)
+        self.assertTrue(marks)
+        self.assertEqual([m for m in marks if m.startswith("¶")], [])
+
+    def test_marks_follow_the_sentence_they_cite(self):
+        page, _ = render_page(transcript(), analysis())
+        # s0004 is cited by the lead and by decision 1: both marks sit right after it, outcome first
+        m = re.search(r'id="s0004"[^>]*>[^<]*</span>((?:⁠<a class="bk [^"]+"[^>]*>[^<]+</a>)+)', page)
+        self.assertIsNotNone(m)
+        self.assertEqual(re.findall(r">([^<]+)</a>", m.group(1)), ["Σ1", "◆1"])
+        self.assertNotIn('class="bks"', page)  # no stack in the gutter, away from its sentences
+        self.assertNotRegex(page, r'class="bk[^"]*\blead\b')  # .lead is the outcome section's own class
+        self.assertIn("Σ итог", page)  # the marks are explained in "Как читать"
 
     def test_never_overwrites_a_foreign_file(self):
         with tempfile.TemporaryDirectory() as d:

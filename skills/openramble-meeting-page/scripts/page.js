@@ -26,6 +26,7 @@
   let backY = null;
   function flash(el) {
     if (!el) return;
+    $$('.here').forEach(x => x.classList.remove('here'));
     el.classList.remove('flash');
     void el.offsetWidth;
     el.classList.add('flash');
@@ -353,5 +354,6 @@
   if (location.hash.length > 1) {
     const el = d.getElementById(decodeURIComponent(location.hash.slice(1)));
     if (el && el.matches('details')) { el.open = true; el.scrollIntoView({ block: 'center' }); }
+    if (el && el.matches('.sg')) { el.classList.add('here'); el.scrollIntoView({ block: 'center' }); }
   }
 })();

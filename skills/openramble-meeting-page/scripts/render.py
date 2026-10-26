@@ -59,6 +59,8 @@ L10N = {
                 "mixed": "Запись одна, общая, поэтому говорящие не подписаны: угадывать их по голосу страница не станет."},
         "verbatim": "Текст стенограммы приведён так, как его распознал OpenRamble, без правки: имена, числа и термины могли записаться иначе.",
         "glossary": "В стенограмме → имелось в виду", "ear": "Проверьте на слух",
+        "marks": "Значки после фраз ведут к пунктам, которые на них ссылаются: "
+                 "Σ\u00a0итог, ◆\u00a0решение, ●\u00a0задача, ?\u00a0вопрос, ▲\u00a0риск.",
         "silent": "распознано в тишине, вероятно, не сказано; никому не приписано",
         "failed": "не распознано {a}–{b}", "speech": "Речь", "listen": "Слушать запись",
         "colophon": "Расшифровано: {asr}. {src} Итог, решения и задачи написаны моделью по стенограмме; у каждого пункта есть ссылка на момент записи, по которой его можно проверить. Страница не делает сетевых запросов.",
@@ -98,6 +100,8 @@ L10N = {
                 "mixed": "There is one shared recording, so speakers are not labelled: this page does not guess them from voices."},
         "verbatim": "The transcript is exactly what OpenRamble recognised, unedited: names, numbers and terms may be spelled differently.",
         "glossary": "In the transcript → meant", "ear": "Check by ear",
+        "marks": "Marks after sentences lead to the items that cite them: "
+                 "Σ\u00a0outcome, ◆\u00a0decision, ●\u00a0task, ?\u00a0question, ▲\u00a0risk.",
         "silent": "recognised in silence, probably not said; not attributed to anyone",
         "failed": "not recognised {a}–{b}", "speech": "Speech", "listen": "Play the recording",
         "colophon": "Transcribed by {asr}. {src} The outcome, decisions and tasks were written by a model from the transcript; each links to the moment it came from, so it can be checked. This page makes no network requests.",
@@ -113,6 +117,7 @@ L10N = {
     },
 }
 
+MARKS = "Σ◆●?▲"  # outcome, decision, task, question, risk: the order of marks after a sentence
 MARKDOWN = re.compile(r"\*\*|__|`|^\s*#{1,6}\s|^\s*[-*+]\s|\[[^\]]+\]\([^)]+\)", re.M)
 
 
@@ -453,7 +458,7 @@ class Page:
                 self.talk[s["speaker"]] = self.talk.get(s["speaker"], 0) + max(0.0, s["end"] - s["start"])
         self.talk_total = sum(self.talk.values()) or 1.0
         self.items = {}      # analysis id -> (dom id, symbol, number, label)
-        self.backlinks = {}  # segment id -> [(token, href, title, class)]
+        self.backlinks = {}  # segment id -> [(token, href, title, class, order)]
         self.chapters = self.chapter_list()
 
     # ---------- basics
@@ -510,7 +515,7 @@ class Page:
             lst = self.backlinks.setdefault(sid, [])
             tok = f"{kind_symbol}{number}"
             if all(t[0] != tok for t in lst):
-                lst.append((tok, f"#{dom_id}", label, cls))
+                lst.append((tok, f"#{dom_id}", label, cls, (MARKS.index(kind_symbol), number)))
 
     # ---------- evidence lists (static, inside folds)
     def evlist(self, ids):
@@ -589,7 +594,7 @@ class Page:
         parts = []
         for n, x in enumerate(self.an["lead"]):
             primary = x["evidence"][0]
-            self.register("¶", n + 1, "lead", self.L["lead"], x["evidence"], "lead")
+            self.register("Σ", n + 1, "lead", self.L["lead"], x["evidence"], "sum")
             parts.append(f'<span class="ls">{self.tx(x["text"])}</span><sup><a class="ts" href="#{primary}" '
                          f'{self.ev_attr(x["evidence"])} aria-expanded="false">{self.at(primary)}</a></sup>')
         return (f'<section class="lead" id="lead" aria-label="{esc(self.L["lead"])}" data-host>'
@@ -933,6 +938,8 @@ class Page:
     def howto(self):
         an, L = self.an, self.L
         parts = [f'<p>{esc(L["src"][self.kind])} {esc(L["verbatim"])}</p>']
+        if self.backlinks:
+            parts.append(f'<p>{esc(L["marks"])}</p>')
         if an.get("cautions"):
             lis = []
             for c in an["cautions"]:
@@ -990,25 +997,22 @@ class Page:
                 continue
             p = self.sp.get(first["speaker"])
             cls = p["cls"] if p else "sp0"
-            toks = []
-            for s in turn:
-                for tok in self.backlinks.get(s["id"], []):
-                    if tok not in toks:
-                        toks.append(tok)
-            bks = ("<span class=\"bks\">" + "".join(
-                f'<a class="bk {cls}" href="{href}" title="{esc(title)}">{esc(tok)}</a>' for tok, href, title, cls in toks)
-                + "</span>") if toks else ""
             time_link = (f'<a class="tt" href="#{first["id"]}" data-sid="{first["id"]}">{self.at(first["id"])}</a>')
             who = f'<b class="who {cls}">{esc(p["short"])}</b> ' if p else ""
             spans = " ".join(f'<span class="sg{" cited" if s["id"] in self.backlinks else ""}" id="{s["id"]}"{self.times(s)}>'
-                             f'{esc(s["text"])}</span>' for s in turn)
+                             f'{esc(s["text"])}</span>{self.marks(s["id"])}' for s in turn)
             data_sp = f' data-sp="{p["id"]}"' if p else ""
-            chunk.append(f'<div class="turn"{data_sp}><div class="g">{time_link}{bks}</div>'
+            chunk.append(f'<div class="turn"{data_sp}><div class="g">{time_link}</div>'
                          f'<p>{who}{spans}</p></div>')
         flush()
         side = self.transcript_side()
         return (f'<section class="tx" id="transcript" aria-labelledby="tx-h"><h2 id="tx-h">{esc(L["transcript"])}</h2>'
                 f'<div class="tx-grid">{side}<div class="tx-body">{"".join(out)}</div></div></section>')
+
+    def marks(self, sid):
+        """The items citing a sentence, right after it: a word joiner keeps them on its line."""
+        return "".join(f'\u2060<a class="bk {cls}" href="{href}" title="{esc(title)}">{esc(tok)}</a>'
+                       for tok, href, title, cls, _ in sorted(self.backlinks.get(sid, []), key=lambda b: b[4]))
 
     def times(self, s):
         return f' data-s="{s["start"]:.2f}" data-e="{s["end"]:.2f}"' if self.timed else ""

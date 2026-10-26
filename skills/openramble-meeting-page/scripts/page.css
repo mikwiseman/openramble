@@ -224,15 +224,16 @@ h2{font:400 2rem/1.2 var(--serif);letter-spacing:-.01em}
 .tt{font:400 .75rem var(--mono);color:var(--ink-3);text-decoration:none;position:relative}
 a.tt::after{content:"";position:absolute;inset:-10px -6px}
 a.tt:hover{color:var(--ev);text-decoration:underline}
-.bks{display:flex;flex-direction:column;align-items:flex-end;gap:3px;margin-top:6px;font:400 .6875rem/1.4 var(--mono)}
-.bk{padding:2px 0;text-decoration:none;white-space:nowrap}
-@media (pointer:coarse){.bk{padding:8px 0}.bks{gap:0}}
-.bk.dec{color:var(--decision)}.bk.act{color:var(--ink)}.bk.opn{color:var(--open)}.bk.lead{color:var(--ev)}
+.bk{position:relative;top:-.45em;margin-left:.25em;font:500 .6875rem/1 var(--mono);text-decoration:none;white-space:nowrap}
+.bk::after{content:"";position:absolute;inset:-10px -3px}
+.bk.dec{color:var(--decision)}.bk.act{color:var(--ink)}.bk.opn{color:var(--open)}.bk.sum{color:var(--ev)}
 .bk:hover{text-decoration:underline}
 .turn p{font:400 1.0625rem/1.6 var(--serif);overflow-wrap:anywhere}
 .turn .who{margin-right:6px;font-size:.75rem}
 .sg{border-radius:2px;scroll-margin:96px 0;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 .sg.cited{text-decoration:underline dotted var(--ink-3);text-decoration-thickness:1px;text-underline-offset:.24em}
+.no-js .sg:target,.sg.here{background:var(--ev-bg);box-shadow:0 0 0 2px var(--ev-bg)}
+.no-js details.it:target>summary{background:var(--ev-bg)}
 .sg.now{background:var(--now);box-shadow:0 0 0 2px var(--now)}
 .sg.flash{animation:flash 1.6s ease-out}
 @keyframes flash{from{background:var(--now);box-shadow:0 0 0 3px var(--now)}to{background:transparent;box-shadow:0 0 0 3px transparent}}
