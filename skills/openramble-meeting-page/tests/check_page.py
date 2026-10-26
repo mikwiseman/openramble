@@ -9,12 +9,15 @@ errors, sideways scroll, a screenshot of the first screen, and text contrast
 (WCAG AA) over the whole page with every fold open. Then, once per page: evidence opening in place, a strip tick opening its
 item, search (with glossary spellings), browser find seeing transcript text,
 the page with JavaScript off, and an A4 PDF with the transcript in it.
-Prints a JSON report and exits 1 when a check fails.
+Prints a JSON report, which names elements but never quotes the meeting, and
+exits 1 when a check fails. Screenshots and the PDF are kept only in --shots.
 """
 import argparse
 import json
+import os
 import re
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -42,8 +45,9 @@ CONTRAST = r"""() => {
     const L1 = lum(c), L2 = lum(b), cr = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
     const fs = parseFloat(s.fontSize), fw = +s.fontWeight, large = fs >= 24 || (fs >= 18.66 && fw >= 700);
     n++;
+    // where, never what: the text may be the meeting's
     if (cr < (large ? 3 : 4.5)) { const k = e.className + s.color; if (!seen.has(k)) { seen.add(k);
-      bad.push(`${cr.toFixed(2)} ${e.tagName}.${e.className} "${e.textContent.trim().slice(0, 30)}"`); } }
+      bad.push(`${cr.toFixed(2)} ${e.tagName}.${e.className}${e.id ? '#' + e.id : ''} ${s.color}`); } }
   }
   return {checked: n, bad};
 }"""
@@ -110,9 +114,12 @@ def check(pages, shots, word):
                                  "return s.length ? s[s.length - 1].textContent.split(' ').slice(0, 3).join(' ') : ''; }")
             pg.evaluate("() => { const q = document.querySelector('#q'); if (q) { q.value = ''; q.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'})); } }")
             r["browserFind"] = pg.evaluate("(t) => { getSelection().removeAllRanges(); scrollTo(0, 0); return window.find(t); }", sample)
-            pdf = Path(shots or ".") / f"{name}.pdf"
-            pg.pdf(path=str(pdf), format="A4", print_background=True, prefer_css_page_size=True)
-            data = pdf.read_bytes()
+            # the PDF holds the whole meeting: kept only in --shots, otherwise made and deleted in a private temp folder
+            with tempfile.TemporaryDirectory() as tmp:
+                pdf = Path(shots or tmp) / f"{name}.pdf"
+                pg.pdf(path=str(pdf), format="A4", print_background=True, prefer_css_page_size=True)
+                os.chmod(pdf, 0o600)
+                data = pdf.read_bytes()
             r["pdfPages"] = len(re.findall(rb"/Type\s*/Page[^s]", data))
             r["pageErrors"] = errs
             ctx.close()

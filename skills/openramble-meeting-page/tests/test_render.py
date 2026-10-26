@@ -4,6 +4,7 @@ import copy
 import hashlib
 import html.parser
 import json
+import os
 import re
 import sys
 import tempfile
@@ -215,7 +216,23 @@ class RenderTests(unittest.TestCase):
             audio = Path(d) / "mix.m4a"
             audio.write_bytes(b"")
             (Path(d) / "планёрка.html").write_text("x", encoding="utf-8")
-            self.assertEqual(render.default_out(tr, "Планёрка", str(audio)).name, "планёрка-2.html")
+            self.assertEqual(render.default_out(tr, "Планёрка", str(audio), "/elsewhere").name, "планёрка-2.html")
+
+    def test_a_page_without_audio_lands_beside_its_transcript(self):
+        # a VTT, SRT or TXT transcript has no audio: the page goes next to transcript.json, never into the cwd
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as cwd:
+            work = Path(d) / "meeting-page"
+            work.mkdir()
+            (work / "transcript.json").write_text(json.dumps(transcript(), ensure_ascii=False), encoding="utf-8")
+            (work / "analysis.json").write_text(json.dumps(analysis(), ensure_ascii=False), encoding="utf-8")
+            here = os.getcwd()
+            os.chdir(cwd)
+            try:
+                path, _ = render.render_file(work / "transcript.json", work / "analysis.json")
+            finally:
+                os.chdir(here)
+            self.assertEqual(path.parent.resolve(), work.resolve())
+            self.assertEqual(list(Path(cwd).iterdir()), [])
 
     def test_example_is_valid(self):
         ex = ROOT / "example"

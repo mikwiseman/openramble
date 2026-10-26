@@ -6,8 +6,9 @@
 The analysis is validated first. Every problem is listed and nothing is written
 until all of them are fixed: an unknown or silent segment, a claim without
 evidence, an owner who is not a participant, a due date nobody said, a quote
-that is not verbatim. Then the page is written next to the recording as
-<title>.html (never over another file), with the audio path relative to it.
+that is not verbatim. Then the page is written next to the recording (next to
+transcript.json when there is none) as <title>.html, never over another file,
+with the audio path relative to it.
 
 The page is static, escaped HTML: it reads with scripts off, prints, and makes
 no network requests. Its one style block and one script block are pinned by
@@ -1080,13 +1081,15 @@ class Page:
 
 # ------------------------------------------------------------------ output
 
-def default_out(tr, title, audio):
+def default_out(tr, title, audio, transcript_dir):
+    """Next to the recording; for a transcript with no audio (VTT, SRT, TXT), next to transcript.json.
+    Never the working directory, which may be a repository."""
     for cand in [audio, tr.get("audio")] + [p.get("audio") for p in tr["speakers"]]:
         if cand and Path(cand).parent.is_dir():
             folder = Path(cand).parent
             break
     else:
-        folder = Path(".")
+        folder = Path(transcript_dir)
     base = slug(title)
     out = folder / f"{base}.html"
     n = 2
@@ -1117,7 +1120,7 @@ def render_file(transcript_path, analysis_path, out=None, audio=None):
     if errors:
         raise Invalid(errors)
     if out is None:
-        out = default_out(tr, an["meeting"]["title"], audio)
+        out = default_out(tr, an["meeting"]["title"], audio, base)
     elif Path(out).exists() and not ours(out):
         raise Invalid([f"--out: {out} exists and was not written by this renderer; choose another name"])
     page = Page(tr, an, out, audio and str(Path(audio).resolve()))
@@ -1134,7 +1137,8 @@ def main(argv=None):
     ap.add_argument("transcript")
     ap.add_argument("analysis")
     ap.add_argument("--audio", help="one file with everyone (Zoom's mixed audio, a Recordings audio.m4a)")
-    ap.add_argument("--out", help="page path; default: <title>.html next to the recording, never over another file")
+    ap.add_argument("--out", help="page path; default: <title>.html next to the recording (or next to transcript.json "
+                                  "when there is no audio), never over another file")
     a = ap.parse_args(argv)
     try:
         out, warnings = render_file(a.transcript, a.analysis, a.out, a.audio)

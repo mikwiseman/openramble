@@ -91,7 +91,8 @@ speaker's own track. The renderer checks the analysis against the transcript
 and lists every problem at once, e.g. an unknown or silent segment, an owner
 who is not a participant, a due date nobody said, or a quote that is not exact.
 Fix `analysis.json` and render again. It writes `<title>.html` next to the
-recording, never over another file, and prints the path. Use `--out` with that
+recording, or next to `transcript.json` when there is no audio, never over
+another file, and prints the path. Use `--out` with that
 path to replace the page on a later render.
 
 ## 6. Verify and report
