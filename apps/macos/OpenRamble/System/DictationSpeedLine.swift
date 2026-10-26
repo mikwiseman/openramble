@@ -11,7 +11,7 @@ import Foundation
 /// `key=value`, always, including for stages that did not run: `absent` says so
 /// outright, because a stage nobody measured must never read as `0.00`.
 enum DictationSpeedLine {
-    static func text(for report: DictationSpeedReport) -> String {
+    static func text(for report: DictationSpeedReport, paging: TakePaging? = nil) -> String {
         let phases = report.phases
         var parts = ["dictation", field("total", report.toRecognizedText)]
         parts.append(field("paste", report.toPasteDispatched))
@@ -47,10 +47,19 @@ enum DictationSpeedLine {
         }
         parts.append(field("queued", phases?.engineQueueing))
         parts.append(field("engine", phases?.engineProcessing))
+        // The tail above, plus the pieces recognized while the person spoke.
+        parts.append(field("enginetotal", phases?.engineProcessingTotal))
         parts.append(field("audio", phases?.audioDuration))
         // How much of the take was already recognized before the key came up.
         // `0` is an ordinary answer: a short take has nothing to stream.
         parts.append("streamed=\(phases?.streamedSegments ?? 0)")
+        // Device cycles the capture never received: audio no take contains.
+        parts.append(field("lost", phases?.lostAudio))
+        // Hundreds of megabytes here, after a long `idle`, is an engine paged
+        // back in from swap; a few is an engine that was resident.
+        parts.append(paging?.diskReadBytes.map { "diskread=" + String(format: "%.1fMB", Double($0) / 1e6) }
+            ?? "diskread=absent")
+        parts.append(paging?.engineIdle.map { "idle=\(Int($0.components.seconds))s" } ?? "idle=absent")
         return parts.joined(separator: " ")
     }
 
@@ -60,4 +69,16 @@ enum DictationSpeedLine {
             + Double(duration.components.attoseconds) / 1e18
         return "\(name)=\(String(format: "%.2f", seconds))s"
     }
+}
+
+/// Whether a take had to page the engine back in.
+///
+/// Neither number is a duration. Without them, a take whose weights came back
+/// from swap read as a slow engine and nothing more — or, when a piece
+/// recognized during speech paid for it, as no engine at all.
+struct TakePaging: Equatable {
+    /// What this process read from disk between key-down and the text.
+    var diskReadBytes: UInt64?
+    /// How long the engine had gone without running when the key went down.
+    var engineIdle: Duration?
 }

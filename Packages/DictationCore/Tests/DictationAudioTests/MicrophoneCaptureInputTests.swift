@@ -383,6 +383,49 @@ final class MicrophoneCaptureInputTests: XCTestCase {
     /// Without an engine there is no configuration-change notification for a
     /// microphone unplugged mid-take. The microphone itself says so, once,
     /// and only while its take is live.
+    /// A cycle the device never delivered is audio no take contains. It used
+    /// to leave no trace anywhere; the recording now says how much is missing.
+    func testCyclesTheDeviceSkippedAreCountedAsLostAudio() async throws {
+        let opener = Opener(format: interleavedStereo)
+        let capture = MicrophoneCapture(directory: directory, openInput: opener.open)
+        let session = DictationSessionID()
+        let url = try await capture.startRecording(session: session, disposition: RecordingDisposition())
+        let input = try XCTUnwrap(opener.opened.first)
+
+        // Ten cycles of 512 frames, the fourth and fifth never delivered.
+        for index in 0..<10 where index != 3 && index != 4 {
+            input.deliver(
+                cycle(from: index * 512, frames: 512, format: interleavedStereo),
+                sampleTime: AVAudioFramePosition(index * 512)
+            )
+        }
+        _ = await capture.waitForFirstFrame()
+        let recording = try await capture.freezeRecording(session: session, expectedURL: url)
+        _ = try? await recording.durableURL()
+
+        let lost = try XCTUnwrap(recording.lostAudio)
+        XCTAssertEqual(lost / .seconds(1), 1_024.0 / 48_000, accuracy: 0.000_01)
+    }
+
+    func testAContinuousTakeLostNothing() async throws {
+        let opener = Opener(format: interleavedStereo)
+        let capture = MicrophoneCapture(directory: directory, openInput: opener.open)
+        let session = DictationSessionID()
+        let url = try await capture.startRecording(session: session, disposition: RecordingDisposition())
+        let input = try XCTUnwrap(opener.opened.first)
+        for index in 0..<10 {
+            input.deliver(
+                cycle(from: index * 512, frames: 512, format: interleavedStereo),
+                sampleTime: AVAudioFramePosition(index * 512)
+            )
+        }
+        _ = await capture.waitForFirstFrame()
+        let recording = try await capture.freezeRecording(session: session, expectedURL: url)
+        _ = try? await recording.durableURL()
+
+        XCTAssertEqual(recording.lostAudio, .zero)
+    }
+
     func testAMicrophoneThatDiesMidTakeReportsALiveFailure() async throws {
         let failures = FailureLog()
         let opener = Opener(format: interleavedStereo)

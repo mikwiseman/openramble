@@ -59,6 +59,38 @@ final class DictationSpeedLineTests: XCTestCase {
         XCTAssertTrue(line(streamed: 0).contains("streamed=0"), line(streamed: 0))
     }
 
+    /// The 23 October slow takes, as the line now tells them: the engine that
+    /// paged its weights back in, the piece recognized during speech that hid
+    /// it, and how long the engine had rested.
+    func testItSaysWhatTheTakeReadFromDiskAndHowLongTheEngineRested() {
+        let report = DictationSpeedReport(
+            toRecognizedText: .milliseconds(3666),
+            phases: DictationPhaseBreakdown(
+                captureFreeze: .milliseconds(10),
+                enginePreparation: nil,
+                recognition: .milliseconds(3600),
+                engineProcessing: .milliseconds(360),
+                engineProcessingTotal: .milliseconds(3620),
+                lostAudio: .milliseconds(21),
+                audioDuration: .seconds(22),
+                streamedSegments: 1
+            )
+        )
+
+        let paged = DictationSpeedLine.text(
+            for: report, paging: TakePaging(diskReadBytes: 365_000_000, engineIdle: .seconds(266))
+        )
+        XCTAssertTrue(paged.contains("engine=0.36s"), paged)
+        XCTAssertTrue(paged.contains("enginetotal=3.62s"), paged)
+        XCTAssertTrue(paged.contains("diskread=365.0MB"), paged)
+        XCTAssertTrue(paged.contains("idle=266s"), paged)
+        XCTAssertTrue(paged.contains("lost=0.02s"), paged)
+
+        let unmeasured = DictationSpeedLine.text(for: report)
+        XCTAssertTrue(unmeasured.contains("diskread=absent"), unmeasured)
+        XCTAssertTrue(unmeasured.contains("idle=absent"), unmeasured)
+    }
+
     func testItNamesBothReturnSpansAndTheirExecutorWitness() {
         let report = DictationSpeedReport(
             toRecognizedText: .seconds(1),

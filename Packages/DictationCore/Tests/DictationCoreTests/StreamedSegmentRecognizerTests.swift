@@ -34,6 +34,18 @@ final class StreamedSegmentRecognizerTests: XCTestCase {
         XCTAssertEqual(texts, ["segment0", "segment1", "segment2", "segment3"])
     }
 
+    /// A piece recognized while the person spoke still cost engine time, and
+    /// one that is still running at key-up is waited for. Dropping it is how a
+    /// 3.7-second take came to be logged with a quarter-second engine.
+    func testTheEngineTimeOfEveryRecognizedSegmentIsKept() async {
+        let recognizer = StreamedSegmentRecognizer { samples in
+            ASRResult(text: "piece", audioDuration: 1, processingDuration: Double(samples.first ?? 0))
+        }
+        for seconds in [0.3, 3.0, 0.2] { recognizer.submit([Float(seconds)]) }
+        _ = await recognizer.finish()
+        XCTAssertEqual(recognizer.recognizedProcessingDuration, 3.5, accuracy: 0.0001)
+    }
+
     func testOneDecodeRunsAtATime() async {
         // The runtime allows only one recognition in flight across every
         // session of a model, so overlapping here would corrupt decodes rather

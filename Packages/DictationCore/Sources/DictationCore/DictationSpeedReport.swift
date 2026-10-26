@@ -73,7 +73,17 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
     /// The recognition call as the application measured it, transport included.
     public let recognition: Duration
     /// The same call as the engine reported it, transport excluded.
+    ///
+    /// For a streamed take this is the tail alone, which keeps it comparable
+    /// with `recognition`.
     public let engineProcessing: Duration?
+    /// Every engine run of the take: the pieces recognized while the person
+    /// was still speaking, plus the tail. Equal to `engineProcessing` when
+    /// nothing was streamed.
+    ///
+    /// A piece still running at key-up is waited for. When one paged the model
+    /// back in from swap, the tail alone read 0.36 s beside a 3.67 s take.
+    public let engineProcessingTotal: Duration?
     /// How long the take waited before the engine started on it.
     ///
     /// The stage that was missing. `recognition` minus `engineProcessing` used
@@ -114,6 +124,9 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
     /// Runtime witness for the frame that stamped `poolReturn`.
     /// `mainActorReturn` is trustworthy only when this is `false`.
     public let returnFrameWasMainThread: Bool?
+    /// Audio the device produced that the capture never received. `nil`
+    /// from a capture that cannot tell; zero means none was lost.
+    public let lostAudio: Duration?
     /// How much audio the take actually carried.
     public let audioDuration: Duration
     /// How many pieces were recognized while the person was still speaking.
@@ -129,6 +142,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         enginePreparation: Duration?,
         recognition: Duration,
         engineProcessing: Duration?,
+        engineProcessingTotal: Duration? = nil,
         engineQueueing: Duration? = nil,
         audioDecoding: Duration? = nil,
         recordingReadable: Duration? = nil,
@@ -138,6 +152,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         engineDispatch: Duration? = nil,
         returnFrameWasMainThread: Bool? = nil,
         engineTransport: Duration? = nil,
+        lostAudio: Duration? = nil,
         audioDuration: Duration,
         streamedSegments: Int = 0
     ) {
@@ -145,6 +160,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         self.enginePreparation = enginePreparation
         self.recognition = recognition
         self.engineProcessing = engineProcessing
+        self.engineProcessingTotal = engineProcessingTotal
         self.engineQueueing = engineQueueing
         self.audioDecoding = audioDecoding
         self.recordingReadable = recordingReadable
@@ -154,6 +170,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         self.mainActorReturn = mainActorReturn
         self.engineDispatch = engineDispatch
         self.returnFrameWasMainThread = returnFrameWasMainThread
+        self.lostAudio = lostAudio
         self.audioDuration = audioDuration
         self.streamedSegments = streamedSegments
     }

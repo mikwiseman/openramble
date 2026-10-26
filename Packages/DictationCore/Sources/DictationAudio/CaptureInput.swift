@@ -134,16 +134,192 @@ final class OnceFlag: @unchecked Sendable {
     }
 }
 
+/// Carries each I/O cycle off the device's real-time thread.
+///
+/// The I/O proc used to run on a dispatch queue, and the HAL waits for that
+/// queue inside its cycle. Whenever the queue's thread was late, the device
+/// skipped the cycle and its audio was gone: after a rest under memory
+/// pressure every take lost some, up to a 100 ms hole at the start, and an
+/// overloaded Mac lost cycles mid-take (research/stress-lab-2026-10). Now the
+/// real-time thread only copies the cycle into memory allocated when the
+/// microphone opened, and a worker thread hands it to the capture. A late
+/// worker delays audio instead of losing it, for about `tolerance` of audio.
+/// Past that the take is told its microphone was lost, and keeps what it
+/// has, rather than recording a hole nobody hears.
+final class CaptureRing: @unchecked Sendable {
+    /// How late the worker may fall behind before a cycle would be lost.
+    static let tolerance: Double = 2.7
+    /// Never more than this for the slots, whatever the device: a
+    /// many-channel interface with long cycles must not cost hundreds of MB.
+    static let memoryLimit = 16 << 20
+
+    let slotCount: Int
+    private let format: AVAudioFormat
+    private let buffers: [AVAudioPCMBuffer]
+    /// Per slot, per AudioBuffer: where the cycle's bytes go and how many fit.
+    /// Read on the real-time thread, so plain pointers rather than objects.
+    private let destinations: UnsafeMutablePointer<UnsafeMutableRawPointer?>
+    private let capacities: UnsafeMutablePointer<Int>
+    private let bufferCount: Int
+    private let bytesPerFrame: Int
+    private let frames: UnsafeMutablePointer<AVAudioFrameCount>
+    private let times: UnsafeMutablePointer<AudioTimeStamp>
+    /// Guards the indices only, never a copy or a handler call: the
+    /// real-time thread holds it for a few instructions.
+    private let lock: UnsafeMutablePointer<os_unfair_lock>
+    private var head = 0
+    private var tail = 0
+    private var count = 0
+    private var overflowed = false
+    private var stopping = false
+    private var finishing = false
+    private let ready = DispatchSemaphore(value: 0)
+    private let finished = DispatchSemaphore(value: 0)
+
+    /// `nil` for a format whose cycles cannot be copied as plain bytes.
+    init?(format: AVAudioFormat, framesPerCycle: Int) {
+        let audioBuffers = format.isInterleaved ? 1 : Int(format.channelCount)
+        let bytes = Int(format.streamDescription.pointee.mBytesPerFrame)
+        guard bytes > 0, audioBuffers > 0 else { return nil }
+        let capacity = AVAudioFrameCount(max(framesPerCycle, 512) * 2)
+        let cycles = Int(Self.tolerance * format.sampleRate) / max(framesPerCycle, 1)
+        let affordable = Self.memoryLimit / max(Int(capacity) * bytes * audioBuffers, 1)
+        let slotCount = max(16, min(cycles, affordable))
+        var buffers: [AVAudioPCMBuffer] = []
+        for _ in 0..<slotCount {
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity) else { return nil }
+            buffers.append(buffer)
+        }
+        self.slotCount = slotCount
+        self.format = format
+        self.buffers = buffers
+        bufferCount = audioBuffers
+        bytesPerFrame = bytes
+        destinations = .allocate(capacity: slotCount * audioBuffers)
+        capacities = .allocate(capacity: slotCount * audioBuffers)
+        for (slot, buffer) in buffers.enumerated() {
+            let list = UnsafeMutableAudioBufferListPointer(buffer.mutableAudioBufferList)
+            guard list.count == audioBuffers else { return nil }
+            for (index, audioBuffer) in list.enumerated() {
+                destinations[slot * audioBuffers + index] = audioBuffer.mData
+                capacities[slot * audioBuffers + index] = Int(capacity) * bytes
+                // Touch every page now, on the start lane, so the real-time
+                // thread never takes a fault on a page nobody wrote yet.
+                if let data = audioBuffer.mData { memset(data, 0, Int(capacity) * bytes) }
+            }
+        }
+        frames = .allocate(capacity: slotCount)
+        times = .allocate(capacity: slotCount)
+        lock = .allocate(capacity: 1)
+        lock.initialize(to: os_unfair_lock())
+    }
+
+    deinit {
+        destinations.deallocate()
+        capacities.deallocate()
+        frames.deallocate()
+        times.deallocate()
+        lock.deallocate()
+    }
+
+    /// The I/O proc's whole job. Real-time thread: no allocation, no waiting.
+    func write(_ input: UnsafePointer<AudioBufferList>, at time: UnsafePointer<AudioTimeStamp>) {
+        os_unfair_lock_lock(lock)
+        let full = count == slotCount
+        if full { overflowed = true }
+        let slot = head
+        os_unfair_lock_unlock(lock)
+        guard !full else {
+            ready.signal()
+            return
+        }
+        copy(input, at: time, into: slot)
+        os_unfair_lock_lock(lock)
+        head = (head + 1) % slotCount
+        count += 1
+        os_unfair_lock_unlock(lock)
+        ready.signal()
+    }
+
+    private func copy(_ input: UnsafePointer<AudioBufferList>, at time: UnsafePointer<AudioTimeStamp>, into slot: Int) {
+        let source = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: input))
+        var length = 0
+        for index in 0..<min(source.count, bufferCount) {
+            let bytes = min(Int(source[index].mDataByteSize), capacities[slot * bufferCount + index])
+            if let data = source[index].mData, let destination = destinations[slot * bufferCount + index] {
+                memcpy(destination, data, bytes)
+            }
+            length = bytes
+        }
+        frames[slot] = AVAudioFrameCount(length / bytesPerFrame)
+        times[slot] = time.pointee
+    }
+
+    /// The worker: hands each cycle over in order, until `finish`. An
+    /// overflow is reported from here, once, never from the real-time thread.
+    func run(_ handler: CaptureHandler, onOverflow: () -> Void) {
+        var reported = false
+        while true {
+            ready.wait()
+            while let slot = next() {
+                let buffer = buffers[slot]
+                buffer.frameLength = frames[slot]
+                if buffer.frameLength > 0 {
+                    handler(buffer, AVAudioTime(audioTimeStamp: times.advanced(by: slot), sampleRate: format.sampleRate))
+                }
+                os_unfair_lock_lock(lock)
+                tail = (tail + 1) % slotCount
+                count -= 1
+                os_unfair_lock_unlock(lock)
+            }
+            os_unfair_lock_lock(lock)
+            let done = stopping && count == 0
+            let lost = overflowed
+            os_unfair_lock_unlock(lock)
+            if lost, !reported {
+                reported = true
+                onOverflow()
+            }
+            if done { break }
+        }
+        finished.signal()
+    }
+
+    /// After the device has stopped: let the worker hand over every cycle
+    /// still queued, then wait for it. No cycle is dropped at the end of a
+    /// take, which is where the last word lives. Only the first call waits.
+    func finish() {
+        os_unfair_lock_lock(lock)
+        let first = !finishing
+        finishing = true
+        stopping = true
+        os_unfair_lock_unlock(lock)
+        guard first else { return }
+        ready.signal()
+        finished.wait()
+    }
+
+    private func next() -> Int? {
+        os_unfair_lock_lock(lock)
+        defer { os_unfair_lock_unlock(lock) }
+        return count > 0 ? tail : nil
+    }
+}
+
 /// A HAL I/O proc on the input device, the way the recorder reads it.
 ///
 /// Nothing is built before the device starts: no graph, no aggregate device,
-/// no output side. The handler gets each I/O cycle as the device delivers it.
+/// no output side. The I/O proc runs on the device's real-time thread and
+/// only copies each cycle into a `CaptureRing`; a worker thread gives it to
+/// the handler.
 final class HALCaptureInput: CaptureInput, @unchecked Sendable {
     let format: AVAudioFormat
 
     private let device: AudioDeviceID
     private let procID: AudioDeviceIOProcID
     private let slot: HandlerSlot
+    private let ring: CaptureRing
+    private var worker: Thread?
     private let lock = NSLock()
     private var destroyed = false
     private var listening = false
@@ -200,31 +376,27 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
         else { return nil }
 
         let slot = HandlerSlot()
-        let queue = DispatchQueue(label: "is.waiwai.dictation.capture-io", qos: .userInteractive)
+        guard let ring = CaptureRing(format: format, framesPerCycle: Self.framesPerCycle(of: device)) else {
+            return nil
+        }
         var made: AudioDeviceIOProcID?
-        let status = AudioDeviceCreateIOProcIDWithBlock(&made, device, queue) { _, inputData, inputTime, _, _ in
-            guard let handler = slot.get(),
-                  let buffer = AVAudioPCMBuffer(
-                    pcmFormat: format,
-                    bufferListNoCopy: inputData,
-                    deallocator: nil
-                  ),
-                  buffer.frameLength > 0
-            else { return }
-            // The buffer is the device's own memory, valid only inside this
-            // call; the handler converts it before returning.
-            handler(buffer, AVAudioTime(audioTimeStamp: inputTime, sampleRate: format.sampleRate))
+        // No queue: the block runs on the HAL's own real-time thread, which
+        // waits for nothing of ours.
+        let status = AudioDeviceCreateIOProcIDWithBlock(&made, device, nil) { _, inputData, inputTime, _, _ in
+            ring.write(inputData, at: inputTime)
         }
         guard status == noErr, let made else { return nil }
         self.device = device
         self.format = format
         self.procID = made
         self.slot = slot
+        self.ring = ring
     }
 
     deinit {
         stopListening()
         destroy()
+        if worker != nil { ring.finish() }
     }
 
     func install(_ handler: @escaping CaptureHandler, onLost: @escaping @Sendable () -> Void) {
@@ -233,9 +405,20 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
 
     func start() throws {
         startListening()
+        // The buffer handed over is the ring's memory, valid only until the
+        // handler returns, exactly like the device's own was.
+        let ring = ring, slot = slot
+        let worker = Thread {
+            ring.run({ buffer, time in slot.get()?(buffer, time) }, onOverflow: { slot.reportLost() })
+        }
+        worker.name = "is.waiwai.dictation.capture-io"
+        worker.qualityOfService = .userInteractive
+        worker.start()
+        lock.withLock { self.worker = worker }
         let status = AudioDeviceStart(device, procID)
         guard status == noErr else {
             stopListening()
+            ring.finish()
             throw AudioCaptureError.engineUnavailable("the microphone could not be started (\(status))")
         }
     }
@@ -243,6 +426,8 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
     func stop() {
         stopListening()
         AudioDeviceStop(device, procID)
+        // The device has stopped writing; hand over what it already wrote.
+        if lock.withLock({ worker }) != nil { ring.finish() }
         destroy()
     }
 
@@ -294,6 +479,21 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
         var size = UInt32(MemoryLayout<UInt32>.size)
         guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &value) == noErr else { return nil }
         return value
+    }
+
+    /// The device's I/O cycle in frames; 512 when it will not say.
+    private static func framesPerCycle(of device: AudioDeviceID) -> Int {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyBufferFrameSize,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var value: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &value) == noErr, value > 0 else {
+            return 512
+        }
+        return Int(value)
     }
 
     private static func transportType(of device: AudioDeviceID) -> UInt32 {

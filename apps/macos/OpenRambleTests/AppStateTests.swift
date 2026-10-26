@@ -1135,6 +1135,55 @@ final class AppStateTests: XCTestCase {
         )
     }
 
+    /// After a long rest the weights may be in swap, and the take's own run
+    /// would read them back after key-up: 1.4–7.1 s on 23 October. The press
+    /// starts the warm-up instead, so they page in while the person speaks.
+    func testAnEngineIdlePastItsResidencyIsWarmedUnderTheVoice() async throws {
+        try installModelMarker()
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        let state = makeState()
+
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        let afterLoad = await recognizer.warmUps
+        await recognizer.setIdle(.seconds(266))
+
+        monitor.onPress?()
+        for _ in 0..<500 where await recognizer.warmUps == afterLoad {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        let afterPress = await recognizer.warmUps
+        XCTAssertEqual(afterPress, afterLoad + 1, "a rested engine is warmed once, under the voice")
+    }
+
+    func testAnEngineUsedRecentlyIsNotWarmedOnThePress() async throws {
+        try installModelMarker()
+        let recognizer = ReadinessControlledRecognizer()
+        harness.recognizer = recognizer
+        let state = makeState()
+
+        for _ in 0..<500 where !state.isEngineReady {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        let afterLoad = await recognizer.warmUps
+        await recognizer.setIdle(.seconds(30))
+
+        monitor.onPress?()
+        for _ in 0..<100 {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        let afterPress = await recognizer.warmUps
+        XCTAssertEqual(afterPress, afterLoad, "weights still inside ggml's keep-alive need no warm-up")
+    }
+
     /// Preparation never gives up and never blames the verified files.
     ///
     /// This used to stop after a fixed budget and tell the person to restart

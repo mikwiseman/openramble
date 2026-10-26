@@ -35,6 +35,16 @@ spends about 180 ms more delivering near silence before the room is audible.
 The second runs from key-up until ⌘V was sent. Sent is not landed: the target
 app may accept the paste later, or never.
 
+After 0.33.1, completed dictations also include `engineTotalMilliseconds`,
+`diskReadBytes` and `engineIdleSeconds`. `engineMilliseconds` remains the tail
+recognized after key-up; the total adds the pieces recognized while the person
+spoke, one of which may still be running at key-up. `diskReadBytes` is what the
+app process read from disk between key-down and the text: a few megabytes when
+the model was resident, hundreds when it came back from swap.
+`engineIdleSeconds` is how long the engine had not run when the key went down.
+`lostAudioMilliseconds` is audio the microphone produced that the capture never
+received, read from the device's own sample times: zero on an ordinary take.
+
 The ZIP contains `system.json`, `events.jsonl`, `README.txt`, and at most five
 redacted Apple `.ips` crash reports (each source limited to 5 MB, last seven days).
 Only reports with OpenRamble's bundle identifier and process name are accepted;

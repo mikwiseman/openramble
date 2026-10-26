@@ -1346,7 +1346,10 @@ public final class AppState: ObservableObject {
                 self?.flushNoticeAfterSession(state)
                 // A take that ended without saying anything leaves nothing
                 // for the next one to say.
-                if state == .preparing { self?.takeNotKept = false }
+                if state == .preparing {
+                    self?.takeNotKept = false
+                    self?.takePaging = TakePaging(diskReadBytes: ProcessDiskReads.bytesRead())
+                }
                 if state == .idle, self?.modelSwitchPending == true {
                     Task { await self?.refreshModelState() }
                 }
@@ -1449,10 +1452,18 @@ public final class AppState: ObservableObject {
                 // with it because the total alone cannot name the cause.
                 // `notice`, not `info`: a slow take is exactly the entry that
                 // must survive in the system log long enough to be read.
-                engineLog.notice("\(DictationSpeedLine.text(for: report), privacy: .public)")
+                let paging = self?.takePaging.map { start in
+                    TakePaging(
+                        diskReadBytes: start.diskReadBytes.flatMap { before in
+                            ProcessDiskReads.bytesRead().map { $0 &- before }
+                        },
+                        engineIdle: start.engineIdle
+                    )
+                }
+                engineLog.notice("\(DictationSpeedLine.text(for: report, paging: paging), privacy: .public)")
                 self?.diagnostics.record(.dictationCompleted,
                     milliseconds: DictationLogFile.milliseconds(report.toRecognizedText.appSeconds),
-                    recognition: DictationLogFile.Recognition(report: report))
+                    recognition: DictationLogFile.Recognition(report: report, paging: paging))
                 DictationDiagnostics.noteCompleted(
                     report: report,
                     characterCount: self?.lastDictation?.insertedText.count ?? 0
@@ -2139,9 +2150,13 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// The take in progress: the disk counter at key-down, and how long the
+    /// engine had rested. Read back when the take reports its speed.
+    private var takePaging: TakePaging?
+
     /// Internal, not private: the residency pin drives the exact press hook.
     func warmEngineUnderVoice() {
-        guard transcriber != nil, !isRecyclingEngine else { return }
+        guard let transcriber, !isRecyclingEngine else { return }
         // Residency gave the memory back: the listening take starts the FULL
         // reload — weights — in parallel with the recording. The
         // single-flight transcriber coalesces this with the transcription
@@ -2164,6 +2179,30 @@ public final class AppState: ObservableObject {
         // Its stated reason was Core ML weights not materialising every
         // prediction path. There is no Core ML in this app; that engine was
         // removed. The comment outlived the runtime it described.
+        //
+        // One exception, and it is not about compute. After three idle
+        // minutes the Metal runtime stops holding the weights resident, and on
+        // a Mac short of memory they go to swap. The take's own run then reads
+        // them back after key-up — 365–819 MB and 1.4–7.1 s on 23 October,
+        // against 0.24 s resident. Started here instead, the same read happens
+        // while the person is still speaking, and the take waits behind it
+        // only for whatever is left. Its cost is logged, because the last
+        // warm-up here hid its cost.
+        Task { [weak self] in
+            let idle = await transcriber.idleDuration
+            self?.takePaging?.engineIdle = idle
+            guard LocalTranscriber.shouldWarmUnderVoice(afterIdle: idle), let idle else { return }
+            let started = ContinuousClock.now
+            do {
+                try await transcriber.warmUpInference()
+                engineLog.notice(
+                    "engine idle warm-up idle=\(Int(idle.components.seconds))s took=\(started.duration(to: .now).appSeconds, format: .fixed(precision: 2))s"
+                )
+            } catch {
+                // The take's own run and deadline own any failure from here.
+                engineLog.notice("engine idle warm-up abandoned idle=\(Int(idle.components.seconds))s")
+            }
+        }
     }
 
     /// Release the engine before the process exits.

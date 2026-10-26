@@ -141,6 +141,41 @@ final class DictationLogFileTests: XCTestCase {
         XCTAssertFalse(text.contains("/Users/"))
     }
 
+    /// A take that paged the engine back in from swap, in numbers only: the
+    /// full engine time with the piece recognized during speech, the bytes the
+    /// process read from disk, and how long the engine had rested.
+    func testCompletedDictationRecordsFullEngineTimeDiskReadsAndIdle() throws {
+        let report = DictationSpeedReport(
+            toRecognizedText: .milliseconds(3666),
+            phases: DictationPhaseBreakdown(
+                captureFreeze: .milliseconds(10),
+                enginePreparation: nil,
+                recognition: .milliseconds(3600),
+                engineProcessing: .milliseconds(360),
+                engineProcessingTotal: .milliseconds(3620),
+                lostAudio: .milliseconds(21),
+                audioDuration: .seconds(22),
+                streamedSegments: 1
+            )
+        )
+        let paged = try XCTUnwrap(DictationLogFile.Recognition(
+            report: report, paging: TakePaging(diskReadBytes: 365_000_000, engineIdle: .seconds(266))
+        ))
+        let log = DictationLogFile(directory: root, enabled: true)
+        log.record(.dictationCompleted, milliseconds: 3666, recognition: paged)
+        log.record(.dictationCompleted, milliseconds: 3666,
+                   recognition: try XCTUnwrap(DictationLogFile.Recognition(report: report)))
+        let lines = log.snapshot().data.split(separator: 10).map { String(decoding: $0, as: UTF8.self) }
+        XCTAssertEqual(lines.count, 2)
+        XCTAssertTrue(lines[0].contains("\"engineMilliseconds\":360"), lines[0])
+        XCTAssertTrue(lines[0].contains("\"engineTotalMilliseconds\":3620"), lines[0])
+        XCTAssertTrue(lines[0].contains("\"diskReadBytes\":365000000"), lines[0])
+        XCTAssertTrue(lines[0].contains("\"engineIdleSeconds\":266"), lines[0])
+        XCTAssertTrue(lines[0].contains("\"lostAudioMilliseconds\":21"), lines[0])
+        XCTAssertFalse(lines[1].contains("diskReadBytes"), lines[1])
+        XCTAssertFalse(lines[1].contains("engineIdleSeconds"), lines[1])
+    }
+
     /// How long the microphone took to deliver its first frame, and how long
     /// key-up took to reach the ⌘V, are numbers every take already measured
     /// and the journal threw away. Numbers only: nothing of the take itself.

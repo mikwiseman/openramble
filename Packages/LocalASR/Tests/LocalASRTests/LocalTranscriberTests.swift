@@ -170,6 +170,62 @@ final class LocalTranscriberTests: XCTestCase {
         XCTAssertTrue(batches[0].allSatisfy { $0 == 0 })
     }
 
+    // MARK: - Idle time
+
+    /// An engine that has never run has no idle time to report, and nothing
+    /// to page back in: the load just read every weight from the file.
+    func testIdleTimeIsUnknownUntilTheEngineHasRun() async throws {
+        let transcriber = LocalTranscriber(engine: StubEngine())
+        try await transcriber.prepare(modelDirectory: directory)
+        let idle = await transcriber.idleDuration
+        XCTAssertNil(idle)
+    }
+
+    func testIdleTimeCountsFromTheEndOfTheLastRun() async throws {
+        let transcriber = LocalTranscriber(engine: StubEngine())
+        try await transcriber.prepare(modelDirectory: directory)
+        _ = try await transcriber.transcribe(samples: [0.25, -0.25])
+        try await Task.sleep(for: .milliseconds(60))
+        let measured = await transcriber.idleDuration
+        let idle = try XCTUnwrap(measured)
+        XCTAssertGreaterThanOrEqual(idle, .milliseconds(60))
+        XCTAssertLessThan(idle, .seconds(10))
+    }
+
+    func testTheWarmupCountsAsARun() async throws {
+        let transcriber = LocalTranscriber(engine: StubEngine())
+        try await transcriber.prepare(modelDirectory: directory)
+        try await transcriber.warmUpInference()
+        let measured = await transcriber.idleDuration
+        let idle = try XCTUnwrap(measured)
+        XCTAssertLessThan(idle, .seconds(10))
+    }
+
+    /// A take, a meeting decode or a warm-up in flight keeps the weights in
+    /// use; nothing needs paging back in.
+    func testAnEngineThatIsRunningIsNotIdle() async throws {
+        let engine = WarmupGateEngine(gatedCalls: [2])
+        let transcriber = LocalTranscriber(engine: engine)
+        try await transcriber.prepare(modelDirectory: directory)
+        _ = try await transcriber.transcribe(samples: [0.1])
+        try await Task.sleep(for: .milliseconds(20))
+        let running = Task { try await transcriber.transcribe(samples: [0.1]) }
+        while await engine.callCount < 2 { await Task.yield() }
+
+        let idle = await transcriber.idleDuration
+        XCTAssertEqual(idle, .zero)
+        await engine.openCall(2)
+        _ = try await running.value
+    }
+
+    func testOnlyAnEngineIdlePastItsResidencyIsWarmedUnderTheVoice() {
+        XCTAssertFalse(LocalTranscriber.shouldWarmUnderVoice(afterIdle: nil))
+        XCTAssertFalse(LocalTranscriber.shouldWarmUnderVoice(afterIdle: .zero))
+        XCTAssertFalse(LocalTranscriber.shouldWarmUnderVoice(afterIdle: .seconds(150)))
+        XCTAssertTrue(LocalTranscriber.shouldWarmUnderVoice(afterIdle: .seconds(151)))
+        XCTAssertTrue(LocalTranscriber.shouldWarmUnderVoice(afterIdle: .seconds(266)))
+    }
+
     func testRealTranscriptionWaitsForInferenceWarmup() async throws {
         let engine = WarmupGateEngine()
         let transcriber = LocalTranscriber(engine: engine)

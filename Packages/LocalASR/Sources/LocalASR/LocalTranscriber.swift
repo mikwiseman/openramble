@@ -36,6 +36,8 @@ public actor LocalTranscriber {
     /// ignore cancellation and finish after unload plus a new prepare; its
     /// owner's defer must not clear the newer task's single-flight marker.
     private var inferenceWarmupEpoch = 0
+    /// When the engine last finished running inference.
+    private var lastRunEnded: ContinuousClock.Instant?
 
     public init(
         engine: any ASREngineAdapting = TranscribeCppAdapter(),
@@ -49,6 +51,30 @@ public actor LocalTranscriber {
 
     /// Is a recognition or load running right now?
     public var isBusy: Bool { activeOperations > 0 || loadTask != nil }
+
+    /// How long the engine has gone without running inference: `nil` before
+    /// its first run, zero while one is running or waiting to.
+    ///
+    /// The weights live in anonymous memory, not a mapped file. The Metal
+    /// runtime keeps them resident for three minutes after its last graph
+    /// (ggml's residency keep-alive) and then lets macOS reclaim them. On a
+    /// Mac short of memory they go to swap, and the next run reads them back:
+    /// 365–819 MB and 1.4–7.1 s for a take whose engine normally needs 0.24 s.
+    public var idleDuration: Duration? {
+        guard activeOperations == 0 else { return .zero }
+        return lastRunEnded?.duration(to: .now)
+    }
+
+    /// Idle longer than this, and a take pages the weights back in while the
+    /// person is still speaking. Below the three-minute keep-alive, so no take
+    /// that may have lost its weights goes without.
+    public static let idleWarmupThreshold: Duration = .seconds(150)
+
+    /// Whether a take starting now should run the warm-up under the voice.
+    public static func shouldWarmUnderVoice(afterIdle idle: Duration?) -> Bool {
+        guard let idle else { return false }
+        return idle > idleWarmupThreshold
+    }
 
     /// A whole recording owns one residency, including the gaps between chunks.
     /// Forced unload invalidates the generation; no later chunk may use its replacement.
@@ -88,6 +114,7 @@ public actor LocalTranscriber {
         if let inferenceWarmupTask { try await inferenceWarmupTask.value }
         try Task.checkCancellation()
         guard generation == expectedGeneration, loadedDirectory != nil else { throw CancellationError() }
+        defer { lastRunEnded = .now }
         let result = try await batchEngine.transcribe(batch: batch, timestamps: timestamps, shouldYield: shouldYield)
         try Task.checkCancellation()
         guard generation == expectedGeneration, loadedDirectory != nil else { throw CancellationError() }
@@ -237,6 +264,7 @@ public actor LocalTranscriber {
             throw CancellationError()
         }
         let queued = arrived.duration(to: .now)
+        defer { lastRunEnded = .now }
         let result = try await engine.transcribe(samples: samples)
         try Task.checkCancellation()
         guard generation == expectedGeneration, loadedDirectory != nil else {
@@ -280,6 +308,7 @@ public actor LocalTranscriber {
         activeOperations += 1
         defer {
             activeOperations -= 1
+            lastRunEnded = .now
             if inferenceWarmupEpoch == warmupEpoch {
                 inferenceWarmupTask = nil
             }

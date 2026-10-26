@@ -15,15 +15,17 @@ final class StreamedDictationTests: XCTestCase {
         private let file = URL(fileURLWithPath: "/tmp/streamed-take.wav")
         private let samples: [Float]
         private let fileBacked: Bool
+        private let lostAudio: Duration?
         /// Sample counts to ship as segments before the key comes up.
         private let segments: [Int]
         private var sink: (@Sendable ([Float]) -> Void)?
         private(set) var consumed = 0
 
-        init(samples: [Float], segments: [Int], fileBacked: Bool = false) {
+        init(samples: [Float], segments: [Int], fileBacked: Bool = false, lostAudio: Duration? = nil) {
             self.samples = samples
             self.segments = segments
             self.fileBacked = fileBacked
+            self.lostAudio = lostAudio
         }
 
         func setSegmentSink(_ sink: (@Sendable ([Float]) -> Void)?) { self.sink = sink }
@@ -52,6 +54,7 @@ final class StreamedDictationTests: XCTestCase {
                 url: file,
                 duration: Double(samples.count) / 16_000,
                 samples: fileBacked ? nil : samples,
+                lostAudio: lostAudio,
                 consumedSampleCount: consumed
             )
         }
@@ -192,6 +195,68 @@ final class StreamedDictationTests: XCTestCase {
             "First second and tail together.",   // the polisher capitalizes, as it always has
             "a stub tail must never be handed to the engine on its own"
         )
+    }
+
+    /// `engine` stays the tail — what the person waited for once the key was
+    /// up — and `engineTotal` adds the pieces recognized while they spoke. A
+    /// piece that paged the model back in from swap used to vanish from the
+    /// log, leaving a 3.7-second take beside a quarter-second engine.
+    func testTheEngineTotalCountsThePiecesRecognizedWhileSpeaking() async throws {
+        let samples = [Float](repeating: 0.5, count: 30 * 16_000)
+        let capture = StreamingCapture(samples: samples, segments: [8 * 16_000, 8 * 16_000, 8 * 16_000])
+        let calls = UncheckedBox(0)
+        let controller = DictationController(
+            capture: capture,
+            transcribe: { _ in ASRResult(text: "", audioDuration: 0, processingDuration: 0) },
+            transcribeSamples: { samples in
+                let index = calls.value
+                calls.value += 1
+                // The first piece paid for the page-in; the tail did not.
+                let seconds = [3.0, 0.2, 0.2, 0.25][min(index, 3)]
+                return ASRResult(text: "piece", audioDuration: Double(samples.count) / 16_000,
+                                 processingDuration: seconds)
+            },
+            readSamples: { _ in await capture.readSamples() },
+            inserter: FakeInserter(),
+            overlay: FakeOverlay(),
+            sounds: FakeSounds(),
+            pipeline: { _ in TextPipeline() }
+        )
+        var report: DictationSpeedReport?
+        controller.onSpeed = { report = $0 }
+
+        await run(controller)
+
+        let phases = try XCTUnwrap(report?.phases)
+        XCTAssertEqual(phases.streamedSegments, 3)
+        XCTAssertEqual(try XCTUnwrap(phases.engineProcessing) / .seconds(1), 0.25, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(phases.engineProcessingTotal) / .seconds(1), 3.65, accuracy: 0.0001)
+    }
+
+    /// Audio the device skipped reaches the speed report with the take.
+    func testTheReportSaysHowMuchAudioTheDeviceSkipped() async throws {
+        let samples = [Float](repeating: 0.5, count: 5 * 16_000)
+        let capture = StreamingCapture(samples: samples, segments: [], lostAudio: .milliseconds(21))
+        let controller = makeController(capture: capture, inserter: FakeInserter()) { _ in "one whole take." }
+        var report: DictationSpeedReport?
+        controller.onSpeed = { report = $0 }
+
+        await run(controller)
+
+        XCTAssertEqual(report?.phases?.lostAudio, .milliseconds(21))
+    }
+
+    func testATakeWithNoCutsReportsTheSameEngineTimeTwice() async throws {
+        let samples = [Float](repeating: 0.5, count: 5 * 16_000)
+        let controller = makeController(capture: StreamingCapture(samples: samples, segments: []),
+                                        inserter: FakeInserter()) { _ in "one whole take." }
+        var report: DictationSpeedReport?
+        controller.onSpeed = { report = $0 }
+
+        await run(controller)
+
+        let phases = try XCTUnwrap(report?.phases)
+        XCTAssertEqual(phases.engineProcessingTotal, phases.engineProcessing)
     }
 
     func testATakeWithNoCutsBehavesExactlyAsItAlwaysDid() async {

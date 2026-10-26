@@ -2061,6 +2061,31 @@ final class MemoryRecoveryWAV: @unchecked Sendable {
     }
 }
 
+/// Cycles the device produced that never reached the capture, read from the
+/// device's own sample times: each buffer should begin where the last ended.
+///
+/// Nothing else can see this loss. The words around it usually survive a
+/// cycle or two, so it is logged rather than announced, but it is never silent.
+final class DeviceContinuity: @unchecked Sendable {
+    private let lock = NSLock()
+    private var next: AVAudioFramePosition?
+    private var missing: AVAudioFramePosition = 0
+    private var sampleRate: Double = 0
+
+    func observe(sampleTime: AVAudioFramePosition?, frames: AVAudioFrameCount, sampleRate rate: Double) {
+        guard let sampleTime else { return }
+        lock.withLock {
+            if let next, sampleTime > next { missing += sampleTime - next }
+            next = sampleTime + AVAudioFramePosition(frames)
+            sampleRate = rate
+        }
+    }
+
+    var lost: Duration {
+        lock.withLock { sampleRate > 0 ? .seconds(Double(missing) / sampleRate) : .zero }
+    }
+}
+
 private final class RecordingContext: @unchecked Sendable {
     let id: UUID
     let session: DictationSessionID
@@ -2075,6 +2100,7 @@ private final class RecordingContext: @unchecked Sendable {
     let shutdownLease: RecordingEngineShutdownLease
     let freezeRecoveryLease: RecordingFreezeRecoveryLease
     let startedAt: ContinuousClock.Instant
+    let continuity: DeviceContinuity
 
     init(
         id: UUID,
@@ -2088,8 +2114,10 @@ private final class RecordingContext: @unchecked Sendable {
         segmentAttachment: RecordingSegmentAttachment,
         shutdownLease: RecordingEngineShutdownLease,
         freezeRecoveryLease: RecordingFreezeRecoveryLease,
-        startedAt: ContinuousClock.Instant
+        startedAt: ContinuousClock.Instant,
+        continuity: DeviceContinuity
     ) {
+        self.continuity = continuity
         self.id = id
         self.session = session
         self.disposition = disposition
@@ -2261,6 +2289,7 @@ func finalizeCapturedRecording(
     frozen: FrozenPCM,
     sampleRate: Double,
     startupLatency: Duration? = nil,
+    lostAudio: Duration? = nil,
     disposition: RecordingDisposition = RecordingDisposition(),
     consumedSampleCount: Int = 0
 ) -> CapturedRecording {
@@ -2339,6 +2368,7 @@ func finalizeCapturedRecording(
         duration: Double(frozen.totalSamples) / sampleRate,
         samples: frozen.samples,
         startupLatency: startupLatency,
+        lostAudio: lostAudio,
         disposition: disposition,
         readableTask: readable,
         durableTask: durable,
@@ -2356,6 +2386,7 @@ func finalizeMemoryOnlyCapturedRecording(
     frozen: FrozenPCM,
     sampleRate: Double,
     startupLatency: Duration? = nil,
+    lostAudio: Duration? = nil,
     disposition: RecordingDisposition = RecordingDisposition(),
     consumedSampleCount: Int = 0
 ) -> CapturedRecording {
@@ -2381,6 +2412,7 @@ func finalizeMemoryOnlyCapturedRecording(
         duration: Double(frozen.totalSamples) / sampleRate,
         samples: frozen.samples,
         startupLatency: startupLatency,
+        lostAudio: lostAudio,
         disposition: disposition,
         readableTask: unavailable,
         durableTask: unavailable,
@@ -2412,6 +2444,7 @@ private func finalizeRecordingContext(
             frozen: frozen,
             sampleRate: sampleRate,
             startupLatency: startupLatency,
+            lostAudio: context.continuity.lost,
             disposition: context.disposition,
             consumedSampleCount: consumedSampleCount
         )
@@ -2421,6 +2454,7 @@ private func finalizeRecordingContext(
         frozen: frozen,
         sampleRate: sampleRate,
         startupLatency: startupLatency,
+        lostAudio: context.continuity.lost,
         disposition: context.disposition,
         consumedSampleCount: consumedSampleCount
     )
@@ -2831,6 +2865,7 @@ public actor MicrophoneCapture: AudioCapturing {
         // nobody, so it must not inherit the previous take's pending audio.
         let segmentAttachment = RecordingSegmentAttachment()
         segmentAttachment.setSink(segmentSink)
+        let continuity = DeviceContinuity()
         let context = RecordingContext(
             id: sessionID,
             session: session,
@@ -2843,7 +2878,8 @@ public actor MicrophoneCapture: AudioCapturing {
             segmentAttachment: segmentAttachment,
             shutdownLease: shutdownLease,
             freezeRecoveryLease: freezeRecoveryLease,
-            startedAt: acceptedAt
+            startedAt: acceptedAt,
+            continuity: continuity
         )
         pendingStart = RecordingPendingStart(
             reservation: startReservation,
@@ -2860,6 +2896,8 @@ public actor MicrophoneCapture: AudioCapturing {
                 let sampleTime = when.isSampleTimeValid ? when.sampleTime : nil
                 guard let frame = pcm.beginFrame(sampleTime: sampleTime) else { return }
                 defer { pcm.endFrame() }
+                continuity.observe(sampleTime: sampleTime, frames: buffer.frameLength,
+                                   sampleRate: buffer.format.sampleRate)
 
                 do {
                     let samples = try conversionSequencer.perform(frame: frame) {
