@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenRamble meeting page analysis",
+  "description": "Written by the agent from transcript.json. Every claim cites transcript segment ids. All text is plain text; the renderer escapes it.",
+  "type": "object",
+  "required": ["schemaVersion", "language", "meeting", "lead", "chapters"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "language": {"type": "string", "pattern": "^[a-z]{2}(-[A-Za-z]{2,4})?$"},
+    "synthetic": {"type": "boolean"},
+    "meeting": {
+      "type": "object",
+      "required": ["title"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {"type": "string", "minLength": 1, "maxLength": 60},
+        "kind": {"type": "string", "minLength": 1, "maxLength": 60},
+        "date": {"$ref": "#/$defs/date"},
+        "timezone": {"type": "string", "maxLength": 64}
+      }
+    },
+    "lead": {
+      "type": "array", "minItems": 1, "maxItems": 4,
+      "items": {"type": "object", "required": ["text", "evidence"], "additionalProperties": false,
+        "properties": {"text": {"$ref": "#/$defs/text"}, "evidence": {"$ref": "#/$defs/evidence"}}}
+    },
+    "participants": {
+      "type": "array",
+      "items": {"type": "object", "required": ["speaker"], "additionalProperties": false,
+        "properties": {
+          "speaker": {"$ref": "#/$defs/speaker"},
+          "short": {"type": "string", "minLength": 1, "maxLength": 40},
+          "aliases": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 40}},
+          "role": {"type": "string", "minLength": 1, "maxLength": 80},
+          "evidence": {"$ref": "#/$defs/evidence"}}}
+    },
+    "mentioned": {
+      "type": "array",
+      "items": {"type": "object", "required": ["name", "evidence"], "additionalProperties": false,
+        "properties": {
+          "name": {"type": "string", "minLength": 1, "maxLength": 60},
+          "aliases": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 40}},
+          "note": {"type": "string", "maxLength": 200},
+          "evidence": {"$ref": "#/$defs/evidence"}}}
+    },
+    "dates": {
+      "type": "array",
+      "items": {"type": "object", "required": ["date", "said", "text", "evidence"], "additionalProperties": false,
+        "properties": {
+          "date": {"$ref": "#/$defs/date"},
+          "said": {"type": "string", "minLength": 1, "maxLength": 120},
+          "text": {"type": "string", "minLength": 1, "maxLength": 200},
+          "evidence": {"$ref": "#/$defs/evidence"}}}
+    },
+    "decisions": {
+      "type": "array",
+      "items": {"type": "object", "required": ["id", "text", "evidence"], "additionalProperties": false,
+        "properties": {
+          "id": {"$ref": "#/$defs/id"}, "text": {"$ref": "#/$defs/text"}, "detail": {"$ref": "#/$defs/detail"},
+          "evidence": {"$ref": "#/$defs/evidence"}, "disagreement": {"$ref": "#/$defs/id"},
+          "cautions": {"$ref": "#/$defs/ids"}}}
+    },
+    "actions": {
+      "type": "array",
+      "items": {"type": "object", "required": ["id", "owner", "task", "evidence"], "additionalProperties": false,
+        "properties": {
+          "id": {"$ref": "#/$defs/id"},
+          "owner": {"type": ["string", "null"], "minLength": 1, "maxLength": 60},
+          "task": {"$ref": "#/$defs/text"}, "detail": {"$ref": "#/$defs/detail"},
+          "due": {"oneOf": [{"$ref": "#/$defs/date"}, {"type": "null"}]},
+          "dueSaid": {"type": ["string", "null"], "minLength": 1, "maxLength": 120},
+          "blocker": {"type": "boolean"},
+          "taken": {"type": "boolean"},
+          "evidence": {"$ref": "#/$defs/evidence"}, "cautions": {"$ref": "#/$defs/ids"}}}
+    },
+    "questions": {
+      "type": "array",
+      "items": {"type": "object", "required": ["id", "text", "evidence"], "additionalProperties": false,
+        "properties": {
+          "id": {"$ref": "#/$defs/id"}, "text": {"$ref": "#/$defs/text"},
+          "status": {"type": "string", "minLength": 1, "maxLength": 300},
+          "evidence": {"$ref": "#/$defs/evidence"}, "cautions": {"$ref": "#/$defs/ids"}}}
+    },
+    "risks": {
+      "type": "array",
+      "items": {"type": "object", "required": ["id", "text", "evidence"], "additionalProperties": false,
+        "properties": {
+          "id": {"$ref": "#/$defs/id"}, "text": {"$ref": "#/$defs/text"}, "detail": {"$ref": "#/$defs/detail"},
+          "mitigation": {"type": "string", "minLength": 1, "maxLength": 300},
+          "evidence": {"$ref": "#/$defs/evidence"}, "cautions": {"$ref": "#/$defs/ids"}}}
+    },
+    "disagreements": {
+      "type": "array",
+      "items": {"type": "object", "required": ["id", "topic", "positions"], "additionalProperties": false,
+        "properties": {
+          "id": {"$ref": "#/$defs/id"},
+          "topic": {"$ref": "#/$defs/text"},
+          "decision": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+          "positions": {"type": "array", "minItems": 1,
+            "items": {"type": "object", "required": ["view", "evidence"], "additionalProperties": false,
+              "properties": {
+                "speaker": {"oneOf": [{"$ref": "#/$defs/speaker"}, {"type": "null"}]},
+                "name": {"type": ["string", "null"], "minLength": 1, "maxLength": 60},
+                "view": {"$ref": "#/$defs/text"},
+                "evidence": {"$ref": "#/$defs/evidence"}}}},
+          "resolution": {"oneOf": [
+            {"type": "object", "required": ["text", "evidence"], "additionalProperties": false,
+              "properties": {"text": {"$ref": "#/$defs/text"}, "evidence": {"$ref": "#/$defs/evidence"}}},
+            {"type": "null"}]}}}
+    },
+    "facts": {
+      "type": "array",
+      "items": {"type": "object", "required": ["id", "text", "evidence"], "additionalProperties": false,
+        "properties": {
+          "id": {"$ref": "#/$defs/id"}, "text": {"$ref": "#/$defs/text"},
+          "evidence": {"$ref": "#/$defs/evidence"}, "cautions": {"$ref": "#/$defs/ids"}}}
+    },
+    "chapters": {
+      "type": "array", "minItems": 1,
+      "items": {"type": "object", "required": ["title", "start"], "additionalProperties": false,
+        "properties": {
+          "title": {"type": "string", "minLength": 1, "maxLength": 80},
+          "start": {"$ref": "#/$defs/segment"},
+          "gist": {"type": "string", "minLength": 1, "maxLength": 300},
+          "aside": {"type": "boolean"}}}
+    },
+    "quotes": {
+      "type": "array", "maxItems": 6,
+      "items": {"type": "object", "required": ["segment", "text"], "additionalProperties": false,
+        "properties": {"segment": {"$ref": "#/$defs/segment"}, "text": {"type": "string", "minLength": 1, "maxLength": 400}}}
+    },
+    "cautions": {
+      "type": "array",
+      "items": {"type": "object", "required": ["id", "segment", "heard", "meant"], "additionalProperties": false,
+        "properties": {
+          "id": {"$ref": "#/$defs/id"}, "segment": {"$ref": "#/$defs/segment"},
+          "heard": {"type": "string", "minLength": 1, "maxLength": 120},
+          "meant": {"type": "string", "minLength": 1, "maxLength": 120},
+          "why": {"type": "string", "minLength": 1, "maxLength": 300},
+          "evidence": {"$ref": "#/$defs/evidence"}}}
+    },
+    "glossary": {
+      "type": "array",
+      "items": {"type": "object", "required": ["meant", "heard"], "additionalProperties": false,
+        "properties": {
+          "meant": {"type": "string", "minLength": 1, "maxLength": 80},
+          "heard": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 2, "maxLength": 80}}}}
+    }
+  },
+  "$defs": {
+    "segment": {"type": "string", "pattern": "^s[0-9]{4,}$"},
+    "speaker": {"type": "string", "pattern": "^p[0-9]+$"},
+    "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/segment"}},
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,31}$"},
+    "ids": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+    "text": {"type": "string", "minLength": 1, "maxLength": 600},
+    "detail": {"type": "string", "minLength": 1, "maxLength": 1200},
+    "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}
+  }
+}

@@ -112,6 +112,8 @@ Run `openramble --help` for every option.
 
 **Claude Code and Codex.** The skill in [`skills/openramble-transcribe`](skills/openramble-transcribe/SKILL.md) lets an agent transcribe a local audio file with OpenRamble. Copy or link the folder to `~/.claude/skills/openramble-transcribe` for Claude Code or `~/.agents/skills/openramble-transcribe` for Codex, and then ask the agent to use `openramble-transcribe`.
 
+**Meeting pages.** The skill in [`skills/openramble-meeting-page`](skills/openramble-meeting-page/SKILL.md) turns a meeting into one HTML page with the outcome, the decisions, the tasks by owner, the open questions and the full transcript. Every item links to the sentence it came from, so you can check it, and the page names a speaker only when a separate audio file, a recording channel or a label in the transcript shows who spoke. It works from Zoom's per-participant audio files, a single recording, an OpenRamble recording or a transcript with speaker labels. It transcribes with the `openramble` tool on your computer, or with your own OpenRamble server when you set `OPENRAMBLE_SERVER` and `OPENRAMBLE_SERVER_KEY`, and it sends audio nowhere else. The page makes no network requests and works offline. Install it the same way as `openramble-transcribe`. [The example page](skills/openramble-meeting-page/example/grosik-release.html) shows a synthetic meeting.
+
 ## Privacy
 
 Your voice and text never leave your Mac. OpenRamble turns speech into text on your Mac without the network, so dictation works offline once the model is installed. OpenRamble has no account, no analytics, no telemetry, no crash reporting service and no cloud sync, and it never writes dictated text, words or keystrokes to its logs.
