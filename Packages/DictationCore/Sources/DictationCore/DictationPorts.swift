@@ -155,6 +155,10 @@ public struct CapturedRecording: Sendable {
     /// post-ASR actor hop from delaying insertion or accidentally reading the
     /// next session's metric.
     public let startupLatency: Duration?
+    /// Audio the device produced and the capture never received: cycles it
+    /// skipped because the thread reading it was late. `nil` from a capture
+    /// that cannot tell; zero is a measurement.
+    public let lostAudio: Duration?
     public let disposition: RecordingDisposition
 
     private let readableTask: Task<URL, Error>
@@ -168,6 +172,7 @@ public struct CapturedRecording: Sendable {
         duration: TimeInterval,
         samples: [Float]? = nil,
         startupLatency: Duration? = nil,
+        lostAudio: Duration? = nil,
         disposition: RecordingDisposition = RecordingDisposition(),
         consumedSampleCount: Int = 0
     ) {
@@ -178,6 +183,7 @@ public struct CapturedRecording: Sendable {
             duration: duration,
             samples: samples,
             startupLatency: startupLatency,
+            lostAudio: lostAudio,
             disposition: disposition,
             readableTask: ready,
             durableTask: ready,
@@ -196,6 +202,7 @@ public struct CapturedRecording: Sendable {
         duration: TimeInterval,
         samples: [Float]?,
         startupLatency: Duration? = nil,
+        lostAudio: Duration? = nil,
         disposition: RecordingDisposition = RecordingDisposition(),
         readableTask: Task<URL, Error>,
         durableTask: Task<URL, Error>,
@@ -207,6 +214,7 @@ public struct CapturedRecording: Sendable {
         self.samples = samples
         self.consumedSampleCount = consumedSampleCount
         self.startupLatency = startupLatency
+        self.lostAudio = lostAudio
         self.disposition = disposition
         disposition.register([url])
         self.readableTask = readableTask

@@ -124,6 +124,9 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
     /// Runtime witness for the frame that stamped `poolReturn`.
     /// `mainActorReturn` is trustworthy only when this is `false`.
     public let returnFrameWasMainThread: Bool?
+    /// Audio the device produced that the capture never received. `nil`
+    /// from a capture that cannot tell; zero means none was lost.
+    public let lostAudio: Duration?
     /// How much audio the take actually carried.
     public let audioDuration: Duration
     /// How many pieces were recognized while the person was still speaking.
@@ -149,6 +152,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         engineDispatch: Duration? = nil,
         returnFrameWasMainThread: Bool? = nil,
         engineTransport: Duration? = nil,
+        lostAudio: Duration? = nil,
         audioDuration: Duration,
         streamedSegments: Int = 0
     ) {
@@ -166,6 +170,7 @@ public struct DictationPhaseBreakdown: Sendable, Equatable {
         self.mainActorReturn = mainActorReturn
         self.engineDispatch = engineDispatch
         self.returnFrameWasMainThread = returnFrameWasMainThread
+        self.lostAudio = lostAudio
         self.audioDuration = audioDuration
         self.streamedSegments = streamedSegments
     }

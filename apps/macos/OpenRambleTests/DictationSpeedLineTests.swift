@@ -71,6 +71,7 @@ final class DictationSpeedLineTests: XCTestCase {
                 recognition: .milliseconds(3600),
                 engineProcessing: .milliseconds(360),
                 engineProcessingTotal: .milliseconds(3620),
+                lostAudio: .milliseconds(21),
                 audioDuration: .seconds(22),
                 streamedSegments: 1
             )
@@ -83,6 +84,7 @@ final class DictationSpeedLineTests: XCTestCase {
         XCTAssertTrue(paged.contains("enginetotal=3.62s"), paged)
         XCTAssertTrue(paged.contains("diskread=365.0MB"), paged)
         XCTAssertTrue(paged.contains("idle=266s"), paged)
+        XCTAssertTrue(paged.contains("lost=0.02s"), paged)
 
         let unmeasured = DictationSpeedLine.text(for: report)
         XCTAssertTrue(unmeasured.contains("diskread=absent"), unmeasured)

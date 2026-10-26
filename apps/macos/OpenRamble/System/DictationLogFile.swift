@@ -57,6 +57,8 @@ final class DictationLogFile: @unchecked Sendable {
         var diskReadBytes: UInt64? = nil
         /// How long the engine had been idle when the key went down.
         var engineIdleSeconds: Int? = nil
+        /// Audio the device produced and the capture never received.
+        var lostAudioMilliseconds: Int? = nil
     }
 
     static func milliseconds(_ seconds: Double) -> Int? {
@@ -286,7 +288,8 @@ extension DictationLogFile.Recognition {
             microphoneStartupMilliseconds: report.microphoneStartup.flatMap { ms($0.appSeconds) },
             pasteMilliseconds: report.toPasteDispatched.flatMap { ms($0.appSeconds) },
             diskReadBytes: paging?.diskReadBytes,
-            engineIdleSeconds: paging?.engineIdle.map { Int($0.components.seconds) }
+            engineIdleSeconds: paging?.engineIdle.map { Int($0.components.seconds) },
+            lostAudioMilliseconds: phases.lostAudio.flatMap { ms($0.appSeconds) }
         )
     }
 }

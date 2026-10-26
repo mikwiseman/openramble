@@ -15,15 +15,17 @@ final class StreamedDictationTests: XCTestCase {
         private let file = URL(fileURLWithPath: "/tmp/streamed-take.wav")
         private let samples: [Float]
         private let fileBacked: Bool
+        private let lostAudio: Duration?
         /// Sample counts to ship as segments before the key comes up.
         private let segments: [Int]
         private var sink: (@Sendable ([Float]) -> Void)?
         private(set) var consumed = 0
 
-        init(samples: [Float], segments: [Int], fileBacked: Bool = false) {
+        init(samples: [Float], segments: [Int], fileBacked: Bool = false, lostAudio: Duration? = nil) {
             self.samples = samples
             self.segments = segments
             self.fileBacked = fileBacked
+            self.lostAudio = lostAudio
         }
 
         func setSegmentSink(_ sink: (@Sendable ([Float]) -> Void)?) { self.sink = sink }
@@ -52,6 +54,7 @@ final class StreamedDictationTests: XCTestCase {
                 url: file,
                 duration: Double(samples.count) / 16_000,
                 samples: fileBacked ? nil : samples,
+                lostAudio: lostAudio,
                 consumedSampleCount: consumed
             )
         }
@@ -228,6 +231,19 @@ final class StreamedDictationTests: XCTestCase {
         XCTAssertEqual(phases.streamedSegments, 3)
         XCTAssertEqual(try XCTUnwrap(phases.engineProcessing) / .seconds(1), 0.25, accuracy: 0.0001)
         XCTAssertEqual(try XCTUnwrap(phases.engineProcessingTotal) / .seconds(1), 3.65, accuracy: 0.0001)
+    }
+
+    /// Audio the device skipped reaches the speed report with the take.
+    func testTheReportSaysHowMuchAudioTheDeviceSkipped() async throws {
+        let samples = [Float](repeating: 0.5, count: 5 * 16_000)
+        let capture = StreamingCapture(samples: samples, segments: [], lostAudio: .milliseconds(21))
+        let controller = makeController(capture: capture, inserter: FakeInserter()) { _ in "one whole take." }
+        var report: DictationSpeedReport?
+        controller.onSpeed = { report = $0 }
+
+        await run(controller)
+
+        XCTAssertEqual(report?.phases?.lostAudio, .milliseconds(21))
     }
 
     func testATakeWithNoCutsReportsTheSameEngineTimeTwice() async throws {

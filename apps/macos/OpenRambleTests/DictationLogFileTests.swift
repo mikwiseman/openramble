@@ -153,6 +153,7 @@ final class DictationLogFileTests: XCTestCase {
                 recognition: .milliseconds(3600),
                 engineProcessing: .milliseconds(360),
                 engineProcessingTotal: .milliseconds(3620),
+                lostAudio: .milliseconds(21),
                 audioDuration: .seconds(22),
                 streamedSegments: 1
             )
@@ -170,6 +171,7 @@ final class DictationLogFileTests: XCTestCase {
         XCTAssertTrue(lines[0].contains("\"engineTotalMilliseconds\":3620"), lines[0])
         XCTAssertTrue(lines[0].contains("\"diskReadBytes\":365000000"), lines[0])
         XCTAssertTrue(lines[0].contains("\"engineIdleSeconds\":266"), lines[0])
+        XCTAssertTrue(lines[0].contains("\"lostAudioMilliseconds\":21"), lines[0])
         XCTAssertFalse(lines[1].contains("diskReadBytes"), lines[1])
         XCTAssertFalse(lines[1].contains("engineIdleSeconds"), lines[1])
     }

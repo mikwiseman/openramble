@@ -53,6 +53,8 @@ enum DictationSpeedLine {
         // How much of the take was already recognized before the key came up.
         // `0` is an ordinary answer: a short take has nothing to stream.
         parts.append("streamed=\(phases?.streamedSegments ?? 0)")
+        // Device cycles the capture never received: audio no take contains.
+        parts.append(field("lost", phases?.lostAudio))
         // Hundreds of megabytes here, after a long `idle`, is an engine paged
         // back in from swap; a few is an engine that was resident.
         parts.append(paging?.diskReadBytes.map { "diskread=" + String(format: "%.1fMB", Double($0) / 1e6) }

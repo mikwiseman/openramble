@@ -1604,6 +1604,7 @@ public final class DictationController {
                         + Double(whole.components.attoseconds) / 1e18) - inside
                     return outside > 0 ? .seconds(outside) : nil
                 }(),
+                lostAudio: recording.lostAudio,
                 audioDuration: .seconds(recognized.audioDuration),
                 streamedSegments: streamedSegmentCount
             )
