@@ -487,7 +487,17 @@ class ValidationTests(unittest.TestCase):
             self.assertIn("a1  [Дмитрий Орлов] Фикс · до пятницы, 20 ноября", lines)
             self.assertIn("    s0003 00:08 Анна Белова: Да, беру.", lines)
             self.assertIn("d1  Релиз в четверг", lines)
+            # a pass says so, so silence is never the only sign
+            self.assertRegex(lines[-1], r"^\d+ claims checked; no problems\.$")
             self.assertEqual(sorted(p.name for p in Path(d).iterdir()), ["analysis.json", "transcript.json"])
+            an = analysis()
+            an["actions"][0]["evidence"] = ["s0099"]
+            ap.write_text(json.dumps(an, ensure_ascii=False), encoding="utf-8")
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                self.assertEqual(render.main([str(tp), str(ap), "--claims"]), 1)
+            self.assertNotIn("no problems", out.getvalue())
+            self.assertTrue(err.getvalue().startswith("2 problem(s)"), err.getvalue())
 
     def test_warnings(self):
         tr, an = transcript(), analysis()

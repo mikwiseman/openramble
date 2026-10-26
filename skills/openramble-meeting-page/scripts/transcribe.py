@@ -9,8 +9,9 @@ Backends, in this order unless --backend names one:
           OPENRAMBLE_SERVER_KEY are set. Audio goes to that server and nowhere else.
 
 Each DIR/<stem>.json is {"schemaVersion":1, "audio", "asr", "duration", "words":[{text,start,end}]}
-(or "segments" from the Linux CLI, which has no word times). A file that is already
-there is skipped, so a rerun redoes only what failed. Waits as long as the job takes;
+(or "segments" from the Linux CLI, which has no word times). A file already done from
+the same audio is skipped, so a rerun redoes only what failed; one made from another
+recording stops the run. Waits as long as the job takes;
 transcript text is never printed.
 
 The macOS CLI gets every file in one run, so the model loads once. The Linux CLI
@@ -324,15 +325,32 @@ def main(argv=None):
     stems = [f.stem for f in files]
     dupes = sorted({s for s in stems if stems.count(s) > 1})
     if dupes:
-        log("error: two inputs share a name, so their outputs would collide: " + ", ".join(dupes)
-            + ". Run them into separate --out folders.")
+        for s in dupes:
+            same = [f.name for f in files if f.stem == s]
+            if len(set(same)) == len(same):  # a.wav and a.m4a: one recording in two formats
+                log(f"error: {' and '.join(same)} look like one recording in two formats; pass one of them, "
+                    "or each person would be in the transcript twice")
+            else:
+                log(f"error: two inputs are both named {same[0]}, so their outputs would collide; "
+                    "run them into separate --out folders")
         return 1
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    todo = [f for f in files if not (out / (f.stem + ".json")).exists()]
+    todo = []
     for f in files:
-        if f not in todo:
-            log(f"skip {f.name}: {out / (f.stem + '.json')} exists")
+        done = out / (f.stem + ".json")
+        if not done.exists():
+            todo.append(f)
+            continue
+        try:
+            made_from = json.loads(done.read_text(encoding="utf-8")).get("audio")
+        except (OSError, ValueError, AttributeError):
+            made_from = None
+        if made_from != str(f.resolve()):  # Zoom names a person's track alike in every meeting
+            log(f"error: {done} holds the transcript of another recording ({made_from or 'unknown'}); "
+                "use a fresh --out folder for this meeting")
+            return 1
+        log(f"skip {f.name}: {done} exists")
     if not todo:
         return 0
     url, key = os.environ.get("OPENRAMBLE_SERVER"), os.environ.get("OPENRAMBLE_SERVER_KEY")

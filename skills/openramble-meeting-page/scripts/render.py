@@ -1228,13 +1228,19 @@ def main(argv=None):
             print(f"error: {e}", file=sys.stderr)
             return 1
         errors, _ = validate(tr, an)
+        lines = []
         try:
-            print("\n".join(claims(tr, an)))
+            lines = claims(tr, an)
+            print("\n".join(lines))
         except (KeyError, TypeError, AttributeError, IndexError):
             pass  # too broken to list; the problems below say why
-        for err in errors:
-            print(f"  - {err}", file=sys.stderr)
-        return 1 if errors else 0
+        if errors:
+            print(f"{len(errors)} problem(s); fix analysis.json and check again:", file=sys.stderr)
+            for err in errors:
+                print(f"  - {err}", file=sys.stderr)
+            return 1
+        print(f"{sum(1 for l in lines if not l.startswith(' '))} claims checked; no problems.")
+        return 0
     try:
         out, warnings = render_file(a.transcript, a.analysis, a.out, a.audio)
     except Invalid as e:

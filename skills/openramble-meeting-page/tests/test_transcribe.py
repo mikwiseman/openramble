@@ -213,6 +213,31 @@ class TranscribeTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {}, clear=True), mock.patch.object(transcribe, "find_cli", return_value=None):
             self.assertEqual(transcribe.main([str(a), "--out", str(self.dir / "o")]), 1)
             self.assertEqual(transcribe.main([str(a), str(b), "--out", str(self.dir / "o")]), 1)
+            # the same track as .wav and .m4a is one person twice: name both, and say to pass one
+            c = self.audio("a.wav")
+            with mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+                self.assertEqual(transcribe.main([str(a), str(c), "--out", str(self.dir / "o")]), 1)
+            self.assertIn("a.m4a and a.wav", err.getvalue())
+            self.assertIn("pass one of them", err.getvalue())
+
+    def test_a_finished_file_is_skipped_only_for_the_same_audio(self):
+        # Zoom names a person's track the same in every meeting: another meeting's output is not this one's
+        out = self.dir / "asr"
+        out.mkdir()
+        old = self.dir / "old"
+        old.mkdir()
+        (out / "audioAnna1.json").write_text(json.dumps({"schemaVersion": 1, "audio": str((old / "audioAnna1.m4a").resolve()),
+                                                          "words": []}))
+        mine = self.audio("audioAnna1.m4a")
+        with mock.patch("sys.stderr", new_callable=io.StringIO) as err, \
+                mock.patch.object(transcribe, "find_cli", return_value=None), mock.patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(transcribe.main([str(mine), "--out", str(out)]), 1)
+        self.assertIn("another recording", err.getvalue())
+        self.assertNotIn("skip", err.getvalue())
+        (out / "audioAnna1.json").write_text(json.dumps({"schemaVersion": 1, "audio": str(mine.resolve()), "words": []}))
+        with mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+            self.assertEqual(transcribe.main([str(mine), "--out", str(out)]), 0)
+        self.assertIn("skip audioAnna1.m4a", err.getvalue())
 
 
 if __name__ == "__main__":

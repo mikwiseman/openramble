@@ -6,7 +6,9 @@ transcript, and refuses to write a page until every problem is fixed. All text
 is plain text, without Markdown or HTML, and the renderer escapes it.
 
 Every claim has `evidence`, a list of segment ids such as `"s0049"`. The first
-id is the main moment, ideally the sentence where people confirmed the point.
+id is the one sentence that shows the claim is true on its own: the moment
+people agreed, when that sentence says what they agreed to, and otherwise the
+sentence that says it, with a bare "That works." or "Fine by me." after it.
 The page shows its time on the item and lists all the evidence in time order
 when the item is opened. A segment marked silent (text recognised in silence)
 or failed can never be cited.
@@ -56,7 +58,7 @@ and `evidence`. The exact contract is
 - `owner: null` shows the task under "Nobody took it" ("Никто не взял" on a Russian page).
 - `owner: null` with `taken: true` means someone took the task but the words do not say who. It happens in a mixed recording when a person says "I'll do it", and the page groups such tasks as taken by a person whose name was not said. The renderer refuses `taken` on a task that has an owner.
 - In a mixed recording, and for anyone on the system channel of a Recordings folder, an owner who is not a speaker id must be named in the task's own evidence, e.g. "Дима, тогда этот фикс на тебе" for the owner "Дима". The same holds for the `name` of a disagreement position. The renderer accepts the name or a case form of it (Дима, Диме, Диму) written with a capital, as names are, and not a word that only looks like it.
-- `due` is a date, and `dueSaid` is the spoken words, e.g. `"до вторника, 24 ноября"`. The renderer looks for `dueSaid` in the task's evidence after ignoring case, ё and punctuation, and fails if the words are not there. Without a meeting date you cannot resolve "by Friday", so keep only `dueSaid`: the task then shows the words in quotes, and the count of tasks with a due date said includes it. Copy any spoken deadline, e.g. "after the call" or "in the week before launch", not only a day.
+- `due` is a date, and `dueSaid` is the spoken words, e.g. `"до вторника, 24 ноября"`. The renderer looks for `dueSaid` in the task's evidence after ignoring case, ё and punctuation, and fails if the words are not there. Without a meeting date you cannot resolve "by Friday", so keep only `dueSaid`: the task then shows the words in quotes, and the count of tasks with a due date said includes it. Copy any spoken time, e.g. "after the call" or "in the week before launch", not only a day. A condition such as "once I have a build" or "as soon as I've spoken to finance" names no time: write it in `detail` and leave `dueSaid` out, so the count stays true.
 
 ## Example
 
