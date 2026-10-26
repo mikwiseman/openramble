@@ -313,19 +313,41 @@
   /* ---------- chapters follow the reader ---------- */
   const heads = $$('.tx-body .chh');
   const navLinks = $$('.tx-ch a[data-ch]');
-  const sel = $('#chsel');
+  const sel = $('#chsel'), side = $('.tx-side');
+  // on one column the search bar sticks over the transcript: jumps land below it (--bar in the CSS)
+  const bar = $('.tx-search');
+  let barPx = 0;
+  function measureBar() {
+    barPx = bar && getComputedStyle(bar).position === 'sticky' ? bar.offsetHeight : 0;
+    d.documentElement.style.setProperty('--bar', barPx + 'px');
+  }
+  if (bar) {
+    measureBar();
+    addEventListener('resize', measureBar, { passive: true });
+    if (window.ResizeObserver) new ResizeObserver(measureBar).observe(bar);
+  }
   if (sel) sel.addEventListener('change', () => { const h = d.getElementById(sel.value); if (h) jump(h, 'start'); });
   let ticking = false, onId = null;
   function spy() {
     ticking = false;
     if (!heads.length) return;
     let lo = 0, hi = heads.length - 1, ans = 0;
-    while (lo <= hi) { const m = (lo + hi) >> 1; if (heads[m].getBoundingClientRect().top < 140) { ans = m; lo = m + 1; } else hi = m - 1; }
+    const line = barPx + 140;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (heads[m].getBoundingClientRect().top < line) { ans = m; lo = m + 1; } else hi = m - 1; }
+    // at the very end the last headings cannot reach the line: the last one on screen is current
+    if (innerHeight + scrollY >= d.documentElement.scrollHeight - 4)
+      while (ans + 1 < heads.length && heads[ans + 1].getBoundingClientRect().top < innerHeight) ans++;
     const id = heads[ans].id;
     if (id === onId) return;
     onId = id;
     navLinks.forEach(a => a.classList.toggle('on', a.dataset.ch === id));
     if (sel) sel.value = id;
+    // a long chapter list scrolls on its own: keep the current chapter in sight
+    const on = navLinks.find(a => a.dataset.ch === id);
+    if (on && on.offsetParent && side.scrollHeight > side.clientHeight) {
+      const r = on.getBoundingClientRect(), s = side.getBoundingClientRect();
+      if (r.top < Math.max(s.top, 0) + 8 || r.bottom > Math.min(s.bottom, innerHeight) - 8) side.scrollTop += r.top - s.top - side.clientHeight / 3;
+    }
   }
   addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(spy); } }, { passive: true });
   spy();

@@ -217,7 +217,7 @@ h2{font:400 2rem/1.2 var(--serif);letter-spacing:-.01em}
 .gl dd{color:var(--ink)}
 .totop{display:inline-block;padding:6px 0;font:400 .875rem var(--sans);text-decoration:none}
 .tx-body{min-width:0}
-.chh{font:600 1.375rem/1.3 var(--serif);margin:48px 0 16px;padding-left:80px;scroll-margin-top:16px}
+.chh{font:600 1.375rem/1.3 var(--serif);margin:48px 0 16px;padding-left:80px;scroll-margin-top:calc(var(--bar,0px) + 16px)}
 .chh:first-child{margin-top:12px}
 .chh .n{font:400 .75rem var(--mono);color:var(--ink-3);margin-right:6px}
 .chh.aside{color:var(--ink-2);font-weight:400}
@@ -233,7 +233,7 @@ a.tt:hover{color:var(--ev);text-decoration:underline}
 .bk:hover{text-decoration:underline}
 .turn p{font:400 1.0625rem/1.6 var(--serif);overflow-wrap:anywhere}
 .turn .who{margin-right:6px;font-size:.75rem}
-.sg{border-radius:2px;scroll-margin:96px 0;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.sg{border-radius:2px;scroll-margin:calc(var(--bar,0px) + 24px) 0 96px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 .sg.cited{text-decoration:underline dotted var(--ink-3);text-decoration-thickness:1px;text-underline-offset:.24em}
 .no-js .sg:target,.sg.here{background:var(--ev-bg);box-shadow:0 0 0 2px var(--ev-bg)}
 .no-js details.it:target>summary{background:var(--ev-bg)}
@@ -295,6 +295,7 @@ body.has-player .colophon{margin-bottom:72px}
   .no-js .tx-ch{display:block}
   .howto{margin:16px 0 24px}
   .tx-body{margin-top:8px}
+  .back{left:auto;right:16px}
 }
 @media (max-width:700px){
   .mast{padding-top:20px}

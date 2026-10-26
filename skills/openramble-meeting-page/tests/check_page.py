@@ -8,7 +8,9 @@ Needs Python Playwright and Google Chrome (channel "chrome"). For every page, at
 errors, sideways scroll, a screenshot of the first screen, and text contrast
 (WCAG AA) over the whole page with every fold open. Then, once per page: evidence opening in place, a strip tick opening its
 item, search (with glossary spellings), browser find seeing transcript text,
-the page with JavaScript off, and an A4 PDF with the transcript in it.
+a chapter chosen on a phone landing below the sticky search bar, the desktop
+chapter list keeping the current chapter in sight, the page with JavaScript
+off, and an A4 PDF with the transcript in it.
 Prints a JSON report, which names elements but never quotes the meeting, and
 exits 1 when a check fails. Screenshots and the PDF are kept only in --shots.
 """
@@ -51,6 +53,25 @@ CONTRAST = r"""() => {
   }
   return {checked: n, bad};
 }"""
+
+
+NAV_PHONE = """() => { const sel = document.querySelector('#chsel'), bar = document.querySelector('.tx-search');
+  if (!sel || !sel.options.length) return null;
+  const out = [];
+  for (const o of [sel.options[Math.floor(sel.options.length / 2)], sel.options[sel.options.length - 1]]) {
+    sel.value = o.value; sel.dispatchEvent(new Event('change'));
+    out.push(Math.round(document.getElementById(o.value).getBoundingClientRect().top - bar.getBoundingClientRect().bottom));
+  }
+  return out; }"""
+
+NAV_SIDE = """() => { const heads = [...document.querySelectorAll('.tx-body .chh')], side = document.querySelector('.tx-side');
+  if (!heads.length) return null;
+  const last = heads[heads.length - 1];
+  scrollTo(0, last.getBoundingClientRect().top + scrollY - 60);
+  return new Promise(res => requestAnimationFrame(() => requestAnimationFrame(() => {
+    const a = document.querySelector('.tx-ch a.on'), r = a && a.getBoundingClientRect(), q = side.getBoundingClientRect();
+    res({current: !!a && a.dataset.ch === last.id, inSight: !!a && r.top >= Math.max(q.top, 0) && r.bottom <= Math.min(q.bottom, innerHeight)});
+  }))); }"""
 
 
 def check(pages, shots, word):
@@ -122,6 +143,13 @@ def check(pages, shots, word):
                 data = pdf.read_bytes()
             r["pdfPages"] = len(re.findall(rb"/Type\s*/Page[^s]", data))
             r["pageErrors"] = errs
+            r["sidebar"] = pg.evaluate(NAV_SIDE)
+            ctx.close()
+            ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+            pg = ctx.new_page()
+            pg.goto(url)
+            pg.evaluate("document.getElementById('transcript').scrollIntoView()")
+            r["chapterBelowBar"] = pg.evaluate(NAV_PHONE)
             ctx.close()
             ctx = browser.new_context(viewport={"width": 1440, "height": 900}, java_script_enabled=False)
             pg = ctx.new_page()
@@ -134,6 +162,8 @@ def check(pages, shots, word):
             ctx.close()
             if not r["evidenceInPlace"]["panel"] or abs(r["evidenceInPlace"]["moved"]) > 2 or errs or not r["browserFind"]:
                 failed.append(f"{name} interactions")
+            if (r["chapterBelowBar"] and min(r["chapterBelowBar"]) < 0) or (r["sidebar"] and not all(r["sidebar"].values())):
+                failed.append(f"{name} navigation")
         browser.close()
     report["failed"] = failed
     return report
