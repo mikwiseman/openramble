@@ -5,7 +5,8 @@
 One row per label, condition and take shape. Times are milliseconds; p50 and
 p95 interpolate between takes. "Lost frames" are device cycles the capture
 never received; "stalls" are main-thread gaps over 100 ms between key-down
-and the text landing.
+and the text landing. "Load" is the median one-minute load average during the
+group's takes: the Mac is shared, and this says how much of the load was ours.
 """
 import json, sys
 
@@ -37,8 +38,8 @@ for r in rows:
         conditions.append(r["condition"])
 
 print("| Condition | Take | Build | n | Landed | Words missed | Release → paste p50 / p95 | Release → target read p50 / p95 "
-      "| Key-down → first audio p50 / p95 | Engine p50 / p95 | Lost frames (takes) | Stalls > 100 ms | Longest stall |")
-print("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+      "| Key-down → first audio p50 / p95 | Engine p50 / p95 | Lost frames (takes) | Stalls > 100 ms | Longest stall | Load |")
+print("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
 for condition in conditions:
     for take in ("short", "long"):
         for label in dict.fromkeys(r["label"] for r in rows):
@@ -54,4 +55,5 @@ for condition in conditions:
                   f"| {pair([r.get('engine') for r in group])} "
                   f"| {sum(lost)} ({sum(1 for x in lost if x)}) "
                   f"| {sum(r['mainThreadStallsOver100'] for r in group)} "
-                  f"| {fmt(max(r['mainThreadLongestStall'] for r in group))} |")
+                  f"| {fmt(max(r['mainThreadLongestStall'] for r in group))} "
+                  f"| {fmt(percentile([r.get('loadAverage') for r in group], 0.5))} |")
