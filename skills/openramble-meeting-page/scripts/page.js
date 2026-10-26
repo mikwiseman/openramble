@@ -369,7 +369,7 @@
     setTimeout(() => { copy.textContent = was; }, 2000);
   });
 
-  /* ---------- print every fold open ---------- */
+  /* ---------- print every fold open (the print style keeps each item's main quote) ---------- */
   let closed = [];
   addEventListener('beforeprint', () => { closed = $$('details:not([open])'); closed.forEach(x => { x.open = true; }); });
   addEventListener('afterprint', () => { closed.forEach(x => { x.open = false; }); closed = []; });

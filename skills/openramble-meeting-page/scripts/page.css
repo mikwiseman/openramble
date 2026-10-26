@@ -335,6 +335,7 @@ body.has-player .colophon{margin-bottom:72px}
   .strip{grid-template-columns:minmax(0,1fr)}
   .cols,.flow-grid{grid-template-columns:minmax(0,1fr);gap:20px}
   .chapters{grid-column:auto}
+  .chap{padding:10px 0}
   .cols,.flow,.colophon{margin-top:24px}
   .dates li{flex-basis:100%;margin-right:0}
   .items>li,.chap,.turn,.dates li,.ppl li,.facts li{break-inside:avoid}
@@ -346,4 +347,11 @@ body.has-player .colophon{margin-bottom:72px}
   .chunk{content-visibility:visible}
   .turn p,.eq{font-size:10pt}
   .num{font-size:24pt}
+  /* on paper an item is its line, its time and its main quote; the rest is in the printed transcript */
+  .fold>:not(.evl),.fold .evl>li:not(.pri):not(:only-child){display:none}
+  details.it>summary{padding:6px 0 2px}
+  .fold{padding-bottom:8px}
+  .evs{display:block;padding:0}
+  .evs .who{margin:0 4px 0 6px}
+  .eq{display:inline;margin:0}
 }
