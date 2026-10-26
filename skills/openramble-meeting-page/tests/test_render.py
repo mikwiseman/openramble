@@ -168,6 +168,8 @@ class RenderTests(unittest.TestCase):
                 if v is not None:
                     self.assertFalse(re.match(r"^([a-z][a-z0-9+.-]*:|//)", v, re.I), f"{tag} {k}={v}")
         self.assertTrue(any("audio-anna.m4a" in w for w in warnings))
+        self.assertNotRegex(page, r'"(audio|src|rel)":"/')  # audio is named relative to the page, never by absolute path
+        self.assertIn('"audio":"../', page)
         plain, _ = render_page(transcript(), analysis())
         self.assertNotRegex(plain, r"(?i)https?:|//[a-z0-9.-]+\.[a-z]{2,}|@import")
         self.assertNotRegex(plain, r"url\((?!#)")
@@ -221,6 +223,9 @@ class RenderTests(unittest.TestCase):
         an = json.loads((ex / "analysis.json").read_text(encoding="utf-8"))
         self.assertTrue(an.get("synthetic"))
         self.assertEqual(errors_of(tr, an), [])
+        doc = (ROOT / "reference" / "analysis.md").read_text(encoding="utf-8")
+        excerpt = json.loads(re.search(r"```json\n(.*?)```", doc, re.S).group(1))
+        self.assertEqual(errors_of(tr, excerpt), [])
 
 
 class ValidationTests(unittest.TestCase):

@@ -209,7 +209,7 @@ def typo(s, lang):
     s = re.sub(r"(\d)\s*%", "\\1\u00a0%", s) if lang == "ru" else s
     if lang == "ru":
         s = RU_NB.sub(lambda m: m.group(1) + "\u00a0", s)
-        s = re.sub(r"(\d)\s+(?=[а-яё])", "\\1\u00a0", s)
+        s = re.sub(r"(\d)\s+(?=[а-яё]{3})", "\\1\u00a0", s)
     else:
         s = EN_NB.sub(lambda m: m.group(1) + "\u00a0", s)
         s = re.sub(r"(\d)\s+(?=[A-Za-z])", "\\1\u00a0", s)
@@ -443,10 +443,10 @@ class Page:
         if not p.exists():
             self.warnings.append(f"audio {p.name} is not there now; the page will offer to choose it")
         try:
-            rel = os.path.relpath(p.resolve() if p.exists() else p, self.page_dir)
-        except ValueError:
-            return {"src": p.resolve().as_uri(), "name": p.name}
-        return {"src": "/".join(quote(part) for part in Path(rel).parts), "name": p.name}
+            rel = Path(os.path.relpath(p.resolve() if p.exists() else p, self.page_dir)).as_posix()
+        except ValueError:  # another drive: only a chosen file can play it
+            rel = p.name
+        return {"src": "/".join(quote(part) for part in rel.split("/")), "name": p.name, "rel": rel}
 
     def t(self, sec):
         return clock(sec, self.long)
@@ -1035,7 +1035,11 @@ class Page:
                 "audio": self.audio, "speakers": {k: {"name": v["name"], "short": v["short"], "cls": v["cls"],
                                                       "audio": v["audio"]} for k, v in self.sp.items()},
                 "glossary": an.get("glossary", []), "copy": copy}
-        source = {"generator": GENERATOR, "analysis": an, "transcript": self.tr}
+        # the page's copy of its sources names audio relative to the page, never by a path on this computer
+        tr = dict(self.tr, speakers=[dict(p, audio=(self.sp[p["id"]]["audio"] or {}).get("rel")) for p in self.tr["speakers"]])
+        if tr.get("audio"):
+            tr["audio"] = self.audio["rel"]
+        source = {"generator": GENERATOR, "analysis": an, "transcript": tr}
         css = (HERE / "page.css").read_text(encoding="utf-8")
         js = (HERE / "page.js").read_text(encoding="utf-8")
         h = lambda s: "'sha256-" + base64.b64encode(hashlib.sha256(s.encode("utf-8")).digest()).decode() + "'"
