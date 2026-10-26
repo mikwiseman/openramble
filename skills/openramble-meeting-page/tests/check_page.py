@@ -67,11 +67,16 @@ MEETING_AUDIO = """() => new Promise(res => { const b = document.querySelector('
   setTimeout(() => { const els = [document.getElementById('au'), ...window.__mix];
     res({want, loaded: new Set(els.map(e => e.getAttribute('src')).filter(Boolean)).size}); }, 300); })"""
 
-NAV_PHONE = """() => { const sel = document.querySelector('#chsel'), bar = document.querySelector('.tx-search');
+# measured once the layout has settled, after the browser's find has laid out the far end of a long transcript
+NAV_PHONE = """async () => { const sel = document.querySelector('#chsel'), bar = document.querySelector('.tx-search');
   if (!sel || !sel.options.length) return null;
+  const segs = [...document.querySelectorAll('.tx-body .sg')];
+  window.find(segs[segs.length - 1].textContent.slice(0, 20));
+  getSelection().removeAllRanges();
   const out = [];
   for (const o of [sel.options[Math.floor(sel.options.length / 2)], sel.options[sel.options.length - 1]]) {
     sel.value = o.value; sel.dispatchEvent(new Event('change'));
+    await new Promise(res => setTimeout(res, 400));
     out.push(Math.round(document.getElementById(o.value).getBoundingClientRect().top - bar.getBoundingClientRect().bottom));
   }
   return out; }"""

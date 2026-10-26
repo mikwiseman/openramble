@@ -23,7 +23,22 @@
 
   /* ---------- jumps, with a way back ---------- */
   const back = $('#back');
-  let backY = null;
+  let backY = null, lastInput = 0;
+  for (const ev of ['wheel', 'touchmove', 'keydown']) addEventListener(ev, () => { lastInput = Date.now(); }, { passive: true });
+  // a long transcript lays out its chunks only as they come into sight, and the browser's scroll anchoring can then
+  // carry the target off its place a frame or two later: put it back while the layout settles, unless the reader moves
+  let landing = 0;
+  function land(el, block) {
+    el.scrollIntoView({ block });
+    const want = el.getBoundingClientRect().top, id = ++landing, since = lastInput;
+    let n = 0;
+    const check = () => {
+      if (id !== landing || lastInput !== since) return;
+      if (Math.abs(el.getBoundingClientRect().top - want) > 1) el.scrollIntoView({ block });
+      if (++n < 12) requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+  }
   function flash(el) {
     if (!el) return;
     $$('.here').forEach(x => x.classList.remove('here'));
@@ -35,11 +50,11 @@
   function jump(el, block) {
     if (!el) return;
     if (backY === null || Math.abs(scrollY - backY) > 4) backY = scrollY;
-    el.scrollIntoView({ block: block || 'center' });
+    land(el, block || 'center');
     back.hidden = false;
     flash(el);
   }
-  back.addEventListener('click', () => { if (backY !== null) scrollTo(0, backY); backY = null; back.hidden = true; });
+  back.addEventListener('click', () => { landing++; if (backY !== null) scrollTo(0, backY); backY = null; back.hidden = true; });
   function openItem(id) {
     const el = d.getElementById(id);
     if (!el) return;
@@ -96,7 +111,7 @@
   if (D.audio) srcs.g = D.audio;
   for (const k in D.speakers) if (D.speakers[k].audio) srcs[k] = D.speakers[k].audio;
   const tracks = Object.keys(srcs).filter(k => k !== 'g');
-  let curKey = null, stopAt = null, follow = false, lastInput = 0, nowEl = null, want = null;
+  let curKey = null, stopAt = null, follow = false, nowEl = null, want = null;
   const ph = $('#ph'), spPlay = $('#sp-play');
   const bySpeaker = {};
   const startsAll = segEls.map(e => +e.dataset.s);
@@ -253,7 +268,6 @@
       if (open && curKey === meetingKey() && au.currentSrc) { resume(); return; }
       play(open ? au.currentTime : 0, null, meetingKey(), false);
     });
-    for (const ev of ['wheel', 'touchmove', 'keydown']) addEventListener(ev, () => { lastInput = Date.now(); }, { passive: true });
   }
 
   /* ---------- one click handler for the whole page ---------- */
@@ -344,7 +358,7 @@
     if (cur >= 0) marks[cur].classList.remove('cur');
     cur = (i + marks.length) % marks.length;
     marks[cur].classList.add('cur');
-    marks[cur].scrollIntoView({ block: 'center' });
+    land(marks[cur], 'center');
     hitsEl.textContent = `${cur + 1} ${T.of} ${marks.length}`;
   }
   if (q) {
@@ -434,7 +448,7 @@
 
   if (location.hash.length > 1) {
     const el = d.getElementById(decodeURIComponent(location.hash.slice(1)));
-    if (el && el.matches('details')) { el.open = true; el.scrollIntoView({ block: 'center' }); }
-    if (el && el.matches('.sg')) { el.classList.add('here'); el.scrollIntoView({ block: 'center' }); }
+    if (el && el.matches('details')) { el.open = true; land(el, 'center'); }
+    if (el && el.matches('.sg')) { el.classList.add('here'); land(el, 'center'); }
   }
 })();
