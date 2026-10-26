@@ -78,6 +78,21 @@ class TranscriptTests(unittest.TestCase):
         self.assertEqual([(s["speaker"], s["turn"]) for s in doc["segments"]], [("p1", 1), ("p1", 1), ("p2", 2), ("p1", 3)])
         self.assertEqual(doc["duration"], 21)
 
+    def test_a_mixed_recording_among_tracks_is_refused(self):
+        # Zoom's audio_only.m4a passed with the tracks would be a speaker who repeats every line
+        lines = {"anna": [(f"а{i}", 6.0 * i) for i in range(12)], "dima": [(f"д{i}", 6.0 * i + 2) for i in range(12)],
+                 "katya": [(f"к{i}", 6.0 * i + 4) for i in range(12)]}
+        tracks = [self.f.json(f"audio-{n}.json", {"words": words(*[(t, a, a + 0.5) for t, a in ws])})
+                  for n, ws in lines.items()]
+        everyone = sorted(((t, a + 0.05, a + 0.5) for ws in lines.values() for t, a in ws), key=lambda w: w[1])
+        mix = self.f.json("mix.json", {"words": words(*everyone)})
+        with self.assertRaisesRegex(T.Fail, "mix.json is a mixed recording"):
+            T.build(tracks + [mix])
+        zoom = self.f.json("audio_only.json", {"words": words(("Привет.", 0, 1))})
+        with self.assertRaisesRegex(T.Fail, "audio_only.json is a mixed recording"):
+            T.build(tracks[:1] + [zoom])
+        self.assertEqual(T.build(tracks)["kind"], "tracks")
+
     def test_single_file_is_mixed_without_speakers(self):
         m = self.f.json("mix.json", {"duration": 5, "words": words(("Привет.", 0, 1), ("Да.", 1.1, 2))})
         self.f.text("mix.m4a", "")
@@ -131,7 +146,13 @@ class TranscriptTests(unittest.TestCase):
         self.assertTrue(doc["segments"][2]["failed"])
         self.assertEqual(doc["recordedAt"], "2026-11-19T07:00:00Z")
         self.assertTrue(doc["audio"].endswith("audio.m4a"))
+        self.assertNotIn("incomplete", doc)
+        meta = json.loads((folder / "meta.json").read_text())
+        (folder / "meta.json").write_text(json.dumps(dict(meta, transcriptionState="partial")), encoding="utf-8")
+        self.assertEqual(T.build([folder])["incomplete"], "partial")  # not finished: kept, so the page can say so
+        (folder / "meta.json").write_text(json.dumps(dict(meta, transcriptionState="complete")), encoding="utf-8")
         named = T.build([folder], me="Анна", other="Олег")
+        self.assertNotIn("incomplete", named)
         self.assertEqual([p["name"] for p in named["speakers"]], ["Анна", "Олег"])
         self.assertIn("(not recognised until", T.text_lines(doc)[2])
 

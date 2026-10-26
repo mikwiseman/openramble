@@ -65,6 +65,8 @@ L10N = {
         "synthetic": "синтетический пример",
         "syntheticNote": "Это синтетический пример: люди, компания и продукт вымышлены, голоса синтезированы.",
         "copyTitle": "Задачи",
+        "incomplete": "Расшифровка не закончена: последняя распознанная фраза — на {t}, а запись идёт {d}. "
+                      "Чего нет в стенограмме, того нет и в итогах.",
         "js": {"of": "из", "noHits": "нет совпадений", "short": "хотя бы 2 буквы", "play": "Слушать",
                "pause": "Пауза", "missing": "Рядом со страницей нет файла «{f}».", "track": "дорожка: {n}",
                "copied": "Скопировано", "copyFail": "Не удалось скопировать", "back": "↩ Назад",
@@ -102,6 +104,8 @@ L10N = {
         "synthetic": "synthetic sample",
         "syntheticNote": "This is a synthetic sample: the people, company and product are fictional and the voices are synthesised.",
         "copyTitle": "Tasks",
+        "incomplete": "Transcription did not finish: the last recognised sentence is at {t} of {d}. "
+                      "What the transcript lacks, this summary lacks too.",
         "js": {"of": "of", "noHits": "no matches", "short": "type 2 letters", "play": "Play",
                "pause": "Pause", "missing": "“{f}” is not next to this page.", "track": "track: {n}",
                "copied": "Copied", "copyFail": "Could not copy", "back": "↩ Back",
@@ -574,8 +578,12 @@ class Page:
             n = len(self.sp)
             bits.append(f'{n}\u00a0{plural(n, L["forms"]["people"], self.lang)}')
         badge = f'<span class="badge">{esc(L["synthetic"])}</span>' if an.get("synthetic") else ""
+        notice = ""
+        if self.tr.get("incomplete"):  # OpenRamble did not finish: say so before anything is read as complete
+            heard = max([s["end"] for s in self.tr["segments"] if not s["failed"] and s["end"] is not None] or [0])
+            notice = f'<p class="notice" role="note">{esc(L["incomplete"].format(t=self.t(heard), d=self.t(self.D)))}</p>'
         return (f'<header class="mast" id="top"><h1><span class="title">{self.tx(m["title"])}</span>{kind}</h1>'
-                f'<p class="meta">{" · ".join(bits)}{badge}</p></header>')
+                f'<p class="meta">{" · ".join(bits)}{badge}</p></header>{notice}')
 
     def lead(self):
         parts = []

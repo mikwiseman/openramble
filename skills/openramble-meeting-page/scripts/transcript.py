@@ -5,11 +5,15 @@
 
 INPUT is one of:
   - one JSON per participant track (from transcribe.py, the macOS or Linux
-    `openramble` CLI, or a server response): the speaker is the track;
+    `openramble` CLI, or a server response): the speaker is the track; a mixed
+    recording among them (Zoom's audio_only, or any track that repeats the
+    others) is refused, because it would be a speaker who says everything;
   - a single JSON of a mixed recording: no speakers, never guessed;
   - an OpenRamble Recordings folder (meta.json + transcript.json): the
     microphone is --me (or "Я (микрофон)"), the system channel is
-    "Собеседники", or --other when the user names the one other person;
+    "Собеседники", or --other when the user names the one other person; a
+    transcription OpenRamble did not finish is kept as "incomplete" and warned
+    about, so the page can say so;
   - a VTT, SRT or TXT transcript whose lines read "Name: text".
 
 Words are cut into sentences, so a claim can cite the exact sentence. A
@@ -30,7 +34,7 @@ PAUSE = 1.0        # a silence this long ends a segment (on a track, someone els
 MAX_SENTENCE = 30.0
 TURN_GAP = 2.0
 TURN_MAX = 60.0    # a longer monologue, or a mixed recording, gets a new paragraph and time
-WINDOW_WORDS = 15000
+WINDOW_CHARS = 32000  # one window is read whole: about 18,000 tokens of Russian, fewer of English
 
 
 class Fail(Exception):
@@ -157,11 +161,35 @@ def audio_beside(json_path, doc):
     return None
 
 
+ZOOM_MIX = re.compile(r"audio[_\- ]?only", re.I)
+
+
+def repeats_others(docs, i):
+    """A track whose words the other tracks already hold, at the same moments, is a mix of them, not a person."""
+    def key(w):
+        return re.sub(r"[^\w]", "", w["text"].lower())
+    others = {}
+    for j, (_, d) in enumerate(docs):
+        if j != i:
+            for w in words_of(d):
+                others.setdefault(key(w), []).append((w["start"], j))
+    mine = words_of(docs[i][1])
+    hits = [next((j for t, j in others.get(key(w), []) if abs(t - w["start"]) <= 0.6), None) for w in mine]
+    found = [j for j in hits if j is not None]
+    return len(mine) >= 20 and len(found) >= 0.5 * len(mine) and len(set(found)) >= 2
+
+
 def track_inputs(paths, overrides):
     docs = [(p, load_json(p)) for p in paths]
     for p, d in docs:
         if not (d.get("words") or d.get("segments")) and "words" not in d:
             raise Fail(f"{p}: no words or segments; is this a transcription output?")
+    if len(docs) > 1:
+        for i, (p, d) in enumerate(docs):
+            if ZOOM_MIX.match(Path(p).stem) or ZOOM_MIX.match(Path(d.get("audio") or "").stem) or repeats_others(docs, i):
+                raise Fail(f"{p.name} is a mixed recording of everyone (like Zoom's audio_only.m4a), not one person's "
+                           "track: it would add a speaker who repeats every line. Leave it out here and give its audio "
+                           "to render.py --audio.")
     named = [speaker_override(p, overrides) or speaker_override(d.get("audio") or "", overrides) for p, d in docs]
     if len(docs) == 1 and not named[0]:
         p, d = docs[0]
@@ -233,8 +261,10 @@ def recordings(folder, me, other, lang):
         segs.append({"speaker": ids.get(u.get("channel")), "start": round(float(u["start"]), 2),
                      "end": round(float(u["end"]), 2), "text": text, "failed": failed})
     started = meta.get("startedAt")
+    state = meta.get("transcriptionState")  # complete, or: live, partial, failed, waitingForModel, none
     return {"kind": "channels", "speakers": speakers, "segments": segs, "audio": audio,
-            "duration": float(meta.get("duration") or 0), "title": meta.get("title"), "recordedAt": started}
+            "duration": float(meta.get("duration") or 0), "title": meta.get("title"), "recordedAt": started,
+            "incomplete": state if state and state != "complete" else None}
 
 
 # ------------------------------------------------------------------ VTT / SRT / TXT
@@ -347,7 +377,7 @@ def build(inputs, overrides=None, me=None, other=None, lang=None):
                         for s in segs]}
     if t.get("audio"):
         doc["audio"] = str(t["audio"])
-    for k in ("title", "recordedAt"):
+    for k in ("title", "recordedAt", "incomplete"):
         if t.get(k):
             doc[k] = t[k]
     return doc
@@ -405,18 +435,26 @@ def main(argv=None):
         os.chmod(out / name, 0o600)
     words = [len(l.split()) for l in lines]
     windows, start, acc = [], 1, 0
-    for i, w in enumerate(words, 1):
-        acc += w
-        if acc >= WINDOW_WORDS:
-            windows.append((start, i))
-            start, acc = i + 1, 0
-    if start <= len(words):
-        windows.append((start, len(words)))
+    for i, line in enumerate(lines, 1):
+        if acc and acc + len(line) + 1 > WINDOW_CHARS:
+            windows.append((start, i - 1))
+            start, acc = i, 0
+        acc += len(line) + 1
+    if start <= len(lines):
+        windows.append((start, len(lines)))
     segs = doc["segments"]
     print(f"{out / 'transcript.json'}: {doc['kind']}, {len(doc['speakers'])} speakers, {len(segs)} segments, "
           f"{sum(words)} words, {doc['duration'] / 60:.1f} min; "
           f"{sum(s['silent'] for s in segs)} silent, {sum(s['failed'] for s in segs)} failed", file=sys.stderr)
-    print("read transcript.txt in these line windows: " + ", ".join(f"{a}-{b}" for a, b in windows), file=sys.stderr)
+    print(f"read transcript.txt in {len(windows)} line window(s), one at a time: "
+          + ", ".join(f"{a}-{b}" for a, b in windows), file=sys.stderr)
+    if doc.get("incomplete"):
+        heard = [s["end"] for s in segs if not s["failed"] and s["end"] is not None]
+        long = doc["duration"] >= 3600
+        print(f"warning: OpenRamble had not finished transcribing this recording ({doc['incomplete']}); the last "
+              f"recognised sentence ends at {clock(max(heard or [0]), long)} of {clock(doc['duration'], long)}. "
+              "Tell the user: the page will say so, and anything said in the untranscribed part is missing from it.",
+              file=sys.stderr)
     return 0
 
 

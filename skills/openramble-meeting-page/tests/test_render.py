@@ -191,6 +191,14 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(page.count('class="sg'), n)
         self.assertGreater(page.count('class="chunk"'), n // 3 // 40)
 
+    def test_an_unfinished_transcription_is_said_on_the_page(self):
+        tr = transcript()
+        tr["incomplete"] = "partial"
+        tr["duration"] = 1800.0
+        page, _ = render_page(tr, analysis())
+        self.assertIn("Расшифровка не закончена: последняя распознанная фраза — на 00:31, а запись идёт 30:00.", page)
+        self.assertNotIn("Расшифровка не закончена", render_page(transcript(), analysis())[0])
+
     def test_untimed_text_uses_paragraph_numbers(self):
         tr = transcript("tracks")
         tr["timed"] = False

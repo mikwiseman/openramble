@@ -39,6 +39,7 @@ button{cursor:pointer}
 h1{font:600 .9375rem/1.4 var(--sans)}
 h1 .kind{font-weight:400;color:var(--ink-2)}
 .meta{font:400 .875rem/1.6 var(--sans);color:var(--ink-2)}
+.notice{margin-top:16px;padding:10px 14px;border-radius:4px;background:var(--open-bg);font:400 .9375rem/1.5 var(--sans);max-width:760px}
 .badge{display:inline-block;margin-left:12px;font:600 .6875rem/1.5 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--open);border:1px solid currentColor;border-radius:99px;padding:0 .7em}
 
 /* lead */
