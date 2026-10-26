@@ -4295,6 +4295,83 @@
     "input": "Use the format dd, mmm."
   },
   {
+    "name": "clean conjunction: We shipped it and, um, it works.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We shipped it and, um, it works."
+  },
+  {
+    "name": "clean conjunction: So we, uh, shipped it and, um, it works.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "So we, uh, shipped it and, um, it works."
+  },
+  {
+    "name": "clean conjunction: We shipped it but, uh, it crashed on launch.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We shipped it but, uh, it crashed on launch."
+  },
+  {
+    "name": "clean conjunction: I'll ask Sam and, uh, Sam will know.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I'll ask Sam and, uh, Sam will know."
+  },
+  {
+    "name": "clean conjunction: We moved the server and, uh, the server is faster now.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We moved the server and, uh, the server is faster now."
+  },
+  {
+    "name": "clean conjunction: I told you that, um, you should come.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I told you that, um, you should come."
+  },
+  {
+    "name": "clean conjunction: We talked to them about, um, them joining.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "We talked to them about, um, them joining."
+  },
+  {
+    "name": "clean conjunction: Мы сделали это и, э, это работает.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Мы сделали это и, э, это работает."
+  },
+  {
+    "name": "clean conjunction: I think that, um, I think we should wait.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "I think that, um, I think we should wait."
+  },
+  {
+    "name": "clean conjunction: Okay, I think that, um, I think we should wait.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Okay, I think that, um, I think we should wait."
+  },
+  {
+    "name": "clean conjunction: Let's meet at, uh, let's meet on Monday.",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "Let's meet at, uh, let's meet on Monday."
+  },
+  {
     "name": "prose new paragraph as its own sentence",
     "dictionary": [],
     "allowPressReturnCommand": false,

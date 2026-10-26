@@ -43,9 +43,10 @@ import Foundation
 ///    recognizer wrote it, unless it can only be the pause: after a word that
 ///    cannot end a phrase ("should, um,"), in "Thanks, um, for", or after the
 ///    sentence's opening subject ("The build, uh,"). A restart around a
-///    hesitation keeps one copy ("It's a, uh, a leak"). Repeated until nothing
-///    changes, so a hesitation that was hiding another one goes in the same
-///    pass.
+///    hesitation keeps one copy ("It's a, uh, a leak"), but a word said again
+///    after a conjunction or preposition is two words ("shipped it and, um, it
+///    works"). Repeated until nothing changes, so a hesitation that was hiding
+///    another one goes in the same pass.
 /// 3. **Stutters.** A short function word said twice in a row, from a list of
 ///    words whose doubles are never grammatical ("the the", "я я", "I, I").
 /// 4. **"New paragraph"** ("Новый абзац"), set apart by punctuation, becomes a
@@ -196,6 +197,17 @@ enum CleanVerbatim {
         "можете", "может", "могу", "буду", "будешь", "будет", "будем", "будете", "будут", "нужно", "нужны", "нужен", "нужна", "надо",
         "только", "должен", "хочу", "which", "who", "whom", "whose", "кроме",
         "через", "между", "без", "перед", "около", "вместо", "then",
+    ]
+
+    /// Conjunctions and prepositions, which open a phrase of their own: the
+    /// word before one can close the phrase before it, so "shipped it and, um,
+    /// it works" says "it" twice and means both.
+    static let joiningWords: Set<String> = [
+        "and", "or", "but", "so", "because", "if", "when", "that", "than", "then", "which", "who", "whom",
+        "whose", "to", "of", "in", "on", "at", "for", "with", "from", "by", "into", "about", "и", "или", "а",
+        "но", "что", "чтобы", "если", "когда", "потому", "как", "который", "которая", "которое", "которые",
+        "в", "во", "на", "с", "со", "к", "ко", "у", "по", "за", "из", "от", "до", "о", "об", "при", "для",
+        "кроме", "через", "между", "без", "перед", "около", "вместо",
     ]
 
     /// What can open a sentence's subject before its one word: "So Sentry,",
@@ -897,7 +909,10 @@ extension CleanVerbatim {
 
         /// How many words before the hesitation at `index` start a phrase that
         /// stops on a word that cannot end it and is begun again with another
-        /// ending: "with the, um, with Kowalski's", "It's a, uh, it's an".
+        /// ending: "with the, um, with Kowalski's", "It's a, uh, it's an". One
+        /// that stops on a conjunction or preposition is begun again only from
+        /// a sentence's start or a comma ("I think that, um, I think we"), not
+        /// "shipped it and, um, it works".
         private func revisedLength(around index: Int) -> Int? {
             for length in stride(from: 3, through: 2, by: -1) {
                 guard index >= length, index + length < items.count else { continue }
@@ -906,6 +921,8 @@ extension CleanVerbatim {
                 let last = items[index - 1]
                 let lastWord = last.word
                 guard CleanVerbatim.pauseCommaWords.contains(lastWord) || CleanVerbatim.unfinishedWords.contains(lastWord),
+                      !CleanVerbatim.joiningWords.contains(lastWord) || opensSentence(at: index - length)
+                        || items[index - length - 1].endsWithComma,
                       !last.startsUppercase,
                       last.punctuation.isEmpty || last.punctuation == ",",
                       !before.dropLast().contains(where: { !$0.punctuation.isEmpty }),

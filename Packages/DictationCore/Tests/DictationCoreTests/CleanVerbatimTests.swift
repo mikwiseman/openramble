@@ -807,6 +807,38 @@ final class CleanVerbatimTests: XCTestCase {
         }
     }
 
+    /// A conjunction or preposition opens a phrase of its own, so the word
+    /// before it can close the phrase before: "shipped it and, um, it works"
+    /// says "it" twice and means both. A phrase stopped on one is begun again
+    /// only from a sentence's start or a comma.
+    func testAWordSaidAgainAfterAConjunctionAndAHesitationStays() {
+        let cases = [
+            ("We shipped it and, um, it works.", "We shipped it and it works."),
+            ("So we, uh, shipped it and, um, it works.", "So we shipped it and it works."),
+            ("We shipped it and uh, it works.", "We shipped it and it works."),
+            ("We shipped it but, uh, it crashed on launch.", "We shipped it but it crashed on launch."),
+            ("I tested it so, um, it should be fine.", "I tested it so it should be fine."),
+            ("We'll ship it when, uh, it is ready.", "We'll ship it when it is ready."),
+            ("Ship it if, um, it passes review.", "Ship it if it passes review."),
+            ("I can do it or, uh, it can wait.", "I can do it or it can wait."),
+            ("We test it then, um, it ships.", "We test it then it ships."),
+            ("I'll ask Sam and, uh, Sam will know.", "I'll ask Sam and Sam will know."),
+            ("We moved the server and, uh, the server is faster now.", "We moved the server and the server is faster now."),
+            ("I told you that, um, you should come.", "I told you that you should come."),
+            ("We talked to them about, um, them joining.", "We talked to them about them joining."),
+            ("Мы сделали это и, э, это работает.", "Мы сделали это и это работает."),
+            ("Позвони ему или, э, ему напишет Лена.", "Позвони ему или ему напишет Лена."),
+            // Begun again from the sentence's start or a comma, it is a restart.
+            ("I think that, um, I think we should wait.", "I think we should wait."),
+            ("Okay, I think that, um, I think we should wait.", "Okay, I think we should wait."),
+            ("Let's meet at, uh, let's meet on Monday.", "Let's meet on Monday."),
+        ]
+        for (input, expected) in cases {
+            XCTAssertEqual(CleanVerbatim.clean(input), expected, input)
+            XCTAssertEqual(CleanVerbatim.clean(input, spokenCorrections: false), expected, input)
+        }
+    }
+
     func testRoundSixKeepsWhatWasMeant() {
         for text in [
             "Is it safe to merge? Uh uh.",

@@ -33,7 +33,9 @@
 //!    it can only be the pause: after a word that cannot end a phrase
 //!    ("should, um,"), in "Thanks, um, for", or after the sentence's opening
 //!    subject ("The build, uh,"). A restart around a hesitation keeps one copy
-//!    ("It's a, uh, a leak"). Repeated until nothing changes.
+//!    ("It's a, uh, a leak"), but a word said again after a conjunction or
+//!    preposition is two words ("shipped it and, um, it works"). Repeated until
+//!    nothing changes.
 //! 3. **Stutters.** A short function word said twice in a row, from a list of
 //!    words whose doubles are never grammatical ("the the", "я я", "I, I").
 //! 4. **"New paragraph"** ("Новый абзац"), set apart by punctuation, becomes a
@@ -299,6 +301,75 @@ const PAUSE_COMMA_WORDS: &[&str] = &[
     "около",
     "вместо",
     "then",
+];
+
+/// Conjunctions and prepositions, which open a phrase of their own: the word
+/// before one can close the phrase before it, so "shipped it and, um, it
+/// works" says "it" twice and means both.
+const JOINING_WORDS: &[&str] = &[
+    "and",
+    "or",
+    "but",
+    "so",
+    "because",
+    "if",
+    "when",
+    "that",
+    "than",
+    "then",
+    "which",
+    "who",
+    "whom",
+    "whose",
+    "to",
+    "of",
+    "in",
+    "on",
+    "at",
+    "for",
+    "with",
+    "from",
+    "by",
+    "into",
+    "about",
+    "и",
+    "или",
+    "а",
+    "но",
+    "что",
+    "чтобы",
+    "если",
+    "когда",
+    "потому",
+    "как",
+    "который",
+    "которая",
+    "которое",
+    "которые",
+    "в",
+    "во",
+    "на",
+    "с",
+    "со",
+    "к",
+    "ко",
+    "у",
+    "по",
+    "за",
+    "из",
+    "от",
+    "до",
+    "о",
+    "об",
+    "при",
+    "для",
+    "кроме",
+    "через",
+    "между",
+    "без",
+    "перед",
+    "около",
+    "вместо",
 ];
 
 /// Opening words that take an object: "Thanks for", "Спасибо за".
@@ -1442,7 +1513,10 @@ impl<'a> Tokens<'a> {
 
     /// How many words before the hesitation at `index` start a phrase that
     /// stops on a word that cannot end it and is begun again with another
-    /// ending: "with the, um, with Kowalski's", "It's a, uh, it's an".
+    /// ending: "with the, um, with Kowalski's", "It's a, uh, it's an". One that
+    /// stops on a conjunction or preposition is begun again only from a
+    /// sentence's start or a comma ("I think that, um, I think we"), not
+    /// "shipped it and, um, it works".
     fn revised_length(&self, index: usize) -> Option<usize> {
         (2..=3).rev().find(|&length| {
             if index < length || index + length >= self.items.len() {
@@ -1454,6 +1528,9 @@ impl<'a> Tokens<'a> {
             let last_word = last.word();
             (PAUSE_COMMA_WORDS.contains(&last_word.as_str())
                 || UNFINISHED_WORDS.contains(&last_word.as_str()))
+                && (!JOINING_WORDS.contains(&last_word.as_str())
+                    || self.opens_sentence(index - length)
+                    || self.items[index - length - 1].ends_with_comma())
                 && !last.starts_uppercase()
                 && (last.punctuation().is_empty() || last.punctuation() == ",")
                 && before[..length - 1]
@@ -2755,6 +2832,98 @@ mod tests {
         for (input, expected) in cases {
             assert_eq!(plain(input), expected, "input: {input:?}");
             assert_eq!(plain(&plain(input)), expected, "idempotent: {input:?}");
+        }
+    }
+
+    /// A conjunction or preposition opens a phrase of its own, so the word
+    /// before it can close the phrase before: "shipped it and, um, it works"
+    /// says "it" twice and means both. A phrase stopped on one is begun again
+    /// only from a sentence's start or a comma.
+    #[test]
+    fn a_word_said_again_after_a_conjunction_and_a_hesitation_stays() {
+        let none = HashSet::new();
+        let cases = [
+            (
+                "We shipped it and, um, it works.",
+                "We shipped it and it works.",
+            ),
+            (
+                "So we, uh, shipped it and, um, it works.",
+                "So we shipped it and it works.",
+            ),
+            (
+                "We shipped it and uh, it works.",
+                "We shipped it and it works.",
+            ),
+            (
+                "We shipped it but, uh, it crashed on launch.",
+                "We shipped it but it crashed on launch.",
+            ),
+            (
+                "I tested it so, um, it should be fine.",
+                "I tested it so it should be fine.",
+            ),
+            (
+                "We'll ship it when, uh, it is ready.",
+                "We'll ship it when it is ready.",
+            ),
+            (
+                "Ship it if, um, it passes review.",
+                "Ship it if it passes review.",
+            ),
+            (
+                "I can do it or, uh, it can wait.",
+                "I can do it or it can wait.",
+            ),
+            (
+                "We test it then, um, it ships.",
+                "We test it then it ships.",
+            ),
+            (
+                "I'll ask Sam and, uh, Sam will know.",
+                "I'll ask Sam and Sam will know.",
+            ),
+            (
+                "We moved the server and, uh, the server is faster now.",
+                "We moved the server and the server is faster now.",
+            ),
+            (
+                "I told you that, um, you should come.",
+                "I told you that you should come.",
+            ),
+            (
+                "We talked to them about, um, them joining.",
+                "We talked to them about them joining.",
+            ),
+            (
+                "Мы сделали это и, э, это работает.",
+                "Мы сделали это и это работает.",
+            ),
+            (
+                "Позвони ему или, э, ему напишет Лена.",
+                "Позвони ему или ему напишет Лена.",
+            ),
+            // Begun again from the sentence's start or a comma, it is a restart.
+            (
+                "I think that, um, I think we should wait.",
+                "I think we should wait.",
+            ),
+            (
+                "Okay, I think that, um, I think we should wait.",
+                "Okay, I think we should wait.",
+            ),
+            (
+                "Let's meet at, uh, let's meet on Monday.",
+                "Let's meet on Monday.",
+            ),
+        ];
+        for (input, expected) in cases {
+            assert_eq!(plain(input), expected, "input: {input:?}");
+            assert_eq!(
+                clean(input, false, &none, PromptMode::Verbatim),
+                expected,
+                "input: {input:?}"
+            );
         }
     }
 
