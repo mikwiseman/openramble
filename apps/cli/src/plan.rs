@@ -6,17 +6,21 @@
 //!
 //! Two steps:
 //!
-//! 1. **Skip silence** (the gate). The recording's floor is its
-//!    10th-percentile frame, and a frame is voiced when it is 6 dB above that
-//!    floor. The floor is the track's own, so a quiet participant's words
-//!    count as long as they stand 6 dB clear of their own microphone's noise,
-//!    whatever its absolute level; only digital silence needs a fixed number,
-//!    and there the floor is taken as -80 dBFS. Voiced frames less than 2 s
-//!    apart form one island; an island with under 0.1 s of voiced frames is a
-//!    click and goes. What is left gets 1 s of audio on each side, so a soft
-//!    first or last syllable is not cut off. A per-participant meeting track
-//!    is mostly the other people talking, which reaches this track as
-//!    silence, so this is most of the server's saving.
+//! 1. **Skip silence** (the gate). The floor of each second is the
+//!    10th-percentile frame of the minute around it, and a frame is voiced
+//!    when it is 6 dB above that floor. The floor is measured where the words
+//!    are, so a quiet participant's words count as long as they stand 6 dB
+//!    clear of their own microphone's noise at that moment, whatever it does
+//!    elsewhere: a fan that runs for eight hours and stops for the last half
+//!    hour does not set the bar for that half hour, and its own hours are
+//!    skipped against its own level. Only digital silence needs a fixed
+//!    number, and there the floor is taken as -80 dBFS. Voiced frames less
+//!    than 2 s apart form one island; an island with under 0.1 s of voiced
+//!    frames is a click and goes. What is left gets 1 s of audio on each
+//!    side, so a soft first or last syllable is not cut off. A
+//!    per-participant meeting track is mostly the other people talking,
+//!    which reaches this track as silence, so this is most of the server's
+//!    saving.
 //! 2. **Cut at pauses.** A region of at most `cap` seconds is one piece.
 //!    A longer one is split into `n = ceil(d / (0.8 * cap))` nearly equal
 //!    pieces, and each cut moves to the quietest point (smoothed over 200 ms)
@@ -34,6 +38,8 @@ pub const FRAME: usize = 16_000 / FRAMES_PER_SECOND;
 
 /// A voiced frame is this many times louder than the floor: 6 dB.
 const MARGIN: f32 = 2.0;
+/// The floor of a second is measured over the minute around it.
+const NEAR: usize = 60 * FRAMES_PER_SECOND;
 /// The floor is never taken as quieter than -80 dBFS, so digital silence and
 /// dither do not make every faint sound voiced.
 const LOWEST_FLOOR: f32 = 1e-4;
@@ -98,19 +104,25 @@ pub fn pieces_of_spans(
     pieces
 }
 
-/// The loudness above which a frame counts as voiced, from the whole recording.
-fn threshold(envelope: &[f32]) -> f32 {
-    let mut sorted = envelope.to_vec();
+/// The loudness above which a frame of `second` counts as voiced, from the
+/// minute around it.
+fn threshold_at(envelope: &[f32], second: usize) -> f32 {
+    let centre = second * FRAMES_PER_SECOND + FRAMES_PER_SECOND / 2;
+    let near = centre.saturating_sub(NEAR / 2)..(centre + NEAR / 2).min(envelope.len());
+    let mut sorted = envelope[near].to_vec();
     let index = sorted.len() / 10;
     let (_, floor, _) = sorted.select_nth_unstable_by(index, f32::total_cmp);
     floor.max(LOWEST_FLOOR) * MARGIN
 }
 
 fn voiced_regions(envelope: &[f32], span: Range<usize>) -> Vec<Range<usize>> {
-    let threshold = threshold(envelope);
+    let mut threshold = 0.0;
     // (first voiced frame, one past the last, voiced frames)
     let mut islands: Vec<(usize, usize, usize)> = Vec::new();
     for frame in span.clone() {
+        if frame == span.start || frame % FRAMES_PER_SECOND == 0 {
+            threshold = threshold_at(envelope, frame / FRAMES_PER_SECOND);
+        }
         if envelope[frame] <= threshold {
             continue;
         }
@@ -583,6 +595,14 @@ mod tests {
             }
         }
 
+        /// From `at_s` to the end, the floor is `kind` at `dbfs` instead.
+        fn floor_from(&mut self, at_s: f32, kind: Floor, dbfs: f32) {
+            let at = (at_s * RATE as f32) as usize;
+            let rest = (self.samples.len() - at) as f32 / RATE as f32;
+            let floor = floor(kind, rest, dbfs, 11);
+            self.samples[at..at + floor.len()].copy_from_slice(&floor);
+        }
+
         /// Add `sound` at `at_s` with its RMS over the whole sound at `dbfs`.
         fn put(&mut self, at_s: f32, sound: (Vec<f32>, Vec<Range<usize>>), dbfs: f32) {
             let (mut samples, syllables) = sound;
@@ -680,6 +700,28 @@ mod tests {
             assert_eq!(track.lost(&pieces), 0, "{kind:?} at {level} dBFS");
             let kept = track.floor_kept_s(&pieces);
             assert!(kept <= STRAY_S, "{kind:?} at {level} dBFS kept {kept} s");
+        }
+    }
+
+    #[test]
+    fn a_quiet_speaker_keeps_every_word_after_a_louder_floor_stops() {
+        // The fan runs for 92% of ten minutes at -55 dBFS, then the floor is
+        // -75. The quiet part is under a tenth of the track, so a floor taken
+        // from the whole track is the fan's, 20 dB over the one the speaker
+        // ends on. They speak 12 dB over the floor of the moment.
+        for kind in [Floor::White, Floor::Pink, Floor::Room] {
+            let mut track = Track::new(kind, 600.0, -55.0);
+            track.floor_from(552.0, kind, -75.0);
+            track.put(100.0, utterance(10.0, 1), -43.0);
+            track.put(300.0, utterance(6.0, 2), -43.0);
+            track.put(560.0, utterance(10.0, 3), -63.0);
+            track.put(585.0, da(), -63.0);
+            let pieces = track.pieces();
+            assert_eq!(track.lost(&pieces), 0, "{kind:?}");
+            // and the fan's floor stays out, but for the half minute before it
+            // stops, which is measured with the quiet floor after it
+            let kept = track.floor_kept_s(&pieces);
+            assert!(kept <= 30.0, "{kind:?} kept {kept} s");
         }
     }
 
