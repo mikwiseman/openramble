@@ -29,7 +29,7 @@ R is required and O is optional.
 | `meeting.kind`, `meeting.date`, `meeting.timezone` | O | The date only from file metadata (`recordedAt` in a Recordings transcript), the user, or the words of the meeting. |
 | `lead` | R | 1 to 4 sentences, at most 60 words, with the outcome and not the agenda. Each is `{text, evidence}`. |
 | `participants` | O | `{speaker, short, aliases, role, evidence}` for speakers in the transcript, e.g. `"p2"`. A role only when someone said it (cite it) or the user gave it. A mixed recording has no participants. |
-| `mentioned` | O | `{name, aliases, note, evidence}` for people named in the meeting. In a tracks or labelled transcript they were not present. In a mixed recording or a Recordings folder, `mentioned` is how you name people the words name. |
+| `mentioned` | O | `{name, aliases, note, evidence}` for people named in the meeting. In a tracks or labelled transcript they were not present. In a mixed recording or a Recordings folder, `mentioned` is how you name people the words name, and the name must be said in the evidence. |
 | `dates` | O | `{date, said, text, evidence}` for dates people said. `said` is the spoken words and must appear in the evidence. |
 | `decisions` | R items | `{id, text, detail, evidence, disagreement, cautions}`. `disagreement` links the debate that ended in this decision. |
 | `actions` | R items | `{id, owner, task, detail, due, dueSaid, blocker, taken, evidence, cautions}`. `owner` is a speaker id, a `mentioned` name, or `null`. |
@@ -50,8 +50,8 @@ no two items share one.
 
 - `owner: null` shows the task under "Никто не взял" (nobody took it).
 - `owner: null` with `taken: true` means someone took the task but the words do not say who. It happens in a mixed recording when a person says "I'll do it", and the page groups such tasks as taken by a person whose name was not said.
-- In a mixed recording, an owner must be named in the task's own evidence, e.g. "Дима, тогда этот фикс на тебе" for the owner "Дима".
-- `due` is an ISO date, and `dueSaid` is the spoken words, e.g. `"до вторника, 24 ноября"`. The renderer looks for `dueSaid` in the task's evidence after ignoring case, ё and punctuation, and fails if the words are not there. Without a meeting date you cannot resolve "by Friday", so keep only `dueSaid`.
+- In a mixed recording, and for anyone on the system channel of a Recordings folder, an owner who is not a speaker id must be named in the task's own evidence, e.g. "Дима, тогда этот фикс на тебе" for the owner "Дима". The same holds for the `name` of a disagreement position. The renderer accepts the name or a case form of it (Дима, Диме, Диму) written with a capital, as names are, and not a word that only looks like it.
+- `due` is an ISO date, and `dueSaid` is the spoken words, e.g. `"до вторника, 24 ноября"`. The renderer looks for `dueSaid` in the task's evidence after ignoring case, ё and punctuation, and fails if the words are not there. Without a meeting date you cannot resolve "by Friday", so keep only `dueSaid`, which the renderer checks the same way.
 
 ## Example
 

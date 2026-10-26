@@ -288,6 +288,51 @@ class ValidationTests(unittest.TestCase):
         self.expect(lambda a: a["actions"][0].update(dueSaid="к понедельнику"), "is not in the task's evidence")
         self.expect(lambda a: a["dates"][0].update(said="в среду"), "dates[0].said")
 
+    def test_spoken_due_is_checked_without_a_date(self):
+        # without a meeting date only dueSaid is kept, and it still has to be words someone said
+        self.expect(lambda a: a["actions"][0].update(due=None, dueSaid="к следующему понедельнику"),
+                    "actions[0].dueSaid")
+        tr, an = transcript(), analysis()
+        an["actions"][0].update(due=None, dueSaid="до пятницы")
+        self.assertEqual(errors_of(tr, an), [])
+
+    def test_recordings_system_channel_names_need_the_words(self):
+        # the system channel carries every remote voice, so a name there comes only from the words
+        def channels(t):
+            t["kind"] = "channels"
+            t["speakers"] = [{"id": "p1", "name": "Анна", "from": "channel", "audio": None},
+                             {"id": "p2", "name": "Собеседники", "from": "channel", "audio": None}]
+
+        def boris(a):
+            a["mentioned"] = [{"name": "Борис", "evidence": ["s0003"]}]
+            a["actions"][1].update(owner="Борис", evidence=["s0003"])
+            a["disagreements"][0]["positions"] = [{"name": "Борис", "view": "против", "evidence": ["s0003"]}]
+        tr, an = transcript(), analysis()
+        channels(tr)
+        boris(an)
+        errs = errors_of(tr, an)
+        self.assertEqual(sorted(e.split(":")[0] for e in errs if "Борис" in e),
+                         ["actions[1].owner", "disagreements[0].positions[0].name", "mentioned[0]"])
+        tr["segments"][2]["text"] = "Да, беру. Борис на связи."
+        self.assertEqual(errors_of(tr, an), [])
+        an["actions"][1].update(owner="p2", evidence=["s0004"])  # the channel itself may own a task
+        self.assertEqual(errors_of(tr, an), [])
+
+    def test_a_name_is_a_name_not_a_word(self):
+        hit = render.name_hit
+        self.assertFalse(hit("Will", "I will send the deck tomorrow."))
+        self.assertFalse(hit("Надя", "Надо обновить договор до пятницы."))
+        self.assertFalse(hit("Тёма", "Вернёмся к теме оплаты."))
+        self.assertFalse(hit("Mark", "check the market"))
+        self.assertFalse(hit("Al", "I can also take it."))
+        self.assertTrue(hit("Дима", "Дима, тогда этот фикс на тебе."))
+        self.assertTrue(hit("Олег", "Олегу напишу сегодня."))
+        self.assertTrue(hit("Катя", "отлично Катя это на тебе до вторника"))
+        self.assertTrue(hit("Тёма", "Тёме это отдадим."))
+        self.assertTrue(hit("Дмитрий Орлов", "Спасибо Дмитрию за фикс."))
+        self.assertTrue(hit("Arjun", "Arjun's draft is ready."))
+        self.assertTrue(hit("Катя", "кать, глянь"))  # a text without capitals is matched as it is
+
     def test_due_matches_after_normalisation(self):
         tr, an = transcript(), analysis()
         an["actions"][0]["dueSaid"] = "ДО ПЯТНИЦЫ 20 ноября"

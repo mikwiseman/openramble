@@ -221,14 +221,28 @@ def slug(title):
     return (s[:60].rstrip("-") or "meeting")
 
 
+WORD = re.compile(r"[^\W\d_]+")
+
+
+def name_forms(part):
+    """A lower case name and its Russian case forms: "дима" -> "диме", "диму", "димой", "дим"."""
+    if len(part) < 3 or not re.fullmatch(r"[а-я]+", part) or part[-1] in "оеиуыэю":
+        return {part}
+    if part[-1] in "ая":
+        stem, ends = part[:-1], ("", "ь", "а", "я", "ы", "и", "е", "у", "ю", "ой", "ей", "ою", "ею")
+    elif part[-1] in "йь":
+        stem, ends = part[:-1], (part[-1], "я", "ю", "ем", "е", "и")
+    else:
+        stem, ends = part, ("", "а", "у", "ом", "е", "ым")
+    return {stem + e for e in ends}
+
+
 def name_hit(name, text):
-    """A person's name, or a declined form of it, appears in text ("Дима" -> "Диме", "Arjun" -> "Arjun's")."""
-    words = norm(text).split()
-    for part in norm(name).split():
-        stem = part[:-1] if len(part) >= 4 else part
-        if any(w == part or (w.startswith(stem) and len(w) <= len(part) + 3) for w in words):
-            return True
-    return False
+    """A person's name is said in text: the name or a case form of it ("Дима" -> "Диме", "Arjun" -> "Arjun's"),
+    written with a capital, as names are, unless the text has no capitals at all ("I will", "к теме" are not names)."""
+    caps = any(c.isupper() for c in text)
+    said = {w.lower().replace("ё", "е") for w in WORD.findall(text) if not caps or w[0].isupper()}
+    return any(said & name_forms(part) for part in WORD.findall(name.lower().replace("ё", "е")))
 
 
 def who_html(name, cls):
@@ -257,6 +271,9 @@ def validate(tr, an, audio=None):
     index = {s["id"]: i for i, s in enumerate(tr["segments"])}
     speakers = {p["id"]: p for p in tr["speakers"]}
     mixed = tr["kind"] == "mixed"
+    # voices are not told apart: everyone in a mixed recording, everyone on a Recordings system channel
+    anonymous = tr["kind"] in ("mixed", "channels")
+    unnamed = "where voices are not told apart (a mixed recording, a Recordings system channel)"
 
     def cite(path, ids):
         for i in ids or []:
@@ -286,8 +303,9 @@ def validate(tr, an, audio=None):
     for n, m in enumerate(an.get("mentioned", [])):
         cite(f"mentioned[{n}].evidence", m["evidence"])
         mentioned[m["name"]] = m
-        if mixed and not any(name_hit(x, ev_text(m["evidence"])) for x in [m["name"]] + m.get("aliases", [])):
-            errors.append(f"mentioned[{n}]: \"{m['name']}\" is not named in its own evidence")
+        if anonymous and not any(name_hit(x, ev_text(m["evidence"])) for x in [m["name"]] + m.get("aliases", [])):
+            errors.append(f"mentioned[{n}]: \"{m['name']}\" is not named in its own evidence; {unnamed} "
+                          "a person is known only by the words")
     for n, d in enumerate(an.get("dates", [])):
         cite(f"dates[{n}].evidence", d["evidence"])
         if norm(d["said"]) not in norm(ev_text(d["evidence"])):
@@ -313,18 +331,17 @@ def validate(tr, an, audio=None):
         if o is not None and o not in speakers and o not in mentioned:
             errors.append(f"actions[{n}].owner: \"{o}\" is not a participant id ({', '.join(speakers) or 'none'}), "
                           f"a mentioned name, or null")
-        if mixed and o is not None:
+        if anonymous and o is not None and o not in speakers:
             names = [o] + mentioned.get(o, {}).get("aliases", [])
             if not any(name_hit(x, ev_text(a["evidence"])) for x in names):
                 errors.append(f"actions[{n}].owner: \"{o}\" is not named in the task's own evidence; "
-                              "in a mixed recording an owner must be named in the words")
+                              f"{unnamed} an owner must be named in the words")
         if a.get("taken") and o is not None:
             errors.append(f"actions[{n}].taken: only for a task with owner null that someone took without being named")
-        if a.get("due"):
-            if not a.get("dueSaid"):
-                errors.append(f"actions[{n}].due: set without dueSaid, the words that named it")
-            elif norm(a["dueSaid"]) not in norm(ev_text(a["evidence"])):
-                errors.append(f"actions[{n}].dueSaid: \"{a['dueSaid']}\" is not in the task's evidence")
+        if a.get("due") and not a.get("dueSaid"):
+            errors.append(f"actions[{n}].due: set without dueSaid, the words that named it")
+        if a.get("dueSaid") and norm(a["dueSaid"]) not in norm(ev_text(a["evidence"])):
+            errors.append(f"actions[{n}].dueSaid: \"{a['dueSaid']}\" is not in the task's evidence")
     for n, d in enumerate(an.get("disagreements", [])):
         if d.get("decision") and d["decision"] not in by_kind["decisions"]:
             errors.append(f"disagreements[{n}].decision: no decision \"{d['decision']}\"")
@@ -332,8 +349,9 @@ def validate(tr, an, audio=None):
             cite(f"disagreements[{n}].positions[{k}].evidence", p["evidence"])
             if p.get("speaker") and p["speaker"] not in speakers:
                 errors.append(f"disagreements[{n}].positions[{k}].speaker: {p['speaker']} is not a speaker")
-            if mixed and p.get("name") and not name_hit(p["name"], ev_text(p["evidence"])):
-                errors.append(f"disagreements[{n}].positions[{k}].name: \"{p['name']}\" is not named in its evidence")
+            if anonymous and p.get("name") and not p.get("speaker") and not name_hit(p["name"], ev_text(p["evidence"])):
+                errors.append(f"disagreements[{n}].positions[{k}].name: \"{p['name']}\" is not named in its evidence; "
+                              f"{unnamed} a name comes only from the words")
         if d.get("resolution"):
             cite(f"disagreements[{n}].resolution.evidence", d["resolution"]["evidence"])
     for n, q in enumerate(an.get("quotes", [])):

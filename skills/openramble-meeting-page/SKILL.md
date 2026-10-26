@@ -74,7 +74,7 @@ You must:
 
 You must not:
 
-- name a speaker from voice or style, or name anyone in a mixed recording unless the words name them;
+- name a speaker from voice or style, or name anyone in a mixed recording or on a Recordings system channel unless the words name them;
 - add owners, due dates, priorities, statuses, roles, sentiment or scores that nobody said;
 - turn "I'll think about it" into a task;
 - correct quotes or evidence, although your own prose may use the glossary's spellings;
