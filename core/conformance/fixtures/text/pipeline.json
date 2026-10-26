@@ -7268,6 +7268,160 @@
     "text" : "Use the format dd, mmm."
   },
   {
+    "afterDictionary" : "We shipped it and, um, it works.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "We shipped it and, um, it works.",
+    "name" : "clean conjunction: We shipped it and, um, it works.",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "We shipped it and it works."
+  },
+  {
+    "afterDictionary" : "So we, uh, shipped it and, um, it works.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "So we, uh, shipped it and, um, it works.",
+    "name" : "clean conjunction: So we, uh, shipped it and, um, it works.",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "So we shipped it and it works."
+  },
+  {
+    "afterDictionary" : "We shipped it but, uh, it crashed on launch.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "We shipped it but, uh, it crashed on launch.",
+    "name" : "clean conjunction: We shipped it but, uh, it crashed on launch.",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "We shipped it but it crashed on launch."
+  },
+  {
+    "afterDictionary" : "I'll ask Sam and, uh, Sam will know.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "I'll ask Sam and, uh, Sam will know.",
+    "name" : "clean conjunction: I'll ask Sam and, uh, Sam will know.",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "I'll ask Sam and Sam will know."
+  },
+  {
+    "afterDictionary" : "We moved the server and, uh, the server is faster now.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "We moved the server and, uh, the server is faster now.",
+    "name" : "clean conjunction: We moved the server and, uh, the server is faster now.",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "We moved the server and the server is faster now."
+  },
+  {
+    "afterDictionary" : "I told you that, um, you should come.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "I told you that, um, you should come.",
+    "name" : "clean conjunction: I told you that, um, you should come.",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "I told you that you should come."
+  },
+  {
+    "afterDictionary" : "We talked to them about, um, them joining.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "We talked to them about, um, them joining.",
+    "name" : "clean conjunction: We talked to them about, um, them joining.",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "We talked to them about them joining."
+  },
+  {
+    "afterDictionary" : "Мы сделали это и, э, это работает.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Мы сделали это и, э, это работает.",
+    "name" : "clean conjunction: Мы сделали это и, э, это работает.",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Мы сделали это и это работает."
+  },
+  {
+    "afterDictionary" : "I think that, um, I think we should wait.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "I think that, um, I think we should wait.",
+    "name" : "clean conjunction: I think that, um, I think we should wait.",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "I think we should wait."
+  },
+  {
+    "afterDictionary" : "Okay, I think that, um, I think we should wait.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Okay, I think that, um, I think we should wait.",
+    "name" : "clean conjunction: Okay, I think that, um, I think we should wait.",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Okay, I think we should wait."
+  },
+  {
+    "afterDictionary" : "Let's meet at, uh, let's meet on Monday.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "Let's meet at, uh, let's meet on Monday.",
+    "name" : "clean conjunction: Let's meet at, uh, let's meet on Monday.",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "Let's meet on Monday."
+  },
+  {
     "afterDictionary" : "First point. New paragraph. Second point.",
     "allowPressReturnCommand" : false,
     "dictionary" : [
