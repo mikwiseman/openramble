@@ -82,7 +82,9 @@ a:hover>.cb{fill:var(--rule)}
 .hb{fill:var(--paper-2)}
 .hl{stroke:var(--rule);stroke-width:2}
 .cn{font:600 10px var(--sans);fill:var(--ink-2)}
-.cn.tiny{display:none}
+/* the script shows each chapter number where it has room before the next; without it, by chapter length */
+.no-js .cn.tiny{display:none}
+@media screen{.cn.off{display:none}}
 .lane rect{fill:currentColor}
 .ln{font:600 11px var(--sans);fill:currentColor}
 .ln .pc{fill:var(--ink-3);font-weight:400}
@@ -309,7 +311,7 @@ body.has-player .colophon{margin-bottom:72px}
   .colophon{margin-top:64px}
   .strip{grid-template-columns:32px minmax(0,1fr);gap:8px}
   .ln{font-size:10px}
-  .cn.narrow{display:none}
+  .no-js .cn.narrow{display:none}
   .chap{grid-template-columns:minmax(0,1fr)}
   .chap h3,.chap .gist,.q{grid-column:1}
   .cm{display:flex;flex-wrap:wrap;gap:0 8px}
@@ -335,6 +337,7 @@ body.has-player .colophon{margin-bottom:72px}
   .mast{padding-top:0}
   .lead>p{font-size:18pt}
   .strip{grid-template-columns:minmax(0,1fr)}
+  .cn.tiny{display:none}
   .cols,.flow-grid{grid-template-columns:minmax(0,1fr);gap:20px}
   .chapters{grid-column:auto}
   .chap{padding:10px 0}

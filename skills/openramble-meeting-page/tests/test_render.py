@@ -499,6 +499,17 @@ class ValidationTests(unittest.TestCase):
             self.assertNotIn("no problems", out.getvalue())
             self.assertTrue(err.getvalue().startswith("2 problem(s)"), err.getvalue())
 
+    def test_prose_keeps_a_short_word_with_the_next_but_never_chains_them(self):
+        # "at 6 in the morning" glued into one unbreakable run left ragged lines in the items
+        runs = lambda s: max(len(r.split("\u00a0")) for r in s.split(" "))
+        en = render.typo("Two short sessions at the depot at 6 in the morning, in the week before launch", "en")
+        self.assertLessEqual(runs(en), 3, en)
+        self.assertIn("at the\u00a0depot", en)
+        self.assertIn("of the\u00a0pilot", render.typo("not part of the pilot", "en"))
+        ru = render.typo("Я и не знал, что в пятницу в 10 утра релиз", "ru")
+        self.assertLessEqual(runs(ru), 3, ru)
+        self.assertIn("не\u00a0знал", ru)
+
     def test_warnings(self):
         tr, an = transcript(), analysis()
         an["decisions"][0]["text"] = "**жирно**"

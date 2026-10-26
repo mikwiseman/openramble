@@ -425,6 +425,15 @@
   addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(spy); } }, { passive: true });
   spy();
 
+  /* ---------- chapter numbers on the strip: each one where it has room before the next ---------- */
+  const nums = $$('.sl .cn');
+  function fitNums() {
+    nums.forEach(n => n.classList.remove('off'));
+    const box = nums.map(n => n.getBBox()), w = nums[0].ownerSVGElement.getBoundingClientRect().width;
+    nums.forEach((n, i) => n.classList.toggle('off', box[i].x + box[i].width + 3 > (i + 1 < nums.length ? box[i + 1].x : w)));
+  }
+  if (nums.length) { fitNums(); addEventListener('resize', fitNums, { passive: true }); }
+
   /* ---------- copy the tasks as a Markdown checklist ---------- */
   const copy = $('#copy');
   if (copy) copy.addEventListener('click', async () => {

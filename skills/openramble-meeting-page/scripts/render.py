@@ -211,9 +211,12 @@ def clock(t, long):
     return f"{h}:{m:02d}:{s:02d}" if long else f"{m:02d}:{s:02d}"
 
 
-RU_NB = re.compile(r"(?<![\w-])(а|в|во|и|к|ко|о|об|с|со|у|я|не|ни|на|по|за|из|от|до|для|без|при|про|над|под|но|что|как)\s+",
-                   re.IGNORECASE)
-EN_NB = re.compile(r"(?<![\w-])(a|an|the|I|to|of|in|on|at|by|or|and)\s+")
+# a short word keeps to the next word, the last of a run of them to its noun ("of the\u00a0pilot"), and never
+# in a chain: "at 6 in the morning" glued whole would leave a ragged line before it
+RU_SHORT = r"(?:а|в|во|и|к|ко|о|об|с|со|у|я|не|ни|на|по|за|из|от|до|для|без|при|про|над|под|но|что|как)"
+EN_SHORT = r"(?:a|an|the|I|to|of|in|on|at|by|or|and)"
+RU_NB = re.compile(rf"(?<![\w\u00a0-])({RU_SHORT}) +(?!{RU_SHORT} )(\S+)", re.IGNORECASE)
+EN_NB = re.compile(rf"(?<![\w\u00a0-])({EN_SHORT}) +(?!{EN_SHORT} )(\S+)")
 
 
 def typo(s, lang):
@@ -222,11 +225,11 @@ def typo(s, lang):
     s = re.sub(r"\s+→\s+", "\u00a0→ ", s)
     s = re.sub(r"(\d)\s*%", "\\1\u00a0%", s) if lang == "ru" else s
     if lang == "ru":
-        s = RU_NB.sub(lambda m: m.group(1) + "\u00a0", s)
-        s = re.sub(r"(\d)\s+(?=[а-яё]{3})", "\\1\u00a0", s)
+        s = re.sub(r"(\d) +(?=[а-яё]{3})", "\\1\u00a0", s)
+        s = RU_NB.sub("\\1\u00a0\\2", s)
     else:
-        s = EN_NB.sub(lambda m: m.group(1) + "\u00a0", s)
-        s = re.sub(r"(\d)\s+(?=[A-Za-z])", "\\1\u00a0", s)
+        s = re.sub(r"(\d) +(?=[A-Za-z])", "\\1\u00a0", s)
+        s = EN_NB.sub("\\1\u00a0\\2", s)
     return s
 
 
