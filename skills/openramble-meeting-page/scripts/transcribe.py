@@ -12,10 +12,21 @@ Each DIR/<stem>.json is {"schemaVersion":1, "audio", "asr", "duration", "words":
 (or "segments" from the Linux CLI, which has no word times). A file that is already
 there is skipped, so a rerun redoes only what failed. Waits as long as the job takes;
 transcript text is never printed.
+
+The macOS CLI gets every file in one run, so the model loads once. The Linux CLI
+has no word times, so its pieces are its only times: left alone it cuts fixed
+windows from 0 s, and a piece starts up to 20 s before the speech in it. So each
+file first gets its speech spans, where it has sound above its own noise floor
+(on a participant's track: where that person talks), and the CLI transcribes
+exactly those (--segments), one run per file. A piece then starts with the
+speech, one turn is not glued to the next, and silence is never transcribed.
 """
 import argparse
+import array
 import concurrent.futures
 import json
+import math
+import operator
 import os
 import plistlib
 import shutil
@@ -33,6 +44,10 @@ CLI_PATHS = ["~/.local/bin/openramble", "/Applications/OpenRamble.app/Contents/M
 SERVER_PARALLEL = 4
 DEADLINE_S = 14400
 RETRIES = 4
+VAD_RATE = 4000      # Hz; speech energy is well below 2 kHz
+FRAME_S = 0.02       # the Linux CLI's frame
+SPAN_GAP = 0.8       # quieter than this between two sounds keeps them in one span
+SPAN_PAD = 0.6       # seconds on each side: soft onsets and trailing words stay in (measured on the samples)
 
 
 class Fail(Exception):
@@ -122,16 +137,83 @@ def cli_asr(cli):
     return "OpenRamble command-line tool"
 
 
+def takes_spans(cli):
+    """The Linux CLI transcribes given spans (--segments); the macOS CLI has word times and no such option."""
+    try:
+        r = subprocess.run([cli, "--help"], capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return "--segments" in r.stdout + r.stderr
+
+
+def speech_spans(path):
+    """[{start, end}] where the file has sound above its own noise floor, by the Linux CLI's own test
+    (a 20 ms frame is voiced above 3x the quietest fifth, and at least 0.003); None without ffmpeg."""
+    if not shutil.which("ffmpeg"):
+        return None
+    proc = subprocess.Popen(["ffmpeg", "-nostdin", "-v", "error", "-i", str(path), "-vn", "-ac", "1",
+                             "-ar", str(VAD_RATE), "-f", "s16le", "-"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    n = round(VAD_RATE * FRAME_S)
+    rms, rest = array.array("f"), b""
+    while True:
+        chunk = proc.stdout.read(1 << 20)
+        if not chunk:
+            break
+        data = rest + chunk
+        cut = len(data) - len(data) % (2 * n)
+        frames, rest = array.array("h", data[:cut]), data[cut:]
+        if sys.byteorder == "big":
+            frames.byteswap()
+        for i in range(0, len(frames), n):
+            f = frames[i:i + n]
+            rms.append(math.sqrt(sum(map(operator.mul, f, f)) / n) / 32768)
+    if proc.wait() != 0:
+        return None
+    if not rms:
+        return []
+    voiced = max(sorted(rms)[len(rms) // 5] * 3, 0.003)
+    runs = []  # [first frame, last frame, voiced frames]
+    for k, r in enumerate(rms):
+        if r > voiced:
+            if runs and (k - runs[-1][1]) * FRAME_S <= SPAN_GAP:
+                runs[-1][1:] = [k, runs[-1][2] + 1]
+            else:
+                runs.append([k, k, 1])
+    end, spans = len(rms) * FRAME_S, []
+    for a, b, v in runs:
+        if v < 10:  # under 0.2 s of sound: a click, a breath
+            continue
+        a, b = max(0.0, a * FRAME_S - SPAN_PAD), min(end, (b + 1) * FRAME_S + SPAN_PAD)
+        if spans and a <= spans[-1]["end"]:
+            spans[-1]["end"] = round(b, 2)
+        else:
+            spans.append({"start": round(a, 2), "end": round(b, 2)})
+    return spans
+
+
 def run_cli(cli, files, out_dir):
     check = subprocess.run([cli, "--check-model"], capture_output=True, text=True)
     if check.returncode != 0:
         raise Fail(f"the OpenRamble model is not ready: {(check.stderr or check.stdout).strip()}\n"
                    "Install or repair it in OpenRamble Settings; do not download another model.")
     asr = cli_asr(cli)
+    # absolute paths never start with "-", and the Linux build has no "--"
+    paths = [str(Path(f).resolve()) for f in files]
     with tempfile.TemporaryDirectory(dir=out_dir, prefix=".raw-") as raw_dir:
-        # one invocation for every file, so the model loads once; progress streams to stderr
-        # absolute paths never start with "-", and the Linux build has no "--"
-        proc = subprocess.run([cli, "--format", "json", "--output-dir", raw_dir] + [str(Path(f).resolve()) for f in files])
+        codes = []
+        if takes_spans(cli):
+            for f, path in zip(files, paths):  # --segments applies to a whole run: one run per file
+                spans = speech_spans(f)
+                if spans is None:
+                    raise Fail(f"{Path(f).name}: cannot read its audio with ffmpeg, which the Linux CLI needs too")
+                spans_file = Path(raw_dir) / (Path(f).stem + ".spans.json")
+                spans_file.write_text(json.dumps(spans), encoding="utf-8")
+                log(f"{Path(f).name}: {len(spans)} speech spans, {sum(s['end'] - s['start'] for s in spans):.0f} s")
+                codes.append(subprocess.run([cli, "--format", "json", "--output-dir", raw_dir,
+                                             "--segments", str(spans_file), path]).returncode)
+        else:
+            # one run for every file, so the model loads once; progress streams to stderr
+            codes.append(subprocess.run([cli, "--format", "json", "--output-dir", raw_dir] + paths).returncode)
         failed = []
         for f in files:
             raw = Path(raw_dir) / (Path(f).stem + ".json")
@@ -143,7 +225,7 @@ def run_cli(cli, files, out_dir):
                              "OpenRamble command-line tool (Linux)" + (f", {data['model']}" if data.get("model") else ""),
                              data)
     if failed:
-        raise Fail(f"the CLI exited {proc.returncode}; not transcribed: " + ", ".join(Path(f).name for f in failed))
+        raise Fail(f"the CLI exited {max(codes, key=abs)}; not transcribed: " + ", ".join(Path(f).name for f in failed))
 
 
 # ------------------------------------------------------------------ OpenRamble server

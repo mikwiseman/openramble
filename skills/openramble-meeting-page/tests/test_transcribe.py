@@ -1,7 +1,10 @@
 """transcribe.py tests against a fake CLI and a local fake server: python3 -m unittest discover -s skills/openramble-meeting-page/tests"""
+import array
 import http.server
 import json
+import math
 import os
+import shutil
 import stat
 import sys
 import tempfile
@@ -9,6 +12,7 @@ import threading
 import time
 import unittest
 import urllib.parse
+import wave
 from pathlib import Path
 from unittest import mock
 
@@ -31,6 +35,38 @@ for a in "$@"; do
   esac
 done
 """
+
+
+# the Linux build: --segments in its help, pieces without word times, one piece per given span
+FAKE_LINUX_CLI = """#!/bin/sh
+echo "$@" >> "$(dirname "$0")/calls.txt"
+if [ "$1" = "--help" ]; then echo "  --segments FILE  transcribe only these spans" >&2; exit 2; fi
+if [ "$1" = "--check-model" ]; then exit 0; fi
+out=""; spans=""; prev=""
+for a in "$@"; do
+  [ "$prev" = "--output-dir" ] && out="$a"
+  [ "$prev" = "--segments" ] && spans="$a"
+  prev="$a"
+done
+for a in "$@"; do last="$a"; done
+n=$(basename "$last" .wav)
+python3 -c "import json,sys; s=json.load(open(sys.argv[1])); json.dump({'model':'m','duration':10.0,
+  'segments':[dict(x, label=None, text='piece') for x in s]}, open(sys.argv[2],'w'))" "$spans" "$out/$n.json"
+"""
+
+
+def tone_wav(path, bursts, seconds=10.0, rate=16000):
+    """A track that is silent except for 220 Hz bursts at the given (start, end) seconds."""
+    frames = array.array("h", [0] * int(seconds * rate))
+    for a, b in bursts:
+        for i in range(int(a * rate), int(b * rate)):
+            frames[i] = int(9000 * math.sin(2 * math.pi * 220 * i / rate))
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(frames.tobytes())
+    return path
 
 
 class Server(http.server.BaseHTTPRequestHandler):
@@ -93,9 +129,9 @@ class TranscribeTests(unittest.TestCase):
         out = self.dir / "asr"
         self.assertEqual(transcribe.main([str(f) for f in files] + ["--out", str(out), "--cli", str(cli)]), 0)
         calls = (self.dir / "calls.txt").read_text().splitlines()
-        self.assertEqual(calls[0], "--check-model")
-        self.assertEqual(len(calls), 2)
-        self.assertIn("--format json --output-dir", calls[1])
+        self.assertEqual(calls[:2], ["--check-model", "--help"])
+        self.assertEqual(len(calls), 3)
+        self.assertIn("--format json --output-dir", calls[2])
         doc = json.loads((out / "audioAnnaBelova1.json").read_text())
         self.assertEqual(doc["words"], [{"text": "Hi.", "start": 0.5, "end": 0.9}])
         self.assertEqual(doc["audio"], str(files[0].resolve()))
@@ -106,6 +142,26 @@ class TranscribeTests(unittest.TestCase):
         last = (self.dir / "calls.txt").read_text().splitlines()[-1]
         self.assertTrue(last.endswith("broken.m4a"))
         self.assertNotIn("audioDima2", last)
+
+    @unittest.skipUnless(shutil.which("ffmpeg"), "needs ffmpeg, as the Linux CLI does")
+    def test_linux_cli_transcribes_speech_spans_one_run_per_file(self):
+        cli = self.dir / "openramble"
+        cli.write_text(FAKE_LINUX_CLI)
+        cli.chmod(cli.stat().st_mode | stat.S_IEXEC)
+        anna = tone_wav(self.dir / "audio-anna.wav", [(1.0, 2.5), (6.0, 6.6)])
+        dima = tone_wav(self.dir / "audio-dima.wav", [(3.0, 5.0), (8.0, 8.1)])  # the 0.1 s click is not speech
+        out = self.dir / "asr"
+        self.assertEqual(transcribe.main([str(anna), str(dima), "--out", str(out), "--cli", str(cli)]), 0)
+        runs = [c for c in (self.dir / "calls.txt").read_text().splitlines() if c.startswith("--format")]
+        self.assertEqual(len(runs), 2)
+        self.assertTrue(all("--segments" in c for c in runs))
+        spans = lambda name: [(s["start"], s["end"]) for s in json.loads((out / name).read_text())["segments"]]
+        for got, want in ((spans("audio-anna.json"), [(0.4, 3.1), (5.4, 7.2)]),
+                          (spans("audio-dima.json"), [(2.4, 5.6)])):
+            self.assertEqual(len(got), len(want), got)
+            for (a, b), (x, y) in zip(got, want):
+                self.assertAlmostEqual(a, x, delta=0.05)
+                self.assertAlmostEqual(b, y, delta=0.05)
 
     def test_server_api_parallel_limit_and_retry(self):
         Server.seen, Server.busy_once, Server.peak = [], set(), 0
