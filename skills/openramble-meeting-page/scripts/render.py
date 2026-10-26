@@ -72,7 +72,7 @@ L10N = {
         "js": {"of": "из", "noHits": "нет совпадений", "short": "хотя бы 2 буквы", "play": "Слушать",
                "pause": "Пауза", "missing": "Рядом со страницей нет файла «{f}».", "track": "дорожка: {n}",
                "copied": "Скопировано", "copyFail": "Не удалось скопировать", "back": "↩ Назад",
-               "inTranscript": "в стенограмме", "primary": "основная цитата"},
+               "inTranscript": "в стенограмме", "primary": "основная цитата", "listen": "Слушать запись"},
     },
     "en": {
         "forms": {"decisions": ("decision", "decisions"), "tasks": ("task", "tasks"),
@@ -113,7 +113,7 @@ L10N = {
         "js": {"of": "of", "noHits": "no matches", "short": "type 2 letters", "play": "Play",
                "pause": "Pause", "missing": "“{f}” is not next to this page.", "track": "track: {n}",
                "copied": "Copied", "copyFail": "Could not copy", "back": "↩ Back",
-               "inTranscript": "in transcript", "primary": "main quote"},
+               "inTranscript": "in transcript", "primary": "main quote", "listen": "Play the recording"},
     },
 }
 
@@ -1046,7 +1046,7 @@ class Page:
                 f'<span class="ptime" id="pcur">00:00</span><span class="pcap"><b id="pwho"></b> <span id="ptext"></span></span>'
                 f'<span class="pmiss" id="pmiss" hidden><span id="pmsg"></span> <label class="pick">'
                 f'{esc("Выбрать файл…" if self.lang == "ru" else "Choose file…")}'
-                f'<input type="file" id="pfile" accept="audio/*,video/*"></label></span>'
+                f'<input type="file" id="pfile" accept="audio/*,video/*" multiple></label></span>'
                 f'<button type="button" class="px" id="px" aria-label="{esc("Закрыть плеер" if self.lang == "ru" else "Close player")}">×</button>'
                 f'</div><audio id="au" preload="none"></audio>')
 

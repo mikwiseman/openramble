@@ -9,8 +9,9 @@ errors, sideways scroll, a screenshot of the first screen, and text contrast
 (WCAG AA) over the whole page with every fold open. Then, once per page: evidence opening in place, a strip tick opening its
 item, search (with glossary spellings), browser find seeing transcript text,
 a chapter chosen on a phone landing below the sticky search bar, the desktop
-chapter list keeping the current chapter in sight, the page with JavaScript
-off, and an A4 PDF with the transcript in it.
+chapter list keeping the current chapter in sight, the strip's play button
+loading the whole meeting (every track when there is no mixed file), the page
+with JavaScript off, and an A4 PDF with the transcript in it.
 Prints a JSON report, which names elements but never quotes the meeting, and
 exits 1 when a check fails. Screenshots and the PDF are kept only in --shots.
 """
@@ -54,6 +55,17 @@ CONTRAST = r"""() => {
   return {checked: n, bad};
 }"""
 
+
+AUDIO_HOOK = ("(() => { const A = window.Audio; window.__mix = []; "
+              "window.Audio = function (...a) { const e = new A(...a); window.__mix.push(e); return e; }; })()")
+
+MEETING_AUDIO = """() => new Promise(res => { const b = document.querySelector('#sp-play');
+  if (!b) return res(null);
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const want = D.audio ? 1 : Object.values(D.speakers).filter(s => s.audio).length;
+  b.click();
+  setTimeout(() => { const els = [document.getElementById('au'), ...window.__mix];
+    res({want, loaded: new Set(els.map(e => e.getAttribute('src')).filter(Boolean)).size}); }, 300); })"""
 
 NAV_PHONE = """() => { const sel = document.querySelector('#chsel'), bar = document.querySelector('.tx-search');
   if (!sel || !sel.options.length) return null;
@@ -108,6 +120,7 @@ def check(pages, shots, word):
                         failed.append(f"{name} {k}")
                     ctx.close()
             ctx = browser.new_context(viewport={"width": 1440, "height": 900})
+            ctx.add_init_script(AUDIO_HOOK)
             pg = ctx.new_page()
             errs = []
             pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -144,6 +157,7 @@ def check(pages, shots, word):
             r["pdfPages"] = len(re.findall(rb"/Type\s*/Page[^s]", data))
             r["pageErrors"] = errs
             r["sidebar"] = pg.evaluate(NAV_SIDE)
+            r["meetingAudio"] = pg.evaluate(MEETING_AUDIO)
             ctx.close()
             ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
             pg = ctx.new_page()
@@ -164,6 +178,8 @@ def check(pages, shots, word):
                 failed.append(f"{name} interactions")
             if (r["chapterBelowBar"] and min(r["chapterBelowBar"]) < 0) or (r["sidebar"] and not all(r["sidebar"].values())):
                 failed.append(f"{name} navigation")
+            if r["meetingAudio"] and r["meetingAudio"]["loaded"] < r["meetingAudio"]["want"]:
+                failed.append(f"{name} meeting audio")
         browser.close()
     report["failed"] = failed
     return report

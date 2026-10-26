@@ -97,8 +97,9 @@ You must not:
 python3 "$SKILL/scripts/render.py" "$WORK/transcript.json" "$WORK/analysis.json" --audio audio_only.m4a
 ```
 
-`--audio` is the one file with everyone in it. Without it, the page plays each
-speaker's own track. The renderer checks the analysis against the transcript
+`--audio` is the one file with everyone in it. Without it, the page plays all
+the participants' tracks together, and one speaker's own track for a single
+sentence. The renderer checks the analysis against the transcript
 and lists every problem at once, e.g. an unknown or silent segment, an owner
 who is not a participant, a due date nobody said, or a quote that is not exact.
 Fix `analysis.json` and render again. It writes `<title>.html` next to the

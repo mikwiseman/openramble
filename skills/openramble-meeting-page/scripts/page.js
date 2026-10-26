@@ -90,15 +90,23 @@
   }
 
   /* ---------- audio: loaded only when asked for ---------- */
+  // 'g' is one file with everyone; without it each speaker has a track, and '*' plays all tracks together
   const player = $('#player'), au = $('#au');
   const srcs = {};
   if (D.audio) srcs.g = D.audio;
   for (const k in D.speakers) if (D.speakers[k].audio) srcs[k] = D.speakers[k].audio;
+  const tracks = Object.keys(srcs).filter(k => k !== 'g');
   let curKey = null, stopAt = null, follow = false, lastInput = 0, nowEl = null, want = null;
   const ph = $('#ph'), spPlay = $('#sp-play');
   const bySpeaker = {};
   const startsAll = segEls.map(e => +e.dataset.s);
-  function keyFor(sp) { return srcs.g ? 'g' : (sp && srcs[sp] ? sp : Object.keys(srcs)[0] || null); }
+  const meetingKey = () => srcs.g ? 'g' : tracks.length > 1 ? '*' : tracks[0] || null;
+  const keyFor = sp => srcs.g ? 'g' : (sp && srcs[sp] ? sp : meetingKey());
+  const leadKey = () => curKey === '*' ? tracks[0] : curKey;
+  const mix = [];  // the other tracks, kept in step with au while '*' plays
+  const lost = new Set();  // tracks whose file is not next to the page
+  const sounds = e => !e.paused && !e.error;
+  const playing = () => sounds(au) || (curKey === '*' && mix.some(m => sounds(m.el)));
   function segAt(t, sp) {
     let els = segEls, starts = startsAll;
     if (sp) {
@@ -121,56 +129,105 @@
     d.body.classList.add('has-player');
     if (ph) ph.setAttribute('visibility', 'visible');
   }
-  function missing() {
-    player.classList.add('missing');
-    $('#pp').classList.add('paused');
-    $('#pmiss').hidden = false;
-    $('#pmsg').textContent = T.missing.replace('{f}', curKey && srcs[curKey] ? srcs[curKey].name : '');
+  const inUse = k => k === leadKey() || (curKey === '*' && tracks.includes(k));
+  function showLost() {
+    const k = [...lost].find(inUse);
+    player.classList.toggle('missing', !!k);
+    $('#pmiss').hidden = !k;
+    if (k) $('#pmsg').textContent = T.missing.replace('{f}', srcs[k].name);
   }
-  function play(t, end, sp, followIt) {
-    if (!player) return;
-    const key = keyFor(sp);
-    if (!key) return;
+  function missing(k) {
+    if (!k || !srcs[k]) return;
+    lost.add(k);
+    showLost();
+    sync();
+  }
+  function joinMix() {
+    for (const k of tracks.slice(1)) {
+      let m = mix.find(x => x.k === k);
+      if (!m) {
+        m = { k, el: new Audio(), src: null };
+        m.el.preload = 'none';
+        m.el.addEventListener('error', () => missing(k));
+        m.el.addEventListener('play', sync);
+        m.el.addEventListener('pause', sync);
+        mix.push(m);
+      }
+      if (m.src !== srcs[k].src) { m.src = srcs[k].src; m.el.src = m.src; }
+    }
+  }
+  function mixAlong(on, t) {
+    for (const m of mix) {
+      if (!on) { m.el.pause(); continue; }
+      if (Math.abs(m.el.currentTime - t) > 0.15) { try { m.el.currentTime = t; } catch (e) { /* not seekable yet */ } }
+      m.el.play().catch(() => {});
+    }
+  }
+  function play(t, end, key, followIt) {
+    if (!player || !key) return;
     showPlayer();
     want = { t, end };
     stopAt = end == null ? null : end + 0.3;
     follow = !!followIt;
     if (key !== curKey) {
+      if (curKey === '*') mixAlong(false);
       curKey = key;
-      player.classList.remove('missing');
-      $('#pmiss').hidden = true;
-      au.src = srcs[key].src;
+      au.src = srcs[leadKey()].src;
+      if (key === '*') joinMix();
+      showLost();
+      if (nowEl) nowEl.classList.remove('now');
+      nowEl = undefined;  // the caption names a track or a speaker: write it afresh
     }
-    const go = () => { try { au.currentTime = Math.max(0, want.t - 0.15); } catch (e) { /* not seekable yet */ } au.play().catch(() => {}); };
+    const at = Math.max(0, t - 0.15);
+    if (key === '*') mixAlong(true, at);  // started here, inside the click, where browsers allow sound
+    const go = () => { try { au.currentTime = at; } catch (e) { /* not seekable yet */ } au.play().catch(() => {}); };
     if (au.readyState >= 1) go(); else { au.addEventListener('loadedmetadata', go, { once: true }); au.load(); }
   }
+  function resume() {
+    stopAt = null;
+    au.play().catch(() => {});
+    if (curKey === '*') mixAlong(true, au.currentTime);
+  }
+  function pause() { au.pause(); mixAlong(false); }
+  function sync() {
+    const on = playing();
+    $('#pp').classList.toggle('paused', !on);
+    $('#pp').setAttribute('aria-label', on ? T.pause : T.play);
+    if (spPlay) { spPlay.classList.toggle('on', on); spPlay.setAttribute('aria-label', on ? T.pause : T.listen); }
+  }
   if (player) {
-    au.addEventListener('error', missing);
+    au.addEventListener('error', () => missing(leadKey()));
     $('#pfile').addEventListener('change', e => {
-      const f = e.target.files && e.target.files[0];
-      if (!f || !curKey) return;
-      srcs[curKey] = { src: URL.createObjectURL(f), name: f.name };
-      const k = curKey; curKey = null;
-      play(want ? want.t : 0, want ? want.end : null, k === 'g' ? null : k, follow);
+      // files are matched to the missing tracks by name; a single file with another name stands in for the one asked for
+      const files = Array.from(e.target.files || []);
+      const asked = [...lost].find(inUse);
+      let leadBack = false;
+      for (const f of files) {
+        const k = [...lost].find(x => srcs[x].name === f.name) || (files.length === 1 ? asked : null);
+        if (!k) continue;
+        srcs[k] = { src: URL.createObjectURL(f), name: f.name };
+        lost.delete(k);
+        if (k === leadKey()) leadBack = true;
+        const m = mix.find(x => x.k === k);
+        if (m && curKey === '*') { m.src = srcs[k].src; m.el.src = m.src; if (!au.paused) mixAlong(true, au.currentTime); }
+      }
+      e.target.value = '';
+      showLost();
+      if (leadBack) { const k = curKey; curKey = null; play(want ? want.t : 0, want ? want.end : null, k, follow); }
     });
-    const sync = () => {
-      const on = !au.paused;
-      $('#pp').classList.toggle('paused', !on);
-      $('#pp').setAttribute('aria-label', on ? T.pause : T.play);
-      if (spPlay) { spPlay.classList.toggle('on', on); spPlay.setAttribute('aria-label', on ? T.pause : T.play); }
-    };
     au.addEventListener('play', sync);
-    au.addEventListener('pause', sync);
+    au.addEventListener('pause', () => { if (curKey === '*') mixAlong(false); sync(); });
     au.addEventListener('timeupdate', () => {
       const t = au.currentTime;
       if (stopAt !== null && t >= stopAt) { au.pause(); stopAt = null; }
+      if (curKey === '*' && !au.paused) for (const m of mix) if (!m.el.paused && Math.abs(m.el.currentTime - t) > 0.15) m.el.currentTime = t;
       $('#pcur').textContent = fmt(t);
       if (ph && D.timed) {
         const dur = isFinite(au.duration) && au.duration > 0 ? au.duration : null;
         const x = (100 * Math.min(1, t / (dur || D.duration || 1))).toFixed(3) + '%';
         ph.setAttribute('x1', x); ph.setAttribute('x2', x);
       }
-      const trackSp = curKey === 'g' ? null : curKey;
+      const trackSp = curKey === 'g' || curKey === '*' ? null : curKey;
       const el = segAt(t, trackSp);
       if (el === nowEl) return;
       if (nowEl) nowEl.classList.remove('now');
@@ -182,18 +239,19 @@
       el.classList.add('now');
       if (follow && Date.now() - lastInput > 4000) el.scrollIntoView({ block: 'center' });
     });
-    $('#pp').addEventListener('click', () => { stopAt = null; au.paused ? au.play().catch(() => {}) : au.pause(); });
+    $('#pp').addEventListener('click', () => { playing() ? pause() : resume(); });
     $('#px').addEventListener('click', () => {
-      au.pause(); player.hidden = true; d.body.classList.remove('has-player');
+      pause(); player.hidden = true; d.body.classList.remove('has-player');
       if (ph) ph.setAttribute('visibility', 'hidden');
       if (nowEl) nowEl.classList.remove('now');
       nowEl = null;
     });
+    // the strip's button plays the meeting: the mixed file, or every track at once, never one person's alone
     if (spPlay) spPlay.addEventListener('click', () => {
-      if (curKey && !player.hidden && !au.paused) { au.pause(); return; }
-      if (curKey && !player.hidden && au.currentSrc) { stopAt = null; au.play().catch(() => {}); return; }
-      const first = Object.keys(srcs)[0];
-      play(0, null, first === 'g' ? null : first, false);
+      const open = curKey && !player.hidden;
+      if (open && playing()) { pause(); return; }
+      if (open && curKey === meetingKey() && au.currentSrc) { resume(); return; }
+      play(open ? au.currentTime : 0, null, meetingKey(), false);
     });
     for (const ev of ['wheel', 'touchmove', 'keydown']) addEventListener(ev, () => { lastInput = Date.now(); }, { passive: true });
   }
@@ -203,7 +261,7 @@
     const b = e.target.closest('button.pl');
     if (b) {
       const seg = d.getElementById(b.dataset.sid);
-      if (seg) play(+seg.dataset.s, +seg.dataset.e, speakerOf(seg), false);
+      if (seg) play(+seg.dataset.s, +seg.dataset.e, keyFor(speakerOf(seg)), false);
       return;
     }
     const a = e.target.closest('a');
@@ -217,7 +275,7 @@
       const seg = d.getElementById(id);
       history.replaceState(null, '', href);
       flash(seg);
-      if (seg && player) play(+seg.dataset.s, null, speakerOf(seg), true);
+      if (seg && player) play(+seg.dataset.s, null, meetingKey(), true);  // the meeting from here, everyone
       return;
     }
     if (id === 'top') return;
