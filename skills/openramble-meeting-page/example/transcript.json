@@ -1,0 +1,1209 @@
+{
+ "schemaVersion": 1,
+ "kind": "tracks",
+ "timed": true,
+ "duration": 548.65,
+ "asr": "OpenRamble 0.33.1 (Parakeet)",
+ "speakers": [
+  {
+   "id": "p1",
+   "name": "Анна Белова",
+   "from": "track",
+   "audio": "audio-anna-belova.m4a"
+  },
+  {
+   "id": "p2",
+   "name": "Дмитрий Орлов",
+   "from": "track",
+   "audio": "audio-dmitry-orlov.m4a"
+  },
+  {
+   "id": "p3",
+   "name": "Екатерина Миронова",
+   "from": "track",
+   "audio": "audio-ekaterina-mironova.m4a"
+  }
+ ],
+ "segments": [
+  {
+   "id": "s0001",
+   "speaker": "p1",
+   "start": 0.64,
+   "end": 6.08,
+   "text": "Так, Дима, слышишь меня, у меня опять наушники что-то чудит.",
+   "turn": 1,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0002",
+   "speaker": "p2",
+   "start": 5.6,
+   "end": 11.92,
+   "text": "Слышу хорошо, Катя еще подключается, она писала, что будет через минуту.",
+   "turn": 2,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0003",
+   "speaker": "p1",
+   "start": 11.44,
+   "end": 16.13,
+   "text": "Ага, как выходные, кстати, ты же в Питер собирался.",
+   "turn": 3,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0004",
+   "speaker": "p2",
+   "start": 16.23,
+   "end": 23.67,
+   "text": "Собирался, но не доехал, сын заболел, так что все выходные смотрели мультики и пили чай с малиной.",
+   "turn": 4,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0005",
+   "speaker": "p1",
+   "start": 23.17,
+   "end": 27.57,
+   "text": "Ох, сочувствую, надеюсь, ему уже лучше.",
+   "turn": 5,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0006",
+   "speaker": "p2",
+   "start": 27.67,
+   "end": 30.73,
+   "text": "Да, сегодня уже в садик пошел.",
+   "turn": 6,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0007",
+   "speaker": "p3",
+   "start": 31.08,
+   "end": 38.2,
+   "text": "Всем привет, простите, я тут Кутлюк на клавиатуре отправил в рабочий чат какую-то абракадабру.",
+   "turn": 7,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0008",
+   "speaker": "p1",
+   "start": 37.93,
+   "end": 43.05,
+   "text": "Да, я видела, там было сообщение из одних букв бэкслэшбэк слэш.",
+   "turn": 8,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0009",
+   "speaker": "p1",
+   "start": 43.05,
+   "end": 45.57,
+   "text": "Я решила, что это шифровка",
+   "turn": 8,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0010",
+   "speaker": "p3",
+   "start": 45.35,
+   "end": 47.91,
+   "text": "Это он так голосует за релиз.",
+   "turn": 9,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0011",
+   "speaker": "p1",
+   "start": 47.41,
+   "end": 64.37,
+   "text": "отлично один голос уже есть давайте начнем у нас сегодня одна главная тема релиз грошика версия 2.4 нужно решить когда выпускаем что входит что не входит и кто что делает минут на 20 не больше",
+   "turn": 10,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0012",
+   "speaker": "p2",
+   "start": 64.88,
+   "end": 66.16,
+   "text": "Давай.",
+   "turn": 11,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0013",
+   "speaker": "p1",
+   "start": 65.79,
+   "end": 69.55,
+   "text": "Сначала по составу совместные счеты готовы.",
+   "turn": 12,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0014",
+   "speaker": "p2",
+   "start": 69.52,
+   "end": 71.92,
+   "text": "Совместные счеты готовы полностью.",
+   "turn": 13,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0015",
+   "speaker": "p2",
+   "start": 71.92,
+   "end": 80.57,
+   "text": "Бэкинг выкатили еще на прошлой неделе, на клиентах все смерджено, новый онбоддинг тоже готов, дизайнеры его приняли.",
+   "turn": 13,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0016",
+   "speaker": "p1",
+   "start": 80.39,
+   "end": 83.75,
+   "text": "Хорошо, а по анбордингу есть и цифры?",
+   "turn": 14,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0017",
+   "speaker": "p2",
+   "start": 83.45,
+   "end": 91.21,
+   "text": "Есть, в тесте новый онбаддинг дал плюс 6% к активации, люди чаще доходят до первого бюджета.",
+   "turn": 15,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0018",
+   "speaker": "p1",
+   "start": 90.87,
+   "end": 95.83,
+   "text": "Шесть процентов это прилично, хорошо, оффлайн мод.",
+   "turn": 16,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0019",
+   "speaker": "p2",
+   "start": 95.39,
+   "end": 108.85,
+   "text": "Оффлайн моуд почти готов, работает, но я бы честно сказал, что это бета, синхронизация после долгого оффлайна иногда отрабатывает дважды, мы это видим в логах, но данные не теряются.",
+   "turn": 17,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0020",
+   "speaker": "p3",
+   "start": 107.52,
+   "end": 109.51,
+   "text": "Пока не теряются.",
+   "turn": 18,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0021",
+   "speaker": "p2",
+   "start": 109.41,
+   "end": 112.13,
+   "text": "Ну, пока не теряются, да.",
+   "turn": 19,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0022",
+   "speaker": "p1",
+   "start": 112.2,
+   "end": 114.49,
+   "text": "Are designed push notifications",
+   "turn": 20,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0023",
+   "speaker": "p2",
+   "start": 115.01,
+   "end": 118.77,
+   "text": "Не готов, там еще даже финальные макеты не пришли.",
+   "turn": 21,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0024",
+   "speaker": "p2",
+   "start": 118.77,
+   "end": 130.53,
+   "text": "Честно, я бы его в 2-4 не тащил.",
+   "turn": 21,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0025",
+   "speaker": "p1",
+   "start": 121.69,
+   "end": 129.35,
+   "text": "согласна тогда предлагаю сразу зафиксировать редизайн пуш и переезжает версию 2.5 возражения есть",
+   "turn": 22,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0026",
+   "speaker": "p3",
+   "start": 129.51,
+   "end": 130.23,
+   "text": "Нет.",
+   "turn": 23,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0027",
+   "speaker": "p2",
+   "start": 130.53,
+   "end": 131.89,
+   "text": "Нет, только за",
+   "turn": 24,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0028",
+   "speaker": "p1",
+   "start": 132.07,
+   "end": 136.79,
+   "text": "записываю дальше Катя что по качеству как бета",
+   "turn": 25,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0029",
+   "speaker": "p3",
+   "start": 137.15,
+   "end": 138.83,
+   "text": "Бета в целом нормальная.",
+   "turn": 26,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0030",
+   "speaker": "p3",
+   "start": 138.83,
+   "end": 151.71,
+   "text": "Crash Free Sessions на iOS 99,8%, а вот на Android 99,1%, почти все падения в одном месте, миграция базы при первой синхронизации на Android 15.",
+   "turn": 26,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0031",
+   "speaker": "p1",
+   "start": 151.52,
+   "end": 153.12,
+   "text": "Это много?",
+   "turn": 27,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0032",
+   "speaker": "p1",
+   "start": 152.24,
+   "end": 165.6,
+   "text": "Много?",
+   "turn": 27,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0033",
+   "speaker": "p3",
+   "start": 152.85,
+   "end": 160.77,
+   "text": "Для нас много, у нас порог для релиза 99,5, ниже мы не выпускаем, мы так договаривались еще летом.",
+   "turn": 28,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0034",
+   "speaker": "p2",
+   "start": 160.73,
+   "end": 168.94,
+   "text": "Я знаю, где эта миграция запускается параллельно с синхронизацией, и на некоторых устройствах они дерутся за базу.",
+   "turn": 29,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0035",
+   "speaker": "p2",
+   "start": 168.94,
+   "end": 174.94,
+   "text": "Фикс понятный, я его сам сделаю, это блокер, без него выпускать нельзя.",
+   "turn": 29,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0036",
+   "speaker": "p1",
+   "start": 174.24,
+   "end": 179.93,
+   "text": "Хорошо, Дима, тогда этот фикс на тебе.",
+   "turn": 30,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0037",
+   "speaker": "p2",
+   "start": 178.14,
+   "end": 179.93,
+   "text": "Да, беру.",
+   "turn": 31,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0038",
+   "speaker": "p1",
+   "start": 179.93,
+   "end": 181.69,
+   "text": "Теперь самое спорное.",
+   "turn": 32,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0039",
+   "speaker": "p1",
+   "start": 181.69,
+   "end": 182.81,
+   "text": "Оффлайн моуд.",
+   "turn": 32,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0040",
+   "speaker": "p1",
+   "start": 182.81,
+   "end": 186.89,
+   "text": "Дима, ты в чате писал, что хочешь его включить.",
+   "turn": 32,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0041",
+   "speaker": "p2",
+   "start": 186.97,
+   "end": 189.93,
+   "text": "Да, смотри, у нас есть фичер флег.",
+   "turn": 33,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0042",
+   "speaker": "p2",
+   "start": 190.17,
+   "end": 196.01,
+   "text": "Я предлагаю включить оффлайн моут для 10% пользователей через стейдж Troll Out.",
+   "turn": 33,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0043",
+   "speaker": "p2",
+   "start": 196.01,
+   "end": 200.33,
+   "text": "Если что-то пойдет не так, мы его выключаем удаленно за 5 минут.",
+   "turn": 33,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0044",
+   "speaker": "p2",
+   "start": 200.33,
+   "end": 204.61,
+   "text": "Без реальных пользователей мы так и не узнаем, как он себя ведет",
+   "turn": 33,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0045",
+   "speaker": "p3",
+   "start": 204.62,
+   "end": 208.7,
+   "text": "Я против, мы его вообще не гоняли на слабых устройствах.",
+   "turn": 34,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0046",
+   "speaker": "p3",
+   "start": 208.7,
+   "end": 217.02,
+   "text": "На телефонах с 2 гигабайтами памяти приложение выгружается в фоне, и я не знаю, что тогда происходит с очередью синхронизации.",
+   "turn": 34,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0047",
+   "speaker": "p3",
+   "start": 217.02,
+   "end": 226.3,
+   "text": "Если человек внес расходы в метро, а потом они продублировались или пропали, это не баг, это потеря доверия, это приложение про деньги.",
+   "turn": 34,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0048",
+   "speaker": "p2",
+   "start": 226.29,
+   "end": 230.03,
+   "text": "флаг выключается удаленно, мы ничего не теряем",
+   "turn": 35,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0049",
+   "speaker": "p3",
+   "start": 230.14,
+   "end": 235.26,
+   "text": "Флаг выключает фичу, но не возвращает дубли, которые уже ушли на сервер.",
+   "turn": 36,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0050",
+   "speaker": "p3",
+   "start": 235.26,
+   "end": 240.51,
+   "text": "Дубли у людей в бюджете останутся.",
+   "turn": 36,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0051",
+   "speaker": "p2",
+   "start": 237.71,
+   "end": 240.03,
+   "text": "дубли можно почистить скриптом",
+   "turn": 37,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0052",
+   "speaker": "p3",
+   "start": 240.51,
+   "end": 246.59,
+   "text": "Можно, но человек их уже увидит и напишет в поддержку, и поставит одну звезду.",
+   "turn": 38,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0053",
+   "speaker": "p1",
+   "start": 246.96,
+   "end": 253.2,
+   "text": "Так, я понимаю обе позиции, Дима прав, что без реальных данных мы будем гадать вечно.",
+   "turn": 39,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0054",
+   "speaker": "p1",
+   "start": 253.2,
+   "end": 256.08,
+   "text": "Катя права, что риск не симметричный.",
+   "turn": 39,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0055",
+   "speaker": "p1",
+   "start": 256.08,
+   "end": 259.52,
+   "text": "Если мы ошибемся, мы ошибемся с чужими деньгами.",
+   "turn": 39,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0056",
+   "speaker": "p1",
+   "start": 259.52,
+   "end": 269.12,
+   "text": "Предлагаю так, оффлайн молот уходит в релиз, но флаг по умолчанию выключен для всех, включаем его только для внутренней беты, для сотрудников.",
+   "turn": 39,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0057",
+   "speaker": "p1",
+   "start": 269.12,
+   "end": 270.32,
+   "text": "Это человек 40.",
+   "turn": 39,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0058",
+   "speaker": "p1",
+   "start": 270.48,
+   "end": 277.55,
+   "text": "Через две недели смотрим на данные и решаем отдельно.",
+   "turn": 39,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0059",
+   "speaker": "p2",
+   "start": 273.98,
+   "end": 277.5,
+   "text": "40 человек, это мало для статистики.",
+   "turn": 40,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0060",
+   "speaker": "p1",
+   "start": 277.55,
+   "end": 285.31,
+   "text": "Мало, но это 40 человек, которые сами напишут, если что-то сломалось и не поставят одну звезду.",
+   "turn": 41,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0061",
+   "speaker": "p2",
+   "start": 285.1,
+   "end": 300.57,
+   "text": "Ладно, не идеально, но принимаю флаг и группу внутренней бета я настрою.",
+   "turn": 42,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0062",
+   "speaker": "p3",
+   "start": 290.64,
+   "end": 299.03,
+   "text": "Спасибо, и я тогда добавлю регресс сценарий с оффлайном на слабых устройствах, чтобы к включению у нас уже была картина.",
+   "turn": 43,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0063",
+   "speaker": "p1",
+   "start": 298.84,
+   "end": 305.48,
+   "text": "Отлично, тогда решение оффлайн моут в релизе за выключенным флагом, только внутреннее бета.",
+   "turn": 44,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0064",
+   "speaker": "p1",
+   "start": 305.48,
+   "end": 318.63,
+   "text": "Вопрос о включении для пользователей обсуждаем через две недели отдельно.",
+   "turn": 44,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0065",
+   "speaker": "p2",
+   "start": 310.53,
+   "end": 318.97,
+   "text": "Кстати, пока не забыл, кофемашина на кухне опять течет, я поставил под нее кружку, но тружка уже полная.",
+   "turn": 45,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0066",
+   "speaker": "p1",
+   "start": 318.63,
+   "end": 322.39,
+   "text": "Я напишу в Хощесть в третий раз за месяц.",
+   "turn": 46,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0067",
+   "speaker": "p3",
+   "start": 322.07,
+   "end": 324.85,
+   "text": "Может, ей тоже нужен регресс.",
+   "turn": 47,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0068",
+   "speaker": "p1",
+   "start": 325.44,
+   "end": 326.64,
+   "text": "Теперь даты.",
+   "turn": 48,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0069",
+   "speaker": "p1",
+   "start": 326.64,
+   "end": 336.88,
+   "text": "Мой вариант, коудфриз в понедельник, 23 ноября, в тот же день отправляем сборку в App Store Review, релиз в четверг, 26.",
+   "turn": 48,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0070",
+   "speaker": "p1",
+   "start": 335.56,
+   "end": 346.28,
+   "text": "26.",
+   "turn": 48,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0071",
+   "speaker": "p2",
+   "start": 337.13,
+   "end": 343.13,
+   "text": "26, это же американский день благодарения, реви в эту неделю может затянуться.",
+   "turn": 49,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0072",
+   "speaker": "p2",
+   "start": 343.13,
+   "end": 346.39,
+   "text": "В прошлом году мы ждали 4 дня вместо одного",
+   "turn": 49,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0073",
+   "speaker": "p1",
+   "start": 346.28,
+   "end": 355.77,
+   "text": "Поэтому и отправляем в понедельник с запасом, но публикуем вручную, нажимаем кнопку, только когда Катя скажет, что регресс спройден",
+   "turn": 50,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0074",
+   "speaker": "p3",
+   "start": 355.94,
+   "end": 359.54,
+   "text": "Тогда мне нужно, чтобы регресс закончился раньше.",
+   "turn": 51,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0075",
+   "speaker": "p3",
+   "start": 359.54,
+   "end": 364.74,
+   "text": "Полный регресс на Android 15 и iOS 18, плюс слабое устройство.",
+   "turn": 51,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0076",
+   "speaker": "p3",
+   "start": 364.74,
+   "end": 368.1,
+   "text": "Я успею до вторника, 24 ноября.",
+   "turn": 51,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0077",
+   "speaker": "p3",
+   "start": 368.1,
+   "end": 371.59,
+   "text": "Во вторник вечером дам ответ, да или нет.",
+   "turn": 51,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0078",
+   "speaker": "p1",
+   "start": 370.89,
+   "end": 375.45,
+   "text": "отлично Катя это на тебе до вторника 24",
+   "turn": 52,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0079",
+   "speaker": "p3",
+   "start": 376.71,
+   "end": 377.99,
+   "text": "Да.",
+   "turn": 53,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0080",
+   "speaker": "p1",
+   "start": 377.13,
+   "end": 389.79,
+   "text": "и раскатываем постепенно стейдж троллау 10 процентов в четверг, потом 50, потом 100, каждый следующий шаг, только если крэшфрини ниже 99,5.",
+   "turn": 54,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0081",
+   "speaker": "p2",
+   "start": 389.72,
+   "end": 392.63,
+   "text": "По дням как пятьдесят в понедельник",
+   "turn": 55,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0082",
+   "speaker": "p1",
+   "start": 392.63,
+   "end": 397.67,
+   "text": "Давайте не привязывать к дням, смотрим на цифры, а не на календарь.",
+   "turn": 56,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0083",
+   "speaker": "p2",
+   "start": 397.27,
+   "end": 398.95,
+   "text": "принято.",
+   "turn": 57,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0084",
+   "speaker": "p1",
+   "start": 398.95,
+   "end": 400.63,
+   "text": "Хорошо, что еще?",
+   "turn": 58,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0085",
+   "speaker": "p1",
+   "start": 400.63,
+   "end": 411.29,
+   "text": "Релиз ноутс я пишу сама, на русском и на английском, и отдельно предупрежу поддержку про совместные счета, там будут вопросы про то, кто видит чьи траты.",
+   "turn": 58,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0086",
+   "speaker": "p3",
+   "start": 411.1,
+   "end": 413.58,
+   "text": "Да, это точно будут спрашивать.",
+   "turn": 59,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0087",
+   "speaker": "p3",
+   "start": 413.58,
+   "end": 417.42,
+   "text": "Я бы им еще сделала короткую памятку со скриншотами.",
+   "turn": 59,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0088",
+   "speaker": "p1",
+   "start": 417.53,
+   "end": 420.81,
+   "text": "Хорошая идея, включу в то же письмо.",
+   "turn": 60,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0089",
+   "speaker": "p2",
+   "start": 421.02,
+   "end": 429.13,
+   "text": "Кстати, раз про скриншоты, скриншоты в сторе у нас еще со старым онбоддинг, после релиза они будут врать.",
+   "turn": 61,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0090",
+   "speaker": "p1",
+   "start": 428.49,
+   "end": 432.17,
+   "text": "Да, их нужно обновить, кто возьмет.",
+   "turn": 62,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0091",
+   "speaker": "p3",
+   "start": 432.72,
+   "end": 435.86,
+   "text": "У меня регресс, и я точно не успела.",
+   "turn": 63,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0092",
+   "speaker": "p2",
+   "start": 435.53,
+   "end": 437.77,
+   "text": "У меня фикс и флаг.",
+   "turn": 64,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0093",
+   "speaker": "p1",
+   "start": 437.53,
+   "end": 444.33,
+   "text": "Понятно, тогда пока повисает, я подумаю, кого из дизайнеров попросить, не сегодня.",
+   "turn": 65,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0094",
+   "speaker": "p1",
+   "start": 444.65,
+   "end": 448.49,
+   "text": "И последнее, вопрос, на который у нас нет ответа.",
+   "turn": 65,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0095",
+   "speaker": "p1",
+   "start": 448.49,
+   "end": 452.25,
+   "text": "Совместные счета в 2-4 бесплатные или под Payval?",
+   "turn": 65,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0096",
+   "speaker": "p2",
+   "start": 452.13,
+   "end": 455.33,
+   "text": "Я думал, решили, что бесплатные",
+   "turn": 66,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0097",
+   "speaker": "p1",
+   "start": 455.29,
+   "end": 456.89,
+   "text": "Нет, не решили.",
+   "turn": 67,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0098",
+   "speaker": "p1",
+   "start": 456.89,
+   "end": 465.13,
+   "text": "Маркетинг хочет сделать их премиальной фичей, а мы боимся, что тогда ими никто не воспользуется и мы не поймем, нужны ли они вообще.",
+   "turn": 67,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0099",
+   "speaker": "p1",
+   "start": 465.13,
+   "end": 469.07,
+   "text": "Олег из маркетинга обещал цифры, но пока не прислал",
+   "turn": 67,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0100",
+   "speaker": "p3",
+   "start": 469.04,
+   "end": 472.0,
+   "text": "А технически это важно для релиза?",
+   "turn": 68,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0101",
+   "speaker": "p2",
+   "start": 471.81,
+   "end": 477.91,
+   "text": "технически нет, PVAL включается конфигом на сервере, сборку менять не нужно.",
+   "turn": 69,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0102",
+   "speaker": "p1",
+   "start": 477.79,
+   "end": 490.17,
+   "text": "вот и хорошо значит это не блокер я напишу Олегу и попрошу цифры а решение примем когда они будут.",
+   "turn": 70,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0103",
+   "speaker": "p2",
+   "start": 485.91,
+   "end": 490.63,
+   "text": "Только давай не как в прошлый раз, когда решили за день до релиза.",
+   "turn": 71,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0104",
+   "speaker": "p1",
+   "start": 490.17,
+   "end": 492.73,
+   "text": "Постараюсь, обещать не буду.",
+   "turn": 72,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0105",
+   "speaker": "p1",
+   "start": 493.25,
+   "end": 498.29,
+   "text": "Так, давайте я быстро пройдусь по итогам, чтобы мы все одинаково поняли.",
+   "turn": 72,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0106",
+   "speaker": "p1",
+   "start": 498.29,
+   "end": 505.57,
+   "text": "Редизайн пуши переносим в 2.5 оффлайн мод в релизе, но за выключенным флагом только внутреннее бета.",
+   "turn": 72,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0107",
+   "speaker": "p1",
+   "start": 505.57,
+   "end": 511.01,
+   "text": "Коудфриз в понедельник, 23, в тот же день сборка уходит в ревью.",
+   "turn": 72,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0108",
+   "speaker": "p1",
+   "start": 511.01,
+   "end": 516.13,
+   "text": "Релиз в четверг, 26, вручную, после зеленого регресса.",
+   "turn": 72,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0109",
+   "speaker": "p1",
+   "start": 516.14,
+   "end": 519.66,
+   "text": "Раскатка 10, 50, 100, по цифрам.",
+   "turn": 72,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0110",
+   "speaker": "p1",
+   "start": 519.66,
+   "end": 523.42,
+   "text": "Дима чинит падение миграции на Андроиде и настраивает флаг.",
+   "turn": 72,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0111",
+   "speaker": "p1",
+   "start": 523.42,
+   "end": 527.1,
+   "text": "Катя делает регресс до вторника 24-го.",
+   "turn": 72,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0112",
+   "speaker": "p1",
+   "start": 527.1,
+   "end": 531.74,
+   "text": "Я пишу релиз ноутс, предупреждаю поддержку и пишу Олегу про Пейвелл.",
+   "turn": 72,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0113",
+   "speaker": "p1",
+   "start": 531.82,
+   "end": 534.29,
+   "text": "Скриншоты пока без хозяина.",
+   "turn": 72,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0114",
+   "speaker": "p3",
+   "start": 533.98,
+   "end": 535.45,
+   "text": "Все так.",
+   "turn": 73,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0115",
+   "speaker": "p2",
+   "start": 535.1,
+   "end": 538.21,
+   "text": "Да, и риск с ревью мы помним.",
+   "turn": 74,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0116",
+   "speaker": "p1",
+   "start": 537.81,
+   "end": 544.53,
+   "text": "Помним, все, спасибо всем, Катя, передай коту, что его голос учтен.",
+   "turn": 75,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0117",
+   "speaker": "p3",
+   "start": 544.09,
+   "end": 546.65,
+   "text": "Передам, он будет доволен.",
+   "turn": 76,
+   "silent": false,
+   "failed": false
+  },
+  {
+   "id": "s0118",
+   "speaker": "p2",
+   "start": 546.53,
+   "end": 547.81,
+   "text": "Пока.",
+   "turn": 77,
+   "silent": false,
+   "failed": false
+  }
+ ]
+}
