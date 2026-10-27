@@ -99,7 +99,7 @@ final class Lab {
     private let config: LabConfig
     private let harness: AppHarness
     private let state: AppState
-    private let microphone: AudioDeviceID
+    private let builtInMicrophone: AudioDeviceID
     private let reader: PasteReader
     private let injection = InjectionBox()
     private let heartbeat = MainThreadHeartbeat()
@@ -161,8 +161,8 @@ final class Lab {
         // Bluetooth headset as the default takes the engine path and switches
         // into its hands-free profile as it opens: seconds and lost words that
         // measure the headset, not the app. Set in the lab's own defaults.
-        guard let builtIn = builtInMicrophone() else { throw LabError("no built-in microphone") }
-        microphone = builtIn.id
+        guard let builtIn = findBuiltInMicrophone() else { throw LabError("no built-in microphone") }
+        builtInMicrophone = builtIn.id
         state = harness.makeState()
         state.inputDeviceUID = builtIn.uid
         await state.refreshModelState()
@@ -331,7 +331,7 @@ final class Lab {
             mainThreadStallsOver100: window.over100,
             mainThreadLongestStallAt: window.longestAt,
             diskReadBytes: processDiskReadBytes().flatMap { after in diskBefore.map { after &- $0 } },
-            microphoneRunningAfter: isRunningSomewhere(microphone),
+            microphoneRunningAfter: isRunningSomewhere(builtInMicrophone),
             thermalState: ProcessInfo.processInfo.thermalState.rawValue,
             loadAverage: loadAverage()
         )
@@ -872,7 +872,7 @@ private func machMilliseconds(from start: UInt64, to end: UInt64) -> Double {
     return ticks * Double(timebase.numer) / Double(timebase.denom) / 1e6
 }
 
-private func builtInMicrophone() -> (id: AudioDeviceID, uid: String)? {
+private func findBuiltInMicrophone() -> (id: AudioDeviceID, uid: String)? {
     for device in AudioInputDevices.available() {
         guard let id = AudioInputDevices.deviceID(forUID: device.uid),
               property(kAudioDevicePropertyTransportType, of: id) == kAudioDeviceTransportTypeBuiltIn
