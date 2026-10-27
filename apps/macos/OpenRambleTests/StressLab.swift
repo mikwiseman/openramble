@@ -99,6 +99,7 @@ final class Lab {
     private let config: LabConfig
     private let harness: AppHarness
     private let state: AppState
+    private let microphone: AudioDeviceID
     private let reader: PasteReader
     private let injection = InjectionBox()
     private let heartbeat = MainThreadHeartbeat()
@@ -156,7 +157,14 @@ final class Lab {
             )
         }
 
+        // The built-in microphone, whatever the Mac's default input is. A
+        // Bluetooth headset as the default takes the engine path and switches
+        // into its hands-free profile as it opens: seconds and lost words that
+        // measure the headset, not the app. Set in the lab's own defaults.
+        guard let builtIn = builtInMicrophone() else { throw LabError("no built-in microphone") }
+        microphone = builtIn.id
         state = harness.makeState()
+        state.inputDeviceUID = builtIn.uid
         await state.refreshModelState()
         for _ in 0..<6_000 where !state.isEngineReady {
             try await Task.sleep(for: .milliseconds(10))
@@ -323,7 +331,7 @@ final class Lab {
             mainThreadStallsOver100: window.over100,
             mainThreadLongestStallAt: window.longestAt,
             diskReadBytes: processDiskReadBytes().flatMap { after in diskBefore.map { after &- $0 } },
-            microphoneRunningAfter: defaultInputIsRunning(),
+            microphoneRunningAfter: isRunningSomewhere(microphone),
             thermalState: ProcessInfo.processInfo.thermalState.rawValue,
             loadAverage: loadAverage()
         )
@@ -405,7 +413,7 @@ struct TakeRecord: Codable {
     /// When the longest stall began, in milliseconds after key-down.
     let mainThreadLongestStallAt: Double?
     let diskReadBytes: UInt64?
-    /// Whether the default input was still running anywhere once the take
+    /// Whether the lab's microphone was still running anywhere once the take
     /// was over. A kept microphone must leave it stopped.
     let microphoneRunningAfter: Bool?
     let thermalState: Int
@@ -864,17 +872,30 @@ private func machMilliseconds(from start: UInt64, to end: UInt64) -> Double {
     return ticks * Double(timebase.numer) / Double(timebase.denom) / 1e6
 }
 
-private func defaultInputIsRunning() -> Bool? {
-    guard let device = MicrophoneAudioSource.defaultInputDevice() else { return nil }
+private func builtInMicrophone() -> (id: AudioDeviceID, uid: String)? {
+    for device in AudioInputDevices.available() {
+        guard let id = AudioInputDevices.deviceID(forUID: device.uid),
+              property(kAudioDevicePropertyTransportType, of: id) == kAudioDeviceTransportTypeBuiltIn
+        else { continue }
+        return (id, device.uid)
+    }
+    return nil
+}
+
+private func isRunningSomewhere(_ device: AudioDeviceID) -> Bool? {
+    property(kAudioDevicePropertyDeviceIsRunningSomewhere, of: device).map { $0 != 0 }
+}
+
+private func property(_ selector: AudioObjectPropertySelector, of device: AudioDeviceID) -> UInt32? {
     var address = AudioObjectPropertyAddress(
-        mSelector: kAudioDevicePropertyDeviceIsRunningSomewhere,
+        mSelector: selector,
         mScope: kAudioObjectPropertyScopeGlobal,
         mElement: kAudioObjectPropertyElementMain
     )
-    var running: UInt32 = 0
+    var value: UInt32 = 0
     var size = UInt32(MemoryLayout<UInt32>.size)
-    guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &running) == noErr else { return nil }
-    return running != 0
+    guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &value) == noErr else { return nil }
+    return value
 }
 
 private func loadAverage() -> Double {
