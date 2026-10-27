@@ -1,0 +1,21 @@
+→ DictationCore
+	 Executed 163 tests, with 0 failures (0 unexpected) in 8.600 (8.620) seconds
+→ LocalASR
+	 Executed 22 tests, with 3 tests skipped and 0 failures (0 unexpected) in 24.064 (24.067) seconds
+→ Shared core
+	 Executed 211 tests, with 0 failures
+→ Swift calls the core
+[32mthe boundary holds[0m
+→ Core matches macOS
+[32mboth implementations agree[0m
+→ Generating a project
+Version: 2.46.0
+→Application tests
+	 Executed 726 tests, with 1 test skipped and 0 failures (0 unexpected) in 85.218 (85.427) seconds
+→ Application artifact
+→ Network Surface
+[32mthe promise about the network stands[0m
+→ Diagnostics Surface
+[32mdiagnostics stay opt-in[0m
+[32m
+Everything is green.[0m
