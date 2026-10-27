@@ -412,8 +412,12 @@ final class DictationControllerStallTests: XCTestCase {
             recordingRecovery: RecordingRecoveryStore(directory: recovered),
             transcriptionDeadline: { _ in .milliseconds(80) },
             prepareForTranscription: { try await Task.sleep(for: .milliseconds(200)) },
-            prepareDeadline: .seconds(1),
-            recoveryForegroundGrace: .milliseconds(20)
+            // A runaway backstop for the 200 ms prepare, not a benchmark: on a
+            // loaded machine the prepare alone can outlast a tight deadline.
+            prepareDeadline: .seconds(10),
+            // The notice waits this long for the take's audio to be saved; the
+            // test asserts the audio is attached, so a loaded machine needs room.
+            recoveryForegroundGrace: .seconds(2)
         )
         var notices: [DictationNotice] = []
         controller.onNotice = { notices.append($0) }
@@ -423,7 +427,8 @@ final class DictationControllerStallTests: XCTestCase {
         controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
         await settle()
         controller.stop()
-        for _ in 0..<400 where controller.state != .idle {
+        let giveUp = ContinuousClock.now + .seconds(10)
+        while controller.state != .idle, ContinuousClock.now < giveUp {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(2))
         }

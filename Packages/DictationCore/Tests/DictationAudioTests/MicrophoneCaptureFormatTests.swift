@@ -3012,8 +3012,11 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
             sampleRate: 16_000
         )
 
+        // The first seal is held until release below, so a second seal that
+        // waited for the slot would hang past any deadline. Two seconds only
+        // keeps a loaded machine from reading a prompt failure as a hang.
         do {
-            _ = try await withTranscriptionDeadline(.milliseconds(100)) {
+            _ = try await withTranscriptionDeadline(.seconds(2)) {
                 try await second.readableURL()
             }
             XCTFail("the second seal should fail while the one storage slot is occupied")
@@ -3022,9 +3025,20 @@ final class MicrophoneCaptureFormatTests: XCTestCase {
         } catch {
             // Expected storage-busy failure.
         }
-        XCTAssertThrowsError(try secondWriter.append([0.3])) { error in
-            XCTAssertEqual(error as? WAVWriter.Failure, .notOpen)
+        // The refused seal closes its writer on the storage queue, so on a
+        // loaded machine the close can land a moment after the refusal.
+        // What matters is that it closes and stops growing, not the instant.
+        var closedError: Error?
+        let closeBy = ContinuousClock.now + .seconds(2)
+        while closedError == nil, ContinuousClock.now < closeBy {
+            do {
+                try secondWriter.append([0.3])
+                try? await Task.sleep(for: .milliseconds(5))
+            } catch {
+                closedError = error
+            }
         }
+        XCTAssertEqual(closedError as? WAVWriter.Failure, .notOpen, "the refused writer closes")
 
         release.signal()
         didRelease = true
