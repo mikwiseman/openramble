@@ -662,8 +662,17 @@ segmenter, so the 34 s inputs 0.34.0 decodes with 0.2.0 are not available.
 The longest deleted run in the English hour file falls from 29 words at 30 s
 to 6 at 25 s. Nothing is silently dropped anymore.
 
+Decision (Mik, 27 October 2026): H16 is adopted with H16b's 30 s cap,
+although both failed the hour-file rule. The runtime is not the cause at equal
+chunks, everything else improves, and the alternative kept the app on a
+runtime that predates its model. H16c is to win the long-file accuracy back.
+
 ## Proposed next hypotheses
 
+- **H16c.** File import and long dictation with Parakeet Ultra on 0.4.x: find
+  the chunk length and context that recover the English and mixed hour files
+  without any engine input over 30 s, against 0.34.0's 5.34% English and
+  31.63% mixed 600 s WER.
 - **H8c.** The decoder's joint output layer and LSTM weights in the model's
   Q8_0 together, against the same 30% decoder rule.
 - **H10b.** Four encoder threads and one decoder thread on the CPU backend.
