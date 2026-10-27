@@ -442,6 +442,13 @@ public struct AppPaths: Sendable {
         return directory
     }
 
+    /// The lock held while someone dictates. Under the standard root it is
+    /// the file the command-line tool probes to step aside; under a test
+    /// root it is the test's own, never the installed app's.
+    public func dictationPriorityLock() throws -> URL {
+        try support().appending(path: "dictation-priority.lock")
+    }
+
 
     /// Recordings and recovered texts are not something worth storing in backup
     /// copies: this is the content of the user's speech.

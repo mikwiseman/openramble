@@ -632,7 +632,7 @@ public final class AppState: ObservableObject {
     @Published public private(set) var transcribingRecordingID: UUID?
     /// Dictation always wins the engine; meeting decodes wait their turn.
     private let engineArbiter = EngineArbiter()
-    private let dictationPriority = Result { try DictationPriority() }
+    private let dictationPriority: Result<DictationPriority, any Error>
     private var transcriptionQueue: MeetingTranscriptionQueue?
     private var utteranceAssembler = MeetingUtteranceAssembler()
     private var closedUtterances: [MeetingUtterance] = []
@@ -1066,6 +1066,7 @@ public final class AppState: ObservableObject {
         learnFromEdits = environment.defaults.bool(forKey: Self.learnFromEditsKey)
         launchAtLogin = SMAppService.mainApp.status == .enabled
         paths = environment.paths
+        dictationPriority = Result { try DictationPriority(url: environment.paths.dictationPriorityLock()) }
         permissions = environment.permissions
         accessibilityManager = environment.accessibilityManager
         hotkeyMonitor = environment.hotkeyMonitor
