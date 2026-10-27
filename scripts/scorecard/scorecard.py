@@ -527,9 +527,9 @@ def build_asr_bench(spec) -> Path:
     warm = spec['warm']
     commit = subprocess.check_output(['git', '-C', str(REPO), 'rev-parse', warm['commit']], text=True).strip()
     runtime = at_root(warm['xcframework_zip']) if warm.get('xcframework_zip') else None
-    archive = at_root(warm['static_runtime']) if warm.get('static_runtime') else None
+    library = at_root(warm['static_runtime']) if warm.get('static_runtime') else None
     tree = ROOT / 'builds' / (commit + (f'-{digest(runtime)[:12]}' if runtime else '')
-                              + (f'-{digest(archive)[:12]}' if archive else ''))
+                              + (f'-{digest(library)[:12]}' if library else ''))
     binary = tree / 'Packages/LocalASR/.build/release/asr-bench'
     tool = REPO / 'Packages/LocalASR/Sources/asr-bench'
     stamp = hashlib.sha256(b''.join(p.read_bytes() for p in sorted(tool.glob('*.swift')))).hexdigest()
@@ -554,8 +554,8 @@ def build_asr_bench(spec) -> Path:
     # How the app linked before 0.34: the shared core's static copy of the runtime
     # is loaded whole, so it answers the adapter's calls instead of the framework.
     link = []
-    if archive:
-        link = ['-Xlinker', '-force_load', '-Xlinker', str(archive), '-Xlinker', '-lc++']
+    if library:
+        link = ['-Xlinker', '-force_load', '-Xlinker', str(library), '-Xlinker', '-lc++']
         for framework in ('Metal', 'MetalKit', 'Accelerate'):
             link += ['-Xlinker', '-framework', '-Xlinker', framework]
     subprocess.run(['swift', 'build', '--package-path', str(tree / 'Packages/LocalASR'), '-c', 'release',
