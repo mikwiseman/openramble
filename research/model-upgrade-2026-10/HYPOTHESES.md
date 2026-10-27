@@ -906,6 +906,53 @@ H16c and H16d ran while another job built FluidAudio and ran smoke tests on
 this Mac (18:01 to 18:24), so their wall times may be disturbed; WER and lost
 words are not timing-dependent.
 
+## H16f result
+
+Measured on 27 October 2026 (local candidate commits `e642778` for 28 s,
+`9b4b6dc` for 60 s and `99b6495` for the planner). WER in percent and lost
+words:
+
+| Input | 0.34.0 | 0.35.0 | 0.4.1, quietest, 28 s | 0.4.1, quietest, 60 s | fork, quietest, 60 s | 0.4.1, server's planner, 20 s |
+|---|---:|---:|---:|---:|---:|---:|
+| English hour | 5.34 / 0 | 5.86 / 30 | 5.88 / 60 | 6.98 / 119 | 5.69 / 16 | 5.43 / 0 |
+| Russian hour | 6.40 / 0 | 5.49 / 0 | 5.49 / 0 | 5.63 / 0 | 5.63 / 0 | 6.14 / 0 |
+| Mixed 60 s | 19.12 / 22 | 18.38 / 22 | 12.50 / 16 | 29.41 / 40 | 29.41 / 40 | 13.97 / 16 |
+| Mixed 600 s | 31.63 / 293 | 33.71 / 337 | 29.64 / 294 | 34.14 / 349 | 34.14 / 349 | 17.59 / 143 |
+| Mixed hour | 39.43 / 2,227 | 39.44 / 2,302 | 31.76 / 1,716 | 39.66 / 2,281 | 39.66 / 2,281 | 22.09 / 1,053 |
+| English takes, 37 / 72 / 129 s | 6.58 / 4.94 / 2.97 | 6.58 / 6.17 / 3.96 | 6.58 / 5.56 / 9.24 (20 lost) | 28.95 (18) / 20.37 (26) / 4.62 | 7.89 / 5.56 / 4.62 | 6.58 / 4.94 / 3.96 |
+| Russian takes, 33 / 72 / 120 s | 1.79 / 6.78 / 9.39 | 0 / 6.78 / 6.63 | 0 / 6.78 / 7.18 | 0 / 7.63 / 7.18 | 0 / 7.63 / 7.18 | 0 / 9.32 / 8.29 |
+| Pooled WER, hour files and takes | 17.22 | 17.26 | 14.81 | 18.04 | 17.41 | 11.27 |
+| File-import wall time, five hours | 176.7 s | 149.4 s | 122.8 s | 142.7 s | 143.1 s | 126.4 s |
+
+Takes lose no words unless a count is given.
+
+The server's planner qualifies and ships. It loses no word on the English
+and Russian hour files or on any take, it loses half as many words as
+0.34.0 on each mixed file (143 against 293, 1,053 against 2,227), and its
+wall time is 15% below 0.35.0's. Its pooled WER is 11.27% against 17.26%,
+mostly from the mixed files, which are 17 points better: 20 s pieces
+without context are short enough that the model keeps each speaker's
+language. The cost is Russian: the hour file is 0.65 point worse than
+0.35.0's (25 more substitutions, 11 more scattered deletions, no run of
+three), and the 72 s and 120 s takes are 2.5 and 1.7 points worse. English
+is better than 0.35.0 everywhere and within 0.1 point of 0.34.0 on the
+hour file.
+
+Cutting at the quietest 400 ms of the last 10 s does not qualify. At 28 s
+it still lost 60 English words in the hour file and 20 in the 129 s take,
+so a quiet stretch near the cap is not reliably a pause between clauses.
+At 60 s, released 0.4.1's own segmenter dropped the quiet sentences of the
+37 s take (18 words, issue #235) and 26 words of the 72 s take.
+
+The fork against released 0.4.1, same chunker: 16 lost words against 119
+on the English hour file, 0 against 18 and 0 against 26 on the two English
+takes, equal everywhere else (Russian 0 and 0; mixed 40, 349 and 2,281 on
+both). The fix's upstream rule holds.
+
+The planner's pieces are at most 20 s, so on the fork they never reach the
+changed code, and the fork gives FLEURS identical to 0.4.1 (H16c). The Mac
+ships the planner on the fork.
+
 ## Proposed next hypotheses
 
 - **H8c.** The decoder's joint output layer and LSTM weights in the model's
