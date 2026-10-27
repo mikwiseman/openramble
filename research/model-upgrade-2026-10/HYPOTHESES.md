@@ -951,7 +951,10 @@ both). The fix's upstream rule holds.
 
 The planner's pieces are at most 20 s, so on the fork they never reach the
 changed code, and the fork gives FLEURS identical to 0.4.1 (H16c). The Mac
-ships the planner on the fork.
+ships the planner on the fork. The pull request's own commit (`ec107c1`,
+candidate `fork-plan20-shipped`, the framework fetched from the fork's
+release) gives the same text as the measured candidate on all 11 hour files
+and takes, with appending in place of the seam matcher.
 
 ## Proposed next hypotheses
 
