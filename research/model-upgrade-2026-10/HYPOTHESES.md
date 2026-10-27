@@ -543,6 +543,13 @@ No overlap, as in H16d. Live recording keeps its own policy unchanged.
 - `runtime-0.4.1-quiet60-seam0`: released 0.4.1, cuts between 50 and 60 s;
   Ultra's own segmenter cuts inside each chunk.
 - `fork-quiet60-seam0`: the fork (`c4cd60da`), the same chunker.
+- `runtime-0.4.1-plan20-seam0`: released 0.4.1 with the Linux server's
+  planner (`apps/cli/src/plan.rs`, its defaults) ported to Swift line for
+  line: silence is left out against a floor taken per minute, longer regions
+  are split evenly into pieces of at most 20 s, and each cut moves to the
+  quietest 200 ms within 2.5 s. Added at the coordinating session's
+  suggestion after the three above were committed, before any H16f output
+  existed. If it qualifies, the Mac and the server cut audio by one rule.
 
 A candidate qualifies by H16d's rules: no lost words on the English and
 Russian hour files and every take, each mixed file at most 5% above
