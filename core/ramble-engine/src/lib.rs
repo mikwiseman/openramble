@@ -588,15 +588,20 @@ mod tests {
     #[test]
     fn the_mac_app_pins_the_runtime_this_crate_links() {
         // One runtime everywhere. A measurement taken on one platform says
-        // nothing about another that runs a different version, and for five
+        // nothing about another that runs a different build, and for five
         // days in October 2026 the Mac and this crate ran 0.4.0 and 0.2.0.
+        // The fork's release tag is `v<version>-<commit>`, so the Mac's
+        // framework names the commit both targets here must build.
         let package = include_str!("../../../Packages/LocalASR/Package.swift");
-        let pinned = package
+        let tag = package
             .split("transcribe.cpp/releases/download/v")
             .nth(1)
             .and_then(|rest| rest.split('/').next())
             .expect("Package.swift pins CTranscribe by its release URL");
-        assert_eq!(pinned, transcribe_cpp::version());
+        let (version, commit) = tag.split_once('-').expect("the tag is <version>-<commit>");
+        assert_eq!(version, transcribe_cpp::version());
+        let manifest = include_str!("../Cargo.toml");
+        assert_eq!(manifest.matches(&format!("rev = \"{commit}")).count(), 2);
     }
 
     #[test]
