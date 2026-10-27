@@ -7,6 +7,9 @@ labels=(before after)
 files=(en-3540s ru-3540s)
 
 if [[ "${1:-}" == build ]]; then
+  # wai-stt's own CPU (Ampere Altra, Neoverse-N1), not this host's: native
+  # detection on an Apple M4 under Docker asks GCC 12 for fp16fml without fp16.
+  export TRANSCRIBE_CMAKE_ARGS="-DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=armv8.2-a+fp16+dotprod"
   for label in "${labels[@]}"; do
     (cd "/src/$label" && CARGO_TARGET_DIR="/target/$label" cargo build --release --locked -p openramble-cli)
     install -D "/target/$label/release/openramble" "/out/bin/$label/openramble"
