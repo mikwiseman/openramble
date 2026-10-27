@@ -427,6 +427,46 @@ together with H16 when:
 FLEURS is not run again: every FLEURS file is shorter than 30 s and is
 decoded whole, so the change cannot reach it.
 
+## H16c. Long files without losing words
+
+Preregistered on 27 October 2026, before any output of these candidates
+existed.
+
+The 30 s cap of H16b keeps transcribe.cpp 0.4.x away from Parakeet Ultra's
+own pause segmenter and costs long English and mixed files 0.5 to 2 points.
+The segmenter's fault is now known (upstream issue #235): it scores speech
+over a whole 120 s block on features normalized over that block, so speech
+about 40 dB quieter than a neighbour scores as silence and its piece is
+dropped. The fork `mikwiseman/transcribe.cpp`, branch `openramble/v0.4.1`
+(`c4cd60da`), scans such a piece again on its own before dropping it; the
+33.13 s repro gives 73 words with it and 40 without, on Metal and CPU.
+
+Candidates, file import and long dictation through the app's chunker:
+
+- `fork-chunks30`: the fork, 30 s segments with 2 s of context (up to 34 s,
+  the chunking 0.34.0 shipped), so the fixed segmenter handles the excess.
+- `fork-chunks60`: the fork, 60 s segments, so Ultra segments the audio
+  itself.
+- `runtime-0.4.1-chunks27`: 0.4.1 as released, 27 s segments with 1 s of
+  context, every input at or under 30 s.
+
+References: `app-0.34.0` (what 0.34.0 shipped) and `runtime-0.4.1-chunks25`
+(what 0.35.0 ships).
+
+A candidate qualifies when:
+
+1. No lost words: on each hour file and long take, the reference words in
+   deleted runs of three or more are no more than under `app-0.34.0`. (That
+   is zero on the English and Russian hour files and on every take.)
+2. For the fork, all 1,422 FLEURS transcripts are identical to
+   `runtime-0.4.1`: inputs of 30 s or less never reach the change.
+3. File-import wall time over the five hour files is at most 10% above
+   `runtime-0.4.1-chunks25`.
+
+Among qualifying candidates, the one with the lowest word-weighted WER over
+the five hour files and six takes is shipped, if that WER is below
+`runtime-0.4.1-chunks25`'s. Every file is also reported against `app-0.34.0`.
+
 ## Live text needs partials at least every 300 ms
 
 Recorded on 20 October 2026 as a gate for any future live-text feature, not
@@ -669,10 +709,6 @@ runtime that predates its model. H16c is to win the long-file accuracy back.
 
 ## Proposed next hypotheses
 
-- **H16c.** File import and long dictation with Parakeet Ultra on 0.4.x: find
-  the chunk length and context that recover the English and mixed hour files
-  without any engine input over 30 s, against 0.34.0's 5.34% English and
-  31.63% mixed 600 s WER.
 - **H8c.** The decoder's joint output layer and LSTM weights in the model's
   Q8_0 together, against the same 30% decoder rule.
 - **H10b.** Four encoder threads and one decoder thread on the CPU backend.
