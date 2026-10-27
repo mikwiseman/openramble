@@ -467,6 +467,41 @@ Among qualifying candidates, the one with the lowest word-weighted WER over
 the five hour files and six takes is shipped, if that WER is below
 `runtime-0.4.1-chunks25`'s. Every file is also reported against `app-0.34.0`.
 
+## H16d. Seams without overlap
+
+Preregistered on 27 October 2026 after the H16c result, before any output of
+these candidates existed.
+
+Every word H16c still lost sat at a seam where the app joins two overlapping
+file chunks by word time. With no overlap there is nothing to match: each
+chunk is exactly its segment, a word belongs to the chunk its middle falls
+in, and no tail is merged. The Linux server works this way.
+
+Candidates, file import and long dictation, overlap 0:
+
+- `fork-chunks30-seam0`: the fork (`c4cd60da`), 30 s segments. A forced cut
+  can pass 30 s by one 20 ms frame; the fixed segmenter takes that.
+- `fork-chunks60-seam0`: the fork, 60 s segments; Ultra segments within.
+- `runtime-0.4.1-chunks29-seam0`: released 0.4.1, 29 s segments, every input
+  under 30 s, no fork needed.
+
+A candidate qualifies when:
+
+1. No lost words (reference words in deleted runs of three or more) on the
+   English and Russian hour files and on every take, and on each mixed file
+   no more than 5% above `app-0.34.0`'s. (Across H16c's setups the mixed
+   files' losses moved by up to 75 words of about 2,200 with no change in
+   the seams, since the model drops one of the two languages.)
+2. For a fork candidate, FLEURS is identical to `runtime-0.4.1` (already
+   shown in H16c for this commit).
+3. File-import wall time over the five hour files at most 10% above
+   `runtime-0.4.1-chunks25`.
+
+Among qualifying candidates, the lowest word-weighted WER over the five hour
+files and six takes ships, if it is below `runtime-0.4.1-chunks25`'s; with
+released 0.4.1 and the fork within 0.1 point of each other, the one without
+the fork ships.
+
 ## Live text needs partials at least every 300 ms
 
 Recorded on 20 October 2026 as a gate for any future live-text feature, not
