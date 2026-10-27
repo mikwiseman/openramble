@@ -27,6 +27,21 @@ public actor TranscribeCppAdapter: BatchASREngineAdapting {
     public static let requiredSampleRate = 16_000
     public static var runtimeVersion: String { String(cString: transcribe_version()) }
 
+    /// The file the runtime's code was loaded from, as the dynamic loader
+    /// reports it.
+    ///
+    /// It must be the pinned CTranscribe framework: the binary the network
+    /// audit checks and the scorecard measures. Until 0.34 it was not. The
+    /// shared core linked its own copy of transcribe.cpp statically, and that
+    /// copy, a different version, answered every call made here.
+    public static var runtimeImagePath: String? {
+        let entry: @convention(c) () -> UnsafePointer<CChar>? = transcribe_version
+        var info = Dl_info()
+        guard dladdr(unsafeBitCast(entry, to: UnsafeRawPointer.self), &info) != 0,
+              let path = info.dli_fname else { return nil }
+        return String(cString: path)
+    }
+
     /// The shortest clip the mel front-end will accept without producing NaNs:
     /// 1.25 seconds, the same constant as `MINIMUM_ENGINE_SAMPLES` in
     /// `core/ramble-audio/src/prepare.rs`. The two must move together.
