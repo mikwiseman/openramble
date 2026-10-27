@@ -20,8 +20,10 @@ final class LongInputRoutingTests: XCTestCase {
             XCTAssertEqual(memory.audioDuration, Double(seconds))
             XCTAssertEqual(file.audioDuration, Double(seconds))
             let sizes = await engine.sizes
-            XCTAssertLessThanOrEqual(sizes.max() ?? 0, 36 * 16_000,
-                "long inputs must never reach the native engine whole")
+            // Over 30 s Parakeet Ultra segments a run itself, and on
+            // transcribe.cpp 0.4.1 that can drop speech (FileAudioChunks).
+            XCTAssertLessThanOrEqual(sizes.max() ?? 0, 30 * 16_000,
+                "no engine call may exceed 30 s, context and merged tail included")
             XCTAssertGreaterThan(sizes.count, 2)
             XCTAssertEqual(memory.processingDuration, Double(sizes.count / 2) * 0.1, accuracy: 0.0001)
         }
@@ -67,7 +69,7 @@ final class LongInputRoutingTests: XCTestCase {
         do { _ = try await work.value; XCTFail("cancelled input published") } catch is CancellationError {}
         let sizes = await engine.sizes
         XCTAssertEqual(sizes.count, 1)
-        XCTAssertLessThanOrEqual(sizes[0], 36 * 16_000)
+        XCTAssertLessThanOrEqual(sizes[0], 30 * 16_000)
     }
 
     func testForcedReloadCannotMixModelGenerationsWithinARecording() async throws {
