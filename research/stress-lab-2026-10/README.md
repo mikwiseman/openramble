@@ -158,14 +158,96 @@ this branch these losses left no trace; now the journal and speed line carry
 | `memory_pressure -S -l critical` | Sets an artificial level and moves no page; it cannot reproduce a read back from swap. |
 | Main-thread work during a take | The stalls are page faults at the key-down after a page-out, not work: in quiet runs the main thread's longest stall was 2–74 ms. |
 
-### Open
+### The first take after a page-out
 
-The first take after the Mac pages OpenRamble out starts its microphone
-1.2–1.7 s after the key-down and freezes the HUD for 1.2–3.7 s, on both builds.
-Words spoken in that window are lost. The cause is page faults across the
-start path and the main thread (80–127 MB read on those takes); the capture
-already starts before any HUD work. Nothing here fixes it, and opening the
-microphone before the key-down is ruled out by the app's privacy promise.
+On 26 October the first take after the Mac paged OpenRamble out started its
+microphone 1.2–1.7 s after the key-down and froze the HUD for 1.2–3.7 s, on
+both builds. Words spoken in that window are lost. Opening the microphone
+before the key-down is ruled out by the app's privacy promise, so the work
+was to shorten what happens between the key-down and the device running.
+
+The lab now records each step of that path (`startpath.py`). Two new
+conditions make every take the first one after a page-out: `pageout` starts a
+fresh hog 10 s before each take and ends it after, and `pageoutcpu` adds a
+busy process per core. With a 14 GB hog the app read 9–110 MB back from disk
+per take, the same scale as the 26 October takes (80–127 MB).
+
+`python3 -I startpath.py data/first-take/main-14g-takes.jsonl` (0.34.0's
+capture, `pageoutcpu`, milliseconds after key-down):
+
+| # | Main thread returned | Open began | Open ended | Start began | Device started | First buffer |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0 | 2 | 9 | 113 | 147 | 265 | 212 |
+| 1 | 0 | 0 | 42 | 53 | 93 | 103 |
+| 2 | 2 | 3 | 55 | 56 | 112 | 118 |
+| 3 | 0 | 1 | 51 | 51 | 142 | 130 |
+| 4 | 0 | 1 | 84 | 92 | 167 | 178 |
+| 5 | 0 | 1 | 78 | 81 | 130 | 136 |
+
+- The key-down reaches the start lane within 0–29 ms, usually under 10. The
+  main thread is not in the way: its freezes come after it has handed the start over, so they delay
+  the HUD, not the microphone.
+- Opening the device (the format and hog queries, then registering the I/O
+  proc) is a run of round trips to `coreaudiod`. It is the step that grows
+  with paging: 12–385 ms across these runs.
+- Between opening and starting, the take built its sample-rate converter:
+  0–54 ms.
+- Starting the device took 40–180 ms. That is Core Audio waking the
+  hardware, and only a running microphone avoids it.
+
+Two changes came out of it:
+
+- The device starts before its converter is built. The capture ring holds
+  every cycle until the handler is installed, so nothing heard meanwhile is
+  dropped.
+- After a take that started cleanly, its I/O proc stays registered with the
+  device, stopped, and the next take only starts it (`KeptMicrophone`). A
+  registered I/O proc that is not started does not run the device: after
+  every take of these runs, `kAudioDevicePropertyDeviceIsRunningSomewhere`
+  was 0 on the input (`microphoneRunningAfter` in the journal). It is let go
+  when the default input changes, when Core Audio restarts, and when its own
+  device disappears or changes format. Every take gets new handler, ring and
+  worker; the ring is new memory each time, because last take's may have been
+  paged out, and the real-time thread must never wait for a page.
+
+A paired comparison on one build, `STRESS_LAB_FRESH=alternate`: every other
+take lets the kept microphone go and opens a new one, under the same hog and
+load (`python3 -I startpath.py data/first-take/paired-takes.jsonl`, 6 takes
+each, load 18–43):
+
+| Take | Key-down → device started, median / max | Open step | Lost frames (takes) | Main-thread stalls > 100 ms |
+|---|---:|---:|---:|---:|
+| new microphone | 136 / 315 ms | 43–194 ms | 3164 (2) | 1 |
+| kept microphone | 87 / 148 ms | 0–1 ms | 772 (1) | 0 |
+
+The same comparison with a prototype that opened the microphone before the
+hog, run earlier the same day (`prototype-paired-takes.jsonl`): 155 / 595 ms
+against 76 / 138 ms. Its kept takes reused a ring allocated before the hog,
+and 2 of 6 lost frames at the second cycle (1 of 6 new ones did). The
+shipping version gives each take a new ring, and none of its kept takes lost
+the second cycle.
+
+After a rest (`idle`: an 8 GB hog, a take after each 240 s), on a quiet Mac
+(load 2–3), neither build was paged out: 0–9 MB read, engine 108–127 ms.
+Key-down → device started was 96 / 52 / 53 ms on 0.34.0 and 105 / 45 / 42 ms
+with this change; the first take of each run opens a new microphone, the
+later ones start the kept one. Every take of every run landed with no word
+missed.
+
+What is left: the device start itself, then the built-in microphone's
+~180 ms of near-silence. The 1.2–1.7 s takes of 26 October came at load
+30–120 with more than 20 GB of swap, while other sessions were building;
+nothing here reproduced that, so this change has not been measured against
+it. Opening, the step that grew with paging, is gone from every take but the
+first after the app launches. The HUD freeze is page faults on the main
+thread and is unchanged; it no longer delays anything the person says.
+
+Tried and not kept:
+
+| Candidate | Why not |
+|---|---|
+| Locking the app's code in memory (`mlock`) | macOS refuses it for code pages: `EPERM`, even for one page. |
+| Reading the app's 8.3 MB of code back in one go at the key-down (`madvise(MADV_WILLNEED)`) | Slower: 203 / 277 ms to device started against 136 / 265 ms. The read competes for the disk with the page-in it was meant to help. |
 
 ### Against Handy
 

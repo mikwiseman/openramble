@@ -8,7 +8,11 @@
 # microphone's samples with a recorded sentence (nothing the room says is kept).
 # Conditions: quiet, cpu (one busy process per logical CPU), memory (a bounded
 # 8 GB hog of hot, incompressible pages), both, idle (the hog, then a take after
-# each 240 s of rest). Results: $STRESS_LAB_OUT (research/stress-lab-2026-10/data
+# each 240 s of rest), pageout (a fresh hog before each take, so every take is
+# the first after the app was paged out; STRESS_LAB_IDLE_TAKES of them), and
+# pageoutcpu (the same with every core busy). STRESS_LAB_FRESH=alternate makes
+# every other page-out take open a new microphone instead of the kept one.
+# Results: $STRESS_LAB_OUT (research/stress-lab-2026-10/data
 # by default), one JSON line per take and a summary table per label.
 #
 # It opens the built-in microphone (the menu bar shows it) and loads the Mac for

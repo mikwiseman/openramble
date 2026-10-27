@@ -15,15 +15,24 @@ import Foundation
 protocol CaptureInput: AnyObject, Sendable {
     /// What the handler receives: the device's own format.
     var format: AVAudioFormat { get }
-    /// Set once, before `start`. `onLost` runs at most once, on any thread,
-    /// when the device disappears or changes its format under a running take:
-    /// from then on nothing it delivers can be trusted.
+    /// Set once: before `start`, or after it when `handlerMayFollowStart`.
+    /// `onLost` runs at most once, on any thread, when the device disappears
+    /// or changes its format under a running take: from then on nothing it
+    /// delivers can be trusted.
     func install(_ handler: @escaping CaptureHandler, onLost: @escaping @Sendable () -> Void)
+    /// Whether the device may start before `install` and hold what it hears
+    /// until a handler arrives, so a take's microphone starts before the
+    /// converter it needs has been built.
+    var handlerMayFollowStart: Bool { get }
     /// May block inside Core Audio, so it runs on the start lane.
     func start() throws
     /// May block inside Core Audio, so it runs on the teardown lane. Safe on
     /// a microphone that was opened but never started.
     func stop()
+}
+
+extension CaptureInput {
+    var handlerMayFollowStart: Bool { false }
 }
 
 /// Receives each buffer in the device's format. On an I/O proc the buffer is
@@ -47,9 +56,14 @@ enum CaptureBlock {
 typealias CaptureInputOpener = @Sendable (AudioDeviceID?) throws -> any CaptureInput
 
 enum CaptureInputs {
-    /// The I/O proc, unless the device is one it does not carry; then the
-    /// engine, which is exactly what every take used before.
+    static let kept = KeptMicrophone<HALCaptureInput>()
+
+    /// The last take's I/O proc while it is still the one this take would
+    /// open; else a new I/O proc, unless the device is one it does not carry;
+    /// then the engine, which is exactly what every take used before.
     static func open(_ device: AudioDeviceID?) throws -> any CaptureInput {
+        kept.watchSystem()
+        if let input = kept.reopen(for: device) { return input }
         if let input = HALCaptureInput(device: device) { return input }
         return try EngineCaptureInput(device: device)
     }
@@ -118,6 +132,91 @@ enum CaptureInputs {
               description.mChannelsPerFrame > 0
         else { return nil }
         return description
+    }
+}
+
+/// What a stopped microphone needs for the next take to use it again.
+protocol ReopenableCaptureInput: AnyObject, Sendable {
+    /// What its take asked for: a device, or the default input.
+    var request: AudioDeviceID? { get }
+    /// `KeptMicrophone.epoch` when it opened.
+    var epoch: Int { get }
+    /// Ready for another take; false once it can no longer be trusted.
+    func reopen() -> Bool
+}
+
+/// The last take's microphone, still registered with its device but stopped,
+/// so the next take does not open one.
+///
+/// Opening is a run of round trips to `coreaudiod`, and on the first take
+/// after the Mac paged OpenRamble out it is the part of key-down → device
+/// started that grows with the paging (research/stress-lab-2026-10). An I/O
+/// proc that is registered but not started does not run the device: nothing
+/// is heard, and the menu bar shows no microphone. It is let go whenever it
+/// may no longer be what a take would open: the default input changing, Core
+/// Audio restarting, or its own device disappearing or changing format.
+final class KeptMicrophone<Input: ReopenableCaptureInput>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var kept: Input?
+    private var changes = 0
+    private var watching = false
+    private let queue = DispatchQueue(label: "is.waiwai.dictation.kept-microphone")
+
+    /// Counts the changes that make a kept microphone the wrong one. One
+    /// opened before the latest is never kept.
+    var epoch: Int { lock.withLock { changes } }
+
+    /// The kept microphone, ready for a new take, if it is the one `request`
+    /// would open. Whatever else was kept is let go.
+    func reopen(for request: AudioDeviceID?) -> Input? {
+        let input: Input? = lock.withLock {
+            defer { kept = nil }
+            return kept
+        }
+        guard let input, input.request == request, input.reopen() else { return nil }
+        return input
+    }
+
+    /// Called by a microphone that has stopped after a clean start. False
+    /// when it opened before a change, and is not kept.
+    func keep(_ input: Input) -> Bool {
+        var replaced: Input?
+        let kept: Bool = lock.withLock {
+            guard input.epoch == changes else { return false }
+            replaced = self.kept
+            self.kept = input
+            return true
+        }
+        withExtendedLifetime(replaced) {}
+        return kept
+    }
+
+    /// The default input changed, or Core Audio restarted.
+    func changed() {
+        let dropped: Input? = lock.withLock {
+            changes += 1
+            defer { kept = nil }
+            return kept
+        }
+        withExtendedLifetime(dropped) {}
+    }
+
+    /// From the first take on, hears about the changes that make a kept
+    /// microphone the wrong one.
+    func watchSystem() {
+        guard lock.withLock({ () -> Bool in
+            defer { watching = true }
+            return !watching
+        }) else { return }
+        let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in self?.changed() }
+        for selector in [kAudioHardwarePropertyDefaultInputDevice, kAudioHardwarePropertyServiceRestarted] {
+            var address = AudioObjectPropertyAddress(
+                mSelector: selector,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &address, queue, block)
+        }
     }
 }
 
@@ -257,15 +356,21 @@ final class CaptureRing: @unchecked Sendable {
 
     /// The worker: hands each cycle over in order, until `finish`. An
     /// overflow is reported from here, once, never from the real-time thread.
-    func run(_ handler: CaptureHandler, onOverflow: () -> Void) {
+    ///
+    /// Until `handler` returns one, cycles stay in the ring: a device started
+    /// before its handler was installed loses nothing it heard meanwhile. A
+    /// take that finishes with no handler at all failed to start, and what it
+    /// held is let go.
+    func run(_ handler: () -> CaptureHandler?, onOverflow: () -> Void) {
         var reported = false
         while true {
             ready.wait()
-            while let slot = next() {
+            let deliver = handler()
+            while let deliver, let slot = next() {
                 let buffer = buffers[slot]
                 buffer.frameLength = frames[slot]
                 if buffer.frameLength > 0 {
-                    handler(buffer, AVAudioTime(audioTimeStamp: times.advanced(by: slot), sampleRate: format.sampleRate))
+                    deliver(buffer, AVAudioTime(audioTimeStamp: times.advanced(by: slot), sampleRate: format.sampleRate))
                 }
                 os_unfair_lock_lock(lock)
                 tail = (tail + 1) % slotCount
@@ -273,7 +378,7 @@ final class CaptureRing: @unchecked Sendable {
                 os_unfair_lock_unlock(lock)
             }
             os_unfair_lock_lock(lock)
-            let done = stopping && count == 0
+            let done = stopping && (count == 0 || deliver == nil)
             let lost = overflowed
             os_unfair_lock_unlock(lock)
             if lost, !reported {
@@ -311,32 +416,44 @@ final class CaptureRing: @unchecked Sendable {
 /// Nothing is built before the device starts: no graph, no aggregate device,
 /// no output side. The I/O proc runs on the device's real-time thread and
 /// only copies each cycle into a `CaptureRing`; a worker thread gives it to
-/// the handler.
-final class HALCaptureInput: CaptureInput, @unchecked Sendable {
+/// the handler. After a take that started cleanly it stays registered,
+/// stopped, for the next one (`KeptMicrophone`); every take gets its own
+/// handler, ring and worker.
+final class HALCaptureInput: CaptureInput, ReopenableCaptureInput, @unchecked Sendable {
     let format: AVAudioFormat
+    let request: AudioDeviceID?
+    let epoch: Int
 
     private let device: AudioDeviceID
-    private let procID: AudioDeviceIOProcID
-    private let slot: HandlerSlot
-    private let ring: CaptureRing
-    private var worker: Thread?
+    private let framesPerCycle: Int
+    private let writer: RingWriter
     private let lock = NSLock()
+    private var procID: AudioDeviceIOProcID
+    private var take: Take?
+    /// A start has succeeded: the I/O proc works, and may be kept.
+    private var proven = false
+    /// Its device disappeared or changed format: it is never kept again.
+    private var invalid = false
     private var destroyed = false
-    private var listening = false
     private let listenerQueue = DispatchQueue(label: "is.waiwai.dictation.capture-device")
     private var listener: AudioObjectPropertyListenerBlock?
 
-    private final class HandlerSlot: @unchecked Sendable {
+    final class HandlerSlot: @unchecked Sendable {
         private let lock = NSLock()
         private var handler: CaptureHandler?
         private var onLost: (@Sendable () -> Void)?
-        private let lost = OnceFlag()
+        private var lost = false
+        private let reported = OnceFlag()
 
+        /// A loss reported before the handler arrived is passed on now: the
+        /// device starts first, and may change in between.
         func set(_ handler: @escaping CaptureHandler, onLost: @escaping @Sendable () -> Void) {
-            lock.withLock {
+            let lostAlready = lock.withLock {
                 self.handler = handler
                 self.onLost = onLost
+                return lost
             }
+            if lostAlready { onLost() }
         }
 
         func get() -> CaptureHandler? {
@@ -344,9 +461,52 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
         }
 
         func reportLost() {
-            guard lost.claim() else { return }
-            let onLost = lock.withLock { self.onLost }
+            guard reported.claim() else { return }
+            let onLost = lock.withLock {
+                lost = true
+                return self.onLost
+            }
             onLost?()
+        }
+    }
+
+    /// One take's handler, its ring, and the worker that empties it.
+    private final class Take: @unchecked Sendable {
+        let slot = HandlerSlot()
+        let ring: CaptureRing
+        /// Under the input's lock.
+        var worker: Thread?
+
+        init(ring: CaptureRing) {
+            self.ring = ring
+        }
+    }
+
+    /// The ring the I/O proc writes into: the current take's, replaced only
+    /// while the device is stopped. The real-time thread holds the lock for
+    /// one load.
+    private final class RingWriter: @unchecked Sendable {
+        private let lock: UnsafeMutablePointer<os_unfair_lock>
+        private var ring: CaptureRing?
+
+        init() {
+            lock = .allocate(capacity: 1)
+            lock.initialize(to: os_unfair_lock())
+        }
+
+        deinit { lock.deallocate() }
+
+        func write(_ input: UnsafePointer<AudioBufferList>, at time: UnsafePointer<AudioTimeStamp>) {
+            os_unfair_lock_lock(lock)
+            let ring = self.ring
+            os_unfair_lock_unlock(lock)
+            ring?.write(input, at: time)
+        }
+
+        func use(_ ring: CaptureRing?) {
+            os_unfair_lock_lock(lock)
+            self.ring = ring
+            os_unfair_lock_unlock(lock)
         }
     }
 
@@ -356,6 +516,7 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
     /// profile and format as its microphone opens, which is unmeasured on the
     /// I/O proc; the engine handles each of these the way it always has.
     init?(device preferred: AudioDeviceID?) {
+        let epoch = CaptureInputs.kept.epoch
         guard let device = preferred ?? MicrophoneAudioSource.defaultInputDevice(), device != 0 else {
             return nil
         }
@@ -375,85 +536,137 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
               format.channelCount > 0
         else { return nil }
 
-        let slot = HandlerSlot()
-        guard let ring = CaptureRing(format: format, framesPerCycle: Self.framesPerCycle(of: device)) else {
-            return nil
-        }
-        var made: AudioDeviceIOProcID?
-        // No queue: the block runs on the HAL's own real-time thread, which
-        // waits for nothing of ours.
-        let status = AudioDeviceCreateIOProcIDWithBlock(&made, device, nil) { _, inputData, inputTime, _, _ in
-            ring.write(inputData, at: inputTime)
-        }
-        guard status == noErr, let made else { return nil }
+        let framesPerCycle = Self.framesPerCycle(of: device)
+        let writer = RingWriter()
+        guard let ring = CaptureRing(format: format, framesPerCycle: framesPerCycle),
+              let made = Self.makeIOProc(on: device, writingTo: writer)
+        else { return nil }
+        writer.use(ring)
+        self.request = preferred
+        self.epoch = epoch
         self.device = device
         self.format = format
+        self.framesPerCycle = framesPerCycle
+        self.writer = writer
         self.procID = made
-        self.slot = slot
-        self.ring = ring
+        self.take = Take(ring: ring)
+        startListening()
     }
 
     deinit {
-        stopListening()
         destroy()
-        if worker != nil { ring.finish() }
+        if let take, take.worker != nil { take.ring.finish() }
+    }
+
+    /// No queue: the block runs on the HAL's own real-time thread, which
+    /// waits for nothing of ours.
+    private static func makeIOProc(on device: AudioDeviceID, writingTo writer: RingWriter) -> AudioDeviceIOProcID? {
+        var made: AudioDeviceIOProcID?
+        let status = AudioDeviceCreateIOProcIDWithBlock(&made, device, nil) { _, inputData, inputTime, _, _ in
+            writer.write(inputData, at: inputTime)
+        }
+        return status == noErr ? made : nil
     }
 
     func install(_ handler: @escaping CaptureHandler, onLost: @escaping @Sendable () -> Void) {
-        slot.set(handler, onLost: onLost)
+        lock.withLock { take?.slot }?.set(handler, onLost: onLost)
+    }
+
+    /// The ring holds every cycle until the handler is installed.
+    var handlerMayFollowStart: Bool { true }
+
+    /// A new handler slot and ring for the next take. The ring is new memory
+    /// rather than the last take's, which the Mac may have paged out since:
+    /// the real-time thread must never wait for a page.
+    func reopen() -> Bool {
+        guard let ring = CaptureRing(format: format, framesPerCycle: framesPerCycle) else { return false }
+        let ready: Bool = lock.withLock {
+            guard !invalid, !destroyed, take == nil else { return false }
+            take = Take(ring: ring)
+            return true
+        }
+        if ready { writer.use(ring) }
+        return ready
     }
 
     func start() throws {
-        startListening()
+        guard let take = lock.withLock({ take }) else {
+            throw AudioCaptureError.engineUnavailable("the microphone was not reopened")
+        }
         // The buffer handed over is the ring's memory, valid only until the
         // handler returns, exactly like the device's own was.
-        let ring = ring, slot = slot
+        let ring = take.ring, slot = take.slot
         let worker = Thread {
-            ring.run({ buffer, time in slot.get()?(buffer, time) }, onOverflow: { slot.reportLost() })
+            ring.run({ slot.get() }, onOverflow: { slot.reportLost() })
         }
         worker.name = "is.waiwai.dictation.capture-io"
         worker.qualityOfService = .userInteractive
         worker.start()
-        lock.withLock { self.worker = worker }
-        let status = AudioDeviceStart(device, procID)
+        let (procID, kept) = lock.withLock {
+            take.worker = worker
+            return (self.procID, proven)
+        }
+        var status = AudioDeviceStart(device, procID)
+        // A kept I/O proc the HAL no longer has: register it again, once.
+        if status != noErr, kept { status = reregister() }
         guard status == noErr else {
-            stopListening()
+            lock.withLock { invalid = true }
             ring.finish()
             throw AudioCaptureError.engineUnavailable("the microphone could not be started (\(status))")
         }
+        lock.withLock { proven = true }
     }
 
     func stop() {
-        stopListening()
-        AudioDeviceStop(device, procID)
+        AudioDeviceStop(device, lock.withLock { procID })
+        let (take, keep): (Take?, Bool) = lock.withLock {
+            defer { self.take = nil }
+            return (self.take, proven && !invalid && !destroyed)
+        }
         // The device has stopped writing; hand over what it already wrote.
-        if lock.withLock({ worker }) != nil { ring.finish() }
+        if let take, lock.withLock({ take.worker }) != nil { take.ring.finish() }
+        writer.use(nil)
+        if keep, CaptureInputs.kept.keep(self) { return }
         destroy()
     }
 
+    private func reregister() -> OSStatus {
+        guard let made = Self.makeIOProc(on: device, writingTo: writer) else { return kAudioHardwareUnspecifiedError }
+        let stale = lock.withLock {
+            defer { procID = made }
+            return procID
+        }
+        AudioDeviceDestroyIOProcID(device, stale)
+        return AudioDeviceStart(device, made)
+    }
+
+    /// For the I/O proc's whole life, kept or running: a device that
+    /// disappears or changes format ends the take on it, and is never used
+    /// again.
     private func startListening() {
         let device = device
         let expected = format
-        let slot = slot
-        let block: AudioObjectPropertyListenerBlock = { _, _ in
-            if !CaptureInputs.delivers(expected, from: device) { slot.reportLost() }
+        let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+            if !CaptureInputs.delivers(expected, from: device) { self?.lost() }
         }
-        lock.withLock {
-            listener = block
-            listening = true
-        }
+        lock.withLock { listener = block }
         for var address in CaptureInputs.watched {
             AudioObjectAddPropertyListenerBlock(device, &address, listenerQueue, block)
         }
     }
 
+    private func lost() {
+        let slot: HandlerSlot? = lock.withLock {
+            invalid = true
+            return take?.slot
+        }
+        slot?.reportLost()
+    }
+
     private func stopListening() {
         let block: AudioObjectPropertyListenerBlock? = lock.withLock {
-            defer {
-                listening = false
-                listener = nil
-            }
-            return listening ? listener : nil
+            defer { listener = nil }
+            return listener
         }
         guard let block else { return }
         for var address in CaptureInputs.watched {
@@ -461,12 +674,15 @@ final class HALCaptureInput: CaptureInput, @unchecked Sendable {
         }
     }
 
+    /// Unregisters for good: the listeners, then the I/O proc.
     private func destroy() {
-        let shouldDestroy = lock.withLock {
+        let procID: AudioDeviceIOProcID? = lock.withLock {
             defer { destroyed = true }
-            return !destroyed
+            return destroyed ? nil : self.procID
         }
-        if shouldDestroy { AudioDeviceDestroyIOProcID(device, procID) }
+        guard let procID else { return }
+        stopListening()
+        AudioDeviceDestroyIOProcID(device, procID)
     }
 
     private static func uint32(_ device: AudioDeviceID, _ selector: AudioObjectPropertySelector) -> UInt32? {
