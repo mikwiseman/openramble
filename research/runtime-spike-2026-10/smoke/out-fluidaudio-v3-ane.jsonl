@@ -1,0 +1,3 @@
+{"id":"__load__","load_seconds":17.064384937286377,"model":"v3","runner":"fluidaudio 0.17.7","units":"ane"}
+{"audio_seconds":5.6056875000000002,"id":"en","text":"Please send the quarterly report to Anna before Friday, and remind her about the meeting at three o'clock.","wall_seconds":0.073781967163085938}
+{"audio_seconds":5.5623750000000003,"id":"ru","text":"Привет, сегодня мы проверяем распознавание русской речи, и результат должен быть точным.","wall_seconds":0.048648953437805176}

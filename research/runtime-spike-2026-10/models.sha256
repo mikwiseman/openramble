@@ -1,0 +1,86 @@
+# SHA-256, size in bytes and path under $SPIKE (~/Library/Caches/OpenRambleSpike) of every downloaded model file.
+# Large files were checked against the SHA-256 that the Hugging Face Hub lists for them (hf_fetch.py).
+# csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8@2bda32ec70b097a55adaa07d9a7173915b43cc78  ->  $SPIKE/sherpa-onnx/models/v3-int8  (670,478,772 bytes, 4 files)
+179e50c43d1a9de79c8a24149a2f9bac6eb5981823f2a2ed88d655b24248db4e        11845275  sherpa-onnx/models/v3-int8/decoder.int8.onnx
+acfc2b4456377e15d04f0243af540b7fe7c992f8d898d751cf134c3a55fd2247       652184281  sherpa-onnx/models/v3-int8/encoder.int8.onnx
+3164c13fc2821009440d20fcb5fdc78bff28b4db2f8d0f0b329101719c0948b3         6355277  sherpa-onnx/models/v3-int8/joiner.int8.onnx
+d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d           93939  sherpa-onnx/models/v3-int8/tokens.txt
+# leogaudin/sherpa-onnx-nemo-parakeet-ultra-int8@f7bc472677ff70be95cdb0ef9df509fee6f5ec0b  ->  $SPIKE/sherpa-onnx/models/ultra-int8  (670,592,336 bytes, 7 files)
+f1ac0568e737172f270ce3797fc2dcc7ade0a5d76692664503b6d8291f5ef0bf            4935  sherpa-onnx/models/ultra-int8/README.md
+57a0b58af789d0d6521182ddd58e5c2aa8449bb3766c525aef9b5c242fb08026             410  sherpa-onnx/models/ultra-int8/SHA256SUMS
+94373c6405c8149d1c9d1e9862514e0e3e88dab1c7de18fac9d5df9c6ba5efdd        11845275  sherpa-onnx/models/ultra-int8/decoder.int8.onnx
+8bd3b8dc07056def6dfd19910e9f90c9e1a4e7e20901f58bdfe2a570a8081a2a       652282340  sherpa-onnx/models/ultra-int8/encoder.int8.onnx
+bdb071a788ef7a3d65791da40ad2b26c1e65f32fa75f1155c63741370058c2d6           10160  sherpa-onnx/models/ultra-int8/export_ultra.py
+8a71aaccfdba3d451775507a889afd2257d2e754463fd81095a8c8f290f924c2         6355277  sherpa-onnx/models/ultra-int8/joiner.int8.onnx
+d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d           93939  sherpa-onnx/models/ultra-int8/tokens.txt
+# csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3@1a468a35cbba69418f126de829e75261dea4a4e4  ->  $SPIKE/sherpa-onnx/models/v3-fp32  (2,549,800,429 bytes, 5 files)
+d593cdb0e571f5a457ec2219af9968cbf6b0e8198e8f7839b40a8754593bf68c        47233743  sherpa-onnx/models/v3-fp32/decoder.onnx
+3eed7ce424bf8339ad09233533c687e2dbd07e74ccf5027b5e7344019ea373b0        41766257  sherpa-onnx/models/v3-fp32/encoder.onnx
+3af3f51af5f2d01dbbf5af47d42c7962a2c205f11004254bb4f2b979862f39a8      2435420160  sherpa-onnx/models/v3-fp32/encoder.weights
+b9b0bcf88ac571902e69a6536223ed2d94885e981b85045410f1403d53121a63        25286330  sherpa-onnx/models/v3-fp32/joiner.onnx
+d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d           93939  sherpa-onnx/models/v3-fp32/tokens.txt
+# mlx-community/parakeet-tdt-0.6b-v3@ed2b7e8c15f9aaa0b5772e2efb986255eaef7e15  ->  $SPIKE/parakeet-mlx/models/v3  (2,509,044,141 bytes, 7 files)
+11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361            1519  parakeet-mlx/models/v3/.gitattributes
+724e3ba46903986ff6caeb8fddb7495c06b5a7a8d908f11e43cc0a7e136b5e23            1081  parakeet-mlx/models/v3/README.md
+f320f1292511f34ec47f513755fe20fd01dbfc09a925d42730e66059a6e1ef4c          244093  parakeet-mlx/models/v3/config.json
+05e01c7f396c298cf7d23f61da7b504adeab698f0aaeafd9c82d198625464592      2508288736  parakeet-mlx/models/v3/model.safetensors
+eacec2b0a77f336d4a2ca4a25a7047575d3c2b74de47e997f4c205126ed3135e          360916  parakeet-mlx/models/v3/tokenizer.model
+41130ff456706304a1adec782ccc9e003c4d417e8e324353d281be958cac4e17          101024  parakeet-mlx/models/v3/tokenizer.vocab
+3cde1409fd78783a79b29ed4d32da57c746993856f7c8263bcb905d2e5839db7           46772  parakeet-mlx/models/v3/vocab.txt
+# moondream/parakeet-ultra@73175eb7aeb0d82f1e2a6b53b3aabc10a90bcd0b  ->  $SPIKE/parakeet-mlx/models/ultra-source  (1,256,524,992 bytes, 6 files)
+b851c71b81d732054660fa986e40b2ebcd8acca6c6d9290ffd384948f6a0ceff            2541  parakeet-mlx/models/ultra-source/.eval_results/open_asr_leaderboard.yaml
+11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361            1519  parakeet-mlx/models/ultra-source/.gitattributes
+d4a8b60c83df734ea0373931ba9548f07bdcbab683d19c7f5777a6a83f0971c8            6433  parakeet-mlx/models/ultra-source/README.md
+e747b85e1bdfd300c8b8ac63bac8dd5221f8fe9bc275b48d06c735fcd6971b6e            1153  parakeet-mlx/models/ultra-source/config.json
+c9608f36d0ab956c14bfcc525479b0746b3b42a56f6949ec85c14eb7466717dc      1255353386  parakeet-mlx/models/ultra-source/model.safetensors
+bd321b096832a3f270bd3b2a88823957920f1a5c5ada71114a26ea729d0cbe91         1159960  parakeet-mlx/models/ultra-source/tokenizer.json
+# FluidInference/parakeet-tdt-0.6b-v3-coreml@7dd20fe6b1797d35f5e3307e8b1732d9a178edfe  ->  $SPIKE/fluidaudio/models/v3  (483,110,405 bytes, 23 files)
+4238c4e81ecd0dc94bd7dfbb60f7e2cc824107c1ffe0387b8607b72833dba350             243  fluidaudio/models/v3/Decoder.mlmodelc/analytics/coremldata.bin
+18647af085d87bd8f3121c8a9b4d4564c1ede038dab63d295b4e745cf2d7fb99             554  fluidaudio/models/v3/Decoder.mlmodelc/coremldata.bin
+a39e93cd8371b8ded92635c7804fcd0590f0d1dd9415c6d19a0484be073077d9            3427  fluidaudio/models/v3/Decoder.mlmodelc/metadata.json
+ef2a0a281695398a62fde86ac269c68f73d5b578d7ed3b31f2ba91a2d1ea1f35           13110  fluidaudio/models/v3/Decoder.mlmodelc/model.mil
+48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41        23604992  fluidaudio/models/v3/Decoder.mlmodelc/weights/weight.bin
+42e638870d73f26b332918a3496ce36793fbb413a81cbd3d16ba01328637a105             243  fluidaudio/models/v3/Encoder.mlmodelc/analytics/coremldata.bin
+d48034a167a82e88fc3df64f60af963ab3983538271175b8319e7d5720a0fb86             485  fluidaudio/models/v3/Encoder.mlmodelc/coremldata.bin
+da24da9cca943fb29d7fa8e376d57fca7cb3aa08ca51b956b0b0e56813f087e9            2921  fluidaudio/models/v3/Encoder.mlmodelc/metadata.json
+ed7b19156ca29fa7dfd6891deb9fda4b0e8893f68597c985d135736546a43808          959769  fluidaudio/models/v3/Encoder.mlmodelc/model.mil
+e2020f323703477a5b21d7c2d282c403e371afb5962e79877e3033e73ba6f421       445187200  fluidaudio/models/v3/Encoder.mlmodelc/weights/weight.bin
+26def4bf73dd56d29dee21c8ef97cb8969e62f6120ed1adc91e46828e2737b6c             243  fluidaudio/models/v3/JointDecisionv3.mlmodelc/analytics/coremldata.bin
+f5fc08b741400f0088492c9e839418b1e18522f19cba28d361dd030c5f398342             521  fluidaudio/models/v3/JointDecisionv3.mlmodelc/coremldata.bin
+d9307211b9a37e0f0ac260c7660b1571a3de25841035cfdf9b58fd40425f890f            3453  fluidaudio/models/v3/JointDecisionv3.mlmodelc/metadata.json
+be60732943389a047175111a83f8839f3eb39d4803adafa828a0871b2f39818d           11775  fluidaudio/models/v3/JointDecisionv3.mlmodelc/model.mil
+4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e        12642764  fluidaudio/models/v3/JointDecisionv3.mlmodelc/weights/weight.bin
+c9beeb989c8d66f8be11df59bc6df277ec76cee404f6865b46243835ef562f6d             243  fluidaudio/models/v3/Preprocessor.mlmodelc/analytics/coremldata.bin
+dbde3f2300842c1fd51ef3ff948a0bcffe65ffd2dca10707f2509f32c1d65b1d             486  fluidaudio/models/v3/Preprocessor.mlmodelc/coremldata.bin
+2a98699e22d279dd37fa1d238aeb1c6db1df0d6fad687775324157689d8f3acf            2841  fluidaudio/models/v3/Preprocessor.mlmodelc/metadata.json
+4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93           28181  fluidaudio/models/v3/Preprocessor.mlmodelc/model.mil
+129b76e3aeafa8afa3ea76d995b964b145fe83700d579f6ff42c4c38fa0968ea          491072  fluidaudio/models/v3/Preprocessor.mlmodelc/weights/weight.bin
+4155baa7d7d6f0ada748e1db3c1b91d18c9f7eb7155efc1abfbbe9d4a6507712            4285  fluidaudio/models/v3/README.md
+97f19ecccd0fdc730d76fb918090fa8bc64bce8ea4ad43715d5e9c2c7350db66             475  fluidaudio/models/v3/config.json
+7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735          151122  fluidaudio/models/v3/parakeet_vocab.json
+# FluidInference/parakeet-ultra-coreml@95eaa59a39d4394f047a4dc5cce480388a60d1b6  ->  $SPIKE/fluidaudio/models/ultra  (632,318,254 bytes, 22 files)
+11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361            1519  fluidaudio/models/ultra/.gitattributes
+fe92b6cfaa012abd5248c0bc877832f19807015abffc60d87b8ccc8ccb48b3b5             243  fluidaudio/models/ultra/Decoder.mlmodelc/analytics/coremldata.bin
+3b06e66768f0df7e21795f50e2b29300e33eeb1a2579dc42c695279c2d308497             560  fluidaudio/models/ultra/Decoder.mlmodelc/coremldata.bin
+956f600207f88396017ca5c96cfa3acd5bfee60835a5b44b762e033a8fb28955           13110  fluidaudio/models/ultra/Decoder.mlmodelc/model.mil
+02a0d219f281b9665bc10c8768649403b2eebbbf4b44c627041d948e0de11bb4        23604992  fluidaudio/models/ultra/Decoder.mlmodelc/weights/weight.bin
+d87101d824d6723cf95304da33755c3c60e762663b9ef2b0c4bd0aa166a09a0d             243  fluidaudio/models/ultra/Encoder.mlmodelc/analytics/coremldata.bin
+397a84a4062f563cbc5f56077c674f09a61d85be5090f61d2f1932afb92ac0fe             514  fluidaudio/models/ultra/Encoder.mlmodelc/coremldata.bin
+f5d601568a4171d99a314c0fe3f6bc67715da2623732a3fb566e050ea83e5848         1002653  fluidaudio/models/ultra/Encoder.mlmodelc/model.mil
+315ba01f33cadbf601d43ac7f5c86208b7aa75fdaa34705c9869d5abe3521c9b       594211328  fluidaudio/models/ultra/Encoder.mlmodelc/weights/weight.bin
+68d38ca646aebafa7a9329e2efda50f5767c49e89fdb5f77f212072bb66f97c4             243  fluidaudio/models/ultra/JointDecisionv3.mlmodelc/analytics/coremldata.bin
+5e3af5a4ce686f6c237cadbd9284e10d333bc0e1546633cd0e430e6194044bc4             592  fluidaudio/models/ultra/JointDecisionv3.mlmodelc/coremldata.bin
+791b3c3cf3eb2079c84623fc880f6bba008d1366e5f8b03e9a8ed8bd4d7194a0           11777  fluidaudio/models/ultra/JointDecisionv3.mlmodelc/model.mil
+3f310b85b82341c53ec383025ab094a4e462ee1c592e1ad7c6bfe39cff66ca25        12642764  fluidaudio/models/ultra/JointDecisionv3.mlmodelc/weights/weight.bin
+c9beeb989c8d66f8be11df59bc6df277ec76cee404f6865b46243835ef562f6d             243  fluidaudio/models/ultra/Preprocessor.mlmodelc/analytics/coremldata.bin
+dbde3f2300842c1fd51ef3ff948a0bcffe65ffd2dca10707f2509f32c1d65b1d             486  fluidaudio/models/ultra/Preprocessor.mlmodelc/coremldata.bin
+2a98699e22d279dd37fa1d238aeb1c6db1df0d6fad687775324157689d8f3acf            2841  fluidaudio/models/ultra/Preprocessor.mlmodelc/metadata.json
+4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93           28181  fluidaudio/models/ultra/Preprocessor.mlmodelc/model.mil
+129b76e3aeafa8afa3ea76d995b964b145fe83700d579f6ff42c4c38fa0968ea          491072  fluidaudio/models/ultra/Preprocessor.mlmodelc/weights/weight.bin
+9e9e26b6da628a0dc34b9c55f2029e486fc02304ccd7f83825333572ae11c158            2235  fluidaudio/models/ultra/README.md
+965c69bf500c7be18958df6438dc1ba897721690ae412937ca7c91e28cec1870             414  fluidaudio/models/ultra/config.json
+7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735          151122  fluidaudio/models/ultra/parakeet_v3_vocab.json
+7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735          151122  fluidaudio/models/ultra/parakeet_vocab.json
+# Converted here by runners/convert_ultra_to_mlx.py from moondream/parakeet-ultra (the source folder was deleted afterwards to save disk)
+f320f1292511f34ec47f513755fe20fd01dbfc09a925d42730e66059a6e1ef4c          244093  parakeet-mlx/models/ultra/config.json
+2da4de593714f2db020312255d3a366997528e6b0a30756c911bf966eb092e32      1254905762  parakeet-mlx/models/ultra/model.safetensors

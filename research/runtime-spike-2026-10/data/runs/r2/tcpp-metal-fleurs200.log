@@ -1,0 +1,222 @@
+parakeet: using metal backend: MTL0
+parakeet: weights memory-mapped: 463.5 MiB in MTL0_Mapped
+load_seconds 0.064
+decoder: 41 iters, 40 tokens, T_enc=72  enc_proj=0.9 ms  pred=16.5 ms  joint=13.5 ms  conf=1.2 ms  total=32.1 ms  per_iter=731 us
+decoder: 47 iters, 39 tokens, T_enc=129  enc_proj=1.6 ms  pred=16.2 ms  joint=15.3 ms  conf=1.2 ms  total=34.4 ms  per_iter=671 us
+decoder: 54 iters, 52 tokens, T_enc=108  enc_proj=1.3 ms  pred=21.6 ms  joint=17.9 ms  conf=1.6 ms  total=42.5 ms  per_iter=732 us
+decoder: 33 iters, 30 tokens, T_enc=72  enc_proj=0.9 ms  pred=12.5 ms  joint=11.1 ms  conf=0.9 ms  total=25.4 ms  per_iter=714 us
+decoder: 67 iters, 50 tokens, T_enc=140  enc_proj=1.8 ms  pred=20.8 ms  joint=22.2 ms  conf=1.6 ms  total=46.4 ms  per_iter=642 us
+decoder: 54 iters, 46 tokens, T_enc=162  enc_proj=2.0 ms  pred=19.3 ms  joint=17.9 ms  conf=1.5 ms  total=40.6 ms  per_iter=687 us
+decoder: 59 iters, 53 tokens, T_enc=137  enc_proj=1.7 ms  pred=21.8 ms  joint=19.5 ms  conf=1.6 ms  total=44.6 ms  per_iter=700 us
+decoder: 53 iters, 49 tokens, T_enc=104  enc_proj=1.3 ms  pred=20.4 ms  joint=17.5 ms  conf=1.5 ms  total=40.7 ms  per_iter=714 us
+decoder: 46 iters, 43 tokens, T_enc=90  enc_proj=1.1 ms  pred=18.3 ms  joint=15.6 ms  conf=1.4 ms  total=36.4 ms  per_iter=737 us
+decoder: 73 iters, 64 tokens, T_enc=143  enc_proj=1.7 ms  pred=26.4 ms  joint=24.3 ms  conf=2.0 ms  total=54.5 ms  per_iter=694 us
+decoder: 49 iters, 45 tokens, T_enc=84  enc_proj=1.0 ms  pred=18.5 ms  joint=16.3 ms  conf=1.4 ms  total=37.2 ms  per_iter=710 us
+decoder: 48 iters, 32 tokens, T_enc=146  enc_proj=1.7 ms  pred=13.4 ms  joint=16.0 ms  conf=1.0 ms  total=32.1 ms  per_iter=613 us
+decoder: 50 iters, 46 tokens, T_enc=134  enc_proj=1.7 ms  pred=18.9 ms  joint=16.4 ms  conf=1.4 ms  total=38.4 ms  per_iter=706 us
+decoder: 25 iters, 21 tokens, T_enc=87  enc_proj=1.1 ms  pred=9.0 ms  joint=8.3 ms  conf=0.7 ms  total=19.0 ms  per_iter=690 us
+decoder: 42 iters, 36 tokens, T_enc=87  enc_proj=1.0 ms  pred=15.1 ms  joint=14.0 ms  conf=1.1 ms  total=31.2 ms  per_iter=693 us
+decoder: 46 iters, 40 tokens, T_enc=94  enc_proj=1.2 ms  pred=16.5 ms  joint=15.3 ms  conf=1.3 ms  total=34.2 ms  per_iter=691 us
+decoder: 58 iters, 48 tokens, T_enc=130  enc_proj=1.6 ms  pred=19.7 ms  joint=18.9 ms  conf=1.5 ms  total=41.8 ms  per_iter=666 us
+decoder: 47 iters, 36 tokens, T_enc=141  enc_proj=1.7 ms  pred=14.9 ms  joint=15.6 ms  conf=1.1 ms  total=33.4 ms  per_iter=651 us
+decoder: 47 iters, 40 tokens, T_enc=95  enc_proj=1.2 ms  pred=16.4 ms  joint=15.7 ms  conf=1.3 ms  total=34.6 ms  per_iter=682 us
+decoder: 62 iters, 56 tokens, T_enc=125  enc_proj=1.5 ms  pred=23.1 ms  joint=20.8 ms  conf=1.8 ms  total=47.2 ms  per_iter=708 us
+decoder: 44 iters, 40 tokens, T_enc=92  enc_proj=1.1 ms  pred=16.4 ms  joint=14.7 ms  conf=1.2 ms  total=33.5 ms  per_iter=708 us
+decoder: 44 iters, 38 tokens, T_enc=94  enc_proj=1.1 ms  pred=15.9 ms  joint=14.8 ms  conf=1.2 ms  total=33.1 ms  per_iter=699 us
+decoder: 55 iters, 50 tokens, T_enc=101  enc_proj=1.3 ms  pred=20.3 ms  joint=18.3 ms  conf=1.6 ms  total=41.5 ms  per_iter=701 us
+decoder: 65 iters, 59 tokens, T_enc=132  enc_proj=1.7 ms  pred=24.4 ms  joint=22.1 ms  conf=1.8 ms  total=50.0 ms  per_iter=715 us
+decoder: 53 iters, 45 tokens, T_enc=101  enc_proj=1.2 ms  pred=19.1 ms  joint=18.1 ms  conf=1.4 ms  total=39.8 ms  per_iter=701 us
+decoder: 46 iters, 38 tokens, T_enc=134  enc_proj=1.6 ms  pred=15.3 ms  joint=14.9 ms  conf=1.2 ms  total=32.9 ms  per_iter=654 us
+decoder: 50 iters, 42 tokens, T_enc=118  enc_proj=1.4 ms  pred=17.6 ms  joint=17.0 ms  conf=1.3 ms  total=37.4 ms  per_iter=692 us
+decoder: 127 iters, 111 tokens, T_enc=368  enc_proj=4.5 ms  pred=45.0 ms  joint=42.3 ms  conf=3.4 ms  total=95.2 ms  per_iter=687 us
+decoder: 41 iters, 37 tokens, T_enc=109  enc_proj=1.4 ms  pred=15.5 ms  joint=13.6 ms  conf=1.2 ms  total=31.7 ms  per_iter=711 us
+decoder: 68 iters, 58 tokens, T_enc=188  enc_proj=2.4 ms  pred=23.7 ms  joint=22.6 ms  conf=1.8 ms  total=50.5 ms  per_iter=681 us
+decoder: 46 iters, 40 tokens, T_enc=114  enc_proj=1.4 ms  pred=16.6 ms  joint=15.4 ms  conf=1.3 ms  total=34.6 ms  per_iter=695 us
+decoder: 39 iters, 34 tokens, T_enc=98  enc_proj=1.3 ms  pred=14.2 ms  joint=13.0 ms  conf=1.1 ms  total=29.6 ms  per_iter=699 us
+decoder: 38 iters, 34 tokens, T_enc=92  enc_proj=1.2 ms  pred=14.2 ms  joint=12.7 ms  conf=1.1 ms  total=29.1 ms  per_iter=707 us
+decoder: 28 iters, 22 tokens, T_enc=85  enc_proj=1.0 ms  pred=9.3 ms  joint=9.3 ms  conf=0.7 ms  total=20.3 ms  per_iter=662 us
+decoder: 45 iters, 36 tokens, T_enc=98  enc_proj=1.2 ms  pred=14.9 ms  joint=14.8 ms  conf=1.1 ms  total=32.0 ms  per_iter=659 us
+decoder: 60 iters, 56 tokens, T_enc=120  enc_proj=1.5 ms  pred=22.9 ms  joint=20.1 ms  conf=1.8 ms  total=46.2 ms  per_iter=716 us
+decoder: 54 iters, 49 tokens, T_enc=105  enc_proj=1.3 ms  pred=20.0 ms  joint=18.3 ms  conf=1.6 ms  total=41.2 ms  per_iter=710 us
+decoder: 63 iters, 59 tokens, T_enc=111  enc_proj=1.4 ms  pred=24.6 ms  joint=20.7 ms  conf=1.8 ms  total=48.5 ms  per_iter=719 us
+decoder: 37 iters, 28 tokens, T_enc=115  enc_proj=1.4 ms  pred=12.0 ms  joint=12.4 ms  conf=0.9 ms  total=26.7 ms  per_iter=659 us
+decoder: 51 iters, 44 tokens, T_enc=119  enc_proj=1.5 ms  pred=18.4 ms  joint=16.7 ms  conf=1.4 ms  total=38.0 ms  per_iter=689 us
+decoder: 47 iters, 40 tokens, T_enc=126  enc_proj=1.5 ms  pred=16.8 ms  joint=15.4 ms  conf=1.2 ms  total=35.0 ms  per_iter=686 us
+decoder: 74 iters, 64 tokens, T_enc=118  enc_proj=1.5 ms  pred=26.5 ms  joint=24.7 ms  conf=2.0 ms  total=54.6 ms  per_iter=691 us
+decoder: 35 iters, 29 tokens, T_enc=86  enc_proj=1.0 ms  pred=12.3 ms  joint=11.7 ms  conf=0.9 ms  total=25.9 ms  per_iter=685 us
+decoder: 34 iters, 24 tokens, T_enc=93  enc_proj=1.2 ms  pred=10.2 ms  joint=11.2 ms  conf=0.7 ms  total=23.3 ms  per_iter=627 us
+decoder: 55 iters, 47 tokens, T_enc=149  enc_proj=1.8 ms  pred=19.6 ms  joint=18.4 ms  conf=1.5 ms  total=41.2 ms  per_iter=690 us
+decoder: 66 iters, 56 tokens, T_enc=136  enc_proj=1.7 ms  pred=23.0 ms  joint=22.2 ms  conf=1.8 ms  total=48.6 ms  per_iter=684 us
+decoder: 70 iters, 57 tokens, T_enc=155  enc_proj=1.9 ms  pred=23.5 ms  joint=23.1 ms  conf=1.8 ms  total=50.3 ms  per_iter=666 us
+decoder: 31 iters, 26 tokens, T_enc=80  enc_proj=1.0 ms  pred=11.1 ms  joint=10.2 ms  conf=0.8 ms  total=23.2 ms  per_iter=690 us
+decoder: 42 iters, 38 tokens, T_enc=105  enc_proj=1.3 ms  pred=15.8 ms  joint=13.8 ms  conf=1.2 ms  total=32.1 ms  per_iter=705 us
+decoder: 46 iters, 39 tokens, T_enc=81  enc_proj=1.0 ms  pred=16.2 ms  joint=15.5 ms  conf=1.2 ms  total=33.9 ms  per_iter=690 us
+decoder: 52 iters, 42 tokens, T_enc=139  enc_proj=1.8 ms  pred=17.6 ms  joint=17.0 ms  conf=1.3 ms  total=37.7 ms  per_iter=665 us
+decoder: 50 iters, 44 tokens, T_enc=112  enc_proj=1.4 ms  pred=18.2 ms  joint=16.7 ms  conf=1.4 ms  total=37.6 ms  per_iter=696 us
+decoder: 47 iters, 44 tokens, T_enc=98  enc_proj=1.2 ms  pred=17.3 ms  joint=14.8 ms  conf=1.3 ms  total=34.6 ms  per_iter=683 us
+decoder: 43 iters, 41 tokens, T_enc=83  enc_proj=1.0 ms  pred=16.3 ms  joint=13.9 ms  conf=1.3 ms  total=32.4 ms  per_iter=702 us
+decoder: 46 iters, 44 tokens, T_enc=93  enc_proj=1.1 ms  pred=17.3 ms  joint=14.5 ms  conf=1.4 ms  total=34.3 ms  per_iter=691 us
+decoder: 59 iters, 54 tokens, T_enc=129  enc_proj=1.6 ms  pred=22.2 ms  joint=19.6 ms  conf=1.7 ms  total=45.1 ms  per_iter=709 us
+decoder: 34 iters, 31 tokens, T_enc=71  enc_proj=0.9 ms  pred=12.8 ms  joint=11.2 ms  conf=0.9 ms  total=25.8 ms  per_iter=706 us
+decoder: 66 iters, 57 tokens, T_enc=180  enc_proj=2.2 ms  pred=23.3 ms  joint=22.1 ms  conf=1.9 ms  total=49.5 ms  per_iter=688 us
+decoder: 37 iters, 33 tokens, T_enc=72  enc_proj=0.9 ms  pred=13.8 ms  joint=12.2 ms  conf=1.0 ms  total=27.9 ms  per_iter=702 us
+decoder: 30 iters, 26 tokens, T_enc=58  enc_proj=0.7 ms  pred=11.0 ms  joint=10.1 ms  conf=0.8 ms  total=22.6 ms  per_iter=703 us
+decoder: 61 iters, 52 tokens, T_enc=188  enc_proj=2.4 ms  pred=21.3 ms  joint=20.9 ms  conf=1.7 ms  total=46.2 ms  per_iter=692 us
+decoder: 43 iters, 39 tokens, T_enc=113  enc_proj=1.4 ms  pred=16.2 ms  joint=14.3 ms  conf=1.2 ms  total=33.2 ms  per_iter=711 us
+decoder: 40 iters, 37 tokens, T_enc=87  enc_proj=1.2 ms  pred=15.5 ms  joint=13.0 ms  conf=1.2 ms  total=30.8 ms  per_iter=712 us
+decoder: 64 iters, 53 tokens, T_enc=127  enc_proj=1.5 ms  pred=21.8 ms  joint=21.2 ms  conf=1.6 ms  total=46.2 ms  per_iter=672 us
+decoder: 37 iters, 31 tokens, T_enc=88  enc_proj=1.0 ms  pred=13.2 ms  joint=12.3 ms  conf=1.0 ms  total=27.6 ms  per_iter=690 us
+decoder: 44 iters, 40 tokens, T_enc=84  enc_proj=1.0 ms  pred=16.6 ms  joint=14.6 ms  conf=1.3 ms  total=33.5 ms  per_iter=710 us
+decoder: 60 iters, 55 tokens, T_enc=141  enc_proj=1.7 ms  pred=22.8 ms  joint=19.9 ms  conf=1.8 ms  total=46.2 ms  per_iter=712 us
+decoder: 48 iters, 45 tokens, T_enc=110  enc_proj=1.4 ms  pred=18.9 ms  joint=16.1 ms  conf=1.4 ms  total=37.8 ms  per_iter=729 us
+decoder: 28 iters, 24 tokens, T_enc=60  enc_proj=0.7 ms  pred=10.3 ms  joint=9.4 ms  conf=0.8 ms  total=21.2 ms  per_iter=703 us
+decoder: 37 iters, 32 tokens, T_enc=112  enc_proj=1.4 ms  pred=13.3 ms  joint=12.3 ms  conf=1.0 ms  total=28.0 ms  per_iter=691 us
+decoder: 42 iters, 35 tokens, T_enc=99  enc_proj=1.3 ms  pred=14.5 ms  joint=13.8 ms  conf=1.1 ms  total=30.7 ms  per_iter=673 us
+decoder: 37 iters, 27 tokens, T_enc=87  enc_proj=1.1 ms  pred=11.3 ms  joint=12.4 ms  conf=0.9 ms  total=25.7 ms  per_iter=640 us
+decoder: 128 iters, 115 tokens, T_enc=249  enc_proj=3.2 ms  pred=46.6 ms  joint=42.6 ms  conf=3.6 ms  total=96.0 ms  per_iter=697 us
+decoder: 54 iters, 38 tokens, T_enc=137  enc_proj=1.7 ms  pred=15.6 ms  joint=18.1 ms  conf=1.2 ms  total=36.5 ms  per_iter=624 us
+decoder: 38 iters, 34 tokens, T_enc=123  enc_proj=1.5 ms  pred=14.2 ms  joint=12.5 ms  conf=1.1 ms  total=29.4 ms  per_iter=705 us
+decoder: 63 iters, 53 tokens, T_enc=126  enc_proj=1.6 ms  pred=22.2 ms  joint=21.1 ms  conf=1.6 ms  total=46.5 ms  per_iter=687 us
+decoder: 44 iters, 41 tokens, T_enc=90  enc_proj=1.1 ms  pred=16.9 ms  joint=14.5 ms  conf=1.3 ms  total=33.8 ms  per_iter=715 us
+decoder: 51 iters, 41 tokens, T_enc=90  enc_proj=1.1 ms  pred=17.0 ms  joint=17.1 ms  conf=1.3 ms  total=36.5 ms  per_iter=669 us
+decoder: 31 iters, 21 tokens, T_enc=92  enc_proj=1.1 ms  pred=8.9 ms  joint=10.5 ms  conf=0.7 ms  total=21.2 ms  per_iter=627 us
+decoder: 45 iters, 35 tokens, T_enc=122  enc_proj=1.5 ms  pred=14.7 ms  joint=15.0 ms  conf=1.1 ms  total=32.3 ms  per_iter=660 us
+decoder: 25 iters, 20 tokens, T_enc=75  enc_proj=0.9 ms  pred=8.5 ms  joint=8.5 ms  conf=0.6 ms  total=18.5 ms  per_iter=679 us
+decoder: 69 iters, 61 tokens, T_enc=187  enc_proj=2.3 ms  pred=24.5 ms  joint=22.6 ms  conf=1.9 ms  total=51.3 ms  per_iter=683 us
+decoder: 54 iters, 49 tokens, T_enc=124  enc_proj=1.5 ms  pred=19.2 ms  joint=17.1 ms  conf=1.5 ms  total=39.3 ms  per_iter=672 us
+decoder: 95 iters, 76 tokens, T_enc=208  enc_proj=2.5 ms  pred=29.9 ms  joint=30.1 ms  conf=2.3 ms  total=64.8 ms  per_iter=631 us
+decoder: 67 iters, 60 tokens, T_enc=142  enc_proj=1.7 ms  pred=24.7 ms  joint=22.5 ms  conf=1.9 ms  total=50.7 ms  per_iter=704 us
+decoder: 63 iters, 55 tokens, T_enc=164  enc_proj=2.0 ms  pred=22.5 ms  joint=21.0 ms  conf=1.7 ms  total=47.2 ms  per_iter=690 us
+decoder: 39 iters, 36 tokens, T_enc=84  enc_proj=1.1 ms  pred=14.9 ms  joint=12.8 ms  conf=1.1 ms  total=30.0 ms  per_iter=710 us
+decoder: 33 iters, 24 tokens, T_enc=86  enc_proj=1.0 ms  pred=10.1 ms  joint=10.9 ms  conf=0.8 ms  total=22.8 ms  per_iter=636 us
+decoder: 52 iters, 49 tokens, T_enc=105  enc_proj=1.3 ms  pred=20.3 ms  joint=17.2 ms  conf=1.5 ms  total=40.3 ms  per_iter=721 us
+decoder: 65 iters, 51 tokens, T_enc=146  enc_proj=1.7 ms  pred=21.1 ms  joint=21.8 ms  conf=1.6 ms  total=46.3 ms  per_iter=661 us
+decoder: 25 iters, 21 tokens, T_enc=65  enc_proj=0.8 ms  pred=8.8 ms  joint=8.4 ms  conf=0.7 ms  total=18.7 ms  per_iter=691 us
+decoder: 32 iters, 30 tokens, T_enc=69  enc_proj=0.9 ms  pred=13.0 ms  joint=11.3 ms  conf=1.0 ms  total=26.1 ms  per_iter=758 us
+decoder: 68 iters, 63 tokens, T_enc=140  enc_proj=1.7 ms  pred=26.0 ms  joint=23.0 ms  conf=2.0 ms  total=52.7 ms  per_iter=720 us
+decoder: 38 iters, 32 tokens, T_enc=119  enc_proj=1.5 ms  pred=13.5 ms  joint=12.6 ms  conf=1.0 ms  total=28.5 ms  per_iter=686 us
+decoder: 50 iters, 46 tokens, T_enc=125  enc_proj=1.5 ms  pred=19.0 ms  joint=17.0 ms  conf=1.5 ms  total=39.1 ms  per_iter=721 us
+decoder: 33 iters, 32 tokens, T_enc=70  enc_proj=0.9 ms  pred=13.3 ms  joint=11.0 ms  conf=1.0 ms  total=26.2 ms  per_iter=737 us
+decoder: 64 iters, 53 tokens, T_enc=131  enc_proj=1.6 ms  pred=21.8 ms  joint=21.3 ms  conf=1.6 ms  total=46.3 ms  per_iter=673 us
+decoder: 77 iters, 65 tokens, T_enc=193  enc_proj=2.3 ms  pred=26.5 ms  joint=25.6 ms  conf=2.1 ms  total=56.5 ms  per_iter=677 us
+decoder: 31 iters, 22 tokens, T_enc=84  enc_proj=1.0 ms  pred=9.5 ms  joint=10.5 ms  conf=0.7 ms  total=21.7 ms  per_iter=644 us
+decoder: 73 iters, 52 tokens, T_enc=177  enc_proj=2.3 ms  pred=21.3 ms  joint=24.1 ms  conf=1.6 ms  total=49.3 ms  per_iter=622 us
+decoder: 43 iters, 38 tokens, T_enc=102  enc_proj=1.3 ms  pred=16.1 ms  joint=14.4 ms  conf=1.2 ms  total=33.0 ms  per_iter=709 us
+decoder: 65 iters, 58 tokens, T_enc=138  enc_proj=1.7 ms  pred=23.8 ms  joint=21.6 ms  conf=1.9 ms  total=49.1 ms  per_iter=699 us
+decoder: 47 iters, 35 tokens, T_enc=114  enc_proj=1.6 ms  pred=15.3 ms  joint=16.4 ms  conf=1.2 ms  total=34.5 ms  per_iter=674 us
+decoder: 80 iters, 70 tokens, T_enc=147  enc_proj=1.8 ms  pred=28.6 ms  joint=26.8 ms  conf=2.3 ms  total=59.6 ms  per_iter=693 us
+decoder: 79 iters, 71 tokens, T_enc=153  enc_proj=1.9 ms  pred=29.1 ms  joint=26.2 ms  conf=2.2 ms  total=59.5 ms  per_iter=701 us
+decoder: 65 iters, 50 tokens, T_enc=151  enc_proj=1.8 ms  pred=20.8 ms  joint=21.3 ms  conf=1.6 ms  total=45.5 ms  per_iter=647 us
+decoder: 47 iters, 34 tokens, T_enc=97  enc_proj=1.3 ms  pred=14.2 ms  joint=15.5 ms  conf=1.1 ms  total=32.0 ms  per_iter=631 us
+decoder: 91 iters, 79 tokens, T_enc=179  enc_proj=2.2 ms  pred=31.8 ms  joint=29.4 ms  conf=2.6 ms  total=66.0 ms  per_iter=673 us
+decoder: 69 iters, 54 tokens, T_enc=113  enc_proj=1.4 ms  pred=21.2 ms  joint=21.7 ms  conf=1.6 ms  total=45.8 ms  per_iter=621 us
+decoder: 93 iters, 69 tokens, T_enc=176  enc_proj=2.1 ms  pred=26.9 ms  joint=29.3 ms  conf=2.1 ms  total=60.4 ms  per_iter=604 us
+decoder: 86 iters, 65 tokens, T_enc=213  enc_proj=2.6 ms  pred=27.0 ms  joint=28.8 ms  conf=2.1 ms  total=60.5 ms  per_iter=649 us
+decoder: 44 iters, 36 tokens, T_enc=83  enc_proj=1.1 ms  pred=14.9 ms  joint=14.6 ms  conf=1.1 ms  total=31.7 ms  per_iter=670 us
+decoder: 100 iters, 82 tokens, T_enc=192  enc_proj=2.5 ms  pred=33.7 ms  joint=33.1 ms  conf=2.6 ms  total=71.9 ms  per_iter=669 us
+decoder: 64 iters, 54 tokens, T_enc=161  enc_proj=1.9 ms  pred=22.2 ms  joint=21.5 ms  conf=1.7 ms  total=47.4 ms  per_iter=684 us
+decoder: 76 iters, 68 tokens, T_enc=159  enc_proj=1.9 ms  pred=28.2 ms  joint=25.5 ms  conf=2.2 ms  total=57.7 ms  per_iter=706 us
+decoder: 73 iters, 60 tokens, T_enc=132  enc_proj=1.6 ms  pred=24.8 ms  joint=24.2 ms  conf=1.9 ms  total=52.4 ms  per_iter=670 us
+decoder: 129 iters, 115 tokens, T_enc=288  enc_proj=3.5 ms  pred=48.4 ms  joint=44.0 ms  conf=3.8 ms  total=99.7 ms  per_iter=716 us
+decoder: 51 iters, 43 tokens, T_enc=108  enc_proj=1.3 ms  pred=18.1 ms  joint=17.2 ms  conf=1.4 ms  total=38.0 ms  per_iter=692 us
+decoder: 71 iters, 61 tokens, T_enc=126  enc_proj=1.5 ms  pred=25.8 ms  joint=24.3 ms  conf=2.0 ms  total=53.6 ms  per_iter=705 us
+decoder: 54 iters, 42 tokens, T_enc=111  enc_proj=1.6 ms  pred=18.0 ms  joint=18.3 ms  conf=1.3 ms  total=39.3 ms  per_iter=674 us
+decoder: 83 iters, 64 tokens, T_enc=177  enc_proj=2.2 ms  pred=26.3 ms  joint=27.8 ms  conf=2.0 ms  total=58.2 ms  per_iter=651 us
+decoder: 89 iters, 74 tokens, T_enc=156  enc_proj=2.1 ms  pred=31.4 ms  joint=30.3 ms  conf=2.4 ms  total=66.3 ms  per_iter=694 us
+decoder: 117 iters, 102 tokens, T_enc=224  enc_proj=2.8 ms  pred=41.4 ms  joint=39.0 ms  conf=3.2 ms  total=86.4 ms  per_iter=687 us
+decoder: 95 iters, 71 tokens, T_enc=166  enc_proj=2.0 ms  pred=29.2 ms  joint=31.6 ms  conf=2.2 ms  total=65.0 ms  per_iter=640 us
+decoder: 99 iters, 85 tokens, T_enc=162  enc_proj=2.0 ms  pred=35.3 ms  joint=33.3 ms  conf=2.7 ms  total=73.2 ms  per_iter=693 us
+decoder: 66 iters, 60 tokens, T_enc=120  enc_proj=1.5 ms  pred=24.8 ms  joint=21.8 ms  conf=1.9 ms  total=50.0 ms  per_iter=706 us
+decoder: 34 iters, 28 tokens, T_enc=74  enc_proj=0.9 ms  pred=11.7 ms  joint=11.5 ms  conf=0.9 ms  total=25.0 ms  per_iter=682 us
+decoder: 62 iters, 46 tokens, T_enc=158  enc_proj=1.9 ms  pred=18.9 ms  joint=20.6 ms  conf=1.5 ms  total=42.9 ms  per_iter=637 us
+decoder: 57 iters, 39 tokens, T_enc=99  enc_proj=1.2 ms  pred=16.3 ms  joint=19.0 ms  conf=1.3 ms  total=37.7 ms  per_iter=618 us
+decoder: 78 iters, 67 tokens, T_enc=141  enc_proj=1.7 ms  pred=26.3 ms  joint=24.6 ms  conf=2.1 ms  total=54.7 ms  per_iter=652 us
+decoder: 92 iters, 81 tokens, T_enc=168  enc_proj=2.0 ms  pred=31.5 ms  joint=29.1 ms  conf=2.5 ms  total=65.1 ms  per_iter=658 us
+decoder: 112 iters, 98 tokens, T_enc=204  enc_proj=2.4 ms  pred=39.9 ms  joint=37.2 ms  conf=3.1 ms  total=82.7 ms  per_iter=689 us
+decoder: 73 iters, 43 tokens, T_enc=169  enc_proj=2.3 ms  pred=17.7 ms  joint=24.2 ms  conf=1.3 ms  total=45.5 ms  per_iter=574 us
+decoder: 80 iters, 70 tokens, T_enc=156  enc_proj=1.9 ms  pred=28.8 ms  joint=26.4 ms  conf=2.3 ms  total=59.3 ms  per_iter=690 us
+decoder: 71 iters, 53 tokens, T_enc=135  enc_proj=1.6 ms  pred=21.9 ms  joint=23.3 ms  conf=1.7 ms  total=48.5 ms  per_iter=637 us
+decoder: 77 iters, 71 tokens, T_enc=155  enc_proj=1.9 ms  pred=29.1 ms  joint=25.7 ms  conf=2.3 ms  total=58.9 ms  per_iter=711 us
+decoder: 94 iters, 77 tokens, T_enc=189  enc_proj=2.3 ms  pred=31.6 ms  joint=31.2 ms  conf=2.5 ms  total=67.6 ms  per_iter=668 us
+decoder: 37 iters, 33 tokens, T_enc=79  enc_proj=1.0 ms  pred=13.8 ms  joint=12.5 ms  conf=1.1 ms  total=28.4 ms  per_iter=711 us
+decoder: 42 iters, 38 tokens, T_enc=96  enc_proj=1.2 ms  pred=16.0 ms  joint=14.1 ms  conf=1.2 ms  total=32.5 ms  per_iter=717 us
+decoder: 74 iters, 66 tokens, T_enc=141  enc_proj=1.8 ms  pred=27.4 ms  joint=24.6 ms  conf=2.1 ms  total=55.8 ms  per_iter=702 us
+decoder: 74 iters, 68 tokens, T_enc=136  enc_proj=1.7 ms  pred=27.8 ms  joint=24.5 ms  conf=2.2 ms  total=56.2 ms  per_iter=707 us
+decoder: 85 iters, 70 tokens, T_enc=146  enc_proj=1.8 ms  pred=28.8 ms  joint=28.2 ms  conf=2.2 ms  total=61.0 ms  per_iter=670 us
+decoder: 46 iters, 35 tokens, T_enc=120  enc_proj=1.5 ms  pred=14.6 ms  joint=15.4 ms  conf=1.1 ms  total=32.6 ms  per_iter=654 us
+decoder: 54 iters, 40 tokens, T_enc=118  enc_proj=1.4 ms  pred=16.6 ms  joint=18.1 ms  conf=1.2 ms  total=37.3 ms  per_iter=642 us
+decoder: 71 iters, 57 tokens, T_enc=120  enc_proj=1.4 ms  pred=23.6 ms  joint=23.7 ms  conf=1.8 ms  total=50.5 ms  per_iter=666 us
+decoder: 52 iters, 40 tokens, T_enc=127  enc_proj=1.5 ms  pred=16.8 ms  joint=17.2 ms  conf=1.3 ms  total=36.8 ms  per_iter=653 us
+decoder: 31 iters, 26 tokens, T_enc=69  enc_proj=0.8 ms  pred=11.2 ms  joint=10.4 ms  conf=0.8 ms  total=23.3 ms  per_iter=698 us
+decoder: 99 iters, 82 tokens, T_enc=159  enc_proj=1.9 ms  pred=33.6 ms  joint=32.8 ms  conf=2.6 ms  total=70.9 ms  per_iter=671 us
+decoder: 53 iters, 48 tokens, T_enc=102  enc_proj=1.2 ms  pred=20.0 ms  joint=17.7 ms  conf=1.5 ms  total=40.5 ms  per_iter=713 us
+decoder: 162 iters, 144 tokens, T_enc=291  enc_proj=3.6 ms  pred=58.7 ms  joint=53.9 ms  conf=4.6 ms  total=120.7 ms  per_iter=695 us
+decoder: 64 iters, 56 tokens, T_enc=132  enc_proj=1.6 ms  pred=23.3 ms  joint=21.4 ms  conf=1.8 ms  total=48.1 ms  per_iter=699 us
+decoder: 35 iters, 24 tokens, T_enc=94  enc_proj=1.2 ms  pred=10.2 ms  joint=11.5 ms  conf=0.7 ms  total=23.6 ms  per_iter=620 us
+decoder: 81 iters, 74 tokens, T_enc=123  enc_proj=1.5 ms  pred=28.7 ms  joint=25.6 ms  conf=2.4 ms  total=58.2 ms  per_iter=670 us
+decoder: 57 iters, 48 tokens, T_enc=117  enc_proj=1.4 ms  pred=19.1 ms  joint=18.4 ms  conf=1.5 ms  total=40.3 ms  per_iter=657 us
+decoder: 104 iters, 87 tokens, T_enc=255  enc_proj=3.1 ms  pred=35.5 ms  joint=33.9 ms  conf=2.7 ms  total=75.3 ms  per_iter=667 us
+decoder: 71 iters, 59 tokens, T_enc=126  enc_proj=1.5 ms  pred=24.3 ms  joint=23.8 ms  conf=1.9 ms  total=51.6 ms  per_iter=678 us
+decoder: 79 iters, 74 tokens, T_enc=150  enc_proj=1.9 ms  pred=30.3 ms  joint=26.3 ms  conf=2.5 ms  total=61.0 ms  per_iter=717 us
+decoder: 86 iters, 70 tokens, T_enc=161  enc_proj=1.9 ms  pred=28.8 ms  joint=28.5 ms  conf=2.2 ms  total=61.4 ms  per_iter=666 us
+decoder: 115 iters, 105 tokens, T_enc=214  enc_proj=2.6 ms  pred=42.7 ms  joint=38.2 ms  conf=3.4 ms  total=86.9 ms  per_iter=704 us
+decoder: 85 iters, 68 tokens, T_enc=197  enc_proj=2.4 ms  pred=28.1 ms  joint=28.3 ms  conf=2.2 ms  total=61.0 ms  per_iter=663 us
+decoder: 110 iters, 86 tokens, T_enc=198  enc_proj=2.4 ms  pred=35.4 ms  joint=36.3 ms  conf=2.7 ms  total=76.7 ms  per_iter=652 us
+decoder: 88 iters, 78 tokens, T_enc=172  enc_proj=2.2 ms  pred=32.2 ms  joint=29.0 ms  conf=2.4 ms  total=65.9 ms  per_iter=695 us
+decoder: 61 iters, 46 tokens, T_enc=130  enc_proj=1.7 ms  pred=18.9 ms  joint=20.2 ms  conf=1.5 ms  total=42.4 ms  per_iter=643 us
+decoder: 70 iters, 54 tokens, T_enc=113  enc_proj=1.5 ms  pred=22.4 ms  joint=22.9 ms  conf=1.7 ms  total=48.4 ms  per_iter=646 us
+decoder: 96 iters, 74 tokens, T_enc=174  enc_proj=2.1 ms  pred=30.3 ms  joint=31.9 ms  conf=2.3 ms  total=66.6 ms  per_iter=648 us
+decoder: 54 iters, 47 tokens, T_enc=107  enc_proj=1.3 ms  pred=19.6 ms  joint=18.2 ms  conf=1.5 ms  total=40.6 ms  per_iter=700 us
+decoder: 26 iters, 22 tokens, T_enc=63  enc_proj=0.8 ms  pred=9.4 ms  joint=8.7 ms  conf=0.7 ms  total=19.6 ms  per_iter=697 us
+decoder: 61 iters, 51 tokens, T_enc=123  enc_proj=1.5 ms  pred=21.0 ms  joint=20.4 ms  conf=1.6 ms  total=44.4 ms  per_iter=677 us
+decoder: 37 iters, 35 tokens, T_enc=63  enc_proj=0.8 ms  pred=14.7 ms  joint=12.3 ms  conf=1.1 ms  total=28.9 ms  per_iter=729 us
+decoder: 64 iters, 49 tokens, T_enc=126  enc_proj=1.8 ms  pred=20.1 ms  joint=21.5 ms  conf=1.6 ms  total=45.1 ms  per_iter=650 us
+decoder: 52 iters, 45 tokens, T_enc=110  enc_proj=1.5 ms  pred=18.8 ms  joint=17.2 ms  conf=1.4 ms  total=38.9 ms  per_iter=693 us
+decoder: 73 iters, 64 tokens, T_enc=171  enc_proj=2.1 ms  pred=26.0 ms  joint=24.1 ms  conf=2.0 ms  total=54.2 ms  per_iter=687 us
+decoder: 83 iters, 68 tokens, T_enc=160  enc_proj=2.1 ms  pred=27.8 ms  joint=27.9 ms  conf=2.2 ms  total=60.1 ms  per_iter=672 us
+decoder: 97 iters, 74 tokens, T_enc=227  enc_proj=2.7 ms  pred=30.2 ms  joint=32.1 ms  conf=2.3 ms  total=67.4 ms  per_iter=643 us
+decoder: 34 iters, 28 tokens, T_enc=74  enc_proj=0.9 ms  pred=11.3 ms  joint=10.8 ms  conf=0.9 ms  total=23.9 ms  per_iter=651 us
+decoder: 62 iters, 45 tokens, T_enc=124  enc_proj=1.5 ms  pred=18.1 ms  joint=19.7 ms  conf=1.4 ms  total=40.7 ms  per_iter=610 us
+decoder: 86 iters, 69 tokens, T_enc=170  enc_proj=2.0 ms  pred=27.5 ms  joint=27.7 ms  conf=2.1 ms  total=59.3 ms  per_iter=642 us
+decoder: 77 iters, 66 tokens, T_enc=131  enc_proj=1.6 ms  pred=27.1 ms  joint=25.6 ms  conf=2.1 ms  total=56.4 ms  per_iter=685 us
+decoder: 51 iters, 41 tokens, T_enc=116  enc_proj=1.4 ms  pred=17.1 ms  joint=17.0 ms  conf=1.3 ms  total=36.8 ms  per_iter=668 us
+decoder: 44 iters, 40 tokens, T_enc=83  enc_proj=1.0 ms  pred=16.7 ms  joint=14.7 ms  conf=1.3 ms  total=33.7 ms  per_iter=714 us
+decoder: 84 iters, 68 tokens, T_enc=191  enc_proj=2.3 ms  pred=27.8 ms  joint=27.6 ms  conf=2.2 ms  total=59.9 ms  per_iter=660 us
+decoder: 35 iters, 28 tokens, T_enc=77  enc_proj=1.0 ms  pred=11.7 ms  joint=11.8 ms  conf=0.9 ms  total=25.4 ms  per_iter=673 us
+decoder: 54 iters, 48 tokens, T_enc=96  enc_proj=1.2 ms  pred=19.9 ms  joint=18.0 ms  conf=1.5 ms  total=40.6 ms  per_iter=702 us
+decoder: 64 iters, 45 tokens, T_enc=153  enc_proj=1.9 ms  pred=19.0 ms  joint=21.2 ms  conf=1.4 ms  total=43.5 ms  per_iter=628 us
+decoder: 81 iters, 67 tokens, T_enc=173  enc_proj=2.1 ms  pred=28.3 ms  joint=27.4 ms  conf=2.1 ms  total=59.9 ms  per_iter=687 us
+decoder: 70 iters, 59 tokens, T_enc=176  enc_proj=2.1 ms  pred=24.4 ms  joint=23.3 ms  conf=1.9 ms  total=51.8 ms  per_iter=682 us
+decoder: 81 iters, 69 tokens, T_enc=147  enc_proj=1.9 ms  pred=28.3 ms  joint=26.8 ms  conf=2.2 ms  total=59.1 ms  per_iter=680 us
+decoder: 56 iters, 46 tokens, T_enc=106  enc_proj=1.5 ms  pred=19.5 ms  joint=19.2 ms  conf=1.5 ms  total=41.7 ms  per_iter=690 us
+decoder: 20 iters, 15 tokens, T_enc=58  enc_proj=0.7 ms  pred=6.5 ms  joint=6.5 ms  conf=0.5 ms  total=14.2 ms  per_iter=649 us
+decoder: 99 iters, 89 tokens, T_enc=177  enc_proj=2.2 ms  pred=36.6 ms  joint=33.2 ms  conf=2.8 ms  total=74.8 ms  per_iter=705 us
+decoder: 58 iters, 49 tokens, T_enc=109  enc_proj=1.4 ms  pred=20.4 ms  joint=19.4 ms  conf=1.6 ms  total=42.7 ms  per_iter=686 us
+decoder: 69 iters, 60 tokens, T_enc=167  enc_proj=2.0 ms  pred=24.9 ms  joint=23.1 ms  conf=1.9 ms  total=51.9 ms  per_iter=695 us
+decoder: 80 iters, 69 tokens, T_enc=153  enc_proj=1.9 ms  pred=28.4 ms  joint=26.7 ms  conf=2.1 ms  total=59.1 ms  per_iter=688 us
+decoder: 64 iters, 49 tokens, T_enc=140  enc_proj=1.8 ms  pred=20.3 ms  joint=21.3 ms  conf=1.5 ms  total=45.0 ms  per_iter=651 us
+decoder: 37 iters, 27 tokens, T_enc=88  enc_proj=1.1 ms  pred=11.4 ms  joint=12.2 ms  conf=0.8 ms  total=25.6 ms  per_iter=638 us
+decoder: 81 iters, 66 tokens, T_enc=171  enc_proj=2.1 ms  pred=27.2 ms  joint=27.2 ms  conf=2.1 ms  total=58.5 ms  per_iter=671 us
+decoder: 115 iters, 97 tokens, T_enc=240  enc_proj=2.9 ms  pred=40.1 ms  joint=38.1 ms  conf=3.0 ms  total=84.1 ms  per_iter=679 us
+decoder: 38 iters, 28 tokens, T_enc=95  enc_proj=1.2 ms  pred=12.0 ms  joint=12.8 ms  conf=0.9 ms  total=26.8 ms  per_iter=652 us
+decoder: 58 iters, 48 tokens, T_enc=111  enc_proj=1.4 ms  pred=19.6 ms  joint=19.3 ms  conf=1.5 ms  total=41.8 ms  per_iter=670 us
+decoder: 71 iters, 59 tokens, T_enc=153  enc_proj=1.8 ms  pred=24.0 ms  joint=23.1 ms  conf=1.9 ms  total=50.7 ms  per_iter=662 us
+decoder: 43 iters, 28 tokens, T_enc=116  enc_proj=1.4 ms  pred=11.3 ms  joint=13.8 ms  conf=0.9 ms  total=27.5 ms  per_iter=585 us
+       23.94 real         9.83 user         0.59 sys
+           295452672  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+               95231  page reclaims
+                 384  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                  13  voluntary context switches
+                8669  involuntary context switches
+        144174431947  instructions retired
+         41141617123  cycles elapsed
+           318932432  peak memory footprint
