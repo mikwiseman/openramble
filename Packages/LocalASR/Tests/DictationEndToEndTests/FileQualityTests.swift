@@ -35,8 +35,8 @@ final class FileQualityTests: XCTestCase {
         let reference = try await oneShotReference(transcriber, url: url)
         let expected = Self.words(Phrase.veryLong)
         let referenceErrors = Self.distance(expected, Self.words(reference.text))
-        // 25 is the shipping split (FileAudioChunks.defaultSeconds).
-        for length in [15, 25, 60] {
+        // 20 is the shipping split (FileAudioChunks.defaultSeconds).
+        for length in [15, 20, 60] {
             let result = Capture()
             try await FileTranscriber(transcriber: transcriber, segmentSeconds: length).transcribe(files: [url]) {
                 _, outcome in await result.store(outcome)
@@ -44,10 +44,7 @@ final class FileQualityTests: XCTestCase {
             let transcript = try await result.get()
             let errors = Self.distance(expected, Self.words(transcript.text))
             print("[file-quality] chunk=\(length)s referenceErrors=\(referenceErrors) chunkErrors=\(errors) referenceWords=\(expected.count)")
-            if length == 25 {
-                // On transcribe.cpp 0.4.1 Parakeet Ultra makes 13 errors at this
-                // split, 15 for the whole file and 16 at the old 30 s split
-                // (research/model-upgrade-2026-10, H16b).
+            if length == 20 {
                 XCTAssertLessThanOrEqual(errors, referenceErrors,
                                          "the shipping split must not lose quality versus whole-file decoding")
                 XCTAssertEqual(transcript.text.occurrences(of: "Вечером мы собираем сборку"), 5)

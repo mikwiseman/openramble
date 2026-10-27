@@ -388,6 +388,42 @@ mod tests {
     }
 
     #[test]
+    fn the_mac_cuts_the_same_frames() {
+        // The Mac's file chunker carries a Swift copy of this planner
+        // (`Packages/LocalASR/Sources/LocalASR/FileAudioChunks.swift`), and its
+        // tests assert these same pieces. Change both, or neither.
+        let mut envelope = room(300);
+        put(&mut envelope, 12.0, &speech(75, 11));
+        put(&mut envelope, 100.0, &speech(3, 12));
+        put(&mut envelope, 140.0, &speech(130, 13));
+        let pieces: Vec<(usize, usize)> = plan(&envelope, 0..envelope.len(), 20.0, true)
+            .into_iter()
+            .map(|piece| (piece.start, piece.end))
+            .collect();
+        assert_eq!(
+            pieces,
+            [
+                (550, 1163),
+                (1163, 1753),
+                (1753, 2209),
+                (2233, 2891),
+                (2891, 3581),
+                (3581, 4400),
+                (4950, 5200),
+                (6950, 7716),
+                (7716, 8508),
+                (8508, 9266),
+                (9266, 9983),
+                (9983, 10819),
+                (10821, 11543),
+                (11543, 12148),
+                (12148, 12846),
+                (12846, 13550),
+            ]
+        );
+    }
+
+    #[test]
     fn the_gate_never_reaches_outside_the_span() {
         let mut envelope = room(60);
         put(&mut envelope, 20.0, &speech(10, 4));

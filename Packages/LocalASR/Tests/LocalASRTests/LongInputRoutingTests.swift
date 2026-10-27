@@ -4,26 +4,30 @@ import XCTest
 @testable import LocalASR
 
 final class LongInputRoutingTests: XCTestCase {
-    func testLongMemoryAndFileInputsKeepEveryMarkerWithBoundedEngineCalls() async throws {
-        for seconds in [240, 300, 480, 900] {
-            let samples = (1...seconds).flatMap { [Float](repeating: Float($0), count: 16_000) }
-            let engine = MarkerEngine()
+    func testLongMemoryAndFileInputsReachTheEngineWholeInBoundedCalls() async throws {
+        for seconds in [240, 480] {
+            let samples = Self.speech(seconds: seconds)
+            let engine = PieceEngine()
             let transcriber = LocalTranscriber(engine: engine)
             try await transcriber.prepare(modelDirectory: URL(fileURLWithPath: "/unused"))
             let memory = try await transcriber.transcribe(samples: samples)
+            let fromMemory = await engine.received
             let url = try recording(samples)
             defer { try? FileManager.default.removeItem(at: url) }
             let file = try await transcriber.transcribe(fileURL: url)
-            let expected = (1...seconds).map(String.init).joined(separator: " ")
-            XCTAssertEqual(memory.text, expected, "all markers once, including forced seams and the ending")
-            XCTAssertEqual(file.text, expected)
+            let fromFile = await engine.received.dropFirst(fromMemory.count)
+            // Speech without a pause is cut into contiguous pieces: every
+            // sample once, in order, nothing shared between pieces.
+            XCTAssertTrue(fromMemory.joined().elementsEqual(samples), "memory, \(seconds) s")
+            XCTAssertTrue(fromFile.joined().elementsEqual(samples), "file, \(seconds) s")
+            XCTAssertEqual(memory.text, file.text)
+            XCTAssertEqual(memory.words.map(\.start), fromMemory.indices.map { Double(fromMemory[..<$0].map(\.count).reduce(0, +)) / 16_000 })
             XCTAssertEqual(memory.audioDuration, Double(seconds))
             XCTAssertEqual(file.audioDuration, Double(seconds))
             let sizes = await engine.sizes
             // Over 30 s Parakeet Ultra segments a run itself, and on
-            // transcribe.cpp 0.4.1 that can drop speech (FileAudioChunks).
-            XCTAssertLessThanOrEqual(sizes.max() ?? 0, 30 * 16_000,
-                "no engine call may exceed 30 s, context and merged tail included")
+            // transcribe.cpp 0.4.1 that can drop speech (issue #235).
+            XCTAssertLessThanOrEqual(sizes.max() ?? 0, 20 * 16_000, "pieces are at most the server's 20 s")
             XCTAssertGreaterThan(sizes.count, 2)
             XCTAssertEqual(memory.processingDuration, Double(sizes.count / 2) * 0.1, accuracy: 0.0001)
         }
@@ -48,7 +52,7 @@ final class LongInputRoutingTests: XCTestCase {
     }
 
     func testShortInputKeepsDirectEnginePath() async throws {
-        let engine = MarkerEngine()
+        let engine = PieceEngine()
         let transcriber = LocalTranscriber(engine: engine)
         try await transcriber.prepare(modelDirectory: URL(fileURLWithPath: "/unused"))
         _ = try await transcriber.transcribe(samples: [Float](repeating: 1, count: 30 * 16_000))
@@ -57,10 +61,10 @@ final class LongInputRoutingTests: XCTestCase {
     }
 
     func testCancellationDoesNotStartTheRestOfALongInput() async throws {
-        let engine = MarkerEngine(gated: true)
+        let engine = PieceEngine(gated: true)
         let transcriber = LocalTranscriber(engine: engine)
         try await transcriber.prepare(modelDirectory: URL(fileURLWithPath: "/unused"))
-        let work = Task { try await transcriber.transcribe(samples: [Float](repeating: 1, count: 90 * 16_000)) }
+        let work = Task { try await transcriber.transcribe(samples: Self.speech(seconds: 90)) }
         while await engine.sizes.isEmpty { await Task.yield() }
         let unloaded = await transcriber.unloadIfIdle()
         XCTAssertFalse(unloaded, "one residency spans the complete recording")
@@ -73,11 +77,11 @@ final class LongInputRoutingTests: XCTestCase {
     }
 
     func testForcedReloadCannotMixModelGenerationsWithinARecording() async throws {
-        let engine = MarkerEngine(gated: true)
+        let engine = PieceEngine(gated: true)
         let transcriber = LocalTranscriber(engine: engine)
         let directory = URL(fileURLWithPath: "/unused")
         try await transcriber.prepare(modelDirectory: directory)
-        let work = Task { try await transcriber.transcribe(samples: [Float](repeating: 1, count: 90 * 16_000)) }
+        let work = Task { try await transcriber.transcribe(samples: Self.speech(seconds: 90)) }
         while await engine.sizes.isEmpty { await Task.yield() }
         await transcriber.unload()
         try await transcriber.prepare(modelDirectory: directory)
@@ -89,19 +93,32 @@ final class LongInputRoutingTests: XCTestCase {
     }
 
     func testFailedMiddleChunkNeverReturnsAPartialSuccess() async throws {
-        let engine = MarkerEngine(failAt: 2)
+        let engine = PieceEngine(failAt: 2)
         let transcriber = LocalTranscriber(engine: engine)
         try await transcriber.prepare(modelDirectory: URL(fileURLWithPath: "/unused"))
         do {
-            _ = try await transcriber.transcribe(samples: [Float](repeating: 1, count: 90 * 16_000))
+            _ = try await transcriber.transcribe(samples: Self.speech(seconds: 90))
             XCTFail("a missing middle must fail the whole result")
         } catch ASREngineError.inferenceFailed(_, let code) { XCTAssertEqual(code, -7) }
         let sizes = await engine.sizes
         XCTAssertEqual(sizes.count, 2)
     }
 
+    /// Noise whose loudness changes every 20 ms, as syllables do. A constant
+    /// signal is no speech to the file planner's gate.
+    private static func speech(seconds: Int) -> [Float] {
+        (0..<seconds * 16_000).map { index in
+            var state = UInt32(truncatingIfNeeded: index / 320) &* 2_654_435_761 &+ 1
+            state = state &* 1_664_525 &+ 1_013_904_223
+            var noise = UInt32(truncatingIfNeeded: index) &* 747_796_405 &+ 2_891_336_453
+            noise ^= noise >> 13
+            noise = noise &* 1_274_126_177
+            return 0.1 * (0.4 + 1.2 * Float(state >> 8) / Float(1 << 24)) * (Float(noise >> 8) / Float(1 << 23) - 1)
+        }
+    }
+
     private func recording(_ samples: [Float]) throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appending(path: "long-markers-\(UUID()).wav")
+        let url = FileManager.default.temporaryDirectory.appending(path: "long-pieces-\(UUID()).wav")
         let format = try XCTUnwrap(AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000,
                                                 channels: 1, interleaved: false))
         let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count)))
@@ -111,8 +128,9 @@ final class LongInputRoutingTests: XCTestCase {
         return url
     }
 
-    private actor MarkerEngine: BatchASREngineAdapting {
+    private actor PieceEngine: BatchASREngineAdapting {
         var sizes: [Int] = []
+        var received: [[Float]] = []
         var batchCalls = 0
         let gated: Bool
         let failAt: Int?
@@ -123,13 +141,12 @@ final class LongInputRoutingTests: XCTestCase {
         func open() { gate?.resume(); gate = nil }
         func transcribe(samples: [Float]) async throws -> ASRResult {
             sizes.append(samples.count)
+            received.append(samples)
             if sizes.count == failAt { throw ASREngineError.inferenceFailed("test failure", code: -7) }
             if gated { await withCheckedContinuation { gate = $0 } }
-            let words = stride(from: 8_000, to: samples.count, by: 16_000).map { index in
-                ASRResult.Word(text: String(Int(samples[index])), start: Double(index) / 16_000,
-                               end: Double(index) / 16_000 + 0.1)
-            }
-            return ASRResult(text: words.map(\.text).joined(separator: " "), words: words,
+            // One word per piece, at its start, naming its length.
+            let words = [ASRResult.Word(text: String(samples.count), start: 0, end: 0.1)]
+            return ASRResult(text: words[0].text, words: words,
                              audioDuration: Double(samples.count) / 16_000, processingDuration: 0.1)
         }
         func transcribe(batch: [[Float]], timestamps: Bool,
