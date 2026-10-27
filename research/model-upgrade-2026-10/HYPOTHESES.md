@@ -781,6 +781,41 @@ the only fault: joining overlapping chunks by word times loses words on
 0.4.x. The Linux server cuts at its quietest points without overlap and
 joins nothing, and its English hour-file WER on 0.4.1 was 5.57% (H16 rule 9).
 
+## H16d result
+
+Measured on 27 October 2026 (`fork-chunks30-seam0`, `fork-chunks60-seam0`,
+`runtime-0.4.1-chunks29-seam0`; local candidate commits `acb3d56`, `38978a7`,
+`8df8115`). WER in percent and lost words, as in H16c:
+
+| Input | 0.34.0 | 0.35.0 | fork 30 s | fork 60 s | 0.4.1 29 s |
+|---|---:|---:|---:|---:|---:|
+| English hour | 5.34 / 0 | 5.86 / 30 | 6.63 / 56 | 6.44 / 57 | 6.73 / 67 |
+| Russian hour | 6.40 / 0 | 5.49 / 0 | 5.79 / 0 | 5.84 / 0 | 5.89 / 0 |
+| Mixed 600 s | 31.63 / 293 | 33.71 / 337 | 23.66 / 211 | 24.70 / 227 | 24.70 / 227 |
+| Mixed hour | 39.43 / 2,227 | 39.44 / 2,302 | 28.12 / 1,455 | 27.57 / 1,423 | 28.48 / 1,487 |
+| English take, 37 s | 6.58 / 0 | 6.58 / 0 | 15.79 / 8 | 15.79 / 8 | 15.79 / 8 |
+| Pooled WER, hour files and takes | 17.22 | 17.26 | 13.75 | 13.60 | 13.99 |
+| File-import wall time, five hours | 176.7 s | 149.4 s | 125.6 s | 140.9 s | 124.3 s |
+
+Rule 1 fails for every candidate (English), so none is shipped. Two effects
+pull in opposite directions:
+
+- Without overlap the mixed files improve by about 11 points: a chunk no
+  longer carries 2 s of the neighbouring utterance, which pulled its single
+  language toward the neighbour's.
+- Without overlap English loses clauses. In the 37 s take the chunker cuts
+  at 12.59 s, inside "…in the third century | BCE…", not at the 0.5 s pause
+  before the sentence. Decoded alone, 0–12.59 s gives 18 words and omits
+  "Built by the Egyptians in the third century"; 0–14.59 s keeps them. 0.2.0
+  omits the same eight words from the same clip, and so does the clip with
+  1 s of silence added: it is the model dropping a clause cut off at the end
+  of its input, not the runtime. The 2 s of context is what protected
+  English at 0.34.0's seams.
+
+So the next lever is where the chunker cuts, not the runtime: at real pauses
+between sentences, with no context needed, and context only where no pause
+exists.
+
 ## Proposed next hypotheses
 
 - **H8c.** The decoder's joint output layer and LSTM weights in the model's
