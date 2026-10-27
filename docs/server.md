@@ -129,7 +129,7 @@ apps/cli/deploy/install.sh
 
 `install.sh` builds on the machine itself (ggml tunes itself to the processor), checks the model's size and SHA-256 with the new binary before replacing the old one, keeps the previous binary as `.prev`, installs and enables `openramble.service`, restarts it only once no job is running, waits for `/health`, and only then switches the ssh path (below).
 
-The server is the only process on the machine that keeps engines loaded. A second set, such as a command-line run with `--workers 3`, would not fit in memory next to its four, and the kernel would kill the server. `install.sh` creates `/var/lib/openramble/engines.lock` for that: the server holds it while its engines are loaded, a file-mode run of the command-line tool refuses to start while the server holds it, and a server that starts while a file-mode run is going waits for it to finish, answering 429 `starting` meanwhile. Send files to the server instead, as `transcribe-stdin` does.
+The server is the only process on the machine that keeps engines loaded. A second set, such as a command-line run with `--workers 3`, would compete with its four for the same cores and slow every job, voice notes past their callers' deadlines. `install.sh` creates `/var/lib/openramble/engines.lock` for that: the server holds it while its engines are loaded, a file-mode run of the command-line tool refuses to start while the server holds it, and a server that starts while a file-mode run is going waits for it to finish, answering 429 `starting` meanwhile. Send files to the server instead, as `transcribe-stdin` does.
 
 The service ([`apps/cli/deploy/openramble.service`](../apps/cli/deploy/openramble.service)) runs as a dynamic user with a read-only system, no home, no devices and `IPAddressDeny=any` except localhost, so neither the server nor ffmpeg can reach another machine. It reads the keys through `LoadCredential`, keeps its temporary files in a private `/var/tmp`, and is limited to 7 GB of memory. On a stop, new jobs get 429 `shutting_down` and jobs in flight get up to 25 minutes.
 
@@ -151,7 +151,7 @@ Caddy needs port 80 or 443 reachable once from Let's Encrypt to get its certific
 
 ### The ssh path
 
-WaiWeb reaches the server with ssh and the forced command `/opt/openramble/bin/transcribe-stdin`: one audio file on standard input, OpenRamble JSON on standard output. That script is now a client of the local server ([`apps/cli/deploy/transcribe-stdin`](../apps/cli/deploy/transcribe-stdin), Python 3 and curl), so the ssh path shares the server's engines instead of loading its own copies, which would not fit in memory next to them. Nothing changes for WaiWeb.
+WaiWeb reaches the server with ssh and the forced command `/opt/openramble/bin/transcribe-stdin`: one audio file on standard input, OpenRamble JSON on standard output. That script is now a client of the local server ([`apps/cli/deploy/transcribe-stdin`](../apps/cli/deploy/transcribe-stdin), Python 3 and curl), so the ssh path shares the server's engines instead of loading its own copies next to them. Nothing changes for WaiWeb.
 
 When an ssh session without a terminal ends, sshd closes its pipes and sends the command no signal, so `transcribe-stdin` watches for that itself, as the school's `stt-ssh` does. It reads the whole upload into a file with no name before it sends anything, so a session that ends mid-upload sends nothing. While the server works, it notices within a fifth of a second that sshd has closed its end of the output, or that its parent has gone, and stops curl; the connection closes and the server cancels the job. Its exit status follows `stt-ssh`'s: 0 done, 64 bad arguments, 65 no audio, 75 busy, starting or stopping (try again later), 129 the session ended, 1 anything else.
 
@@ -174,7 +174,7 @@ The school reaches the same machine through its own forced command, `stt-ssh` (w
 
 ## Capacity
 
-Defaults for a 4-core, 8 GB machine (Hetzner CAX21): 4 engines with Q4_K_M, pieces of up to 20 seconds, callers who wait up to 600 s treated as interactive, 8 jobs, 32 connections, uploads up to 2 GiB and audio up to 12 hours. Each engine takes about 1.15 GB on transcribe.cpp 0.2.0, so four take about 5 GB. Disk use per job is the upload until it is decoded, plus 230 MB per hour of audio.
+Defaults for a 4-core, 8 GB machine (Hetzner CAX21): 4 engines with Q4_K_M, pieces of up to 20 seconds, callers who wait up to 600 s treated as interactive, 8 jobs, 32 connections, uploads up to 2 GiB and audio up to 12 hours. transcribe.cpp 0.4.1 maps the model file into memory, so the engines share its 464 MB and each adds about 390 MB of its own: four take about 1.6 GB after loading and 2 GB at a job's peak, plus the shared file (measured in an arm64 container of this size, `research/model-upgrade-2026-10/h16-server`; on 0.2.0 it was 3.4 and 3.9 GB). Resident set size counts the shared file once per engine, so read the anonymous memory instead. Disk use per job is the upload until it is decoded, plus 230 MB per hour of audio.
 
 Estimates at 4 engines and 0.44 engine seconds per audio second, from the 20.8-minute track that took 184 s on 3 engines:
 
@@ -187,13 +187,13 @@ Estimates at 4 engines and 0.44 engine seconds per audio second, from the 20.8-m
 | 1-hour participant track | 3.3 min |
 | 9.2-hour track, the speaker talking a third of the time | 24 min |
 
-Meeting time and long notes scale with 1/engines; a single piece still takes about 7 seconds, so a short note does not get faster. Use one engine per core while engines × 1.2 GB + 1 GB fits in memory.
+Meeting time and long notes scale with 1/engines; a single piece still takes about 7 seconds, so a short note does not get faster. Use one engine per core: memory is no longer the limit.
 
 ## Deploy-day checks
 
 These are for the operator after review, on the real server:
 
-1. With the service stopped (file mode refuses to run next to it), `/usr/bin/time -v openramble --workers 3` and `--workers 4` on the 20.8-minute track, with Q4_K_M and with Q8_0. Choose the engine count and quantization from the wall time and the maximum resident memory.
+1. With the service stopped (file mode refuses to run next to it), `/usr/bin/time -v openramble --workers 3` and `--workers 4` on the 20.8-minute track, with Q4_K_M and with Q8_0. Choose the engine count and quantization from the wall time and the anonymous memory (`/proc/<pid>/smaps_rollup`).
 2. Compare the server with today's command-line run on that track: word differences and wall time.
 3. Three real Zoom tracks with `--no-gate` and without it: the gate must keep at least 99% of the words.
 4. 30-second, 60-second and 4-minute Opus notes, on an idle server and with a 9-hour job running.
@@ -205,6 +205,5 @@ These are for the operator after review, on the real server:
 
 ## Not done yet
 
-- transcribe.cpp 0.4.1 maps the model file into memory, so engines share the weights (about 420 MB each instead of 1.15 GB), can be cancelled mid-piece, and use bounded memory on long audio. Moving to it needs the same validation on the Mac, which links the same runtime.
 - Speaker separation (Sortformer) for `diarize=true`.
 - `/v1/models`, only if a caller turns out to need it.

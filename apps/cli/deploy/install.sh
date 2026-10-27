@@ -10,7 +10,7 @@
 # back.
 #
 # The server becomes the only process here that keeps engines loaded: a
-# second set would not fit in memory next to its four. The ssh transports
+# second set would compete with its four for the same cores. The ssh transports
 # that ran the command-line tool themselves, WaiWeb's transcribe-stdin and
 # the school's stt-ssh, become clients of the server in the same step, while
 # the lock they share is held, so none of their jobs runs next to the new
@@ -109,7 +109,7 @@ main() {
 
   # One owner of the engines on this machine (apps/cli/src/engines.rs): the
   # server holds this lock while its engines are loaded, and a file-mode run
-  # refuses to load engines next to them, since both would not fit in memory.
+  # refuses to load engines next to them, since both would compete for the cores.
   install -d -m 0755 /var/lib/openramble
   [[ -e /var/lib/openramble/engines.lock ]] || install -m 0644 /dev/null /var/lib/openramble/engines.lock
 

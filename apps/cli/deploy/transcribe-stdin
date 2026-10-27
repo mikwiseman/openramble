@@ -2,7 +2,7 @@
 """One audio file to the OpenRamble server on this machine, OpenRamble JSON back.
 
 The ssh path into the server. Two forced commands run it, and neither loads
-engines of its own, which would not fit in memory next to the server's:
+engines of its own, which would compete with the server's for the cores:
 
 - WaiWeb runs it with no arguments: the audio on standard input, the JSON on
   standard output.

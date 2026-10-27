@@ -24,7 +24,8 @@ NoNewPrivileges=yes
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 IPAddressDeny=any
 IPAddressAllow=localhost
-# Four engines take about 1.15 GB each on transcribe.cpp 0.2.0.
+# Four engines on transcribe.cpp 0.4.1: about 2 GB of their own at a job's
+# peak, plus the 464 MB model file they share.
 MemoryMax=7G
 LimitCORE=0
 # SIGTERM goes to the server alone, so a running ffmpeg is not killed while
