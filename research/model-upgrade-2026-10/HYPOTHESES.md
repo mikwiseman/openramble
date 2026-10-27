@@ -833,6 +833,33 @@ So the next lever is where the chunker cuts, not the runtime: at real pauses
 between sentences, with no context needed, and context only where no pause
 exists.
 
+## H16e result
+
+Measured on 27 October 2026 (`runtime-0.4.1-pause29-seam0`,
+`runtime-0.4.1-pause25`; local commits `3595241`, `5d3ae40`):
+
+| Input | 0.34.0 | 0.35.0 | 29 s, pause cuts, no overlap | 25 s, pause cuts, 2 s context |
+|---|---:|---:|---:|---:|
+| English hour | 5.34 / 0 | 5.86 / 30 | 6.47 / 47 | 5.58 / 12 |
+| Russian hour | 6.40 / 0 | 5.49 / 0 | 6.25 / 0 | 5.15 / 0 |
+| Mixed 600 s | 31.63 / 293 | 33.71 / 337 | 23.66 / 204 | 35.44 / 357 |
+| Mixed hour | 39.43 / 2,227 | 39.44 / 2,302 | 29.13 / 1,540 | 38.90 / 2,223 |
+| English take, 37 s | 6.58 / 0 | 6.58 / 0 | 15.79 / 8 | 6.58 / 0 |
+| Pooled WER, hour files and takes | 17.22 | 17.26 | 14.09 | 17.01 |
+| File-import wall time, five hours | 176.7 s | 149.4 s | 122.7 s | 149.5 s |
+
+Both fail rule 1 on English, so neither ships. Earlier pause cuts with
+context give the best English and Russian hour files on 0.4.1 yet (5.58% and
+5.15%) but still lose 12 English words; without context the 37 s take still
+loses the same eight words, so the chunker still cuts it mid-clause. The
+policy reports that cut at 12.59 s for every cap tried, before both the
+15 s minimum segment and the cap, which these parameters cannot explain; the
+cut placement needs to be traced before another candidate.
+
+H16c and H16d ran while another job built FluidAudio and ran smoke tests on
+this Mac (18:01 to 18:24), so their wall times may be disturbed; WER and lost
+words are not timing-dependent.
+
 ## Proposed next hypotheses
 
 - **H8c.** The decoder's joint output layer and LSTM weights in the model's

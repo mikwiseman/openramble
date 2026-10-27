@@ -1,0 +1,21 @@
+{
+  "label": "Ultra Q4_K_M, 0.4.1, 29 s cap, pause cuts, no overlap",
+  "summary": "Ultra Q4_K_M, 0.4.1, 29 s cap, pause cuts, no overlap; H16e",
+  "order": 26,
+  "model": {
+    "name": "parakeet-ultra Q4_K_M",
+    "path": "models/parakeet-ultra-Q4_K_M/parakeet-ultra-Q4_K_M.gguf",
+    "sha256": "c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9",
+    "source": "https://huggingface.co/handy-computer/parakeet-ultra-gguf/blob/a1539be1b849ea7463b88343e5277b373d0c4ea9/parakeet-ultra-Q4_K_M.gguf",
+    "license": "CC-BY-4.0"
+  },
+  "runtime": "transcribe.cpp 0.4.1, upstream prebuilt XCFramework (SwiftPM checksum fb5646e5…), Metal, one decoder thread, weights memory-mapped",
+  "process": {
+    "kind": "asr-bench"
+  },
+  "warm": {
+    "kind": "asr-bench",
+    "commit": "35952413ec"
+  },
+  "index": false
+}
