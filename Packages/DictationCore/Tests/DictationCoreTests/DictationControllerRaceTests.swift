@@ -196,9 +196,15 @@ actor DetachedFreezeCapture: AudioCapturing {
 
 actor RecordingInserter: TextInserting {
     private(set) var insertedTexts: [String] = []
+    /// How long the insertion holds on after the text lands, as the real one
+    /// holds its clipboard restore floor.
+    private let hold: Duration
+
+    init(hold: Duration = .zero) { self.hold = hold }
 
     func insert(_ text: String, into target: TargetApplication?) async throws {
         insertedTexts.append(text)
+        if hold > .zero { try? await Task.sleep(for: hold) }
     }
     func pressReturn() async throws {}
     nonisolated func frontmostApplication() -> TargetApplication? { nil }
@@ -634,7 +640,9 @@ final class DictationControllerRaceTests: XCTestCase {
         // always hold on: the microphone is turned off and the next dictation works.
         for seed in 0..<200 {
             capture = TrackedCapture()
-            inserter = RecordingInserter()
+            // A paste that holds on, so gestures also land while it finishes.
+            // An instant one left that window to the CI machine's timing.
+            inserter = RecordingInserter(hold: .milliseconds(20))
             overlay = QuietOverlay()
             sounds = CountingSounds()
             transcribes = TranscribeTracker()

@@ -1017,6 +1017,65 @@ final class DictationControllerTests: XCTestCase {
         XCTAssertEqual(stops, 2, "the tap's take was stopped, not left listening")
     }
 
+    /// A hands-free press inside the hold, and its second press inside the
+    /// hold too, are the take they would have been a moment later: it starts
+    /// and stops. The second press is not lost to the paste, or the take would
+    /// listen on for someone who has already ended it.
+    func testAHandsFreeTakeEndedWhileALandedPasteFinishesIsStopped() async throws {
+        let landed = LandedPasteInserter()
+        let controller = makeController(inserter: landed)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        let pasted = try await waitForPaste(landed, count: 1)
+        try await Task.sleep(until: pasted + .milliseconds(100))
+        controller.begin(handsFree: true, isEnabled: true, isModelReady: true)
+        try await Task.sleep(until: pasted + .milliseconds(150))
+        controller.stopHandsFree()
+        XCTAssertEqual(controller.state, .inserting)
+
+        _ = try await waitForPaste(landed, count: 2)
+        let deadline = ContinuousClock.now + .seconds(1)
+        while controller.state != .idle, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(controller.state, .idle)
+        let starts = await capture.startCount
+        let stops = await capture.stopCount
+        XCTAssertEqual(starts, 2)
+        XCTAssertEqual(stops, 2, "the hands-free take was stopped, not left listening")
+    }
+
+    /// Releasing the key of a hands-free press means nothing inside the hold,
+    /// as anywhere else: its take listens until the second press.
+    func testAHandsFreePressWhileALandedPasteFinishesListensUntilItsSecondPress() async throws {
+        let landed = LandedPasteInserter()
+        let controller = makeController(inserter: landed)
+
+        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
+        await settle()
+        controller.stop()
+        let pasted = try await waitForPaste(landed, count: 1)
+        try await Task.sleep(until: pasted + .milliseconds(100))
+        controller.begin(handsFree: true, isEnabled: true, isModelReady: true)
+        controller.stop()
+        XCTAssertEqual(controller.state, .inserting)
+
+        let deadline = ContinuousClock.now + .seconds(1)
+        while controller.state != .listening, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(controller.state, .listening)
+        let stopsWhileListening = await capture.stopCount
+        XCTAssertEqual(stopsWhileListening, 1)
+
+        controller.stopHandsFree()
+        _ = try await waitForPaste(landed, count: 2)
+        let stops = await capture.stopCount
+        XCTAssertEqual(stops, 2)
+    }
+
     /// A press inside the hold that turns out to be a shortcut (Right ⌘ and
     /// Return, "send" in a chat app) is no take. The hotkey monitor cancels
     /// the hold and swallows its release, so the press that waits for the
