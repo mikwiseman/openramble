@@ -38,6 +38,16 @@ final class AppPathsTests: XCTestCase {
         XCTAssertEqual(Set(directories.map(\.path)).count, 3)
     }
 
+    /// The command-line tool steps aside for dictation by probing this lock
+    /// under the real Application Support. The app must hold that same file.
+    func testTheStandardDictationLockIsTheOneTheCLIProbes() throws {
+        let probed = try FileManager.default.url(
+            for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+        ).appending(path: "OpenRamble/dictation-priority.lock")
+        XCTAssertEqual(try AppPaths.standard().dictationPriorityLock().path, probed.path)
+        XCTAssertTrue(try paths.dictationPriorityLock().path.hasPrefix(paths.support().path))
+    }
+
     func testLegacySupportDirectoryIsMigrated() throws {
         let legacy = root.appending(path: ["Wai", "Dictation"].joined(), directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: legacy, withIntermediateDirectories: true)

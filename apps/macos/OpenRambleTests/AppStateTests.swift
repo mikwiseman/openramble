@@ -1308,6 +1308,36 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(after, before)
     }
 
+    /// The installed app holds the real dictation lock whenever its person
+    /// dictates. A test's dictation takes its own lock under the test root,
+    /// so it is never told that background transcription couldn't pause.
+    func testDictationTakesTheLockUnderItsOwnRoot() async throws {
+        let real = try FileManager.default.url(
+            for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+        ).appending(path: "OpenRamble/dictation-priority.lock")
+        try FileManager.default.createDirectory(
+            at: real.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
+        let holder = Process()
+        holder.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+        holder.arguments = ["-c", "import fcntl,os,sys; f=os.open(sys.argv[1],os.O_RDWR|os.O_CREAT,0o600); fcntl.lockf(f,fcntl.LOCK_EX); print('ready',flush=True); sys.stdin.read()", real.path]
+        let output = Pipe()
+        let input = Pipe()
+        holder.standardOutput = output
+        holder.standardInput = input
+        try holder.run()
+        defer { if holder.isRunning { holder.terminate(); holder.waitUntilExit() } }
+        XCTAssertEqual(output.fileHandleForReading.readData(ofLength: 6), Data("ready\n".utf8))
+
+        try installModelMarker()
+        let state = makeState()
+        await state.refreshModelState()
+        monitor.onPress?()
+
+        XCTAssertEqual(state.dictationState, .preparing)
+        XCTAssertNil(state.lastNotice)
+    }
+
     // MARK: - Gestures
 
     func testScenario032() async throws {
