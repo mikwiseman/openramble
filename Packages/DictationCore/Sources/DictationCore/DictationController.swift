@@ -407,13 +407,14 @@ public final class DictationController {
     private var deferredStopRequested = false
 
     /// A press of the dictation key while the paste was finishing, and
-    /// whether that key is up again. The text was already in place, so the
-    /// person went on: the press starts its take the moment the paste is done.
+    /// whether its stop came too: the key is up again, or, hands-free,
+    /// pressed a second time. The text was already in place, so the person
+    /// went on: the press starts its take the moment the paste is done.
     ///
     /// Kept only by a paste that lands; every other ending clears it in
     /// final cleaning and speaks for itself.
     private var pressDuringInsertion: (
-        handsFree: Bool, isEnabled: Bool, isModelReady: Bool, released: Bool
+        handsFree: Bool, isEnabled: Bool, isModelReady: Bool, stopped: Bool
     )?
 
     private var cancellationRequested = false
@@ -677,11 +678,12 @@ public final class DictationController {
 
     /// The hotkey is released (or pressed a second time in hands-free mode).
     public func stop() {
-        if state == .inserting, pressDuringInsertion != nil {
+        if state == .inserting, pressDuringInsertion?.handsFree == false {
             // The release of a press that waits for the paste: it is replayed
             // with it, so a tap stays a tap and no key that is up keeps the
-            // microphone on.
-            pressDuringInsertion?.released = true
+            // microphone on. A hands-free press's release means nothing here
+            // either.
+            pressDuringInsertion?.stopped = true
             return
         }
         switch DictationStopPolicy.decideStop(state: state, isHandsFree: isHandsFree) {
@@ -699,6 +701,13 @@ public final class DictationController {
 
     /// Stop in the mode without holding - by pressing the key a second time.
     public func stopHandsFree() {
+        if state == .inserting, pressDuringInsertion?.handsFree == true {
+            // The second press of a hands-free press that waits for the
+            // paste. Replayed with it, as a hold's release is: lost here, it
+            // would leave that take listening for nobody.
+            pressDuringInsertion?.stopped = true
+            return
+        }
         guard isHandsFree else { return }
 
         switch state {
@@ -1742,7 +1751,9 @@ public final class DictationController {
         await end(session, saying: notice)
         if let press {
             begin(handsFree: press.handsFree, isEnabled: press.isEnabled, isModelReady: press.isModelReady)
-            if press.released { stop() }
+            if press.stopped {
+                if press.handsFree { stopHandsFree() } else { stop() }
+            }
         }
     }
 
