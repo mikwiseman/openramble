@@ -1,0 +1,155 @@
+{
+ "cpus": "14",
+ "before": {
+  "en-3540s": {
+   "wer": {
+    "n": 1,
+    "reference_words": 7754,
+    "wer": 0.05635800876966727,
+    "substitutions": 307,
+    "deletions": 79,
+    "insertions": 51,
+    "deletion_rate": 0.010188289914882642,
+    "insertion_rate": 0.006577250451379933
+   },
+   "memory": {
+    "Rss": 4124934144,
+    "Pss": 4123953152,
+    "Shared_Clean": 2912256,
+    "Private_Clean": 4100096,
+    "Private_Dirty": 4119281664,
+    "Anonymous": 4119281664
+   },
+   "wall_seconds": 195.104343799
+  },
+  "ru-3540s": {
+   "wer": {
+    "n": 1,
+    "reference_words": 5668,
+    "wer": 0.06898376852505293,
+    "substitutions": 273,
+    "deletions": 55,
+    "insertions": 63,
+    "deletion_rate": 0.009703599153140438,
+    "insertion_rate": 0.011115031757233593
+   },
+   "memory": {
+    "Rss": 4136321024,
+    "Pss": 4135333888,
+    "Shared_Clean": 2973696,
+    "Private_Clean": 4149248,
+    "Private_Dirty": 4130607104,
+    "Anonymous": 4130607104
+   },
+   "wall_seconds": 192.252135117
+  },
+  "serve": {
+   "idle_after_load": {
+    "Rss": 3572989952,
+    "Pss": 3572002816,
+    "Shared_Clean": 1564672,
+    "Private_Clean": 4169728,
+    "Private_Dirty": 3567255552,
+    "Anonymous": 3567255552
+   },
+   "job_peak": {
+    "Rss": 4132532224,
+    "Pss": 4131543040,
+    "Shared_Clean": 2990080,
+    "Private_Clean": 4165632,
+    "Private_Dirty": 4126797824,
+    "Anonymous": 4126797824
+   },
+   "same_text_as_file_mode": true,
+   "ready_seconds": 0.894960293,
+   "wall_seconds": 189.729915657
+  }
+ },
+ "after": {
+  "en-3540s": {
+   "wer": {
+    "n": 1,
+    "reference_words": 7754,
+    "wer": 0.055713180294041785,
+    "substitutions": 315,
+    "deletions": 75,
+    "insertions": 42,
+    "deletion_rate": 0.009672427134382254,
+    "insertion_rate": 0.0054165591952540625
+   },
+   "memory": {
+    "Rss": 4032057344,
+    "Pss": 2575394816,
+    "Shared_Clean": 1942474752,
+    "Private_Clean": 80609280,
+    "Private_Dirty": 2085326848,
+    "Anonymous": 2085326848
+   },
+   "wall_seconds": 200.082319078
+  },
+  "ru-3540s": {
+   "wer": {
+    "n": 1,
+    "reference_words": 5668,
+    "wer": 0.062103034580098804,
+    "substitutions": 275,
+    "deletions": 58,
+    "insertions": 19,
+    "deletion_rate": 0.010232886379675371,
+    "insertion_rate": 0.0033521524347212422
+   },
+   "memory": {
+    "Rss": 3950862336,
+    "Pss": 2494199808,
+    "Shared_Clean": 1942474752,
+    "Private_Clean": 45015040,
+    "Private_Dirty": 2004131840,
+    "Anonymous": 2004131840
+   },
+   "wall_seconds": 203.563983636
+  },
+  "serve": {
+   "idle_after_load": {
+    "Rss": 3574833152,
+    "Pss": 2118180864,
+    "Shared_Clean": 1942458368,
+    "Private_Clean": 4263936,
+    "Private_Dirty": 1628110848,
+    "Anonymous": 1628110848
+   },
+   "job_peak": {
+    "Rss": 4022243328,
+    "Pss": 2565425152,
+    "Shared_Clean": 1943879680,
+    "Private_Clean": 4276224,
+    "Private_Dirty": 2075508736,
+    "Anonymous": 2075508736
+   },
+   "same_text_as_file_mode": true,
+   "ready_seconds": 0.705548084,
+   "wall_seconds": 198.041084036
+  }
+ },
+ "word_changes": {
+  "en-3540s": {
+   "n": 1,
+   "reference_words": 7726,
+   "wer": 0.006730520320994046,
+   "substitutions": 31,
+   "deletions": 13,
+   "insertions": 8,
+   "deletion_rate": 0.0016826300802485115,
+   "insertion_rate": 0.0010354646647683149
+  },
+  "ru-3540s": {
+   "n": 1,
+   "reference_words": 5676,
+   "wer": 0.01427061310782241,
+   "substitutions": 26,
+   "deletions": 51,
+   "insertions": 4,
+   "deletion_rate": 0.008985200845665961,
+   "insertion_rate": 0.0007047216349541931
+  }
+ }
+}

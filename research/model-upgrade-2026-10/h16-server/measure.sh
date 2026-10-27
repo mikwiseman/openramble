@@ -26,7 +26,7 @@ file_mode() {  # label file
   local pid=$!
   python3 /sample.py "$pid" "/out/$1-$2.memory.json"
   wait "$pid"
-  echo "{\"wall_seconds\": $(echo "$(now) - $start" | bc)}" > "/out/$1-$2.time.json"
+  echo "{\"wall_seconds\": $(printf %.3f "$(echo "$(now) - $start" | bc)")}" > "/out/$1-$2.time.json"
 }
 
 serve() {  # label
@@ -37,14 +37,14 @@ serve() {  # label
   "$bin" serve --keys /tmp/keys --listen 127.0.0.1:8080 --engines 4 --model-dir /models 2> "/out/$1-serve.log" &
   local pid=$!
   until curl -fsS http://127.0.0.1:8080/health > /dev/null 2>&1; do sleep 0.2; done
-  echo "{\"ready_seconds\": $(echo "$(now) - $start" | bc)}" > "/out/$1-serve.ready.json"
+  echo "{\"ready_seconds\": $(printf %.3f "$(echo "$(now) - $start" | bc)")}" > "/out/$1-serve.ready.json"
   python3 /sample.py "$pid" "/out/$1-serve.idle.json" --for 10
   python3 /sample.py "$pid" "/out/$1-serve.job.json" &
   local sampler=$!
   start=$(now)
   curl -fsS -H "xi-api-key: $key" -F file=@/audio/en-3540s.wav -F output_format=openramble \
     http://127.0.0.1:8080/v1/speech-to-text > "/out/$1-serve-en-3540s.json"
-  echo "{\"wall_seconds\": $(echo "$(now) - $start" | bc)}" > "/out/$1-serve.time.json"
+  echo "{\"wall_seconds\": $(printf %.3f "$(echo "$(now) - $start" | bc)")}" > "/out/$1-serve.time.json"
   kill -TERM "$pid"
   wait "$pid" || true
   wait "$sampler" || true
