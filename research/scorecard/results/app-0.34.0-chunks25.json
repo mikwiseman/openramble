@@ -1,0 +1,253 @@
+{
+ "schema": "openramble-scorecard/1",
+ "candidate": {
+  "label": "Ultra Q4_K_M, 0.34.0 runtime (0.2.0) with 25 s chunks",
+  "summary": "control for H16b: the app as 0.34.0 ran it, with only the chunk cap changed",
+  "order": 19,
+  "model": {
+   "name": "parakeet-ultra Q4_K_M",
+   "path": "models/parakeet-ultra-Q4_K_M/parakeet-ultra-Q4_K_M.gguf",
+   "sha256": "c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9",
+   "source": "https://huggingface.co/handy-computer/parakeet-ultra-gguf/blob/a1539be1b849ea7463b88343e5277b373d0c4ea9/parakeet-ultra-Q4_K_M.gguf",
+   "license": "CC-BY-4.0"
+  },
+  "runtime": "transcribe-cpp-sys 0.2.0 compiled by scripts/build-ffi.sh at 6b2e56a (aarch64 libramble_ffi.a), force-loaded into asr-bench so it answers the adapter's calls as in the app; Metal, one decoder thread, weights copied",
+  "process": {
+   "kind": "asr-bench"
+  },
+  "warm": {
+   "kind": "asr-bench",
+   "commit": "dcc6aeac40",
+   "static_runtime": "builds/ffi-6b2e56a/libramble_ffi.a",
+   "static_runtime_sha256": "a0ad8f821dfa8fe82b5802f9828066b8df7ba9e7d77b1366462159b8858ba958"
+  },
+  "index": false,
+  "id": "app-0.34.0-chunks25"
+ },
+ "scored_at": "2026-10-27T12:48:22.570173+00:00",
+ "sessions": [
+  {
+   "started": {
+    "at": "2026-10-27T12:44:02.560508+00:00",
+    "thermal": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+    "load_average": [
+     4.8759765625,
+     6.10986328125,
+     7.6025390625
+    ]
+   },
+   "suites": [
+    "hour",
+    "takes"
+   ],
+   "host": {
+    "hardware": [
+     "Mac16,8",
+     "Apple M4 Pro",
+     "25769803776",
+     "14"
+    ],
+    "macos": "27.0.1",
+    "pressure_workers": 14
+   },
+   "installed_app_running": true
+  }
+ ],
+ "metrics": {
+  "long_takes": {
+   "take-en-30s": {
+    "audio_seconds": 37.32,
+    "n": 1,
+    "reference_words": 76,
+    "wer": 0.06578947368421052,
+    "substitutions": 4,
+    "deletions": 0,
+    "insertions": 1,
+    "deletion_rate": 0.0,
+    "insertion_rate": 0.013157894736842105
+   },
+   "take-en-60s": {
+    "audio_seconds": 71.72,
+    "n": 1,
+    "reference_words": 162,
+    "wer": 0.06172839506172839,
+    "substitutions": 7,
+    "deletions": 1,
+    "insertions": 2,
+    "deletion_rate": 0.006172839506172839,
+    "insertion_rate": 0.012345679012345678
+   },
+   "take-en-120s": {
+    "audio_seconds": 128.7,
+    "n": 1,
+    "reference_words": 303,
+    "wer": 0.039603960396039604,
+    "substitutions": 9,
+    "deletions": 2,
+    "insertions": 1,
+    "deletion_rate": 0.006600660066006601,
+    "insertion_rate": 0.0033003300330033004
+   },
+   "take-ru-30s": {
+    "audio_seconds": 33.06,
+    "n": 1,
+    "reference_words": 56,
+    "wer": 0.017857142857142856,
+    "substitutions": 0,
+    "deletions": 0,
+    "insertions": 1,
+    "deletion_rate": 0.0,
+    "insertion_rate": 0.017857142857142856
+   },
+   "take-ru-60s": {
+    "audio_seconds": 71.64,
+    "n": 1,
+    "reference_words": 118,
+    "wer": 0.06779661016949153,
+    "substitutions": 5,
+    "deletions": 3,
+    "insertions": 0,
+    "deletion_rate": 0.025423728813559324,
+    "insertion_rate": 0.0
+   },
+   "take-ru-120s": {
+    "audio_seconds": 120.18,
+    "n": 1,
+    "reference_words": 181,
+    "wer": 0.08287292817679558,
+    "substitutions": 11,
+    "deletions": 1,
+    "insertions": 3,
+    "deletion_rate": 0.0055248618784530384,
+    "insertion_rate": 0.016574585635359115
+   }
+  },
+  "hour": {
+   "mixed-60s": {
+    "audio_seconds": 71.46,
+    "wall_seconds": 1.417154708,
+    "ok": true,
+    "max_rss_bytes": 917454848,
+    "runner": "warm-file",
+    "n": 1,
+    "reference_words": 136,
+    "wer": 0.19117647058823528,
+    "substitutions": 2,
+    "deletions": 22,
+    "insertions": 2,
+    "deletion_rate": 0.16176470588235295,
+    "insertion_rate": 0.014705882352941176
+   },
+   "mixed-600s": {
+    "audio_seconds": 613.22,
+    "wall_seconds": 12.379235,
+    "ok": true,
+    "max_rss_bytes": 976666624,
+    "runner": "warm-file",
+    "n": 1,
+    "reference_words": 1154,
+    "wer": 0.3466204506065858,
+    "substitutions": 38,
+    "deletions": 348,
+    "insertions": 14,
+    "deletion_rate": 0.30155979202772965,
+    "insertion_rate": 0.012131715771230503
+   },
+   "mixed-3540s": {
+    "audio_seconds": 3543.3,
+    "wall_seconds": 72.599343875,
+    "ok": true,
+    "max_rss_bytes": 980074496,
+    "runner": "warm-file",
+    "n": 1,
+    "reference_words": 6622,
+    "wer": 0.40003020235578374,
+    "substitutions": 254,
+    "deletions": 2344,
+    "insertions": 51,
+    "deletion_rate": 0.3539716097855633,
+    "insertion_rate": 0.007701600724856539
+   },
+   "ru-3540s": {
+    "audio_seconds": 3550.1,
+    "wall_seconds": 73.169407542,
+    "ok": true,
+    "max_rss_bytes": 969588736,
+    "runner": "warm-file",
+    "n": 1,
+    "reference_words": 5668,
+    "wer": 0.06192660550458716,
+    "substitutions": 242,
+    "deletions": 48,
+    "insertions": 61,
+    "deletion_rate": 0.008468595624558928,
+    "insertion_rate": 0.010762173606210304
+   },
+   "en-3540s": {
+    "audio_seconds": 3546.8,
+    "wall_seconds": 64.338361792,
+    "ok": true,
+    "max_rss_bytes": 980647936,
+    "runner": "warm-file",
+    "n": 1,
+    "reference_words": 7754,
+    "wer": 0.05700283724529275,
+    "substitutions": 298,
+    "deletions": 97,
+    "insertions": 47,
+    "deletion_rate": 0.012509672427134383,
+    "insertion_rate": 0.006061387670879546
+   }
+  },
+  "model": {
+   "bytes": 486280096,
+   "sha256": "c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9",
+   "license": "CC-BY-4.0"
+  }
+ },
+ "hooks": {
+  "term-recall": {
+   "status": "no-data",
+   "needs": "Names, companies and code terms. Rows: {\"path\", \"language\", \"reference\", \"terms\": [...]}. Record consented takes or TTS; keep audio outside Git.",
+   "where": "/Users/mikwiseman/.openramble/scorecard/suites/term-recall.jsonl"
+  },
+  "code-switch": {
+   "status": "no-data",
+   "needs": "RU↔EN switching inside one take. Rows: {\"path\", \"language\", \"reference\"}.",
+   "where": "/Users/mikwiseman/.openramble/scorecard/suites/code-switch.jsonl"
+  },
+  "noise-accent": {
+   "status": "no-data",
+   "needs": "MUSAN mixes at 20/10/5 dB and non-native speech. Rows: {\"path\", \"language\", \"reference\", \"tag\"}.",
+   "where": "/Users/mikwiseman/.openramble/scorecard/suites/noise-accent.jsonl"
+  },
+  "onset-offset": {
+   "status": "no-data",
+   "needs": "Scripted takes whose first and last words sit at the clip edges. Rows: {\"path\", \"language\", \"reference\"}.",
+   "where": "/Users/mikwiseman/.openramble/scorecard/suites/onset-offset.jsonl"
+  },
+  "insertion-matrix": {
+   "status": "not-in-harness",
+   "needs": "Right app, right text, clipboard byte-exact across 12 apps. Needs the Phase 4 e2e harness driving the app."
+  },
+  "paste-timings": {
+   "status": "not-in-harness",
+   "needs": "Key-up to paste p50/p95 from the local numeric journal once toPasteDispatched lands (Phase 4)."
+  },
+  "energy": {
+   "status": "not-in-harness",
+   "needs": "Energy per dictated minute with powermetrics; needs sudo, so it is run by hand."
+  },
+  "meaning-preservation": {
+   "status": "not-in-harness",
+   "needs": "False deletions on the scripted disfluent set; owned by the Clean Verbatim work in DictationCore."
+  }
+ },
+ "evidence": {
+  "observation_sha256": {
+   "hour.jsonl": "cb63c83f04ca0649ebf8632579cfe383196c6a8c9b021f98196884a7077863a3",
+   "sessions.jsonl": "a5121dd1002bf3ff391a2d95aed0f424f329bba040858737c6d0f094ff8dac5b",
+   "takes.jsonl": "5eda4250d257de8964905507342b4f9130be822036a10a51ddf6e0cc89bd8b73"
+  }
+ }
+}

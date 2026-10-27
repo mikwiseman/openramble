@@ -335,6 +335,98 @@ The same runtime (`db678a03`) is adopted together with #79 when:
    speech (TED 3.19 to 2.35% WER) and worse on French. It is stated in the
    #79 pull request instead.
 
+## H16. transcribe.cpp 0.4.1, and the app runs it
+
+Preregistered on 27 October 2026, before any output of 0.4.1, or of the
+runtime the app itself has been running, existed on this Mac.
+
+H1 adopted 0.4.0 and H15b adopted upstream main at `db678a03`, both measured
+through `asr-bench`, which calls the pinned CTranscribe framework. The app did
+not call it. `RambleCoreFFI` linked the Rust crate `transcribe-cpp-sys` 0.2.0
+statically, and that copy answered every call the adapter made (found by PR
+#87; `dyld_info -imports` on shipping 0.33.1 shows only two Whisper helpers
+taken from the framework). So 0.33.1 and 0.34.0 run Parakeet Ultra Q4_K_M on
+transcribe.cpp 0.2.0, which predates Ultra support (upstream #192, in 0.4.0):
+it ignores the checkpoint's `length_masking = "kestrel"`, its global symbol
+budget and its pause segmenter. No suite has measured that configuration.
+
+The change pins 0.4.1, the first release that contains `db678a03`, removes
+`ramble-engine` from `ramble-ffi` so the app calls the framework, and moves the
+Rust crates to 0.4.1. The candidates:
+
+- `app-0.34.0`: `asr-bench` at the 0.34.0 release commit `6b2e56a` with that
+  commit's `libramble_ffi.a` force-loaded, so every `transcribe_*` call lands in the cargo-built 0.2.0
+  copy, as in the app. Checked with `dyld_info -imports` before it runs.
+- `runtime-0.4.1`: `asr-bench` at this change, on the pinned 0.4.1 framework.
+- `runtime-main-ultra-q4km`: H15's committed observations.
+
+0.4.1 is the build H15b adopted when:
+
+1. All 1,422 FLEURS transcripts, the six long takes and the five hour-file
+   transcripts are identical to `runtime-main-ultra-q4km`. If not, H15's rules
+   1 to 6 run again against 0.4.0 before anything else.
+
+What changes for people, `app-0.34.0` against `runtime-0.4.1`, all in one
+interleaved run:
+
+2. Pooled FLEURS WER is not higher by more than 0.10 points, and neither
+   language by more than 0.25 points (paired bootstrap interval reported).
+3. Wrong-script decodes and invented words are not more.
+4. Hour-file deleted-word rates are within 0.2 points or lower.
+5. Warm p50 and p95 are within 5% + 2 ms, idle and under load; whole-process
+   p50 within 10%.
+6. The footprint after load and warm-up is at least 300 MB lower, and the peak
+   footprint over the warm run is not higher.
+7. The stress lab (`scripts/stress-lab.sh`, all five conditions, builds
+   alternating first) lands every take and misses no more words in total.
+   Its latencies are reported, not gated per row: the shared Mac's load swings
+   from 6 to over 100 between adjacent runs. A condition counts as a
+   regression only if release-to-paste p50 and p95 are both more than 30%
+   worse for both take lengths.
+8. `check.sh` is green; the LocalASR unit and end-to-end suites, with Ultra
+   installed in a separate models root, have no failure that main lacks; the
+   new binding test in `OpenRambleTests` fails on main and passes here.
+
+The Linux server, Ultra Q4_K_M on the CPU backend in an arm64 container,
+0.2.0 against 0.4.1 on a public hour file:
+
+9. WER against the reference is not higher by more than 0.25 points.
+10. `serve` with four engines peaks lower in memory, and file mode with four
+    workers is not more than 10% slower.
+
+If a rule fails, the change is not merged and the failure is recorded here.
+
+## H16b. No engine input longer than 30 seconds
+
+Preregistered on 27 October 2026 after the H16 result below, before any
+output of the change existed.
+
+H16 failed rule 4 alone, and the cause is in transcribe.cpp 0.4.x, not in the
+app: Parakeet Ultra cuts any run longer than 30 s with its own pause
+segmenter, keeps a piece only if its speech head finds speech in it, and on a
+piece that begins mid-sentence the head can find none. The file chunker gives
+the engine up to 34 s (a 30 s segment, 2 s of context on each side, and a final
+tail under 2 s merged in), so file import and long dictation takes reach that
+path; 0.2.0 had no segmenter and never did.
+
+The change caps a chunk's segment at 25 s, so no engine input exceeds 30 s.
+(Preregistered first as 26 s; corrected before any output, because the cap is
+checked once per 20 ms frame and 26 + 4 s of context and tail can reach
+30.02 s.)
+Against `app-0.34.0`, with `runtime-0.4.1` at the new commit, it is adopted
+together with H16 when:
+
+1. Hour-file deleted-word rates are within 0.2 points of `app-0.34.0` or lower,
+   and no hour file's WER is higher by more than 0.25 points.
+2. No long take has a run of five or more deleted words.
+3. A unit test shows that no chunk of continuous audio, a merged tail
+   included, exceeds 30 s.
+4. The LocalASR unit and end-to-end suites, the opt-in long-dictation gate
+   included, have no failure that H16's run lacked.
+
+FLEURS is not run again: every FLEURS file is shorter than 30 s and is
+decoded whole, so the change cannot reach it.
+
 ## Live text needs partials at least every 300 ms
 
 Recorded on 20 October 2026 as a gate for any future live-text feature, not
@@ -493,8 +585,94 @@ the 30 s split, turns them red. The 15 s and 60 s splits beat whole-file
 decoding for both models here, so moving the file split is a candidate
 hypothesis of its own (it needs the hour files measured at the new split).
 
+## H16 result
+
+Measured on 27 October 2026 with the scorecard (`app-0.34.0`,
+`runtime-0.4.1`), the stress lab (`research/stress-lab-2026-10/data/h16`) and
+the LocalASR suites. Before any run, `dyld_info -imports` confirmed the
+bindings: the `app-0.34.0` asr-bench takes no `transcribe_*` symbol from the
+framework (the force-load also brings in the two Whisper helpers the app takes
+from it, which Parakeet never calls), the 0.34.0 test bundle defines
+`transcribe_run` itself, and the #92 app, CLI and test bundle take all 20
+functions from CTranscribe 0.4.1. The new binding test fails on the 0.34.0
+build ("the runtime is the OpenRambleTests binary itself") and passes on #92.
+
+| Rule | 0.34.0 as shipped (0.2.0) | #92 (0.4.1) | Verdict |
+|---|---:|---:|---|
+| 1. Identical to H15's `db678a03` | | 1,422 FLEURS, 200 FLEURS, 11 noise, 6 takes, 5 hour: all identical (`h16-transcripts.json`) | pass |
+| 2. Pooled FLEURS WER | 5.31% | 4.85%; −0.46 pp (95% interval −0.59 to −0.35), 95 utterances better, 6 worse | pass |
+| 2. English / Russian | 5.06% / 5.54% | 4.86% / 4.84% (−0.21 and −0.71 pp, both intervals below zero) | pass |
+| 3. Wrong script / invented words | 0 / 0 | 0 / 0 | pass |
+| 4. Hour-file deleted words, English / Russian | 0.88% / 0.85% | 2.71% / 0.85% | **fail** |
+| 5. Warm p50 / p95, all inputs, idle | 427 / 1,939 ms | 332 / 1,648 ms | pass |
+| 5. Warm p50 / p95, under load | 618 / 2,827 ms | 405 / 1,964 ms | pass |
+| 5. Whole-process p50, idle / load | 0.424 / 0.679 s | 0.264 / 0.348 s | pass |
+| 6. Footprint after load / peak | 739 / 1,110 MB | 267 / 366 MB | pass |
+| 7. Stress lab: landed, words missed | 51 of 51, 0 | 51 of 51, 0; release → paste faster at the median in every condition | pass |
+| 8. check.sh, LocalASR unit and end-to-end, binding test | | all green; 22 end-to-end run, 3 opt-in skipped, the same as 0.34.0 | pass |
+
+Model load fell from 0.156 to 0.066 s. The opt-in long-dictation gate (4 to 15
+minutes, Russian and English) gives identical WER under 0.4.0 and 0.4.1 with
+peak memory 788–824 MB against 545 MB, and stop-to-insertion p50 / p95 of 123 /
+143 ms against 128 / 133 ms.
+
+Rule 4's failure is 142 English words, two whole sentences each of the three
+times the composite repeats them. The file importer's chunks run up to 34 s,
+and transcribe.cpp 0.4.x hands any Parakeet Ultra input over 30 s to its own
+pause segmenter (`stt.parakeet.segmenter.max_segment_seconds = 30` in the
+GGUF), which keeps a piece only if its speech head finds speech there. On the
+chunk at 991.21 s of `en-3540s` (33.13 s, beginning mid-sentence) it kept one
+piece, 12.4 to 33.13 s, and dropped the first 12.4 s: 73 words on 0.2.0, 40
+on 0.4.1. The same audio cut to 30.0 s gives 67 words on 0.4.1, and no 30 s
+window in the region loses a run of words on 0.4.1. The six long dictation
+takes (33 to 129 s) lost nothing on 0.4.1. The server's pieces are at most
+20 s and never reach the segmenter. H16 is not adopted as measured; H16b asks
+whether keeping every input at or under 30 s removes the loss.
+
+## H16b result
+
+Measured the same day: `runtime-0.4.1-chunks25` (#92 with 25 s chunks), and as
+a control `app-0.34.0-chunks25`, 0.34.0's own 0.2.0 runtime with only the chunk
+cap changed (a local commit, `dcc6aea`; not indexed). WER and deleted-word
+rate in percent, hour files and long takes:
+
+| Input | 0.2.0, 30 s (shipping) | 0.2.0, 25 s | 0.4.1, 30 s | 0.4.1, 25 s |
+|---|---:|---:|---:|---:|
+| English hour | 5.34 / 0.88 | 5.70 / 1.25 | 7.27 / 2.71 | 5.86 / 1.41 |
+| Russian hour | 6.40 / 0.85 | 6.19 / 0.85 | 5.58 / 0.85 | 5.49 / 0.85 |
+| Mixed 600 s | 31.63 / 26.60 | 34.66 / 30.16 | 31.37 / 27.64 | 33.71 / 30.33 |
+| Mixed hour | 39.43 / 34.46 | 40.00 / 35.40 | 37.99 / 33.72 | 39.44 / 35.53 |
+| English take, 60 s | 4.94 | 6.17 | 5.56 | 6.17 |
+| English take, 120 s | 2.97 | 3.96 | 3.63 | 3.96 |
+| Russian take, 120 s | 9.39 | 8.29 | 7.18 | 6.63 |
+
+| Rule | Result | Verdict |
+|---|---|---|
+| 1. Hour files against shipping | English +0.52 pp WER, +0.53 pp deleted; mixed 600 s +2.08 pp; mixed hour +1.07 pp deleted | **fail** |
+| 2. No deleted run of five words in a take | longest run 1 word | pass |
+| 3. No chunk over 30 s | `FileAudioChunksTests` and the routing test (240–900 s, memory and file paths) | pass |
+| 4. No new suite failure | LocalASR unit 176 run, 9 skipped, 0 failed; the chunk-profile test makes 13 errors at 25 s against 15 whole-file, so its strict expected failure became a plain assertion | pass |
+
+The control separates the two causes. At equal chunks 0.4.1 matches or beats
+0.2.0 on every input (English hour +0.16 pp, everything else lower), so the
+runtime is not what costs accuracy. The 25 s chunks are: they cost about as
+much on 0.2.0. With 0.4.x, 30 s of input is the most that avoids Ultra's own
+segmenter, so the 34 s inputs 0.34.0 decodes with 0.2.0 are not available.
+
+The longest deleted run in the English hour file falls from 29 words at 30 s
+to 6 at 25 s. Nothing is silently dropped anymore.
+
+Decision (Mik, 27 October 2026): H16 is adopted with H16b's 30 s cap,
+although both failed the hour-file rule. The runtime is not the cause at equal
+chunks, everything else improves, and the alternative kept the app on a
+runtime that predates its model. H16c is to win the long-file accuracy back.
+
 ## Proposed next hypotheses
 
+- **H16c.** File import and long dictation with Parakeet Ultra on 0.4.x: find
+  the chunk length and context that recover the English and mixed hour files
+  without any engine input over 30 s, against 0.34.0's 5.34% English and
+  31.63% mixed 600 s WER.
 - **H8c.** The decoder's joint output layer and LSTM weights in the model's
   Q8_0 together, against the same 30% decoder rule.
 - **H10b.** Four encoder threads and one decoder thread on the CPU backend.

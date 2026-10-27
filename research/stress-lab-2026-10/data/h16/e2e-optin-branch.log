@@ -1,0 +1,53 @@
+Building for debugging...
+Build complete! (0.30 sec)
+Test Suite 'Selected tests' started at 2026-10-27 13:35:12.091.
+Test Suite 'LocalASRTests.xctest' started at 2026-10-27 13:35:12.092.
+Test Suite 'LocalASRTests.xctest' passed at 2026-10-27 13:35:12.092.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-27 13:35:12.092.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'Selected tests' started at 2026-10-27 13:35:12.148.
+Test Suite 'DictationEndToEndTests.xctest' started at 2026-10-27 13:35:12.149.
+Test Suite 'DictationLatencyTests' started at 2026-10-27 13:35:12.149.
+Test Case '-[DictationEndToEndTests.DictationLatencyTests testLongFileCancellationStopsAtNextChunkAndDoesNotComplete]' started.
+Test Case '-[DictationEndToEndTests.DictationLatencyTests testLongFileCancellationStopsAtNextChunkAndDoesNotComplete]' passed (0.323 seconds).
+Test Case '-[DictationEndToEndTests.DictationLatencyTests testPathFromReadyFileToInsertedTextStaysUnderASecond]' started.
+Test Case '-[DictationEndToEndTests.DictationLatencyTests testPathFromReadyFileToInsertedTextStaysUnderASecond]' passed (3.866 seconds).
+Test Case '-[DictationEndToEndTests.DictationLatencyTests testScenario002]' started.
+Test Case '-[DictationEndToEndTests.DictationLatencyTests testScenario002]' passed (0.289 seconds).
+Test Case '-[DictationEndToEndTests.DictationLatencyTests testStopToInsertionDistribution]' started.
+Test Case '-[DictationEndToEndTests.DictationLatencyTests testStopToInsertionDistribution]' passed (26.663 seconds).
+Test Suite 'DictationLatencyTests' passed at 2026-10-27 13:35:43.291.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 31.141 (31.142) seconds
+Test Suite 'FileBackedStreamingTests' started at 2026-10-27 13:35:43.291.
+Test Case '-[DictationEndToEndTests.FileBackedStreamingTests testEightMinuteFileReusesAlreadyRecognizedSpeech]' started.
+Test Case '-[DictationEndToEndTests.FileBackedStreamingTests testEightMinuteFileReusesAlreadyRecognizedSpeech]' passed (5.617 seconds).
+Test Suite 'FileBackedStreamingTests' passed at 2026-10-27 13:35:48.908.
+	 Executed 1 test, with 0 failures (0 unexpected) in 5.617 (5.618) seconds
+Test Suite 'LongInputQualityTests' started at 2026-10-27 13:35:48.908.
+Test Case '-[DictationEndToEndTests.LongInputQualityTests testDenseRussianAndEnglishAtFourFiveEightAndFifteenMinutes]' started.
+Test Case '-[DictationEndToEndTests.LongInputQualityTests testDenseRussianAndEnglishAtFourFiveEightAndFifteenMinutes]' passed (77.395 seconds).
+Test Suite 'LongInputQualityTests' passed at 2026-10-27 13:37:06.304.
+	 Executed 1 test, with 0 failures (0 unexpected) in 77.395 (77.395) seconds
+Test Suite 'DictationEndToEndTests.xctest' passed at 2026-10-27 13:37:06.304.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 114.153 (114.155) seconds
+Test Suite 'Selected tests' passed at 2026-10-27 13:37:06.304.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 114.153 (114.156) seconds
+
+| запись     |    аудио | распознав. |     весь путь | pool return | main return | engine queue | быстрее РВ |
+|------------|----------|------------|---------------|-------------|-------------|--------------|------------|
+| фраза      |     4.26 с |     0.064 с |     0.089 с |   0.000 с |   0.000 с |   0.000 с |     48× |
+| полминуты  |    36.76 с |     0.549 с |     0.603 с |   0.000 с |   0.000 с |   0.000 с |     61× |
+| три минуты |   183.78 с |     2.916 с |     3.008 с |   0.000 с |   0.000 с |   0.000 с |     61× |
+load 6.41 5.55 6.03
+
+[stop-to-insertion] runtime=0.4.1 n=20 p50=0.1282919585 p95=0.132788333 max=0.140450583
+[long-file] audio=480s completedBeforeStop=23 decodesAfterStop=1 stopToText=0.202133417 seconds
+[long-quality] voice=Milena audio=241.8215s noise=false elapsed=4.000717667 seconds engine=3.9761439590000003s WER=0.043478260869565216 processPeakRSS=544735232
+[long-quality] voice=Milena audio=304.242625s noise=false elapsed=4.880624042 seconds engine=4.855894875000001s WER=0.04381846635367762 processPeakRSS=544735232
+[long-quality] voice=Milena audio=493.8586875s noise=true elapsed=7.989382958 seconds engine=7.962285584999999s WER=0.0472972972972973 processPeakRSS=544735232
+[long-quality] voice=Milena audio=909.131875s noise=false elapsed=15.136410332999999 seconds engine=15.103182918s WER=0.0575614861329147 processPeakRSS=544735232
+[long-quality] voice=Samantha audio=243.852625s noise=false elapsed=3.826212958 seconds engine=3.801121668s WER=0.0014388489208633094 processPeakRSS=544735232
+[long-quality] voice=Samantha audio=304.5385s noise=false elapsed=4.713969167 seconds engine=4.689404999000001s WER=0.003464203233256351 processPeakRSS=544735232
+[long-quality] voice=Samantha audio=485.882s noise=true elapsed=7.819564333 seconds engine=7.791408999999999s WER=0.006498194945848376 processPeakRSS=544735232
+[long-quality] voice=Samantha audio=909.457625s noise=false elapsed=15.817280875 seconds engine=15.774370959999999s WER=0.003861003861003861 processPeakRSS=544735232

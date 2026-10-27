@@ -15,7 +15,7 @@ final class BundledManifestTests: XCTestCase {
         XCTAssertEqual(manifest.modelID, "parakeet-ultra-gguf")
         XCTAssertEqual(manifest.repository, "handy-computer/parakeet-ultra-gguf")
         XCTAssertEqual(manifest.revision, "a1539be1b849ea7463b88343e5277b373d0c4ea9")
-        XCTAssertEqual(manifest.runtimeVersion, "transcribe.cpp 0.4.0")
+        XCTAssertEqual(manifest.runtimeVersion, "transcribe.cpp 0.4.1")
         XCTAssertEqual(manifest.quantization, "Q4_K_M")
         // The weights are Moondream's post-training of NVIDIA's Parakeet TDT
         // 0.6B v3, and attribution is a licence condition rather than a courtesy.

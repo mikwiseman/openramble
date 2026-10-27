@@ -28,7 +28,8 @@ public struct FileTranscriber: Sendable {
     private let segmentSeconds: Int
 
     public init(transcriber: LocalTranscriber, priority: DictationPriority? = nil,
-                segmentSeconds: Int = 30) {
+                segmentSeconds: Int? = nil) {
+        let segmentSeconds = segmentSeconds ?? FileAudioChunks.defaultSeconds
         precondition((15...60).contains(segmentSeconds))
         self.transcriber = transcriber
         self.priority = priority

@@ -13,7 +13,7 @@ final class FileAudioChunksTests: XCTestCase {
         XCTAssertEqual(covered, 61 * 16_000, "imported audio has no guaranteed microphone gain")
     }
     func testContinuousAudioHasBoundedChunksAndKeepsShortTail() async throws {
-        let url = try recording(seconds: 61.13, value: 0.1)
+        let url = try recording(seconds: 51.13, value: 0.1)
         defer { try? FileManager.default.removeItem(at: url) }
         let source = try await FileAudioChunks(url: url)
         var end = 0
@@ -21,12 +21,14 @@ final class FileAudioChunksTests: XCTestCase {
         while let chunk = try await source.next() {
             XCTAssertEqual(chunk.boundaryFrame, end)
             XCTAssertLessThanOrEqual(chunk.startFrame, chunk.boundaryFrame)
-            XCTAssertLessThanOrEqual(chunk.samples.count, 36 * 16_000)
+            // Parakeet Ultra cuts anything longer itself and can drop speech
+            // doing it, so its context and a merged tail must fit in 30 s too.
+            XCTAssertLessThanOrEqual(chunk.samples.count, 30 * 16_000)
             XCTAssertEqual(chunk.samples.last, 0.1)
             end = chunk.endFrame
             count += 1
         }
-        XCTAssertEqual(end, Int(61.13 * 16_000))
+        XCTAssertEqual(end, Int(51.13 * 16_000))
         XCTAssertEqual(count, 2, "the final 1.13 s must be merged into the preceding chunk")
     }
 

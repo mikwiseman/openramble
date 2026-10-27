@@ -74,6 +74,7 @@ A candidate is a JSON file in `candidates/`. Its fields are listed here:
 - `process` names the command-line program for the whole-process lane: `openramble-cli`, `whisper-cli` or `asr-bench`.
 - `warm` names the source commit whose `LocalASR` and `DictationCore` the warm lane is built from. The `asr-bench` tool target is always today's, so an old build can answer the scorecard's requests without any change to what it measures.
 - `warm.xcframework_zip` and `warm.xcframework_sha256` replace the pinned runtime download with a runtime built from source by `scripts/build-transcribe-xcframework.sh`, which builds transcribe.cpp's macOS slice from a clean checkout with upstream's own scripts and runs the same binary audit as `scripts/check-network-surface.sh`.
+- `warm.static_runtime` and `warm.static_runtime_sha256` force-load a static library into `asr-bench`, so the transcribe.cpp copy inside it answers instead of the framework. This is how the app linked until 0.34: `libramble_ffi.a`, built by `scripts/build-ffi.sh` at the candidate's commit, carried transcribe.cpp 0.2.0.
 - `vocabulary` names a term file in the repository that the engine is given, and `env` sets environment variables for the engine process, e.g. a runtime switch under test.
 - `index: false` keeps a control candidate out of the HTML page; its results are still written.
 

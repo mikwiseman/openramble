@@ -25,7 +25,18 @@ actor FileAudioChunks {
     private let whole: Bool
     private let overlap = 2 * 16_000
 
-    init(url: URL, seconds: Int = 30) async throws {
+    /// Seconds of new audio in each chunk unless a caller asks otherwise.
+    ///
+    /// The engine also gets the 2 s of context on each side and, at the end of
+    /// a file, a tail under 2 s merged in, and the cap can be passed by one
+    /// 20 ms frame. Twenty-five keeps all of that under 30 s, the length past
+    /// which Parakeet Ultra segments a run itself. On transcribe.cpp 0.4.1 that
+    /// segmenter keeps a piece only if its speech head hears speech there, and
+    /// on a piece that starts mid-sentence it can hear none: an hour test file
+    /// lost 142 words that way at 30 s chunks.
+    static let defaultSeconds = 25
+
+    init(url: URL, seconds: Int = defaultSeconds) async throws {
         let stream = try await AudioFileStream(url: url)
         self.stream = stream
         samples = nil
@@ -37,7 +48,7 @@ actor FileAudioChunks {
         ))
     }
 
-    init(samples: [Float], seconds: Int = 30) {
+    init(samples: [Float], seconds: Int = defaultSeconds) {
         stream = nil
         self.samples = samples
         duration = Double(samples.count) / 16_000

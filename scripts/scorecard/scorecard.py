@@ -527,7 +527,9 @@ def build_asr_bench(spec) -> Path:
     warm = spec['warm']
     commit = subprocess.check_output(['git', '-C', str(REPO), 'rev-parse', warm['commit']], text=True).strip()
     runtime = at_root(warm['xcframework_zip']) if warm.get('xcframework_zip') else None
-    tree = ROOT / 'builds' / (commit + (f'-{digest(runtime)[:12]}' if runtime else ''))
+    library = at_root(warm['static_runtime']) if warm.get('static_runtime') else None
+    tree = ROOT / 'builds' / (commit + (f'-{digest(runtime)[:12]}' if runtime else '')
+                              + (f'-{digest(library)[:12]}' if library else ''))
     binary = tree / 'Packages/LocalASR/.build/release/asr-bench'
     tool = REPO / 'Packages/LocalASR/Sources/asr-bench'
     stamp = hashlib.sha256(b''.join(p.read_bytes() for p in sorted(tool.glob('*.swift')))).hexdigest()
@@ -549,8 +551,15 @@ def build_asr_bench(spec) -> Path:
     target = tree / 'Packages/LocalASR/Sources/asr-bench'
     shutil.rmtree(target)
     shutil.copytree(tool, target)
+    # How the app linked before 0.34: the shared core's static copy of the runtime
+    # is loaded whole, so it answers the adapter's calls instead of the framework.
+    link = []
+    if library:
+        link = ['-Xlinker', '-force_load', '-Xlinker', str(library), '-Xlinker', '-lc++']
+        for framework in ('Metal', 'MetalKit', 'Accelerate'):
+            link += ['-Xlinker', '-framework', '-Xlinker', framework]
     subprocess.run(['swift', 'build', '--package-path', str(tree / 'Packages/LocalASR'), '-c', 'release',
-                    '--product', 'asr-bench'], check=True)
+                    '--product', 'asr-bench', *link], check=True)
     (tree / '.tool-stamp').write_text(stamp)
     return binary
 
@@ -940,6 +949,8 @@ def run(names, suites, tag=None):
         warm = spec.get('warm') or {}
         if warm.get('xcframework_zip') and digest(at_root(warm['xcframework_zip'])) != warm.get('xcframework_sha256'):
             sys.exit(f"{spec['id']}: the source-built runtime does not match its pinned SHA-256")
+        if warm.get('static_runtime') and digest(at_root(warm['static_runtime'])) != warm.get('static_runtime_sha256'):
+            sys.exit(f"{spec['id']}: the statically linked runtime does not match its pinned SHA-256")
         session = {'started': snapshot(), 'suites': suites, 'host': host(),
                    'installed_app_running': bool(subprocess.run(['pgrep', '-x', 'OpenRamble'], capture_output=True).stdout)}
         record(spec['id'], 'sessions', session)

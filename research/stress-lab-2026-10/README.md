@@ -266,3 +266,32 @@ shipping 0.33.1 imports only two whisper helpers from the 0.4.0 framework
 (`dyld_info -imports`). The lab's test bundle links the same way, so these
 numbers describe the runtime the app really runs. Untangling the two is a
 separate change.
+
+### 0.34.0 against the app on transcribe.cpp 0.4.1 (27 October)
+
+PR #92 made the app call the pinned framework, 0.4.1, with the weights
+memory-mapped. The same lab, both builds, alternating which went first per
+condition (`data/h16`, `python3 -I summarize.py data/h16/0.34.0-takes.jsonl
+data/h16/0.4.1-takes.jsonl`). Both builds recorded through the built-in
+microphone: the default input that afternoon was a pair of AirPods, whose
+hands-free profile takes about 3.2 s to start and cost every take its first
+words, so both labs were given `inputDeviceUID = "BuiltInMicrophoneDevice"`
+in their own defaults suite (a one-line local patch; PR #94 makes it
+permanent).
+
+| Condition | Take | 0.34.0 release → paste p50 / p95 | 0.4.1 release → paste p50 / p95 | 0.34.0 engine p50 | 0.4.1 engine p50 |
+|---|---|---:|---:|---:|---:|
+| quiet | short | 141 / 155 | 105 / 110 | 136 | 101 |
+| quiet | long | 152 / 159 | 111 / 126 | 140 | 102 |
+| cpu | short | 117 / 136 | 85 / 97 | 114 | 83 |
+| cpu | long | 149 / 211 | 94 / 99 | 140 | 91 |
+| memory | short | 120 / 141 | 79 / 88 | 118 | 77 |
+| memory | long | 126 / 159 | 90 / 93 | 123 | 87 |
+| both | short | 118 / 131 | 84 / 88 | 116 | 82 |
+| both | long | 133 / 144 | 93 / 98 | 129 | 90 |
+| idle (3 takes) | short | 124 / 126 | 109 / 149 | 121 | 107 |
+
+All 51 takes of each build landed and neither missed a word. The engine's
+median over all takes went from 127 to 89 ms. Load swung from 3 to 128 during
+the runs, the same as on 26 October, so single rows carry that noise; the
+direction holds in every condition at the median.

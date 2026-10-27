@@ -18,6 +18,7 @@
 //!   GPU was unavailable is a fact the person is entitled to, since it is the
 //!   difference between two seconds and twenty.
 
+use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -133,10 +134,9 @@ impl Engine {
     /// Recognize 16 kHz mono audio.
     ///
     /// Short clips are padded before the runtime sees them — the mel front-end
-    /// emits NaNs on anything under two frames.
+    /// emits NaNs on anything under two frames — and long ones are cut into
+    /// runs of at most [`MAX_RUN_SAMPLES`].
     pub fn transcribe(&self, samples: &[f32]) -> Result<String, EngineError> {
-        let prepared = ramble_audio::prepare_for_engine(samples);
-
         let options = RunOptions {
             // Timestamps cost decoding work and nothing in this product reads
             // them: the text goes straight into somebody else's text field.
@@ -148,13 +148,18 @@ impl Engine {
             .session
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let transcript = session
-            .run(&prepared, &options)
-            .map_err(|error| EngineError::Run(error.to_string()))?;
-        if session.was_aborted() {
-            return Err(EngineError::Cancelled);
+        let mut texts = Vec::new();
+        for run in runs(samples) {
+            let prepared = ramble_audio::prepare_for_engine(&samples[run]);
+            let transcript = session
+                .run(&prepared, &options)
+                .map_err(|error| EngineError::Run(error.to_string()))?;
+            if session.was_aborted() {
+                return Err(EngineError::Cancelled);
+            }
+            texts.push(transcript.text);
         }
-        Ok(transcript.text)
+        Ok(joined(texts))
     }
 
     /// Recognize 16 kHz mono audio and say where each word lies.
@@ -164,7 +169,6 @@ impl Engine {
     /// Padding goes at the end of a short clip, so it moves no time; times are
     /// clamped to the clip so the padding can never hold a word.
     pub fn recognize(&self, samples: &[f32]) -> Result<Recognized, EngineError> {
-        let prepared = ramble_audio::prepare_for_engine(samples);
         let options = RunOptions {
             timestamps: TimestampKind::Word,
             ..Default::default()
@@ -173,8 +177,23 @@ impl Engine {
             .session
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let outcome = session.run(&prepared, &options);
-        recognized(outcome, session.was_aborted(), clip_ms(samples.len()))
+        let mut whole = Recognized::default();
+        let mut texts = Vec::new();
+        for run in runs(samples) {
+            let offset = clip_ms(run.start);
+            let prepared = ramble_audio::prepare_for_engine(&samples[run.clone()]);
+            let outcome = session.run(&prepared, &options);
+            let part = recognized(outcome, session.was_aborted(), clip_ms(run.len()))?;
+            texts.push(part.text);
+            whole.truncated |= part.truncated;
+            whole.words.extend(part.words.into_iter().map(|word| Word {
+                start_ms: word.start_ms + offset,
+                end_ms: word.end_ms + offset,
+                ..word
+            }));
+        }
+        whole.text = joined(texts);
+        Ok(whole)
     }
 
     /// Drop the model before the process exits.
@@ -187,6 +206,50 @@ impl Engine {
     pub fn shutdown(self) {
         drop(self);
     }
+}
+
+/// The longest audio the runtime is given in one run: 30 seconds.
+///
+/// Parakeet Ultra segments a longer run itself, at pauses its own speech head
+/// finds, and on transcribe.cpp 0.4.1 that head can miss the speech at the
+/// start of a piece that begins mid-sentence and drop it without a trace. So
+/// longer audio is cut here, the bound the Mac's file chunker keeps too.
+pub const MAX_RUN_SAMPLES: usize = 30 * ramble_audio::ENGINE_SAMPLE_RATE as usize;
+
+/// Where to cut audio into runs of at most [`MAX_RUN_SAMPLES`]: in the middle
+/// of the quietest 20 ms frame of the last 5 s before each limit, so a cut
+/// lands in a pause whenever the speaker made one.
+fn runs(samples: &[f32]) -> Vec<Range<usize>> {
+    const FRAME: usize = 320;
+    const SEARCH: usize = 5 * 16_000;
+    let energy = |at: usize| samples[at..at + FRAME].iter().map(|s| s * s).sum::<f32>();
+    let mut runs = Vec::new();
+    let mut start = 0;
+    while samples.len() - start > MAX_RUN_SAMPLES {
+        let limit = start + MAX_RUN_SAMPLES;
+        let cut = (limit - SEARCH..=limit - FRAME)
+            .step_by(FRAME)
+            .min_by(|&a, &b| energy(a).total_cmp(&energy(b)))
+            .map_or(limit, |frame| frame + FRAME / 2);
+        runs.push(start..cut);
+        start = cut;
+    }
+    runs.push(start..samples.len());
+    runs
+}
+
+/// The text of consecutive runs. One run's text is returned exactly as the
+/// runtime gave it.
+fn joined(mut texts: Vec<String>) -> String {
+    if texts.len() == 1 {
+        return texts.remove(0);
+    }
+    texts
+        .iter()
+        .map(|text| text.trim())
+        .filter(|text| !text.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// The length of a 16 kHz clip in whole milliseconds.
@@ -283,16 +346,20 @@ fn preferred_backend() -> Backend {
 /// with no GPU passthrough — but it is never silent. The active backend is
 /// carried out so the interface can say so.
 fn load_with_fallback(path: &Path, requested: Backend) -> Result<(Model, Backend), EngineError> {
+    // The weights stay memory-mapped (the runtime's default): engines loaded
+    // from one file share its pages, and the OS can drop them under pressure
+    // instead of swapping them. Installs replace a model by renaming a new
+    // directory into place, never by rewriting the mapped file.
     let options = ModelOptions {
         backend: requested,
-        device: None,
+        ..ModelOptions::default()
     };
     match Model::load_with(path, &options) {
         Ok(model) => Ok((model, requested)),
         Err(accelerator_error) => {
             let cpu = ModelOptions {
                 backend: Backend::Cpu,
-                device: None,
+                ..ModelOptions::default()
             };
             match Model::load_with(path, &cpu) {
                 Ok(model) => Ok((model, Backend::Cpu)),
@@ -476,6 +543,60 @@ mod tests {
             model_file(directory.path()).unwrap().file_name().unwrap(),
             "a-model.gguf"
         );
+    }
+
+    #[test]
+    fn no_run_is_longer_than_thirty_seconds_and_runs_cover_the_audio_in_order() {
+        for seconds in [1.0, 29.9, 30.0, 30.02, 34.0, 61.5, 600.0] {
+            let samples = vec![0.1f32; (seconds * 16_000.0) as usize];
+            let runs = runs(&samples);
+            assert!(
+                runs.iter().all(|run| run.len() <= MAX_RUN_SAMPLES),
+                "{seconds} s"
+            );
+            assert_eq!(runs.first().unwrap().start, 0);
+            assert_eq!(runs.last().unwrap().end, samples.len());
+            assert!(runs.windows(2).all(|pair| pair[0].end == pair[1].start));
+        }
+        assert_eq!(runs(&vec![0.1f32; MAX_RUN_SAMPLES]).len(), 1);
+    }
+
+    #[test]
+    fn a_long_run_is_cut_in_the_last_pause_before_thirty_seconds() {
+        // Speech with one 200 ms pause at 27 s and another at 12 s.
+        let mut samples = vec![0.3f32; 70 * 16_000];
+        for pause in [12 * 16_000, 27 * 16_000] {
+            samples[pause..pause + 3_200].fill(0.0);
+        }
+        let first = runs(&samples)[0].clone();
+        assert!(
+            (27 * 16_000..27 * 16_000 + 3_200).contains(&first.end),
+            "cut at {}",
+            first.end
+        );
+    }
+
+    #[test]
+    fn texts_of_several_runs_are_joined_by_one_space_and_one_run_is_untouched() {
+        assert_eq!(joined(vec![" one ".into()]), " one ");
+        assert_eq!(
+            joined(vec![" one".into(), "".into(), "two ".into()]),
+            "one two"
+        );
+    }
+
+    #[test]
+    fn the_mac_app_pins_the_runtime_this_crate_links() {
+        // One runtime everywhere. A measurement taken on one platform says
+        // nothing about another that runs a different version, and for five
+        // days in October 2026 the Mac and this crate ran 0.4.0 and 0.2.0.
+        let package = include_str!("../../../Packages/LocalASR/Package.swift");
+        let pinned = package
+            .split("transcribe.cpp/releases/download/v")
+            .nth(1)
+            .and_then(|rest| rest.split('/').next())
+            .expect("Package.swift pins CTranscribe by its release URL");
+        assert_eq!(pinned, transcribe_cpp::version());
     }
 
     #[test]

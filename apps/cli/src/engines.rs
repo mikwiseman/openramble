@@ -1,9 +1,10 @@
 //! One owner of the engines per machine: the server, or file-mode runs.
 //!
-//! An engine takes about 1.15 GB on transcribe.cpp 0.2.0, so on an 8 GB
-//! machine the server's four and a file-mode run's three do not fit, and the
-//! kernel kills the largest process, the server. A lock file decides who may
-//! load them. A file-mode run holds it shared for as long as its engines live
+//! Each engine is one decoding thread, so the server's four already fill a
+//! 4-core machine, and a file-mode run's three next to them would slow every
+//! job, voice notes past their callers' deadlines. On transcribe.cpp 0.2.0
+//! they did not fit in 8 GB at all (an engine took about 1.15 GB), and the
+//! kernel killed the server. A lock file decides who may load them. A file-mode run holds it shared for as long as its engines live
 //! and refuses to start while the server holds it. The server holds it
 //! exclusively for its life, and before loading waits for file-mode runs that
 //! started first. Without the file, as on a desktop or a development machine,
@@ -36,7 +37,7 @@ pub fn share(path: &Path) -> Result<Option<File>, String> {
         Ok(()) => Ok(Some(file)),
         Err(TryLockError::WouldBlock) => Err(
             "the OpenRamble server on this machine holds the engines, and more next to \
-             them would not fit in memory; send the file to the server instead, for example \
+             them would compete for the same cores; send the file to the server instead, for example \
              through /opt/openramble/bin/transcribe-stdin"
                 .into(),
         ),
