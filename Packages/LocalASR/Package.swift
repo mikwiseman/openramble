@@ -18,8 +18,11 @@ let package = Package(
         .package(path: "../DictationCore"),
     ],
     targets: [
-        // The transcribe.cpp inference runtime, as the prebuilt XCFramework
-        // published with its release. Pinned by exact URL and checksum for the
+        // The transcribe.cpp inference runtime from our fork: release 0.4.1 plus
+        // the Parakeet long-form fix (upstream issue #235), built from commit
+        // c4cd60da by scripts/build-transcribe-xcframework.sh and published
+        // with the fork's release. core/ramble-engine builds the same commit;
+        // its tests compare the two. Pinned by exact URL and checksum for the
         // same reason every other dependency here is: a build must not be able
         // to change what it links without the change being visible in a diff.
         //
@@ -31,8 +34,8 @@ let package = Package(
         // `scripts/check-network-surface.sh` re-runs that audit on every check.
         .binaryTarget(
             name: "CTranscribe",
-            url: "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.1/TranscribeCpp.xcframework.zip",
-            checksum: "fb5646e564036a6c49659e3efcf72eb567af20da31b8569045c9a08181d35126"
+            url: "https://github.com/mikwiseman/transcribe.cpp/releases/download/v0.4.1-c4cd60da/TranscribeCpp.xcframework.zip",
+            checksum: "12eac3ece73ff53c5eff152db8e8e6b9b599d925e545f9d5dc18b79077e6549a"
         ),
         .target(
             name: "LocalASR",

@@ -76,9 +76,13 @@ No package depends on the application layer.
 - `scripts/build-ffi.sh` produces `Packages/RambleCoreFFI`, a Swift package whose
   implementation is Rust. Its output is generated, never committed.
 - One transcription runtime: the Mac runs the CTranscribe framework LocalASR
-  pins, and `ramble-engine` builds the same transcribe.cpp release (a test
-  compares them). `ramble-ffi` must not depend on `ramble-engine`: its static
-  copy would answer the Swift adapter's calls instead of the framework.
+  pins, and `ramble-engine` builds the same commit of our transcribe.cpp fork,
+  `mikwiseman/transcribe.cpp` (a test compares them). `ramble-ffi` must not
+  depend on `ramble-engine`: its static copy would answer the Swift adapter's
+  calls instead of the framework.
+- One way to cut a file: the server's `apps/cli/src/plan.rs` and the Mac's
+  `FileAudioChunks.swift` carry the same planner, and both test suites pin the
+  same cut frames. Change both or neither.
 - These crates are ports of `Packages/DictationCore`, not a second design. While
   both exist, the Swift side is the source of truth and the Rust side follows.
 - `core/conformance/` is what keeps them from drifting. The generator runs the
