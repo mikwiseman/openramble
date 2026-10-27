@@ -1,0 +1,23 @@
+{
+  "label": "Ultra Q4_K_M, 0.34.0 runtime (0.2.0) with 25 s chunks",
+  "summary": "control for H16b: the app as 0.34.0 ran it, with only the chunk cap changed",
+  "order": 19,
+  "model": {
+    "name": "parakeet-ultra Q4_K_M",
+    "path": "models/parakeet-ultra-Q4_K_M/parakeet-ultra-Q4_K_M.gguf",
+    "sha256": "c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9",
+    "source": "https://huggingface.co/handy-computer/parakeet-ultra-gguf/blob/a1539be1b849ea7463b88343e5277b373d0c4ea9/parakeet-ultra-Q4_K_M.gguf",
+    "license": "CC-BY-4.0"
+  },
+  "runtime": "transcribe-cpp-sys 0.2.0 compiled by scripts/build-ffi.sh at 6b2e56a (aarch64 libramble_ffi.a), force-loaded into asr-bench so it answers the adapter's calls as in the app; Metal, one decoder thread, weights copied",
+  "process": {
+    "kind": "asr-bench"
+  },
+  "warm": {
+    "kind": "asr-bench",
+    "commit": "dcc6aeac40",
+    "static_runtime": "builds/ffi-6b2e56a/libramble_ffi.a",
+    "static_runtime_sha256": "a0ad8f821dfa8fe82b5802f9828066b8df7ba9e7d77b1366462159b8858ba958"
+  },
+  "index": false
+}

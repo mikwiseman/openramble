@@ -35,7 +35,8 @@ final class FileQualityTests: XCTestCase {
         let reference = try await oneShotReference(transcriber, url: url)
         let expected = Self.words(Phrase.veryLong)
         let referenceErrors = Self.distance(expected, Self.words(reference.text))
-        for length in [15, 30, 60] {
+        // 25 is the shipping split (FileAudioChunks.defaultSeconds).
+        for length in [15, 25, 60] {
             let result = Capture()
             try await FileTranscriber(transcriber: transcriber, segmentSeconds: length).transcribe(files: [url]) {
                 _, outcome in await result.store(outcome)
@@ -43,15 +44,12 @@ final class FileQualityTests: XCTestCase {
             let transcript = try await result.get()
             let errors = Self.distance(expected, Self.words(transcript.text))
             print("[file-quality] chunk=\(length)s referenceErrors=\(referenceErrors) chunkErrors=\(errors) referenceWords=\(expected.count)")
-            if length == 30 {
-                // Parakeet Ultra makes 16 errors at this split against 15 for the
-                // whole file, while the 15 s and 60 s splits make 13
-                // (research/model-upgrade-2026-10, "Ultra on the end-to-end
-                // suite"). Strict, so a model that closes the gap turns this red.
-                XCTExpectFailure("Parakeet Ultra: one error more than whole-file decoding at 30 s") {
-                    XCTAssertLessThanOrEqual(errors, referenceErrors,
-                                             "the shipping split must not lose quality versus whole-file decoding")
-                }
+            if length == 25 {
+                // On transcribe.cpp 0.4.1 Parakeet Ultra makes 13 errors at this
+                // split, 15 for the whole file and 16 at the old 30 s split
+                // (research/model-upgrade-2026-10, H16b).
+                XCTAssertLessThanOrEqual(errors, referenceErrors,
+                                         "the shipping split must not lose quality versus whole-file decoding")
                 XCTAssertEqual(transcript.text.occurrences(of: "Вечером мы собираем сборку"), 5)
                 XCTAssertTrue(String(transcript.text.suffix(60)).containsInsensitive("заранее"))
             }

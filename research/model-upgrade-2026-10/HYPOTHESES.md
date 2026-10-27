@@ -629,6 +629,39 @@ takes (33 to 129 s) lost nothing on 0.4.1. The server's pieces are at most
 20 s and never reach the segmenter. H16 is not adopted as measured; H16b asks
 whether keeping every input at or under 30 s removes the loss.
 
+## H16b result
+
+Measured the same day: `runtime-0.4.1-chunks25` (#92 with 25 s chunks), and as
+a control `app-0.34.0-chunks25`, 0.34.0's own 0.2.0 runtime with only the chunk
+cap changed (a local commit, `dcc6aea`; not indexed). WER and deleted-word
+rate in percent, hour files and long takes:
+
+| Input | 0.2.0, 30 s (shipping) | 0.2.0, 25 s | 0.4.1, 30 s | 0.4.1, 25 s |
+|---|---:|---:|---:|---:|
+| English hour | 5.34 / 0.88 | 5.70 / 1.25 | 7.27 / 2.71 | 5.86 / 1.41 |
+| Russian hour | 6.40 / 0.85 | 6.19 / 0.85 | 5.58 / 0.85 | 5.49 / 0.85 |
+| Mixed 600 s | 31.63 / 26.60 | 34.66 / 30.16 | 31.37 / 27.64 | 33.71 / 30.33 |
+| Mixed hour | 39.43 / 34.46 | 40.00 / 35.40 | 37.99 / 33.72 | 39.44 / 35.53 |
+| English take, 60 s | 4.94 | 6.17 | 5.56 | 6.17 |
+| English take, 120 s | 2.97 | 3.96 | 3.63 | 3.96 |
+| Russian take, 120 s | 9.39 | 8.29 | 7.18 | 6.63 |
+
+| Rule | Result | Verdict |
+|---|---|---|
+| 1. Hour files against shipping | English +0.52 pp WER, +0.53 pp deleted; mixed 600 s +2.08 pp; mixed hour +1.07 pp deleted | **fail** |
+| 2. No deleted run of five words in a take | longest run 1 word | pass |
+| 3. No chunk over 30 s | `FileAudioChunksTests` and the routing test (240–900 s, memory and file paths) | pass |
+| 4. No new suite failure | LocalASR unit 176 run, 9 skipped, 0 failed; the chunk-profile test makes 13 errors at 25 s against 15 whole-file, so its strict expected failure became a plain assertion | pass |
+
+The control separates the two causes. At equal chunks 0.4.1 matches or beats
+0.2.0 on every input (English hour +0.16 pp, everything else lower), so the
+runtime is not what costs accuracy. The 25 s chunks are: they cost about as
+much on 0.2.0. With 0.4.x, 30 s of input is the most that avoids Ultra's own
+segmenter, so the 34 s inputs 0.34.0 decodes with 0.2.0 are not available.
+
+The longest deleted run in the English hour file falls from 29 words at 30 s
+to 6 at 25 s. Nothing is silently dropped anymore.
+
 ## Proposed next hypotheses
 
 - **H8c.** The decoder's joint output layer and LSTM weights in the model's
