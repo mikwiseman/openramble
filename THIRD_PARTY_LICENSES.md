@@ -48,13 +48,13 @@ The user downloads them explicitly from the app.
 
 | Component | Version | License | Purpose |
 |---|---|---|---|
-| [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) by CJ Pais and the Handy team | 0.4.0 | MIT | GGUF speech-recognition runtime on Metal |
+| [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) by CJ Pais and the Handy team | 0.4.1 | MIT | GGUF speech-recognition runtime on Metal |
 | [Sparkle](https://sparkle-project.org) | 2.9.4 | MIT | Application updates |
 
 The dependencies are pinned immutably:
 
-- transcribe.cpp: the `TranscribeCpp.xcframework.zip` asset of release `v0.4.0`,
-  SHA-256 `3da069d288b79475adb257e4425c7c00f7026a90d0ef06af2214b7355dcd0453`
+- transcribe.cpp: the `TranscribeCpp.xcframework.zip` asset of release `v0.4.1`,
+  SHA-256 `fb5646e564036a6c49659e3efcf72eb567af20da31b8569045c9a08181d35126`
 - Sparkle: `b6496a74a087257ef5e6da1c5b29a447a60f5bd7`
 
 transcribe.cpp vendors three libraries, whose notices ship with it:

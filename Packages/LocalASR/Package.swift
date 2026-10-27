@@ -31,8 +31,8 @@ let package = Package(
         // `scripts/check-network-surface.sh` re-runs that audit on every check.
         .binaryTarget(
             name: "CTranscribe",
-            url: "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/TranscribeCpp.xcframework.zip",
-            checksum: "3da069d288b79475adb257e4425c7c00f7026a90d0ef06af2214b7355dcd0453"
+            url: "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.1/TranscribeCpp.xcframework.zip",
+            checksum: "fb5646e564036a6c49659e3efcf72eb567af20da31b8569045c9a08181d35126"
         ),
         .target(
             name: "LocalASR",

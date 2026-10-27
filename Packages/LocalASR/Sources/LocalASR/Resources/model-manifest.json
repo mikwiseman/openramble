@@ -2,7 +2,7 @@
   "modelID": "parakeet-ultra-gguf",
   "repository": "handy-computer/parakeet-ultra-gguf",
   "revision": "a1539be1b849ea7463b88343e5277b373d0c4ea9",
-  "runtimeVersion": "transcribe.cpp 0.4.0",
+  "runtimeVersion": "transcribe.cpp 0.4.1",
   "quantization": "Q4_K_M",
   "license": "CC-BY-4.0",
   "files": [

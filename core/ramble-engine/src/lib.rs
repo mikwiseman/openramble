@@ -283,16 +283,20 @@ fn preferred_backend() -> Backend {
 /// with no GPU passthrough — but it is never silent. The active backend is
 /// carried out so the interface can say so.
 fn load_with_fallback(path: &Path, requested: Backend) -> Result<(Model, Backend), EngineError> {
+    // The weights stay memory-mapped (the runtime's default): engines loaded
+    // from one file share its pages, and the OS can drop them under pressure
+    // instead of swapping them. Installs replace a model by renaming a new
+    // directory into place, never by rewriting the mapped file.
     let options = ModelOptions {
         backend: requested,
-        device: None,
+        ..ModelOptions::default()
     };
     match Model::load_with(path, &options) {
         Ok(model) => Ok((model, requested)),
         Err(accelerator_error) => {
             let cpu = ModelOptions {
                 backend: Backend::Cpu,
-                device: None,
+                ..ModelOptions::default()
             };
             match Model::load_with(path, &cpu) {
                 Ok(model) => Ok((model, Backend::Cpu)),
@@ -476,6 +480,20 @@ mod tests {
             model_file(directory.path()).unwrap().file_name().unwrap(),
             "a-model.gguf"
         );
+    }
+
+    #[test]
+    fn the_mac_app_pins_the_runtime_this_crate_links() {
+        // One runtime everywhere. A measurement taken on one platform says
+        // nothing about another that runs a different version, and for five
+        // days in October 2026 the Mac and this crate ran 0.4.0 and 0.2.0.
+        let package = include_str!("../../../Packages/LocalASR/Package.swift");
+        let pinned = package
+            .split("transcribe.cpp/releases/download/v")
+            .nth(1)
+            .and_then(|rest| rest.split('/').next())
+            .expect("Package.swift pins CTranscribe by its release URL");
+        assert_eq!(pinned, transcribe_cpp::version());
     }
 
     #[test]
