@@ -707,6 +707,45 @@ although both failed the hour-file rule. The runtime is not the cause at equal
 chunks, everything else improves, and the alternative kept the app on a
 runtime that predates its model. H16c is to win the long-file accuracy back.
 
+## H16c result
+
+Measured on 27 October 2026 (`fork-chunks30`, `fork-chunks60`,
+`runtime-0.4.1-chunks27`; candidate commits are local, `dbb5d4a`, `2b1d529`,
+`6aff0cb`). WER in percent, and lost words: reference words in deleted runs
+of three or more.
+
+| Input | 0.34.0 shipped | 0.35.0 shipped | fork, 30 s | fork, 60 s | 0.4.1, 27 s + 1 s |
+|---|---:|---:|---:|---:|---:|
+| English hour | 5.34 / 0 | 5.86 / 30 | 6.23 / 48 | 5.80 / 0 | 5.91 / 31 |
+| Russian hour | 6.40 / 0 | 5.49 / 0 | 5.58 / 0 | 5.42 / 0 | 5.93 / 0 |
+| Mixed 60 s | 19.12 / 22 | 18.38 / 22 | 18.38 / 22 | 18.38 / 22 | 19.12 / 23 |
+| Mixed 600 s | 31.63 / 293 | 33.71 / 337 | 31.37 / 306 | 33.36 / 333 | 31.20 / 303 |
+| Mixed hour | 39.43 / 2,227 | 39.44 / 2,302 | 37.99 / 2,180 | 38.69 / 2,234 | 35.40 / 1,948 |
+| English take, 37 s | 6.58 / 0 | 6.58 / 0 | 6.58 / 0 | 6.58 / 0 | 14.47 / 7 |
+| English take, 72 s | 4.94 / 0 | 6.17 / 0 | 5.56 / 0 | 4.94 / 0 | 3.70 / 0 |
+| English take, 129 s | 2.97 / 0 | 3.96 / 0 | 3.63 / 0 | 4.62 / 0 | 3.63 / 0 |
+| Russian takes, 33 / 72 / 120 s | 1.79 / 6.78 / 9.39 | 0 / 6.78 / 6.63 | 0 / 6.78 / 7.18 | 0 / 6.78 / 6.08 | 1.79 / 8.47 / 7.73 |
+| Pooled WER, hour files and takes | 17.22 | 17.26 | 16.86 | 16.98 | 16.09 |
+| File-import wall time, five hours | 176.7 s | 149.4 s | 157.4 s | 151.9 s | 134.9 s |
+
+Rule 2 holds for the fork: all 1,422 FLEURS transcripts are identical to
+`runtime-0.4.1`. Rule 3 holds for every candidate (load averaged 6 to 28 during
+the runs). Rule 1 fails for every candidate, so none is shipped:
+
+- `fork-chunks60` loses no word on any English or Russian input or take, but
+  loses 7 and 40 more words than 0.34.0 on the two long mixed files, where
+  every setup loses about two thousand words of the minority language.
+- `fork-chunks30` still loses one 16-word sentence each time it recurs in the
+  English hour file. The fix recovered the 29-word loss, not this one.
+- `runtime-0.4.1-chunks27` loses 7 and 8 words in a row at chunk seams and 7
+  words of the 37 s English take.
+
+The lost runs that remain all sit where two of the app's overlapping chunks
+are joined, and 0.34.0 on 0.2.0 lost none there. Ultra's segmenter is not
+the only fault: joining overlapping chunks by word times loses words on
+0.4.x. The Linux server cuts at its quietest points without overlap and
+joins nothing, and its English hour-file WER on 0.4.1 was 5.57% (H16 rule 9).
+
 ## Proposed next hypotheses
 
 - **H8c.** The decoder's joint output layer and LSTM weights in the model's
