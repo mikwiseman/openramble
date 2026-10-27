@@ -335,6 +335,67 @@ The same runtime (`db678a03`) is adopted together with #79 when:
    speech (TED 3.19 to 2.35% WER) and worse on French. It is stated in the
    #79 pull request instead.
 
+## H16. transcribe.cpp 0.4.1, and the app runs it
+
+Preregistered on 27 October 2026, before any output of 0.4.1, or of the
+runtime the app itself has been running, existed on this Mac.
+
+H1 adopted 0.4.0 and H15b adopted upstream main at `db678a03`, both measured
+through `asr-bench`, which calls the pinned CTranscribe framework. The app did
+not call it. `RambleCoreFFI` linked the Rust crate `transcribe-cpp-sys` 0.2.0
+statically, and that copy answered every call the adapter made (found by PR
+#87; `dyld_info -imports` on shipping 0.33.1 shows only two Whisper helpers
+taken from the framework). So 0.33.1 and 0.34.0 run Parakeet Ultra Q4_K_M on
+transcribe.cpp 0.2.0, which predates Ultra support (upstream #192, in 0.4.0):
+it ignores the checkpoint's `length_masking = "kestrel"`, its global symbol
+budget and its pause segmenter. No suite has measured that configuration.
+
+The change pins 0.4.1, the first release that contains `db678a03`, removes
+`ramble-engine` from `ramble-ffi` so the app calls the framework, and moves the
+Rust crates to 0.4.1. The candidates:
+
+- `app-0.34.0`: `asr-bench` at the 0.34.0 release commit `6b2e56a` with that
+  commit's `libramble_ffi.a` force-loaded, so every `transcribe_*` call lands in the cargo-built 0.2.0
+  copy, as in the app. Checked with `dyld_info -imports` before it runs.
+- `runtime-0.4.1`: `asr-bench` at this change, on the pinned 0.4.1 framework.
+- `runtime-main-ultra-q4km`: H15's committed observations.
+
+0.4.1 is the build H15b adopted when:
+
+1. All 1,422 FLEURS transcripts, the six long takes and the five hour-file
+   transcripts are identical to `runtime-main-ultra-q4km`. If not, H15's rules
+   1 to 6 run again against 0.4.0 before anything else.
+
+What changes for people, `app-0.34.0` against `runtime-0.4.1`, all in one
+interleaved run:
+
+2. Pooled FLEURS WER is not higher by more than 0.10 points, and neither
+   language by more than 0.25 points (paired bootstrap interval reported).
+3. Wrong-script decodes and invented words are not more.
+4. Hour-file deleted-word rates are within 0.2 points or lower.
+5. Warm p50 and p95 are within 5% + 2 ms, idle and under load; whole-process
+   p50 within 10%.
+6. The footprint after load and warm-up is at least 300 MB lower, and the peak
+   footprint over the warm run is not higher.
+7. The stress lab (`scripts/stress-lab.sh`, all five conditions, builds
+   alternating first) lands every take and misses no more words in total.
+   Its latencies are reported, not gated per row: the shared Mac's load swings
+   from 6 to over 100 between adjacent runs. A condition counts as a
+   regression only if release-to-paste p50 and p95 are both more than 30%
+   worse for both take lengths.
+8. `check.sh` is green; the LocalASR unit and end-to-end suites, with Ultra
+   installed in a separate models root, have no failure that main lacks; the
+   new binding test in `OpenRambleTests` fails on main and passes here.
+
+The Linux server, Ultra Q4_K_M on the CPU backend in an arm64 container,
+0.2.0 against 0.4.1 on a public hour file:
+
+9. WER against the reference is not higher by more than 0.25 points.
+10. `serve` with four engines peaks lower in memory, and file mode with four
+    workers is not more than 10% slower.
+
+If a rule fails, the change is not merged and the failure is recorded here.
+
 ## Live text needs partials at least every 300 ms
 
 Recorded on 20 October 2026 as a gate for any future live-text feature, not
