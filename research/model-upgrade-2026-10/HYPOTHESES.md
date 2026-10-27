@@ -519,6 +519,45 @@ and search the last 5 s for a forced cut:
 Both keep every input under 30 s. The rules are H16d's, against `app-0.34.0`
 and `runtime-0.4.1-chunks25`.
 
+## H16f. Cut at the quietest stretch, not at a fixed level
+
+Preregistered on 27 October 2026 after tracing the H16e cut, before any
+output of these candidates existed.
+
+The trace: the 37 s English take is one loud FLEURS utterance followed by
+three about 40 dB quieter. From 10.7 s on, no 20 ms frame reaches the
+chunker's speech peak of 0.02 (the live microphone's threshold), so the
+segmenter reads the quiet speech as one long pause, and at 15 s, the minimum
+segment, it cuts at that pause's middle: 12.59 s, inside "…third century |
+BCE…". A fixed level cannot tell quiet speech from silence in imported files.
+
+The candidates drop the level for file import. Each chunk ends at the middle
+of the quietest 400 ms (the lowest mean of 20 ms frame peaks, ties to the
+later stretch) in the last 10 s before the cap. Pauses are where a speaker's
+level is lowest whatever the recording's gain, so no threshold is needed.
+No overlap, as in H16d. Live recording keeps its own policy unchanged.
+
+- `runtime-0.4.1-quiet28-seam0`: released 0.4.1, cuts between 18 and 28 s;
+  a final tail under 2 s joins the chunk before it, so every input stays at
+  or under 30 s.
+- `runtime-0.4.1-quiet60-seam0`: released 0.4.1, cuts between 50 and 60 s;
+  Ultra's own segmenter cuts inside each chunk.
+- `fork-quiet60-seam0`: the fork (`c4cd60da`), the same chunker.
+
+A candidate qualifies by H16d's rules: no lost words on the English and
+Russian hour files and every take, each mixed file at most 5% above
+`app-0.34.0`'s lost words, FLEURS identical to `runtime-0.4.1` for the fork
+(shown in H16c), and five-hour file-import wall time at most 10% above
+`runtime-0.4.1-chunks25`. Among qualifying candidates the lowest
+word-weighted WER over the five hour files and six takes ships, if below
+`runtime-0.4.1-chunks25`'s; within 0.1 point, the one without the fork.
+
+The last two candidates differ only in the fork, so they also test the fix on
+its own. The fix goes upstream as a pull request if `fork-quiet60-seam0` loses
+no more words than `runtime-0.4.1-quiet60-seam0` on the English and Russian
+hour files and every take, at most 5% more on each mixed file, and fewer in
+total.
+
 ## Live text needs partials at least every 300 ms
 
 Recorded on 20 October 2026 as a gate for any future live-text feature, not
