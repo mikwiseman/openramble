@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.34.1</title>
-      <pubDate>Tue, 27 Oct 2026 16:10:30 +0300</pubDate>
-      <sparkle:version>79</sparkle:version>
-      <sparkle:shortVersionString>0.34.1</sparkle:shortVersionString>
+      <title>0.35.0</title>
+      <pubDate>Tue, 27 Oct 2026 17:33:26 +0300</pubDate>
+      <sparkle:version>80</sparkle:version>
+      <sparkle:shortVersionString>0.35.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.34.1&lt;/h2&gt;&lt;h2&gt;The first word after a pause&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;After your Mac has moved OpenRamble out of memory, the microphone now starts sooner when you press the key. OpenRamble keeps it set up between dictations without running it, so a press only has to start it. With memory full and every core busy, it started in 87 ms instead of 136 ms, and in at most 148 ms instead of 315 ms.&lt;/li&gt;&lt;li&gt;The microphone still does not run between dictations.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Your voice and text still never leave your Mac.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.34.1/OpenRamble-0.34.1.dmg" length="18210609" type="application/octet-stream" sparkle:edSignature="3E+NZJ9GRSa2dLdOsMyf/Y9SD1wI6TYF3ILZ2/tLs9eGm4cbE4DcO8aT+DzL834F22WRvwHLBK7/UBkLRUDHBA==" />
+      <description>&lt;h2&gt;OpenRamble 0.35.0&lt;/h2&gt;&lt;h2&gt;A third of the memory&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;OpenRamble now runs the speech engine it was measured with, transcribe.cpp 0.4.1. Until now the app was running an older copy by mistake.&lt;/li&gt;&lt;li&gt;It needs about a third of the memory: about 270 MB once the model is loaded instead of about 740 MB, and at most about 370 MB instead of 1.1 GB. The model is read straight from its file, so when your Mac runs short of memory it can take that memory back and read it again later, instead of writing it to swap.&lt;/li&gt;&lt;li&gt;Text lands 25 to 35% sooner after you release the key, both on a quiet Mac and with every core busy. The model loads in 0.07 s instead of 0.16 s.&lt;/li&gt;&lt;/ul&gt;&lt;h2&gt;More accurate&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Fewer errors in dictation: from 5.5% to 4.8% in Russian and from 5.1% to 4.9% in English on a standard test set.&lt;/li&gt;&lt;li&gt;Long recordings, such as imported files and dictations over 30 seconds, are now recognized in 25-second pieces, because the new engine can silently drop speech from longer ones. Long Russian recordings come out more accurate. Long English recordings make about half a point more errors than in 0.34, and recordings that mix languages up to two points more; the next release works on that.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Your voice and text still never leave your Mac.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.35.0/OpenRamble-0.35.0.dmg" length="15198437" type="application/octet-stream" sparkle:edSignature="6gV8KLz4r1kRGZ3JSTtopsvYxqWruP246Fw5KamNe+vXtT186tYaIrrmjMu3Z4utqvdCnCMkCaG0lYDm35mACQ==" />
     </item>
   </channel>
 </rss>
