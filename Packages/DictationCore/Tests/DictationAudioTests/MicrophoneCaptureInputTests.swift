@@ -22,13 +22,18 @@ final class MicrophoneCaptureInputTests: XCTestCase {
         private var onLost: (@Sendable () -> Void)?
         private var startCount = 0
         private var stopCount = 0
+        private var calls: [String] = []
+        let handlerMayFollowStart: Bool
 
-        init(format: AVAudioFormat) {
+        init(format: AVAudioFormat, handlerMayFollowStart: Bool = false) {
             self.format = format
+            self.handlerMayFollowStart = handlerMayFollowStart
         }
 
         var starts: Int { lock.withLock { startCount } }
         var stops: Int { lock.withLock { stopCount } }
+        /// "install" and "start", in the order the take made them.
+        var order: [String] { lock.withLock { calls } }
 
         func install(
             _ handler: @escaping @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void,
@@ -37,11 +42,15 @@ final class MicrophoneCaptureInputTests: XCTestCase {
             lock.withLock {
                 self.handler = handler
                 self.onLost = onLost
+                calls.append("install")
             }
         }
 
         func start() throws {
-            lock.withLock { startCount += 1 }
+            lock.withLock {
+                startCount += 1
+                calls.append("start")
+            }
         }
 
         func stop() {
@@ -63,6 +72,7 @@ final class MicrophoneCaptureInputTests: XCTestCase {
     /// Opens fake microphones. Can wedge one open call, or fail some.
     private final class Opener: @unchecked Sendable {
         let format: AVAudioFormat
+        var handlerMayFollowStart = false
         private let lock = NSLock()
         private var inputs: [Int: FakeInput] = [:]
         private var calls = 0
@@ -101,7 +111,7 @@ final class MicrophoneCaptureInputTests: XCTestCase {
             }
             wedge?.wait()
             if fails { throw AudioCaptureError.engineUnavailable("no microphone") }
-            let input = FakeInput(format: format)
+            let input = FakeInput(format: format, handlerMayFollowStart: handlerMayFollowStart)
             lock.withLock { inputs[call] = input }
             return input
         }
@@ -383,6 +393,25 @@ final class MicrophoneCaptureInputTests: XCTestCase {
     /// Without an engine there is no configuration-change notification for a
     /// microphone unplugged mid-take. The microphone itself says so, once,
     /// and only while its take is live.
+    /// A microphone that can hold what it hears starts before its converter is
+    /// built; the person is already speaking. One that cannot gets its
+    /// handler first, as every take always did.
+    func testAMicrophoneThatCanHoldAudioStartsBeforeItsHandler() async throws {
+        for follows in [true, false] {
+            let opener = Opener(format: interleavedStereo)
+            opener.handlerMayFollowStart = follows
+            let capture = MicrophoneCapture(directory: directory, openInput: opener.open)
+            let session = DictationSessionID()
+            let url = try await capture.startRecording(session: session, disposition: RecordingDisposition())
+            let input = try XCTUnwrap(opener.opened.first)
+
+            XCTAssertEqual(input.order, follows ? ["start", "install"] : ["install", "start"])
+            input.deliver(cycle(from: 0, frames: 512, format: interleavedStereo), sampleTime: 0)
+            let recording = try await capture.freezeRecording(session: session, expectedURL: url)
+            _ = try? await recording.durableURL()
+        }
+    }
+
     /// A cycle the device never delivered is audio no take contains. It used
     /// to leave no trace anywhere; the recording now says how much is missing.
     func testCyclesTheDeviceSkippedAreCountedAsLostAudio() async throws {

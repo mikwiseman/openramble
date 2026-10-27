@@ -1678,7 +1678,11 @@ private final class RecordingEngineStartJob: @unchecked Sendable {
             // From here on, whatever happens, this microphone is closed by
             // the lease and by nobody else.
             lease.adopt(microphone)
-            try prepare(microphone)
+            // A device that can hold what it hears starts first and gets its
+            // converter after: the person is already speaking, and building
+            // the converter is work that can wait for a page on a Mac that
+            // has paged the app out.
+            if !microphone.handlerMayFollowStart { try prepare(microphone) }
             // A take contained while its microphone was opening is over.
             // Starting now would light the microphone after the person was
             // told "Dictation was stopped". Its abandon closes it unstarted,
@@ -1687,6 +1691,7 @@ private final class RecordingEngineStartJob: @unchecked Sendable {
                 return .failure(.engineUnavailable("the take ended before the microphone opened"))
             }
             try microphone.start()
+            if microphone.handlerMayFollowStart { try prepare(microphone) }
             return .success(())
         } catch let error as AudioCaptureError {
             return .failure(error)
