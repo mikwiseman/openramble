@@ -409,7 +409,10 @@ the engine up to 34 s (a 30 s segment, 2 s of context on each side, and a final
 tail under 2 s merged in), so file import and long dictation takes reach that
 path; 0.2.0 had no segmenter and never did.
 
-The change caps a chunk's segment at 26 s, so no engine input exceeds 30 s.
+The change caps a chunk's segment at 25 s, so no engine input exceeds 30 s.
+(Preregistered first as 26 s; corrected before any output, because the cap is
+checked once per 20 ms frame and 26 + 4 s of context and tail can reach
+30.02 s.)
 Against `app-0.34.0`, with `runtime-0.4.1` at the new commit, it is adopted
 together with H16 when:
 
