@@ -48,12 +48,22 @@ final class CaptureRingTests: XCTestCase {
         var overflowCount: Int { lock.withLock { overflows } }
     }
 
-    private func worker(_ ring: CaptureRing, into received: Received) -> Thread {
+    /// The handler the worker hands cycles to, installed when a test says so.
+    private final class Slot: @unchecked Sendable {
+        private let lock = NSLock()
+        private var handler: CaptureHandler?
+        func set(_ handler: @escaping CaptureHandler) { lock.withLock { self.handler = handler } }
+        func get() -> CaptureHandler? { lock.withLock { handler } }
+    }
+
+    private func worker(_ ring: CaptureRing, into received: Received, installed: Bool = true) -> Slot {
+        let slot = Slot()
+        if installed { slot.set { received.add($0, $1) } }
         let thread = Thread {
-            ring.run({ received.add($0, $1) }, onOverflow: { received.overflowed() })
+            ring.run({ slot.get() }, onOverflow: { received.overflowed() })
         }
         thread.start()
-        return thread
+        return slot
     }
 
     func testCyclesArriveInOrderWithTheirSamplesAndTimes() throws {
@@ -112,6 +122,39 @@ final class CaptureRingTests: XCTestCase {
         let interface = AVAudioFormat(standardFormatWithSampleRate: 96_000, channelLayout: layout)
         let wide = try XCTUnwrap(CaptureRing(format: interface, framesPerCycle: 4_096))
         XCTAssertEqual(wide.slotCount, 16)
+    }
+
+    /// A device that starts before its handler exists holds what it hears:
+    /// the cycles from before the install arrive first, in order.
+    func testCyclesBeforeTheHandlerIsInstalledAreHeldNotDropped() throws {
+        let ring = try XCTUnwrap(CaptureRing(format: format, framesPerCycle: 512))
+        let received = Received()
+        let slot = worker(ring, into: received, installed: false)
+        for index in 0..<20 {
+            Cycle(value: Float(index), sampleTime: Double(index * 512)).write(into: ring)
+        }
+        Thread.sleep(forTimeInterval: 0.05)
+        XCTAssertTrue(received.all.isEmpty, "nothing is handed over before a handler exists")
+        slot.set { received.add($0, $1) }
+        for index in 20..<25 {
+            Cycle(value: Float(index), sampleTime: Double(index * 512)).write(into: ring)
+        }
+        ring.finish()
+
+        XCTAssertEqual(received.all.map(\.first), (0..<25).map(Float.init))
+    }
+
+    /// A start that fails before its handler arrives still lets the ring go.
+    func testFinishingWithoutAHandlerReturns() throws {
+        let ring = try XCTUnwrap(CaptureRing(format: format, framesPerCycle: 512))
+        _ = worker(ring, into: Received(), installed: false)
+        Cycle(value: 1, sampleTime: 0).write(into: ring)
+        let finished = expectation(description: "finish returns")
+        DispatchQueue.global().async {
+            ring.finish()
+            finished.fulfill()
+        }
+        wait(for: [finished], timeout: 2)
     }
 
     /// A start that fails and the stop after it both finish the ring; the

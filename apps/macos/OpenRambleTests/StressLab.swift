@@ -146,7 +146,9 @@ final class Lab {
                 onMemoryLimitReached: memoryLimit,
                 preferredInputDeviceID: device,
                 openInput: { device in
+                    let began = mach_absolute_time()
                     let microphone = try CaptureInputs.open(device)
+                    injection.noteOpen(began: began, ended: mach_absolute_time())
                     let input = SpeechOverMicrophone(microphone, speech: speech[injection.takeIndex])
                     injection.current = input
                     return input
@@ -191,6 +193,26 @@ final class Lab {
             try stress.pressMemory(hog: config.hog, gigabytes: config.hogGigabytes)
             try await takes(condition)
             stress.stopAll()
+        case "pageout", "pageoutcpu":
+            // The first take after the Mac pages the app out, quickly: a fresh
+            // hog takes everyone's pages within seconds of claiming its own, so
+            // each take here is the first one after a page-out. With "cpu",
+            // every core is busy too, as on the Mac where the words were lost.
+            if condition == "pageoutcpu" { try stress.saturateCPU() }
+            defer { stress.stopAll() }
+            // STRESS_LAB_FRESH=alternate: every other take lets the kept
+            // microphone go and opens a new one, a paired comparison.
+            let alternate = ProcessInfo.processInfo.environment["STRESS_LAB_FRESH"] == "alternate"
+            for index in 0..<config.idleTakes {
+                let fresh = alternate && index % 2 == 0
+                if fresh { CaptureInputs.kept.changed() }
+                try stress.pressMemory(hog: config.hog, gigabytes: config.hogGigabytes)
+                try await Task.sleep(for: .seconds(10))
+                let name = alternate ? condition + (fresh ? "-fresh" : "-kept") : condition
+                try await take(config.takes[0], takeIndex: 0, condition: name, index: index)
+                stress.stopHogs()
+                try await Task.sleep(for: .seconds(10))
+            }
         case "idle":
             // The 23 October shape: the model goes unused while the Mac is
             // short of memory, long enough for its weights to reach swap, and
@@ -229,6 +251,7 @@ final class Lab {
         let pressed = clock.now
         let pressedMach = mach_absolute_time()
         harness.monitor.onPress?()
+        let pressReturnedMach = mach_absolute_time()
         var listening: Duration?
         // The person speaks into the microphone the moment the key is down;
         // the injected sentence starts at its first buffer. Hold through it.
@@ -256,6 +279,17 @@ final class Lab {
         let notice = state.lastNotice != noticeBefore ? state.lastNotice : nil
         let microphone = injection.current?.counters()
         let firstAudio = injection.current?.firstAudio().map { machMilliseconds(from: pressedMach, to: $0) }
+        // Where key-down → first audio went, stage by stage.
+        let opening = injection.takeOpening()
+        let since = { (mark: UInt64?) in mark.map { machMilliseconds(from: pressedMach, to: $0) } }
+        let startPath = StartPath(
+            mainThread: machMilliseconds(from: pressedMach, to: pressReturnedMach),
+            openBegan: since(opening?.began),
+            openEnded: since(opening?.ended),
+            startBegan: since(injection.current?.startBegan),
+            startEnded: since(injection.current?.startEnded),
+            firstBuffer: firstAudio
+        )
         let record = TakeRecord(
             label: config.label,
             condition: condition,
@@ -264,6 +298,7 @@ final class Lab {
             speechSeconds: take.seconds,
             keyDownToListening: listening?.ms,
             keyDownToFirstAudio: firstAudio,
+            startPath: startPath,
             microphoneStartup: report?.microphoneStartup?.ms,
             releaseToText: report?.toRecognizedText.ms,
             releaseToPaste: report?.toPasteDispatched?.ms,
@@ -288,6 +323,7 @@ final class Lab {
             mainThreadStallsOver100: window.over100,
             mainThreadLongestStallAt: window.longestAt,
             diskReadBytes: processDiskReadBytes().flatMap { after in diskBefore.map { after &- $0 } },
+            microphoneRunningAfter: defaultInputIsRunning(),
             thermalState: ProcessInfo.processInfo.thermalState.rawValue,
             loadAverage: loadAverage()
         )
@@ -341,6 +377,8 @@ struct TakeRecord: Codable {
     /// Key-down to the first buffer reaching the capture: speech before it
     /// is speech no take can contain.
     let keyDownToFirstAudio: Double?
+    /// Milliseconds after key-down at which each step of the start happened.
+    let startPath: StartPath
     let microphoneStartup: Double?
     let releaseToText: Double?
     let releaseToPaste: Double?
@@ -367,10 +405,25 @@ struct TakeRecord: Codable {
     /// When the longest stall began, in milliseconds after key-down.
     let mainThreadLongestStallAt: Double?
     let diskReadBytes: UInt64?
+    /// Whether the default input was still running anywhere once the take
+    /// was over. A kept microphone must leave it stopped.
+    let microphoneRunningAfter: Bool?
     let thermalState: Int
     /// The Mac is shared: the one-minute load average says how much of the
     /// load was ours.
     let loadAverage: Double
+}
+
+/// Milliseconds after key-down: when the key-down's own main-thread work
+/// returned, when the start lane began and finished opening the device, when
+/// the device start began and returned, and when the first buffer arrived.
+struct StartPath: Codable {
+    let mainThread: Double
+    let openBegan: Double?
+    let openEnded: Double?
+    let startBegan: Double?
+    let startEnded: Double?
+    let firstBuffer: Double?
 }
 
 struct LabSummary {
@@ -491,6 +544,7 @@ final class SpeechOverMicrophone: CaptureInput, @unchecked Sendable {
     }
 
     var format: AVAudioFormat { microphone.format }
+    var handlerMayFollowStart: Bool { microphone.handlerMayFollowStart }
 
     func install(_ handler: @escaping CaptureHandler, onLost: @escaping @Sendable () -> Void) {
         let format = microphone.format
@@ -501,7 +555,15 @@ final class SpeechOverMicrophone: CaptureInput, @unchecked Sendable {
         }, onLost: onLost)
     }
 
-    func start() throws { try microphone.start() }
+    /// Around the device start, on the mach clock.
+    private(set) var startBegan: UInt64?
+    private(set) var startEnded: UInt64?
+
+    func start() throws {
+        startBegan = mach_absolute_time()
+        defer { startEnded = mach_absolute_time() }
+        try microphone.start()
+    }
     func stop() { microphone.stop() }
 
     func firstAudio() -> UInt64? { lock.withLock { firstDelivery } }
@@ -565,6 +627,15 @@ final class InjectionBox: @unchecked Sendable {
     private let lock = NSLock()
     private var index = 0
     private var input: SpeechOverMicrophone?
+    /// When the start lane began and finished opening the device, on the
+    /// mach clock: the boundaries of the take's start path the lab can see.
+    private var opening: (began: UInt64, ended: UInt64)?
+
+    func noteOpen(began: UInt64, ended: UInt64) { lock.withLock { opening = (began, ended) } }
+
+    func takeOpening() -> (began: UInt64, ended: UInt64)? {
+        lock.withLock { defer { opening = nil }; return opening }
+    }
 
     var takeIndex: Int {
         get { lock.withLock { index } }
@@ -721,6 +792,7 @@ final class MainThreadHeartbeat {
 /// The loads, as processes the lab owns and always stops.
 final class Stress {
     private var processes: [Process] = []
+    private var hogs: [Process] = []
 
     /// The October 9 load: one busy process per logical CPU, at the default
     /// priority every ordinary app gets.
@@ -737,6 +809,7 @@ final class Stress {
     func pressMemory(hog: URL?, gigabytes: String) throws {
         guard let hog else { throw LabError("memory conditions need STRESS_LAB_HOG") }
         let process = try launch(hog.path, [gigabytes, "3600"], output: Pipe())
+        hogs.append(process)
         let ready = DispatchSemaphore(value: 0)
         (process.standardOutput as? Pipe)?.fileHandleForReading.readabilityHandler = { handle in
             if String(decoding: handle.availableData, as: UTF8.self).contains("ready") { ready.signal() }
@@ -748,6 +821,15 @@ final class Stress {
         for process in processes where process.isRunning { process.terminate() }
         for process in processes { process.waitUntilExit() }
         processes = []
+        hogs = []
+    }
+
+    /// Ends the memory hogs and leaves any CPU load running.
+    func stopHogs() {
+        for process in hogs where process.isRunning { process.terminate() }
+        for process in hogs { process.waitUntilExit() }
+        processes.removeAll { hogs.contains($0) }
+        hogs = []
     }
 
     @discardableResult
@@ -780,6 +862,19 @@ private func machMilliseconds(from start: UInt64, to end: UInt64) -> Double {
     mach_timebase_info(&timebase)
     let ticks = end >= start ? Double(end - start) : -Double(start - end)
     return ticks * Double(timebase.numer) / Double(timebase.denom) / 1e6
+}
+
+private func defaultInputIsRunning() -> Bool? {
+    guard let device = MicrophoneAudioSource.defaultInputDevice() else { return nil }
+    var address = AudioObjectPropertyAddress(
+        mSelector: kAudioDevicePropertyDeviceIsRunningSomewhere,
+        mScope: kAudioObjectPropertyScopeGlobal,
+        mElement: kAudioObjectPropertyElementMain
+    )
+    var running: UInt32 = 0
+    var size = UInt32(MemoryLayout<UInt32>.size)
+    guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &running) == noErr else { return nil }
+    return running != 0
 }
 
 private func loadAverage() -> Double {
