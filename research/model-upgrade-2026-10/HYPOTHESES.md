@@ -502,6 +502,23 @@ files and six takes ships, if it is below `runtime-0.4.1-chunks25`'s; with
 released 0.4.1 and the fork within 0.1 point of each other, the one without
 the fork ships.
 
+## H16e. Cut where the speaker pauses
+
+Preregistered on 27 October 2026 after the H16d result, before any output of
+these candidates existed.
+
+The file chunker counts a pause only once it is 700 ms long (350 ms after
+`relaxAfter`, which equals the chunk length) and otherwise forces a cut at
+the quietest 20 ms of the last second, so most cuts land inside sentences.
+The candidates keep everything else and let 350 ms pauses count from 15 s,
+and search the last 5 s for a forced cut:
+
+- `runtime-0.4.1-pause29-seam0`: released 0.4.1, 29 s cap, no overlap.
+- `runtime-0.4.1-pause25`: released 0.4.1, 25 s cap, 2 s of context.
+
+Both keep every input under 30 s. The rules are H16d's, against `app-0.34.0`
+and `runtime-0.4.1-chunks25`.
+
 ## Live text needs partials at least every 300 ms
 
 Recorded on 20 October 2026 as a gate for any future live-text feature, not
