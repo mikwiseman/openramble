@@ -9,10 +9,14 @@ publish = false
 [dependencies]
 ramble-audio = { path = "../ramble-audio" }
 
+# Our fork of transcribe.cpp: release 0.4.1 plus the Parakeet long-form fix
+# (upstream issue #235), the same commit the Mac's CTranscribe framework is
+# built from. Pinned by commit, so a build cannot change what it compiles.
+#
 # Default features are off so each platform states its accelerator explicitly.
 # `metal` is the crate's default and would silently follow us onto Windows.
 [target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dependencies]
-transcribe-cpp = { version = "0.4.1", default-features = false, features = ["metal"] }
+transcribe-cpp = { git = "https://github.com/mikwiseman/transcribe.cpp", rev = "c4cd60daa560313292dc25772ed708e34c38be01", default-features = false, features = ["metal"] }
 
 # Intel macOS, Windows and Linux use the CPU backend.
 #
@@ -23,7 +27,7 @@ transcribe-cpp = { version = "0.4.1", default-features = false, features = ["met
 # should be judged on. Turning Vulkan on is its own piece of work: the SDK in
 # the build image, and a runtime report saying which one a person actually got.
 [target.'cfg(not(all(target_os = "macos", target_arch = "aarch64")))'.dependencies]
-transcribe-cpp = { version = "0.4.1", default-features = false }
+transcribe-cpp = { git = "https://github.com/mikwiseman/transcribe.cpp", rev = "c4cd60daa560313292dc25772ed708e34c38be01", default-features = false }
 
 [dev-dependencies]
 ramble-model = { path = "../ramble-model" }

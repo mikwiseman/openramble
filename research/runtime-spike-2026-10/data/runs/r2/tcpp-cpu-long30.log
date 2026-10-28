@@ -1,0 +1,53 @@
+parakeet: using cpu backend (strict)
+parakeet: weights memory-mapped: 463.5 MiB in CPU_Mapped
+parakeet: promoted 48 conv pointwise weights from F16 → F32 for CPU backend
+load_seconds 0.098
+decoder: 41 iters, 40 tokens, T_enc=72  enc_proj=0.4 ms  pred=7.5 ms  joint=5.3 ms  conf=1.2 ms  total=14.5 ms  per_iter=313 us
+decoder: 125 iters, 106 tokens, T_enc=343  enc_proj=1.4 ms  pred=18.8 ms  joint=15.0 ms  conf=3.4 ms  total=38.6 ms  per_iter=270 us
+decoder: 149 iters, 122 tokens, T_enc=343  enc_proj=1.6 ms  pred=20.4 ms  joint=17.2 ms  conf=3.8 ms  total=42.9 ms  per_iter=252 us
+decoder: 164 iters, 144 tokens, T_enc=363  enc_proj=1.4 ms  pred=23.9 ms  joint=18.9 ms  conf=4.4 ms  total=48.7 ms  per_iter=261 us
+decoder: 148 iters, 123 tokens, T_enc=349  enc_proj=1.4 ms  pred=20.5 ms  joint=16.6 ms  conf=3.8 ms  total=42.3 ms  per_iter=251 us
+decoder: 140 iters, 118 tokens, T_enc=345  enc_proj=1.8 ms  pred=20.0 ms  joint=16.4 ms  conf=3.7 ms  total=41.8 ms  per_iter=260 us
+decoder: 156 iters, 128 tokens, T_enc=350  enc_proj=1.4 ms  pred=20.6 ms  joint=17.2 ms  conf=3.9 ms  total=43.3 ms  per_iter=243 us
+decoder: 116 iters, 94 tokens, T_enc=324  enc_proj=1.5 ms  pred=15.5 ms  joint=13.2 ms  conf=2.9 ms  total=33.1 ms  per_iter=247 us
+decoder: 122 iters, 103 tokens, T_enc=326  enc_proj=1.4 ms  pred=17.1 ms  joint=14.1 ms  conf=3.2 ms  total=35.8 ms  per_iter=255 us
+decoder: 136 iters, 114 tokens, T_enc=337  enc_proj=1.5 ms  pred=19.0 ms  joint=15.5 ms  conf=3.5 ms  total=39.5 ms  per_iter=254 us
+decoder: 139 iters, 115 tokens, T_enc=343  enc_proj=1.4 ms  pred=18.7 ms  joint=16.4 ms  conf=3.5 ms  total=40.0 ms  per_iter=252 us
+decoder: 172 iters, 140 tokens, T_enc=338  enc_proj=1.5 ms  pred=22.7 ms  joint=19.6 ms  conf=4.3 ms  total=48.1 ms  per_iter=246 us
+decoder: 151 iters, 136 tokens, T_enc=332  enc_proj=1.4 ms  pred=22.9 ms  joint=17.6 ms  conf=4.2 ms  total=46.0 ms  per_iter=268 us
+decoder: 117 iters, 96 tokens, T_enc=349  enc_proj=1.4 ms  pred=16.3 ms  joint=13.5 ms  conf=3.2 ms  total=34.4 ms  per_iter=255 us
+decoder: 150 iters, 125 tokens, T_enc=365  enc_proj=1.7 ms  pred=21.2 ms  joint=17.3 ms  conf=4.1 ms  total=44.4 ms  per_iter=257 us
+decoder: 127 iters, 105 tokens, T_enc=328  enc_proj=1.4 ms  pred=17.5 ms  joint=14.4 ms  conf=3.6 ms  total=36.9 ms  per_iter=251 us
+decoder: 151 iters, 121 tokens, T_enc=353  enc_proj=1.7 ms  pred=20.8 ms  joint=17.2 ms  conf=4.0 ms  total=43.7 ms  per_iter=252 us
+decoder: 169 iters, 134 tokens, T_enc=327  enc_proj=1.3 ms  pred=23.2 ms  joint=19.9 ms  conf=4.6 ms  total=49.0 ms  per_iter=255 us
+decoder: 196 iters, 150 tokens, T_enc=366  enc_proj=1.5 ms  pred=25.6 ms  joint=22.6 ms  conf=5.0 ms  total=54.8 ms  per_iter=246 us
+decoder: 164 iters, 149 tokens, T_enc=339  enc_proj=1.6 ms  pred=25.7 ms  joint=19.5 ms  conf=5.2 ms  total=51.9 ms  per_iter=276 us
+decoder: 170 iters, 149 tokens, T_enc=325  enc_proj=1.7 ms  pred=26.5 ms  joint=20.6 ms  conf=5.3 ms  total=54.1 ms  per_iter=277 us
+decoder: 184 iters, 158 tokens, T_enc=319  enc_proj=1.3 ms  pred=27.0 ms  joint=22.0 ms  conf=5.5 ms  total=55.8 ms  per_iter=266 us
+decoder: 140 iters, 115 tokens, T_enc=327  enc_proj=1.6 ms  pred=19.1 ms  joint=16.2 ms  conf=3.9 ms  total=40.9 ms  per_iter=253 us
+decoder: 156 iters, 137 tokens, T_enc=333  enc_proj=1.5 ms  pred=24.5 ms  joint=18.9 ms  conf=4.8 ms  total=49.8 ms  per_iter=278 us
+decoder: 160 iters, 128 tokens, T_enc=368  enc_proj=1.8 ms  pred=20.9 ms  joint=18.0 ms  conf=4.3 ms  total=45.0 ms  per_iter=243 us
+decoder: 171 iters, 145 tokens, T_enc=332  enc_proj=1.6 ms  pred=25.1 ms  joint=20.5 ms  conf=5.0 ms  total=52.2 ms  per_iter=267 us
+decoder: 149 iters, 122 tokens, T_enc=324  enc_proj=1.4 ms  pred=21.0 ms  joint=17.6 ms  conf=4.2 ms  total=44.2 ms  per_iter=259 us
+decoder: 159 iters, 126 tokens, T_enc=327  enc_proj=1.6 ms  pred=21.7 ms  joint=18.7 ms  conf=4.3 ms  total=46.4 ms  per_iter=255 us
+decoder: 160 iters, 133 tokens, T_enc=332  enc_proj=1.3 ms  pred=23.4 ms  joint=19.0 ms  conf=4.6 ms  total=48.3 ms  per_iter=265 us
+decoder: 135 iters, 104 tokens, T_enc=326  enc_proj=1.5 ms  pred=18.7 ms  joint=16.4 ms  conf=3.6 ms  total=40.2 ms  per_iter=259 us
+decoder: 144 iters, 119 tokens, T_enc=320  enc_proj=1.6 ms  pred=20.7 ms  joint=16.9 ms  conf=4.2 ms  total=43.3 ms  per_iter=261 us
+       41.24 real       162.30 user         1.69 sys
+          1179009024  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              297460  page reclaims
+                 321  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   0  voluntary context switches
+               42765  involuntary context switches
+       4178763976936  instructions retired
+        607603395008  cycles elapsed
+           682968600  peak memory footprint

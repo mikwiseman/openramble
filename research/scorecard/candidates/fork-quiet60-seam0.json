@@ -1,0 +1,23 @@
+{
+  "label": "Ultra Q4_K_M, fork, cut at the quietest 400 ms, 60 s cap, no overlap",
+  "summary": "Ultra Q4_K_M, fork, cut at the quietest 400 ms, 60 s cap, no overlap; H16f",
+  "order": 30,
+  "model": {
+    "name": "parakeet-ultra Q4_K_M",
+    "path": "models/parakeet-ultra-Q4_K_M/parakeet-ultra-Q4_K_M.gguf",
+    "sha256": "c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9",
+    "source": "https://huggingface.co/handy-computer/parakeet-ultra-gguf/blob/a1539be1b849ea7463b88343e5277b373d0c4ea9/parakeet-ultra-Q4_K_M.gguf",
+    "license": "CC-BY-4.0"
+  },
+  "runtime": "transcribe.cpp built from mikwiseman/transcribe.cpp at c4cd60da (v0.4.1 + the long-form fix) by scripts/build-transcribe-xcframework.sh, SwiftPM checksum 12eac3ec…; Metal, one decoder thread, weights memory-mapped",
+  "process": {
+    "kind": "asr-bench"
+  },
+  "warm": {
+    "kind": "asr-bench",
+    "commit": "9b4b6dc4b0",
+    "xcframework_zip": "builds/xcframework-fork-c4cd60da/TranscribeCpp-v0.4.1-1-gc4cd60da.xcframework.zip",
+    "xcframework_sha256": "12eac3ece73ff53c5eff152db8e8e6b9b599d925e545f9d5dc18b79077e6549a"
+  },
+  "index": false
+}

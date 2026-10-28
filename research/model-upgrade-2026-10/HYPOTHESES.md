@@ -427,6 +427,144 @@ together with H16 when:
 FLEURS is not run again: every FLEURS file is shorter than 30 s and is
 decoded whole, so the change cannot reach it.
 
+## H16c. Long files without losing words
+
+Preregistered on 27 October 2026, before any output of these candidates
+existed.
+
+The 30 s cap of H16b keeps transcribe.cpp 0.4.x away from Parakeet Ultra's
+own pause segmenter and costs long English and mixed files 0.5 to 2 points.
+The segmenter's fault is now known (upstream issue #235): it scores speech
+over a whole 120 s block on features normalized over that block, so speech
+about 40 dB quieter than a neighbour scores as silence and its piece is
+dropped. The fork `mikwiseman/transcribe.cpp`, branch `openramble/v0.4.1`
+(`c4cd60da`), scans such a piece again on its own before dropping it; the
+33.13 s repro gives 73 words with it and 40 without, on Metal and CPU.
+
+Candidates, file import and long dictation through the app's chunker:
+
+- `fork-chunks30`: the fork, 30 s segments with 2 s of context (up to 34 s,
+  the chunking 0.34.0 shipped), so the fixed segmenter handles the excess.
+- `fork-chunks60`: the fork, 60 s segments, so Ultra segments the audio
+  itself.
+- `runtime-0.4.1-chunks27`: 0.4.1 as released, 27 s segments with 1 s of
+  context, every input at or under 30 s.
+
+References: `app-0.34.0` (what 0.34.0 shipped) and `runtime-0.4.1-chunks25`
+(what 0.35.0 ships).
+
+A candidate qualifies when:
+
+1. No lost words: on each hour file and long take, the reference words in
+   deleted runs of three or more are no more than under `app-0.34.0`. (That
+   is zero on the English and Russian hour files and on every take.)
+2. For the fork, all 1,422 FLEURS transcripts are identical to
+   `runtime-0.4.1`: inputs of 30 s or less never reach the change.
+3. File-import wall time over the five hour files is at most 10% above
+   `runtime-0.4.1-chunks25`.
+
+Among qualifying candidates, the one with the lowest word-weighted WER over
+the five hour files and six takes is shipped, if that WER is below
+`runtime-0.4.1-chunks25`'s. Every file is also reported against `app-0.34.0`.
+
+## H16d. Seams without overlap
+
+Preregistered on 27 October 2026 after the H16c result, before any output of
+these candidates existed.
+
+Every word H16c still lost sat at a seam where the app joins two overlapping
+file chunks by word time. With no overlap there is nothing to match: each
+chunk is exactly its segment, a word belongs to the chunk its middle falls
+in, and no tail is merged. The Linux server works this way.
+
+Candidates, file import and long dictation, overlap 0:
+
+- `fork-chunks30-seam0`: the fork (`c4cd60da`), 30 s segments. A forced cut
+  can pass 30 s by one 20 ms frame; the fixed segmenter takes that.
+- `fork-chunks60-seam0`: the fork, 60 s segments; Ultra segments within.
+- `runtime-0.4.1-chunks29-seam0`: released 0.4.1, 29 s segments, every input
+  under 30 s, no fork needed.
+
+A candidate qualifies when:
+
+1. No lost words (reference words in deleted runs of three or more) on the
+   English and Russian hour files and on every take, and on each mixed file
+   no more than 5% above `app-0.34.0`'s. (Across H16c's setups the mixed
+   files' losses moved by up to 75 words of about 2,200 with no change in
+   the seams, since the model drops one of the two languages.)
+2. For a fork candidate, FLEURS is identical to `runtime-0.4.1` (already
+   shown in H16c for this commit).
+3. File-import wall time over the five hour files at most 10% above
+   `runtime-0.4.1-chunks25`.
+
+Among qualifying candidates, the lowest word-weighted WER over the five hour
+files and six takes ships, if it is below `runtime-0.4.1-chunks25`'s; with
+released 0.4.1 and the fork within 0.1 point of each other, the one without
+the fork ships.
+
+## H16e. Cut where the speaker pauses
+
+Preregistered on 27 October 2026 after the H16d result, before any output of
+these candidates existed.
+
+The file chunker counts a pause only once it is 700 ms long (350 ms after
+`relaxAfter`, which equals the chunk length) and otherwise forces a cut at
+the quietest 20 ms of the last second, so most cuts land inside sentences.
+The candidates keep everything else and let 350 ms pauses count from 15 s,
+and search the last 5 s for a forced cut:
+
+- `runtime-0.4.1-pause29-seam0`: released 0.4.1, 29 s cap, no overlap.
+- `runtime-0.4.1-pause25`: released 0.4.1, 25 s cap, 2 s of context.
+
+Both keep every input under 30 s. The rules are H16d's, against `app-0.34.0`
+and `runtime-0.4.1-chunks25`.
+
+## H16f. Cut at the quietest stretch, not at a fixed level
+
+Preregistered on 27 October 2026 after tracing the H16e cut, before any
+output of these candidates existed.
+
+The trace: the 37 s English take is one loud FLEURS utterance followed by
+three about 40 dB quieter. From 10.7 s on, no 20 ms frame reaches the
+chunker's speech peak of 0.02 (the live microphone's threshold), so the
+segmenter reads the quiet speech as one long pause, and at 15 s, the minimum
+segment, it cuts at that pause's middle: 12.59 s, inside "…third century |
+BCE…". A fixed level cannot tell quiet speech from silence in imported files.
+
+The candidates drop the level for file import. Each chunk ends at the middle
+of the quietest 400 ms (the lowest mean of 20 ms frame peaks, ties to the
+later stretch) in the last 10 s before the cap. Pauses are where a speaker's
+level is lowest whatever the recording's gain, so no threshold is needed.
+No overlap, as in H16d. Live recording keeps its own policy unchanged.
+
+- `runtime-0.4.1-quiet28-seam0`: released 0.4.1, cuts between 18 and 28 s;
+  a final tail under 2 s joins the chunk before it, so every input stays at
+  or under 30 s.
+- `runtime-0.4.1-quiet60-seam0`: released 0.4.1, cuts between 50 and 60 s;
+  Ultra's own segmenter cuts inside each chunk.
+- `fork-quiet60-seam0`: the fork (`c4cd60da`), the same chunker.
+- `runtime-0.4.1-plan20-seam0`: released 0.4.1 with the Linux server's
+  planner (`apps/cli/src/plan.rs`, its defaults) ported to Swift line for
+  line: silence is left out against a floor taken per minute, longer regions
+  are split evenly into pieces of at most 20 s, and each cut moves to the
+  quietest 200 ms within 2.5 s. Added at the coordinating session's
+  suggestion after the three above were committed, before any H16f output
+  existed. If it qualifies, the Mac and the server cut audio by one rule.
+
+A candidate qualifies by H16d's rules: no lost words on the English and
+Russian hour files and every take, each mixed file at most 5% above
+`app-0.34.0`'s lost words, FLEURS identical to `runtime-0.4.1` for the fork
+(shown in H16c), and five-hour file-import wall time at most 10% above
+`runtime-0.4.1-chunks25`. Among qualifying candidates the lowest
+word-weighted WER over the five hour files and six takes ships, if below
+`runtime-0.4.1-chunks25`'s; within 0.1 point, the one without the fork.
+
+The last two candidates differ only in the fork, so they also test the fix on
+its own. The fix goes upstream as a pull request if `fork-quiet60-seam0` loses
+no more words than `runtime-0.4.1-quiet60-seam0` on the English and Russian
+hour files and every take, at most 5% more on each mixed file, and fewer in
+total.
+
 ## Live text needs partials at least every 300 ms
 
 Recorded on 20 October 2026 as a gate for any future live-text feature, not
@@ -667,12 +805,159 @@ although both failed the hour-file rule. The runtime is not the cause at equal
 chunks, everything else improves, and the alternative kept the app on a
 runtime that predates its model. H16c is to win the long-file accuracy back.
 
+## H16c result
+
+Measured on 27 October 2026 (`fork-chunks30`, `fork-chunks60`,
+`runtime-0.4.1-chunks27`; candidate commits are local, `dbb5d4a`, `2b1d529`,
+`6aff0cb`). WER in percent, and lost words: reference words in deleted runs
+of three or more.
+
+| Input | 0.34.0 shipped | 0.35.0 shipped | fork, 30 s | fork, 60 s | 0.4.1, 27 s + 1 s |
+|---|---:|---:|---:|---:|---:|
+| English hour | 5.34 / 0 | 5.86 / 30 | 6.23 / 48 | 5.80 / 0 | 5.91 / 31 |
+| Russian hour | 6.40 / 0 | 5.49 / 0 | 5.58 / 0 | 5.42 / 0 | 5.93 / 0 |
+| Mixed 60 s | 19.12 / 22 | 18.38 / 22 | 18.38 / 22 | 18.38 / 22 | 19.12 / 23 |
+| Mixed 600 s | 31.63 / 293 | 33.71 / 337 | 31.37 / 306 | 33.36 / 333 | 31.20 / 303 |
+| Mixed hour | 39.43 / 2,227 | 39.44 / 2,302 | 37.99 / 2,180 | 38.69 / 2,234 | 35.40 / 1,948 |
+| English take, 37 s | 6.58 / 0 | 6.58 / 0 | 6.58 / 0 | 6.58 / 0 | 14.47 / 7 |
+| English take, 72 s | 4.94 / 0 | 6.17 / 0 | 5.56 / 0 | 4.94 / 0 | 3.70 / 0 |
+| English take, 129 s | 2.97 / 0 | 3.96 / 0 | 3.63 / 0 | 4.62 / 0 | 3.63 / 0 |
+| Russian takes, 33 / 72 / 120 s | 1.79 / 6.78 / 9.39 | 0 / 6.78 / 6.63 | 0 / 6.78 / 7.18 | 0 / 6.78 / 6.08 | 1.79 / 8.47 / 7.73 |
+| Pooled WER, hour files and takes | 17.22 | 17.26 | 16.86 | 16.98 | 16.09 |
+| File-import wall time, five hours | 176.7 s | 149.4 s | 157.4 s | 151.9 s | 134.9 s |
+
+Rule 2 holds for the fork: all 1,422 FLEURS transcripts are identical to
+`runtime-0.4.1`. Rule 3 holds for every candidate (load averaged 6 to 28 during
+the runs). Rule 1 fails for every candidate, so none is shipped:
+
+- `fork-chunks60` loses no word on any English or Russian input or take, but
+  loses 7 and 40 more words than 0.34.0 on the two long mixed files, where
+  every setup loses about two thousand words of the minority language.
+- `fork-chunks30` still loses one 16-word sentence each time it recurs in the
+  English hour file. The fix recovered the 29-word loss, not this one.
+- `runtime-0.4.1-chunks27` loses 7 and 8 words in a row at chunk seams and 7
+  words of the 37 s English take.
+
+The lost runs that remain all sit where two of the app's overlapping chunks
+are joined, and 0.34.0 on 0.2.0 lost none there. Ultra's segmenter is not
+the only fault: joining overlapping chunks by word times loses words on
+0.4.x. The Linux server cuts at its quietest points without overlap and
+joins nothing, and its English hour-file WER on 0.4.1 was 5.57% (H16 rule 9).
+
+## H16d result
+
+Measured on 27 October 2026 (`fork-chunks30-seam0`, `fork-chunks60-seam0`,
+`runtime-0.4.1-chunks29-seam0`; local candidate commits `acb3d56`, `38978a7`,
+`8df8115`). WER in percent and lost words, as in H16c:
+
+| Input | 0.34.0 | 0.35.0 | fork 30 s | fork 60 s | 0.4.1 29 s |
+|---|---:|---:|---:|---:|---:|
+| English hour | 5.34 / 0 | 5.86 / 30 | 6.63 / 56 | 6.44 / 57 | 6.73 / 67 |
+| Russian hour | 6.40 / 0 | 5.49 / 0 | 5.79 / 0 | 5.84 / 0 | 5.89 / 0 |
+| Mixed 600 s | 31.63 / 293 | 33.71 / 337 | 23.66 / 211 | 24.70 / 227 | 24.70 / 227 |
+| Mixed hour | 39.43 / 2,227 | 39.44 / 2,302 | 28.12 / 1,455 | 27.57 / 1,423 | 28.48 / 1,487 |
+| English take, 37 s | 6.58 / 0 | 6.58 / 0 | 15.79 / 8 | 15.79 / 8 | 15.79 / 8 |
+| Pooled WER, hour files and takes | 17.22 | 17.26 | 13.75 | 13.60 | 13.99 |
+| File-import wall time, five hours | 176.7 s | 149.4 s | 125.6 s | 140.9 s | 124.3 s |
+
+Rule 1 fails for every candidate (English), so none is shipped. Two effects
+pull in opposite directions:
+
+- Without overlap the mixed files improve by about 11 points: a chunk no
+  longer carries 2 s of the neighbouring utterance, which pulled its single
+  language toward the neighbour's.
+- Without overlap English loses clauses. In the 37 s take the chunker cuts
+  at 12.59 s, inside "…in the third century | BCE…", not at the 0.5 s pause
+  before the sentence. Decoded alone, 0–12.59 s gives 18 words and omits
+  "Built by the Egyptians in the third century"; 0–14.59 s keeps them. 0.2.0
+  omits the same eight words from the same clip, and so does the clip with
+  1 s of silence added: it is the model dropping a clause cut off at the end
+  of its input, not the runtime. The 2 s of context is what protected
+  English at 0.34.0's seams.
+
+So the next lever is where the chunker cuts, not the runtime: at real pauses
+between sentences, with no context needed, and context only where no pause
+exists.
+
+## H16e result
+
+Measured on 27 October 2026 (`runtime-0.4.1-pause29-seam0`,
+`runtime-0.4.1-pause25`; local commits `3595241`, `5d3ae40`):
+
+| Input | 0.34.0 | 0.35.0 | 29 s, pause cuts, no overlap | 25 s, pause cuts, 2 s context |
+|---|---:|---:|---:|---:|
+| English hour | 5.34 / 0 | 5.86 / 30 | 6.47 / 47 | 5.58 / 12 |
+| Russian hour | 6.40 / 0 | 5.49 / 0 | 6.25 / 0 | 5.15 / 0 |
+| Mixed 600 s | 31.63 / 293 | 33.71 / 337 | 23.66 / 204 | 35.44 / 357 |
+| Mixed hour | 39.43 / 2,227 | 39.44 / 2,302 | 29.13 / 1,540 | 38.90 / 2,223 |
+| English take, 37 s | 6.58 / 0 | 6.58 / 0 | 15.79 / 8 | 6.58 / 0 |
+| Pooled WER, hour files and takes | 17.22 | 17.26 | 14.09 | 17.01 |
+| File-import wall time, five hours | 176.7 s | 149.4 s | 122.7 s | 149.5 s |
+
+Both fail rule 1 on English, so neither ships. Earlier pause cuts with
+context give the best English and Russian hour files on 0.4.1 yet (5.58% and
+5.15%) but still lose 12 English words; without context the 37 s take still
+loses the same eight words, so the chunker still cuts it mid-clause. The
+policy reports that cut at 12.59 s for every cap tried, before both the
+15 s minimum segment and the cap, which these parameters cannot explain; the
+cut placement needs to be traced before another candidate.
+
+H16c and H16d ran while another job built FluidAudio and ran smoke tests on
+this Mac (18:01 to 18:24), so their wall times may be disturbed; WER and lost
+words are not timing-dependent.
+
+## H16f result
+
+Measured on 27 October 2026 (local candidate commits `e642778` for 28 s,
+`9b4b6dc` for 60 s and `99b6495` for the planner). WER in percent and lost
+words:
+
+| Input | 0.34.0 | 0.35.0 | 0.4.1, quietest, 28 s | 0.4.1, quietest, 60 s | fork, quietest, 60 s | 0.4.1, server's planner, 20 s |
+|---|---:|---:|---:|---:|---:|---:|
+| English hour | 5.34 / 0 | 5.86 / 30 | 5.88 / 60 | 6.98 / 119 | 5.69 / 16 | 5.43 / 0 |
+| Russian hour | 6.40 / 0 | 5.49 / 0 | 5.49 / 0 | 5.63 / 0 | 5.63 / 0 | 6.14 / 0 |
+| Mixed 60 s | 19.12 / 22 | 18.38 / 22 | 12.50 / 16 | 29.41 / 40 | 29.41 / 40 | 13.97 / 16 |
+| Mixed 600 s | 31.63 / 293 | 33.71 / 337 | 29.64 / 294 | 34.14 / 349 | 34.14 / 349 | 17.59 / 143 |
+| Mixed hour | 39.43 / 2,227 | 39.44 / 2,302 | 31.76 / 1,716 | 39.66 / 2,281 | 39.66 / 2,281 | 22.09 / 1,053 |
+| English takes, 37 / 72 / 129 s | 6.58 / 4.94 / 2.97 | 6.58 / 6.17 / 3.96 | 6.58 / 5.56 / 9.24 (20 lost) | 28.95 (18) / 20.37 (26) / 4.62 | 7.89 / 5.56 / 4.62 | 6.58 / 4.94 / 3.96 |
+| Russian takes, 33 / 72 / 120 s | 1.79 / 6.78 / 9.39 | 0 / 6.78 / 6.63 | 0 / 6.78 / 7.18 | 0 / 7.63 / 7.18 | 0 / 7.63 / 7.18 | 0 / 9.32 / 8.29 |
+| Pooled WER, hour files and takes | 17.22 | 17.26 | 14.81 | 18.04 | 17.41 | 11.27 |
+| File-import wall time, five hours | 176.7 s | 149.4 s | 122.8 s | 142.7 s | 143.1 s | 126.4 s |
+
+Takes lose no words unless a count is given.
+
+The server's planner qualifies and ships. It loses no word on the English
+and Russian hour files or on any take, it loses half as many words as
+0.34.0 on each mixed file (143 against 293, 1,053 against 2,227), and its
+wall time is 15% below 0.35.0's. Its pooled WER is 11.27% against 17.26%,
+mostly from the mixed files, which are 17 points better: 20 s pieces
+without context are short enough that the model keeps each speaker's
+language. The cost is Russian: the hour file is 0.65 point worse than
+0.35.0's (25 more substitutions, 11 more scattered deletions, no run of
+three), and the 72 s and 120 s takes are 2.5 and 1.7 points worse. English
+is better than 0.35.0 everywhere and within 0.1 point of 0.34.0 on the
+hour file.
+
+Cutting at the quietest 400 ms of the last 10 s does not qualify. At 28 s
+it still lost 60 English words in the hour file and 20 in the 129 s take,
+so a quiet stretch near the cap is not reliably a pause between clauses.
+At 60 s, released 0.4.1's own segmenter dropped the quiet sentences of the
+37 s take (18 words, issue #235) and 26 words of the 72 s take.
+
+The fork against released 0.4.1, same chunker: 16 lost words against 119
+on the English hour file, 0 against 18 and 0 against 26 on the two English
+takes, equal everywhere else (Russian 0 and 0; mixed 40, 349 and 2,281 on
+both). The fix's upstream rule holds.
+
+The planner's pieces are at most 20 s, so on the fork they never reach the
+changed code, and the fork gives FLEURS identical to 0.4.1 (H16c). The Mac
+ships the planner on the fork. The pull request's own commit (`ec107c1`,
+candidate `fork-plan20-shipped`, the framework fetched from the fork's
+release) gives the same text as the measured candidate on all 11 hour files
+and takes, with appending in place of the seam matcher.
+
 ## Proposed next hypotheses
 
-- **H16c.** File import and long dictation with Parakeet Ultra on 0.4.x: find
-  the chunk length and context that recover the English and mixed hour files
-  without any engine input over 30 s, against 0.34.0's 5.34% English and
-  31.63% mixed 600 s WER.
 - **H8c.** The decoder's joint output layer and LSTM weights in the model's
   Q8_0 together, against the same 30% decoder rule.
 - **H10b.** Four encoder threads and one decoder thread on the CPU backend.

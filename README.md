@@ -318,7 +318,7 @@ Run `./scripts/check.sh` before you commit, because it runs every test and check
 
 ## Credits and licenses
 
-- Speech recognition runs on [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) 0.4.1 by CJ Pais and the [Handy](https://handy.computer) team, under the MIT License. It includes ggml, miniz and code translated from Silero VAD, all under the MIT License.
+- Speech recognition runs on [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) 0.4.1 by CJ Pais and the [Handy](https://handy.computer) team, with one fix of ours from [our fork](https://github.com/mikwiseman/transcribe.cpp), under the MIT License. It includes ggml, miniz and code translated from Silero VAD, all under the MIT License.
 - The speech model is [Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra) by Moondream, a version of NVIDIA's [Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) trained further. Both are licensed CC BY 4.0. OpenRamble uses handy-computer's [GGUF conversion](https://huggingface.co/handy-computer/parakeet-ultra-gguf), quantized to Q4_K_M for the Mac. Windows and Linux builds made from this version use Q8_0.
 - Macs that have not upgraded yet, and the desktop-v0.21.2 release for Windows and Linux, use NVIDIA's Parakeet TDT 0.6B v3 in handy-computer's [GGUF conversion](https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf), quantized to Q8_0.
 - Updates come through [Sparkle](https://sparkle-project.org), under the MIT License.
