@@ -64,7 +64,8 @@ final class LongInputRoutingTests: XCTestCase {
         let engine = PieceEngine(gated: true)
         let transcriber = LocalTranscriber(engine: engine)
         try await transcriber.prepare(modelDirectory: URL(fileURLWithPath: "/unused"))
-        let work = Task { try await transcriber.transcribe(samples: Self.speech(seconds: 90)) }
+        let samples = Self.speech(seconds: 90)
+        let work = Task { try await transcriber.transcribe(samples: samples) }
         while await engine.sizes.isEmpty { await Task.yield() }
         let unloaded = await transcriber.unloadIfIdle()
         XCTAssertFalse(unloaded, "one residency spans the complete recording")
@@ -81,7 +82,8 @@ final class LongInputRoutingTests: XCTestCase {
         let transcriber = LocalTranscriber(engine: engine)
         let directory = URL(fileURLWithPath: "/unused")
         try await transcriber.prepare(modelDirectory: directory)
-        let work = Task { try await transcriber.transcribe(samples: Self.speech(seconds: 90)) }
+        let samples = Self.speech(seconds: 90)
+        let work = Task { try await transcriber.transcribe(samples: samples) }
         while await engine.sizes.isEmpty { await Task.yield() }
         await transcriber.unload()
         try await transcriber.prepare(modelDirectory: directory)
