@@ -35,6 +35,19 @@ public struct MeetingSegmentPolicy: Sendable {
             forcedCutWindow: .seconds(1)
         )
 
+        /// A live recording's default for each channel: `meeting`, with a
+        /// lower speech floor for the other side. Tapped playback can be far
+        /// quieter than a microphone, and a voice that never peaks at the
+        /// floor is never decoded: held-out English read speech fed in as the
+        /// other side lost over half its audio at 0.02. The microphone keeps
+        /// 0.02, because there a lower floor let sparse leakage from the
+        /// speakers past the echo gate and into You.
+        public static func capture(channel: MeetingChannel) -> Parameters {
+            var parameters = meeting
+            if channel == .system { parameters.speech.speechPeak = 0.005 }
+            return parameters
+        }
+
         public init(
             speech: SpeechSegmenter.Parameters = SpeechSegmenter.Parameters(),
             hardCap: Duration = .seconds(20),
@@ -104,6 +117,11 @@ public struct MeetingSegmentPolicy: Sendable {
         if !heardSpeech, !parameters.preserveQuietAudio, pendingFrames > frames(Self.leadingSilence) {
             segmentStart = end - frames(Self.leadingSilence)
             segmenter.reset()
+            // The segmenter's cut offset counts from segmentStart, so it must
+            // count the quiet second kept above. Started from zero, its next
+            // pause cut landed a second early, inside the last words, and
+            // this slide then dropped them with the silence after.
+            _ = segmenter.observe(peak: 0, count: frames(Self.leadingSilence))
             return nil
         }
 

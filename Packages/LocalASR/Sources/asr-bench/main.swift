@@ -235,6 +235,9 @@ case "transcribe":
         } catch {
             print("\n=== \(url.lastPathComponent) ===")
             print("Error: \(error)")
+            // exit() runs the Metal runtime's static teardown, which aborts
+            // the process while a model is still loaded.
+            await transcriber.unload()
             exit(70)
         }
     }
@@ -257,6 +260,7 @@ case "stream":
         } catch {
             print("\n=== \(url.lastPathComponent) ===")
             print("Error reading: \(error)")
+            await transcriber.unload() // before exit(), as in `transcribe`
             exit(70)
         }
 
