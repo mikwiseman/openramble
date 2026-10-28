@@ -104,6 +104,11 @@ public struct MeetingSegmentPolicy: Sendable {
         if !heardSpeech, !parameters.preserveQuietAudio, pendingFrames > frames(Self.leadingSilence) {
             segmentStart = end - frames(Self.leadingSilence)
             segmenter.reset()
+            // The segmenter's cut offset counts from segmentStart, so it must
+            // count the quiet second kept above. Started from zero, its next
+            // pause cut landed a second early, inside the last words, and
+            // this slide then dropped them with the silence after.
+            _ = segmenter.observe(peak: 0, count: frames(Self.leadingSilence))
             return nil
         }
 
