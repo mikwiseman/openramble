@@ -725,3 +725,59 @@ final class OverlayModelWaitingTests: XCTestCase {
         XCTAssertGreaterThan(size.height, GlassTokens.Block.unit * 2, "the words, the reason and the action")
     }
 }
+
+/// The panel is as large as what it shows.
+@MainActor
+final class OverlayPanelSizeTests: XCTestCase {
+    /// A panel built the way the app builds its own, kept under the desktop
+    /// picture so nothing appears on the screen of whoever runs the suite.
+    private func panel(_ model: OverlayModel) -> NSPanel {
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 244, height: GlassTokens.Block.unit),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        panel.isReleasedWhenClosed = false
+        panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) - 1)
+        panel.contentView = DictationOverlay.makeContentView(model: model)
+        panel.orderFrontRegardless()
+        return panel
+    }
+
+    private func settle() async throws {
+        try await Task.sleep(for: .milliseconds(250))
+    }
+
+    /// Waiting words are shown in full. The panel was once left at the size
+    /// it was created with, and a block 384 points wide was drawn into 244
+    /// and cut off on both sides: seen in a screenshot of the real panel.
+    func testThePanelGrowsToHoldWaitingWordsAndShrinksBack() async throws {
+        let model = OverlayModel(
+            announcer: FakeAnnouncer(),
+            noticeDuration: .seconds(30),
+            outcomeDuration: .seconds(30)
+        )
+        let panel = panel(model)
+        defer { panel.close() }
+
+        model.show(.listening, elapsed: 2)
+        try await settle()
+        XCTAssertEqual(panel.frame.width, 244, accuracy: 1)
+        XCTAssertEqual(panel.frame.height, GlassTokens.Block.unit, accuracy: 1, "a take is one unit tall")
+
+        model.hide()
+        model.setWaiting(WaitingWords(
+            words: "The deploy passed. Let's ship the menu bar fix on Monday.",
+            cause: .typingProtected(by: "Terminal")
+        ))
+        try await settle()
+        XCTAssertEqual(panel.frame.width, 384, accuracy: 1)
+        XCTAssertGreaterThan(panel.frame.height, 2 * GlassTokens.Block.unit, "the words, the reason and the action")
+
+        model.showOutcome(.pasted(into: "Notes"))
+        try await settle()
+        XCTAssertEqual(panel.frame.width, 320, accuracy: 1)
+        XCTAssertEqual(panel.frame.height, GlassTokens.Block.unit, accuracy: 1, "one line again")
+    }
+}

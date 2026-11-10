@@ -212,7 +212,7 @@ public final class DictationOverlay: OverlayPresenting, EngineWaitPresenting, Ha
     private func showPanel() {
         if panel == nil {
             let panel = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 244, height: 52),
+                contentRect: NSRect(x: 0, y: 0, width: 244, height: GlassTokens.Block.unit),
                 styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
                 defer: false
@@ -243,11 +243,7 @@ public final class DictationOverlay: OverlayPresenting, EngineWaitPresenting, Ha
             // intended for the application underneath it.
             panel.ignoresMouseEvents = true
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-            let hosting = NSHostingView(rootView: OverlayView(model: model))
-            // The panel grows behind the content: a two-line message has no
-            // the right to cut off to “automatic...” - a cut-off toast is worse than silence.
-            hosting.sizingOptions = .preferredContentSize
-            panel.contentView = hosting
+            panel.contentView = Self.makeContentView(model: model)
             // The window keeps the upper left corner in place when resizing. Width
             // changes when the compact status turns into the recording waveform.
             // Without recalculation, she moved 80 points to the right of the center of the screen -
@@ -288,6 +284,22 @@ public final class DictationOverlay: OverlayPresenting, EngineWaitPresenting, Ha
         let showsWords = model.waiting != nil
         panel?.ignoresMouseEvents = !showsWords
         panel?.sharingType = showsWords ? .none : .readOnly
+    }
+
+    /// The view the panel is sized by.
+    ///
+    /// The panel grows with its content: waiting words are shown in full,
+    /// and a cut-off block is worse than silence.
+    ///
+    /// The size comes from constraints, not from `.preferredContentSize`. On
+    /// macOS 27 that option alone leaves a content view's window at the size
+    /// it was created with, so a 384-point block was drawn into a 244-point
+    /// panel and clipped on both sides. With these three the hosting view
+    /// states its content's size as constraints, and the window follows them.
+    static func makeContentView(model: OverlayModel) -> NSView {
+        let hosting = NSHostingView(rootView: OverlayView(model: model))
+        hosting.sizingOptions = [.minSize, .intrinsicContentSize, .maxSize]
+        return hosting
     }
 
     private func hidePanel() {
