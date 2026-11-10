@@ -74,23 +74,26 @@ struct RecordingsWindow: View {
                     detail
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                // The record control floats: a capsule of glass over whatever
+                // is being read, with the page scrolling beneath it.
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    VStack(spacing: GlassTokens.Space.inline) {
+                        if state.meetingState == .recording || state.meetingState == .paused {
+                            CaptureHealthStrip(state: state)
+                        }
+                        RecordBar(state: state)
+                    }
+                    .padding(.horizontal, GlassTokens.Space.section)
+                    .padding(.bottom, GlassTokens.Space.stack)
+                }
                 // A floor for the column's own measurement. Asked for its
                 // smallest size, a split view proposes no width at all, and
                 // text that wraps then reports one word per line: the pin
                 // claimed more height than the window had, and the whole
                 // content slid out from under the toolbar.
                 .frame(minWidth: 440)
-                .background(.background)
+                .background(Color(nsColor: .textBackgroundColor))
                 .clipped()
-            }
-            VStack(spacing: 0) {
-                Divider()
-                if state.meetingState == .recording || state.meetingState == .paused {
-                    CaptureHealthStrip(state: state)
-                }
-                RecordBar(state: state)
-                    .padding(.horizontal, GlassTokens.Space.page)
-                    .padding(.vertical, GlassTokens.Space.inline)
             }
         }
         .frame(minWidth: 860, minHeight: 560)

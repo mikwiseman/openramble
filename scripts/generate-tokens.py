@@ -46,15 +46,19 @@ enum GlassTokens {{
         static let chip: CGFloat = {number(r["chip"])}
     }}
 
-    /// A block is sized by what it holds: whole units tall, one gap between
-    /// neighbours. A floating block is a rim of glass around an opaque slip.
+    /// A floating block is one piece of Liquid Glass: a capsule one unit tall
+    /// for a line, a panel with the surface radius when it holds more. Inside
+    /// a window, air does the grouping.
     enum Block {{
         static let unit: CGFloat = {number(b["unit"])}
         static let gap: CGFloat = {number(b["gap"])}
-        static let rim: CGFloat = {number(b["rim"])}
         static let padding: CGFloat = {number(b["padding"])}
-        /// Concentric with the surface: the same centre, one rim smaller.
-        static let slipRadius: CGFloat = {number(r["surface"] - b["rim"])}
+        /// A row: a little taller than a control, so a page of them breathes.
+        static let row: CGFloat = {number(b["row"])}
+        /// The margin around a page.
+        static let page: CGFloat = {number(b["page"])}
+        /// The widest a page's column of content gets.
+        static let column: CGFloat = {number(b["column"])}
     }}
 
     /// One spacing rhythm, so nothing is nudged by eye.
@@ -110,9 +114,10 @@ def css(tokens: dict) -> str:
 
   --block-unit: {number(b["unit"])}px;
   --block-gap: {number(b["gap"])}px;
-  --block-rim: {number(b["rim"])}px;
   --block-padding: {number(b["padding"])}px;
-  --block-slip-radius: {number(r["surface"] - b["rim"])}px;
+  --block-row: {number(b["row"])}px;
+  --block-page: {number(b["page"])}px;
+  --block-column: {number(b["column"])}px;
 
   --space-tight: {number(s["tight"])}px;
   --space-inline: {number(s["inline"])}px;

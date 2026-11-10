@@ -734,3 +734,5 @@
 "Dictations and their audio" = "Диктовки и их звук";
 "Your dictations live in the Library, next to your recordings. Starred ones stay past the limit." = "Диктовки хранятся в Библиотеке, рядом с записями. Отмеченные звёздочкой остаются сверх лимита.";
 "To stop this, turn off Secure Keyboard Entry in %@'s menu." = "Чтобы это не повторялось, выключите «Безопасный ввод с клавиатуры» в меню приложения «%@».";
+"Shortcuts" = "Сочетания клавиш";
+"History" = "История";

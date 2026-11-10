@@ -11,20 +11,24 @@ enum GlassTokens {
     /// Concentric radii: a control inside a surface takes the smaller one so
     /// their curves stay parallel rather than fighting.
     enum Radius {
-        static let surface: CGFloat = 16
+        static let surface: CGFloat = 24
         static let control: CGFloat = 10
         static let chip: CGFloat = 7
     }
 
-    /// A block is sized by what it holds: whole units tall, one gap between
-    /// neighbours. A floating block is a rim of glass around an opaque slip.
+    /// A floating block is one piece of Liquid Glass: a capsule one unit tall
+    /// for a line, a panel with the surface radius when it holds more. Inside
+    /// a window, air does the grouping.
     enum Block {
-        static let unit: CGFloat = 48
+        static let unit: CGFloat = 44
         static let gap: CGFloat = 8
-        static let rim: CGFloat = 5
-        static let padding: CGFloat = 20
-        /// Concentric with the surface: the same centre, one rim smaller.
-        static let slipRadius: CGFloat = 11
+        static let padding: CGFloat = 24
+        /// A row: a little taller than a control, so a page of them breathes.
+        static let row: CGFloat = 52
+        /// The margin around a page.
+        static let page: CGFloat = 44
+        /// The widest a page's column of content gets.
+        static let column: CGFloat = 620
     }
 
     /// One spacing rhythm, so nothing is nudged by eye.

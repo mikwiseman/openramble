@@ -32,8 +32,7 @@ struct CaptureHealthStrip: View {
                     )
                 }
             }
-            .padding(.horizontal, GlassTokens.Space.page)
-            .padding(.top, GlassTokens.Space.stack)
+            .frame(maxWidth: 560)
         }
     }
 
@@ -75,6 +74,12 @@ struct CaptureHealthStrip: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentBlock(.attention, padding: GlassTokens.Space.stack)
+        // It floats over the transcript, so the page shows under the tint
+        // unless it has a ground of its own.
+        .background(
+            Color(nsColor: .textBackgroundColor),
+            in: RoundedRectangle(cornerRadius: GlassTokens.Radius.surface, style: .continuous)
+        )
         .accessibilityElement(children: .contain)
     }
 }

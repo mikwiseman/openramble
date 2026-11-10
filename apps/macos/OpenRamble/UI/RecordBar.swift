@@ -67,7 +67,7 @@ struct RecordBar: View {
                     Image(systemName: state.meetingState == .paused ? "play.fill" : "pause.fill")
                         .font(.system(size: 16, weight: .semibold))
                         .frame(width: 40, height: 40)
-                        .contentShape(RoundedRectangle(cornerRadius: GlassTokens.Radius.control, style: .continuous))
+                        .contentShape(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .help(state.meetingState == .paused ? L10n.tr("Resume recording") : L10n.tr("Pause recording"))
@@ -83,7 +83,7 @@ struct RecordBar: View {
                         .font(.callout.weight(.medium))
                         .padding(.horizontal, GlassTokens.Space.inline)
                         .frame(height: 40)
-                        .contentShape(RoundedRectangle(cornerRadius: GlassTokens.Radius.control, style: .continuous))
+                        .contentShape(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
@@ -105,21 +105,21 @@ struct RecordBar: View {
                         .font(.callout.weight(.semibold))
                         .padding(.horizontal, GlassTokens.Space.stack)
                         .frame(height: 40)
-                        .contentShape(RoundedRectangle(cornerRadius: GlassTokens.Radius.control, style: .continuous))
+                        .contentShape(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(isRecording ? L10n.tr("Stop recording") : L10n.tr("Record"))
                 .accessibilityHint(isRecording ? L10n.tr("Ends the recording and keeps it") : line)
             }
             .foregroundStyle(.white)
-            .background(StatusColorRole.recording.color, in: RoundedRectangle(cornerRadius: GlassTokens.Radius.control, style: .continuous))
+            .background(StatusColorRole.recording.color, in: Capsule(style: .continuous))
             .disabled(isBusy)
         }
-        .padding(.leading, 14)
-        .padding(.trailing, 8)
-        .padding(.vertical, 8)
-        .frame(maxWidth: 760, minHeight: 56)
-        .glassSurface(RoundedRectangle(cornerRadius: GlassTokens.Radius.surface, style: .continuous))
+        .padding(.leading, 18)
+        .padding(.trailing, 7)
+        .padding(.vertical, 7)
+        .frame(maxWidth: 560, minHeight: 54)
+        .glassBlock(.capsule)
         .animation(reduceMotion ? nil : .easeOut(duration: GlassTokens.Motion.surfaceChange), value: isRecording)
     }
 

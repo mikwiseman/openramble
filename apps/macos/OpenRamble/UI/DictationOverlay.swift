@@ -756,9 +756,6 @@ final class OverlayModel: ObservableObject {
 struct OverlayView: View {
     @ObservedObject var model: OverlayModel
 
-    /// One unit tall: the slip plus the rim on both sides.
-    private static let lineHeight = GlassTokens.Block.unit - 2 * GlassTokens.Block.rim
-
     var body: some View {
         if let content = model.visibleContent {
             block(content)
@@ -771,6 +768,9 @@ struct OverlayView: View {
         }
     }
 
+    /// One piece of Liquid Glass. A line of it is a capsule, because a panel
+    /// one unit tall has nothing left but its corners; holding the person's
+    /// words, the same shape is a soft panel.
     private func block(_ content: OverlayContent) -> some View {
         Group {
             if let waiting = content.waiting {
@@ -781,9 +781,8 @@ struct OverlayView: View {
                 take(content)
             }
         }
-        .frame(width: content.panelWidth - 2 * GlassTokens.Block.rim, alignment: .leading)
-        .wordSlip()
-        .glassBlock(tint: content.rim)
+        .frame(width: content.panelWidth, alignment: .leading)
+        .glassBlock(.panel)
         .accessibilityElement(children: content.waiting == nil ? .ignore : .contain)
         .accessibilityLabel(model.accessibilityLabel)
     }
@@ -796,15 +795,15 @@ struct OverlayView: View {
     /// recognition result waits for the main actor, and an iterative effect
     /// drove a RenderBox/CA commit on every display refresh through the glass.
     private func take(_ content: OverlayContent) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             if let glyph = content.glyph {
-                StateGlyphView(glyph: glyph)
+                StateGlyphView(glyph: glyph, size: 12)
             }
             if let title = content.title {
                 // Takes the place of the meter and the clock, so the block
                 // keeps its size and nothing beside it moves.
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 14, weight: .medium))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
@@ -812,59 +811,61 @@ struct OverlayView: View {
                 if let key = content.finishKey {
                     KeyCap(title: key)
                     Text(L10n.tr("ends"))
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 14, weight: .medium))
                         .lineLimit(1)
                         .fixedSize()
                 } else if let word = content.word {
                     Text(word)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 14, weight: .medium))
                         .lineLimit(1)
                         .fixedSize()
                 }
                 RecordingWaveform(
                     samples: model.waveformSamples,
                     color: content.mark?.colorRole?.color ?? .secondary,
-                    height: 20
+                    height: 18
                 )
                 .frame(maxWidth: .infinity)
-                .padding(.leading, 2)
                 Text(elapsedText)
-                    .font(.system(size: 13, weight: .medium).monospacedDigit())
+                    .font(.system(size: 14).monospacedDigit())
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
             }
         }
-        .padding(.horizontal, 14)
-        .frame(height: Self.lineHeight)
+        .padding(.horizontal, 18)
+        .frame(height: GlassTokens.Block.unit)
     }
 
     // MARK: A sentence
 
     /// A notice, or how a waiting take ended: one glyph and about eight words.
     private func line(_ content: OverlayContent) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
             if let glyph = content.glyph {
-                StateGlyphView(glyph: glyph)
-                    .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
+                StateGlyphView(glyph: glyph, size: 12)
+                    .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1.5 }
             }
             Text(content.outcome?.message ?? content.title ?? "")
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 14, weight: .medium))
+                .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .frame(minHeight: Self.lineHeight)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 13)
+        .frame(minHeight: GlassTokens.Block.unit)
     }
 
     // MARK: Words that wait
 
-    /// The words first: they are what the person is afraid of losing. Then
-    /// why, then the one thing to do.
+    /// The words first, set as written text: they are what the person is
+    /// afraid of losing. Then why, then the one thing to do.
     private func waitingWords(_ waiting: WaitingWords) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(waiting.words)
-                .font(.system(size: 17, weight: .semibold))
-                .lineSpacing(1)
+                .font(.words(19))
+                .lineSpacing(3)
                 .lineLimit(6)
                 .fixedSize(horizontal: false, vertical: true)
                 // Read aloud only on request: the label names the state, and
@@ -908,17 +909,19 @@ struct OverlayView: View {
                 .padding(.top, 2)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, 12)
+        .padding(.leading, 22)
+        .padding(.trailing, 14)
+        .padding(.top, 20)
+        .padding(.bottom, 14)
     }
 
     private func reasonLine(_ waiting: WaitingWords) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            StateGlyphView(glyph: waiting.glyph)
-                .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
+            StateGlyphView(glyph: waiting.glyph, size: 12)
+                .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1.5 }
             Text(waiting.reason(key: model.key.shortTitle))
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)

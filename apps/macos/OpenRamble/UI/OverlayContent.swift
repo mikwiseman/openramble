@@ -126,13 +126,6 @@ struct OverlayContent: Equatable {
         return mark?.glyph
     }
 
-    /// The state the glass rim confirms: orange while words wait, green for
-    /// the beat after they land. Every other state leaves the glass clear.
-    var rim: StatusColorRole? {
-        if waiting != nil { return .attention }
-        return outcome?.rim
-    }
-
     /// Whether the block shows what the person said. While it does, it is
     /// kept out of screen captures and recordings.
     var showsDictatedWords: Bool { waiting != nil }

@@ -125,12 +125,6 @@ enum TakeOutcome: Equatable {
         }
     }
 
-    /// Green only for the paste: kept is not success, and not waiting either.
-    var rim: StatusColorRole? {
-        if case .pasted = self { return .success }
-        return nil
-    }
-
     var message: String {
         switch self {
         case let .pasted(app?): return L10n.tr("Pasted into %@.", app)

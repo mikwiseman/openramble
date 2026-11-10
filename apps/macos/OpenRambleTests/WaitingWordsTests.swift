@@ -101,14 +101,16 @@ final class WaitingWordsTests: XCTestCase {
 
     // MARK: How it ends
 
-    /// Green is for the paste alone. Kept is not success and not waiting.
+    /// Green is for the paste alone. Kept is not success and not waiting,
+    /// and a copy is neither: both are drawn in ink. The glass itself is
+    /// never tinted; the glyph is the one place a state has a color.
     func testOnlyAPasteIsGreen() {
-        XCTAssertEqual(TakeOutcome.pasted(into: "Notes").rim, .success)
         XCTAssertEqual(TakeOutcome.pasted(into: "Notes").glyph, .pasted)
-        XCTAssertNil(TakeOutcome.kept(chord: "⌃⌘V").rim)
+        XCTAssertEqual(TakeOutcome.pasted(into: "Notes").glyph.colorRole, .success)
         XCTAssertEqual(TakeOutcome.kept(chord: "⌃⌘V").glyph, .kept)
         XCTAssertNil(TakeOutcome.kept(chord: "⌃⌘V").glyph.colorRole)
-        XCTAssertNil(TakeOutcome.copied.rim)
+        XCTAssertEqual(TakeOutcome.copied.glyph, .copied)
+        XCTAssertNil(TakeOutcome.copied.glyph.colorRole)
     }
 
     func testOutcomesSayWhereTheWordsAre() {
@@ -151,14 +153,14 @@ final class WaitingWordsTests: XCTestCase {
         OverlayContent.make(state: state, notice: notice, elapsed: 0, waiting: waiting, outcome: outcome)
     }
 
-    /// Waiting words are the block's whole content: wider, orange-rimmed, and
-    /// out of every capture for as long as it shows what was said.
+    /// Waiting words are the block's whole content: wider, with the orange
+    /// bar, and out of every capture for as long as it shows what was said.
     func testTheBlockGrowsToHoldTheWords() {
         let waiting = WaitingWords(words: words, cause: .noTextField)
         let block = content(waiting: waiting)
         XCTAssertEqual(block.waiting, waiting)
         XCTAssertEqual(block.glyph, .waiting)
-        XCTAssertEqual(block.rim, .attention)
+        XCTAssertEqual(block.glyph?.colorRole, .attention)
         XCTAssertEqual(block.panelWidth, 384)
         XCTAssertTrue(block.showsDictatedWords)
         XCTAssertFalse(content(state: .listening).showsDictatedWords)
@@ -180,16 +182,7 @@ final class WaitingWordsTests: XCTestCase {
         let block = content(waiting: waiting, outcome: .pasted(into: "Notes"))
         XCTAssertNil(block.waiting)
         XCTAssertEqual(block.outcome, .pasted(into: "Notes"))
-        XCTAssertEqual(block.rim, .success)
+        XCTAssertEqual(block.glyph, .pasted)
         XCTAssertEqual(block.voice, .speech("Pasted into Notes.", urgent: false))
-    }
-
-    /// The rim is clear for every state that is about the app: red, blue and
-    /// plain notices never tint the glass.
-    func testOnlyWaitingAndPastedTintTheRim() {
-        XCTAssertNil(content(state: .listening).rim)
-        XCTAssertNil(content(state: .transcribing).rim)
-        XCTAssertNil(content(notice: DictationNotice(kind: .warning, message: "x")).rim)
-        XCTAssertNil(content(outcome: .kept(chord: nil)).rim)
     }
 }

@@ -27,6 +27,9 @@ final class SettingsLayoutTests: XCTestCase {
         try await checkLayout(historyCount: 5)
     }
 
+    /// Every pane is a page that scrolls inside the window: whatever its
+    /// content needs, the window keeps the size the person gave it and the
+    /// page stays within it.
     private func checkLayout(historyCount: Int) async throws {
         let harness = try AppHarness()
         defer { harness.tearDown() }
@@ -36,29 +39,27 @@ final class SettingsLayoutTests: XCTestCase {
         }
         let state = harness.makeState()
         XCTAssertEqual(state.history.count, historyCount)
-        let controller = NSHostingController(rootView: SettingsView(state: state))
-        let window = NSWindow(contentViewController: controller)
-        defer { window.close() }
-        window.setContentSize(NSSize(width: 780, height: 580))
-        window.orderFront(nil)
-        try await Task.sleep(for: .milliseconds(200))
 
-        let sidebar = try XCTUnwrap(descendants(of: controller.view).compactMap { $0 as? NSTableView }.first)
-        XCTAssertEqual(sidebar.numberOfRows, SettingsView.Pane.allCases.count)
-        for size in [NSSize(width: 720, height: 540), NSSize(width: 1000, height: 720)] {
-            window.setContentSize(size)
-            // Enter every pane from every other, including after resizing.
-            for row in [2, 0, 2, 1, 2, 3, 0, 3, 1] {
-                sidebar.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        for pane in SettingsView.Pane.allCases {
+            let controller = NSHostingController(rootView: SettingsView(state: state, pane: pane))
+            let window = NSWindow(contentViewController: controller)
+            defer { window.close() }
+            for size in [NSSize(width: 720, height: 540), NSSize(width: 1000, height: 720)] {
+                window.setContentSize(size)
+                window.orderFront(nil)
                 try await Task.sleep(for: .milliseconds(200))
                 controller.view.layoutSubtreeIfNeeded()
 
-                let split = try XCTUnwrap(descendants(of: controller.view).compactMap { $0 as? NSSplitView }.first)
-                let frame = controller.view.convert(split.bounds, from: split)
-                XCTAssertLessThanOrEqual(frame.height, controller.view.bounds.height + 1)
-                XCTAssertGreaterThanOrEqual(frame.minY, -1)
-                XCTAssertTrue(sidebar.visibleRect.contains(sidebar.rect(ofRow: 0)), "General must remain reachable")
-                XCTAssertTrue(sidebar.visibleRect.contains(sidebar.rect(ofRow: 3)), "About must remain reachable")
+                XCTAssertEqual(window.contentLayoutRect.width, size.width, accuracy: 1, "\(pane) must not widen the window")
+                XCTAssertLessThanOrEqual(window.frame.height, size.height + 80, "\(pane) must not grow the window")
+                let page = try XCTUnwrap(
+                    descendants(of: controller.view).compactMap { $0 as? NSScrollView }.first,
+                    "\(pane) is a page that scrolls"
+                )
+                let frame = controller.view.convert(page.bounds, from: page)
+                XCTAssertLessThanOrEqual(frame.height, controller.view.bounds.height + 1, "\(pane)")
+                XCTAssertGreaterThanOrEqual(frame.minY, -1, "\(pane)")
+                XCTAssertLessThanOrEqual(frame.maxX, controller.view.bounds.maxX + 1, "\(pane)")
             }
         }
     }

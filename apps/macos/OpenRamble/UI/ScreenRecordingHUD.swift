@@ -55,9 +55,8 @@ final class ScreenRecordingHUD {
     }
 }
 
-/// The screen recording, as the same block a take is: a rim of glass around
-/// an opaque slip, one glyph, one word, one clock. Its three controls sit on
-/// the slip, so nothing here is written on glass either.
+/// The screen recording, as the same block a take is: one capsule of Liquid
+/// Glass with one glyph, one word, one clock, and its three controls.
 struct ScreenRecordingHUDView: View {
     @ObservedObject var state: AppState
 
@@ -70,13 +69,13 @@ struct ScreenRecordingHUDView: View {
     var body: some View {
         HStack(spacing: 8) {
             // Red is the microphone capturing. Paused, it is not.
-            StateGlyphView(glyph: isPaused ? .silent : .listening)
+            StateGlyphView(glyph: isPaused ? .silent : .listening, size: 12)
             Text(isPaused ? L10n.tr("Paused") : L10n.tr("Recording screen"))
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 14, weight: .medium))
                 .lineLimit(1)
                 .fixedSize()
             Text(RecordingTime.clock(state.liveDuration))
-                .font(.system(size: 13, weight: .medium).monospacedDigit())
+                .font(.system(size: 14).monospacedDigit())
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .fixedSize()
@@ -105,20 +104,16 @@ struct ScreenRecordingHUDView: View {
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 28, height: 28)
-                    .background(
-                        StatusColorRole.recording.color,
-                        in: RoundedRectangle(cornerRadius: GlassTokens.Radius.chip, style: .continuous)
-                    )
+                    .background(StatusColorRole.recording.color, in: Circle())
             }
             .buttonStyle(.plain)
             .help(L10n.tr("Stop recording"))
             .accessibilityLabel(L10n.tr("Stop recording"))
         }
-        .padding(.leading, 14)
-        .padding(.trailing, 5)
-        .frame(width: Self.width - 2 * GlassTokens.Block.rim, height: GlassTokens.Block.unit - 2 * GlassTokens.Block.rim)
-        .wordSlip()
-        .glassBlock()
+        .padding(.leading, 18)
+        .padding(.trailing, 8)
+        .frame(width: Self.width, height: GlassTokens.Block.unit)
+        .glassBlock(.capsule)
         .accessibilityElement(children: .contain)
     }
 
@@ -127,7 +122,7 @@ struct ScreenRecordingHUDView: View {
             Image(systemName: symbol)
                 .font(.system(size: 12, weight: .semibold))
                 .frame(width: 28, height: 28)
-                .contentShape(RoundedRectangle(cornerRadius: GlassTokens.Radius.chip, style: .continuous))
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)

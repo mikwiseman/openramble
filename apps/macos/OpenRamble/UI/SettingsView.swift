@@ -48,36 +48,28 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
-            List(Pane.allCases, selection: $pane) { candidate in
-                Label(candidate.title, systemImage: candidate.symbol)
-                    .tag(candidate)
+        detail
+            .frame(minWidth: 640, idealWidth: 720, minHeight: 540, idealHeight: 640)
+            // A page, not a panel: the same white as a document, so the few
+            // things on it float.
+            .background(Color(nsColor: .textBackgroundColor))
+            .toolbar {
+                // Where to go is the window's one control, so it floats: a
+                // segmented control in the toolbar is Liquid Glass on macOS
+                // 26, and the page scrolls beneath it.
+                ToolbarItem(placement: .principal) {
+                    Picker(L10n.tr("Settings"), selection: $pane) {
+                        ForEach(Pane.allCases) { candidate in
+                            Text(candidate.title).tag(candidate)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .accessibilityLabel(L10n.tr("Settings"))
+                }
             }
-            .navigationSplitViewColumnWidth(min: 168, ideal: 178, max: 200)
-            // The sidebar's own translucency, which is the whole point of
-            // using one here.
-            .scrollContentBackground(.hidden)
-            // Sidebar content scrolls under the title bar, which is ordinary
-            // on macOS — but only when the title bar has a material to hide it
-            // behind. This window's was transparent, so a scrolled list showed
-            // through raw and collided with the traffic lights: the
-            // "Dictionary" row rendered straight underneath them.
-            .toolbarBackground(.visible, for: .windowToolbar)
-            // Five fixed panes always fit, so there is nothing to scroll — and
-            // a list that cannot scroll cannot slide its rows up under the
-            // traffic lights, which is what kept happening. Giving the title
-            // bar a material was not enough on its own: the rows still moved,
-            // they were merely harder to see doing it.
-            .scrollDisabled(true)
-        } detail: {
-            detail
-                // A pane's ideal content size must not enlarge the split view
-                // beyond the window and push the sidebar offscreen.
-                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-                .clipped()
-                .navigationTitle(pane.title)
-        }
-        .frame(minWidth: 720, idealWidth: 720, minHeight: 540, idealHeight: 540)
+            .navigationTitle(L10n.tr("Settings"))
+            .modifier(WithoutToolbarTitle())
     }
 
     @ViewBuilder
@@ -112,149 +104,147 @@ private struct GeneralSettings: View {
     @State private var showClearConfirmation = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: GlassTokens.Block.gap) {
-                if let waiting = SetupBlock.reason(for: state) {
-                    SetupBlock(reason: waiting, action: showSetup)
-                }
-
-                HStack(alignment: .top, spacing: GlassTokens.Block.gap) {
-                    keyBlock
-                    microphoneBlock
-                }
-                .fixedSize(horizontal: false, vertical: true)
-
-                BlockRows {
-                    BlockRow(
-                        title: L10n.tr("Paste last take"),
-                        isChanged: state.lastTakeShortcut != SettingsDefaults.lastTakeShortcut,
-                        revert: { state.lastTakeShortcut = SettingsDefaults.lastTakeShortcut }
-                    ) {
-                        ShortcutRecorder(
-                            shortcut: $state.lastTakeShortcut,
-                            reserved: state.recordingShortcut.map { [$0: L10n.tr("Record")] } ?? [:]
-                        )
-                    }
-                    .accessibilityHint(L10n.tr("Press this shortcut to paste the last take into the app in front"))
-                    BlockDivider()
-                    BlockRow(
-                        title: L10n.tr("Record"),
-                        isChanged: state.recordingShortcut != SettingsDefaults.recordingShortcut,
-                        revert: { state.recordingShortcut = SettingsDefaults.recordingShortcut }
-                    ) {
-                        ShortcutRecorder(
-                            shortcut: $state.recordingShortcut,
-                            reserved: state.lastTakeShortcut.map { [$0: L10n.tr("Paste last take")] } ?? [:]
-                        )
-                    }
-                    .accessibilityHint(L10n.tr("Press this shortcut to start or stop a recording"))
-                }
-                footnote(L10n.tr("Paste last take puts your newest dictation into the app in front, and copies it while a password field or terminal protects typing. Record starts and stops a recording from any app."))
-
-                BlockRows {
-                    toggleRow(
-                        L10n.tr("Add a space after each dictation"),
-                        hint: L10n.tr("For dictating in runs, so the next phrase does not arrive welded to the last word."),
-                        isOn: $state.appendsTrailingSpace,
-                        default: SettingsDefaults.appendsTrailingSpace
-                    )
-                    BlockDivider()
-                    toggleRow(
-                        L10n.tr("Finish hands-free dictation on silence"),
-                        hint: L10n.tr("Only in hands-free mode. While you hold the key, a pause is never treated as the end."),
-                        isOn: $state.stopsOnSilence,
-                        default: SettingsDefaults.stopsOnSilence
-                    )
-                    BlockDivider()
-                    toggleRow(
-                        L10n.tr("Play a sound when something needs you"),
-                        hint: L10n.tr("A quiet tone when the text didn't reach the field or nothing was recognized. A dictation that works stays silent."),
-                        isOn: $state.soundsEnabled,
-                        default: SettingsDefaults.soundsEnabled
-                    )
-                    BlockDivider()
-                    BlockRow(
-                        title: L10n.tr("Dictation panel"),
-                        isChanged: state.overlayPlacement != SettingsDefaults.overlayPlacement,
-                        revert: { state.overlayPlacement = SettingsDefaults.overlayPlacement }
-                    ) {
-                        Picker("", selection: $state.overlayPlacement) {
-                            ForEach(DictationOverlayPlacement.allCases) { placement in
-                                Text(placement.title).tag(placement)
-                            }
-                        }
-                        .labelsHidden()
-                        .accessibilityLabel(L10n.tr("Dictation panel"))
-                        .accessibilityHint(L10n.tr("Places dictation feedback at the top or bottom of the active screen"))
-                    }
-                }
-
-                BlockRows {
-                    BlockRow(title: L10n.tr("History keeps")) {
-                        Picker(L10n.tr("Keep"), selection: $state.historyLimit) {
-                            ForEach([5, 10, 20, 50], id: \.self) { count in
-                                Text(L10n.tr("Last %@", String(describing: count))).tag(count)
-                            }
-                        }
-                        .labelsHidden()
-                        .accessibilityLabel(L10n.tr("History keeps"))
-                        .accessibilityHint(L10n.tr("How many dictations to keep, with their audio"))
-                    }
-                    BlockDivider()
-                    BlockRow(title: L10n.tr("Dictations and their audio")) {
-                        HStack(spacing: 8) {
-                            Button(L10n.tr("Show in Finder")) { state.revealHistoryAudio() }
-                                .disabled(state.history.isEmpty)
-                                .accessibilityHint(L10n.tr("Opens the folder holding the audio kept with these dictations"))
-                            Button(L10n.tr("Delete All"), role: .destructive) { showClearConfirmation = true }
-                                .disabled(state.history.isEmpty)
-                        }
-                    }
-                }
-                .confirmationDialog(
-                    L10n.tr("Delete all dictation history?"),
-                    isPresented: $showClearConfirmation,
-                    titleVisibility: .visible
-                ) {
-                    Button(L10n.tr("Delete All"), role: .destructive) { state.clearHistory() }
-                    Button(L10n.tr("Cancel"), role: .cancel) {}
-                } message: {
-                    Text(L10n.tr("The transcripts and their recordings are removed from this Mac."))
-                }
-                footnote(L10n.tr("Your dictations live in the Library, next to your recordings. Starred ones stay past the limit."))
-
-                BlockRows {
-                    BlockRow(title: L10n.tr("Interface language")) {
-                        LanguagePicker().labelsHidden()
-                    }
-                    BlockDivider()
-                    BlockRow(
-                        title: L10n.tr("Show OpenRamble in"),
-                        isChanged: state.presence != SettingsDefaults.presence,
-                        revert: { state.presence = SettingsDefaults.presence }
-                    ) {
-                        Picker("", selection: $state.presence) {
-                            ForEach(AppPresence.allCases) { option in
-                                Text(option.title).tag(option)
-                            }
-                        }
-                        .labelsHidden()
-                        .accessibilityLabel(L10n.tr("Show OpenRamble in"))
-                        .accessibilityHint(L10n.tr("There is no option to hide it entirely — an app you cannot see is one you cannot open again."))
-                    }
-                    BlockDivider()
-                    toggleRow(
-                        L10n.tr("Launch at login"),
-                        hint: L10n.tr("Starts OpenRamble automatically when you log in"),
-                        isOn: $state.launchAtLogin,
-                        default: SettingsDefaults.launchAtLogin
-                    )
-                }
-
-                footnote(PrivacySentence.text)
-                    .padding(.top, GlassTokens.Space.tight)
+        BlockPage {
+            if let waiting = SetupBlock.reason(for: state) {
+                SetupBlock(reason: waiting, action: showSetup)
             }
-            .padding(GlassTokens.Block.padding)
+
+            HStack(alignment: .top, spacing: GlassTokens.Space.stack) {
+                keyBlock
+                microphoneBlock
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+            BlockSection(
+                L10n.tr("Shortcuts"),
+                footer: L10n.tr("Paste last take puts your newest dictation into the app in front, and copies it while a password field or terminal protects typing. Record starts and stops a recording from any app.")
+            ) {
+                BlockRow(
+                    title: L10n.tr("Paste last take"),
+                    isChanged: state.lastTakeShortcut != SettingsDefaults.lastTakeShortcut,
+                    revert: { state.lastTakeShortcut = SettingsDefaults.lastTakeShortcut }
+                ) {
+                    ShortcutRecorder(
+                        shortcut: $state.lastTakeShortcut,
+                        reserved: state.recordingShortcut.map { [$0: L10n.tr("Record")] } ?? [:]
+                    )
+                }
+                .accessibilityHint(L10n.tr("Press this shortcut to paste the last take into the app in front"))
+                BlockDivider()
+                BlockRow(
+                    title: L10n.tr("Record"),
+                    isChanged: state.recordingShortcut != SettingsDefaults.recordingShortcut,
+                    revert: { state.recordingShortcut = SettingsDefaults.recordingShortcut }
+                ) {
+                    ShortcutRecorder(
+                        shortcut: $state.recordingShortcut,
+                        reserved: state.lastTakeShortcut.map { [$0: L10n.tr("Paste last take")] } ?? [:]
+                    )
+                }
+                .accessibilityHint(L10n.tr("Press this shortcut to start or stop a recording"))
+            }
+
+            BlockSection(L10n.tr("Dictation")) {
+                toggleRow(
+                    L10n.tr("Add a space after each dictation"),
+                    hint: L10n.tr("For dictating in runs, so the next phrase does not arrive welded to the last word."),
+                    isOn: $state.appendsTrailingSpace,
+                    default: SettingsDefaults.appendsTrailingSpace
+                )
+                BlockDivider()
+                toggleRow(
+                    L10n.tr("Finish hands-free dictation on silence"),
+                    hint: L10n.tr("Only in hands-free mode. While you hold the key, a pause is never treated as the end."),
+                    isOn: $state.stopsOnSilence,
+                    default: SettingsDefaults.stopsOnSilence
+                )
+                BlockDivider()
+                toggleRow(
+                    L10n.tr("Play a sound when something needs you"),
+                    hint: L10n.tr("A quiet tone when the text didn't reach the field or nothing was recognized. A dictation that works stays silent."),
+                    isOn: $state.soundsEnabled,
+                    default: SettingsDefaults.soundsEnabled
+                )
+                BlockDivider()
+                BlockRow(
+                    title: L10n.tr("Dictation panel"),
+                    isChanged: state.overlayPlacement != SettingsDefaults.overlayPlacement,
+                    revert: { state.overlayPlacement = SettingsDefaults.overlayPlacement }
+                ) {
+                    Picker("", selection: $state.overlayPlacement) {
+                        ForEach(DictationOverlayPlacement.allCases) { placement in
+                            Text(placement.title).tag(placement)
+                        }
+                    }
+                    .labelsHidden()
+                    .accessibilityLabel(L10n.tr("Dictation panel"))
+                    .accessibilityHint(L10n.tr("Places dictation feedback at the top or bottom of the active screen"))
+                }
+            }
+
+            BlockSection(
+                L10n.tr("History"),
+                footer: L10n.tr("Your dictations live in the Library, next to your recordings. Starred ones stay past the limit.")
+            ) {
+                BlockRow(title: L10n.tr("History keeps")) {
+                    Picker(L10n.tr("Keep"), selection: $state.historyLimit) {
+                        ForEach([5, 10, 20, 50], id: \.self) { count in
+                            Text(L10n.tr("Last %@", String(describing: count))).tag(count)
+                        }
+                    }
+                    .labelsHidden()
+                    .accessibilityLabel(L10n.tr("History keeps"))
+                    .accessibilityHint(L10n.tr("How many dictations to keep, with their audio"))
+                }
+                BlockDivider()
+                BlockRow(title: L10n.tr("Dictations and their audio")) {
+                    HStack(spacing: 8) {
+                        Button(L10n.tr("Show in Finder")) { state.revealHistoryAudio() }
+                            .disabled(state.history.isEmpty)
+                            .accessibilityHint(L10n.tr("Opens the folder holding the audio kept with these dictations"))
+                        Button(L10n.tr("Delete All"), role: .destructive) { showClearConfirmation = true }
+                            .disabled(state.history.isEmpty)
+                    }
+                }
+            }
+            .confirmationDialog(
+                L10n.tr("Delete all dictation history?"),
+                isPresented: $showClearConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button(L10n.tr("Delete All"), role: .destructive) { state.clearHistory() }
+                Button(L10n.tr("Cancel"), role: .cancel) {}
+            } message: {
+                Text(L10n.tr("The transcripts and their recordings are removed from this Mac."))
+            }
+
+            BlockSection("OpenRamble", footer: PrivacySentence.text) {
+                BlockRow(title: L10n.tr("Interface language")) {
+                    LanguagePicker().labelsHidden()
+                }
+                BlockDivider()
+                BlockRow(
+                    title: L10n.tr("Show OpenRamble in"),
+                    isChanged: state.presence != SettingsDefaults.presence,
+                    revert: { state.presence = SettingsDefaults.presence }
+                ) {
+                    Picker("", selection: $state.presence) {
+                        ForEach(AppPresence.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                    .labelsHidden()
+                    .accessibilityLabel(L10n.tr("Show OpenRamble in"))
+                    .accessibilityHint(L10n.tr("There is no option to hide it entirely — an app you cannot see is one you cannot open again."))
+                }
+                BlockDivider()
+                toggleRow(
+                    L10n.tr("Launch at login"),
+                    hint: L10n.tr("Starts OpenRamble automatically when you log in"),
+                    isOn: $state.launchAtLogin,
+                    default: SettingsDefaults.launchAtLogin
+                )
+            }
         }
     }
 
@@ -265,8 +255,9 @@ private struct GeneralSettings: View {
             && !state.isHandsFreeActive
     }
 
+    /// The key, as an object: the one thing on this page a hand knows.
     private var keyBlock: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
                 BlockLabel(L10n.tr("Dictation key"))
                 Spacer()
@@ -275,26 +266,29 @@ private struct GeneralSettings: View {
                     revert: { state.hotkey = SettingsDefaults.hotkey }
                 )
             }
+            Spacer(minLength: 20)
             // The cap goes down when the real key does: hold it here and the
             // setting answers the hand.
             DictationKeyMenu(hotkey: $state.hotkey, isPressed: isKeyHeld)
-
+                .frame(maxWidth: .infinity)
+            Spacer(minLength: 20)
             if let warning = state.hotkeyWarning {
                 attention(warning)
                     .accessibilityLabel(L10n.tr("Key warning. %@", String(describing: warning)))
             } else {
                 Text(L10n.tr("Hold to talk. Double-press for hands-free."))
-                    .font(.system(size: 13))
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 168, maxHeight: .infinity, alignment: .topLeading)
         .contentBlock()
     }
 
+    /// The microphone, by the name of the one a take would use right now.
     private var microphoneBlock: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
                 BlockLabel(L10n.tr("Microphone"))
                 Spacer()
@@ -303,6 +297,7 @@ private struct GeneralSettings: View {
                     revert: { state.inputDeviceUID = nil }
                 )
             }
+            Spacer(minLength: 20)
             Menu {
                 Picker(L10n.tr("Microphone"), selection: $state.inputDeviceUID) {
                     Text(L10n.tr("System default")).tag(String?.none)
@@ -315,33 +310,32 @@ private struct GeneralSettings: View {
             } label: {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(microphoneName)
-                        .font(.system(size: 22, weight: .semibold))
+                        .font(.system(size: 24, weight: .regular))
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.tertiary)
                 }
                 .contentShape(Rectangle())
             }
             .menuStyle(.button)
             .buttonStyle(.plain)
             .menuIndicator(.hidden)
-            .frame(minHeight: KeyCap.Size.large.height + KeyCap.Size.large.travel, alignment: .leading)
             .accessibilityLabel(L10n.tr("Microphone"))
             .accessibilityValue(microphoneName)
             .accessibilityHint(L10n.tr("Which input to record through. The system default follows whatever your Mac is using."))
-
+            Spacer(minLength: 20)
             if let notice = state.inputDeviceNotice {
                 attention(notice)
             } else {
                 Text(state.inputDeviceUID == nil ? L10n.tr("Follows your Mac.") : L10n.tr("Always this one, while it is connected."))
-                    .font(.system(size: 13))
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 168, maxHeight: .infinity, alignment: .topLeading)
         .contentBlock()
     }
 
@@ -365,15 +359,6 @@ private struct GeneralSettings: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func footnote(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 12))
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, GlassTokens.Space.stack)
-            .padding(.bottom, GlassTokens.Space.tight)
-    }
-
     private func toggleRow(
         _ title: String,
         hint: String,
@@ -390,6 +375,19 @@ private struct GeneralSettings: View {
                 .toggleStyle(.switch)
                 .accessibilityLabel(title)
                 .accessibilityHint(hint)
+        }
+    }
+}
+
+/// The window's name stays for the Window menu and for VoiceOver; in the
+/// toolbar the switcher says where you are, and a title beside it only
+/// repeats the window.
+struct WithoutToolbarTitle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) {
+            content.toolbar(removing: .title)
+        } else {
+            content
         }
     }
 }

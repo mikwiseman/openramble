@@ -131,21 +131,24 @@ struct DictationRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(entry.text.isEmpty ? L10n.tr("Nothing recognized") : entry.text)
-                .font(.body)
-                .foregroundStyle(entry.text.isEmpty ? .secondary : .primary)
-                .lineLimit(2)
-            HStack(spacing: GlassTokens.Space.tight) {
-                Text(time)
-                    .font(.caption)
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-                if entry.isKept {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 9))
+        HStack(alignment: .top, spacing: GlassTokens.Space.inline) {
+            RowDisc(symbol: "text.quote")
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.text.isEmpty ? L10n.tr("Nothing recognized") : entry.text)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(entry.text.isEmpty ? .secondary : .primary)
+                    .lineLimit(2)
+                HStack(spacing: GlassTokens.Space.tight) {
+                    Text(time)
+                        .font(.system(size: 12))
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
+                    if entry.isKept {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                    }
                 }
             }
         }
@@ -181,47 +184,55 @@ struct RecordingRow: View {
             ?? RecordingsPlaceholder.degradedNote(for: recording)
     }
 
+    private var symbol: String {
+        if recording.captureKind == .screen { return "rectangle.inset.filled" }
+        return recording.isMeeting ? "person.2.fill" : "mic.fill"
+    }
+
+    private var kind: String {
+        if recording.captureKind == .screen { return L10n.tr("Screen recording") }
+        return recording.isMeeting ? L10n.tr("Meeting") : L10n.tr("Voice note")
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: GlassTokens.Space.inline) {
-                Image(systemName: recording.captureKind == .screen ? "rectangle.inset.filled" : "waveform")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(recording.captureKind == .screen ? Color.accentColor : Color.secondary)
-                    .accessibilityHidden(true)
-                if isEditing, let editingTitle, let focusedEditingID {
-                    TextField(
-                        L10n.tr("Recording name"),
-                        text: editingTitle,
-                        prompt: Text(RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
-                    )
-                    .textFieldStyle(.plain)
-                    .font(.body)
-                    .focused(focusedEditingID, equals: recording.id)
-                    .onSubmit { onCommit?() }
-                    .onExitCommand { onCancel?() }
-                    .accessibilityLabel(L10n.tr("Recording name"))
-                } else {
-                    Text(recording.title ?? startTime)
-                        .font(.body)
-                        .lineLimit(1)
+        HStack(alignment: .top, spacing: GlassTokens.Space.inline) {
+            RowDisc(symbol: symbol)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: GlassTokens.Space.inline) {
+                    if isEditing, let editingTitle, let focusedEditingID {
+                        TextField(
+                            L10n.tr("Recording name"),
+                            text: editingTitle,
+                            prompt: Text(RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
+                        )
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 13, weight: .medium))
+                        .focused(focusedEditingID, equals: recording.id)
+                        .onSubmit { onCommit?() }
+                        .onExitCommand { onCancel?() }
+                        .accessibilityLabel(L10n.tr("Recording name"))
+                    } else {
+                        Text(recording.title ?? kind)
+                            .font(.system(size: 13, weight: .medium))
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: GlassTokens.Space.tight)
+                    Text(RecordingTime.clock(recording.duration))
+                        .font(.system(size: 12))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
                 }
-                Spacer(minLength: GlassTokens.Space.tight)
-                Text(RecordingTime.clock(recording.duration))
-                    .font(.caption)
+                Text(startTime)
+                    .font(.system(size: 12))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
-                    .fixedSize()
-            }
-            if recording.title != nil {
-                Text(startTime)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            if let warning {
-                Label(warning, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundStyle(StatusColorRole.attention.color)
-                    .lineLimit(2)
+                if let warning {
+                    Label(warning, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(StatusColorRole.attention.color)
+                        .lineLimit(2)
+                }
             }
         }
         .padding(.vertical, GlassTokens.Space.tight)

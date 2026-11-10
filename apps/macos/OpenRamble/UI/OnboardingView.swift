@@ -55,8 +55,8 @@ struct OnboardingView: View {
             // two different ones.
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                .padding(.horizontal, 36)
-                .padding(.top, 28)
+                .padding(.horizontal, 48)
+                .padding(.top, 44)
                 .padding(.bottom, 8)
                 // Each step is its own page: forward it slides left, back it
                 // slides right — the same paths in both directions. With
@@ -104,13 +104,14 @@ struct OnboardingView: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .accessibilityHidden(navigationBlockReason == nil)
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 20)
         }
         // The combined setup step contains three cards and every model state,
         // including repair and download progress. Keep enough vertical room
         // for those controls without making the first-run window feel large.
-        .frame(width: 600, height: 640)
+        .frame(width: 640, height: 680)
+        .background(Color(nsColor: .textBackgroundColor))
         .confirmationDialog(
             L10n.tr("Repair Accessibility access?"),
             isPresented: $showAccessibilityRepairConfirmation,
@@ -143,39 +144,41 @@ struct OnboardingView: View {
             Spacer(minLength: 0)
 
             Text(L10n.tr("Hold a key, speak, let go."))
-                .font(.system(size: 30, weight: .bold))
+                .font(.display(38))
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
 
             Text(L10n.tr("The words appear at your cursor, in any app."))
-                .font(.system(size: 15))
+                .font(.system(size: 16))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.top, 8)
+                .padding(.top, 12)
 
             KeyCap(title: state.hotkey.shortTitle, size: .hero, isPressed: keyEcho.isDown)
-                .padding(.top, 44)
+                .padding(.top, 52)
 
             Text(keyEcho.wasPressed
                 ? L10n.tr("That is your dictation key.")
                 : L10n.tr("Press %@ to find it.", String(describing: state.hotkey.title)))
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 13))
                 .foregroundStyle(.secondary)
-                .padding(.top, 18)
+                .padding(.top, 22)
                 .accessibilityHidden(true)
 
             Spacer(minLength: 0)
 
-            VStack(alignment: .leading, spacing: 4) {
+            // The promise, in the open: no box, no icon, two sentences.
+            VStack(spacing: 4) {
                 Text(PrivacySentence.text)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13))
+                    .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(L10n.tr("No account. Free and open source."))
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentBlock()
+            .frame(maxWidth: 440)
         }
         .frame(maxWidth: .infinity)
         .onAppear {
@@ -188,13 +191,14 @@ struct OnboardingView: View {
     /// Three blocks, one per thing that is needed. Each says what it is for
     /// and turns green when it is done.
     private var setup: some View {
-        VStack(alignment: .leading, spacing: GlassTokens.Block.gap) {
+        VStack(alignment: .leading, spacing: 0) {
             OnboardingStepHeader(
                 title: L10n.tr("Set up OpenRamble"),
                 subtitle: L10n.tr("One download, two permissions — speech never leaves this Mac.")
             )
-            .padding(.bottom, GlassTokens.Space.stack - GlassTokens.Block.gap)
+            .padding(.bottom, 32)
 
+            Divider()
             VStack(alignment: .leading, spacing: 10) {
                 BlockLabel(L10n.tr("Speech model"))
                 ModelStatusView(
@@ -205,7 +209,8 @@ struct OnboardingView: View {
                 )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .contentBlock()
+            .padding(.vertical, 18)
+            Divider()
 
             OnboardingPermission(
                 status: PermissionStatus(
@@ -215,6 +220,7 @@ struct OnboardingView: View {
                 ),
                 action: state.requestMicrophone
             )
+            Divider()
             OnboardingPermission(
                 status: PermissionStatus.accessibility(
                     state: state.accessibilityState,
@@ -244,12 +250,13 @@ struct OnboardingView: View {
                 .font(.caption)
             }
 
+            Divider()
             Text(L10n.tr("Accessibility is used only to notice your dictation key and insert finished text. Other keystrokes are never logged or stored. Input Monitoring is not needed."))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
+                .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, GlassTokens.Space.stack)
-                .padding(.top, GlassTokens.Space.tight)
+                .padding(.top, 14)
 
             Spacer(minLength: 0)
         }
@@ -291,7 +298,7 @@ struct OnboardingView: View {
     /// Teach by doing: the key on the screen goes down with the real one,
     /// and the words land in a note that belongs to this window.
     private var tryIt: some View {
-        VStack(alignment: .leading, spacing: GlassTokens.Space.stack) {
+        VStack(alignment: .leading, spacing: 24) {
             OnboardingStepHeader(
                 title: L10n.tr("Hold %@ and say something.", String(describing: state.hotkey.shortTitle)),
                 subtitle: L10n.tr("Let go when you are done. The words land in the note below.")
@@ -318,8 +325,8 @@ struct OnboardingView: View {
             // no other app to land in.
             VStack(alignment: .leading, spacing: 0) {
                 TextEditor(text: $trial)
-                    .font(.system(size: 17))
-                    .frame(height: 104)
+                    .font(.words(20))
+                    .frame(height: 120)
                     .focused($trialFocused)
                     .scrollContentBackground(.hidden)
                     .onAppear { trialFocused = true }
@@ -330,7 +337,7 @@ struct OnboardingView: View {
                                 Text(L10n.tr("Try saying"))
                                     .font(.system(size: 12))
                                 Text(OnboardingStep.tryOutSuggestion())
-                                    .font(.system(size: 17))
+                                    .font(.words(20))
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             .foregroundStyle(.tertiary)
@@ -340,20 +347,13 @@ struct OnboardingView: View {
                         }
                     }
             }
-            .padding(14)
+            .padding(20)
             .background(
-                Color(nsColor: .textBackgroundColor),
+                trialSucceeded
+                    ? StatusColorRole.success.color.opacity(0.10)
+                    : Color.primary.opacity(0.045),
                 in: RoundedRectangle(cornerRadius: GlassTokens.Radius.surface, style: .continuous)
             )
-            .overlay {
-                RoundedRectangle(cornerRadius: GlassTokens.Radius.surface, style: .continuous)
-                    .strokeBorder(
-                        trialSucceeded
-                            ? StatusColorRole.success.color
-                            : Color.primary.opacity(0.14),
-                        lineWidth: trialSucceeded ? 2 : 1
-                    )
-            }
             .animation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.2), value: trialSucceeded)
 
             HStack(alignment: .center, spacing: GlassTokens.Space.stack) {
@@ -541,7 +541,7 @@ private struct OnboardingStepHeader: View {
     var body: some View {
         VStack(spacing: 6) {
             Text(title)
-                .font(.system(size: 24, weight: .bold))
+                .font(.display(30))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
@@ -580,8 +580,8 @@ private struct OnboardingProgressDots: View {
     }
 }
 
-/// A permission as a block: what it is for, and the one button that grants
-/// it. Granted, it turns green and the button goes.
+/// A permission as a row: what it is for, and the one button that grants
+/// it. Granted, its ring becomes a green check and the button goes.
 private struct OnboardingPermission<Secondary: View>: View {
     let status: PermissionStatus
     let action: () -> Void
@@ -603,7 +603,7 @@ private struct OnboardingPermission<Secondary: View>: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(status.title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 15, weight: .medium))
                 Text(status.detail)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
@@ -625,6 +625,6 @@ private struct OnboardingPermission<Secondary: View>: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .contentBlock(padding: GlassTokens.Space.stack)
+        .padding(.vertical, 16)
     }
 }

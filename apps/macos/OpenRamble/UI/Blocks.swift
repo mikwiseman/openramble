@@ -3,114 +3,106 @@ import SwiftUI
 
 /// The parts every OpenRamble surface is built from.
 ///
-/// One idea, two layers. Floating pieces — the take block, the recording
-/// block — are a rim of Liquid Glass around an opaque slip, so glass frames
-/// the words and never carries them. Inside a window a block is content: a
-/// flat fill one step from the background, sized by what it holds.
+/// Three ideas, used everywhere:
+///
+/// - **Glass floats, content rests.** Anything that floats — the take block,
+///   the recording control, the bars over a window's content — is one piece
+///   of Liquid Glass: a capsule for a line, a soft panel when it holds more.
+///   Content never wears glass.
+/// - **Air groups.** Inside a window there are no boxes around rows. A centred
+///   column, wide margins and a hairline between rows do the grouping, and a
+///   soft tile is kept for the few things that are objects: the key, the
+///   microphone, something that waits for you.
+/// - **Your words are set in a serif.** The app speaks in the system sans.
+///   What the person said is written in New York, wherever it appears: on
+///   the take block, in the Library, in the first note. Speech became text,
+///   and it looks like text.
 
-// MARK: - Floating block
+// MARK: - Type
+
+extension Font {
+    /// What the person said. Regular weight, a serif, room between the lines.
+    static func words(_ size: CGFloat) -> Font {
+        .system(size: size, weight: .regular, design: .serif)
+    }
+
+    /// A page's one headline: the same serif, larger, and never bold.
+    static func display(_ size: CGFloat) -> Font {
+        .system(size: size, weight: .regular, design: .serif)
+    }
+}
+
+// MARK: - Glass
+
+/// The two shapes a floating block takes.
+enum GlassShape {
+    /// One line: a capsule, one unit tall.
+    case capsule
+    /// More than a line: a panel with the surface radius.
+    case panel
+
+    var shape: AnyShape {
+        switch self {
+        case .capsule: return AnyShape(Capsule(style: .continuous))
+        case .panel: return AnyShape(RoundedRectangle(cornerRadius: GlassTokens.Radius.surface, style: .continuous))
+        }
+    }
+}
 
 extension View {
-    /// A floating block: a rim of Liquid Glass around whatever is inside.
+    /// One piece of Liquid Glass around this content.
     ///
-    /// The content is expected to be a `wordSlip()`. Words on glass are the
-    /// documented failure of the material, and the macOS 27 slider from clear
-    /// to tinted changes glass under any text that sits on it.
-    ///
-    /// - Parameter tint: the state the rim confirms, for the two states that
-    ///   are about the person rather than the app: orange while words wait,
-    ///   green for the beat after they land.
-    func glassBlock(tint: StatusColorRole? = nil) -> some View {
-        modifier(GlassBlock(tint: tint))
+    /// Regular glass, the variant made to carry text: it frosts and dims
+    /// what is behind it as far as legibility needs, and follows the Mac's
+    /// own glass setting. Reduce Transparency makes it solid; Increase
+    /// Contrast adds a border; macOS 14 and 15 get the system material.
+    func glassBlock(_ shape: GlassShape = .capsule) -> some View {
+        modifier(GlassBlock(shape: shape))
     }
 
-    /// The opaque slip words sit on, inside a `glassBlock()`.
-    func wordSlip() -> some View {
-        modifier(WordSlip())
-    }
-
-    /// A block inside a window: content, never glass.
+    /// A soft tile inside a window, for the few things that are objects.
     func contentBlock(padding: CGFloat = GlassTokens.Block.padding) -> some View {
         modifier(ContentBlock(padding: padding, tint: nil))
     }
 
-    /// A content block that carries a state: orange for something that waits
-    /// for the person, green for the one success worth marking.
+    /// A tile that carries a state: orange for something that waits for the
+    /// person, green for the one success worth marking.
     func contentBlock(_ tint: StatusColorRole, padding: CGFloat = GlassTokens.Block.padding) -> some View {
         modifier(ContentBlock(padding: padding, tint: tint))
     }
 }
 
 private struct GlassBlock: ViewModifier {
-    let tint: StatusColorRole?
+    let shape: GlassShape
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var contrast
 
-    private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: GlassTokens.Radius.surface, style: .continuous)
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .padding(GlassTokens.Block.rim)
-            .background { rim }
-    }
-
     @ViewBuilder
-    private var rim: some View {
+    func body(content: Content) -> some View {
+        let outline = shape.shape
         if reduceTransparency {
-            // "Reduced Transparency makes Liquid Glass frostier." At its limit
-            // that is a solid rim in the state's color.
-            shape
-                .fill(tint.map { AnyShapeStyle($0.color) } ?? AnyShapeStyle(.background))
-                .overlay { shape.stroke(.primary.opacity(0.42), lineWidth: GlassTokens.Stroke.emphasised) }
+            content
+                .background(Color(nsColor: .windowBackgroundColor), in: outline)
+                .overlay { outline.stroke(.primary.opacity(0.42), lineWidth: GlassTokens.Stroke.emphasised) }
         } else if #available(macOS 26.0, *) {
-            Color.clear
-                .glassEffect(glass, in: shape)
+            content
+                .glassEffect(.regular, in: outline)
                 .overlay {
                     if contrast == .increased {
-                        shape.stroke(.primary.opacity(0.42), lineWidth: GlassTokens.Stroke.emphasised)
+                        outline.stroke(.primary.opacity(0.42), lineWidth: GlassTokens.Stroke.emphasised)
                     }
                 }
         } else {
-            shape
-                .fill(.regularMaterial)
-                .overlay { shape.fill((tint?.color ?? .clear).opacity(0.85)) }
+            content
+                .background(.regularMaterial, in: outline)
                 .overlay {
-                    shape.stroke(
+                    outline.stroke(
                         .primary.opacity(GlassTokens.Stroke.opacity(increasedContrast: contrast == .increased)),
                         lineWidth: GlassTokens.Stroke.hairline
                     )
                 }
         }
-    }
-
-    /// Clear, not regular: nothing is written on the rim, so it can show the
-    /// desktop it bends, and a tint on clear glass stays the state's own color
-    /// where regular glass greys it out.
-    @available(macOS 26.0, *)
-    private var glass: Glass {
-        guard let tint else { return .clear }
-        return .clear.tint(tint.color)
-    }
-}
-
-private struct WordSlip: ViewModifier {
-    @Environment(\.colorSchemeContrast) private var contrast
-
-    private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: GlassTokens.Block.slipRadius, style: .continuous)
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .background(Color(nsColor: .textBackgroundColor), in: shape)
-            .overlay {
-                if contrast == .increased {
-                    shape.stroke(.primary.opacity(0.42), lineWidth: GlassTokens.Stroke.emphasised)
-                }
-            }
     }
 }
 
@@ -129,23 +121,17 @@ private struct ContentBlock: ViewModifier {
             .padding(padding)
             .background(fill, in: shape)
             .overlay {
-                shape.stroke(
-                    (tint?.color ?? .primary).opacity(strokeOpacity),
-                    lineWidth: contrast == .increased
-                        ? GlassTokens.Stroke.emphasised
-                        : GlassTokens.Stroke.hairline
-                )
+                if contrast == .increased {
+                    shape.stroke((tint?.color ?? .primary).opacity(0.6), lineWidth: GlassTokens.Stroke.emphasised)
+                }
             }
     }
 
+    /// One quiet step from the page. A tint is the state's color, thinned
+    /// until it reads as a place rather than as an alarm.
     private var fill: AnyShapeStyle {
-        if let tint { return AnyShapeStyle(tint.color.opacity(0.14)) }
-        return AnyShapeStyle(.quaternary.opacity(0.55))
-    }
-
-    private var strokeOpacity: Double {
-        if tint != nil { return contrast == .increased ? 0.9 : 0.45 }
-        return GlassTokens.Stroke.opacity(increasedContrast: contrast == .increased) * 0.6
+        if let tint { return AnyShapeStyle(tint.color.opacity(0.12)) }
+        return AnyShapeStyle(Color.primary.opacity(0.045))
     }
 }
 
@@ -250,11 +236,12 @@ struct StateGlyphView: View {
 
 // MARK: - Key cap
 
-/// A key, drawn. The dictation key is the one gesture the app has, so it is
-/// shown as the thing a finger rests on rather than described in a sentence.
+/// A key, drawn as the thing a finger rests on.
 ///
-/// The cap goes down when `isPressed` is true: wired to the real key, the
-/// drawing answers the hand.
+/// The dictation key is the one gesture the app has, so it is an object
+/// rather than a sentence: a lit face, a side that shows its travel, a shadow
+/// on the desk. The cap goes down when `isPressed` is true. Wired to the real
+/// key, the drawing answers the hand.
 struct KeyCap: View {
     enum Size {
         /// Inside a line of text or a button.
@@ -267,16 +254,16 @@ struct KeyCap: View {
         var height: CGFloat {
             switch self {
             case .inline: return 22
-            case .large: return 56
-            case .hero: return 132
+            case .large: return 64
+            case .hero: return 148
             }
         }
 
         var radius: CGFloat {
             switch self {
             case .inline: return 6
-            case .large: return 12
-            case .hero: return 22
+            case .large: return 15
+            case .hero: return 30
             }
         }
 
@@ -284,8 +271,8 @@ struct KeyCap: View {
         var travel: CGFloat {
             switch self {
             case .inline: return 1.5
-            case .large: return 3
-            case .hero: return 6
+            case .large: return 4
+            case .hero: return 9
             }
         }
     }
@@ -312,7 +299,8 @@ struct KeyCap: View {
                 shape.fill(side).offset(y: size.travel)
             }
             .padding(.bottom, size.travel)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.06), value: isPressed)
+            .shadow(color: shadow, radius: isPressed ? shadowRadius * 0.35 : shadowRadius, y: isPressed ? shadowRadius * 0.2 : shadowRadius * 0.55)
+            .animation(reduceMotion ? nil : .spring(duration: 0.14, bounce: 0.2), value: isPressed)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(title)
     }
@@ -324,8 +312,8 @@ struct KeyCap: View {
     private var minWidth: CGFloat {
         switch size {
         case .inline: return size.height
-        case .large: return 112
-        case .hero: return 248
+        case .large: return 128
+        case .hero: return 280
         }
     }
 
@@ -340,59 +328,86 @@ struct KeyCap: View {
                 .padding(.horizontal, 7)
         case .large:
             Text(title)
-                .font(.system(size: 19, weight: .semibold))
+                .font(.system(size: 21, weight: .medium))
                 .lineLimit(1)
                 .fixedSize()
-                .padding(.horizontal, 18)
+                .padding(.horizontal, 22)
         case .hero:
             Text(title)
-                .font(.system(size: 34, weight: .semibold))
+                .font(.system(size: 40, weight: .medium))
                 .lineLimit(1)
                 .fixedSize()
-                .padding(.horizontal, 36)
+                .padding(.horizontal, 44)
         }
     }
 
     private var isDark: Bool { colorScheme == .dark }
 
-    private var face: Color {
-        if onInk { return isDark ? Color.black.opacity(0.08) : Color.white.opacity(0.16) }
-        return isDark ? Color(white: 0.24) : .white
+    /// Lit from above: a shade lighter at the top of the face than at the
+    /// bottom, as a key under a desk lamp is.
+    private var face: LinearGradient {
+        let colors: [Color]
+        if onInk {
+            colors = isDark
+                ? [Color.black.opacity(0.06), Color.black.opacity(0.10)]
+                : [Color.white.opacity(0.20), Color.white.opacity(0.13)]
+        } else if isDark {
+            colors = [Color(white: 0.30), Color(white: 0.22)]
+        } else {
+            colors = [Color.white, Color(white: 0.955)]
+        }
+        return LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
     }
 
     private var edge: Color {
-        if onInk { return isDark ? Color.black.opacity(0.32) : Color.white.opacity(0.5) }
-        return .primary.opacity(contrast == .increased ? 0.5 : (isDark ? 0.24 : 0.16))
+        if onInk { return isDark ? Color.black.opacity(0.30) : Color.white.opacity(0.45) }
+        return .primary.opacity(contrast == .increased ? 0.5 : (isDark ? 0.20 : 0.10))
     }
 
     private var side: Color {
         if onInk { return .clear }
-        return isDark ? Color(white: 0.10) : Color(white: 0.72)
+        return isDark ? Color(white: 0.09) : Color(white: 0.78)
+    }
+
+    private var shadow: Color {
+        guard !onInk, size != .inline else { return .clear }
+        return .black.opacity(isDark ? 0.5 : 0.16)
+    }
+
+    private var shadowRadius: CGFloat {
+        switch size {
+        case .inline: return 0
+        case .large: return 10
+        case .hero: return 26
+        }
     }
 }
 
 // MARK: - Buttons
 
-/// The one action a block offers: ink on the surface, so it is the darkest
-/// thing in light mode and the lightest in dark.
+/// The one action a block offers: ink, in a capsule. Stated as colors of its
+/// own rather than as label colors, because on glass a label color turns
+/// translucent, and the one thing to press must not.
 struct InkButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
+        let dark = colorScheme == .dark
         configuration.label
             .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(.background)
-            .padding(.horizontal, 12)
-            .frame(minHeight: 32)
+            .foregroundStyle(dark ? Color.black : Color.white)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 34)
             .background(
-                .primary.opacity(configuration.isPressed ? 0.78 : 1),
-                in: RoundedRectangle(cornerRadius: GlassTokens.Radius.control, style: .continuous)
+                (dark ? Color.white : Color(white: 0.09)).opacity(configuration.isPressed ? 0.82 : 1),
+                in: Capsule(style: .continuous)
             )
             .opacity(isEnabled ? 1 : 0.4)
-            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
-            .animation(reduceMotion ? nil : .easeOut(duration: GlassTokens.Motion.controlFeedback), value: configuration.isPressed)
-            .contentShape(RoundedRectangle(cornerRadius: GlassTokens.Radius.control, style: .continuous))
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(reduceMotion ? nil : .spring(duration: 0.18, bounce: 0.3), value: configuration.isPressed)
+            .contentShape(Capsule(style: .continuous))
     }
 }
 
@@ -404,20 +419,49 @@ struct QuietButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(.secondary)
-            .padding(.horizontal, 10)
-            .frame(minHeight: 32)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 34)
             .background(
-                .primary.opacity(configuration.isPressed ? 0.10 : 0),
-                in: RoundedRectangle(cornerRadius: GlassTokens.Radius.control, style: .continuous)
+                Color.primary.opacity(configuration.isPressed ? 0.10 : 0),
+                in: Capsule(style: .continuous)
             )
             .opacity(isEnabled ? 1 : 0.4)
-            .contentShape(RoundedRectangle(cornerRadius: GlassTokens.Radius.control, style: .continuous))
+            .contentShape(Capsule(style: .continuous))
     }
 }
 
-// MARK: - Block label
+/// A control that floats on content: Liquid Glass on macOS 26, the bordered
+/// style before it. A capsule either way.
+extension View {
+    @ViewBuilder
+    func floatingButtonStyle() -> some View {
+        if #available(macOS 26.0, *) {
+            buttonStyle(.glass).buttonBorderShape(.capsule)
+        } else {
+            buttonStyle(.bordered).buttonBorderShape(.capsule)
+        }
+    }
+}
 
-/// The small word above a block's content: what the block is about.
+/// What a row in a list is, as a small disc: the same place for the eye to
+/// land on every row.
+struct RowDisc: View {
+    let symbol: String
+    var tint: Color = .secondary
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(tint)
+            .frame(width: 30, height: 30)
+            .background(Color.primary.opacity(0.06), in: Circle())
+            .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Labels
+
+/// The small word above something: what it is. Quiet, never a shout.
 struct BlockLabel: View {
     let text: String
 
@@ -425,82 +469,33 @@ struct BlockLabel: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 13, weight: .medium))
+            .font(.system(size: 13))
             .foregroundStyle(.secondary)
     }
 }
 
-// MARK: - Rows in a block
+// MARK: - A page
 
-/// A block of rows: the settings that are too small to be a block of their
-/// own. One unit tall each, a hairline between them.
-struct BlockRows<Content: View>: View {
-    @ViewBuilder var content: () -> Content
-
-    var body: some View {
-        VStack(spacing: 0) { content() }
-            .contentBlock(padding: 0)
-    }
-}
-
-/// One row: what it is on the left, the control on the right.
-struct BlockRow<Control: View>: View {
-    let title: String
-    var detail: String?
-    var isChanged = false
-    var revert: (() -> Void)?
-    @ViewBuilder var control: () -> Control
-
-    var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let detail {
-                    Text(detail)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            Spacer(minLength: 12)
-            control()
-                .fixedSize()
-            // Always in the layout, so every control in a block ends on the
-            // same line whether or not its row has a default to go back to.
-            RevertToDefault(isChanged: isChanged && revert != nil, revert: revert ?? {})
-        }
-        .padding(.horizontal, GlassTokens.Space.stack)
-        .padding(.vertical, 8)
-        .frame(minHeight: GlassTokens.Block.unit)
-    }
-}
-
-/// The hairline between two rows of a block, inset like the rows.
-struct BlockDivider: View {
-    var body: some View {
-        Divider().padding(.leading, GlassTokens.Space.stack)
-    }
-}
-
-// MARK: - A page of blocks
-
-/// A settings page: blocks down a scrolling column, one gap apart.
+/// A page of settings: one centred column with a wide margin, so the window
+/// can grow and the reading width does not.
 struct BlockPage<Content: View>: View {
     @ViewBuilder var content: () -> Content
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: GlassTokens.Space.stack) {
+            VStack(alignment: .leading, spacing: 40) {
                 content()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(GlassTokens.Block.padding)
+            .frame(maxWidth: GlassTokens.Block.column, alignment: .leading)
+            .padding(.horizontal, GlassTokens.Block.page)
+            .padding(.vertical, 36)
+            .frame(maxWidth: .infinity)
         }
     }
 }
 
-/// A titled block: what it is about, the block, and a sentence under it.
+/// A group on a page: what it is about, its rows, and a sentence under them.
+/// No box. The space around the group is the group.
 struct BlockSection<Content: View, Accessory: View>: View {
     let title: String?
     let footer: String?
@@ -520,29 +515,31 @@ struct BlockSection<Content: View, Accessory: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: GlassTokens.Block.gap) {
+        VStack(alignment: .leading, spacing: 0) {
             if title != nil || Accessory.self != EmptyView.self {
                 HStack(alignment: .firstTextBaseline) {
                     if let title {
                         Text(title)
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 13))
                             .foregroundStyle(.secondary)
                             .accessibilityAddTraits(.isHeader)
                     }
                     Spacer(minLength: 8)
                     accessory()
                 }
-                .padding(.horizontal, GlassTokens.Space.stack)
+                .padding(.bottom, 6)
+                Divider()
             }
             VStack(alignment: .leading, spacing: 0) { content() }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .contentBlock(padding: 0)
             if let footer {
+                Divider()
                 Text(footer)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
+                    .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, GlassTokens.Space.stack)
+                    .padding(.top, 12)
             }
         }
     }
@@ -558,16 +555,65 @@ extension BlockSection where Accessory == EmptyView {
     }
 }
 
-/// Free-form content inside a block of rows, padded like a row.
+/// Rows with no heading: the same air, no box.
+struct BlockRows<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(spacing: 0) { content() }
+    }
+}
+
+/// One row: what it is on the left, the control on the right.
+struct BlockRow<Control: View>: View {
+    let title: String
+    var detail: String?
+    var isChanged = false
+    var revert: (() -> Void)?
+    @ViewBuilder var control: () -> Control
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 14))
+                    .fixedSize(horizontal: false, vertical: true)
+                if let detail {
+                    Text(detail)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 12)
+            // Before the control, so every control on a page ends on the
+            // column's own edge whether or not its row has a default to go
+            // back to.
+            if let revert {
+                RevertToDefault(isChanged: isChanged, revert: revert)
+            }
+            control()
+                .fixedSize()
+        }
+        .padding(.vertical, 8)
+        .frame(minHeight: GlassTokens.Block.row)
+    }
+}
+
+/// The hairline between two rows.
+struct BlockDivider: View {
+    var body: some View { Divider() }
+}
+
+/// Free-form content among rows, with a row's air above and below.
 struct BlockCell<Content: View>: View {
     @ViewBuilder var content: () -> Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) { content() }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, GlassTokens.Space.stack)
-            .padding(.vertical, 12)
-            .frame(minHeight: GlassTokens.Block.unit)
+            .padding(.vertical, 14)
+            .frame(minHeight: GlassTokens.Block.row)
     }
 }
 

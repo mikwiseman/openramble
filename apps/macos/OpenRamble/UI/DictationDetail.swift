@@ -18,19 +18,21 @@ struct DictationDetail: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: GlassTokens.Space.section) {
+            VStack(alignment: .leading, spacing: 28) {
                 Text(entry.date.formatted(Date.FormatStyle(date: .complete, time: .shortened, locale: L10n.shared.language.locale)))
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
 
+                // What was said, set as written text: large, in the serif,
+                // with room to read.
                 if entry.text.isEmpty {
                     Text(L10n.tr("Nothing recognized"))
-                        .font(.system(size: 20))
+                        .font(.words(26))
                         .foregroundStyle(.secondary)
                 } else {
                     Text(entry.text)
-                        .font(.system(size: 20))
-                        .lineSpacing(5)
+                        .font(.words(26))
+                        .lineSpacing(7)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -45,6 +47,7 @@ struct DictationDetail: View {
                                 systemImage: isPlaying ? "stop.fill" : "play.fill"
                             )
                         }
+                        .floatingButtonStyle()
                         .accessibilityLabel(isPlaying ? L10n.tr("Stop playback") : L10n.tr("Play this recording"))
 
                         Button {
@@ -52,6 +55,7 @@ struct DictationDetail: View {
                         } label: {
                             Label(L10n.tr("Recognize again"), systemImage: "arrow.clockwise")
                         }
+                        .floatingButtonStyle()
                         .disabled(state.isRetranscribing)
                         .help(L10n.tr("Recognize this recording again"))
                         .accessibilityLabel(L10n.tr("Recognize this recording again"))
@@ -70,13 +74,15 @@ struct DictationDetail: View {
                         Label(L10n.tr("Keep"), systemImage: entry.isKept ? "star.fill" : "star")
                     }
                     .toggleStyle(.button)
+                    .floatingButtonStyle()
                     .help(entry.isKept ? L10n.tr("Stop keeping this one") : L10n.tr("Keep this one"))
                     .accessibilityLabel(entry.isKept ? L10n.tr("Kept. Stop keeping") : L10n.tr("Keep this dictation"))
                 }
                 .controlSize(.large)
             }
-            .frame(maxWidth: 640, alignment: .leading)
-            .padding(GlassTokens.Space.page)
+            .frame(maxWidth: GlassTokens.Block.column, alignment: .leading)
+            .padding(.horizontal, GlassTokens.Block.page + 8)
+            .padding(.vertical, 40)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .onDisappear { player.stopIfPlaying(entry.id) }
@@ -105,7 +111,8 @@ struct WaitingTakePin: View {
             .accessibilityElement(children: .combine)
 
             Text(waiting.words)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.words(19))
+                .lineSpacing(3)
                 .lineLimit(4)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
