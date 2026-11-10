@@ -697,8 +697,7 @@ private struct DictionarySettings: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
-                    .padding(.horizontal, GlassTokens.Space.stack)
+                    .padding(.vertical, 28)
                     .accessibilityElement(children: .combine)
                 } else {
                     ForEach(Array(state.replacements.enumerated()), id: \.element.id) { index, replacement in
@@ -729,8 +728,7 @@ private struct DictionarySettings: View {
                                 L10n.tr("Delete replacement “%@” to “%@”", String(describing: replacement.spoken), String(describing: replacement.written))
                             )
                         }
-                        .padding(.horizontal, GlassTokens.Space.stack)
-                        .frame(minHeight: GlassTokens.Block.unit - 8)
+                        .frame(minHeight: GlassTokens.Block.unit)
                         .accessibilityElement(children: .contain)
                         .accessibilityLabel(
                             replacement.noAcousticBoost
@@ -762,8 +760,7 @@ private struct DictionarySettings: View {
                         .accessibilityLabel(L10n.tr("Add replacement"))
                         .accessibilityHint(addReplacementHint)
                 }
-                .padding(.horizontal, GlassTokens.Space.stack)
-                .frame(minHeight: GlassTokens.Block.unit)
+                .frame(minHeight: GlassTokens.Block.row)
             } accessory: {
                 HStack(spacing: 12) {
                     Button(L10n.tr("Import…")) { showImporter = true }
@@ -936,7 +933,7 @@ private struct AboutView: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
                     Text("OpenRamble")
-                        .font(.system(size: 22, weight: .semibold))
+                        .font(.display(26))
                         .accessibilityAddTraits(.isHeader)
                     Text(L10n.tr("Private dictation and recording for your Mac"))
                         .foregroundStyle(.secondary)
@@ -988,7 +985,8 @@ private struct AboutView: View {
             ) {
                 BlockCell {
                     Text(PrivacySentence.text)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 15))
+                        .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 BlockDivider()

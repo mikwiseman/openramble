@@ -21,19 +21,19 @@ struct ScreenRecordingSetup: View {
                         .padding(.bottom, 20)
                     captureControls
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 22)
+                .padding(.horizontal, 32)
+                .padding(.top, 32)
                 .padding(.bottom, 18)
             }
 
             Divider()
 
             footer
-                .padding(.horizontal, 24)
-                .padding(.vertical, 14)
+                .padding(.horizontal, 32)
+                .padding(.vertical, 18)
         }
         .frame(width: 520, height: 640)
-        .glassWindowBackground()
+        .background(Color(nsColor: .textBackgroundColor))
         .task {
             state.refreshScreenRecordingPermissions()
             await state.refreshScreenDisplays()
@@ -43,7 +43,7 @@ struct ScreenRecordingSetup: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(L10n.tr("Screen recording"))
-                .font(.system(size: 22, weight: .bold))
+                .font(.display(28))
                 .accessibilityAddTraits(.isHeader)
             Text(L10n.tr("Choose what to include."))
                 .font(.system(size: 13))
@@ -56,7 +56,7 @@ struct ScreenRecordingSetup: View {
             VStack(alignment: .leading, spacing: 6) {
                 BlockLabel(L10n.tr("Display"))
                 Text(selectedDisplayName)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 20))
                     .lineLimit(1)
             }
 
@@ -85,7 +85,7 @@ struct ScreenRecordingSetup: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .contentBlock(padding: GlassTokens.Space.stack)
+        .contentBlock(padding: 20)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.tr("Display: %@", String(describing: selectedDisplayName)))
     }
@@ -93,11 +93,11 @@ struct ScreenRecordingSetup: View {
     private var captureControls: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L10n.tr("Include"))
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 13))
                 .foregroundStyle(.secondary)
-                .padding(.horizontal, GlassTokens.Space.stack)
 
             VStack(spacing: 0) {
+                Divider()
                 CaptureOptionRow(
                     title: L10n.tr("Camera"),
                     subtitle: cameraSubtitle,
@@ -107,6 +107,7 @@ struct ScreenRecordingSetup: View {
                 ) {
                     state.refreshScreenRecordingPermissions()
                 }
+                Divider()
                 CaptureOptionRow(
                     title: L10n.tr("Microphone"),
                     subtitle: microphoneSubtitle,
@@ -116,6 +117,7 @@ struct ScreenRecordingSetup: View {
                 ) {
                     state.refreshScreenRecordingPermissions()
                 }
+                Divider()
                 CaptureOptionRow(
                     title: L10n.tr("Mac audio"),
                     subtitle: state.systemAudioMode == .unsupported ? L10n.tr("Unavailable on this Mac") : L10n.tr("System sound"),
@@ -123,8 +125,8 @@ struct ScreenRecordingSetup: View {
                     isOn: $state.screenRecordingOptions.systemAudioEnabled,
                     isDisabled: state.systemAudioMode == .unsupported
                 )
+                Divider()
             }
-            .contentBlock(padding: 0)
 
             if state.screenRecordingOptions.cameraEnabled {
                 ScreenCameraPreview(
@@ -324,8 +326,8 @@ private struct CaptureOptionRow: View {
                 .onChange(of: isOn) { _, _ in onChange?() }
                 .disabled(isDisabled)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 9)
+        .padding(.vertical, 10)
+        .frame(minHeight: GlassTokens.Block.row)
         .opacity(isDisabled ? 0.48 : 1)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(title)
