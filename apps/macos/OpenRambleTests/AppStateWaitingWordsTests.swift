@@ -100,6 +100,15 @@ final class AppStateWaitingWordsTests: XCTestCase {
         XCTAssertEqual(state.waitingWords?.cause, .typingProtected(by: nil))
     }
 
+    /// Change the dictation key while words wait, and the block names the
+    /// key that works now.
+    func testTheBlockNamesTheKeyInUse() async throws {
+        let state = try await takeThatCannotLand(.pasteNotRead)
+        state.hotkey = .rightOption
+        XCTAssertEqual(block.key, .rightOption)
+        XCTAssertEqual(block.shown.last, state.waitingWords)
+    }
+
     // MARK: A tap
 
     func testATapPastesOnceThereIsAField() async throws {

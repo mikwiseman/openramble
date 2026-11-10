@@ -755,6 +755,8 @@ public final class AppState: ObservableObject {
             guard oldValue != hotkey else { return }
             defaults.set(hotkey.rawValue, forKey: Keys.hotkey)
             hotkeyMonitor.setHotkey(hotkey)
+            // A block that names the key names the one that works now.
+            if waitingWords != nil { waitingPresenter?.setWaiting(waitingWords, key: hotkey) }
         }
     }
 

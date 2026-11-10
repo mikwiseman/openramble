@@ -116,7 +116,6 @@
 "Delete this dictation" = "Delete this dictation";
 "Deleting model" = "Deleting model";
 "Deleting model…" = "Deleting model…";
-"Dictation History" = "Dictation History";
 "Dictation needs Accessibility access. Open Settings → Setup." = "Dictation needs Accessibility access. Open Settings → Setup.";
 "Dictation needs microphone access. Open Settings → Setup." = "Dictation needs microphone access. Open Settings → Setup.";
 "Dictation cancelled. Its local recording is queued for deletion." = "Dictation cancelled. Its local recording is queued for deletion.";
@@ -125,7 +124,6 @@
 "Dictation key" = "Dictation key";
 "Dictation panel" = "Dictation panel";
 "Dictation stops working until you download the model again — that's another %@ MB over the network." = "Dictation stops working until you download the model again — that's another %@ MB over the network.";
-"Dictation that stays on your Mac" = "Dictation that stays on your Mac";
 "Dictionary" = "Dictionary";
 "Dictionary can't be edited" = "Dictionary can't be edited";
 "Dictionary can't be edited. %@" = "Dictionary can't be edited. %@";
@@ -160,7 +158,6 @@
 "Finish or cancel the current dictation first" = "Finish or cancel the current dictation first";
 "Finish or cancel the current dictation first." = "Finish or cancel the current dictation first.";
 "Finish the current recording first — relaunching now would end it." = "Finish the current recording first — relaunching now would end it.";
-"Finished dictations appear here with their audio." = "Finished dictations appear here with their audio.";
 "Finished text is pasted through the clipboard; its previous contents are restored shortly afterward." = "Finished text is pasted through the clipboard; its previous contents are restored shortly afterward.";
 "Removes OpenRamble's old Accessibility entry and relaunches the app." = "Removes OpenRamble's old Accessibility entry and relaunches the app.";
 "Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT." = "Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT.";
@@ -178,8 +175,6 @@
 "Heard as “%@”, written as “%@”, text only — not used to help recognition" = "Heard as “%@”, written as “%@”, text only — not used to help recognition";
 "Hears your voice during dictation and recordings you start." = "Hears your voice during dictation and recordings you start.";
 "Hide camera bubble" = "Hide camera bubble";
-"Hold %@, say a few words, let go — the text lands in the field below." = "Hold %@, say a few words, let go — the text lands in the field below.";
-"Hold a key, speak, let go — the text appears at your cursor. In any app." = "Hold a key, speak, let go — the text appears at your cursor. In any app.";
 "How many dictations to keep, with their audio" = "How many dictations to keep, with their audio";
 "If access is enabled in Settings and Retry still fails, quit and reopen OpenRamble once." = "If access is enabled in Settings and Retry still fails, quit and reopen OpenRamble once.";
 "If your terminal says 'command not found', add this line to your shell startup file, such as ~/.zshrc, then open a new terminal:" = "If your terminal says 'command not found', add this line to your shell startup file, such as ~/.zshrc, then open a new terminal:";
@@ -218,13 +213,11 @@
 "“Let’s meet Tuesday. Scratch that. Let’s meet Wednesday.”" = "“Let’s meet Tuesday. Scratch that. Let’s meet Wednesday.”";
 "Listening" = "Listening";
 "Listening — press %@ to finish" = "Listening — press %@ to finish";
-"Listening…" = "Listening…";
 "Live camera bubble preview" = "Live camera bubble preview";
 "Loading the recognizer… %@ s" = "Loading the recognizer… %@ s";
 "Mac audio" = "Mac audio";
 "Make sure pressing 🌐 is not assigned to anything in the system: System Settings → Keyboard → “Press 🌐 key”. Otherwise dictation will fire together with the system action. %@" = "Make sure pressing 🌐 is not assigned to anything in the system: System Settings → Keyboard → “Press 🌐 key”. Otherwise dictation will fire together with the system action. %@";
 "Meeting" = "Meeting";
-"Meetings and voice notes you record on purpose live in their own window: Recordings, ⌘R." = "Meetings and voice notes you record on purpose live in their own window: Recordings, ⌘R.";
 "Menu bar" = "Menu bar";
 "Menu bar and Dock" = "Menu bar and Dock";
 "Microphone" = "Microphone";
@@ -249,10 +242,8 @@
 "Move selected recordings to Trash" = "Move selected recordings to Trash";
 "Move to Trash" = "Move to Trash";
 "Neither your microphone nor the other side of this call was captured." = "Neither your microphone nor the other side of this call was captured.";
-"Network, only on your terms" = "Network, only on your terms";
 "No account, analytics, or cloud transcription. Reports contain technical events and available crash details, never your speech. Nothing is sent automatically. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder." = "No account, analytics, or cloud transcription. Reports contain technical events and available crash details, never your speech. Nothing is sent automatically. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder.";
 "No accounts, no analytics, no automatic reports. The code is open — you can check." = "No accounts, no analytics, no automatic reports. The code is open — you can check.";
-"No dictations yet" = "No dictations yet";
 "No display available" = "No display available";
 "No microphone access. Open System Settings." = "No microphone access. Open System Settings.";
 "No new terms to learn — only term-like corrections become replacements." = "No new terms to learn — only term-like corrections become replacements.";
@@ -271,7 +262,6 @@
 "Nothing dictated yet." = "Nothing dictated yet.";
 "Nothing is arriving from what this Mac plays. Either System Audio Recording isn't allowed for OpenRamble, or this output is one macOS can't record — Bluetooth and AirPlay are. If you've just allowed it, relaunch OpenRamble." = "Nothing is arriving from what this Mac plays. Either System Audio Recording isn't allowed for OpenRamble, or this output is one macOS can't record — Bluetooth and AirPlay are. If you've just allowed it, relaunch OpenRamble.";
 "Nothing is arriving from your microphone. Another app may have exclusive access, or this input is silent. The other side is still being recorded." = "Nothing is arriving from your microphone. Another app may have exclusive access, or this input is silent. The other side is still being recorded.";
-"Your voice and text never leave your Mac" = "Your voice and text never leave your Mac";
 "Nothing to import — every phrase in the file is already in the dictionary." = "Nothing to import — every phrase in the file is already in the dictionary.";
 "Nothing to import." = "Nothing to import.";
 "Nothing to transcribe" = "Nothing to transcribe";
@@ -434,7 +424,6 @@
 "Space" = "Space";
 "Speech is recognized by a model on your disk. No internet needed." = "Speech is recognized by a model on your disk. No internet needed.";
 "Speech model" = "Speech model";
-"Speech stays on this Mac" = "Speech stays on this Mac";
 "Spoken phrase" = "Spoken phrase";
 "Start Recording" = "Start Recording";
 "Starting recording…" = "Starting recording…";
@@ -536,7 +525,6 @@
 "Try Again" = "Try Again";
 "Try another location with available disk space." = "Try another location with available disk space.";
 "Try dictation first, or press “Skip the try-out”." = "Try dictation first, or press “Skip the try-out”.";
-"Try it" = "Try it";
 "Try saying" = "Try saying";
 "Turn On" = "Turn On";
 "Turn on OpenRamble in the System Settings window that just opened, then come back here." = "Turn on OpenRamble in the System Settings window that just opened, then come back here.";
@@ -567,7 +555,6 @@
 "Welcome" = "Welcome";
 "Which input to record through. The system default follows whatever your Mac is using." = "Which input to record through. The system default follows whatever your Mac is using.";
 "Working" = "Working";
-"Works on a plane" = "Works on a plane";
 "Write as" = "Write as";
 "Yesterday" = "Yesterday";
 "You" = "You";
