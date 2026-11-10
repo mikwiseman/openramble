@@ -42,6 +42,10 @@ final class AppStateWaitingWordsTests: XCTestCase {
         harness.inserter.frontmost = TargetApplication(
             bundleIdentifier: "com.apple.Notes", processIdentifier: 42, localizedName: "Notes"
         )
+        // A press here is a tap however slow the machine is. A loaded runner
+        // once took longer than a short limit between press and release, and
+        // the tap became a hold. The tests about a hold set their own limit.
+        harness.waitingTapLimit = .seconds(30)
     }
 
     override func tearDown() async throws { harness.tearDown() }
@@ -195,14 +199,17 @@ final class AppStateWaitingWordsTests: XCTestCase {
     /// second tap is the tap: hands-free never starts while words wait, and
     /// no hold is left running to open a microphone with the key up.
     func testADoubleTapIsATapAndNeverHandsFree() async throws {
+        harness.waitingTapLimit = .milliseconds(100)
         let state = try await takeThatCannotLand(.pasteNotRead)
         await harness.inserter.setError(nil)
 
+        // Nothing suspends between the press and the second tap, so the hold
+        // cannot begin first. The wait is longer than the limit: a hold left
+        // running would start a take inside it.
         harness.monitor.onPress?()
-        await settle(2)
         harness.monitor.onDoubleTap?()
         await settle()
-        try await Task.sleep(for: .milliseconds(200))
+        try await Task.sleep(for: .milliseconds(250))
 
         let inserted = await harness.inserter.insertedTexts
         XCTAssertEqual(inserted, ["Ping test"])
@@ -217,11 +224,14 @@ final class AppStateWaitingWordsTests: XCTestCase {
     /// Holding the key is dictating again. The waiting words are already in
     /// History; the new take is the news.
     func testAHoldStartsANewTake() async throws {
+        harness.waitingTapLimit = .milliseconds(50)
         let state = try await takeThatCannotLand(.pasteNotRead)
         await harness.inserter.setError(nil)
 
         harness.monitor.onPress?()
-        try await Task.sleep(for: .milliseconds(250))
+        for _ in 0..<400 where state.waitingWords != nil {
+            try await Task.sleep(for: .milliseconds(5))
+        }
         await settle()
 
         XCTAssertNil(state.waitingWords)
@@ -240,11 +250,14 @@ final class AppStateWaitingWordsTests: XCTestCase {
 
     /// A chord over the held key is a shortcut, not a tap and not a take.
     func testAChordOverWaitingWordsDoesNothing() async throws {
+        harness.waitingTapLimit = .milliseconds(100)
         let state = try await takeThatCannotLand(.pasteNotRead)
         await harness.inserter.setError(nil)
 
+        // Nothing suspends between the press and the chord, so the hold cannot
+        // begin first. The wait is longer than the limit: a hold the chord
+        // did not end would start a take inside it.
         harness.monitor.onPress?()
-        await settle(2)
         harness.monitor.onAbortShortcut?()
         try await Task.sleep(for: .milliseconds(250))
         await settle()
@@ -341,12 +354,16 @@ final class AppStateWaitingWordsTests: XCTestCase {
 
     /// A take that lands is the newest take. Nothing older waits.
     func testANewTakeThatLandsTakesTheBlockAway() async throws {
+        harness.waitingTapLimit = .milliseconds(50)
         let state = try await takeThatCannotLand(.pasteNotRead)
         await harness.inserter.setError(nil)
         harness.transcription.text = "Second take"
 
         harness.monitor.onPress?()
-        try await Task.sleep(for: .milliseconds(250))
+        for _ in 0..<400 where state.waitingWords != nil {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        await settle()
         harness.monitor.onRelease?()
         for _ in 0..<400 where state.lastDictation == nil {
             try await Task.sleep(for: .milliseconds(5))
