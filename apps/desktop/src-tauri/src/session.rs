@@ -27,6 +27,12 @@ pub enum Outcome {
     /// The text was inserted, but the recording had hit the ceiling and was cut
     /// short. Worth saying, because the person's last words are missing.
     Truncated,
+    /// The words were recognized and could not be put into the other
+    /// application. They wait on the take block, in full, with the reason.
+    ///
+    /// Carries nothing, for the same reason `Inserted` does: the words stay
+    /// with the dictation service, and the block asks for them there.
+    WordsWait,
     /// Something failed, in words a person can act on.
     Failed(String),
 }
@@ -44,6 +50,7 @@ mod tests {
         assert_ne!(Outcome::Inserted, Outcome::Truncated);
         assert_ne!(Outcome::DroppedSilently, Outcome::SilentInput);
         assert_ne!(Outcome::DroppedSilently, Outcome::TakenBack);
+        assert_ne!(Outcome::Inserted, Outcome::WordsWait);
         assert_ne!(Outcome::Failed("a".into()), Outcome::Failed("b".into()));
     }
 }

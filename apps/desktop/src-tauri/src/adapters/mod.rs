@@ -3,6 +3,7 @@
 //! Each module keeps its platform code at the edge and its decisions in a plain
 //! type that can be tested without the platform present.
 
+pub mod block_window;
 pub mod capture;
 pub mod download;
 pub mod hotkey;

@@ -3,9 +3,12 @@
 //! Kept small on purpose. Every command here is a question a person asked by
 //! clicking something; nothing polls, and nothing runs on its own.
 
+use crate::adapters::block_window;
 use crate::adapters::download;
 use crate::adapters::hotkey::Hotkey;
 use crate::dictation::Dictation;
+use crate::runner::Runner;
+use crate::take::Block;
 use ramble_model::ModelState;
 use serde::Serialize;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -245,6 +248,42 @@ pub fn install_model(
 #[tauri::command]
 pub fn cancel_install() {
     CANCEL.store(true, Ordering::SeqCst);
+}
+
+/// What the take block shows now.
+///
+/// Asked once, by the block's page when it loads: a take that began before
+/// the page was ready is drawn as soon as it is.
+#[tauri::command]
+pub fn take_block(runner: State<'_, Arc<Runner>>) -> Block {
+    runner.block()
+}
+
+/// The page drew the block, and this is the size it came to.
+#[tauri::command]
+pub fn take_block_fits(
+    app: tauri::AppHandle,
+    runner: State<'_, Arc<Runner>>,
+    width: f64,
+    height: f64,
+) {
+    // A take can end while the page is still drawing it. Showing the window
+    // then would leave a block on the screen with nothing to remove it.
+    if runner.block() != Block::Hidden {
+        block_window::fit(&app, width, height);
+    }
+}
+
+/// A click on the block's own button: what a tap of the dictation key does.
+#[tauri::command]
+pub fn take_block_act(runner: State<'_, Arc<Runner>>) {
+    runner.act();
+}
+
+/// A click on Later.
+#[tauri::command]
+pub fn take_block_later(runner: State<'_, Arc<Runner>>) {
+    runner.later();
 }
 
 #[cfg(test)]
