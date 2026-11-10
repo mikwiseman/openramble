@@ -7,19 +7,23 @@ final class SettingsLayoutTests: XCTestCase {
     /// General keeps what changes how dictation behaves; everything you do
     /// once to make it work — the model, both permissions, the command-line
     /// tool — is one "Setup" pane, the same three things onboarding asks for.
+    /// What you said is not a setting: dictations live in the Library, next
+    /// to recordings, and Settings keeps only how many to keep.
     func testSetupIsItsOwnPane() {
         XCTAssertEqual(
             SettingsView.Pane.allCases.map(\.title),
-            ["General", "Setup", "Dictation History", "Dictionary", "About"]
+            ["General", "Setup", "Dictionary", "About"]
         )
         XCTAssertEqual(SettingsView.Pane.setup.symbol, "checklist", "the onboarding setup step's symbol")
     }
 
-    func testEmptyHistoryKeepsSettingsInsideTheWindow() async throws {
+    func testEveryPaneStaysInsideTheWindow() async throws {
         try await checkLayout(historyCount: 0)
     }
 
-    func testPopulatedHistoryKeepsSettingsInsideTheWindow() async throws {
+    /// A long history used to push the window past its bounds. It has left
+    /// Settings, and a full one must not come back through General's rows.
+    func testAFullHistoryKeepsSettingsInsideTheWindow() async throws {
         try await checkLayout(historyCount: 5)
     }
 
@@ -43,8 +47,8 @@ final class SettingsLayoutTests: XCTestCase {
         XCTAssertEqual(sidebar.numberOfRows, SettingsView.Pane.allCases.count)
         for size in [NSSize(width: 720, height: 540), NSSize(width: 1000, height: 720)] {
             window.setContentSize(size)
-            // Re-enter history from every other pane, including after resizing.
-            for row in [2, 0, 2, 1, 2, 3, 2, 4, 2] {
+            // Enter every pane from every other, including after resizing.
+            for row in [2, 0, 2, 1, 2, 3, 0, 3, 1] {
                 sidebar.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
                 try await Task.sleep(for: .milliseconds(200))
                 controller.view.layoutSubtreeIfNeeded()
@@ -54,7 +58,7 @@ final class SettingsLayoutTests: XCTestCase {
                 XCTAssertLessThanOrEqual(frame.height, controller.view.bounds.height + 1)
                 XCTAssertGreaterThanOrEqual(frame.minY, -1)
                 XCTAssertTrue(sidebar.visibleRect.contains(sidebar.rect(ofRow: 0)), "General must remain reachable")
-                XCTAssertTrue(sidebar.visibleRect.contains(sidebar.rect(ofRow: 4)), "About must remain reachable")
+                XCTAssertTrue(sidebar.visibleRect.contains(sidebar.rect(ofRow: 3)), "About must remain reachable")
             }
         }
     }

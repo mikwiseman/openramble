@@ -570,3 +570,72 @@ struct BlockCell<Content: View>: View {
             .frame(minHeight: GlassTokens.Block.unit)
     }
 }
+
+// MARK: - The dictation key, as a control
+
+/// The dictation key drawn as a key cap that opens the list of keys.
+///
+/// One control in Settings and in onboarding: the thing you press to change
+/// the key looks like the key.
+struct DictationKeyMenu: View {
+    @Binding var hotkey: DictationHotkey
+    var size: KeyCap.Size = .large
+    var isPressed = false
+
+    var body: some View {
+        Menu {
+            Picker(L10n.tr("Dictation key"), selection: $hotkey) {
+                ForEach(DictationHotkey.allCases, id: \.self) { key in
+                    Text(key.title).tag(key)
+                }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } label: {
+            KeyCap(title: hotkey.shortTitle, size: size, isPressed: isPressed)
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .accessibilityLabel(L10n.tr("Dictation key"))
+        .accessibilityValue(hotkey.title)
+        .accessibilityHint(L10n.tr("The key you hold down while dictating"))
+    }
+}
+
+/// Whether the dictation key is down, heard through this app's own windows.
+///
+/// A local monitor needs no permission, so the drawn key can answer the real
+/// one on the first screen of onboarding, before Accessibility is granted.
+/// It hears nothing while another app is in front, and stores nothing.
+@MainActor
+final class KeyEcho: ObservableObject {
+    @Published private(set) var isDown = false
+    /// The key was pressed at least once since this started listening.
+    @Published private(set) var wasPressed = false
+
+    private var monitor: Any?
+
+    func start(for hotkey: @escaping @MainActor () -> DictationHotkey) {
+        guard monitor == nil else { return }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            let keyCode = event.keyCode
+            let flags = event.modifierFlags.rawValue
+            MainActor.assumeIsolated {
+                let key = hotkey()
+                guard keyCode == key.keyCode else { return }
+                let down = flags & key.sideMask != 0
+                self?.isDown = down
+                if down { self?.wasPressed = true }
+            }
+            return event
+        }
+    }
+
+    func stop() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        isDown = false
+    }
+}

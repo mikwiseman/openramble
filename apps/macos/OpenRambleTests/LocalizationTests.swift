@@ -66,13 +66,13 @@ final class LocalizationTests: XCTestCase {
         let paths = AppPaths(root: root)
         L10n.shared.language = .english
         let directory = try paths.recordings()
-        XCTAssertEqual(RecordingsPlaceholder.emptyLibrary.title, "No recordings yet")
+        XCTAssertEqual(RecordingsPlaceholder.emptyLibrary.title, "Nothing said yet")
         L10n.shared.language = .russian
         XCTAssertEqual(try paths.recordings(), directory)
         XCTAssertEqual(directory.lastPathComponent, "Recordings")
-        XCTAssertEqual(RecordingsPlaceholder.emptyLibrary.title, "Записей пока нет")
+        XCTAssertEqual(RecordingsPlaceholder.emptyLibrary.title, "Здесь пока пусто")
         L10n.shared.language = .english
-        XCTAssertEqual(RecordingsPlaceholder.emptyLibrary.title, "No recordings yet")
+        XCTAssertEqual(RecordingsPlaceholder.emptyLibrary.title, "Nothing said yet")
     }
 
     func testRussianResourcesShipInTheApplication() throws {

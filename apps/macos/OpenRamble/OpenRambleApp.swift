@@ -139,7 +139,7 @@ struct OpenRambleApp: App {
         // The library. A `Window` for the same reason Settings is one, sized
         // for content that is unbounded: a person decides how much of a
         // transcript to look at, not the window.
-        Window(L10n.tr("Recordings"), id: RecordingsWindow.windowID) {
+        Window(L10n.tr("Library"), id: RecordingsWindow.windowID) {
             RecordingsWindow(state: state)
                 .environment(\.locale, L10n.shared.language.locale)
         }
@@ -159,7 +159,7 @@ struct OpenRambleApp: App {
                     WindowFronting.raiseOpenedWindow(id: Self.settingsWindowID)
                 }
                 .keyboardShortcut(",", modifiers: .command)
-                Button(L10n.tr("Recordings…")) {
+                Button(L10n.tr("Library…")) {
                     openWindow(id: RecordingsWindow.windowID)
                     WindowFronting.raiseOpenedWindow(id: RecordingsWindow.windowID)
                 }

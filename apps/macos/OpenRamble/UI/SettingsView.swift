@@ -25,14 +25,13 @@ struct SettingsView: View {
     }
 
     enum Pane: String, CaseIterable, Identifiable {
-        case general, setup, history, dictionary, about
+        case general, setup, dictionary, about
         var id: Self { self }
 
         var title: String {
             switch self {
             case .general: return L10n.tr("General")
             case .setup: return L10n.tr("Setup")
-            case .history: return L10n.tr("Dictation History")
             case .dictionary: return L10n.tr("Dictionary")
             case .about: return L10n.tr("About")
             }
@@ -42,7 +41,6 @@ struct SettingsView: View {
             switch self {
             case .general: return "gearshape"
             case .setup: return "checklist"
-            case .history: return "clock.arrow.circlepath"
             case .dictionary: return "character.book.closed"
             case .about: return "info.circle"
             }
@@ -87,7 +85,6 @@ struct SettingsView: View {
         switch pane {
         case .general: GeneralSettings(state: state) { pane = .setup }
         case .setup: SetupSettings(state: state)
-        case .history: HistoryView(state: state)
         case .dictionary: DictionarySettings(state: state)
         case .about:
             AboutView(
@@ -112,6 +109,7 @@ struct SettingsView: View {
 private struct GeneralSettings: View {
     @ObservedObject var state: AppState
     let showSetup: () -> Void
+    @State private var showClearConfirmation = false
 
     var body: some View {
         ScrollView {
@@ -192,6 +190,40 @@ private struct GeneralSettings: View {
                 }
 
                 BlockRows {
+                    BlockRow(title: L10n.tr("History keeps")) {
+                        Picker(L10n.tr("Keep"), selection: $state.historyLimit) {
+                            ForEach([5, 10, 20, 50], id: \.self) { count in
+                                Text(L10n.tr("Last %@", String(describing: count))).tag(count)
+                            }
+                        }
+                        .labelsHidden()
+                        .accessibilityLabel(L10n.tr("History keeps"))
+                        .accessibilityHint(L10n.tr("How many dictations to keep, with their audio"))
+                    }
+                    BlockDivider()
+                    BlockRow(title: L10n.tr("Dictations and their audio")) {
+                        HStack(spacing: 8) {
+                            Button(L10n.tr("Show in Finder")) { state.revealHistoryAudio() }
+                                .disabled(state.history.isEmpty)
+                                .accessibilityHint(L10n.tr("Opens the folder holding the audio kept with these dictations"))
+                            Button(L10n.tr("Delete All"), role: .destructive) { showClearConfirmation = true }
+                                .disabled(state.history.isEmpty)
+                        }
+                    }
+                }
+                .confirmationDialog(
+                    L10n.tr("Delete all dictation history?"),
+                    isPresented: $showClearConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button(L10n.tr("Delete All"), role: .destructive) { state.clearHistory() }
+                    Button(L10n.tr("Cancel"), role: .cancel) {}
+                } message: {
+                    Text(L10n.tr("The transcripts and their recordings are removed from this Mac."))
+                }
+                footnote(L10n.tr("Your dictations live in the Library, next to your recordings. Starred ones stay past the limit."))
+
+                BlockRows {
                     BlockRow(title: L10n.tr("Interface language")) {
                         LanguagePicker().labelsHidden()
                     }
@@ -243,26 +275,9 @@ private struct GeneralSettings: View {
                     revert: { state.hotkey = SettingsDefaults.hotkey }
                 )
             }
-            Menu {
-                Picker(L10n.tr("Dictation key"), selection: $state.hotkey) {
-                    ForEach(DictationHotkey.allCases, id: \.self) { key in
-                        Text(key.title).tag(key)
-                    }
-                }
-                .pickerStyle(.inline)
-                .labelsHidden()
-            } label: {
-                // The cap goes down when the real key does: hold it here and
-                // the setting answers the hand.
-                KeyCap(title: state.hotkey.shortTitle, size: .large, isPressed: isKeyHeld)
-            }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .accessibilityLabel(L10n.tr("Dictation key"))
-            .accessibilityValue(state.hotkey.title)
-            .accessibilityHint(L10n.tr("The key you hold down while dictating"))
+            // The cap goes down when the real key does: hold it here and the
+            // setting answers the hand.
+            DictationKeyMenu(hotkey: $state.hotkey, isPressed: isKeyHeld)
 
             if let warning = state.hotkeyWarning {
                 attention(warning)

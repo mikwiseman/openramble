@@ -16,7 +16,22 @@ struct RecordingsWindow: View {
 
     @ObservedObject var state: AppState
     @StateObject private var player = RecordingPlayer()
+    @StateObject private var dictationPlayer = HistoryAudioPlayer()
     @State private var selection = Set<UUID>()
+    @State private var scope = LibraryScope.all
+    @State private var query = ""
+
+    /// Everything said, by day: what the list shows.
+    private var days: [LibraryDay] {
+        LibraryIndex.days(
+            dictations: state.history,
+            recordings: state.recordings,
+            scope: scope,
+            query: query
+        )
+    }
+
+    private var listedIDs: [UUID] { days.flatMap(\.items).map(\.id) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,16 +39,49 @@ struct RecordingsWindow: View {
                 RecordingsList(
                     state: state,
                     selection: $selection,
+                    days: days,
                     onRename: { id, title in state.renameRecording(id, title: title) },
-                    onDelete: deleteRecordings
+                    onDelete: deleteItems
                 )
-                    .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 360)
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        VStack(spacing: GlassTokens.Space.inline) {
+                            Picker(L10n.tr("Show"), selection: $scope) {
+                                ForEach(LibraryScope.allCases) { scope in
+                                    Text(scope.title).tag(scope)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                            .accessibilityLabel(L10n.tr("Show"))
+                            if state.recoveredRecordingCount > 0 || state.recordingRecoveryStorageFaulted {
+                                UnfinishedDictationsNote(state: state)
+                            }
+                        }
+                        .padding(.horizontal, GlassTokens.Space.inline)
+                        .padding(.vertical, GlassTokens.Space.tight)
+                    }
+                    .searchable(text: $query, placement: .sidebar, prompt: Text(L10n.tr("Search what you said")))
+                    .navigationSplitViewColumnWidth(min: 240, ideal: 300, max: 400)
                     .toolbarBackground(.visible, for: .windowToolbar)
             } detail: {
-                detail
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(.background)
-                    .clipped()
+                VStack(spacing: 0) {
+                    // Words that could not land, wherever the person came
+                    // from: the Dock, Spotlight or the menu.
+                    if let waiting = state.waitingWords {
+                        WaitingTakePin(state: state, waiting: waiting)
+                            .padding([.horizontal, .top], GlassTokens.Space.stack)
+                    }
+                    detail
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                // A floor for the column's own measurement. Asked for its
+                // smallest size, a split view proposes no width at all, and
+                // text that wraps then reports one word per line: the pin
+                // claimed more height than the window had, and the whole
+                // content slid out from under the toolbar.
+                .frame(minWidth: 440)
+                .background(.background)
+                .clipped()
             }
             VStack(spacing: 0) {
                 Divider()
@@ -46,41 +94,49 @@ struct RecordingsWindow: View {
             }
         }
         .frame(minWidth: 860, minHeight: 560)
-        .navigationTitle(L10n.tr("Recordings"))
+        .navigationTitle(L10n.tr("Library"))
         .glassWindowBackground()
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
-                    if let id = primarySelection { state.revealRecording(id) }
+                    if selectedDictation != nil {
+                        state.revealHistoryAudio()
+                    } else if let id = primarySelection {
+                        state.revealRecording(id)
+                    }
                 } label: {
                     Image(systemName: "folder")
                         .frame(width: 28, height: 28)
                 }
-                .help(L10n.tr("Open recording in Finder"))
+                .help(selectedDictation == nil ? L10n.tr("Open recording in Finder") : L10n.tr("Show in Finder"))
                 .accessibilityLabel(L10n.tr("Open in Finder"))
                 .accessibilityIdentifier("open-recording-in-finder")
                 .buttonStyle(.borderless)
                 .disabled(primarySelection == nil)
 
                 Button {
-                    if let id = primarySelection { state.copyTranscript(id) }
+                    if let entry = selectedDictation {
+                        state.copyHistoryEntry(entry)
+                    } else if let id = primarySelection {
+                        state.copyTranscript(id)
+                    }
                 } label: {
                     Image(systemName: "doc.on.doc")
                         .frame(width: 28, height: 28)
                 }
-                .help(L10n.tr("Copy all text transcribed so far"))
-                .accessibilityLabel(L10n.tr("Copy Transcript"))
+                .help(selectedDictation == nil ? L10n.tr("Copy all text transcribed so far") : L10n.tr("Copy"))
+                .accessibilityLabel(selectedDictation == nil ? L10n.tr("Copy Transcript") : L10n.tr("Copy this dictation"))
                 .accessibilityIdentifier("copy-transcript")
                 .buttonStyle(.borderless)
-                .disabled(primarySelection.map { state.transcript(for: $0).isEmpty } ?? true)
+                .disabled(isCopyDisabled)
 
                 if !selection.isEmpty {
-                    Button(role: .destructive, action: deleteSelectedRecordings) {
+                    Button(role: .destructive, action: { deleteItems(selection) }) {
                         Image(systemName: "trash")
                             .frame(width: 28, height: 28)
                     }
-                    .help(selection.count == 1 ? L10n.tr("Move recording to Trash") : L10n.tr("Move selected recordings to Trash"))
-                    .accessibilityLabel(selection.count == 1 ? L10n.tr("Move recording to Trash") : L10n.tr("Move selected recordings to Trash"))
+                    .help(deleteTitle)
+                    .accessibilityLabel(deleteTitle)
                     .buttonStyle(.borderless)
                 }
             }
@@ -102,7 +158,7 @@ struct RecordingsWindow: View {
         }
         .onAppear {
             state.reloadRecordings()
-            if selection.isEmpty, let id = state.liveRecording?.id ?? state.recordings.first?.id {
+            if selection.isEmpty, let id = state.liveRecording?.id ?? listedIDs.first {
                 selection = [id]
             }
         }
@@ -114,13 +170,15 @@ struct RecordingsWindow: View {
         .onChange(of: state.lastFinishedRecordingID) { _, id in
             if let id { selection = [id] }
         }
-        .onChange(of: state.recordings) { _, recordings in
-            let available = Set(recordings.map(\.id)).union(state.liveRecording.map { [$0.id] } ?? [])
+        .onChange(of: listedIDs) { _, listed in
+            // What is selected has to be something the list still shows: an
+            // item deleted, or filtered out by the search, leaves the detail.
+            let available = Set(listed).union(state.liveRecording.map { [$0.id] } ?? [])
             if !selection.isSubset(of: available) {
                 player.unload()
                 self.selection = selection.intersection(available)
             }
-            if selection.isEmpty, let id = recordings.first?.id {
+            if selection.isEmpty, let id = listed.first {
                 self.selection = [id]
             }
         }
@@ -135,13 +193,42 @@ struct RecordingsWindow: View {
                   let recording = state.recordings.first(where: { $0.id == selection }) {
             RecordingDetail(state: state, recording: recording, player: player)
                 .id(recording.id)
+        } else if let entry = selectedDictation {
+            DictationDetail(state: state, entry: entry, player: dictationPlayer)
+                .id(entry.id)
         } else {
             RecordingsPlaceholderView(
-                placeholder: state.recordings.isEmpty && state.liveRecording == nil
-                    ? .emptyLibrary
-                    : .nothingSelected
+                placeholder: placeholder
             )
         }
+    }
+
+    private var placeholder: RecordingsPlaceholder {
+        if state.recordings.isEmpty, state.history.isEmpty, state.liveRecording == nil {
+            return .emptyLibrary
+        }
+        return listedIDs.isEmpty ? .nothingFound : .nothingSelected
+    }
+
+    private var selectedDictation: HistoryEntry? {
+        guard let id = primarySelection else { return nil }
+        return state.history.first { $0.id == id }
+    }
+
+    private var isCopyDisabled: Bool {
+        if let entry = selectedDictation { return entry.text.isEmpty }
+        return primarySelection.map { state.transcript(for: $0).isEmpty } ?? true
+    }
+
+    private var deleteTitle: String {
+        let dictations = selection.filter { id in state.history.contains { $0.id == id } }.count
+        if dictations == selection.count {
+            return selection.count == 1 ? L10n.tr("Delete this dictation") : L10n.tr("Delete selected dictations")
+        }
+        if dictations == 0 {
+            return selection.count == 1 ? L10n.tr("Move recording to Trash") : L10n.tr("Move selected recordings to Trash")
+        }
+        return L10n.tr("Delete selected items")
     }
 
     private var primarySelection: UUID? {
@@ -149,11 +236,13 @@ struct RecordingsWindow: View {
         return selection.first
     }
 
-    private func deleteSelectedRecordings() {
-        deleteRecordings(selection)
-    }
-
-    private func deleteRecordings(_ ids: Set<UUID>) {
+    /// Recordings go to the Trash; dictations are deleted, audio and all, as
+    /// they always were. A live recording cannot be deleted from under itself.
+    private func deleteItems(_ ids: Set<UUID>) {
+        for entry in state.history where ids.contains(entry.id) {
+            dictationPlayer.stopIfPlaying(entry.id)
+            state.deleteHistoryEntry(entry)
+        }
         let deletable = ids.filter { id in
             state.liveRecording?.id != id && state.recordings.contains { $0.id == id }
         }

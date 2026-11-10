@@ -141,7 +141,7 @@ struct MenuContent: View {
             .accessibilityHint(L10n.tr("Ends the recording and keeps it"))
 
         case .openRecordings:
-            Button(L10n.tr("Recordings…")) {
+            Button(L10n.tr("Library…")) {
                 openWindow(id: RecordingsWindow.windowID)
                 WindowFronting.raiseOpenedWindow(id: RecordingsWindow.windowID)
             }
