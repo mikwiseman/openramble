@@ -237,7 +237,7 @@ final class OverlayModelTests: XCTestCase {
         model.setHandsFree(finishKey: "Right Command")
 
         XCTAssertEqual(model.content.mark, .handsFree)
-        XCTAssertEqual(model.content.panelWidth, 244)
+        XCTAssertEqual(model.content.panelWidth, 304)
         XCTAssertEqual(announcer.cues, 2)
         XCTAssertEqual(announcer.messages, [])
     }
@@ -278,7 +278,7 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(model.content.panelWidth, 244)
 
         model.show(.transcribing, elapsed: 2)
-        XCTAssertEqual(model.content.mark, .working)
+        XCTAssertEqual(model.content.mark, .closed)
         XCTAssertNil(model.content.title)
         XCTAssertEqual(model.content.panelWidth, 244)
     }
@@ -290,9 +290,10 @@ final class OverlayModelTests: XCTestCase {
 
         try await waitUntil { self.model.hasLingered }
 
-        XCTAssertEqual(model.content.title, "Transcribing…")
+        XCTAssertEqual(model.content.title, "Writing it down…")
+        XCTAssertEqual(model.content.mark, .working)
         XCTAssertEqual(model.content.panelWidth, 244)
-        XCTAssertEqual(announcer.messages, ["Transcribing…"])
+        XCTAssertEqual(announcer.messages, ["Writing it down…"])
     }
 
     func testASlowMicrophoneEarnsATitleButNoWords() async throws {
@@ -313,7 +314,7 @@ final class OverlayModelTests: XCTestCase {
         try await waitUntil { self.model.hasLingered }
         let after = NSHostingView(rootView: OverlayView(model: model)).fittingSize
 
-        XCTAssertEqual(model.content.title, "Transcribing…")
+        XCTAssertEqual(model.content.title, "Writing it down…")
         XCTAssertEqual(after, before)
     }
 
@@ -322,7 +323,7 @@ final class OverlayModelTests: XCTestCase {
         model.show(.transcribing, elapsed: 2)
         model.setWaitingForEngine(true)
 
-        XCTAssertEqual(model.content.title, "Waking the model…")
+        XCTAssertEqual(model.content.title, "Getting ready…")
         XCTAssertEqual(announcer.messages, ["Waiting for the speech model to load"])
     }
 
@@ -596,5 +597,187 @@ final class OverlayModelTests: XCTestCase {
         XCTAssertEqual(model.state, .listening)
         XCTAssertTrue(model.isVisible)
         XCTAssertTrue(model.isTicking)
+    }
+}
+
+/// The block while words wait: it stays, it gives way to a new take, and it
+/// says how the waiting ended.
+@MainActor
+final class OverlayModelWaitingTests: XCTestCase {
+    private var announcer: FakeAnnouncer!
+    private var model: OverlayModel!
+    private var visibility: [Bool] = []
+    private let waiting = WaitingWords(words: "Ping test", cause: .typingProtected(by: "Terminal"))
+
+    override func setUp() async throws {
+        announcer = FakeAnnouncer()
+        model = OverlayModel(
+            announcer: announcer,
+            noticeDuration: .milliseconds(60),
+            titleDelay: .milliseconds(60),
+            outcomeDuration: .milliseconds(60)
+        )
+        visibility = []
+        model.onVisibilityChange = { [weak self] visible in self?.visibility.append(visible) }
+    }
+
+    private func waitUntil(_ condition: @escaping () -> Bool) async throws {
+        for _ in 0..<200 where !condition() {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertTrue(condition())
+    }
+
+    /// The take that could not land ends like any other: its session hides
+    /// the block. The words keep it up.
+    func testWaitingWordsOutliveTheTakeThatProducedThem() async throws {
+        model.show(.listening, elapsed: 1)
+        model.show(.transcribing, elapsed: 1)
+        model.setWaiting(waiting)
+        model.hide()
+
+        XCTAssertTrue(model.isVisible)
+        XCTAssertEqual(model.content.waiting, waiting)
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertTrue(model.isVisible, "no timer takes the words away")
+    }
+
+    /// The failure notice that carries the words is not a four-second toast:
+    /// the block that holds them says everything it said, and stays.
+    func testTheNoticeThatCarriesWaitingWordsIsNotAToast() {
+        model.showNotice(DictationNotice(
+            kind: .warning,
+            message: "The words couldn't be pasted. They are waiting.",
+            recoverableText: "Ping test",
+            wordsDidNotLand: true
+        ))
+        XCTAssertNil(model.notice)
+        XCTAssertFalse(model.isVisible, "the application hands the words over itself")
+    }
+
+    /// The reason interrupts, like every landing that failed. The words are
+    /// never read aloud.
+    func testVoiceOverHearsTheReasonAndNotTheWords() {
+        model.key = .rightCommand
+        model.setWaiting(waiting)
+        XCTAssertEqual(
+            announcer.announcements.filter(\.urgent).map(\.message),
+            ["Words waiting. Can't paste while Terminal protects typing. Right Command copies."]
+        )
+        XCTAssertFalse(announcer.messages.joined().contains("Ping"))
+    }
+
+    /// The block tells its owner the moment it starts and stops showing what
+    /// the person said: that is when it leaves and rejoins screen captures.
+    func testTheBlockSaysWhenItShowsDictatedWords() {
+        var changes = 0
+        model.onWordsShownChange = { changes += 1 }
+        model.setWaiting(waiting)
+        XCTAssertEqual(changes, 1)
+        var copied = waiting
+        copied.isCopied = true
+        model.setWaiting(copied)
+        XCTAssertEqual(changes, 1, "still the same words")
+        model.setWaiting(nil)
+        XCTAssertEqual(changes, 2)
+        XCTAssertFalse(model.isVisible)
+    }
+
+    /// A new take is the news. The words are in History; the block is the
+    /// take's again.
+    func testANewTakeTakesTheBlock() {
+        model.setWaiting(waiting)
+        model.show(.listening, elapsed: 0)
+        XCTAssertNil(model.content.waiting)
+        XCTAssertEqual(model.content.mark, .recording)
+    }
+
+    /// How it ended is said once, then the block leaves.
+    func testAnOutcomeIsSaidOnceAndLeaves() async throws {
+        model.setWaiting(waiting)
+        model.showOutcome(.pasted(into: "Notes"))
+
+        XCTAssertNil(model.waiting)
+        XCTAssertEqual(model.content.outcome, .pasted(into: "Notes"))
+        XCTAssertTrue(model.isVisible)
+        XCTAssertEqual(announcer.messages.last, "Pasted into Notes.")
+
+        try await waitUntil { !self.model.isVisible }
+        XCTAssertNil(model.outcome)
+    }
+
+    /// A toast over waiting words steps aside for them again.
+    func testANoticeOverWaitingWordsGivesTheBlockBack() async throws {
+        model.setWaiting(waiting)
+        model.showNotice(DictationNotice(kind: .warning, message: "The previous clipboard couldn't be restored."))
+        XCTAssertNotNil(model.content.tone)
+
+        try await waitUntil { self.model.notice == nil }
+        XCTAssertTrue(model.isVisible)
+        XCTAssertEqual(model.content.waiting, waiting)
+    }
+
+    /// The drawn block is as wide as its content says, in every kind.
+    func testTheDrawnBlockMatchesItsWidth() {
+        model.setWaiting(waiting)
+        let size = NSHostingView(rootView: OverlayView(model: model)).fittingSize
+        XCTAssertEqual(size.width, 384)
+        XCTAssertGreaterThan(size.height, GlassTokens.Block.unit * 2, "the words, the reason and the action")
+    }
+}
+
+/// The panel is as large as what it shows.
+@MainActor
+final class OverlayPanelSizeTests: XCTestCase {
+    /// A panel built the way the app builds its own, kept under the desktop
+    /// picture so nothing appears on the screen of whoever runs the suite.
+    private func panel(_ model: OverlayModel) -> NSPanel {
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 244, height: GlassTokens.Block.unit),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        panel.isReleasedWhenClosed = false
+        panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) - 1)
+        panel.contentView = DictationOverlay.makeContentView(model: model)
+        panel.orderFrontRegardless()
+        return panel
+    }
+
+    private func settle() async throws {
+        try await Task.sleep(for: .milliseconds(250))
+    }
+
+    /// Waiting words are shown in full. The panel was once left at the size
+    /// it was created with, and a block 384 points wide was drawn into 244
+    /// and cut off on both sides: seen in a screenshot of the real panel.
+    func testThePanelGrowsToHoldWaitingWordsAndShrinksBack() async throws {
+        let model = OverlayModel(
+            announcer: FakeAnnouncer(),
+            noticeDuration: .seconds(30),
+            outcomeDuration: .seconds(30)
+        )
+        let panel = panel(model)
+        defer { panel.close() }
+
+        model.show(.listening, elapsed: 2)
+        try await settle()
+        XCTAssertEqual(panel.frame.width, 244, accuracy: 1)
+        XCTAssertEqual(panel.frame.height, GlassTokens.Block.unit, accuracy: 1, "a take is one unit tall")
+
+        model.hide()
+        model.setWaiting(WaitingWords(
+            words: "The deploy passed. Let's ship the menu bar fix on Monday.",
+            cause: .typingProtected(by: "Terminal")
+        ))
+        try await settle()
+        XCTAssertEqual(panel.frame.width, 384, accuracy: 1)
+        XCTAssertGreaterThan(panel.frame.height, 2 * GlassTokens.Block.unit, "the words, the reason and the action")
+
+        model.showOutcome(.pasted(into: "Notes"))
+        try await settle()
+        XCTAssertEqual(panel.frame.width, 320, accuracy: 1)
+        XCTAssertEqual(panel.frame.height, GlassTokens.Block.unit, accuracy: 1, "one line again")
     }
 }

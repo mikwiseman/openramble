@@ -9,7 +9,7 @@ import Foundation
 /// the arrow would quietly move the setting somewhere the person never chose.
 public enum SettingsDefaults {
     public static let hotkey: DictationHotkey = .rightCommand
-    public static let copyShortcut: KeyCombination? = nil
+    public static let lastTakeShortcut: KeyCombination? = .controlCommandV
     public static let recordingShortcut: KeyCombination? = .controlCommandR
     public static let soundsEnabled = true
     public static let appendsTrailingSpace = false

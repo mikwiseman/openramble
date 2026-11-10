@@ -1874,7 +1874,7 @@ public final class DictationController {
         pendingRecovery = RecoveredDictation(text: text)
         return DictationNotice(
             kind: .warning,
-            message: L10n.tr("Insertion couldn't be confirmed in time. The text is saved in the menu and may already have been pasted."),
+            message: L10n.tr("The paste couldn't be confirmed in time. Your words are waiting and may already be in place."),
             recoverableText: text,
             wordsDidNotLand: true
         )
@@ -1901,25 +1901,26 @@ public final class DictationController {
             switch insertion {
             case .secureInputActive:
                 // Not a failure, but a normal situation: the password field is active.
-                message = L10n.tr("Text not inserted: secure input is active. Your text is saved in the menu.")
+                message = L10n.tr("Can't paste while typing is protected. Your words are waiting.")
             case .insertionInProgress:
-                message = L10n.tr("A previous paste is still finishing. Your text is saved in the menu.")
+                message = L10n.tr("A previous paste is still finishing. Your words are waiting.")
             case .clipboardRestoreFailed:
                 // Nothing was pasted and what the person had copied is gone:
                 // both are theirs to know.
-                message = L10n.tr("The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu.")
+                message = L10n.tr("The words couldn't be pasted, and the previous clipboard couldn't be restored. Your words are waiting.")
             default:
-                message = L10n.tr("The text couldn't be inserted. It's saved in the menu.")
+                message = L10n.tr("The words couldn't be pasted. They are waiting.")
             }
         } else {
-            message = L10n.tr("The text couldn't be inserted. It's saved in the menu.")
+            message = L10n.tr("The words couldn't be pasted. They are waiting.")
         }
 
         return DictationNotice(
             kind: .warning,
             message: message,
             recoverableText: text,
-            wordsDidNotLand: true
+            wordsDidNotLand: true,
+            insertionFailure: error as? TextInsertionError
         )
     }
 

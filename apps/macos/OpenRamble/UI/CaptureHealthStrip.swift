@@ -32,8 +32,7 @@ struct CaptureHealthStrip: View {
                     )
                 }
             }
-            .padding(.horizontal, GlassTokens.Space.page)
-            .padding(.top, GlassTokens.Space.stack)
+            .frame(maxWidth: 560)
         }
     }
 
@@ -41,12 +40,11 @@ struct CaptureHealthStrip: View {
     private func card(title: String, detail: String?, systemUnheardActions: Bool) -> some View {
         VStack(alignment: .leading, spacing: GlassTokens.Space.tight) {
             HStack(alignment: .firstTextBaseline, spacing: GlassTokens.Space.inline) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(StatusColorRole.attention.color)
-                    .accessibilityHidden(true)
+                StateGlyphView(glyph: .attention)
+                    .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.callout.weight(.medium))
+                        .font(.system(size: 13, weight: .semibold))
                     if let detail {
                         Text(detail)
                             .font(.caption)
@@ -74,8 +72,14 @@ struct CaptureHealthStrip: View {
                 }
             }
         }
-        .padding(GlassTokens.Space.stack)
-        .contentSurface(RoundedRectangle(cornerRadius: GlassTokens.Radius.control, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentBlock(.attention, padding: GlassTokens.Space.stack)
+        // It floats over the transcript, so the page shows under the tint
+        // unless it has a ground of its own.
+        .background(
+            Color(nsColor: .textBackgroundColor),
+            in: RoundedRectangle(cornerRadius: GlassTokens.Radius.surface, style: .continuous)
+        )
         .accessibilityElement(children: .contain)
     }
 }

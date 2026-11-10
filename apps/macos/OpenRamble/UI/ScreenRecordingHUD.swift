@@ -22,7 +22,7 @@ final class ScreenRecordingHUD {
 
     private func makePanel() -> NSPanel {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 292, height: 58),
+            contentRect: NSRect(x: 0, y: 0, width: ScreenRecordingHUDView.width, height: GlassTokens.Block.unit),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -55,56 +55,53 @@ final class ScreenRecordingHUD {
     }
 }
 
-private struct ScreenRecordingHUDView: View {
+/// The screen recording, as the same block a take is: one capsule of Liquid
+/// Glass with one glyph, one word, one clock, and its three controls.
+struct ScreenRecordingHUDView: View {
     @ObservedObject var state: AppState
+
+    /// Wide enough for the word, an hour-long clock and three controls, in
+    /// either language.
+    static let width: CGFloat = 352
 
     private var isPaused: Bool { state.meetingState == .paused }
 
     var body: some View {
-        HStack(spacing: GlassTokens.Space.inline) {
-            Circle()
-                .fill(isPaused ? Color.secondary : StatusColorRole.recording.color)
-                .frame(width: 8, height: 8)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(isPaused ? L10n.tr("Paused") : L10n.tr("Recording screen"))
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                Text(RecordingTime.clock(state.liveDuration))
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-            }
+        HStack(spacing: 8) {
+            // Red is the microphone capturing. Paused, it is not.
+            StateGlyphView(glyph: isPaused ? .silent : .listening, size: 12)
+            Text(isPaused ? L10n.tr("Paused") : L10n.tr("Recording screen"))
+                .font(.system(size: 14, weight: .medium))
+                .lineLimit(1)
+                .fixedSize()
+            Text(RecordingTime.clock(state.liveDuration))
+                .font(.system(size: 14).monospacedDigit())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .fixedSize()
             Spacer(minLength: GlassTokens.Space.tight)
             if state.screenRecordingOptions.cameraEnabled {
-                Button {
+                control("video.fill", L10n.tr("Hide camera bubble")) {
                     state.setRecordingCameraEnabled(false)
-                } label: {
-                    Image(systemName: "video.fill")
                 }
-                .help(L10n.tr("Hide camera bubble"))
-                .accessibilityLabel(L10n.tr("Hide camera bubble"))
                 .disabled(state.isCameraChanging)
             } else {
-                Button {
+                control("video.slash", L10n.tr("Show camera bubble")) {
                     state.setRecordingCameraEnabled(true)
-                } label: {
-                    Image(systemName: "video.slash")
                 }
-                .help(L10n.tr("Show camera bubble"))
-                .accessibilityLabel(L10n.tr("Show camera bubble"))
                 .disabled(state.isCameraChanging)
             }
-            Button {
+            control(
+                isPaused ? "play.fill" : "pause.fill",
+                isPaused ? L10n.tr("Resume recording") : L10n.tr("Pause recording")
+            ) {
                 if isPaused { state.resumeRecording() } else { state.pauseRecording() }
-            } label: {
-                Image(systemName: isPaused ? "play.fill" : "pause.fill")
             }
-            .help(isPaused ? L10n.tr("Resume recording") : L10n.tr("Pause recording"))
-            .accessibilityLabel(isPaused ? L10n.tr("Resume recording") : L10n.tr("Pause recording"))
             Button {
                 state.stopRecording()
             } label: {
                 Image(systemName: "stop.fill")
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 28, height: 28)
                     .background(StatusColorRole.recording.color, in: Circle())
@@ -113,10 +110,23 @@ private struct ScreenRecordingHUDView: View {
             .help(L10n.tr("Stop recording"))
             .accessibilityLabel(L10n.tr("Stop recording"))
         }
-        .padding(.horizontal, GlassTokens.Space.stack)
-        .padding(.vertical, GlassTokens.Space.inline)
-        .frame(width: 292)
-        .glassSurface(Capsule())
+        .padding(.leading, 18)
+        .padding(.trailing, 8)
+        .frame(width: Self.width, height: GlassTokens.Block.unit)
+        .glassBlock(.capsule)
         .accessibilityElement(children: .contain)
+    }
+
+    private func control(_ symbol: String, _ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 12, weight: .semibold))
+                .frame(width: 28, height: 28)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .help(label)
+        .accessibilityLabel(label)
     }
 }

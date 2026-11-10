@@ -2,15 +2,19 @@ import AppKit
 import DictationCore
 import SwiftUI
 
-/// The menu bar presence: the brand mark, with a small colored dot over its
-/// corner while the microphone is live or something needs the person.
+/// The menu bar presence: the brand mark, with a small badge over its corner
+/// while the microphone is live or something waits for the person.
+///
+/// Red is a dot, and the only dot. Orange is a bar: macOS draws its own round
+/// orange microphone indicator a few points away, and a round orange badge of
+/// ours would pass for it.
 ///
 /// The label owns no clock and no animation: state arrives from outside and
 /// each state maps to one static image, so the menu bar costs nothing at rest.
 struct MenuBarLabel: View {
     let state: DictationState
     let isDictationReady: Bool
-    let hasRecoveredWork: Bool
+    let wordsAreWaiting: Bool
     let setupNeedsAttention: Bool
     var isRecordingMeeting = false
     var recordingIsDegraded = false
@@ -19,7 +23,7 @@ struct MenuBarLabel: View {
     var body: some View {
         let badge = MenuBarStatus.badge(
             activity: MenuBarStatus.activity(state: state, isRecordingMeeting: isRecordingMeeting),
-            needsAttention: hasRecoveredWork || setupNeedsAttention,
+            needsAttention: wordsAreWaiting || setupNeedsAttention,
             recordingIsDegraded: recordingIsDegraded || microphoneMissing
         )
 
@@ -29,7 +33,7 @@ struct MenuBarLabel: View {
                 MenuBarStatus.accessibilityLabel(
                     state: state,
                     isDictationReady: isDictationReady,
-                    hasRecoveredWork: hasRecoveredWork,
+                    wordsAreWaiting: wordsAreWaiting,
                     isRecordingMeeting: isRecordingMeeting,
                     recordingIsDegraded: recordingIsDegraded,
                     microphoneMissing: microphoneMissing
@@ -68,13 +72,20 @@ enum MenuBarLabelArt {
         }
     }
 
-    static let recording = composite(dot: StatusColorRole.recording.nsColor)
-    static let attention = composite(dot: StatusColorRole.attention.nsColor)
+    static let recording = composite(
+        badge: StatusColorRole.recording.nsColor,
+        size: NSSize(width: 7, height: 7)
+    )
+    static let attention = composite(
+        badge: StatusColorRole.attention.nsColor,
+        size: NSSize(width: 10, height: 5)
+    )
 
     private static let canvas = NSSize(width: 22, height: 22)
-    private static let dotDiameter: CGFloat = 7
 
-    private static func composite(dot: NSColor) -> NSImage {
+    /// - Parameter size: a square is drawn as a dot, anything else as a bar
+    ///   with rounded ends that stops short of a capsule.
+    private static func composite(badge dot: NSColor, size: NSSize) -> NSImage {
         let brand = NSImage(named: MenuBarStatus.brandIconName)
         let image = NSImage(size: canvas, flipped: false) { rect in
             // The brand mark, tinted to the label color of whatever appearance
@@ -88,11 +99,15 @@ enum MenuBarLabelArt {
             }
 
             let dotRect = NSRect(
-                x: rect.maxX - dotDiameter,
-                y: rect.maxY - dotDiameter,
-                width: dotDiameter,
-                height: dotDiameter
+                x: rect.maxX - size.width,
+                y: rect.maxY - size.height - (size.width == size.height ? 0 : 1),
+                width: size.width,
+                height: size.height
             )
+            let radius = size.width == size.height ? size.height / 2 : 1.5
+            func path(_ rect: NSRect, _ radius: CGFloat) -> NSBezierPath {
+                NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
+            }
 
             // A thin transparent ring punched out of the mark separates the
             // dot like a system badge — readable on any wallpaper without
@@ -100,12 +115,12 @@ enum MenuBarLabelArt {
             if let context = NSGraphicsContext.current {
                 let previous = context.compositingOperation
                 context.compositingOperation = .destinationOut
-                NSBezierPath(ovalIn: dotRect.insetBy(dx: -1.5, dy: -1.5)).fill()
+                path(dotRect.insetBy(dx: -1.5, dy: -1.5), radius + 1.5).fill()
                 context.compositingOperation = previous
             }
 
             dot.setFill()
-            NSBezierPath(ovalIn: dotRect).fill()
+            path(dotRect, radius).fill()
             return true
         }
         image.isTemplate = false

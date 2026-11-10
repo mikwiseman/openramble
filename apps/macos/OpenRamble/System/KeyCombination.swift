@@ -35,6 +35,12 @@ public struct KeyCombination: Sendable, Equatable, Hashable {
         modifiers: [.command, .control]
     )
 
+    /// Pastes the last take. One key away from the paste it stands in for.
+    public static let controlCommandV = KeyCombination(
+        keyCode: UInt16(kVK_ANSI_V),
+        modifiers: [.command, .control]
+    )
+
     public var modifierFlags: NSEvent.ModifierFlags {
         NSEvent.ModifierFlags(rawValue: modifiers)
     }

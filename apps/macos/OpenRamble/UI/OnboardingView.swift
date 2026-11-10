@@ -30,11 +30,16 @@ struct OnboardingView: View {
     @State private var trialStartCount = 0
     @State private var showAccessibilityRepairConfirmation = false
     @FocusState private var trialFocused: Bool
+    /// The dictation key, heard through this window alone: no permission is
+    /// needed for the drawn key to answer the real one.
+    @StateObject private var keyEcho = KeyEcho()
 
-    init(state: AppState, onFinish: @escaping () -> Void) {
+    /// - Parameter step: where to open. `nil` picks the first step that still
+    ///   has something to do.
+    init(state: AppState, step: OnboardingStep? = nil, onFinish: @escaping () -> Void) {
         self.state = state
         self.onFinish = onFinish
-        _step = State(initialValue: OnboardingStep.first(
+        _step = State(initialValue: step ?? OnboardingStep.first(
             microphoneGranted: state.microphoneGranted,
             accessibilityGranted: state.accessibilityGranted
         ))
@@ -50,8 +55,8 @@ struct OnboardingView: View {
             // two different ones.
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                .padding(.horizontal, 36)
-                .padding(.top, 28)
+                .padding(.horizontal, 48)
+                .padding(.top, 44)
                 .padding(.bottom, 8)
                 // Each step is its own page: forward it slides left, back it
                 // slides right — the same paths in both directions. With
@@ -99,13 +104,14 @@ struct OnboardingView: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .accessibilityHidden(navigationBlockReason == nil)
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 20)
         }
         // The combined setup step contains three cards and every model state,
         // including repair and download progress. Keep enough vertical room
         // for those controls without making the first-run window feel large.
-        .frame(width: 600, height: 660)
+        .frame(width: 640, height: 680)
+        .background(Color(nsColor: .textBackgroundColor))
         .confirmationDialog(
             L10n.tr("Repair Accessibility access?"),
             isPresented: $showAccessibilityRepairConfirmation,
@@ -131,107 +137,103 @@ struct OnboardingView: View {
 
     // MARK: - Steps
 
+    /// One thing on the screen: the key. It goes down when the real one
+    /// does, so the first thing a person learns is where their finger goes.
     private var welcome: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             Spacer(minLength: 0)
 
-            // The product crest is the app icon itself — the same mark the
-            // person just dragged into Applications and will find in the menu
-            // bar. Deliberately no glass here: Liquid Glass is the control
-            // layer, not content decoration.
-            Image(nsImage: NSApplication.shared.applicationIconImage)
-                .resizable()
-                .frame(width: 96, height: 96)
-                .accessibilityHidden(true)
-
-            Text(L10n.tr("Dictation that stays on your Mac"))
-                .font(.largeTitle.bold())
+            Text(L10n.tr("Hold a key, speak, let go."))
+                .font(.display(38))
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
 
-            Text(L10n.tr("Hold a key, speak, let go — the text appears at your cursor. In any app."))
+            Text(L10n.tr("The words appear at your cursor, in any app."))
+                .font(.system(size: 16))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .frame(maxWidth: 440)
-                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 12)
 
-            // Fixed, not a Spacer: three flexible spacers would split the
-            // leftover height evenly and blow this gap wide open.
-            VStack(alignment: .leading, spacing: 14) {
-                OnboardingFeatureRow(
-                    symbol: "airplane",
-                    title: L10n.tr("Works on a plane"),
-                    text: L10n.tr("Speech is recognized by a model on your disk. No internet needed.")
-                )
-                OnboardingFeatureRow(
-                    // An open lock reads as “unprotected” — the opposite.
-                    symbol: "hand.raised",
-                    title: L10n.tr("Your voice and text never leave your Mac"),
-                    text: L10n.tr("No accounts, no analytics, no automatic reports. The code is open — you can check.")
-                )
-                OnboardingFeatureRow(
-                    symbol: "arrow.down.circle",
-                    title: L10n.tr("Network, only on your terms"),
-                    text: L10n.tr("Used once to download the model, plus a small daily update check you can turn off.")
-                )
-            }
-            .frame(width: 420, alignment: .leading)
-            .padding(.top, 24)
+            KeyCap(title: state.hotkey.shortTitle, size: .hero, isPressed: keyEcho.isDown)
+                .padding(.top, 52)
+
+            Text(keyEcho.wasPressed
+                ? L10n.tr("That is your dictation key.")
+                : L10n.tr("Press %@ to find it.", String(describing: state.hotkey.title)))
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .padding(.top, 22)
+                .accessibilityHidden(true)
 
             Spacer(minLength: 0)
+
+            // The promise, in the open: no box, no icon, two sentences.
+            VStack(spacing: 4) {
+                Text(PrivacySentence.text)
+                    .font(.system(size: 13))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(L10n.tr("No account. Free and open source."))
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: 440)
         }
         .frame(maxWidth: .infinity)
+        .onAppear {
+            let state = state
+            keyEcho.start { [weak state] in state?.hotkey ?? SettingsDefaults.hotkey }
+        }
+        .onDisappear { keyEcho.stop() }
     }
 
+    /// Three blocks, one per thing that is needed. Each says what it is for
+    /// and turns green when it is done.
     private var setup: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 0) {
             OnboardingStepHeader(
-                symbol: "checklist",
                 title: L10n.tr("Set up OpenRamble"),
                 subtitle: L10n.tr("One download, two permissions — speech never leaves this Mac.")
             )
+            .padding(.bottom, 32)
 
-            VStack(spacing: 10) {
-                // The model goes first: its download runs while the person
-                // makes the System Settings round-trips below it.
-                VStack(alignment: .leading, spacing: 8) {
-                    Label(L10n.tr("Speech model"), systemImage: "waveform")
-                        .font(.headline)
-                    ModelStatusView(
-                        status: modelCard,
-                        install: state.installModel,
-                        cancel: state.cancelModelInstall,
-                        delete: state.deleteModel
-                    )
-                }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentSurface(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                OnboardingPermission(
-                    status: PermissionStatus(
-                        title: L10n.tr("Microphone"),
-                        detail: L10n.tr("Hears your voice during dictation and recordings you start."),
-                        granted: state.microphoneGranted
-                    ),
-                    action: state.requestMicrophone
+            Divider()
+            VStack(alignment: .leading, spacing: 10) {
+                BlockLabel(L10n.tr("Speech model"))
+                ModelStatusView(
+                    status: modelCard,
+                    install: state.installModel,
+                    cancel: state.cancelModelInstall,
+                    delete: state.deleteModel
                 )
-                OnboardingPermission(
-                    status: PermissionStatus.accessibility(
-                        state: state.accessibilityState,
-                        detail: L10n.tr("Notices your dictation key and types the finished text at your cursor."),
-                    ),
-                    action: performAccessibilityAction
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 18)
+            Divider()
+
+            OnboardingPermission(
+                status: PermissionStatus(
+                    title: L10n.tr("Microphone"),
+                    detail: L10n.tr("Hears your voice during dictation and recordings you start."),
+                    granted: state.microphoneGranted
+                ),
+                action: state.requestMicrophone
+            )
+            Divider()
+            OnboardingPermission(
+                status: PermissionStatus.accessibility(
+                    state: state.accessibilityState,
+                    detail: L10n.tr("Notices your dictation key and types the finished text at your cursor."),
+                ),
+                action: performAccessibilityAction
+            ) {
+                if AccessibilityRepairLink.isShown(
+                    state: state.accessibilityState,
+                    returnedWithoutGrant: state.accessibilityReturnedWithoutGrant
                 ) {
-                    // Under the button it qualifies, so the card keeps its
-                    // height and nothing above it is squeezed.
-                    if AccessibilityRepairLink.isShown(
-                        state: state.accessibilityState,
-                        returnedWithoutGrant: state.accessibilityReturnedWithoutGrant
-                    ) {
-                        AccessibilityRepairLinkButton(modelState: state.modelState) {
-                            showAccessibilityRepairConfirmation = true
-                        }
+                    AccessibilityRepairLinkButton(modelState: state.modelState) {
+                        showAccessibilityRepairConfirmation = true
                     }
                 }
             }
@@ -248,12 +250,15 @@ struct OnboardingView: View {
                 .font(.caption)
             }
 
+            Divider()
             Text(L10n.tr("Accessibility is used only to notice your dictation key and insert finished text. Other keystrokes are never logged or stored. Input Monitoring is not needed."))
-                .font(.caption)
+                .font(.system(size: 12))
                 .foregroundStyle(.secondary)
+                .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 14)
 
-            Spacer()
+            Spacer(minLength: 0)
         }
     }
 
@@ -290,21 +295,15 @@ struct OnboardingView: View {
         }
     }
 
+    /// Teach by doing: the key on the screen goes down with the real one,
+    /// and the words land in a note that belongs to this window.
     private var tryIt: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 24) {
             OnboardingStepHeader(
-                symbol: "keyboard",
-                title: L10n.tr("Try it"),
-                subtitle: L10n.tr("Hold %@, say a few words, let go — the text lands in the field below.", String(describing: state.hotkey.title))
+                title: L10n.tr("Hold %@ and say something.", String(describing: state.hotkey.shortTitle)),
+                subtitle: L10n.tr("Let go when you are done. The words land in the note below.")
             )
 
-            // The header has just asked for a key press. If the model cannot
-            // answer one yet — the one-time compile after a fresh install, or a
-            // model that was deleted from Settings meanwhile — that belongs on
-            // the screen, with the same live counter the setup step shows,
-            // rather than only in the toast that appears after the person has
-            // already pressed and seen nothing happen. A loaded engine, and a
-            // resting one whose comeback is that very press, say nothing.
             if let line = modelCard.setupLine {
                 HStack(spacing: 8) {
                     if state.isPreparingEngine {
@@ -317,82 +316,98 @@ struct OnboardingView: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                .frame(maxWidth: .infinity, alignment: .center)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(modelCard.announcement)
             }
 
-            // One sentence that shows the cleanup: what lands in the field is
-            // visibly cleaner than what was said.
-            VStack(alignment: .leading, spacing: 2) {
-                Text(L10n.tr("Try saying"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(OnboardingStep.tryOutSuggestion())
-                    .font(.title3.weight(.medium))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
+            // The note: a page of the person's own, so the first take needs
+            // no other app to land in.
+            VStack(alignment: .leading, spacing: 0) {
+                TextEditor(text: $trial)
+                    .font(.words(20))
+                    .frame(height: 120)
+                    .focused($trialFocused)
+                    .scrollContentBackground(.hidden)
+                    .onAppear { trialFocused = true }
+                    .accessibilityLabel(L10n.tr("Trial dictation field"))
+                    .overlay(alignment: .topLeading) {
+                        if trial.isEmpty {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(L10n.tr("Try saying"))
+                                    .font(.system(size: 12))
+                                Text(OnboardingStep.tryOutSuggestion())
+                                    .font(.words(20))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .foregroundStyle(.tertiary)
+                            .padding(.leading, 5)
+                            .allowsHitTesting(false)
+                            .accessibilityElement(children: .combine)
+                        }
+                    }
             }
-            .accessibilityElement(children: .combine)
+            .padding(20)
+            .background(
+                trialSucceeded
+                    ? StatusColorRole.success.color.opacity(0.10)
+                    : Color.primary.opacity(0.045),
+                in: RoundedRectangle(cornerRadius: GlassTokens.Radius.surface, style: .continuous)
+            )
+            .animation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.2), value: trialSucceeded)
 
-            Picker(L10n.tr("Dictation key"), selection: $state.hotkey) {
-                ForEach(DictationHotkey.allCases, id: \.self) { key in
-                    Text(key.title).tag(key)
+            HStack(alignment: .center, spacing: GlassTokens.Space.stack) {
+                DictationKeyMenu(
+                    hotkey: $state.hotkey,
+                    isPressed: isListening && !state.isHandsFreeActive
+                )
+                .disabled(isDictationBusy)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    if trialSucceeded {
+                        HStack(spacing: 8) {
+                            StateGlyphView(glyph: .pasted)
+                            Text(L10n.tr("Done — dictation works"))
+                                .font(.system(size: 15, weight: .semibold))
+                        }
+                        .accessibilityElement(children: .combine)
+                        Text(L10n.tr("OpenRamble lives in your menu bar at the top of the screen. Settings can move it to the Dock instead — never to neither."))
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else if isListening {
+                        HStack(spacing: 8) {
+                            StateGlyphView(glyph: .listening)
+                            Text(L10n.tr("Listening"))
+                                .font(.system(size: 15, weight: .semibold))
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(L10n.tr("Recording"))
+                    } else if let warning = state.hotkeyWarning {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            StateGlyphView(glyph: .attention, size: 12)
+                                .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
+                            Text(warning)
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(L10n.tr("Key warning. %@", String(describing: warning)))
+                    } else {
+                        Text(L10n.tr("Hold to talk. Double-press for hands-free."))
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                        Text(L10n.tr("Click the key to choose another."))
+                            .font(.system(size: 12))
+                            .foregroundStyle(.tertiary)
+                    }
                 }
+                Spacer(minLength: 0)
             }
-            .pickerStyle(.menu)
-            .accessibilityHint(L10n.tr("The key you hold down while dictating"))
-            .disabled(isDictationBusy)
+            .frame(minHeight: KeyCap.Size.large.height + KeyCap.Size.large.travel)
 
-            if let warning = state.hotkeyWarning {
-                Label {
-                    Text(warning)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } icon: {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(StatusColorRole.attention.color)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(L10n.tr("Key warning. %@", String(describing: warning)))
-            }
-
-            // Sample field. Present, with variable text: it used to be
-            // tied to a constant, and what was dictated did not appear in it
-            // never - the first attempt looked like nothing
-            // works. The cursor is placed here by itself, otherwise the text will go into that window
-            // which was ahead before onboarding.
-            TextEditor(text: $trial)
-                .frame(height: 90)
-                .focused($trialFocused)
-                .scrollContentBackground(.hidden)
-                .padding(8)
-                .contentSurface(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .onAppear { trialFocused = true }
-                .accessibilityLabel(L10n.tr("Trial dictation field"))
-
-            // Color goes to the dot, not the words: red text reads as an
-            // error, and here everything goes as intended.
-            if state.dictationState == .listening {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(StatusColorRole.recording.color)
-                        .frame(width: 8, height: 8)
-                    Text(L10n.tr("Listening…"))
-                        .foregroundStyle(.secondary)
-                }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(L10n.tr("Recording"))
-            }
-
-            if trialSucceeded {
-                Label(L10n.tr("Done — dictation works"), systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(StatusColorRole.success.color)
-                // “Done” closes the window, and the app has no Dock icon: say
-                // where it lives, or the person loses it right here.
-                Text(L10n.tr("OpenRamble lives in your menu bar at the top of the screen. Settings can move it to the Dock instead — never to neither."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
+            if !trialSucceeded {
                 HStack(spacing: 12) {
                     Button(L10n.tr("Skip the try-out")) { finishOnboarding() }
                         .buttonStyle(.borderless)
@@ -400,19 +415,21 @@ struct OnboardingView: View {
                         .accessibilityHint(
                             isDictationBusy ? L10n.tr("Finish or cancel the current dictation first") : ""
                         )
-                    // The escape hatch: while dictation runs, Back, Next and
-                    // Skip are all disabled — without this button a stuck
-                    // trial locks the whole window.
                     if isDictationBusy {
                         Button(L10n.tr("Cancel Dictation")) { state.cancelCurrentDictation() }
                             .buttonStyle(.bordered)
                             .accessibilityHint(L10n.tr("Stops the current dictation so you can continue setup."))
                     }
                 }
+                .font(.system(size: 12))
             }
 
-            Spacer()
+            Spacer(minLength: 0)
         }
+    }
+
+    private var isListening: Bool {
+        state.dictationState == .preparing || state.dictationState == .listening
     }
 
     // MARK: - Navigation
@@ -515,23 +532,18 @@ extension OnboardingConditions {
     }
 }
 
-/// Step header: symbol, title, explanation — one drawing for all steps,
-/// centered like macOS's own assistants.
+/// Step header: what to do, and one sentence about it. Centered like
+/// macOS's own assistants.
 private struct OnboardingStepHeader: View {
-    let symbol: String
     let title: String
     let subtitle: String?
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: symbol)
-                .font(.system(size: 32, weight: .medium))
-                .foregroundStyle(Color.accentColor)
-                .symbolRenderingMode(.hierarchical)
-                .accessibilityHidden(true)
-
+        VStack(spacing: 6) {
             Text(title)
-                .font(.title2.bold())
+                .font(.display(30))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
 
             if let subtitle {
@@ -568,39 +580,8 @@ private struct OnboardingProgressDots: View {
     }
 }
 
-/// Value list item in the first step: a short claim in the person's favor,
-/// then the fact that backs it.
-///
-/// The icon is in a fixed-width column. Otherwise, the column width is set
-/// by the glyph itself, and glyph widths differ: the text of the third row
-/// started a few points to the right of the first two, and the left edge of
-/// the list went torn.
-private struct OnboardingFeatureRow: View {
-    let symbol: String
-    let title: String
-    let text: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: symbol)
-                .font(.system(size: 20, weight: .medium))
-                .foregroundStyle(Color.accentColor)
-                .symbolRenderingMode(.hierarchical)
-                .frame(width: 28, alignment: .center)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.callout.weight(.semibold))
-                Text(text)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
+/// A permission as a row: what it is for, and the one button that grants
+/// it. Granted, its ring becomes a green check and the button goes.
 private struct OnboardingPermission<Secondary: View>: View {
     let status: PermissionStatus
     let action: () -> Void
@@ -617,27 +598,22 @@ private struct OnboardingPermission<Secondary: View>: View {
     }
 
     var body: some View {
-        HStack {
-            Image(systemName: status.granted ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(status.granted ? StatusColorRole.success.color : .secondary)
-                .font(.title3)
-                .accessibilityHidden(true)
+        HStack(spacing: 12) {
+            StateGlyphView(glyph: status.granted ? .pasted : .silent, size: 16)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(status.title)
-                    .font(.headline)
+                    .font(.system(size: 15, weight: .medium))
                 Text(status.detail)
-                    .font(.caption)
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            // Title, explanation and checkmark are about the same thing. Separately
-            // VoiceOver reads them as three elements, and "issued" hangs without
-            // owner.
             .accessibilityElement(children: .combine)
             .accessibilityLabel(status.accessibilityLabel)
             .accessibilityValue(status.accessibilityValue)
 
-            Spacer()
+            Spacer(minLength: 8)
 
             VStack(alignment: .trailing, spacing: 4) {
                 if let title = status.actionTitle {
@@ -648,7 +624,7 @@ private struct OnboardingPermission<Secondary: View>: View {
                 secondary
             }
         }
-        .padding(14)
-        .contentSurface(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 16)
     }
 }

@@ -36,7 +36,7 @@ struct MenuContent: View {
                     isDictationReady: state.isDictationReady,
                     isHandsFreeActive: state.isHandsFreeActive,
                     hotkeyTitle: state.hotkey.title,
-                    hasRecoveredText: state.recoveredText != nil
+                    waitingReason: state.waitingWords?.reason(key: state.hotkey.shortTitle)
                 )
             )
 
@@ -61,14 +61,28 @@ struct MenuContent: View {
                 WindowFronting.raiseOpenedWindow(id: "onboarding")
             }
 
-        case .insertLastDictation:
-            Button(L10n.tr("Insert Last Dictation")) { state.retryRecoveredText() }
-                .disabled(state.dictationState != .idle)
-                .accessibilityHint(
-                    state.dictationState == .idle
-                        ? L10n.tr("Attempts to insert the saved text into the current field")
-                        : L10n.tr("Finish or cancel the current dictation first")
-                )
+        case .pasteLastTake:
+            Button {
+                state.pasteLastTake()
+            } label: {
+                // Written into the title: this can be a bare function key,
+                // which `keyboardShortcut` cannot express.
+                Text(titled(
+                    L10n.tr("Paste “%@”", Self.firstWords(of: state.lastTakeText ?? "")),
+                    shortcut: state.lastTakeShortcut
+                ))
+            }
+            .disabled(state.dictationState != .idle)
+            .accessibilityLabel(L10n.tr("Paste the last take"))
+            .accessibilityHint(
+                state.dictationState == .idle
+                    ? L10n.tr("Pastes the last take into the app in front")
+                    : L10n.tr("Finish or cancel the current dictation first")
+            )
+
+        case .copyLastTake:
+            Button(L10n.tr("Copy")) { state.copyLastDictation() }
+                .accessibilityLabel(L10n.tr("Copy the last take"))
 
         case .revealRecoveredRecordings:
             Button(
@@ -78,32 +92,6 @@ struct MenuContent: View {
             ) {
                 state.revealRecoveredRecordings()
             }
-
-        case .recentDictations:
-            Menu(L10n.tr("Recent Dictations")) {
-                // History itself, so the Keep limit and Delete All hold here.
-                ForEach(state.recentDictations) { entry in
-                    Button {
-                        state.copyHistoryEntry(entry)
-                    } label: {
-                        Text(entry.menuTitle)
-                    }
-                }
-            }
-
-        case .copyLast:
-            // Its own row rather than a label inside the submenu. The menu
-            // shows a shortcut beside Settings and Quit; the copy key was the
-            // one binding with nowhere to be seen, because it lived a level
-            // down next to a dictation rather than next to its own action.
-            Button {
-                state.copyLastDictation()
-            } label: {
-                // Written into the title: this can be a bare function key,
-                // which `keyboardShortcut` cannot express.
-                Text(titled(L10n.tr("Copy Last Dictation"), shortcut: state.copyShortcut))
-            }
-
 
         case .recordingLine:
             switch state.meetingState {
@@ -153,7 +141,7 @@ struct MenuContent: View {
             .accessibilityHint(L10n.tr("Ends the recording and keeps it"))
 
         case .openRecordings:
-            Button(L10n.tr("Recordings…")) {
+            Button(L10n.tr("Library…")) {
                 openWindow(id: RecordingsWindow.windowID)
                 WindowFronting.raiseOpenedWindow(id: RecordingsWindow.windowID)
             }
@@ -172,6 +160,15 @@ struct MenuContent: View {
             Button(L10n.tr("Quit OpenRamble")) { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q", modifiers: .command)
         }
+    }
+
+    /// The take's first words on one line, short enough for a menu.
+    static func firstWords(of text: String) -> String {
+        let singleLine = text
+            .split(whereSeparator: \.isWhitespace)
+            .joined(separator: " ")
+        guard singleLine.count > 44 else { return singleLine }
+        return String(singleLine.prefix(43)) + "…"
     }
 
     /// A held modifier cannot be a `keyboardShortcut`, and a function key
@@ -235,17 +232,6 @@ struct MenuContent: View {
     }
 }
 
-private extension HistoryEntry {
-    /// One line, short enough for a menu.
-    var menuTitle: String {
-        let singleLine = text
-            .split(whereSeparator: \.isWhitespace)
-            .joined(separator: " ")
-        guard singleLine.count > 56 else { return singleLine }
-        return String(singleLine.prefix(55)) + "…"
-    }
-}
-
 extension MenuSections {
     /// The rows for the app as it is now: the one place the menu reads its
     /// inputs, so a test can check the real wiring.
@@ -254,10 +240,9 @@ extension MenuSections {
         sections(
             state: state.dictationState,
             isDictationReady: state.isDictationReady,
-            hasRecoveredText: state.recoveredText != nil,
+            wordsAreWaiting: state.waitingWords != nil,
             recoveryStorageFaulted: state.recordingRecoveryStorageFaulted,
-            hasRecents: !state.recentDictations.isEmpty,
-            hasLastDictation: state.lastDictation != nil,
+            hasLastTake: state.lastTakeText != nil,
             recordingState: state.meetingState
         )
     }

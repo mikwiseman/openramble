@@ -13,14 +13,21 @@ struct RecordingsPlaceholder: Equatable {
 
     static var emptyLibrary: RecordingsPlaceholder { RecordingsPlaceholder(
         symbol: "waveform",
-        title: L10n.tr("No recordings yet"),
-        detail: L10n.tr("Press the red button to record a meeting or a voice note. Everything stays on this Mac.")
+        title: L10n.tr("Nothing said yet"),
+        detail: L10n.tr("Hold your dictation key to dictate, or press the red button to record. Everything stays on this Mac.")
     ) }
 
     static var nothingSelected: RecordingsPlaceholder { RecordingsPlaceholder(
         symbol: "waveform",
-        title: L10n.tr("Select a recording"),
-        detail: L10n.tr("Its audio and transcript appear here.")
+        title: L10n.tr("Nothing selected"),
+        detail: L10n.tr("Choose a dictation or a recording to read it here.")
+    ) }
+
+    /// The search, or the scope, leaves nothing to show.
+    static var nothingFound: RecordingsPlaceholder { RecordingsPlaceholder(
+        symbol: "magnifyingglass",
+        title: L10n.tr("Nothing found"),
+        detail: L10n.tr("No dictation or recording matches.")
     ) }
 
     static var listening: RecordingsPlaceholder { RecordingsPlaceholder(

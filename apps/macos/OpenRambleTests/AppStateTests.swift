@@ -2029,7 +2029,8 @@ final class RecoveredFileTests: XCTestCase {
         state.retryRecoveredText()
         await settle()
 
-        XCTAssertNil(state.recoveredText)
+        XCTAssertNil(state.waitingWords, "the words landed: nothing waits")
+        XCTAssertEqual(state.lastTakeText, "Ping test", "and they stay the last take, one chord away")
         XCTAssertEqual(
             state.history.map(\.text), ["Ping test"],
             "the words entered history at failure time; success must not append again"
@@ -2058,7 +2059,7 @@ final class RecoveredFileTests: XCTestCase {
 
         let inserted = await harness.inserter.insertedTexts
         XCTAssertEqual(inserted, ["Ping test"])
-        XCTAssertNil(state.recoveredText)
+        XCTAssertNil(state.waitingWords)
     }
 
     /// "Insert Last Dictation" waits for its paste to be read just as a
@@ -2106,7 +2107,7 @@ final class RecoveredFileTests: XCTestCase {
         await harness.inserter.releaseInsertions()
         await settle()
 
-        XCTAssertNil(state.recoveredText, "the recovered text landed")
+        XCTAssertNil(state.waitingWords, "the recovered text landed")
         let starts = await harness.capture.startCount
         XCTAssertEqual(starts, 2, "the press started its take")
         XCTAssertEqual(state.dictationState, .listening)
@@ -2164,10 +2165,9 @@ final class RecoveredFileTests: XCTestCase {
         state.retryRecoveredText()
         await settle()
 
-        XCTAssertEqual(
-            state.lastNotice?.message,
-            "The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu."
-        )
+        XCTAssertEqual(state.lastNotice?.message, "The previous clipboard couldn't be restored.")
+        XCTAssertEqual(state.lastNotice?.wordsDidNotLand, false, "the block says that part")
+        XCTAssertEqual(state.waitingWords?.words, "Ping test", "the words still wait where they were")
         XCTAssertEqual(state.recoveredText, "Ping test")
     }
 
@@ -2360,7 +2360,7 @@ final class RecoveredFileTests: XCTestCase {
         await dictate(state)
         try await waitForTheTakeToEnd(state)
 
-        let joined = "The text couldn't be inserted. It's saved in the menu. This dictation couldn't be saved to History."
+        let joined = "The words couldn't be pasted. They are waiting. This dictation couldn't be saved to History."
         let notice = try XCTUnwrap(state.lastNotice)
         XCTAssertEqual(notice.message, joined)
         XCTAssertEqual(notice.recoverableText, "Ping test")
@@ -2449,7 +2449,7 @@ final class RecoveredFileTests: XCTestCase {
         await dictate(state)
         try await waitForTheTakeToEnd(state)
 
-        let joined = "The text couldn't be inserted. It's saved in the menu. This dictation couldn't be saved to History."
+        let joined = "The words couldn't be pasted. They are waiting. This dictation couldn't be saved to History."
         XCTAssertEqual(state.lastNotice?.message, joined)
         let shown = await harness.overlay.notices.map(\.message)
         XCTAssertEqual(shown, [joined], "one notice per take, and the last one on screen")

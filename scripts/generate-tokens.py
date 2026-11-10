@@ -27,6 +27,7 @@ def number(value: float) -> str:
 
 def swift(tokens: dict) -> str:
     r, s, k, t, m = (tokens[key] for key in ("radius", "space", "stroke", "type", "motion"))
+    b = tokens["block"]
     return f'''import SwiftUI
 
 /// The visual vocabulary shared with the Windows and Linux interface.
@@ -43,6 +44,21 @@ enum GlassTokens {{
         static let surface: CGFloat = {number(r["surface"])}
         static let control: CGFloat = {number(r["control"])}
         static let chip: CGFloat = {number(r["chip"])}
+    }}
+
+    /// A floating block is one piece of Liquid Glass: a capsule one unit tall
+    /// for a line, a panel with the surface radius when it holds more. Inside
+    /// a window, air does the grouping.
+    enum Block {{
+        static let unit: CGFloat = {number(b["unit"])}
+        static let gap: CGFloat = {number(b["gap"])}
+        static let padding: CGFloat = {number(b["padding"])}
+        /// A row: a little taller than a control, so a page of them breathes.
+        static let row: CGFloat = {number(b["row"])}
+        /// The margin around a page.
+        static let page: CGFloat = {number(b["page"])}
+        /// The widest a page's column of content gets.
+        static let column: CGFloat = {number(b["column"])}
     }}
 
     /// One spacing rhythm, so nothing is nudged by eye.
@@ -83,6 +99,7 @@ enum GlassTokens {{
 
 def css(tokens: dict) -> str:
     r, s, k, t, m = (tokens[key] for key in ("radius", "space", "stroke", "type", "motion"))
+    b = tokens["block"]
     return f'''/* {BANNER}
  *
  * The visual vocabulary shared with the macOS interface. The two render
@@ -94,6 +111,13 @@ def css(tokens: dict) -> str:
   --radius-surface: {number(r["surface"])}px;
   --radius-control: {number(r["control"])}px;
   --radius-chip: {number(r["chip"])}px;
+
+  --block-unit: {number(b["unit"])}px;
+  --block-gap: {number(b["gap"])}px;
+  --block-padding: {number(b["padding"])}px;
+  --block-row: {number(b["row"])}px;
+  --block-page: {number(b["page"])}px;
+  --block-column: {number(b["column"])}px;
 
   --space-tight: {number(s["tight"])}px;
   --space-inline: {number(s["inline"])}px;

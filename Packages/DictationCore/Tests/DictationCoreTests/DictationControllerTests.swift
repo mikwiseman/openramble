@@ -884,8 +884,12 @@ final class DictationControllerTests: XCTestCase {
         await settle()
 
         let notices = await overlay.notices
+        // The cause travels with the notice, so the interface can offer the
+        // action that works now: copy, while typing is protected.
+        XCTAssertEqual(notices.last?.insertionFailure, .secureInputActive)
+        XCTAssertEqual(notices.last?.recoverableText, controller.pendingRecovery?.text)
         XCTAssertTrue(
-            notices.contains { $0.message.contains("secure input") },
+            notices.contains { $0.message.contains("typing is protected") },
             "\u{041F}\u{043E}\u{043B}\u{044C}\u{0437}\u{043E}\u{0432}\u{0430}\u{0442}\u{0435}\u{043B}\u{044E} \u{043D}\u{0443}\u{0436}\u{043D}\u{043E} \u{043E}\u{0431}\u{044A}\u{044F}\u{0441}\u{043D}\u{0438}\u{0442}\u{044C}, \u{043F}\u{043E}\u{0447}\u{0435}\u{043C}\u{0443} \u{0442}\u{0435}\u{043A}\u{0441}\u{0442} \u{043D}\u{0435} \u{0432}\u{0441}\u{0442}\u{0430}\u{0432}\u{0438}\u{043B}\u{0441}\u{044F}"
         )
     }
@@ -1119,7 +1123,7 @@ final class DictationControllerTests: XCTestCase {
         XCTAssertEqual(notice.recoverableText, "Lost both")
         XCTAssertEqual(
             notice.message,
-            L10n.tr("The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu.")
+            L10n.tr("The words couldn't be pasted, and the previous clipboard couldn't be restored. Your words are waiting.")
         )
     }
 

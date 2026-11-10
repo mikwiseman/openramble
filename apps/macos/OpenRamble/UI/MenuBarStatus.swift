@@ -114,7 +114,7 @@ enum MenuBarStatus {
     static func accessibilityLabel(
         state: DictationState,
         isDictationReady: Bool,
-        hasRecoveredWork: Bool = false,
+        wordsAreWaiting: Bool = false,
         isRecordingMeeting: Bool = false,
         recordingIsDegraded: Bool = false,
         microphoneMissing: Bool = false
@@ -136,8 +136,8 @@ enum MenuBarStatus {
             }
             // The dot on the icon must also sound for VoiceOver: a picture
             // without words does not exist for the blind.
-            if hasRecoveredWork {
-                return L10n.tr("OpenRamble: last dictation needs attention — open the menu")
+            if wordsAreWaiting {
+                return L10n.tr("OpenRamble: words waiting")
             }
             return isDictationReady
                 ? L10n.tr("OpenRamble: ready to dictate")
@@ -147,21 +147,22 @@ enum MenuBarStatus {
 
     /// The first line of the menu is also an explanation of what to do.
     ///
-    /// It talks about unfinished work before it talks about the key. The
-    /// dictation panel is a toast: it lives four seconds and leaves, so the
-    /// lasting explanation has to live somewhere permanent — the menu. The
-    /// "Insert Last Dictation" item sits right below this line.
+    /// It talks about words that wait before it talks about the key. The take
+    /// block holds them where the person works; the menu is the backstop, and
+    /// the last take sits right below this line.
     static func statusLine(
         state: DictationState,
         isDictationReady: Bool,
         isHandsFreeActive: Bool,
         hotkeyTitle: String,
-        hasRecoveredText: Bool = false
+        waitingReason: String? = nil
     ) -> String {
         switch state {
         case .idle:
-            if hasRecoveredText {
-                return L10n.tr("Last dictation wasn't inserted")
+            // The block where the person works says this already. The menu
+            // repeats it for whoever came here first.
+            if let waitingReason {
+                return L10n.tr("Words waiting.") + " " + waitingReason
             }
             // The idle line teaches the one gesture the app has. "Ready"
             // alone told a new person nothing about what to do next.

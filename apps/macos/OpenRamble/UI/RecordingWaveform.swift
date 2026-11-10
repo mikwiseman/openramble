@@ -20,6 +20,7 @@ enum RecordingWaveformLayout {
 struct RecordingWaveform: View {
     let samples: [Float]
     let color: Color
+    var height: CGFloat = 32
 
     var body: some View {
         Canvas { context, size in
@@ -49,7 +50,7 @@ struct RecordingWaveform: View {
                 )
             }
         }
-        .frame(height: 32)
+        .frame(height: height)
         .accessibilityHidden(true)
     }
 }

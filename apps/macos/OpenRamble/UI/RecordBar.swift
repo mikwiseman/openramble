@@ -27,12 +27,10 @@ struct RecordBar: View {
                 if isBusy {
                     ProgressView().controlSize(.small)
                 } else {
-                    Image(systemName: "waveform")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(isRecording ? StatusColorRole.recording.color : .secondary)
+                    // The same glyphs as the take block: a red disc while
+                    // the microphone captures, a hollow ring while it does not.
+                    StateGlyphView(glyph: state.meetingState == .recording ? .listening : .silent)
                         .frame(width: 24, height: 24)
-                        .background(.quaternary.opacity(0.55), in: Circle())
-                        .accessibilityHidden(true)
                 }
                 if isRecording {
                     VStack(alignment: .leading, spacing: 2) {
@@ -40,7 +38,7 @@ struct RecordBar: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text(RecordingTime.clock(state.liveDuration))
-                            .font(.system(size: 19, weight: .medium, design: .rounded))
+                            .font(.system(size: 19, weight: .semibold))
                             .monospacedDigit()
                     }
                     .frame(minWidth: 84, alignment: .leading)
@@ -69,7 +67,7 @@ struct RecordBar: View {
                     Image(systemName: state.meetingState == .paused ? "play.fill" : "pause.fill")
                         .font(.system(size: 16, weight: .semibold))
                         .frame(width: 40, height: 40)
-                        .contentShape(Circle())
+                        .contentShape(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .help(state.meetingState == .paused ? L10n.tr("Resume recording") : L10n.tr("Pause recording"))
@@ -85,7 +83,7 @@ struct RecordBar: View {
                         .font(.callout.weight(.medium))
                         .padding(.horizontal, GlassTokens.Space.inline)
                         .frame(height: 40)
-                        .contentShape(Capsule())
+                        .contentShape(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
@@ -107,20 +105,21 @@ struct RecordBar: View {
                         .font(.callout.weight(.semibold))
                         .padding(.horizontal, GlassTokens.Space.stack)
                         .frame(height: 40)
-                        .contentShape(Capsule())
+                        .contentShape(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(isRecording ? L10n.tr("Stop recording") : L10n.tr("Record"))
                 .accessibilityHint(isRecording ? L10n.tr("Ends the recording and keeps it") : line)
             }
             .foregroundStyle(.white)
-            .background(StatusColorRole.recording.color, in: Capsule())
+            .background(StatusColorRole.recording.color, in: Capsule(style: .continuous))
             .disabled(isBusy)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .frame(maxWidth: 760, minHeight: 58)
-        .glassSurface(Capsule())
+        .padding(.leading, 18)
+        .padding(.trailing, 7)
+        .padding(.vertical, 7)
+        .frame(maxWidth: 560, minHeight: 54)
+        .glassBlock(.capsule)
         .animation(reduceMotion ? nil : .easeOut(duration: GlassTokens.Motion.surfaceChange), value: isRecording)
     }
 

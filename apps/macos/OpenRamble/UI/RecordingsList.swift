@@ -6,6 +6,7 @@ import SwiftUI
 struct RecordingsList: View {
     @ObservedObject var state: AppState
     @Binding var selection: Set<UUID>
+    let days: [LibraryDay]
     let onRename: (UUID, String?) -> Void
     let onDelete: (Set<UUID>) -> Void
     @State private var editingID: UUID?
@@ -19,34 +20,50 @@ struct RecordingsList: View {
                     .tag(live.id)
                     .listRowSeparator(.hidden)
             }
-            ForEach(RecordingDayGroup.make(state.recordings)) { group in
+            ForEach(days) { day in
                 Section {
-                    ForEach(group.recordings) { recording in
-                        RecordingRow(
-                            recording: recording,
-                            showsSeconds: group.needsSeconds(for: recording),
-                            isEditing: editingID == recording.id,
-                            editingTitle: $draftTitle,
-                            focusedEditingID: $focusedEditingID,
-                            onCommit: { commitRenaming(recording) },
-                            onCancel: cancelRenaming
-                        )
-                            .tag(recording.id)
-                            .listRowSeparator(.hidden)
-                            .contentShape(Rectangle())
-                            .onTapGesture(count: 2) {
-                                guard editingID == nil else { return }
-                                beginRenaming(recording)
-                            }
-                            .accessibilityAction(named: L10n.tr("Rename")) { beginRenaming(recording) }
-                            .contextMenu {
-                                Button(L10n.tr("Rename…")) { beginRenaming(recording) }
-                                Divider()
-                                Button(L10n.tr("Move to Trash"), role: .destructive) { onDelete([recording.id]) }
-                            }
+                    ForEach(day.items) { item in
+                        switch item {
+                        case let .dictation(entry):
+                            DictationRow(entry: entry)
+                                .tag(entry.id)
+                                .listRowSeparator(.hidden)
+                                .contextMenu {
+                                    Button(L10n.tr("Copy")) { state.copyHistoryEntry(entry) }
+                                        .disabled(entry.text.isEmpty)
+                                    Button(entry.isKept ? L10n.tr("Stop keeping this one") : L10n.tr("Keep this one")) {
+                                        state.setHistoryEntryKept(!entry.isKept, for: entry)
+                                    }
+                                    Divider()
+                                    Button(L10n.tr("Delete"), role: .destructive) { onDelete([entry.id]) }
+                                }
+                        case let .recording(recording):
+                            RecordingRow(
+                                recording: recording,
+                                showsSeconds: day.needsSeconds(for: recording),
+                                isEditing: editingID == recording.id,
+                                editingTitle: $draftTitle,
+                                focusedEditingID: $focusedEditingID,
+                                onCommit: { commitRenaming(recording) },
+                                onCancel: cancelRenaming
+                            )
+                                .tag(recording.id)
+                                .listRowSeparator(.hidden)
+                                .contentShape(Rectangle())
+                                .onTapGesture(count: 2) {
+                                    guard editingID == nil else { return }
+                                    beginRenaming(recording)
+                                }
+                                .accessibilityAction(named: L10n.tr("Rename")) { beginRenaming(recording) }
+                                .contextMenu {
+                                    Button(L10n.tr("Rename…")) { beginRenaming(recording) }
+                                    Divider()
+                                    Button(L10n.tr("Move to Trash"), role: .destructive) { onDelete([recording.id]) }
+                                }
+                        }
                     }
                 } header: {
-                    Text(group.title)
+                    Text(day.title)
                         .font(.caption.weight(.medium))
                         .textCase(nil)
                         .padding(.top, GlassTokens.Space.inline)
@@ -104,6 +121,50 @@ struct RecordingsList: View {
     }
 }
 
+/// A dictation in the list: its first words, when it was said, and a star
+/// if it is kept past the limit.
+struct DictationRow: View {
+    let entry: HistoryEntry
+
+    private var time: String {
+        entry.date.formatted(Date.FormatStyle.dateTime.hour().minute().locale(L10n.shared.language.locale))
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: GlassTokens.Space.inline) {
+            RowDisc(symbol: "text.quote")
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.text.isEmpty ? L10n.tr("Nothing recognized") : entry.text)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(entry.text.isEmpty ? .secondary : .primary)
+                    .lineLimit(2)
+                HStack(spacing: GlassTokens.Space.tight) {
+                    Text(time)
+                        .font(.system(size: 12))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                    if entry.isKept {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, GlassTokens.Space.tight)
+        .help(entry.date.formatted(Date.FormatStyle(date: .complete, time: .standard, locale: L10n.shared.language.locale)))
+        .accessibilityElement(children: .ignore)
+        // The time, not the words: the row is a place in a list, and the
+        // words are read from the detail when the person asks for them.
+        .accessibilityLabel(L10n.tr("Dictation"))
+        .accessibilityValue(
+            entry.date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened, locale: L10n.shared.language.locale))
+                + (entry.isKept ? ", " + L10n.tr("Kept") : "")
+        )
+    }
+}
+
 struct RecordingRow: View {
     let recording: MeetingRecordingMetadata
     var showsSeconds = false
@@ -123,47 +184,55 @@ struct RecordingRow: View {
             ?? RecordingsPlaceholder.degradedNote(for: recording)
     }
 
+    private var symbol: String {
+        if recording.captureKind == .screen { return "rectangle.inset.filled" }
+        return recording.isMeeting ? "person.2.fill" : "mic.fill"
+    }
+
+    private var kind: String {
+        if recording.captureKind == .screen { return L10n.tr("Screen recording") }
+        return recording.isMeeting ? L10n.tr("Meeting") : L10n.tr("Voice note")
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: GlassTokens.Space.inline) {
-                Image(systemName: recording.captureKind == .screen ? "rectangle.inset.filled" : "waveform")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(recording.captureKind == .screen ? Color.accentColor : Color.secondary)
-                    .accessibilityHidden(true)
-                if isEditing, let editingTitle, let focusedEditingID {
-                    TextField(
-                        L10n.tr("Recording name"),
-                        text: editingTitle,
-                        prompt: Text(RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
-                    )
-                    .textFieldStyle(.plain)
-                    .font(.body)
-                    .focused(focusedEditingID, equals: recording.id)
-                    .onSubmit { onCommit?() }
-                    .onExitCommand { onCancel?() }
-                    .accessibilityLabel(L10n.tr("Recording name"))
-                } else {
-                    Text(recording.title ?? startTime)
-                        .font(.body)
-                        .lineLimit(1)
+        HStack(alignment: .top, spacing: GlassTokens.Space.inline) {
+            RowDisc(symbol: symbol)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: GlassTokens.Space.inline) {
+                    if isEditing, let editingTitle, let focusedEditingID {
+                        TextField(
+                            L10n.tr("Recording name"),
+                            text: editingTitle,
+                            prompt: Text(RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
+                        )
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 13, weight: .medium))
+                        .focused(focusedEditingID, equals: recording.id)
+                        .onSubmit { onCommit?() }
+                        .onExitCommand { onCancel?() }
+                        .accessibilityLabel(L10n.tr("Recording name"))
+                    } else {
+                        Text(recording.title ?? kind)
+                            .font(.system(size: 13, weight: .medium))
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: GlassTokens.Space.tight)
+                    Text(RecordingTime.clock(recording.duration))
+                        .font(.system(size: 12))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
                 }
-                Spacer(minLength: GlassTokens.Space.tight)
-                Text(RecordingTime.clock(recording.duration))
-                    .font(.caption)
+                Text(startTime)
+                    .font(.system(size: 12))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
-                    .fixedSize()
-            }
-            if recording.title != nil {
-                Text(startTime)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            if let warning {
-                Label(warning, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundStyle(StatusColorRole.attention.color)
-                    .lineLimit(2)
+                if let warning {
+                    Label(warning, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(StatusColorRole.attention.color)
+                        .lineLimit(2)
+                }
             }
         }
         .padding(.vertical, GlassTokens.Space.tight)

@@ -17,7 +17,7 @@ final class SettingsDefaultsTests: XCTestCase {
     func testScenario001() {
         let state = harness.makeState()
         XCTAssertEqual(state.hotkey, SettingsDefaults.hotkey)
-        XCTAssertEqual(state.copyShortcut, SettingsDefaults.copyShortcut)
+        XCTAssertEqual(state.lastTakeShortcut, SettingsDefaults.lastTakeShortcut)
         XCTAssertEqual(state.recordingShortcut, SettingsDefaults.recordingShortcut)
         XCTAssertEqual(state.soundsEnabled, SettingsDefaults.soundsEnabled)
         XCTAssertEqual(state.appendsTrailingSpace, SettingsDefaults.appendsTrailingSpace)

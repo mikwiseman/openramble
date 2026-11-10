@@ -657,6 +657,14 @@ final class AppHarness {
     var inserterOverride: (any TextInserting)?
     var overlayOverride: (any OverlayPresenting)?
     var targetOverride: TargetApplication?
+    /// What the Mac says about protected typing. Off, as on a quiet desk.
+    var typingProtection = TypingProtection.off
+    /// Every text the application put on the clipboard. Nothing here touches
+    /// the real one.
+    private(set) var copied: [String] = []
+    var copyFailure: (any Error)?
+    /// How long a press over waiting words is still a tap.
+    var waitingTapLimit: Duration = .milliseconds(120)
 
     func makeState() -> AppState {
         AppState(
@@ -666,7 +674,7 @@ final class AppHarness {
                 permissions: permissions,
                 accessibilityManager: accessibilityManager,
                 hotkeyMonitor: monitor,
-                copyShortcutMonitor: copyMonitor,
+                lastTakeShortcutMonitor: copyMonitor,
                 recordingShortcutMonitor: recordingMonitor,
                 inserter: inserterOverride ?? inserter,
                 targetApplicationSnapshot: { [inserter, targetOverride] in
@@ -746,7 +754,14 @@ final class AppHarness {
                 playSystemAudioProbe: {},
                 // Remove rather than trash: a suite that fills the developer's
                 // Trash with fixtures is a suite nobody wants to run.
-                trashItem: { try FileManager.default.removeItem(at: $0) }
+                trashItem: { try FileManager.default.removeItem(at: $0) },
+                typingProtection: { [weak self] in self?.typingProtection ?? .off },
+                typingProtectionPollInterval: .milliseconds(10),
+                copyText: { [weak self] text in
+                    if let failure = self?.copyFailure { throw failure }
+                    self?.copied.append(text)
+                },
+                waitingTapLimit: waitingTapLimit
             )
         )
     }

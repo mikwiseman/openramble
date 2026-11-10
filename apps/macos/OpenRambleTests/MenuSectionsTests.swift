@@ -8,26 +8,26 @@ import XCTest
 /// - Background audio transcription remains gone. Failed-transcription and
 ///   crash recordings expose one Finder destination with a count, so retention
 ///   is discoverable and deletion stays explicit.
-/// - "Copy/Delete Saved Text" are gone. Failed-insert words join Recent
-///   Dictations at failure time (copyable there), and the one recovery row is
-///   "Insert Last Dictation". Do not re-add delete items.
+/// - "Copy/Delete Saved Text" are gone, and so are "Insert Last Dictation",
+///   "Copy Last Dictation" and "Recent Dictations": three answers to one
+///   question. The last take is one thing, with two verbs, and it leads the
+///   menu. Older takes live in the Library. Do not re-add delete items.
 final class MenuSectionsTests: XCTestCase {
     private func sections(
         state: DictationState = .idle,
         ready: Bool = true,
-        recoveredText: Bool = false,
+        waiting: Bool = false,
         recoveryFaulted: Bool = false,
-        recents: Bool = false,
-        lastDictation: Bool = false,
+        lastTake: Bool = false,
         recording: AppState.MeetingState = .idle
     ) -> [[MenuRow]] {
         MenuSections.sections(
             state: state,
             isDictationReady: ready,
-            hasRecoveredText: recoveredText,
+            wordsAreWaiting: waiting,
             recoveryStorageFaulted: recoveryFaulted,
-            hasRecents: recents,
-            hasLastDictation: lastDictation,
+            // Words that wait are the last take, by definition.
+            hasLastTake: lastTake || waiting,
             recordingState: recording
         )
     }
@@ -84,13 +84,13 @@ final class MenuSectionsTests: XCTestCase {
         }
     }
 
-    func testUninsertedDictationStillNeedsAttentionWhileRecording() {
-        XCTAssertEqual(sections(recoveredText: true, recording: .paused).first, [.statusLine])
-        XCTAssertTrue(sections(recoveredText: true, recording: .paused).flatMap(\.self).contains(.insertLastDictation))
+    func testWaitingWordsStillLeadTheMenuWhileRecording() {
+        XCTAssertEqual(sections(waiting: true, recording: .paused).first, [.statusLine])
+        XCTAssertTrue(sections(waiting: true, recording: .paused).flatMap(\.self).contains(.pasteLastTake))
     }
 
     /// The common case: a ready, quiet app shows start-recording as its own
-    /// section, so the shortcut has a row the way Copy Last Dictation does.
+    /// section, so the shortcut has a row the way the last take does.
     func testScenario001() {
         XCTAssertEqual(
             sections(),
@@ -98,14 +98,13 @@ final class MenuSectionsTests: XCTestCase {
         )
     }
 
-    /// Everything on at once — still at most five top-level row units.
+    /// Everything on at once — four sections, and the last take leads.
     func testScenario002() {
         XCTAssertEqual(
-            sections(recoveredText: true, recents: true, lastDictation: true),
+            sections(waiting: true, lastTake: true),
             [
                 [.statusLine],
-                [.insertLastDictation],
-                [.recentDictations, .copyLast],
+                [.pasteLastTake, .copyLastTake],
                 [.startRecording, .startScreenRecording],
                 [.openRecordings, .settings, .quit],
             ]
@@ -117,7 +116,7 @@ final class MenuSectionsTests: XCTestCase {
     func testScenario003() {
         for state in [DictationState.preparing, .listening] {
             XCTAssertEqual(
-                sections(state: state, recoveredText: true, recents: true),
+                sections(state: state, waiting: true, lastTake: true),
                 [
                     [.statusLine],
                     [.stopAndInsert, .cancelDictation],
@@ -133,7 +132,7 @@ final class MenuSectionsTests: XCTestCase {
     func testScenario004() {
         for state in [DictationState.transcribing, .inserting] {
             XCTAssertEqual(
-                sections(state: state, recoveredText: true, recents: true),
+                sections(state: state, waiting: true, lastTake: true),
                 [[.statusLine], [.openRecordings, .settings, .quit]],
                 "\(state) must show only the status"
             )
@@ -148,37 +147,28 @@ final class MenuSectionsTests: XCTestCase {
         )
     }
 
-    /// A person mid-setup keeps access to recovery and history.
+    /// A person mid-setup keeps access to the last take.
     func testScenario006() {
         XCTAssertEqual(
-            sections(ready: false, recoveredText: true, recents: true, lastDictation: true),
+            sections(ready: false, waiting: true, lastTake: true),
             [
                 [.statusLine],
                 [.setupHints, .finishSetup],
-                [.insertLastDictation],
-                [.recentDictations, .copyLast],
+                [.pasteLastTake, .copyLastTake],
                 [.startRecording, .startScreenRecording],
                 [.openRecordings, .settings, .quit],
             ]
         )
     }
 
-    /// History is listed after a relaunch, but Copy Last copies only what
-    /// this run inserted: no such take, no row.
-    func testCopyLastNeedsATakeThisRunInserted() {
+    /// The last take is what this run dictated: no such take, no rows. One
+    /// take, two verbs, always together.
+    func testTheLastTakeNeedsATakeFromThisRun() {
         XCTAssertEqual(
-            sections(recents: true),
-            [[.statusLine], [.recentDictations], [.startRecording, .startScreenRecording], [.openRecordings, .settings, .quit]]
+            sections(),
+            [[.statusLine], [.startRecording, .startScreenRecording], [.openRecordings, .settings, .quit]]
         )
-        XCTAssertEqual(
-            sections(recents: true, lastDictation: true)[1],
-            [.recentDictations, .copyLast]
-        )
-        XCTAssertEqual(
-            sections(lastDictation: true)[1],
-            [.copyLast],
-            "History kept nothing, but this run inserted a take"
-        )
+        XCTAssertEqual(sections(lastTake: true)[1], [.pasteLastTake, .copyLastTake])
     }
 
     /// Settings and Quit close every menu, in every state.
@@ -187,7 +177,7 @@ final class MenuSectionsTests: XCTestCase {
             sections(),
             sections(state: .listening),
             sections(state: .transcribing),
-            sections(ready: false, recoveredText: true, recents: true),
+            sections(ready: false, waiting: true, lastTake: true),
         ]
         for variant in variants {
             XCTAssertEqual(variant.last, [.openRecordings, .settings, .quit])
@@ -198,15 +188,15 @@ final class MenuSectionsTests: XCTestCase {
     /// or delete item.
     func testScenario009() {
         let everything: Set<MenuRow> = Set(
-            sections(ready: false, recoveredText: true, recents: true, lastDictation: true)
+            sections(ready: false, waiting: true, lastTake: true)
                 .flatMap(\.self)
-            + sections(state: .listening, recoveredText: true).flatMap(\.self)
-            + sections(state: .transcribing, recoveredText: true).flatMap(\.self)
+            + sections(state: .listening, waiting: true).flatMap(\.self)
+            + sections(state: .transcribing, waiting: true).flatMap(\.self)
         )
         let allowed: Set<MenuRow> = [
             .statusLine, .stopAndInsert, .cancelDictation, .setupHints, .finishSetup,
-            .insertLastDictation, .revealRecoveredRecordings,
-            .recentDictations, .copyLast, .startRecording, .startScreenRecording, .openRecordings, .settings, .quit,
+            .pasteLastTake, .copyLastTake, .revealRecoveredRecordings,
+            .startRecording, .startScreenRecording, .openRecordings, .settings, .quit,
         ]
         XCTAssertTrue(everything.isSubset(of: allowed))
     }

@@ -60,17 +60,24 @@ for the check.
    terminal behind it. With the Dvorak and Turkish F layouts selected, confirm
    a dictation pastes rather than typing ⌘K or copying.
    Dictate with no text field focused (Finder's desktop) and confirm the
-   "couldn't be inserted" notice appears within three seconds and the previous
-   clipboard is back. Repeat, and press the dictation key again a second
-   after releasing it: the notice and its sound come at once, and the press
-   after that starts a new take. Then use `Insert Last Dictation` from the menu into
-   a text field and confirm it lands without a second notice.
+   words appear on the panel within three seconds, in full, with "No text
+   field. Click one, then tap Right ⌘." and the previous clipboard is back.
+   Click into a text field and tap the dictation key: the words land and the
+   panel says "Pasted into …" once. Repeat, and hold the key instead: a new
+   take starts and the waiting words are in History. Repeat, and choose Later:
+   the panel says "Kept in History. ⌃⌘V pastes it.", and ⌃⌘V pastes it.
+   With Terminal's Secure Keyboard Entry on, dictate into another app: the
+   panel names Terminal, a tap copies, your own ⌘V pastes, and the panel does
+   not appear in a screenshot while it shows the words. Turn Secure Keyboard
+   Entry off while the words wait: the key's label changes from copies to
+   pastes.
 9. Confirm clipboard text, rich content, files, and multiple items are restored
    after insertion and do not appear on another device through Universal
    Clipboard. Verify password-manager values, lazy file promises, and content
    above 16 MiB use the safe Copy/Retry recovery instead.
 10. Force capture, transcription, insertion, and kill/relaunch failures. Verify
-    uninserted recognized text offers `Insert Last Dictation`; retained voice is
+    uninserted recognized text waits on the panel and leads the menu as the
+    last take; retained voice is
     disclosed once and appears as `Recovered Recordings (N)…`, which opens the
     exact Finder folder for Preview/Delete. Verify the count, explicit Finder
     deletion, seven-day/count/size expiry, and bounded-background removal of
