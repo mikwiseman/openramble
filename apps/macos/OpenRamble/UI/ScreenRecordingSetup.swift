@@ -41,42 +41,22 @@ struct ScreenRecordingSetup: View {
     }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(Color.accentColor.opacity(0.16))
-                Image(systemName: "rectangle.inset.filled")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.accentColor)
-            }
-            .frame(width: 40, height: 40)
-            .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(L10n.tr("Screen recording"))
-                    .font(.title3.weight(.semibold))
-                Text(L10n.tr("Choose what to include."))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
+        VStack(alignment: .leading, spacing: 4) {
+            Text(L10n.tr("Screen recording"))
+                .font(.system(size: 22, weight: .bold))
+                .accessibilityAddTraits(.isHeader)
+            Text(L10n.tr("Choose what to include."))
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
         }
     }
 
     private var displaySelection: some View {
         HStack(spacing: 12) {
-            Image(systemName: "display")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 30, height: 30)
-                .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(L10n.tr("Display"))
-                    .font(.body.weight(.medium))
+            VStack(alignment: .leading, spacing: 6) {
+                BlockLabel(L10n.tr("Display"))
                 Text(selectedDisplayName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 17, weight: .semibold))
                     .lineLimit(1)
             }
 
@@ -104,9 +84,8 @@ struct ScreenRecordingSetup: View {
                 .controlSize(.small)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .contentSurface(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentBlock(padding: GlassTokens.Space.stack)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.tr("Display: %@", String(describing: selectedDisplayName)))
     }
@@ -114,8 +93,9 @@ struct ScreenRecordingSetup: View {
     private var captureControls: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L10n.tr("Include"))
-                .font(.caption.weight(.semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.secondary)
+                .padding(.horizontal, GlassTokens.Space.stack)
 
             VStack(spacing: 0) {
                 CaptureOptionRow(
@@ -144,7 +124,7 @@ struct ScreenRecordingSetup: View {
                     isDisabled: state.systemAudioMode == .unsupported
                 )
             }
-            .background(.quaternary.opacity(0.24), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentBlock(padding: 0)
 
             if state.screenRecordingOptions.cameraEnabled {
                 ScreenCameraPreview(
@@ -184,6 +164,7 @@ struct ScreenRecordingSetup: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(StatusColorRole.recording.color)
+            .controlSize(.large)
             .disabled(!canStart)
             .keyboardShortcut(.defaultAction)
         }
@@ -260,7 +241,7 @@ struct ScreenRecordingSetup: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: GlassTokens.Space.inline) {
                 Image(systemName: issue.symbol)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(StatusColorRole.attention.color)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(issue.title)
@@ -286,8 +267,8 @@ struct ScreenRecordingSetup: View {
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(12)
-        .contentSurface(RoundedRectangle(cornerRadius: GlassTokens.Radius.control, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentBlock(.attention, padding: 12)
         .accessibilityElement(children: .contain)
     }
 
