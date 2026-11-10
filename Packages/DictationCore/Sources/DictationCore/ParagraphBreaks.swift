@@ -47,7 +47,7 @@ public enum ParagraphBreaks {
     }
 
     /// Text already shaped for one app, made fit for the app it reaches
-    /// instead ("Insert Last Dictation" goes to whatever is in front). A
+    /// instead (a paste of the last take goes to whatever is in front). A
     /// verbatim app never receives a paragraph break it did not ask for: each
     /// becomes the space the pipeline would have put there. A line break the
     /// person asked for with "New line." stays.

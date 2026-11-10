@@ -82,7 +82,7 @@ struct OpenRambleApp: App {
             MenuBarLabel(
                 state: state.dictationState,
                 isDictationReady: state.isDictationReady,
-                hasRecoveredWork: state.recoveredText != nil,
+                wordsAreWaiting: state.waitingWords != nil,
                 setupNeedsAttention: MenuBarStatus.setupNeedsUserAction(
                     accessibilityState: state.accessibilityState,
                     microphoneGranted: state.microphoneGranted,

@@ -1,18 +1,21 @@
 import DictationCore
 import Foundation
 
-/// What is written on the dictation panel.
+/// What is written on the take block.
 ///
-/// The panel is the only feedback channel during dictation: from your window
-/// no application. Therefore, its contents are collected as a separate type and
-/// checked by the state table, not by looking at the screen.
+/// The block is the only feedback channel during dictation: the app has no
+/// window of its own at that moment. Therefore its contents are collected as a
+/// separate type and checked by the state table, not by looking at the screen.
 ///
-/// A take has one shape from key-down to text: the same 244-point panel with a
-/// mark, a waveform and a clock. Only the mark's color moves — gray while the
-/// microphone starts, red while it records, blue while the words are worked
-/// on. Most takes finish inside half a second of release, so a title appears
-/// only when a state outlasts that: a panel that changed layout three times
-/// in 200 ms said nothing anyone could read.
+/// A take has one shape from key-down to text: the same block with a glyph, a
+/// word, a meter and a clock. The glyph carries the state — a hollow ring
+/// while the microphone starts, a red disc while it records, a blue ring while
+/// the words are written down — and color only confirms it. Most takes finish
+/// inside half a second of release, so a title appears only when a state
+/// outlasts that.
+///
+/// When the words cannot land the block grows to hold them, in full, with the
+/// reason and the one action that works now. See `WaitingWords`.
 struct OverlayContent: Equatable {
     /// What a notice is. Notices are the only thing drawn with an icon.
     enum Tone: Equatable {
@@ -50,14 +53,21 @@ struct OverlayContent: Equatable {
         /// A red lock: capturing with the key let go, until it is pressed
         /// again — the locked-recording sign of voice messages.
         case handsFree
-        /// Blue: the microphone is closed and the words are being worked on.
+        /// Gray: the microphone has closed. Nine takes in ten end here, so no
+        /// color announces work that is over before it could be read.
+        case closed
+        /// Blue: the words are being written down, and it is taking a while.
         case working
 
-        var colorRole: StatusColorRole? {
+        var colorRole: StatusColorRole? { glyph.colorRole }
+
+        /// The shape this state wears.
+        var glyph: StateGlyph {
             switch self {
-            case .starting: return nil
-            case .recording, .handsFree: return .recording
-            case .working: return .processing
+            case .starting, .closed: return .silent
+            case .recording: return .listening
+            case .handsFree: return .handsFree
+            case .working: return .working
             }
         }
     }
@@ -76,6 +86,16 @@ struct OverlayContent: Equatable {
     var accessibilityLabel: String
     /// What VoiceOver hears on entering this state. `nil` - nothing.
     var voice: Voice?
+    /// The state's word beside the glyph while the take's shape is shown:
+    /// "Listening". Stays visible for as long as the microphone is open.
+    var word: String?
+    /// Hands-free only: the key that ends the take, drawn as a key cap, so the
+    /// way out is on the block and not in memory.
+    var finishKey: String?
+    /// Words that could not land. The block grows to hold them.
+    var waiting: WaitingWords?
+    /// How a waiting take ended, said once before the block leaves.
+    var outcome: TakeOutcome?
 
     /// VoiceOver never speaks while the microphone is open: whatever it says
     /// then is played into that microphone and dictated. The moment it opens
@@ -87,8 +107,35 @@ struct OverlayContent: Equatable {
     }
 
     /// One width per kind: every take state shares the recording layout, so
-    /// the panel never re-centres mid-take; a notice needs room for a sentence.
-    var panelWidth: Double { tone == nil ? 244 : 320 }
+    /// the block never re-centres mid-take; a notice needs room for a
+    /// sentence, and waiting words need room to be read in full.
+    var panelWidth: Double {
+        if waiting != nil { return 384 }
+        if outcome != nil { return 320 }
+        // Going hands-free is a deliberate gesture, so the block may grow for
+        // it once: the key that ends the take needs room in every language.
+        if finishKey != nil { return 304 }
+        return tone == nil ? 244 : 320
+    }
+
+    /// The one glyph the block shows.
+    var glyph: StateGlyph? {
+        if let waiting { return waiting.glyph }
+        if let outcome { return outcome.glyph }
+        if let tone { return tone == .info ? .info : .attention }
+        return mark?.glyph
+    }
+
+    /// The state the glass rim confirms: orange while words wait, green for
+    /// the beat after they land. Every other state leaves the glass clear.
+    var rim: StatusColorRole? {
+        if waiting != nil { return .attention }
+        return outcome?.rim
+    }
+
+    /// Whether the block shows what the person said. While it does, it is
+    /// kept out of screen captures and recordings.
+    var showsDictatedWords: Bool { waiting != nil }
 
     /// How long a state lasts before it earns a title or a spoken word.
     static let titleDelay: Duration = .milliseconds(500)
@@ -97,14 +144,29 @@ struct OverlayContent: Equatable {
     ///   - hasLingered: the state has outlasted `titleDelay`.
     ///   - handsFreeFinishKey: the key that ends a hands-free take, while one
     ///     runs; `nil` while the key is held.
+    ///   - waiting: words that could not land.
+    ///   - outcome: how a waiting take just ended.
+    ///   - key: the dictation key, as drawn and as spoken.
     static func make(
         state: DictationState,
         notice: DictationNotice?,
         elapsed: TimeInterval,
         isWaitingForEngine: Bool = false,
         hasLingered: Bool = false,
-        handsFreeFinishKey: String? = nil
+        handsFreeFinishKey: String? = nil,
+        waiting: WaitingWords? = nil,
+        outcome: TakeOutcome? = nil,
+        key: DictationHotkey = SettingsDefaults.hotkey
     ) -> OverlayContent {
+        // How the waiting ended is the last word on it.
+        if let outcome {
+            return OverlayContent(
+                accessibilityLabel: outcome.message,
+                voice: .speech(outcome.message, urgent: false),
+                outcome: outcome
+            )
+        }
+
         // The message is more important than the state: it is shown instead.
         if let notice {
             return OverlayContent(
@@ -115,6 +177,19 @@ struct OverlayContent: Equatable {
                 // Waiting for the end of someone else's phrase means saying too much
                 //too late for this to be useful.
                 voice: .speech(notice.message, urgent: notice.kind != .info)
+            )
+        }
+
+        // Words wait only while nothing else is happening: a new take files
+        // them in History before its microphone opens.
+        if let waiting, state == .idle || state == .inserting {
+            let label = waiting.accessibilityLabel(keyName: key.title, key: key.shortTitle)
+            return OverlayContent(
+                accessibilityLabel: label,
+                // The person is looking at the app the words were meant for,
+                // so this interrupts, like every other failed landing.
+                voice: .speech(label, urgent: true),
+                waiting: waiting
             )
         }
 
@@ -148,7 +223,8 @@ struct OverlayContent: Equatable {
                         String(describing: seconds),
                         handsFreeFinishKey
                     ),
-                    voice: .cue
+                    voice: .cue,
+                    finishKey: key.shortTitle
                 )
             }
             return OverlayContent(
@@ -156,7 +232,8 @@ struct OverlayContent: Equatable {
                 accessibilityLabel: L10n.tr("Recording, %@.", String(describing: seconds)),
                 // The main cue throughout the application: without it, a blind
                 // person does not know that the microphone is on.
-                voice: .cue
+                voice: .cue,
+                word: L10n.tr("Listening")
             )
 
         case .transcribing:
@@ -169,7 +246,7 @@ struct OverlayContent: Equatable {
             // say what is actually happening, and say it at once.
             if isWaitingForEngine {
                 return OverlayContent(
-                    title: L10n.tr("Waking the model…"),
+                    title: L10n.tr("Getting ready…"),
                     mark: .working,
                     accessibilityLabel: L10n.tr("Recording stopped, waiting for the speech model to load")
                         + ". " + L10n.tr("Your words are waiting, not lost."),
@@ -177,10 +254,10 @@ struct OverlayContent: Equatable {
                 )
             }
             return OverlayContent(
-                title: hasLingered ? L10n.tr("Transcribing…") : nil,
-                mark: .working,
+                title: hasLingered ? L10n.tr("Writing it down…") : nil,
+                mark: hasLingered ? .working : .closed,
                 accessibilityLabel: L10n.tr("Recording stopped, transcribing speech"),
-                voice: hasLingered ? .speech(L10n.tr("Transcribing…"), urgent: false) : nil
+                voice: hasLingered ? .speech(L10n.tr("Writing it down…"), urgent: false) : nil
             )
 
         case .inserting:

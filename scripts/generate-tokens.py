@@ -27,6 +27,7 @@ def number(value: float) -> str:
 
 def swift(tokens: dict) -> str:
     r, s, k, t, m = (tokens[key] for key in ("radius", "space", "stroke", "type", "motion"))
+    b = tokens["block"]
     return f'''import SwiftUI
 
 /// The visual vocabulary shared with the Windows and Linux interface.
@@ -43,6 +44,17 @@ enum GlassTokens {{
         static let surface: CGFloat = {number(r["surface"])}
         static let control: CGFloat = {number(r["control"])}
         static let chip: CGFloat = {number(r["chip"])}
+    }}
+
+    /// A block is sized by what it holds: whole units tall, one gap between
+    /// neighbours. A floating block is a rim of glass around an opaque slip.
+    enum Block {{
+        static let unit: CGFloat = {number(b["unit"])}
+        static let gap: CGFloat = {number(b["gap"])}
+        static let rim: CGFloat = {number(b["rim"])}
+        static let padding: CGFloat = {number(b["padding"])}
+        /// Concentric with the surface: the same centre, one rim smaller.
+        static let slipRadius: CGFloat = {number(r["surface"] - b["rim"])}
     }}
 
     /// One spacing rhythm, so nothing is nudged by eye.
@@ -83,6 +95,7 @@ enum GlassTokens {{
 
 def css(tokens: dict) -> str:
     r, s, k, t, m = (tokens[key] for key in ("radius", "space", "stroke", "type", "motion"))
+    b = tokens["block"]
     return f'''/* {BANNER}
  *
  * The visual vocabulary shared with the macOS interface. The two render
@@ -94,6 +107,12 @@ def css(tokens: dict) -> str:
   --radius-surface: {number(r["surface"])}px;
   --radius-control: {number(r["control"])}px;
   --radius-chip: {number(r["chip"])}px;
+
+  --block-unit: {number(b["unit"])}px;
+  --block-gap: {number(b["gap"])}px;
+  --block-rim: {number(b["rim"])}px;
+  --block-padding: {number(b["padding"])}px;
+  --block-slip-radius: {number(r["surface"] - b["rim"])}px;
 
   --space-tight: {number(s["tight"])}px;
   --space-inline: {number(s["inline"])}px;

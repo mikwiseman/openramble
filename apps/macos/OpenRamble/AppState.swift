@@ -51,7 +51,7 @@ public struct AppEnvironment {
     /// Its own monitor rather than another callback on the first: that one
     /// watches a bare modifier being held, this one watches a chord being
     /// pressed. Different events, different machinery.
-    public var copyShortcutMonitor: (any ShortcutMonitoring)?
+    public var lastTakeShortcutMonitor: (any ShortcutMonitoring)?
     /// A third watcher, for the shortcut that starts and stops a recording.
     public var recordingShortcutMonitor: (any ShortcutMonitoring)?
     public var inserter: any TextInserting
@@ -186,6 +186,17 @@ public struct AppEnvironment {
     /// Deleting a recording is a move to the Trash. Injectable so a test
     /// removes its fixtures instead of filling the developer's Trash.
     public var trashItem: @Sendable (URL) throws -> Void
+    /// Whether typing is protected right now, and by which app. Injectable
+    /// because the real answer is whatever the Mac running the suite is doing.
+    public var typingProtection: @MainActor () -> TypingProtection
+    /// How often that is asked again while protected words wait.
+    public var typingProtectionPollInterval: Duration
+    /// Puts words on this Mac's clipboard and no other device's. Injectable so
+    /// a test never overwrites what its developer had copied.
+    public var copyText: @MainActor (String) throws -> Void
+    /// How long the key is held over waiting words before it means "dictate
+    /// again" instead of "do what the block says".
+    public var waitingTapLimit: Duration
     /// Shared with the worker supervisor so its off-main recovery loop can
     /// read the pressure tier without hopping through AppState.
 
@@ -195,7 +206,7 @@ public struct AppEnvironment {
         permissions: any PermissionReading,
         accessibilityManager: any AccessibilityManaging,
         hotkeyMonitor: any HotkeyMonitoring,
-        copyShortcutMonitor: (any ShortcutMonitoring)? = nil,
+        lastTakeShortcutMonitor: (any ShortcutMonitoring)? = nil,
         recordingShortcutMonitor: (any ShortcutMonitoring)? = nil,
         inserter: any TextInserting,
         targetApplicationSnapshot: @escaping @Sendable () -> TargetApplication? = { nil },
@@ -268,13 +279,17 @@ public struct AppEnvironment {
         trashItem: @escaping @Sendable (URL) throws -> Void = {
             try FileManager.default.trashItem(at: $0, resultingItemURL: nil)
         },
+        typingProtection: @escaping @MainActor () -> TypingProtection = { TypingProtection.current() },
+        typingProtectionPollInterval: Duration = .milliseconds(700),
+        copyText: @escaping @MainActor (String) throws -> Void = { try HostOnlyPasteboard().copyHostOnly($0) },
+        waitingTapLimit: Duration = .milliseconds(600),
     ) {
         self.defaults = defaults
         self.paths = paths
         self.permissions = permissions
         self.accessibilityManager = accessibilityManager
         self.hotkeyMonitor = hotkeyMonitor
-        self.copyShortcutMonitor = copyShortcutMonitor
+        self.lastTakeShortcutMonitor = lastTakeShortcutMonitor
         self.recordingShortcutMonitor = recordingShortcutMonitor
         self.inserter = inserter
         self.targetApplicationSnapshot = targetApplicationSnapshot
@@ -305,6 +320,10 @@ public struct AppEnvironment {
         self.readScreenCapturePermissionState = readScreenCapturePermissionState
         self.listScreenDisplays = listScreenDisplays
         self.trashItem = trashItem
+        self.typingProtection = typingProtection
+        self.typingProtectionPollInterval = typingProtectionPollInterval
+        self.copyText = copyText
+        self.waitingTapLimit = waitingTapLimit
         self.announcer = announcer
         self.openSystemAudioSettings = openSystemAudioSettings
         self.playSystemAudioProbe = playSystemAudioProbe
@@ -321,7 +340,9 @@ public struct AppEnvironment {
             permissions: SystemPermissions(),
             accessibilityManager: SystemAccessibilityManager(),
             hotkeyMonitor: GlobalHotkeyMonitor(),
-            copyShortcutMonitor: GlobalShortcutMonitor(),
+            // A Carbon hot key: the one kind of shortcut that still fires while
+            // typing is protected, which is when this one is needed most.
+            lastTakeShortcutMonitor: CarbonShortcutMonitor(),
             recordingShortcutMonitor: GlobalShortcutMonitor(),
             inserter: TextInserter(restoreReporter: restoreReporter),
             targetApplicationSnapshot: { activeApplication.current() },
@@ -493,8 +514,35 @@ public final class AppState: ObservableObject {
     /// the take's words also reach History, and when that entry is deleted
     /// the slot goes with it, as Copy Last's does.
     @Published public private(set) var recoveredText: String? {
-        didSet { recoveredEntryID = recoveredText.flatMap(historyEntryID(holding:)) }
+        didSet {
+            recoveredEntryID = recoveredText.flatMap(historyEntryID(holding:))
+            // Words that are gone cannot wait: deleting the take's History
+            // entry takes the block with it.
+            if recoveredText == nil { waitingWords = nil }
+        }
     }
+
+    /// Words that could not land, waiting on the take block where the person
+    /// is working. A tap of the dictation key pastes them, or copies them
+    /// while typing is protected; Later keeps them in History; holding the
+    /// key starts a new take. Nothing here sends anyone to the menu bar.
+    @Published private(set) var waitingWords: WaitingWords? {
+        didSet {
+            guard oldValue != waitingWords else { return }
+            waitingPresenter?.setWaiting(waitingWords, key: hotkey)
+            watchTypingProtection()
+            if waitingWords?.isCopied != true { copiedDismissal?.cancel() }
+        }
+    }
+
+    private var waitingPresenter: (any WaitingWordsPresenting)? {
+        overlay as? any WaitingWordsPresenting
+    }
+    /// The key is down over waiting words and has not yet said whether it is
+    /// a tap or a hold.
+    private var waitingKeyHold: Task<Void, Never>?
+    private var typingProtectionWatch: Task<Void, Never>?
+    private var copiedDismissal: Task<Void, Never>?
     /// The History entry holding the words behind Insert Last. Nil while the
     /// entry is not written yet, or could not be: then nothing deletes them.
     private var recoveredEntryID: HistoryEntry.ID?
@@ -804,15 +852,15 @@ public final class AppState: ObservableObject {
         NSApp?.setActivationPolicy(presence.showsDockIcon ? .regular : .accessory)
     }
 
-    /// The shortcut that copies the last dictation, or nothing.
+    /// The shortcut that pastes the last take anywhere, or nothing.
     ///
-    /// Optional because most people will not want a second global shortcut
-    /// taken out of their keyboard, and one nobody asked for is one that
-    /// collides with something they already use.
-    @Published public var copyShortcut: KeyCombination? {
+    /// ⌃⌘V by default: one key away from the paste it stands in for. While
+    /// typing is protected it copies instead, because only the person's own
+    /// ⌘V can land then. Clearing it is Off.
+    @Published public var lastTakeShortcut: KeyCombination? {
         didSet {
-            guard oldValue != copyShortcut else { return }
-            defaults.set(copyShortcut?.rawValue ?? "", forKey: Keys.copyShortcut)
+            guard oldValue != lastTakeShortcut else { return }
+            defaults.set(lastTakeShortcut?.rawValue ?? "", forKey: Keys.lastTakeShortcut)
             applyCopyShortcut()
         }
     }
@@ -832,7 +880,7 @@ public final class AppState: ObservableObject {
     /// Point the second watcher at the chosen shortcut, or take it off the
     /// keyboard.
     private func applyCopyShortcut() {
-        applyShortcutMonitor(copyShortcutMonitor, shortcut: copyShortcut)
+        applyShortcutMonitor(lastTakeShortcutMonitor, shortcut: lastTakeShortcut)
     }
 
     private func applyRecordingShortcut() {
@@ -868,7 +916,7 @@ public final class AppState: ObservableObject {
     private enum Keys {
         static let hotkey = "hotkey"
         static let sounds = "soundsEnabled"
-        static let copyShortcut = "copyShortcut"
+        static let lastTakeShortcut = "copyShortcut"
         static let recordingShortcut = "recordingShortcut"
         static let trailingSpace = "appendsTrailingSpace"
         static let inputDevice = "inputDeviceUID"
@@ -889,7 +937,7 @@ public final class AppState: ObservableObject {
     /// Keeps one level update in flight at a time. See `LevelUpdateGate`.
     private let levelGate = LevelUpdateGate()
     private let hotkeyMonitor: any HotkeyMonitoring
-    private let copyShortcutMonitor: (any ShortcutMonitoring)?
+    private let lastTakeShortcutMonitor: (any ShortcutMonitoring)?
     private let recordingShortcutMonitor: (any ShortcutMonitoring)?
     private let inserter: any TextInserting
     private let targetApplicationSnapshot: @Sendable () -> TargetApplication?
@@ -924,6 +972,10 @@ public final class AppState: ObservableObject {
     private let readScreenCapturePermissionState: AppEnvironment.ScreenCapturePermissionStateReader
     private let listScreenDisplays: @MainActor () async throws -> [ScreenDisplayOption]
     private let trashItem: @Sendable (URL) throws -> Void
+    private let typingProtection: @MainActor () -> TypingProtection
+    private let typingProtectionPollInterval: Duration
+    private let copyText: @MainActor (String) throws -> Void
+    private let waitingTapLimit: Duration
     private let announcer: any AccessibilityAnnouncing
     private let openSystemAudioSettingsPane: @MainActor () -> Void
     private let playSystemAudioProbe: @Sendable () -> Void
@@ -958,7 +1010,7 @@ public final class AppState: ObservableObject {
     private var engineLoadFailure: String?
     /// Retry/Delete recovery are performed one at a time and block the hotkey.
     private var isRecoveryOperationActive = false
-    /// A press of the dictation key while "Insert Last Dictation" finishes
+    /// A press of the dictation key while a paste of the last take finishes
     /// its paste, and whether that key is up again. If the text landed, the
     /// person went on: the press starts its take once the paste is done.
     private var pressDuringRecovery: KeyPress?
@@ -1070,7 +1122,7 @@ public final class AppState: ObservableObject {
         permissions = environment.permissions
         accessibilityManager = environment.accessibilityManager
         hotkeyMonitor = environment.hotkeyMonitor
-        copyShortcutMonitor = environment.copyShortcutMonitor
+        lastTakeShortcutMonitor = environment.lastTakeShortcutMonitor
         recordingShortcutMonitor = environment.recordingShortcutMonitor
         inserter = environment.inserter
         targetApplicationSnapshot = environment.targetApplicationSnapshot
@@ -1107,6 +1159,10 @@ public final class AppState: ObservableObject {
         readScreenCapturePermissionState = environment.readScreenCapturePermissionState
         listScreenDisplays = environment.listScreenDisplays
         trashItem = environment.trashItem
+        typingProtection = environment.typingProtection
+        typingProtectionPollInterval = environment.typingProtectionPollInterval
+        copyText = environment.copyText
+        waitingTapLimit = environment.waitingTapLimit
         announcer = environment.announcer
         openSystemAudioSettingsPane = environment.openSystemAudioSettings
         playSystemAudioProbe = environment.playSystemAudioProbe
@@ -1114,10 +1170,14 @@ public final class AppState: ObservableObject {
         hotkey = DictationHotkey(rawValue: environment.defaults.string(forKey: Keys.hotkey) ?? "")
             ?? SettingsDefaults.hotkey
         soundsEnabled = environment.defaults.object(forKey: Keys.sounds) as? Bool ?? SettingsDefaults.soundsEnabled
-        // Off unless asked for: dictated text on the clipboard is dictated text
-        // handed to every clipboard manager on the machine.
-        copyShortcut = (environment.defaults.string(forKey: Keys.copyShortcut))
-            .flatMap(KeyCombination.init(rawValue:))
+        // ⌃⌘V unless changed or cleared. Stored under the name it had as the
+        // copy shortcut, so a chord someone already chose stays theirs.
+        if environment.defaults.object(forKey: Keys.lastTakeShortcut) == nil {
+            lastTakeShortcut = SettingsDefaults.lastTakeShortcut
+        } else {
+            lastTakeShortcut = (environment.defaults.string(forKey: Keys.lastTakeShortcut))
+                .flatMap(KeyCombination.init(rawValue:))
+        }
         if environment.defaults.object(forKey: Keys.recordingShortcut) == nil {
             recordingShortcut = SettingsDefaults.recordingShortcut
         } else {
@@ -1348,6 +1408,9 @@ public final class AppState: ObservableObject {
                 // A take that ended without saying anything leaves nothing
                 // for the next one to say.
                 if state == .preparing {
+                    // The waiting words are in History already; a new take
+                    // is the news now.
+                    self?.waitingWords = nil
                     self?.takeNotKept = false
                     self?.takePaging = TakePaging(diskReadBytes: ProcessDiskReads.bytesRead())
                 }
@@ -1395,6 +1458,13 @@ public final class AppState: ObservableObject {
                 // loses nothing.
                 if let text = notice.recoverableText {
                     self?.recoveredText = text
+                    if notice.wordsDidNotLand {
+                        self?.wordsWait(
+                            text,
+                            failure: notice.insertionFailure,
+                            keptNowhereElse: notice.reason == .storage
+                        )
+                    }
                 }
                 // The kernel explained itself. Your own explanation on top of his words would be
                 // worse than silence: the session has one reason for ending, not two.
@@ -1803,7 +1873,8 @@ public final class AppState: ObservableObject {
             recoverableText: said.recoverableText,
             recoveryAudio: said.recoveryAudio,
             wordsDidNotLand: said.wordsDidNotLand,
-            reason: said.reason ?? .storage
+            reason: said.reason ?? .storage,
+            insertionFailure: said.insertionFailure
         )
     }
 
@@ -1945,40 +2016,187 @@ public final class AppState: ObservableObject {
         recoveredText = nil
     }
 
-    /// Put the last dictation back on the clipboard.
+    // MARK: - The last take
+
+    /// The newest take's words, landed or not: the one thing "the last take"
+    /// means. Words that did not land are always newer than the last ones
+    /// that did, because a take that lands clears them.
+    public var lastTakeText: String? {
+        guard let text = recoveredText ?? lastDictation?.insertedText,
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return nil }
+        return text
+    }
+
+    /// Put the last take on the clipboard.
     ///
     /// The text as it was inserted, not the raw words: this is the "I need that
     /// again" action, and what the person saw appear is what they mean.
     public func copyLastDictation() {
-        guard let text = lastDictation?.insertedText,
-              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else {
+        guard let text = lastTakeText else {
             notify(DictationNotice(kind: .info, message: L10n.tr("Nothing dictated yet.")))
             return
         }
         do {
-            try HostOnlyPasteboard().copyHostOnly(text)
+            try copyText(text)
             notify(DictationNotice(kind: .info, message: L10n.tr("Copied — to this Mac only.")))
         } catch {
             notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation."), reason: .clipboard))
         }
     }
 
+    /// Paste the last take into the app in front: the paste-last chord, the
+    /// menu's first row, and a tap of the key while words wait.
+    ///
+    /// While typing is protected a paste of ours cannot land and the person's
+    /// own ⌘V can, so the words are copied instead and the block says so.
+    public func pasteLastTake() {
+        guard dictationState == .idle, !isRecoveryOperationActive else { return }
+        guard let words = lastTakeText else {
+            notify(DictationNotice(kind: .info, message: L10n.tr("Nothing dictated yet.")))
+            return
+        }
+        let protection = typingProtection()
+        guard !protection.isOn else {
+            copyWhileTypingIsProtected(words, protection: protection)
+            return
+        }
+        paste(words)
+    }
+
+    private func copyWhileTypingIsProtected(_ words: String, protection: TypingProtection) {
+        do {
+            try copyText(words)
+        } catch {
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation."), reason: .clipboard))
+            return
+        }
+        guard waitingWords != nil else {
+            // The chord, with no block up: say where the words went.
+            waitingPresenter?.showOutcome(.copied)
+            return
+        }
+        waitingWords?.cause = .typingProtected(by: protection.holder)
+        waitingWords?.isCopied = true
+        // The words are on the clipboard and in History. The block has said
+        // so; it does not need to stay in the way of the ⌘V it asked for.
+        copiedDismissal?.cancel()
+        copiedDismissal = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(6))
+            guard let self, !Task.isCancelled, self.waitingWords?.isCopied == true else { return }
+            self.waitingWords = nil
+        }
+    }
+
+    /// The words did not land: keep them on the block, with the reason.
+    private func wordsWait(
+        _ words: String,
+        failure: TextInsertionError?,
+        keptNowhereElse: Bool? = nil
+    ) {
+        let protection = typingProtection()
+        var cause = WaitingWords.Cause(failure, protectedBy: protection.holder)
+        // Whatever the paste reported, protected typing is the reason that
+        // decides what the key can do now.
+        if protection.isOn { cause = .typingProtected(by: protection.holder) }
+        if recoveredText != words { recoveredText = words }
+        waitingWords = WaitingWords(
+            words: words,
+            cause: cause,
+            // A paste tried again changes the reason, not where the words are.
+            isKeptNowhereElse: keptNowhereElse ?? waitingWords?.isKeptNowhereElse ?? false
+        )
+    }
+
+    /// A tap of the dictation key, or a click on the block's first button.
+    public func performWaitingAction() {
+        guard let waiting = waitingWords, !waiting.isCopied else { return }
+        pasteLastTake()
+    }
+
+    /// Later, or Escape: the block leaves and the words stay in History, one
+    /// chord away.
+    public func keepWaitingWordsForLater() {
+        guard let waiting = waitingWords else { return }
+        waitingWords = nil
+        waitingPresenter?.showOutcome(
+            .kept(inHistory: !waiting.isKeptNowhereElse, chord: lastTakeShortcut?.displayString)
+        )
+    }
+
+    /// While protected words wait, notice the moment typing works again: the
+    /// key's job changes from copy to paste, and the block says so.
+    private func watchTypingProtection() {
+        typingProtectionWatch?.cancel()
+        typingProtectionWatch = nil
+        guard let waiting = waitingWords, !waiting.isCopied,
+              case .typingProtected = waiting.cause
+        else { return }
+        let interval = typingProtectionPollInterval
+        typingProtectionWatch = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: interval)
+                guard let self, !Task.isCancelled else { return }
+                guard !self.typingProtection().isOn else { continue }
+                self.waitingWords?.cause = .typingWorksAgain
+                return
+            }
+        }
+    }
+
+    // MARK: Key presses over waiting words
+
+    private func keyWentDownOverWaitingWords() {
+        // Copied words have nothing left to press: the key dictates again.
+        guard waitingWords?.isCopied != true else {
+            waitingWords = nil
+            beginHoldToTalk()
+            return
+        }
+        waitingPresenter?.setKeyDown(true)
+        let limit = waitingTapLimit
+        waitingKeyHold = Task { [weak self] in
+            try? await Task.sleep(for: limit)
+            guard let self, !Task.isCancelled else { return }
+            self.waitingKeyHold = nil
+            self.waitingPresenter?.setKeyDown(false)
+            // A hold is a new take. The waiting words are already in History.
+            self.waitingWords = nil
+            self.beginHoldToTalk()
+        }
+    }
+
+    /// The key came up, or was tapped twice, before a hold began: a tap.
+    private func keyCameUpOverWaitingWords() {
+        endWaitingKeyHold()
+        performWaitingAction()
+    }
+
+    private func endWaitingKeyHold() {
+        waitingKeyHold?.cancel()
+        waitingKeyHold = nil
+        waitingPresenter?.setKeyDown(false)
+    }
+
     // MARK: - Recovering a failed insertion
 
+    /// Insert Last Dictation, as it was called: the same paste.
     public func retryRecoveredText() {
-        guard dictationState == .idle,
-              !isRecoveryOperationActive,
-              let recoveredText
-        else { return }
+        guard recoveredText != nil else { return }
+        pasteLastTake()
+    }
+
+    private func paste(_ words: String) {
         // The destination is maintained ahead of the click. Querying
         // NSWorkspace synchronously here can wedge MainActor and permanently
-        // lock both Retry and the dictation hotkey.
+        // lock both the paste and the dictation hotkey.
         let target = targetApplicationSnapshot()
         // The words were shaped for the app they were dictated into; the app
         // in front now may be a terminal, which never gets a paragraph break.
-        // The menu keeps them as they were, for a retry into a prose app.
-        let text = ParagraphBreaks.fit(recoveredText, to: PromptModePolicy().mode(for: target))
+        // History keeps them as they were, for a paste into a prose app.
+        let text = ParagraphBreaks.fit(words, to: PromptModePolicy().mode(for: target))
+        let wereWaiting = waitingWords != nil
+        let neverLanded = recoveredText != nil
         isRecoveryOperationActive = true
         dictationState = .inserting
         Task { [weak self] in
@@ -2002,42 +2220,46 @@ public final class AppState: ObservableObject {
                     try await inserter.insert(text, into: target)
                 }
                 landed = true
-                // The words already joined History at failure time;
-                // appending again here would duplicate them. The provenance
-                // slot is cleared too: it still holds the PREVIOUS dictation,
-                // and after inserting recovered words neither "Copy Last
-                // Dictation" nor correction learning may act on it — one would
-                // hand back someone else's text, the other would protect
-                // someone else's spans.
-                self.successfulDictationCount += 1
-                self.recoveredText = nil
-                self.lastDictation = nil
+                if neverLanded {
+                    // The words already joined History at failure time;
+                    // appending again here would duplicate them. The
+                    // provenance slot is cleared too: it still holds the
+                    // PREVIOUS dictation, and correction learning may not act
+                    // on it once these words have landed over it.
+                    self.successfulDictationCount += 1
+                    self.lastDictation = nil
+                }
+                // The words stay the last take: the chord pastes them again.
+                self.waitingWords = nil
+                if wereWaiting {
+                    self.waitingPresenter?.showOutcome(.pasted(into: target?.localizedName))
+                }
             } catch is TranscriptionTimeout {
-                notify(
-                    DictationNotice(
-                        kind: .warning,
-                        message: L10n.tr("Insertion couldn't be confirmed in time. The text stays in the menu and may already have been pasted."),
-                        recoverableText: recoveredText
-                    )
+                lastNotice = DictationNotice(
+                    kind: .warning,
+                    message: L10n.tr("The paste couldn't be confirmed in time. Your words are waiting and may already be in place."),
+                    recoverableText: words
                 )
+                wordsWait(words, failure: nil)
             } catch TextInsertionError.clipboardRestoreFailed {
                 // Nothing was pasted and what the person had copied is gone:
-                // both are theirs to know.
+                // both are theirs to know, and the block cannot say the second.
                 notify(
                     DictationNotice(
                         kind: .warning,
-                        message: L10n.tr("The text couldn't be inserted, and the previous clipboard couldn't be restored. The text is saved in the menu."),
-                        recoverableText: recoveredText
+                        message: L10n.tr("The previous clipboard couldn't be restored."),
+                        wordsDidNotLand: false
                     )
                 )
+                wordsWait(words, failure: .clipboardRestoreFailed)
             } catch {
-                notify(
-                    DictationNotice(
-                        kind: .warning,
-                        message: L10n.tr("The text still couldn't be inserted — it stays in the menu."),
-                        recoverableText: recoveredText
-                    )
+                lastNotice = DictationNotice(
+                    kind: .warning,
+                    message: L10n.tr("The words couldn't be pasted. They are waiting."),
+                    recoverableText: words,
+                    insertionFailure: error as? TextInsertionError
                 )
+                wordsWait(words, failure: error as? TextInsertionError)
             }
         }
     }
@@ -2125,7 +2347,7 @@ public final class AppState: ObservableObject {
     private func handleWake() {
         diagnostics.record(.systemWoke)
         hotkeyMonitor.stop()
-        copyShortcutMonitor?.stop()
+        lastTakeShortcutMonitor?.stop()
         recordingShortcutMonitor?.stop()
         refreshPermissions()
         revalidateEngineAfterWake()
@@ -2507,8 +2729,14 @@ public final class AppState: ObservableObject {
 
     private func wireHotkey() {
         hotkeyMonitor.setHotkey(hotkey)
-        copyShortcutMonitor?.onPress = { [weak self] in
-            self?.copyLastDictation()
+        lastTakeShortcutMonitor?.onPress = { [weak self] in
+            self?.pasteLastTake()
+        }
+        waitingPresenter?.onWaitingAction = { [weak self] in
+            self?.performWaitingAction()
+        }
+        waitingPresenter?.onWaitingLater = { [weak self] in
+            self?.keepWaitingWordsForLater()
         }
         recordingShortcutMonitor?.onPress = { [weak self] in
             self?.handleRecordingShortcut()
@@ -2518,12 +2746,18 @@ public final class AppState: ObservableObject {
             // Nothing before `begin`: the microphone start is where the first
             // word lives. A cold engine reloads once the take is listening.
             guard !self.isRecoveryOperationActive else {
-                // "Insert Last Dictation" may be waiting for its paste to be
+                // A paste of the last take may be waiting to be
                 // read: nothing appeared, so end the wait and say so now. Or
                 // the text has landed and only the restore floor is left:
                 // then the press starts its take once that is over.
                 self.inserter.endTheReadWait()
                 self.pressDuringRecovery = .held
+                return
+            }
+            // Over waiting words the key does what the block says. Which of
+            // tap and hold this is, its release decides.
+            guard self.waitingWords == nil else {
+                self.keyWentDownOverWaitingWords()
                 return
             }
             self.beginHoldToTalk()
@@ -2536,10 +2770,22 @@ public final class AppState: ObservableObject {
                 self.pressDuringRecovery = .released
                 return
             }
+            guard self.waitingKeyHold == nil else {
+                self.keyCameUpOverWaitingWords()
+                return
+            }
             self.controller?.stop()
         }
         hotkeyMonitor.onDoubleTap = { [weak self] in
             guard let self else { return }
+            // Hands-free never starts while words wait. The monitor swallowed
+            // the first tap's release, so this second tap stands in for it: a
+            // hold left running here would open the microphone with the key up.
+            guard self.waitingKeyHold == nil else {
+                self.keyCameUpOverWaitingWords()
+                return
+            }
+            guard self.waitingWords == nil else { return }
 
             switch self.dictationState {
             case .preparing, .listening:
@@ -2566,11 +2812,18 @@ public final class AppState: ObservableObject {
             // the recording ends quietly - without insertion, without messages and without sound
             // errors. The person pressed the shortcut, rather than dictated.
             self?.pressDuringRecovery = nil
+            self?.endWaitingKeyHold()
             self?.controller?.cancel()
         }
         hotkeyMonitor.onEscape = { [weak self] in
             // Escape cancels only the dictation in progress. The rest of the time it's
-            // a regular key, and cannot be intercepted.
+            // a regular key, and cannot be intercepted. Over waiting words it
+            // is Later, where it can be heard at all: not while typing is
+            // protected, which is why Later is also a button.
+            guard self?.waitingWords == nil else {
+                self?.keepWaitingWordsForLater()
+                return
+            }
             self?.cancelCurrentDictation()
         }
     }
@@ -3935,7 +4188,7 @@ public final class AppState: ObservableObject {
             applyRecordingShortcut()
         } else {
             hotkeyMonitor.stop()
-            copyShortcutMonitor?.stop()
+            lastTakeShortcutMonitor?.stop()
             recordingShortcutMonitor?.stop()
         }
 

@@ -8,10 +8,12 @@ enum MenuRow: Equatable {
     case cancelDictation
     case setupHints
     case finishSetup
-    case insertLastDictation
+    /// The last take, by its first words: one press pastes it where the
+    /// person is. Insert Last, Copy Last and Recent Dictations were three
+    /// answers to one question.
+    case pasteLastTake
+    case copyLastTake
     case revealRecoveredRecordings
-    case recentDictations
-    case copyLast
     case recordingLine
     case startRecording
     case startScreenRecording
@@ -40,21 +42,20 @@ enum MenuRow: Equatable {
 ///   recovery-storage fault: when safe cleanup cannot be persisted, hiding
 ///   retained voice data would break the privacy promise, so that state keeps
 ///   its menu row until it is resolved.
-/// - Copy Last Dictation copies what this run inserted, so it appears only
-///   while there is such a take. History outlives a relaunch and keeps a
-///   take-back's raw words, so it is listed, never copied from by this row.
+/// - The last take is one thing: the newest take's words, landed or not.
+///   It leads the menu, because the menu is the backstop for words that
+///   could not land. Older takes live in the Library.
 enum MenuSections {
     static func sections(
         state: DictationState,
         isDictationReady: Bool,
-        hasRecoveredText: Bool,
+        wordsAreWaiting: Bool,
         recoveryStorageFaulted: Bool,
-        hasRecents: Bool,
-        hasLastDictation: Bool,
+        hasLastTake: Bool,
         recordingState: AppState.MeetingState = .idle
     ) -> [[MenuRow]] {
         var sections: [[MenuRow]] = []
-        if state != .idle || recordingState == .idle || hasRecoveredText {
+        if state != .idle || recordingState == .idle || wordsAreWaiting {
             sections.append([.statusLine])
         }
 
@@ -81,16 +82,11 @@ enum MenuSections {
             if !isDictationReady {
                 sections.append([.setupHints, .finishSetup])
             }
-            if hasRecoveredText {
-                sections.append([.insertLastDictation])
+            if hasLastTake {
+                sections.append([.pasteLastTake, .copyLastTake])
             }
             if recoveryStorageFaulted {
                 sections.append([.revealRecoveredRecordings])
-            }
-            let dictations: [MenuRow] = (hasRecents ? [.recentDictations] : [])
-                + (hasLastDictation ? [.copyLast] : [])
-            if !dictations.isEmpty {
-                sections.append(dictations)
             }
             if recordingState == .idle {
                 sections.append([.startRecording, .startScreenRecording])

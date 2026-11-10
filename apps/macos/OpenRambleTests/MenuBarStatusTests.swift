@@ -223,18 +223,22 @@ final class MenuHandsFreeLineTests: XCTestCase {
 /// was still alive. The menu holds it as long as needed.
 @MainActor
 final class MenuRecoveryLineTests: XCTestCase {
+    private let reason = "Can't paste while Terminal protects typing."
+
     private func line(text: Bool = false) -> String {
         MenuBarStatus.statusLine(
             state: .idle,
             isDictationReady: true,
             isHandsFreeActive: false,
             hotkeyTitle: "Right Command",
-            hasRecoveredText: text
+            waitingReason: text ? reason : nil
         )
     }
 
+    /// The menu repeats what the block where the person works already says,
+    /// for whoever came to the menu first.
     func testScenario013() {
-        XCTAssertEqual(line(text: true), "Last dictation wasn't inserted")
+        XCTAssertEqual(line(text: true), "Words waiting. Can't paste while Terminal protects typing.")
     }
 
     func testScenario016() {
@@ -249,7 +253,7 @@ final class MenuRecoveryLineTests: XCTestCase {
             isDictationReady: true,
             isHandsFreeActive: false,
             hotkeyTitle: "Right Command",
-            hasRecoveredText: true
+            waitingReason: reason
         )
 
         XCTAssertEqual(line, "Listening")
@@ -261,9 +265,9 @@ final class MenuRecoveryLineTests: XCTestCase {
 final class MenuBarRecoveryStatusTests: XCTestCase {
     func testScenario021() {
         let label = MenuBarStatus.accessibilityLabel(
-            state: .idle, isDictationReady: true, hasRecoveredWork: true
+            state: .idle, isDictationReady: true, wordsAreWaiting: true
         )
-        XCTAssertTrue(label.contains("needs attention"), "A picture without words does not exist for a blind person: \(label)")
+        XCTAssertEqual(label, "OpenRamble: words waiting", "A picture without words does not exist for a blind person")
     }
 }
 
@@ -332,7 +336,7 @@ final class MenuBarActivityTests: XCTestCase {
     func testScenario035() throws {
         let idle = try renderLabel(state: .idle)
         let preparing = try renderLabel(state: .preparing)
-        let recovery = try renderLabel(state: .idle, hasRecoveredWork: true)
+        let recovery = try renderLabel(state: .idle, wordsAreWaiting: true)
         let recording = try renderLabel(state: .listening)
         let processing = try renderLabel(state: .transcribing)
 
@@ -353,13 +357,13 @@ final class MenuBarActivityTests: XCTestCase {
     @MainActor
     private func renderLabel(
         state: DictationState,
-        hasRecoveredWork: Bool = false
+        wordsAreWaiting: Bool = false
     ) throws -> Data {
         let renderer = ImageRenderer(
             content: MenuBarLabel(
                 state: state,
                 isDictationReady: true,
-                hasRecoveredWork: hasRecoveredWork,
+                wordsAreWaiting: wordsAreWaiting,
                 setupNeedsAttention: false
             )
             .frame(width: 22, height: 22)

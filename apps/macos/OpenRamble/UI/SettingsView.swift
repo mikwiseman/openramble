@@ -140,16 +140,16 @@ private struct GeneralSettings: View {
                     .accessibilityLabel(L10n.tr("Key warning. %@", String(describing: warning)))
                 }
                 SettingRow(
-                    title: L10n.tr("Copy last dictation"),
-                    isChanged: state.copyShortcut != SettingsDefaults.copyShortcut,
-                    revert: { state.copyShortcut = SettingsDefaults.copyShortcut }
+                    title: L10n.tr("Paste last take"),
+                    isChanged: state.lastTakeShortcut != SettingsDefaults.lastTakeShortcut,
+                    revert: { state.lastTakeShortcut = SettingsDefaults.lastTakeShortcut }
                 ) {
                     ShortcutRecorder(
-                        shortcut: $state.copyShortcut,
+                        shortcut: $state.lastTakeShortcut,
                         reserved: state.recordingShortcut.map { [$0: L10n.tr("Record")] } ?? [:]
                     )
                 }
-                .accessibilityHint(L10n.tr("Press this shortcut to put the last dictation back on the clipboard"))
+                .accessibilityHint(L10n.tr("Press this shortcut to paste the last take into the app in front"))
                 SettingRow(
                     title: L10n.tr("Record"),
                     isChanged: state.recordingShortcut != SettingsDefaults.recordingShortcut,
@@ -157,14 +157,14 @@ private struct GeneralSettings: View {
                 ) {
                     ShortcutRecorder(
                         shortcut: $state.recordingShortcut,
-                        reserved: state.copyShortcut.map { [$0: L10n.tr("Copy last dictation")] } ?? [:]
+                        reserved: state.lastTakeShortcut.map { [$0: L10n.tr("Paste last take")] } ?? [:]
                     )
                 }
                 .accessibilityHint(L10n.tr("Press this shortcut to start or stop a recording"))
             } header: {
                 Text(L10n.tr("Shortcut"))
             } footer: {
-                Text(L10n.tr("Hold the dictation key to speak, or double-press for hands-free dictation. Press once more to finish. Record starts and stops a recording from any app; choose a shortcut that your other apps don't use. ⌘R opens Recordings while OpenRamble is active."))
+                Text(L10n.tr("Hold the dictation key to speak, or double-press for hands-free dictation. Press once more to finish. Paste last take puts your newest dictation into the app in front, and copies it while a password field or terminal protects typing. Record starts and stops a recording from any app; choose shortcuts that your other apps don't use. ⌘R opens Recordings while OpenRamble is active."))
             }
 
             Section(L10n.tr("Behavior")) {

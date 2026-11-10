@@ -156,7 +156,7 @@ final class AppStateTakeDestinationTests: XCTestCase {
 
         harness.inserter.frontmost = Self.terminal
         state.retryRecoveredText()
-        try await waitUntil { state.recoveredText == nil }
+        try await waitUntil { state.waitingWords == nil }
 
         let inserted = await harness.inserter.insertedTexts
         XCTAssertEqual(inserted, ["Para one. Para two."])
@@ -168,7 +168,7 @@ final class AppStateTakeDestinationTests: XCTestCase {
 
         harness.inserter.frontmost = Self.notes
         state.retryRecoveredText()
-        try await waitUntil { state.recoveredText == nil }
+        try await waitUntil { state.waitingWords == nil }
 
         let inserted = await harness.inserter.insertedTexts
         XCTAssertEqual(inserted, ["Para one.\n\nPara two."])

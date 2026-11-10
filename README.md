@@ -33,8 +33,10 @@ OpenRamble's voice typing works in any app that accepts text, from Mail, Slack a
 - **Hands-free.** Double-press the key to dictate without holding it. In Settings, you can also let hands-free dictation finish when you stop talking.
 - **Long dictation.** You can dictate for longer than five minutes, and OpenRamble starts transcribing while you are still speaking.
 - **Personal dictionary.** Tell OpenRamble how a word sounds and how to write it. A built-in list already covers common technical terms. You can also import and export your dictionary as a file.
-- **Your clipboard comes back.** Once the text has been read, usually a quarter of a second after the paste, OpenRamble puts back what was on your clipboard, images included. If no app reads the text within three seconds, OpenRamble puts your clipboard back, tells you the text was not inserted and keeps it for Insert Last Dictation. Dictated text is marked so that it stays off Universal Clipboard and out of clipboard managers that respect the standard privacy markers.
-- **History.** Replay, copy or delete recent dictations, or recognize one again. If a paste fails, choose Insert Last Dictation from the OpenRamble menu in the menu bar.
+- **Your clipboard comes back.** Once the text has been read, usually a quarter of a second after the paste, OpenRamble puts back what was on your clipboard, images included. If no app reads the text within three seconds, OpenRamble puts your clipboard back and keeps your words on screen, where you are working, until you paste them or set them aside. Dictated text is marked so that it stays off Universal Clipboard and out of clipboard managers that respect the standard privacy markers.
+- **Words wait where you work.** If a paste cannot land, the words stay on the dictation panel with the reason and one action. Tap the dictation key to paste them once you are in a text field. While a password field or a terminal protects typing, the tap copies them instead, and your own ⌘V pastes. Later keeps them in History, and holding the key starts a new dictation.
+- **The last take.** ⌃⌘V pastes your newest dictation into the app in front, and it is the first row of the OpenRamble menu. You can change or clear the shortcut in Settings.
+- **History.** Replay, copy or delete recent dictations, or recognize one again.
 - **VoiceOver.** With VoiceOver on, OpenRamble plays a short tone when the microphone opens instead of a spoken announcement, so VoiceOver's speech does not end up in your dictation.
 
 ### Clean Verbatim removes filler words without rewording you
@@ -152,7 +154,7 @@ OpenRamble stores audio and text from your dictations and recordings only on you
 | Audio saved after a technical failure, so a take is not lost | Up to 10 WAV files, for at most 7 days and about 1 GB |
 | Technical journal, with no speech or text in it | On by default, for 7 days and at most 5 MB, and cleared when you turn it off |
 | Settings and dictionary | Until you change or delete them |
-| The copy of text that could not be pasted, kept for Insert Last Dictation | In memory only, until a later dictation is pasted, you delete its History entry, or you quit. Dictation history keeps its own copy. |
+| The words of your last dictation, kept so that ⌃⌘V and the menu can paste them again | In memory only, until a later dictation replaces them, you delete its History entry, or you quit. Dictation history keeps its own copy. While words that could not be pasted are on screen, the panel that shows them is left out of screenshots and screen recordings. |
 
 To report a problem, choose Settings → About → Save Error Report. OpenRamble saves a ZIP file on your Mac, and you decide whether to send it to the developer. The file holds technical events, timings, error codes, the app and macOS versions, the app's architecture (arm64 or x86_64), and up to five recent Apple crash reports rebuilt without your file paths or device identifiers. It never holds audio, transcripts or clipboard contents, and OpenRamble does not upload it. [docs/diagnostics.md](docs/diagnostics.md) lists exactly what it contains.
 

@@ -46,6 +46,23 @@ public protocol HandsFreePresenting: AnyObject {
     func setHandsFree(finishKey: String?)
 }
 
+/// A block that can hold words that could not land, and say how that ended.
+///
+/// Outside the session fence like the two protocols above: the application
+/// owns the waiting words, and they outlive the session that produced them.
+@MainActor
+protocol WaitingWordsPresenting: AnyObject {
+    /// A tap of the key, or a click on the block's first button.
+    var onWaitingAction: (() -> Void)? { get set }
+    /// Later, on the block.
+    var onWaitingLater: (() -> Void)? { get set }
+    /// The words that wait, or `nil` once they no longer do.
+    func setWaiting(_ waiting: WaitingWords?, key: DictationHotkey)
+    func showOutcome(_ outcome: TakeOutcome)
+    /// The real key went down or came up: the drawn one follows.
+    func setKeyDown(_ down: Bool)
+}
+
 /// A small panel showing what's happening with dictation.
 ///
 /// The panel does not take focus: the user dictates to another application, and the
@@ -57,6 +74,14 @@ public protocol HandsFreePresenting: AnyObject {
 public final class DictationOverlay: OverlayPresenting, EngineWaitPresenting, HandsFreePresenting {
     private var panel: NSPanel?
     private let model: OverlayModel
+    var onWaitingAction: (() -> Void)? {
+        get { model.onWaitingAction }
+        set { model.onWaitingAction = newValue }
+    }
+    var onWaitingLater: (() -> Void)? {
+        get { model.onWaitingLater }
+        set { model.onWaitingLater = newValue }
+    }
     /// Synchronous issue-order fence shared with nonisolated protocol calls.
     private nonisolated let commandOrder = OverlayCommandOrder()
     /// Subscribe to change the panel size. The panel grows behind the content, and
@@ -90,6 +115,7 @@ public final class DictationOverlay: OverlayPresenting, EngineWaitPresenting, Ha
                 self?.hidePanel()
             }
         }
+        model.onWordsShownChange = { [weak self] in self?.applyWordsMode() }
     }
 
     deinit {
@@ -206,6 +232,9 @@ public final class DictationOverlay: OverlayPresenting, EngineWaitPresenting, Ha
             //
             // If a live preview is ever added, this decision must be revisited
             // in the same commit.
+            // Revisited, as promised: the block now shows dictated words
+            // while they wait, and for exactly that long it leaves captures.
+            // See `applyWordsMode`.
             panel.sharingType = .readOnly
             panel.backgroundColor = .clear
             panel.isOpaque = false
@@ -243,8 +272,22 @@ public final class DictationOverlay: OverlayPresenting, EngineWaitPresenting, Ha
             }
             self.panel = panel
         }
+        applyWordsMode()
         position()
         panel?.orderFrontRegardless()
+    }
+
+    /// The block is status feedback and never eats a click, with one
+    /// exception: while it holds words it is the thing to press. A
+    /// non-activating panel takes that click without becoming key, so the app
+    /// the words are meant for keeps the focus the paste needs.
+    ///
+    /// For the same stretch the block shows what the person said, so it is
+    /// kept out of screenshots, recordings and screen shares.
+    private func applyWordsMode() {
+        let showsWords = model.waiting != nil
+        panel?.ignoresMouseEvents = !showsWords
+        panel?.sharingType = showsWords ? .none : .readOnly
     }
 
     private func hidePanel() {
@@ -274,6 +317,21 @@ public final class DictationOverlay: OverlayPresenting, EngineWaitPresenting, Ha
 }
 
 extension DictationOverlay: OverlayPlacementConfiguring {}
+
+extension DictationOverlay: WaitingWordsPresenting {
+    func setWaiting(_ waiting: WaitingWords?, key: DictationHotkey) {
+        model.key = key
+        model.setWaiting(waiting)
+    }
+
+    func showOutcome(_ outcome: TakeOutcome) {
+        model.showOutcome(outcome)
+    }
+
+    func setKeyDown(_ down: Bool) {
+        model.isKeyDown = down
+    }
+}
 
 /// State of the panel: what is written on it, whether it is visible and what has already been said out loud.
 ///
@@ -318,6 +376,25 @@ final class OverlayModel: ObservableObject {
     /// The key that finishes a hands-free take, while one runs.
     @Published private(set) var handsFreeFinishKey: String?
 
+    /// Words that could not land. The application owns them; the block only
+    /// shows them.
+    @Published private(set) var waiting: WaitingWords? {
+        didSet {
+            guard (oldValue == nil) != (waiting == nil) else { return }
+            onWordsShownChange?()
+        }
+    }
+    /// How a waiting take just ended.
+    @Published private(set) var outcome: TakeOutcome?
+    /// The dictation key, as the block draws and names it.
+    @Published var key: DictationHotkey = SettingsDefaults.hotkey
+    /// Whether the real key is down: the drawn one goes down with it.
+    @Published var isKeyDown = false
+    var onWaitingAction: (() -> Void)?
+    var onWaitingLater: (() -> Void)?
+    /// The block started or stopped showing dictated words.
+    var onWordsShownChange: (() -> Void)?
+
     var content: OverlayContent {
         OverlayContent.make(
             state: state,
@@ -325,7 +402,10 @@ final class OverlayModel: ObservableObject {
             elapsed: elapsed,
             isWaitingForEngine: isWaitingForEngine,
             hasLingered: hasLingered,
-            handsFreeFinishKey: handsFreeFinishKey
+            handsFreeFinishKey: handsFreeFinishKey,
+            waiting: waiting,
+            outcome: outcome,
+            key: key
         )
     }
 
@@ -346,6 +426,9 @@ final class OverlayModel: ObservableObject {
     nonisolated(unsafe) private var timer: Timer?
     private var startedAt: Date?
     private var autoHide: Task<Void, Never>?
+    private var outcomeHide: Task<Void, Never>?
+    /// A fixed time for every outcome, so a test need not wait out the real ones.
+    private let outcomeDuration: Duration?
     /// A session may finish while a notice owns the panel. Preserve the notice
     /// long enough to be read, then honor that deferred dismissal.
     private var dismissAfterNotice = false
@@ -362,11 +445,13 @@ final class OverlayModel: ObservableObject {
     init(
         announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
         noticeDuration: Duration = .seconds(4),
-        titleDelay: Duration = OverlayContent.titleDelay
+        titleDelay: Duration = OverlayContent.titleDelay,
+        outcomeDuration: Duration? = nil
     ) {
         self.announcer = announcer
         self.noticeDuration = noticeDuration
         self.titleDelay = titleDelay
+        self.outcomeDuration = outcomeDuration
     }
 
     deinit {
@@ -374,8 +459,55 @@ final class OverlayModel: ObservableObject {
         // after the death of the owner.
         timer?.invalidate()
         autoHide?.cancel()
+        outcomeHide?.cancel()
         reveal?.cancel()
     }
+
+    /// Nothing but waiting words or their outcome keeps the block up at rest.
+    private var restsVisible: Bool { waiting != nil || outcome != nil }
+
+    /// The words that wait, or `nil` once they no longer do.
+    func setWaiting(_ waiting: WaitingWords?) {
+        guard self.waiting != waiting else { return }
+        self.waiting = waiting
+        guard waiting != nil else {
+            if isAtRest, notice == nil { setVisible(restsVisible) }
+            return
+        }
+        // The block is the answer now; whatever it said a moment ago is not.
+        clearOutcome()
+        cancelAutoHide()
+        notice = nil
+        dismissAfterNotice = false
+        setVisible(true)
+        announceContent()
+    }
+
+    /// Say how a waiting take ended, then leave.
+    func showOutcome(_ outcome: TakeOutcome) {
+        clearOutcome()
+        waiting = nil
+        self.outcome = outcome
+        setVisible(true)
+        announceContent()
+        let duration = outcomeDuration ?? outcome.duration
+        outcomeHide = Task { [weak self] in
+            try? await Task.sleep(for: duration)
+            guard let self, !Task.isCancelled else { return }
+            self.outcome = nil
+            self.outcomeHide = nil
+            self.lastAnnouncement = nil
+            if self.isAtRest, self.notice == nil { self.setVisible(self.restsVisible) }
+        }
+    }
+
+    private func clearOutcome() {
+        outcomeHide?.cancel()
+        outcomeHide = nil
+        outcome = nil
+    }
+
+    private var isAtRest: Bool { state == .idle || state == .inserting }
 
     /// The take is waiting for a model that is still loading.
     func setWaitingForEngine(_ waiting: Bool) {
@@ -408,6 +540,8 @@ final class OverlayModel: ObservableObject {
         }
         cancelAutoHide()
         dismissAfterNotice = false
+        // A take in progress is the news; how the last one ended is not.
+        if state != .idle, state != .inserting { clearOutcome() }
         // A wait belongs to exactly one take. Leaving the flag set would let a
         // finished load narrate the next dictation.
         if state != .transcribing { isWaitingForEngine = false }
@@ -443,6 +577,10 @@ final class OverlayModel: ObservableObject {
 
     /// Show the message and remove it after the specified time.
     func showNotice(_ notice: DictationNotice) {
+        // Words that did not land are not a four-second toast. The
+        // application hands them to `setWaiting`, where they stay, in full,
+        // with their action.
+        if notice.recoverableText != nil, notice.wordsDidNotLand { return }
         cancelAutoHide()
         // Keep the recording clock alive behind a transient notice. The notice
         // does not display elapsed time, but returning to the HUD must not lose
@@ -477,7 +615,8 @@ final class OverlayModel: ObservableObject {
                 self.setVisible(true)
                 self.announceContent()
             case .idle, .inserting:
-                self.setVisible(false)
+                self.setVisible(self.restsVisible)
+                if self.restsVisible { self.announceContent() }
             }
         }
     }
@@ -506,7 +645,7 @@ final class OverlayModel: ObservableObject {
         state = .idle
         isWaitingForEngine = false
         restartReveal(for: .idle)
-        setVisible(false)
+        setVisible(restsVisible)
         // The next dictation must appear again, even if the state
         // matches the previous one.
         lastAnnouncement = nil
@@ -605,78 +744,178 @@ final class OverlayModel: ObservableObject {
 struct OverlayView: View {
     @ObservedObject var model: OverlayModel
 
-    private static let waveformHeight: CGFloat = 28
+    /// One unit tall: the slip plus the rim on both sides.
+    private static let lineHeight = GlassTokens.Block.unit - 2 * GlassTokens.Block.rim
 
     var body: some View {
         if let content = model.visibleContent {
-            panel(content)
+            block(content)
         } else {
             // Preserve the panel's initial preferred size for placement while
             // removing every animated and composited child from the retained
             // host view. In bottom placement, collapsing the height would put
             // the first expanded frame below the visible screen.
-            Color.clear.frame(width: model.content.panelWidth, height: 52)
+            Color.clear.frame(width: model.content.panelWidth, height: GlassTokens.Block.unit)
         }
     }
 
-    private func panel(_ content: OverlayContent) -> some View {
-        HStack(spacing: 10) {
-            if let tone = content.tone {
-                Image(systemName: tone.iconName)
-                    .foregroundStyle(tone.colorRole.color)
-                    .font(.body.weight(.semibold))
-                Text(content.title ?? "")
-                    .font(.callout.weight(.medium))
-                    .fixedSize(horizontal: false, vertical: true)
-            } else if let mark = content.mark {
-                // Static on purpose, in every state: this panel is visible
-                // while the recognition result waits for the main actor, and an
-                // iterative effect drove a RenderBox/CA commit on every display
-                // refresh through the glass surface.
-                let color = mark.colorRole?.color ?? .secondary
-                Group {
-                    if mark == .handsFree {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(color)
-                    } else {
-                        Circle()
-                            .fill(color)
-                            .frame(width: 8, height: 8)
-                    }
-                }
-                .frame(width: 12)
-                .accessibilityHidden(true)
-                if let title = content.title {
-                    // Takes the place of the waveform and the clock at the
-                    // waveform's height, so the panel keeps its size and
-                    // nothing beside it moves.
-                    Text(title)
-                        .font(.callout.weight(.medium))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .frame(height: Self.waveformHeight)
-                } else {
-                    RecordingWaveform(samples: model.waveformSamples, color: color)
-                        .frame(width: 136, height: Self.waveformHeight)
-                    Text(elapsedText)
-                        .font(.caption.weight(.medium).monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
+    private func block(_ content: OverlayContent) -> some View {
+        Group {
+            if let waiting = content.waiting {
+                waitingWords(waiting)
+            } else if content.tone != nil || content.outcome != nil {
+                line(content)
+            } else {
+                take(content)
             }
+        }
+        .frame(width: content.panelWidth - 2 * GlassTokens.Block.rim, alignment: .leading)
+        .wordSlip()
+        .glassBlock(tint: content.rim)
+        .accessibilityElement(children: content.waiting == nil ? .ignore : .contain)
+        .accessibilityLabel(model.accessibilityLabel)
+    }
+
+    // MARK: A take
+
+    /// Glyph, word, meter, clock: one shape from key-down to text.
+    ///
+    /// Static on purpose, in every state: this block is visible while the
+    /// recognition result waits for the main actor, and an iterative effect
+    /// drove a RenderBox/CA commit on every display refresh through the glass.
+    private func take(_ content: OverlayContent) -> some View {
+        HStack(spacing: 8) {
+            if let glyph = content.glyph {
+                StateGlyphView(glyph: glyph)
+            }
+            if let title = content.title {
+                // Takes the place of the meter and the clock, so the block
+                // keeps its size and nothing beside it moves.
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+            } else {
+                if let key = content.finishKey {
+                    KeyCap(title: key)
+                    Text(L10n.tr("ends"))
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                        .fixedSize()
+                } else if let word = content.word {
+                    Text(word)
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                RecordingWaveform(
+                    samples: model.waveformSamples,
+                    color: content.mark?.colorRole?.color ?? .secondary,
+                    height: 20
+                )
+                .frame(maxWidth: .infinity)
+                .padding(.leading, 2)
+                Text(elapsedText)
+                    .font(.system(size: 13, weight: .medium).monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(height: Self.lineHeight)
+    }
+
+    // MARK: A sentence
+
+    /// A notice, or how a waiting take ended: one glyph and about eight words.
+    private func line(_ content: OverlayContent) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            if let glyph = content.glyph {
+                StateGlyphView(glyph: glyph)
+                    .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
+            }
+            Text(content.outcome?.message ?? content.title ?? "")
+                .font(.system(size: 13, weight: .medium))
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .frame(minHeight: Self.lineHeight)
+    }
+
+    // MARK: Words that wait
+
+    /// The words first: they are what the person is afraid of losing. Then
+    /// why, then the one thing to do.
+    private func waitingWords(_ waiting: WaitingWords) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(waiting.words)
+                .font(.system(size: 17, weight: .semibold))
+                .lineSpacing(1)
+                .lineLimit(6)
+                .fixedSize(horizontal: false, vertical: true)
+                // Read aloud only on request: the label names the state, and
+                // the words belong to the person, not to the room.
+                .accessibilityLabel(L10n.tr("Your words"))
+                .accessibilityValue(waiting.words)
+
+            if let note = waiting.note {
+                Text(note)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if waiting.isCopied {
+                // The words are on the clipboard: nothing is left to press
+                // but the way out, so it shares the line.
+                HStack(spacing: 8) {
+                    reasonLine(waiting)
+                    Spacer(minLength: 8)
+                    laterButton
+                }
+            } else {
+                reasonLine(waiting)
+                HStack(spacing: 4) {
+                    Button {
+                        model.onWaitingAction?()
+                    } label: {
+                        HStack(spacing: 8) {
+                            KeyCap(title: model.key.shortTitle, isPressed: model.isKeyDown, onInk: true)
+                            Text(waiting.actionVerb)
+                        }
+                    }
+                    .buttonStyle(InkButtonStyle())
+                    .accessibilityLabel(
+                        waiting.action == .copy ? L10n.tr("Copy") : L10n.tr("Paste")
+                    )
+                    Spacer(minLength: 0)
+                    laterButton
+                }
+                .padding(.top, 2)
+            }
+        }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .frame(
-            width: content.panelWidth,
-            alignment: .leading
-        )
-        .glassSurface(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        // The panel is read by one element: a colored dot and a counter
-        //separately do not mean anything.
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(model.accessibilityLabel)
+        .padding(.top, 14)
+        .padding(.bottom, 12)
+    }
+
+    private func reasonLine(_ waiting: WaitingWords) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            StateGlyphView(glyph: waiting.glyph)
+                .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
+            Text(waiting.reason(key: model.key.shortTitle))
+                .font(.system(size: 13, weight: .medium))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var laterButton: some View {
+        Button(L10n.tr("Later")) { model.onWaitingLater?() }
+            .buttonStyle(QuietButtonStyle())
+            .accessibilityHint(L10n.tr("Keeps the words in History"))
     }
 
     private var elapsedText: String {

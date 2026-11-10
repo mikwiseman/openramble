@@ -6,9 +6,15 @@
  * and rhythm are one decision, made once.
  */
 :root {
-  --radius-surface: 18px;
+  --radius-surface: 16px;
   --radius-control: 10px;
   --radius-chip: 7px;
+
+  --block-unit: 48px;
+  --block-gap: 8px;
+  --block-rim: 5px;
+  --block-padding: 20px;
+  --block-slip-radius: 11px;
 
   --space-tight: 6px;
   --space-inline: 10px;

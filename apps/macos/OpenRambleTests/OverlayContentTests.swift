@@ -31,7 +31,7 @@ final class OverlayContentTests: XCTestCase {
     /// the wait, and the wait can reach the preparation deadline.
     func testWaitingForTheModelIsNotCalledTranscribing() {
         let waiting = content(.transcribing, isWaitingForEngine: true)
-        XCTAssertEqual(waiting.title, "Waking the model…", "said at once, not after the delay")
+        XCTAssertEqual(waiting.title, "Getting ready…", "said at once, not after the delay")
         XCTAssertNotEqual(waiting.title, content(.transcribing, hasLingered: true).title)
         // Still work, still not a failure: the words are safe either way.
         XCTAssertEqual(waiting.mark, .working)
@@ -78,16 +78,25 @@ final class OverlayContentTests: XCTestCase {
         XCTAssertNil(content(.transcribing).title)
         XCTAssertEqual(content(.preparing, hasLingered: true).title, "Turning on the microphone…")
         XCTAssertNil(content(.listening, hasLingered: true).title, "the waveform is the title")
-        XCTAssertEqual(content(.transcribing, hasLingered: true).title, "Transcribing…")
+        XCTAssertEqual(content(.transcribing, hasLingered: true).title, "Writing it down…")
         XCTAssertNil(content(.idle).title)
         XCTAssertNil(content(.inserting).title)
     }
 
-    /// Gray, then red, then blue — the mark is the only thing that moves.
+    /// Gray, then red, then gray again — the mark is the only thing that
+    /// moves. Blue comes only when the writing outlasts the delay: nine takes
+    /// in ten are done by then, and a color that flashed for them said
+    /// nothing anyone could read.
     func testScenario002() {
         XCTAssertEqual(content(.preparing).mark, .starting)
         XCTAssertEqual(content(.listening).mark, .recording)
-        XCTAssertEqual(content(.transcribing).mark, .working)
+        XCTAssertEqual(content(.transcribing).mark, .closed)
+        XCTAssertEqual(content(.transcribing, hasLingered: true).mark, .working)
+        XCTAssertEqual(content(.transcribing, isWaitingForEngine: true).mark, .working)
+        XCTAssertNil(OverlayContent.Mark.closed.colorRole)
+        XCTAssertEqual(OverlayContent.Mark.closed.glyph, .silent)
+        XCTAssertEqual(content(.listening).word, "Listening", "the word stays for as long as the microphone is open")
+        XCTAssertNil(content(.transcribing).word)
         XCTAssertNil(OverlayContent.Mark.starting.colorRole)
         XCTAssertEqual(OverlayContent.Mark.recording.colorRole, .recording)
         XCTAssertEqual(OverlayContent.Mark.working.colorRole, .processing)
@@ -172,7 +181,7 @@ final class OverlayContentTests: XCTestCase {
         XCTAssertNil(content(.transcribing).voice, "a quick take says nothing after its tone")
         XCTAssertEqual(
             content(.transcribing, hasLingered: true).voice,
-            .speech("Transcribing…", urgent: false)
+            .speech("Writing it down…", urgent: false)
         )
         XCTAssertNil(content(.inserting).voice)
         XCTAssertNil(content(.preparing).voice, "said while the microphone opens, so never said")

@@ -2,10 +2,10 @@ import AppKit
 import Carbon.HIToolbox
 import XCTest
 
-/// The shortcut that puts the last dictation back on the clipboard, and the
-/// rules that decide what may be one.
+/// The shortcut that pastes the last take, the rules that decide what may be
+/// one, and what "the last take" is.
 @MainActor
-final class CopyHotkeyTests: XCTestCase {
+final class LastTakeShortcutTests: XCTestCase {
     private var harness: AppHarness!
 
     override func setUp() async throws { harness = try AppHarness() }
@@ -20,15 +20,25 @@ final class CopyHotkeyTests: XCTestCase {
 
     private let cKey = UInt16(kVK_ANSI_C)
 
-    /// Nobody gets a second global shortcut without asking for one.
+    /// ⌃⌘V out of the box: one key away from the paste it stands in for, and
+    /// the way back to words that could not land.
     func testScenario001() {
         let state = harness.makeState()
-        XCTAssertNil(state.copyShortcut)
+        XCTAssertEqual(state.lastTakeShortcut, .controlCommandV)
+        XCTAssertEqual(state.lastTakeShortcut?.displayString, "⌃⌘V")
+    }
+
+    /// Cleared is Off, and stays Off after a relaunch: an empty value is a
+    /// decision, a missing one is a first launch.
+    func testClearingTheShortcutSurvivesARelaunch() {
+        let state = harness.makeState()
+        state.lastTakeShortcut = nil
+        XCTAssertNil(harness.makeState().lastTakeShortcut)
     }
 
     /// "Also copy dictations to the clipboard" is gone: the clipboard holds a
     /// dictation only for the paste. The ways to get one back on purpose —
-    /// Copy Last with its shortcut, and Recent Dictations — both hold it.
+    /// the last take with its shortcut, and History — both hold it.
     func testEveryDictationStaysOneCopyAway() async throws {
         try harness.installModelMarker()
         let state = harness.makeState()
@@ -39,8 +49,8 @@ final class CopyHotkeyTests: XCTestCase {
         harness.monitor.onRelease?()
         await settle()
 
-        XCTAssertEqual(state.lastDictation?.insertedText, "Ping test", "Copy Last and its shortcut")
-        XCTAssertEqual(state.recentDictations.first?.text, "Ping test", "Recent Dictations")
+        XCTAssertEqual(state.lastTakeText, "Ping test", "the last take and its shortcut")
+        XCTAssertEqual(state.history.first?.text, "Ping test", "History")
     }
 
     /// A plain key would fire in the middle of a word, and Shift with a letter
@@ -146,11 +156,11 @@ final class CopyHotkeyTests: XCTestCase {
         await settle()
 
         let shortcut = KeyCombination(keyCode: cKey, modifiers: [.command, .option])
-        state.copyShortcut = shortcut
+        state.lastTakeShortcut = shortcut
         XCTAssertEqual(harness.copyMonitor.shortcut, shortcut)
         XCTAssertTrue(harness.copyMonitor.isRunning)
 
-        state.copyShortcut = nil
+        state.lastTakeShortcut = nil
         XCTAssertFalse(harness.copyMonitor.isRunning)
     }
 
@@ -162,7 +172,7 @@ final class CopyHotkeyTests: XCTestCase {
         state.refreshPermissions()
         await settle()
 
-        state.copyShortcut = KeyCombination(keyCode: cKey, modifiers: [.command])
+        state.lastTakeShortcut = KeyCombination(keyCode: cKey, modifiers: [.command])
         XCTAssertFalse(harness.copyMonitor.isRunning)
     }
 
@@ -170,15 +180,56 @@ final class CopyHotkeyTests: XCTestCase {
     /// again every morning is not a shortcut.
     func testScenario012() {
         let shortcut = KeyCombination(keyCode: cKey, modifiers: [.command, .option])
+        // The name it was stored under as the copy shortcut: a chord someone
+        // already chose stays theirs.
         harness.defaults.set(shortcut.rawValue, forKey: "copyShortcut")
-        XCTAssertEqual(harness.makeState().copyShortcut, shortcut)
+        XCTAssertEqual(harness.makeState().lastTakeShortcut, shortcut)
     }
 
-    /// Pressing it with nothing dictated says so rather than copying silence.
-    func testScenario013() {
+    /// Pressing it with nothing dictated says so rather than pasting silence.
+    func testScenario013() async {
         let state = harness.makeState()
-        state.copyLastDictation()
-        XCTAssertNil(state.lastDictation)
+        harness.copyMonitor.onPress?()
+        await settle()
+        XCTAssertNil(state.lastTakeText)
+        XCTAssertEqual(state.lastNotice?.message, "Nothing dictated yet.")
+        let inserted = await harness.inserter.insertedTexts
+        XCTAssertEqual(inserted, [])
+        XCTAssertEqual(harness.copied, [])
+    }
+
+    /// The chord pastes the last take into the app in front, and leaves the
+    /// clipboard to the paste: nothing is copied.
+    func testTheChordPastesTheLastTake() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        try await dictate(state, untilHistoryHas: 1)
+
+        harness.copyMonitor.onPress?()
+        await settle()
+
+        let inserted = await harness.inserter.insertedTexts
+        XCTAssertEqual(inserted, ["Ping test", "Ping test"], "the take, then the chord")
+        XCTAssertEqual(harness.copied, [])
+        XCTAssertEqual(state.lastTakeText, "Ping test", "still the last take: the chord pastes it again")
+    }
+
+    /// While typing is protected a paste of ours cannot land and the person's
+    /// own ⌘V can. The chord copies, and says so.
+    func testTheChordCopiesWhileTypingIsProtected() async throws {
+        try harness.installModelMarker()
+        let state = harness.makeState()
+        await state.refreshModelState()
+        try await dictate(state, untilHistoryHas: 1)
+        harness.typingProtection = TypingProtection(isOn: true, holder: "Terminal")
+
+        harness.copyMonitor.onPress?()
+        await settle()
+
+        let inserted = await harness.inserter.insertedTexts
+        XCTAssertEqual(inserted, ["Ping test"], "only the take itself")
+        XCTAssertEqual(harness.copied, ["Ping test"])
     }
 
     private func dictate(_ state: AppState, untilHistoryHas count: Int) async throws {
@@ -192,14 +243,16 @@ final class CopyHotkeyTests: XCTestCase {
     }
 
     private func offersCopyLast(_ state: AppState) -> Bool {
-        MenuSections.sections(for: state).joined().contains(.copyLast)
+        let rows = MenuSections.sections(for: state).joined()
+        XCTAssertEqual(rows.contains(.pasteLastTake), rows.contains(.copyLastTake), "one take, two verbs")
+        return rows.contains(.pasteLastTake)
     }
 
-    /// Copy Last puts back the text this run inserted, and the menu offers
-    /// it only then. History cannot stand in: it outlives a relaunch and
-    /// keeps a take-back's raw words, "Scratch that." included, so the row
-    /// would copy words the person took back, and copy something else after
-    /// a relaunch. Recent Dictations still copies any entry.
+    /// The last take is the text this run inserted, and the menu offers it
+    /// only then. History cannot stand in: it outlives a relaunch and keeps a
+    /// take-back's raw words, "Scratch that." included, so the row would
+    /// paste words the person took back, and paste something else after a
+    /// relaunch. The Library still copies any entry.
     func testCopyLastIsOfferedOnlyForTextThisRunInserted() async throws {
         try harness.installModelMarker()
         let state = harness.makeState()
@@ -216,7 +269,7 @@ final class CopyHotkeyTests: XCTestCase {
 
         let relaunched = harness.makeState()
         XCTAssertNil(relaunched.lastDictation, "in memory only")
-        XCTAssertTrue(MenuSections.sections(for: relaunched).joined().contains(.recentDictations))
+        XCTAssertEqual(relaunched.history.count, 2, "History kept both")
         XCTAssertFalse(offersCopyLast(relaunched), "nothing inserted in this run")
     }
 
@@ -251,12 +304,14 @@ final class CopyHotkeyTests: XCTestCase {
         await harness.inserter.setError(.accessibilityPermissionDenied)
         try await dictate(state, untilHistoryHas: 1)
         XCTAssertEqual(state.recoveredText, "Ping test")
-        XCTAssertTrue(MenuSections.sections(for: state).joined().contains(.insertLastDictation))
+        XCTAssertEqual(state.waitingWords?.words, "Ping test")
+        XCTAssertTrue(offersCopyLast(state))
 
         state.deleteHistoryEntry(state.history[0])
 
         XCTAssertNil(state.recoveredText, "the only copy left of deleted words")
-        XCTAssertFalse(MenuSections.sections(for: state).joined().contains(.insertLastDictation))
+        XCTAssertNil(state.waitingWords, "and the block that showed them")
+        XCTAssertFalse(offersCopyLast(state))
     }
 
     /// Lowering Keep deletes what falls out of it, Copy Last's copy included.
@@ -287,7 +342,7 @@ final class CopyHotkeyTests: XCTestCase {
         try await dictate(state, untilHistoryHas: 1)
 
         XCTAssertNil(state.lastDictation)
-        XCTAssertTrue(MenuSections.sections(for: state).joined().contains(.recentDictations))
+        XCTAssertEqual(state.history.count, 1, "History keeps the raw words")
         XCTAssertFalse(offersCopyLast(state))
     }
 }

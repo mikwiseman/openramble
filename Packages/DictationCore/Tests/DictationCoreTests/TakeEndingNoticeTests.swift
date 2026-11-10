@@ -64,7 +64,7 @@ final class TakeEndingNoticeTests: XCTestCase {
             controller.onNotice = { reported.append($0) }
         }
 
-        let said = "The text couldn't be inserted. It's saved in the menu. Not kept."
+        let said = "The words couldn't be pasted. They are waiting. Not kept."
         let shown = await overlay.notices.map(\.message)
         XCTAssertEqual(shown, [said], "one notice per take")
         XCTAssertEqual(reported.map(\.message), [said])

@@ -637,6 +637,10 @@ public struct DictationNotice: Sendable, Equatable {
     /// Why a failure happened, for the local journal. The message is for the
     /// person and never reaches the journal; this case name is all it keeps.
     public let reason: DictationFailureReason?
+    /// Why a paste did not land, when that is known. The interface reads it to
+    /// offer the action that works now: copy while typing is protected, paste
+    /// once focus is in a field. `nil` for every other notice.
+    public let insertionFailure: TextInsertionError?
 
     public init(
         kind: Kind,
@@ -644,7 +648,8 @@ public struct DictationNotice: Sendable, Equatable {
         recoverableText: String? = nil,
         recoveryAudio: URL? = nil,
         wordsDidNotLand: Bool? = nil,
-        reason: DictationFailureReason? = nil
+        reason: DictationFailureReason? = nil,
+        insertionFailure: TextInsertionError? = nil
     ) {
         self.kind = kind
         self.message = message
@@ -654,6 +659,7 @@ public struct DictationNotice: Sendable, Equatable {
         // explicitly at the site that knows.
         self.wordsDidNotLand = wordsDidNotLand ?? (kind == .failure)
         self.reason = reason
+        self.insertionFailure = insertionFailure
     }
 }
 
