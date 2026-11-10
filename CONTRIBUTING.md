@@ -63,3 +63,5 @@ When an installed model is available, also run:
 
 Write comments that explain constraints and intent. Keep policies in testable
 types and ensure every failure path produces a clear user-facing result.
+
+<!-- Direct-push test, 2026-11-10. Safe to remove. -->
