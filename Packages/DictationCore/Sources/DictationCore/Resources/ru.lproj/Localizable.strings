@@ -712,3 +712,14 @@
 "Paste last take" = "Вставить последнюю диктовку";
 "Press this shortcut to paste the last take into the app in front" = "Эта комбинация вставляет последнюю диктовку в активное приложение";
 "Hold the dictation key to speak, or double-press for hands-free dictation. Press once more to finish. Paste last take puts your newest dictation into the app in front, and copies it while a password field or terminal protects typing. Record starts and stops a recording from any app; choose shortcuts that your other apps don't use. ⌘R opens Recordings while OpenRamble is active." = "Удерживайте клавишу, пока говорите, или нажмите дважды для диктовки без удержания. Нажмите ещё раз для завершения. «Вставить последнюю диктовку» помещает её в активное приложение, а пока поле пароля или терминал защищает ввод, копирует. Комбинация записи работает из любого приложения. Выбирайте свободные комбинации. ⌘R открывает «Записи», когда OpenRamble активно.";
+"Hold to talk. Double-press for hands-free." = "Удерживайте, чтобы говорить. Двойное нажатие: без удержания.";
+"Follows your Mac." = "Тот же, что у Mac.";
+"Always this one, while it is connected." = "Всегда этот, пока он подключён.";
+"Paste last take puts your newest dictation into the app in front, and copies it while a password field or terminal protects typing. Record starts and stops a recording from any app." = "«Вставить последнюю диктовку» помещает её в активное приложение, а пока поле пароля или терминал защищает ввод, копирует. Комбинация записи начинает и останавливает запись из любого приложения.";
+"Speech is recognized on this Mac. OpenRamble goes online only to download the speech model and to check for updates." = "Речь распознаётся на этом Mac. OpenRamble выходит в интернет, только чтобы скачать модель речи и проверить обновления.";
+"Almost ready" = "Почти готово";
+"Set up" = "Настроить";
+"Allow the microphone so OpenRamble can hear you." = "Разрешите микрофон, чтобы OpenRamble вас слышал.";
+"Allow Accessibility so your words can land." = "Разрешите Универсальный доступ, чтобы слова вставлялись.";
+"Download the speech model to start dictating." = "Скачайте модель речи, чтобы начать диктовать.";
+"The speech model needs a repair." = "Модель речи нужно восстановить.";

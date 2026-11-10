@@ -712,3 +712,14 @@
 "Paste last take" = "Paste last take";
 "Press this shortcut to paste the last take into the app in front" = "Press this shortcut to paste the last take into the app in front";
 "Hold the dictation key to speak, or double-press for hands-free dictation. Press once more to finish. Paste last take puts your newest dictation into the app in front, and copies it while a password field or terminal protects typing. Record starts and stops a recording from any app; choose shortcuts that your other apps don't use. ⌘R opens Recordings while OpenRamble is active." = "Hold the dictation key to speak, or double-press for hands-free dictation. Press once more to finish. Paste last take puts your newest dictation into the app in front, and copies it while a password field or terminal protects typing. Record starts and stops a recording from any app; choose shortcuts that your other apps don't use. ⌘R opens Recordings while OpenRamble is active.";
+"Hold to talk. Double-press for hands-free." = "Hold to talk. Double-press for hands-free.";
+"Follows your Mac." = "Follows your Mac.";
+"Always this one, while it is connected." = "Always this one, while it is connected.";
+"Paste last take puts your newest dictation into the app in front, and copies it while a password field or terminal protects typing. Record starts and stops a recording from any app." = "Paste last take puts your newest dictation into the app in front, and copies it while a password field or terminal protects typing. Record starts and stops a recording from any app.";
+"Speech is recognized on this Mac. OpenRamble goes online only to download the speech model and to check for updates." = "Speech is recognized on this Mac. OpenRamble goes online only to download the speech model and to check for updates.";
+"Almost ready" = "Almost ready";
+"Set up" = "Set up";
+"Allow the microphone so OpenRamble can hear you." = "Allow the microphone so OpenRamble can hear you.";
+"Allow Accessibility so your words can land." = "Allow Accessibility so your words can land.";
+"Download the speech model to start dictating." = "Download the speech model to start dictating.";
+"The speech model needs a repair." = "The speech model needs a repair.";

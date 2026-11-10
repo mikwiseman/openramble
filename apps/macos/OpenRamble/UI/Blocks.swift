@@ -429,3 +429,144 @@ struct BlockLabel: View {
             .foregroundStyle(.secondary)
     }
 }
+
+// MARK: - Rows in a block
+
+/// A block of rows: the settings that are too small to be a block of their
+/// own. One unit tall each, a hairline between them.
+struct BlockRows<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(spacing: 0) { content() }
+            .contentBlock(padding: 0)
+    }
+}
+
+/// One row: what it is on the left, the control on the right.
+struct BlockRow<Control: View>: View {
+    let title: String
+    var detail: String?
+    var isChanged = false
+    var revert: (() -> Void)?
+    @ViewBuilder var control: () -> Control
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let detail {
+                    Text(detail)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 12)
+            control()
+                .fixedSize()
+            // Always in the layout, so every control in a block ends on the
+            // same line whether or not its row has a default to go back to.
+            RevertToDefault(isChanged: isChanged && revert != nil, revert: revert ?? {})
+        }
+        .padding(.horizontal, GlassTokens.Space.stack)
+        .padding(.vertical, 8)
+        .frame(minHeight: GlassTokens.Block.unit)
+    }
+}
+
+/// The hairline between two rows of a block, inset like the rows.
+struct BlockDivider: View {
+    var body: some View {
+        Divider().padding(.leading, GlassTokens.Space.stack)
+    }
+}
+
+// MARK: - A page of blocks
+
+/// A settings page: blocks down a scrolling column, one gap apart.
+struct BlockPage<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: GlassTokens.Space.stack) {
+                content()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(GlassTokens.Block.padding)
+        }
+    }
+}
+
+/// A titled block: what it is about, the block, and a sentence under it.
+struct BlockSection<Content: View, Accessory: View>: View {
+    let title: String?
+    let footer: String?
+    @ViewBuilder var accessory: () -> Accessory
+    @ViewBuilder var content: () -> Content
+
+    init(
+        _ title: String? = nil,
+        footer: String? = nil,
+        @ViewBuilder content: @escaping () -> Content,
+        @ViewBuilder accessory: @escaping () -> Accessory
+    ) {
+        self.title = title
+        self.footer = footer
+        self.content = content
+        self.accessory = accessory
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: GlassTokens.Block.gap) {
+            if title != nil || Accessory.self != EmptyView.self {
+                HStack(alignment: .firstTextBaseline) {
+                    if let title {
+                        Text(title)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                    Spacer(minLength: 8)
+                    accessory()
+                }
+                .padding(.horizontal, GlassTokens.Space.stack)
+            }
+            VStack(alignment: .leading, spacing: 0) { content() }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentBlock(padding: 0)
+            if let footer {
+                Text(footer)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, GlassTokens.Space.stack)
+            }
+        }
+    }
+}
+
+extension BlockSection where Accessory == EmptyView {
+    init(
+        _ title: String? = nil,
+        footer: String? = nil,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.init(title, footer: footer, content: content, accessory: { EmptyView() })
+    }
+}
+
+/// Free-form content inside a block of rows, padded like a row.
+struct BlockCell<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) { content() }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, GlassTokens.Space.stack)
+            .padding(.vertical, 12)
+            .frame(minHeight: GlassTokens.Block.unit)
+    }
+}

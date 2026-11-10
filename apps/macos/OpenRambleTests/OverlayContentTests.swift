@@ -110,16 +110,20 @@ final class OverlayContentTests: XCTestCase {
 
     /// The key is up and the microphone is still live. A red lock where the
     /// dot was says so — the locked-recording sign people know from voice
-    /// messages — and red keeps its one meaning. Nothing new to fit beside
-    /// the waveform, nothing spoken into the open microphone: the way out is
-    /// in the label VoiceOver reads on demand.
+    /// messages — and red keeps its one meaning. The way out is on the block
+    /// as the key that ends the take, drawn, and in the label VoiceOver reads
+    /// on demand: nothing is spoken into the open microphone.
     func testHandsFreeIsARedLockWithTheWayOutInTheLabel() {
         let handsFree = content(.listening, elapsed: 3, handsFreeFinishKey: "Right Command")
 
         XCTAssertEqual(handsFree.mark, .handsFree)
         XCTAssertEqual(OverlayContent.Mark.handsFree.colorRole, .recording)
         XCTAssertNil(handsFree.title)
-        XCTAssertEqual(handsFree.panelWidth, 244)
+        XCTAssertEqual(handsFree.finishKey, "Right ⌘", "the key that ends it, as a key cap")
+        XCTAssertNil(content(.listening, elapsed: 3).finishKey, "while the key is held there is nothing to teach")
+        // Going hands-free is a deliberate gesture, so the block may grow
+        // once for it: the key needs room in every language.
+        XCTAssertEqual(handsFree.panelWidth, 304)
         XCTAssertEqual(
             handsFree.accessibilityLabel,
             "Recording hands-free, 3 seconds. Press Right Command to finish."
