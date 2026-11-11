@@ -52,6 +52,29 @@ final class MeetingTranscriptFormatterTests: XCTestCase {
         )
     }
 
+    /// An imported file's sound is on the microphone's channel, and it is
+    /// not "You": nobody knows who speaks in a file. It leaves the app with
+    /// its times and no names.
+    func testAFileWhoseSpeakerIsUnknownIsWrittenWithoutNames() {
+        let lecture = [
+            MeetingUtterance(channel: .microphone, start: 0.5, end: 4.2, text: "Good morning."),
+            MeetingUtterance(channel: .microphone, start: 65, end: 70, text: "Let's begin."),
+        ]
+        XCTAssertEqual(
+            MeetingTranscriptFormatter.plainText(lecture, speakers: false),
+            """
+            00:00:00
+            Good morning.
+
+            00:01:05
+            Let's begin.
+            """
+        )
+        let markdown = MeetingTranscriptFormatter.markdown(lecture, title: "Lecture", subtitle: "Imported file", speakers: false)
+        XCTAssertTrue(markdown.contains("**00:01:05**\nLet's begin."), markdown)
+        XCTAssertFalse(markdown.contains("You"), markdown)
+    }
+
     func testNamesCanBeRelabelledWithoutTouchingTheTranscript() {
         let text = MeetingTranscriptFormatter.plainText(
             [utterances[0]],

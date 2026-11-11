@@ -61,6 +61,42 @@ final class FileAudioChunksTests: XCTestCase {
         XCTAssertNil(rest)
     }
 
+    /// The Library stores an imported file's audio itself and asks only
+    /// where to cut. The answer has to be the cuts the command-line tool
+    /// decodes by, or the two would transcribe one file differently.
+    func testThePlannerCutsWhereAFileIsCut() async throws {
+        let sample: (Int) -> Float = { $0 < 20 * 16_000 || $0 >= 50 * 16_000 ? self.syllables($0, level: 0.1) : 0 }
+        let url = try recording(seconds: 70, sample: sample)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let source = try await FileAudioChunks(url: url)
+        var fromFile: [Range<Int>] = []
+        while let chunk = try await source.next() { fromFile.append(chunk.startFrame..<chunk.endFrame) }
+
+        var planner = FilePiecePlanner()
+        // In uneven blocks, as a reader hands them over.
+        var position = 0
+        for size in [16_000, 1, 4_096, 70 * 16_000] {
+            let end = min(position + size, 70 * 16_000)
+            planner.push((position..<end).map(sample))
+            position = end
+        }
+        XCTAssertEqual(planner.finish(), fromFile)
+        XCTAssertGreaterThan(fromFile.count, 1)
+    }
+
+    func testThePlannerKeepsAShortFileWholeAndCutsNothingFromNothing() {
+        var short = FilePiecePlanner()
+        short.push([Float](repeating: 0, count: 29 * 16_000))
+        XCTAssertEqual(short.finish(), [0..<29 * 16_000], "thirty seconds or less goes to the engine whole")
+
+        var empty = FilePiecePlanner()
+        XCTAssertEqual(empty.finish(), [])
+
+        var silent = FilePiecePlanner()
+        silent.push([Float](repeating: 0, count: 90 * 16_000))
+        XCTAssertEqual(silent.finish(), [], "a long silence has no pieces")
+    }
+
     func testShortFileStaysWholeAndLongSilenceProducesNoChunks() async throws {
         let short = try recording(seconds: 29) { _ in 0 }
         let silent = try recording(seconds: 90) { _ in 0 }

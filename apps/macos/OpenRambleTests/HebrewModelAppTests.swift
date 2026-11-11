@@ -207,7 +207,7 @@ final class HebrewModelAppTests: XCTestCase {
         // expecting Hebrew to be picked up by itself.
         XCTAssertEqual(
             offer.detail,
-            "Optional. After the download, switch your keyboard to Hebrew to dictate or record in Hebrew."
+            "Optional. For audio files in Hebrew, and for dictating or recording while your keyboard is set to Hebrew."
         )
         XCTAssertEqual(offer.actions, [.install])
         XCTAssertEqual(offer.title(for: .install), "Download — 740 MB")
@@ -221,7 +221,10 @@ final class HebrewModelAppTests: XCTestCase {
         )
         XCTAssertEqual(ready.title, "Hebrew is ready")
         XCTAssertEqual(ready.tone, .success)
-        XCTAssertEqual(ready.detail, "To dictate or record in Hebrew, switch your keyboard to Hebrew.")
+        XCTAssertEqual(
+            ready.detail,
+            "To dictate or record in Hebrew, switch your keyboard to Hebrew. A file you import asks which language it is in."
+        )
         XCTAssertEqual(ready.actions, [.delete])
         XCTAssertEqual(ready.title(for: .delete), "Remove")
         XCTAssertFalse(ready.hint(for: .delete).contains("stops working"))
@@ -240,7 +243,10 @@ final class HebrewModelAppTests: XCTestCase {
 
         XCTAssertEqual(card.title, "Hebrew is downloaded")
         XCTAssertEqual(card.tone, .neutral, "not a tick: nothing is in Hebrew yet")
-        XCTAssertEqual(card.detail, "To use it, add the Hebrew keyboard and switch to it.")
+        XCTAssertEqual(
+            card.detail,
+            "Files you import can be transcribed in Hebrew now. To dictate or record in Hebrew, add the Hebrew keyboard and switch to it."
+        )
         XCTAssertEqual(card.actions, [.keyboardSettings, .delete])
         XCTAssertEqual(card.title(for: .keyboardSettings), "Keyboard Settings…")
         XCTAssertEqual(
@@ -257,7 +263,7 @@ final class HebrewModelAppTests: XCTestCase {
 
         XCTAssertEqual(
             ModelStatus.hebrew(state: installed, place: .settings, downloadMegabytes: 740, hasKeyboard: true).detail,
-            "Чтобы диктовать или записывать на иврите, переключите раскладку на иврит."
+            "Чтобы диктовать или записывать на иврите, переключите раскладку на иврит. При импорте файла приложение спросит, на каком он языке."
         )
         XCTAssertEqual(
             ModelStatus.hebrew(state: installed, place: .settings, downloadMegabytes: 740, hasKeyboard: false).title,

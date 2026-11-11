@@ -7,6 +7,9 @@ struct TranscriptView: View {
     var currentTime: TimeInterval?
     var onSeek: ((TimeInterval) -> Void)?
     var followsLive = false
+    /// `false` for an imported file: who speaks in it is not known, and it
+    /// is certainly not "You".
+    var showsSpeakers = true
 
     @State private var follow = TranscriptFollowState()
     @State private var contentHeight: CGFloat = 0
@@ -23,11 +26,13 @@ struct TranscriptView: View {
                                 TranscriptTurnView(
                                     utterance: utterance,
                                     isCurrent: isCurrent(utterance),
-                                    onTap: onSeek.map { seek in { seek(utterance.start) } }
+                                    onTap: onSeek.map { seek in { seek(utterance.start) } },
+                                    namesSpeaker: showsSpeakers
                                 )
                                 .id(utterance.id)
                             }
                         } header: {
+                            if showsSpeakers {
                             HStack(spacing: GlassTokens.Space.inline) {
                                 RoundedRectangle(cornerRadius: 1)
                                     .fill(section.channel == .microphone ? Color.accentColor : .secondary)
@@ -41,6 +46,7 @@ struct TranscriptView: View {
                             .padding(.vertical, GlassTokens.Space.inline)
                             .padding(.horizontal, GlassTokens.Space.inline)
                             .background(.background)
+                            }
                         }
                     }
                     Color.clear.frame(height: 1).id(bottomID)
@@ -108,6 +114,7 @@ struct TranscriptTurnView: View {
     let utterance: MeetingUtterance
     let isCurrent: Bool
     var onTap: (() -> Void)?
+    var namesSpeaker = true
 
     @Environment(\.colorSchemeContrast) private var contrast
 
@@ -142,7 +149,10 @@ struct TranscriptTurnView: View {
             .lineSpacing(4)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityLabel(speaker + ": " + (utterance.isFailed ? L10n.tr("Couldn't transcribe this part") : utterance.text))
+            .accessibilityLabel(
+                (namesSpeaker ? speaker + ": " : "")
+                    + (utterance.isFailed ? L10n.tr("Couldn't transcribe this part") : utterance.text)
+            )
         }
         .padding(.vertical, GlassTokens.Space.inline)
         .padding(.horizontal, GlassTokens.Space.inline)
@@ -176,6 +186,37 @@ enum TranscriptStatusPolicy {
 ///
 /// Orange for a stopped transcription, never red: red is a live microphone,
 /// and every state here is recoverable — the audio is safe.
+/// An imported file whose words are still coming: how far it has got, or
+/// what it is waiting for.
+struct ImportStatusLine: View {
+    let text: String
+    /// How much is transcribed, while it is this file's turn.
+    let fraction: Double?
+
+    var body: some View {
+        HStack(spacing: GlassTokens.Space.inline) {
+            if let fraction {
+                ProgressView(value: fraction)
+                    .progressViewStyle(.linear)
+                    .frame(width: 120)
+                    .accessibilityHidden(true)
+            } else {
+                Image(systemName: "clock")
+                    .foregroundStyle(StatusColorRole.processing.color)
+                    .accessibilityHidden(true)
+            }
+            Text(text)
+                .font(.callout)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, GlassTokens.Space.page)
+        .padding(.vertical, GlassTokens.Space.inline)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 struct TranscriptStatusLine: View {
     @ObservedObject var state: AppState
 

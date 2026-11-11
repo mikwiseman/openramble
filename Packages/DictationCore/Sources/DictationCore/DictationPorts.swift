@@ -680,6 +680,7 @@ public enum DictationFailureReason: String, Codable, Sendable {
     case accessibilityRevoked, microphoneRevoked, accessibilityRepair, relaunch
     case recordingStart, recordingPause, recordingResume, recordingFiling, recordingFailed
     case retranscription, clipboard, export, fileOperation, storage, dictionary
+    case recordingImport
 
     /// A paste that did not land, by kind. "It did not paste" is the report
     /// people send, and the journal could not say which of these it was.

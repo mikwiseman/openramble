@@ -136,7 +136,21 @@ for the check.
     Settings… opens the Keyboard pane of System Settings. Add the Hebrew
     keyboard there and confirm the row changes to "Hebrew is ready" without a
     relaunch. With the model installed, run `openramble <a Hebrew file>
-    --hebrew` and confirm Hebrew text. With the keyboard on Hebrew, dictate a Hebrew sentence
+    --hebrew` and confirm Hebrew text.
+21. Importing a file. Drop an M4A on the Library window: the window dims and
+    says "Drop to transcribe", the file appears as a recording under its own
+    name and plays at once, and its words arrive with a progress line. No
+    paragraph is labelled You. Click the import button and choose an MP4 and
+    an Ogg voice note together: the first is shown and transcribed, the
+    second says "Waiting its turn." Dictate while a long file is being
+    transcribed: the dictation lands as fast as usual and the file's line
+    says it is paused. Start a recording during an import: both carry on.
+    Quit during an import and relaunch: the transcript is finished without
+    asking. Drop a PDF: a notice names the file and nothing is added. Move an
+    import to the Trash while it is being transcribed: it stops. With the
+    Hebrew model installed, an import asks which language the file is in,
+    with the keyboard's language first, and a Hebrew file comes out in Hebrew
+    while the keyboard is English. Without it, nothing is asked. With the keyboard on Hebrew, dictate a Hebrew sentence
     and confirm Hebrew text lands right to left; switch to an English keyboard
     and confirm the next take is English. Switch keyboards during a take and
     during a recording and confirm neither changes language halfway. Remove

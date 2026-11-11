@@ -1,6 +1,7 @@
 import DictationAudio
 import DictationCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The library: recordings on the left, one recording on the right.
 ///
@@ -20,6 +21,11 @@ struct RecordingsWindow: View {
     @State private var selection = Set<UUID>()
     @State private var scope = LibraryScope.all
     @State private var query = ""
+    @State private var isChoosingFiles = false
+    @State private var isDropTargeted = false
+    /// Files chosen or dropped that wait for the one question an import can
+    /// have: which language. Asked only with the Hebrew model installed.
+    @State private var filesAwaitingLanguage: [URL] = []
 
     /// Everything said, by day: what the list shows.
     private var days: [LibraryDay] {
@@ -102,6 +108,23 @@ struct RecordingsWindow: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
+                    isChoosingFiles = true
+                } label: {
+                    if state.importActivity.copying > 0 {
+                        ProgressView()
+                            .controlSize(.small)
+                            .frame(width: 28, height: 28)
+                    } else {
+                        Image(systemName: "square.and.arrow.down")
+                            .frame(width: 28, height: 28)
+                    }
+                }
+                .help(L10n.tr("Import audio or video to transcribe"))
+                .accessibilityLabel(L10n.tr("Import Audio or Video…"))
+                .accessibilityIdentifier("import-audio")
+                .buttonStyle(.borderless)
+
+                Button {
                     if selectedDictation != nil {
                         state.revealHistoryAudio()
                     } else if let id = primarySelection {
@@ -147,6 +170,43 @@ struct RecordingsWindow: View {
         .onChange(of: selection) { _, id in
             if id.count != 1 || id.first != player.loadedID { player.pause() }
         }
+        .fileImporter(
+            isPresented: $isChoosingFiles,
+            allowedContentTypes: [.audio, .movie],
+            allowsMultipleSelection: true
+        ) { result in
+            if case let .success(files) = result { receive(files) }
+        }
+        // The whole window takes a file: nobody aims a drag at a button.
+        .dropDestination(for: URL.self) { files, _ in
+            let local = files.filter(\.isFileURL)
+            guard !local.isEmpty else { return false }
+            receive(local)
+            return true
+        } isTargeted: { isDropTargeted = $0 }
+        .overlay {
+            if isDropTargeted { ImportDropOverlay() }
+        }
+        .confirmationDialog(
+            ImportLanguageQuestion.title(for: filesAwaitingLanguage),
+            isPresented: Binding(
+                get: { !filesAwaitingLanguage.isEmpty },
+                set: { if !$0 { filesAwaitingLanguage = [] } }
+            ),
+            titleVisibility: .visible
+        ) {
+            // The keyboard's language first: it is the likelier answer, and
+            // Return takes it.
+            ForEach(ImportLanguageQuestion.answers(suggested: state.suggestedImportLanguage), id: \.self) { language in
+                Button(ImportLanguageQuestion.label(for: language)) {
+                    state.importFiles(filesAwaitingLanguage, language: language)
+                    filesAwaitingLanguage = []
+                }
+            }
+            Button(L10n.tr("Cancel"), role: .cancel) { filesAwaitingLanguage = [] }
+        } message: {
+            Text(L10n.tr("Hebrew has a speech model of its own. Every other language is recognized without asking."))
+        }
         .sheet(isPresented: Binding(
             get: { state.isSystemAudioIntroPresented },
             set: { if !$0 { state.dismissSystemAudioIntro() } }
@@ -161,7 +221,10 @@ struct RecordingsWindow: View {
         }
         .onAppear {
             state.reloadRecordings()
-            if selection.isEmpty, let id = state.liveRecording?.id ?? listedIDs.first {
+            // What is happening now, before what merely came last: a
+            // recording being made, then a file whose words are arriving.
+            if selection.isEmpty,
+               let id = state.liveRecording?.id ?? state.importActivity.transcribing ?? listedIDs.first {
                 selection = [id]
             }
         }
@@ -234,6 +297,15 @@ struct RecordingsWindow: View {
         return L10n.tr("Delete selected items")
     }
 
+    /// Files chosen in the panel or dropped on the window.
+    private func receive(_ files: [URL]) {
+        if state.importAsksForLanguage {
+            filesAwaitingLanguage = files
+        } else {
+            state.importFiles(files)
+        }
+    }
+
     private var primarySelection: UUID? {
         guard selection.count == 1 else { return nil }
         return selection.first
@@ -251,6 +323,50 @@ struct RecordingsWindow: View {
         }
         guard !deletable.isEmpty else { return }
         state.trashRecordings(deletable)
+    }
+}
+
+/// The one question an import can have, as data.
+enum ImportLanguageQuestion {
+    static func title(for files: [URL]) -> String {
+        guard files.count == 1, let file = files.first else {
+            return L10n.tr("What language are these %@ files in?", String(describing: files.count))
+        }
+        return L10n.tr("What language is “%@” in?", file.deletingPathExtension().lastPathComponent)
+    }
+
+    static func answers(suggested: RecordingImportLanguage) -> [RecordingImportLanguage] {
+        suggested == .hebrew ? [.hebrew, .automatic] : [.automatic, .hebrew]
+    }
+
+    static func label(for language: RecordingImportLanguage) -> String {
+        switch language {
+        case .hebrew: return L10n.tr("Hebrew")
+        case .automatic: return L10n.tr("Another Language")
+        }
+    }
+}
+
+/// Shown over the Library while a file is held above it.
+struct ImportDropOverlay: View {
+    var body: some View {
+        ZStack {
+            Rectangle().fill(.ultraThinMaterial)
+            VStack(spacing: GlassTokens.Space.inline) {
+                Image(systemName: "square.and.arrow.down")
+                    .font(.system(size: 34, weight: .light))
+                    .foregroundStyle(.secondary)
+                Text(L10n.tr("Drop to transcribe"))
+                    .font(.display(28))
+                Text(L10n.tr("The file is copied into your Library. Nothing leaves this Mac."))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(GlassTokens.Space.page)
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

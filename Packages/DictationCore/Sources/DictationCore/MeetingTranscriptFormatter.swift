@@ -10,12 +10,19 @@ public enum MeetingTranscriptFormatter {
     public static var defaultNames: [MeetingChannel: String] { [.microphone: L10n.tr("You"), .system: L10n.tr("Others")] }
     public static var failedLine: String { L10n.tr("[couldn't transcribe this part]") }
 
+    /// - Parameter speakers: `false` for an imported file. Its one stream
+    ///   of sound is on the microphone's channel, and it is not "You": who
+    ///   speaks in a file is not something the app knows.
     public static func plainText(
         _ utterances: [MeetingUtterance],
-        names: [MeetingChannel: String] = defaultNames
+        names: [MeetingChannel: String] = defaultNames,
+        speakers: Bool = true
     ) -> String {
         ordered(utterances).map { utterance in
-            "\(name(utterance.channel, names)) · \(timestamp(utterance.start))\n\(body(utterance))"
+            let heading = speakers
+                ? "\(name(utterance.channel, names)) · \(timestamp(utterance.start))"
+                : timestamp(utterance.start)
+            return "\(heading)\n\(body(utterance))"
         }.joined(separator: "\n\n")
     }
 
@@ -27,12 +34,16 @@ public enum MeetingTranscriptFormatter {
         title: String,
         subtitle: String,
         note: String? = nil,
-        names: [MeetingChannel: String] = defaultNames
+        names: [MeetingChannel: String] = defaultNames,
+        speakers: Bool = true
     ) -> String {
         var lines = ["# \(title)", "", subtitle, "", L10n.tr("> Recorded with OpenRamble. This transcript was produced on this Mac.")]
         if let note { lines += ["", "> \(note)"] }
         for utterance in ordered(utterances) {
-            lines += ["", "**\(name(utterance.channel, names))** · \(timestamp(utterance.start))", body(utterance)]
+            let heading = speakers
+                ? "**\(name(utterance.channel, names))** · \(timestamp(utterance.start))"
+                : "**\(timestamp(utterance.start))**"
+            lines += ["", heading, body(utterance)]
         }
         return lines.joined(separator: "\n") + "\n"
     }

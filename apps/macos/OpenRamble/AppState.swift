@@ -116,6 +116,10 @@ public struct AppEnvironment {
     /// The only production recognition lifecycle. Production owns the model
     /// in a private child process; tests may inject an in-process fake engine.
     public var localTranscriber: (any DictationRecognizing)?
+    /// The engine imported files are transcribed with: a second one, so a
+    /// file never takes the dictation engine or changes its model. See
+    /// `RecordingImporter`.
+    public var importRecognizer: (any DictationRecognizing)?
     /// How to read the field in which you inserted it. The only thing the app reads
     /// at other people’s windows, so there is a seam: “turned off means we can’t read” otherwise
     /// there is nothing to prove, but you will have to prove it in the README.
@@ -240,6 +244,7 @@ public struct AppEnvironment {
         workspaceNotifications: NotificationCenter,
         notifications: NotificationCenter,
         localTranscriber: (any DictationRecognizing)? = nil,
+        importRecognizer: (any DictationRecognizing)? = nil,
         focusedFieldReader: any FocusedFieldReading = SystemFocusedFieldReader(),
         clipboardRestoreReporter: ClipboardRestoreReporter? = nil,
         cleanupLegacyAgentStaging: @escaping @Sendable () throws -> Void = {},
@@ -318,6 +323,7 @@ public struct AppEnvironment {
         self.workspaceNotifications = workspaceNotifications
         self.notifications = notifications
         self.localTranscriber = localTranscriber
+        self.importRecognizer = importRecognizer
         self.focusedFieldReader = focusedFieldReader
         self.clipboardRestoreReporter = clipboardRestoreReporter
         self.cleanupLegacyAgentStaging = cleanupLegacyAgentStaging
@@ -399,6 +405,7 @@ public struct AppEnvironment {
             workspaceNotifications: NSWorkspace.shared.notificationCenter,
             notifications: .default,
             localTranscriber: transcriber,
+            importRecognizer: LocalTranscriber(),
             cleanupLegacyAgentStaging: {
                 try LegacyAgentStagingCleanup.removeAbandonedAudio(
                     bundleIdentifier: Bundle.main.bundleIdentifier
@@ -649,6 +656,9 @@ public final class AppState: ObservableObject {
     @Published public private(set) var liveLevels = MeetingCapture.Levels.silent
     /// The recording that most recently ended — the window selects it.
     @Published public private(set) var lastFinishedRecordingID: UUID?
+    /// What the importer is doing: files being read in, the recording being
+    /// transcribed and how far, and the ones waiting behind it.
+    @Published private(set) var importActivity = RecordingImporter.Activity()
     public static let screenRecordingOptionsKey = "screenRecordingOptions"
     @Published public var screenRecordingOptions: ScreenRecordingOptions {
         didSet {
@@ -682,6 +692,11 @@ public final class AppState: ObservableObject {
     @Published public private(set) var isCameraChanging = false
     private var screenRecordingSettingsOpened = false
     private var meetingStore: MeetingStore?
+    private var importer: RecordingImporter?
+    private let importRecognizer: (any DictationRecognizing)?
+    /// The main model's folder while one of its versions is ready: what an
+    /// imported file in the main model's languages is read with.
+    private var mainEngineDirectory: URL?
     private var meetingCapture: (any MeetingCapturing)?
     private var screenRecordingCapture: (any ScreenRecordingCapturing)?
     private var screenRecordingDirectory: URL?
@@ -1189,6 +1204,7 @@ public final class AppState: ObservableObject {
         workspaceNotifications = environment.workspaceNotifications
         notifications = environment.notifications
         transcriber = environment.localTranscriber
+        importRecognizer = environment.importRecognizer
         // Test environments substitute a ready-made ASR closure and do not need
         // in Core ML warmup. Production always sends a shared transcriber.
         isEngineReady = environment.localTranscriber == nil
@@ -1389,6 +1405,7 @@ public final class AppState: ObservableObject {
             // without a word would read as one the person never made.
             let recovered = meetingStore.recoverIncomplete()
             reloadRecordings()
+            startImporter(store: meetingStore)
             refreshSystemAudioPermission()
             if !recovered.isEmpty {
                 notify(DictationNotice(
@@ -2499,10 +2516,15 @@ public final class AppState: ObservableObject {
     /// is bounded because quitting must not hang on a wedged engine; a killed
     /// process at least fails the same way it does today rather than aborting.
     public func releaseEngineBeforeTermination(timeout: Duration = .seconds(3)) {
-        guard let transcriber else { return }
+        // An import under way stays marked as unfinished and is taken up at
+        // the next launch. Its engine holds a model too, and ggml aborts at
+        // exit over a model still loaded.
+        importer?.stop()
+        guard transcriber != nil || importRecognizer != nil else { return }
         let done = DispatchSemaphore(value: 0)
-        Task.detached {
-            await transcriber.unload()
+        Task.detached { [transcriber, importRecognizer] in
+            await transcriber?.unload()
+            await importRecognizer?.unload()
             done.signal()
         }
         _ = done.wait(timeout: .now() + .milliseconds(Int(timeout.components.seconds * 1000)))
@@ -3632,6 +3654,87 @@ public final class AppState: ObservableObject {
         recordings = meetingStore.list()
     }
 
+    // MARK: - Imported files
+
+    /// Whether bringing in a file has to ask which language it is in. Only
+    /// with the Hebrew model installed: the main model tells its own
+    /// languages apart, and a file has no keyboard to follow.
+    var importAsksForLanguage: Bool { hebrewModelState.isReady }
+
+    /// The answer the keyboard suggests: Hebrew while it is set to Hebrew.
+    var suggestedImportLanguage: RecordingImportLanguage {
+        hebrewRule.recognizes ? .hebrew : .automatic
+    }
+
+    /// Bring audio or video files into the Library and transcribe them.
+    ///
+    /// Each becomes a recording at once, with its sound, and its words follow
+    /// as they are read. Dictation and recording carry on meanwhile.
+    func importFiles(_ files: [URL], language: RecordingImportLanguage = .automatic) {
+        guard let importer, !files.isEmpty else { return }
+        importer.add(files, language: language)
+    }
+
+    private func startImporter(store: MeetingStore) {
+        guard let importRecognizer else { return }
+        let importer = RecordingImporter(edges: .init(
+            store: store,
+            recognizer: importRecognizer,
+            modelDirectory: { [weak self] language in
+                guard let self else { return nil }
+                switch language {
+                case .automatic: return self.mainEngineDirectory
+                case .hebrew: return self.hebrewModelState.isReady ? self.hebrewEngineDirectory : nil
+                }
+            },
+            // Fillers go and the dictionary applies, as in a recording.
+            makePipeline: { [weak self] in
+                self?.makePipeline(spokenCorrections: false) ?? TextPipeline(replacements: [])
+            },
+            arbiter: engineArbiter
+        ))
+        importer.onActivity = { [weak self] activity in
+            self?.importActivity = activity
+        }
+        importer.onImported = { [weak self] metadata in
+            guard let self else { return }
+            self.loadedTranscripts[metadata.id] = []
+            self.reloadRecordings()
+            // What was just brought in is what the person came to see: of
+            // several files, the first, whose words are the ones arriving.
+            if self.importActivity.transcribing == nil, self.importActivity.waiting.isEmpty {
+                self.lastFinishedRecordingID = metadata.id
+            }
+        }
+        importer.onTranscript = { [weak self] id, utterances in
+            self?.loadedTranscripts[id] = utterances
+        }
+        importer.onFinished = { [weak self] id in
+            guard let self else { return }
+            self.reloadRecordings()
+            guard self.recordings.first(where: { $0.id == id })?.transcriptionState == .complete else { return }
+            Task { [weak self] in
+                await self?.compactAudioIfPossible(for: id, store: store)
+                self?.reloadRecordings()
+            }
+        }
+        importer.onFailure = { [weak self] failure, name in
+            let message: String
+            switch failure {
+            case .unreadable:
+                message = L10n.tr("Couldn't read “%@”. OpenRamble reads audio and video such as M4A, MP3, WAV, MP4 and MOV.", name)
+            case .empty:
+                message = L10n.tr("“%@” has no sound in it.", name)
+            case .cannotStore:
+                message = L10n.tr("Couldn't add “%@” to the Library.", name)
+            }
+            self?.notify(DictationNotice(kind: .failure, message: message, reason: .recordingImport))
+        }
+        self.importer = importer
+        // Whatever a quit interrupted. It waits here until its model is ready.
+        importer.resume(recordings)
+    }
+
     public func recordingAudioURL(_ id: UUID) -> URL? {
         meetingStore?.audioURL(for: id)
     }
@@ -3669,6 +3772,8 @@ public final class AppState: ObservableObject {
         guard let meetingStore, !ids.isEmpty else { return }
         do {
             for id in ids {
+                // A file still being transcribed stops being transcribed.
+                importer?.cancel(id)
                 try meetingStore.trash(id)
             }
             reloadRecordings()
@@ -3694,7 +3799,8 @@ public final class AppState: ObservableObject {
     }
 
     public func loadTranscript(_ id: UUID) {
-        guard id != transcribingRecordingID, let meetingStore else { return }
+        // A file being transcribed is shown from memory, piece by piece.
+        guard id != transcribingRecordingID, id != importActivity.transcribing, let meetingStore else { return }
         loadedTranscripts[id] = meetingStore.transcript(for: id)?.utterances ?? []
     }
 
@@ -3704,7 +3810,8 @@ public final class AppState: ObservableObject {
         let utterances = transcript(for: id)
         guard !utterances.isEmpty else { return }
         do {
-            try HostOnlyPasteboard().copyHostOnly(MeetingTranscriptFormatter.plainText(utterances))
+            let imported = recordings.first { $0.id == id }?.isImported ?? false
+            try HostOnlyPasteboard().copyHostOnly(MeetingTranscriptFormatter.plainText(utterances, speakers: !imported))
         } catch {
             notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the transcript."), reason: .clipboard))
         }
@@ -3730,13 +3837,14 @@ public final class AppState: ObservableObject {
         let subtitle = [
             recording.startedAt.formatted(Date.FormatStyle(date: .long, time: .shortened, locale: L10n.shared.language.locale)),
             RecordingTime.brief(recording.duration),
-            recording.isMeeting ? L10n.tr("Meeting") : L10n.tr("Voice note"),
+            RecordingsPlaceholder.kind(of: recording),
         ].joined(separator: " · ")
         return MeetingTranscriptFormatter.markdown(
             utterances,
             title: recording.title ?? RecordingsPlaceholder.defaultTitle(for: recording.startedAt),
             subtitle: subtitle,
-            note: RecordingsPlaceholder.degradedNote(for: recording)
+            note: RecordingsPlaceholder.degradedNote(for: recording),
+            speakers: !recording.isImported
         )
     }
 
@@ -4372,6 +4480,8 @@ public final class AppState: ObservableObject {
         } else if !modelState.isReady {
             isEngineReady = false
         }
+        // An imported file may have been waiting for exactly this model.
+        importer?.modelsChanged()
     }
 
     /// Point recognition at the model the lineup chooses and publish both states.
@@ -4382,6 +4492,7 @@ public final class AppState: ObservableObject {
     private func applyLineup(current: ModelState, previous: ModelState) -> ModelState {
         let lineup = ModelLineup(current: current, previous: previous)
         let lineupFolder = lineup.recognizer == .previous ? previousEngineDirectory : currentEngineDirectory
+        mainEngineDirectory = lineup.recognizer == .none ? nil : lineupFolder
         // Hebrew is an addition to a working model, never a replacement for a
         // missing one: without the main model the app is not set up at all.
         let folder = lineup.recognizer != .none && hebrewRule.recognizes ? hebrewEngineDirectory : lineupFolder

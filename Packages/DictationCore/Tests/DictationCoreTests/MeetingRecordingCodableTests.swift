@@ -70,6 +70,28 @@ final class MeetingRecordingCodableTests: XCTestCase {
         XCTAssertNil(decoded.endReason)
         XCTAssertEqual(decoded.transcriptionState, .none)
         XCTAssertFalse(decoded.isMeeting)
+        XCTAssertNil(decoded.importLanguage)
+        XCTAssertFalse(decoded.isImported, "every recording made before files could be imported was recorded here")
+    }
+
+    /// An imported file says so on disk, and says which model reads it, so
+    /// an import a quit interrupted is taken up again the same way.
+    func testAnImportedRecordingRemembersItsLanguage() throws {
+        var imported = sample()
+        imported.importLanguage = .hebrew
+        let data = try MeetingRecordingCoding.encoder().encode(imported)
+        let decoded = try MeetingRecordingCoding.decoder().decode(MeetingRecordingMetadata.self, from: data)
+        XCTAssertEqual(decoded.importLanguage, .hebrew)
+        XCTAssertTrue(decoded.isImported)
+
+        // A language a later version adds must not cost the recording.
+        let later = """
+        {"id":"6F9619FF-8B86-D011-B42D-00C04FC964FF","startedAt":"2025-09-03T11:46:40Z","importLanguage":"yiddish"}
+        """
+        let fromLater = try MeetingRecordingCoding.decoder()
+            .decode(MeetingRecordingMetadata.self, from: Data(later.utf8))
+        XCTAssertEqual(fromLater.importLanguage, .automatic)
+        XCTAssertTrue(fromLater.isImported)
     }
 
     func testAnUnknownFieldFromALaterVersionIsIgnored() throws {

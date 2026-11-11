@@ -169,12 +169,12 @@ struct ModelStatus: Equatable {
     ///
     /// Whether dictation works is the main card's business: Hebrew is an
     /// addition, and every state here leaves the main model dictating. What
-    /// the card has to get across is the one rule: Hebrew follows the
-    /// keyboard. So it says the rule before the download, and once the model
-    /// is on a Mac with no Hebrew keyboard it says how to add one, because
-    /// until then nothing would ever be in Hebrew.
+    /// the card has to get across is how Hebrew is chosen: a dictation or a
+    /// recording follows the keyboard, and an imported file is asked. So it
+    /// says so before the download, and on a Mac with no Hebrew keyboard it
+    /// says what already works, files, and how to get the rest.
     static func hebrew(state: ModelState, place: Place, downloadMegabytes: Int, hasKeyboard: Bool) -> ModelStatus {
-        let rule = L10n.tr("To dictate or record in Hebrew, switch your keyboard to Hebrew.")
+        let rule = L10n.tr("To dictate or record in Hebrew, switch your keyboard to Hebrew. A file you import asks which language it is in.")
         var status: ModelStatus
         switch state {
         case let .downloading(received, total):
@@ -203,7 +203,7 @@ struct ModelStatus: Equatable {
             // off, and not a failure either. The next step is one button.
             status = ModelStatus(
                 title: L10n.tr("Hebrew is downloaded"),
-                detail: L10n.tr("To use it, add the Hebrew keyboard and switch to it."),
+                detail: L10n.tr("Files you import can be transcribed in Hebrew now. To dictate or record in Hebrew, add the Hebrew keyboard and switch to it."),
                 progress: nil,
                 progressLabel: nil,
                 actions: place == .settings ? [.keyboardSettings, .delete] : [.keyboardSettings],
@@ -254,7 +254,7 @@ struct ModelStatus: Equatable {
         case .notInstalled:
             status = ModelStatus(
                 title: L10n.tr("Hebrew"),
-                detail: L10n.tr("Optional. After the download, switch your keyboard to Hebrew to dictate or record in Hebrew."),
+                detail: L10n.tr("Optional. For audio files in Hebrew, and for dictating or recording while your keyboard is set to Hebrew."),
                 progress: nil,
                 progressLabel: nil,
                 actions: [.install],

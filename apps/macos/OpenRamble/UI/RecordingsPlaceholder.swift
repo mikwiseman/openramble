@@ -14,7 +14,7 @@ struct RecordingsPlaceholder: Equatable {
     static var emptyLibrary: RecordingsPlaceholder { RecordingsPlaceholder(
         symbol: "waveform",
         title: L10n.tr("Nothing said yet"),
-        detail: L10n.tr("Hold your dictation key to dictate, or press the red button to record. Everything stays on this Mac.")
+        detail: L10n.tr("Hold your dictation key to dictate, press the red button to record, or drop an audio file here. Everything stays on this Mac.")
     ) }
 
     static var nothingSelected: RecordingsPlaceholder { RecordingsPlaceholder(
@@ -117,6 +117,52 @@ struct RecordingsPlaceholder: Equatable {
         case (false, false):
             return nil
         }
+    }
+
+    /// What kind of thing a recording is, in two words.
+    static func kind(of recording: MeetingRecordingMetadata) -> String {
+        if recording.captureKind == .screen { return L10n.tr("Screen recording") }
+        if recording.isImported { return L10n.tr("Imported file") }
+        return recording.isMeeting ? L10n.tr("Meeting") : L10n.tr("Voice note")
+    }
+
+    static var importTranscribing: RecordingsPlaceholder { RecordingsPlaceholder(
+        symbol: "text.alignleft",
+        title: L10n.tr("Transcribing"),
+        detail: L10n.tr("The words appear here as they are read.")
+    ) }
+
+    static var importWaiting: RecordingsPlaceholder { RecordingsPlaceholder(
+        symbol: "clock",
+        title: L10n.tr("Waiting its turn"),
+        detail: L10n.tr("Another file is being transcribed first. You can already play this one.")
+    ) }
+
+    /// What stands in for the words of an imported file that has none yet,
+    /// or `nil` when the importer is not working on it.
+    static func importing(_ id: UUID, activity: RecordingImporter.Activity) -> RecordingsPlaceholder? {
+        if activity.transcribing == id { return .importTranscribing }
+        guard activity.waiting.contains(id) else { return nil }
+        return activity.needsModel && activity.transcribing == nil ? .waitingForModel : .importWaiting
+    }
+
+    /// What an imported recording says while its words are still coming, or
+    /// `nil` once they are all there.
+    static func importLine(
+        for id: UUID,
+        activity: RecordingImporter.Activity,
+        isDictating: Bool
+    ) -> String? {
+        if activity.transcribing == id {
+            if isDictating { return L10n.tr("Transcription paused while you dictate.") }
+            return L10n.tr("Transcribing — %@ percent.", String(describing: Int((activity.fraction * 100).rounded(.down))))
+        }
+        guard activity.waiting.contains(id) else { return nil }
+        // Only the first in line waits for a model; the rest wait for it.
+        if activity.needsModel, activity.transcribing == nil {
+            return L10n.tr("Waiting for the speech model.")
+        }
+        return L10n.tr("Waiting its turn.")
     }
 
     /// The title a recording shows when the person has not given it one.
