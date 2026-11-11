@@ -45,7 +45,12 @@ struct RecordingsList: View {
                                 editingTitle: $draftTitle,
                                 focusedEditingID: $focusedEditingID,
                                 onCommit: { commitRenaming(recording) },
-                                onCancel: cancelRenaming
+                                onCancel: cancelRenaming,
+                                importLine: RecordingsPlaceholder.importLine(
+                                    for: recording.id,
+                                    activity: state.importActivity,
+                                    isDictating: state.dictationState != .idle
+                                )
                             )
                                 .tag(recording.id)
                                 .listRowSeparator(.hidden)
@@ -173,6 +178,8 @@ struct RecordingRow: View {
     var focusedEditingID: FocusState<UUID?>.Binding? = nil
     var onCommit: (() -> Void)? = nil
     var onCancel: (() -> Void)? = nil
+    /// Set while an imported file's words are still coming.
+    var importLine: String? = nil
 
     private var startTime: String {
         let format = Date.FormatStyle.dateTime.hour().minute().locale(L10n.shared.language.locale)
@@ -186,13 +193,11 @@ struct RecordingRow: View {
 
     private var symbol: String {
         if recording.captureKind == .screen { return "rectangle.inset.filled" }
+        if recording.isImported { return "waveform" }
         return recording.isMeeting ? "person.2.fill" : "mic.fill"
     }
 
-    private var kind: String {
-        if recording.captureKind == .screen { return L10n.tr("Screen recording") }
-        return recording.isMeeting ? L10n.tr("Meeting") : L10n.tr("Voice note")
-    }
+    private var kind: String { RecordingsPlaceholder.kind(of: recording) }
 
     var body: some View {
         HStack(alignment: .top, spacing: GlassTokens.Space.inline) {
@@ -223,10 +228,11 @@ struct RecordingRow: View {
                         .foregroundStyle(.secondary)
                         .fixedSize()
                 }
-                Text(startTime)
+                Text(importLine ?? startTime)
                     .font(.system(size: 12))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
                 if let warning {
                     Label(warning, systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
@@ -244,12 +250,11 @@ struct RecordingRow: View {
 
     private var accessibilityValue: String {
         var parts = [
-            recording.captureKind == .screen
-                ? L10n.tr("Screen recording")
-                : (recording.isMeeting ? L10n.tr("Meeting") : L10n.tr("Voice note")),
+            kind,
             RecordingTime.spoken(recording.duration),
             recording.startedAt.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened, locale: L10n.shared.language.locale)),
         ]
+        if let importLine { parts.append(importLine) }
         if let note = RecordingsPlaceholder.endNote(for: recording.endReason) { parts.append(note) }
         if let note = RecordingsPlaceholder.degradedNote(for: recording) { parts.append(note) }
         return parts.joined(separator: ", ")

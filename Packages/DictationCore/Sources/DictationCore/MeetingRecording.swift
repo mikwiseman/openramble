@@ -130,6 +130,16 @@ public enum MeetingTranscriptionState: String, Codable, Sendable {
     case waitingForModel
 }
 
+/// Which speech model reads an imported file.
+///
+/// The main model tells its languages apart by itself, so for them there is
+/// nothing to say. Hebrew has a model of its own, and a file has no keyboard
+/// to follow, so the person says it once when the file is brought in.
+public enum RecordingImportLanguage: String, Codable, Sendable, Equatable {
+    case automatic
+    case hebrew
+}
+
 /// What happened on the system-audio side, kept so a one-sided recording can
 /// explain itself later.
 ///
@@ -200,6 +210,10 @@ public struct MeetingRecordingMetadata: Codable, Sendable, Equatable, Identifiab
     public var videoFileName: String?
     public var screenOptions: ScreenRecordingOptions?
     public var displayName: String?
+    /// Set on a recording that came from a file, and absent on one the app
+    /// recorded. It also says which model reads the file, so an import cut
+    /// short by a quit is taken up again the same way.
+    public var importLanguage: RecordingImportLanguage?
 
     public init(
         id: UUID = UUID(),
@@ -218,7 +232,8 @@ public struct MeetingRecordingMetadata: Codable, Sendable, Equatable, Identifiab
         captureKind: RecordingCaptureKind = .audio,
         videoFileName: String? = nil,
         screenOptions: ScreenRecordingOptions? = nil,
-        displayName: String? = nil
+        displayName: String? = nil,
+        importLanguage: RecordingImportLanguage? = nil
     ) {
         schemaVersion = Self.currentSchemaVersion
         self.id = id
@@ -238,6 +253,7 @@ public struct MeetingRecordingMetadata: Codable, Sendable, Equatable, Identifiab
         self.videoFileName = videoFileName
         self.screenOptions = screenOptions
         self.displayName = displayName
+        self.importLanguage = importLanguage
     }
 
     public init(from decoder: any Decoder) throws {
@@ -263,7 +279,14 @@ public struct MeetingRecordingMetadata: Codable, Sendable, Equatable, Identifiab
         videoFileName = try c.decodeIfPresent(String.self, forKey: .videoFileName)
         screenOptions = try c.decodeIfPresent(ScreenRecordingOptions.self, forKey: .screenOptions)
         displayName = try c.decodeIfPresent(String.self, forKey: .displayName)
+        // A value a later version added reads as an import in the main
+        // model's languages rather than failing the whole recording.
+        importLanguage = try c.decodeIfPresent(String.self, forKey: .importLanguage)
+            .map { RecordingImportLanguage(rawValue: $0) ?? .automatic }
     }
+
+    /// Whether this came from a file rather than from the microphone.
+    public var isImported: Bool { importLanguage != nil }
 
     /// Whether the other side was ever listened to. A voice note has one
     /// channel by choice; a meeting recorded with a silent tap has two by

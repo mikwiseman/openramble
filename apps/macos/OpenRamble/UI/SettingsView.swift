@@ -498,24 +498,6 @@ private struct SetupSettings: View {
                         )
                     }
                 }
-                // Only on a Mac with a Hebrew keyboard; see `HebrewModelRule`.
-                if state.offersHebrewModel {
-                    BlockDivider()
-                    BlockCell {
-                        ModelStatusView(
-                            status: ModelStatus.hebrew(
-                                state: state.hebrewModelState,
-                                place: .settings,
-                                downloadMegabytes: state.hebrewModelMegabytes
-                            ),
-                            install: state.installHebrewModel,
-                            cancel: state.cancelHebrewModelInstall,
-                            // Asks first, as the main model's button does:
-                            // a slip costs the whole download again.
-                            delete: { showHebrewRemovalConfirmation = true }
-                        )
-                    }
-                }
             }
             .confirmationDialog(
                 L10n.tr("Delete the recognition model?"),
@@ -536,6 +518,32 @@ private struct SetupSettings: View {
                 Button(L10n.tr("Cancel"), role: .cancel) {}
             } message: {
                 Text(L10n.tr("Dictation in other languages keeps working. Getting Hebrew back is another %@ MB over the network.", String(describing: state.hebrewModelMegabytes)))
+            }
+
+            // For everyone, and in one quiet row: a person who wants Hebrew
+            // looks here. See `HebrewModelRule`.
+            if state.isHebrewModelAvailable {
+                BlockSection(
+                    L10n.tr("More languages"),
+                    footer: L10n.tr("The speech model hears 25 European languages and tells them apart by itself. Hebrew needs a model of its own.")
+                ) {
+                    BlockCell {
+                        ModelStatusView(
+                            status: ModelStatus.hebrew(
+                                state: state.hebrewModelState,
+                                place: .settings,
+                                downloadMegabytes: state.hebrewModelMegabytes,
+                                hasKeyboard: state.hasHebrewKeyboard
+                            ),
+                            install: state.installHebrewModel,
+                            cancel: state.cancelHebrewModelInstall,
+                            // Asks first, as the main model's button does:
+                            // a slip costs the whole download again.
+                            delete: { showHebrewRemovalConfirmation = true },
+                            openKeyboardSettings: state.openKeyboardSettings
+                        )
+                    }
+                }
             }
 
             BlockSection(

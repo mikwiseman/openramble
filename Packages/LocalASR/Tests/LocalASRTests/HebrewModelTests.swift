@@ -29,18 +29,27 @@ final class HebrewModelTests: XCTestCase {
         }
     }
 
-    func testItIsOfferedOnlyWhereThereIsAHebrewKeyboard() {
-        XCTAssertFalse(rule(enabled: ["en", "ru"]).isOffered, "nobody else sees a row about Hebrew")
-        XCTAssertTrue(rule(enabled: ["en", "he"]).isOffered)
-        XCTAssertTrue(rule(enabled: ["en-US", "he-IL"]).isOffered)
-        XCTAssertTrue(rule(enabled: ["iw"]).isOffered, "the older code for Hebrew")
-        XCTAssertFalse(rule(enabled: ["hi", "hr"]).isOffered, "Hindi and Croatian are not Hebrew")
+    func testFirstRunSetupOffersItOnlyWhereThereIsAHebrewKeyboard() {
+        XCTAssertFalse(rule(enabled: ["en", "ru"]).isOfferedInSetup, "nobody else is asked about Hebrew while setting up")
+        XCTAssertTrue(rule(enabled: ["en", "he"]).isOfferedInSetup)
+        XCTAssertTrue(rule(enabled: ["en-US", "he-IL"]).isOfferedInSetup)
+        XCTAssertTrue(rule(enabled: ["iw"]).isOfferedInSetup, "the older code for Hebrew")
+        XCTAssertFalse(rule(enabled: ["hi", "hr"]).isOfferedInSetup, "Hindi and Croatian are not Hebrew")
+    }
+
+    /// The keyboard is what turns the model on, so the card has to know
+    /// whether this Mac has one: without it a downloaded model is never used.
+    func testItKnowsWhetherThisMacHasAHebrewKeyboard() {
+        XCTAssertFalse(rule(enabled: ["en", "ru"]).hasKeyboard)
+        XCTAssertFalse(rule(enabled: ["en", "ru"], model: ready).hasKeyboard, "a download does not add a keyboard")
+        XCTAssertTrue(rule(enabled: ["en", "he"]).hasKeyboard)
+        XCTAssertTrue(rule(current: "en", enabled: ["he-IL"]).hasKeyboard, "enabled is enough; it need not be the one in use")
     }
 
     func testAModelAlreadyOnDiskStaysVisibleSoItCanBeRemoved() {
-        XCTAssertTrue(rule(enabled: ["en"], model: ready).isOffered)
-        XCTAssertTrue(rule(enabled: ["en"], model: .failed(.download("offline"))).isOffered)
-        XCTAssertTrue(rule(enabled: ["en"], model: .downloading(receivedBytes: 1, totalBytes: 2)).isOffered)
+        XCTAssertTrue(rule(enabled: ["en"], model: ready).isOfferedInSetup)
+        XCTAssertTrue(rule(enabled: ["en"], model: .failed(.download("offline"))).isOfferedInSetup)
+        XCTAssertTrue(rule(enabled: ["en"], model: .downloading(receivedBytes: 1, totalBytes: 2)).isOfferedInSetup)
     }
 
     func testATakeIsInHebrewWhileTheKeyboardIsHebrewAndTheModelIsReady() {

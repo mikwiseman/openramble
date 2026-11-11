@@ -16,6 +16,7 @@ public actor EngineArbiter {
     private var dictationActive = false
     private var engineReady: Bool
     private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var dictationWaiters: [CheckedContinuation<Void, Never>] = []
 
     public init(engineReady: Bool = false) {
         self.engineReady = engineReady
@@ -26,6 +27,10 @@ public actor EngineArbiter {
     public func setDictationActive(_ active: Bool) {
         dictationActive = active
         resumeWaitersIfFree()
+        guard !active else { return }
+        let resumed = dictationWaiters
+        dictationWaiters = []
+        for waiter in resumed { waiter.resume() }
     }
 
     public func setEngineReady(_ ready: Bool) {
@@ -38,6 +43,16 @@ public actor EngineArbiter {
         if isFree { return }
         await withCheckedContinuation { continuation in
             waiters.append(continuation)
+        }
+    }
+
+    /// Returns when no dictation is running. For work on an engine of its
+    /// own, such as an imported file: it does not need the dictation engine
+    /// to be ready, only to stay out of a dictation's way on the processor.
+    public func awaitDictationEnd() async {
+        guard dictationActive else { return }
+        await withCheckedContinuation { continuation in
+            dictationWaiters.append(continuation)
         }
     }
 

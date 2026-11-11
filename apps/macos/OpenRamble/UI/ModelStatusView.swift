@@ -8,6 +8,8 @@ struct ModelStatusView: View {
     let install: () -> Void
     let cancel: () -> Void
     let delete: () -> Void
+    /// Only the Hebrew card offers it, and only on a Mac with no Hebrew keyboard.
+    var openKeyboardSettings: () -> Void = {}
     var announcer: any AccessibilityAnnouncing = SystemAccessibilityAnnouncer()
 
     /// What has already been said out loud. The load share changes dozens of times per second -
@@ -87,6 +89,9 @@ struct ModelStatusView: View {
                 .accessibilityHint(status.hint(for: action))
         case .delete:
             Button(status.title(for: action), role: .destructive, action: delete)
+                .accessibilityHint(status.hint(for: action))
+        case .keyboardSettings:
+            Button(status.title(for: action), action: openKeyboardSettings)
                 .accessibilityHint(status.hint(for: action))
         }
     }

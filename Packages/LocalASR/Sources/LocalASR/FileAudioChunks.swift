@@ -34,7 +34,7 @@ actor FileAudioChunks {
 
     /// The server's piece length. Pieces this short also never reach the
     /// long-form segmenter Parakeet Ultra runs past 30 s.
-    static let defaultSeconds = 20
+    static let defaultSeconds = FilePiecePlanner.defaultSeconds
 
     init(url: URL, seconds: Int = defaultSeconds) async throws {
         let stream = try await AudioFileStream(url: url)
@@ -42,7 +42,7 @@ actor FileAudioChunks {
         self.stream = stream
         samples = nil
         duration = stream.duration
-        whole = duration <= 30
+        whole = duration <= FilePiecePlanner.wholeSeconds
         self.seconds = seconds
     }
 
@@ -51,7 +51,7 @@ actor FileAudioChunks {
         stream = nil
         self.samples = samples
         duration = Double(samples.count) / 16_000
-        whole = duration <= 30
+        whole = duration <= FilePiecePlanner.wholeSeconds
         self.seconds = seconds
     }
 

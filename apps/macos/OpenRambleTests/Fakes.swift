@@ -535,6 +535,8 @@ final class AppHarness {
     let monitor = FakeHotkeyMonitor()
     let copyMonitor = FakeShortcutMonitor()
     let recordingMonitor = FakeShortcutMonitor()
+    /// The engine imported files are transcribed with.
+    let importEngine = ScriptedImportRecognizer()
     let overlay = FakeOverlay()
     let capture: FakeCapture
     var captureMemoryLimit: (@Sendable (DictationSessionID) -> Void)?
@@ -732,6 +734,7 @@ final class AppHarness {
                 workspaceNotifications: workspaceNotifications,
                 notifications: notifications,
                 localTranscriber: recognizer ?? warmUpEngine.map { LocalTranscriber(engine: $0) },
+                importRecognizer: importEngine,
                 focusedFieldReader: focusedField,
                 cleanupLegacyAgentStaging: cleanupLegacyAgentStaging,
                 makeMeetingCapture: { [meetingCapture] directory, _, includeSystemAudio, _, onSegment, _ in
@@ -1022,6 +1025,74 @@ final class TransientWarmupASREngine: ASREngineAdapting, @unchecked Sendable {
     }
 
     func unload() async {}
+}
+
+/// The importer's own engine, scripted: it says which model it was asked to
+/// load and how many pieces it was given, and answers each with its number.
+actor ScriptedImportRecognizer: DictationRecognizing {
+    private(set) var prepared: [URL] = []
+    private(set) var unloads = 0
+    private(set) var decodes = 0
+    private(set) var decodedSamples: [Int] = []
+    private var loaded: URL?
+    private var failsEveryDecode = false
+    private var failsToLoad = false
+    private var held: CheckedContinuation<Void, Never>?
+    private var holdsNextDecode = false
+    private var heldDecode: Int?
+    private var lines: [String] = []
+
+    var isPrepared: Bool { loaded != nil }
+    var isBusy: Bool { false }
+    /// A decode is waiting for `releaseDecode()`.
+    var isDecodeWaiting: Bool { held != nil }
+
+    func failEveryDecode() { failsEveryDecode = true }
+    func failToLoad() { failsToLoad = true }
+    func holdNextDecode() { holdsNextDecode = true }
+    /// Hold the decode with this number, counting from one.
+    func holdDecode(_ number: Int) { heldDecode = number }
+    /// What each decode answers, in order, instead of its number.
+    func script(_ lines: [String]) { self.lines = lines }
+
+    func releaseDecode() {
+        held?.resume()
+        held = nil
+    }
+
+    func prepare(modelDirectory: URL) async throws {
+        if failsToLoad { throw ASREngineError.modelsUnavailable("scripted") }
+        prepared.append(modelDirectory)
+        loaded = modelDirectory
+    }
+
+    func transcribe(fileURL: URL) async throws -> ASRResult {
+        throw ASREngineError.modelsNotLoaded
+    }
+
+    func transcribe(samples: [Float]) async throws -> ASRResult {
+        guard loaded != nil else { throw ASREngineError.modelsNotLoaded }
+        decodes += 1
+        let number = decodes
+        decodedSamples.append(samples.count)
+        if holdsNextDecode || heldDecode == number {
+            holdsNextDecode = false
+            heldDecode = nil
+            await withCheckedContinuation { held = $0 }
+        }
+        if failsEveryDecode { throw ASREngineError.inferenceFailed("scripted", code: -1) }
+        let text = lines.indices.contains(number - 1) ? lines[number - 1] : "Piece \(number)."
+        return ASRResult(text: text, audioDuration: Double(samples.count) / 16_000, processingDuration: 0)
+    }
+
+    func warmUpInference() async throws {}
+
+    func unload() async {
+        unloads += 1
+        loaded = nil
+    }
+
+    func unloadIfIdle() async -> Bool { false }
 }
 
 actor ReadinessControlledRecognizer: DictationRecognizing {

@@ -120,9 +120,7 @@ struct RecordingDetail: View {
         var parts = [
             recording.startedAt.formatted(Date.FormatStyle(date: .long, time: .shortened, locale: L10n.shared.language.locale)),
             RecordingTime.brief(recording.duration),
-            recording.captureKind == .screen
-                ? L10n.tr("Screen recording")
-                : (recording.isMeeting ? L10n.tr("Meeting") : L10n.tr("Voice note")),
+            RecordingsPlaceholder.kind(of: recording),
         ]
         if let transport = recording.systemAudio.outputTransport, recording.isMeeting {
             parts.append(L10n.tr("other side via %@", String(describing: transport)))
@@ -210,19 +208,34 @@ struct RecordingDetail: View {
                     onSeek: { time in
                         player.seek(to: time)
                         if !player.isPlaying { player.toggle() }
-                    }
+                    },
+                    showsSpeakers: !recording.isImported
                 )
             } else if player.failedToLoad && player.videoPlayer == nil {
                 RecordingsPlaceholderView(placeholder: .audioMissing)
             } else {
                 RecordingsPlaceholderView(
-                    placeholder: state.transcribingRecordingID == recording.id
-                        ? .stillTranscribing
-                        : .transcript(for: recording.transcriptionState)
+                    placeholder: RecordingsPlaceholder.importing(recording.id, activity: state.importActivity)
+                        ?? (state.transcribingRecordingID == recording.id
+                            ? .stillTranscribing
+                            : .transcript(for: recording.transcriptionState))
                 )
+                // Fills the pane, so a line under it sits at the bottom.
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             if state.transcribingRecordingID == recording.id {
                 TranscriptStatusLine(state: state)
+            } else if state.importActivity.transcribing == recording.id || !utterances.isEmpty,
+                      let line = RecordingsPlaceholder.importLine(
+                          for: recording.id,
+                          activity: state.importActivity,
+                          isDictating: state.dictationState != .idle
+                      ) {
+                // A file that only waits says so where its words will be.
+                ImportStatusLine(
+                    text: line,
+                    fraction: state.importActivity.transcribing == recording.id ? state.importActivity.fraction : nil
+                )
             }
         }
     }

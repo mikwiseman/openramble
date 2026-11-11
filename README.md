@@ -93,6 +93,16 @@ OpenRamble acts on the spoken commands below.
 
 Choose Record Screen to record your screen, optionally with your microphone, your Mac's audio and a camera bubble that you can move and resize while you talk. OpenRamble saves an MP4 video next to the audio and the transcript on your Mac. OpenRamble does not upload the video, make a share link or store it in the cloud. To put a copy somewhere else, choose Save Video.
 
+### Transcribe an audio or video file
+
+Drop a file on the Library window, or click the import button in its toolbar. OpenRamble copies the file's sound into the Library as a recording and transcribes it on your Mac. You can play it at once, and the words appear as they are read.
+
+- It reads the audio and video files macOS can decode: M4A, MP3, WAV, AIFF, FLAC, CAF, AMR, Ogg and Opus voice notes on recent macOS, and the sound of MP4 and MOV videos. It does not read WebM, MKV or WMA. It keeps a video's sound, not its picture.
+- The language is recognized without asking, in any of the model's 25 languages. Only if you installed the optional Hebrew model does an import ask one question, whether the file is in Hebrew.
+- Several files are transcribed one at a time. Dictation and recording keep working meanwhile, and a file waits while you dictate. A file is transcribed by a second copy of the speech engine, so it never changes the model your dictation uses, and that copy's memory is given back when the last file is done.
+- Your original file is only read. If you quit before a transcript is finished, OpenRamble finishes it the next time it starts.
+- A transcript of an imported file has times and no speaker names, because OpenRamble does not know who speaks in it.
+
 ### Transcribe audio files from the command line
 
 The `openramble` command-line tool comes inside the app. To install it, open Settings → Setup → Install command-line tool, which creates a link at `~/.local/bin/openramble` without administrator rights. If your shell cannot find `openramble`, add `~/.local/bin` to your PATH.
@@ -101,6 +111,7 @@ The `openramble` command-line tool comes inside the app. To install it, open Set
 openramble interview.m4a > transcript.txt
 openramble interview.m4a --format srt > subtitles.srt
 openramble *.m4a --format json --output-dir transcripts
+openramble lecture.m4a --hebrew > lecture.txt
 openramble --check-model
 ```
 
@@ -109,6 +120,7 @@ openramble --check-model
 - With `--output-dir`, it never overwrites a file, and only you can read what it writes.
 - Dictation in the app comes first, so the tool pauses while you dictate and then continues.
 - Its output is the model's text, without the app's dictionary or cleanup.
+- With `--hebrew`, it uses the optional Hebrew model for audio in Hebrew. Download that model first in Settings → Setup.
 
 Run `openramble --help` for every option.
 
@@ -147,7 +159,7 @@ You can verify the network limits yourself. On every pull request and every push
 OpenRamble stores audio and text from your dictations and recordings only on your Mac, in `~/Library/Application Support/OpenRamble`:
 
 - **Dictation history.** OpenRamble keeps your recent dictations with their audio, so you can replay, copy or delete them. It keeps the last 5 by default, and you can change that to 10, 20 or 50 in Settings → General → History keeps. The dictations themselves are in the Library, next to your recordings. When a new dictation pushes an old one past the limit, OpenRamble deletes the old one's text and audio. A dictation you star with "Keep this one" does not count toward the limit and stays until you delete it. Each dictation also notes the kind of app it went to, such as mail, chat or terminal, never the app's name, so recognizing it again shapes the text the same way. You can also delete one dictation or all of them at any time. OpenRamble also keeps a take in which it recognized no words, so you can play it or recognize it again. Such takes never push out a dictation, because they have their own limit of the same number. A take that heard only silence is not kept.
-- **Recordings.** OpenRamble keeps each meeting or screen recording with its audio, its transcript and any screen video. The audio takes about 230 MB per hour while you record, and about 43 MB per hour after OpenRamble compresses it once the transcript is done. A recording stays until you delete it, and deleting it moves it to the Trash. Your Mac's backups include your recordings but skip the folders that hold temporary dictation audio.
+- **Recordings.** OpenRamble keeps each meeting or screen recording with its audio, its transcript and any screen video. A file you import is kept the same way: OpenRamble stores its own copy of the sound and the transcript, under the file's name, and leaves the original where it was. The audio takes about 230 MB per hour while you record, and about 43 MB per hour after OpenRamble compresses it once the transcript is done. A recording stays until you delete it, and deleting it moves it to the Trash. Your Mac's backups include your recordings but skip the folders that hold temporary dictation audio.
 
 | Other local data | How long it stays |
 |---|---|
@@ -229,7 +241,7 @@ OpenRamble uses Parakeet Ultra, a version of NVIDIA's Parakeet TDT 0.6B v3 that 
 
 ### Which languages does OpenRamble support?
 
-OpenRamble recognizes 25 European languages, one language at a time, including English, Russian, German, French, Spanish, Italian, Polish and Ukrainian. Hebrew is an optional second download on a Mac that has a Hebrew keyboard. It does not support Chinese, Japanese or Korean, and [Languages](#languages) has the full list.
+OpenRamble recognizes 25 European languages, one language at a time, including English, Russian, German, French, Spanish, Italian, Polish and Ukrainian. Hebrew is an optional second download in Settings → Setup. It does not support Chinese, Japanese or Korean, and [Languages](#languages) has the full list.
 
 ### Which Macs does OpenRamble run on? Does it work on Intel?
 
@@ -249,7 +261,7 @@ Yes. OpenRamble records your microphone and what your Mac plays, and it transcri
 
 ### Can OpenRamble transcribe audio files or make subtitles?
 
-Yes. The `openramble` command-line tool comes with the app and writes plain text, JSON with word timestamps, SRT or VTT. For example, `openramble interview.m4a --format srt > interview.srt` writes a subtitle file. The tool uses the model the app already installed and downloads nothing.
+Yes. Drop an audio or video file on the Library window, or use the import button there, and OpenRamble transcribes it on your Mac. For subtitles and scripts, the `openramble` command-line tool comes with the app and writes plain text, JSON with word timestamps, SRT or VTT. For example, `openramble interview.m4a --format srt > interview.srt` writes a subtitle file. The tool uses the model the app already installed and downloads nothing.
 
 ### How accurate and how fast is OpenRamble?
 
@@ -291,9 +303,9 @@ There is no language setting, because the model detects the language by itself. 
 
 ### Hebrew
 
-Hebrew is an optional second model, because the main model does not hear Hebrew. If your Mac has a Hebrew keyboard, Settings → Setup and the first-run setup offer the Hebrew download, about 740 MB. A Mac without a Hebrew keyboard is never shown it. To see the offer, add the Hebrew keyboard in System Settings → Keyboard → Input Sources.
+Hebrew is an optional second model, because the main model does not hear Hebrew. Download it in Settings → Setup → More languages, about 740 MB. First-run setup also offers it, but only on a Mac that has a Hebrew keyboard, so nobody else is asked about it while setting up.
 
-There is still no language setting. A take is recognized in Hebrew while your keyboard is set to Hebrew, and with the main model on any other keyboard, so you change the dictation language the way you already change the typing language. Switching keyboards loads the other model in about a second, and the first time after a restart it can take a few seconds. A take or a recording keeps the model it started with: if you switch keyboards in the middle, the change applies when it ends.
+There is still no language setting. A take is recognized in Hebrew while your keyboard is set to Hebrew, and with the main model on any other keyboard, so you change the dictation language the way you already change the typing language. If your Mac has no Hebrew keyboard, the Hebrew row says so after the download, says that imported files already work, and opens Keyboard settings, where you add a keyboard under Input Sources. Switching keyboards loads the other model in about a second, and the first time after a restart it can take a few seconds. A take or a recording keeps the model it started with: if you switch keyboards in the middle, the change applies when it ends. A recording that is already made cannot be recognized again in the other language. A file is different: when you import one, OpenRamble asks whether it is in Hebrew, so a Hebrew file needs the Hebrew model and no Hebrew keyboard. The command-line tool has the same choice: `openramble lecture.m4a --hebrew`.
 
 The Hebrew model is [Parakeet TDT 0.6B v3 Hebrew](https://huggingface.co/thewh1teagle/parakeet-tdt-0.6b-v3-he) by Yakov Kolani, the same family as the main model. It writes Hebrew only: English words said in a Hebrew take are recognized less well, so switch the keyboard for an English sentence. OpenRamble has not measured its accuracy. On ivrit.ai's test sets, the [file OpenRamble downloads](https://huggingface.co/vladkens/parakeet-tdt-0.6b-v3-he-gguf) is reported at 5.3% word errors on podcast speech and 8.4% on voice notes. Removing the filler words and the spoken commands work in English and Russian, not in Hebrew. The Windows and Linux version does not offer Hebrew yet.
 

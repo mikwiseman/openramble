@@ -145,6 +145,12 @@ public enum Permissions {
         NSWorkspace.shared.open(url)
     }
 
+    /// Keyboard, where input sources are added.
+    public static func openKeyboardSettings() {
+        let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension")!
+        NSWorkspace.shared.open(url)
+    }
+
     public static func openScreenRecordingSettings() {
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!
         NSWorkspace.shared.open(url)
