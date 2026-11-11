@@ -124,11 +124,12 @@ Your voice and text never leave your Mac. OpenRamble turns speech into text on y
 
 ### When OpenRamble uses the network
 
-The Mac app connects to the internet only to download the speech model and to check for and download updates.
+The Mac app connects to the internet only to download a speech model and to check for and download updates.
 
 | Action | When | Goes to | What the service can see |
 |---|---|---|---|
 | Download the speech model | When you start a download | GitHub Releases, with Hugging Face as a fallback | Your IP address and the download request |
+| Download the optional Hebrew model | When you start that download | Hugging Face | Your IP address and the download request |
 | Check for updates | About once a day, unless you turn it off in Settings → About | GitHub Pages | Your IP address and the app version |
 | Download an update | Only after you click | GitHub Releases | Your IP address and the download request |
 
@@ -228,7 +229,7 @@ OpenRamble uses Parakeet Ultra, a version of NVIDIA's Parakeet TDT 0.6B v3 that 
 
 ### Which languages does OpenRamble support?
 
-OpenRamble recognizes 25 European languages, one language at a time, including English, Russian, German, French, Spanish, Italian, Polish and Ukrainian. It does not support Chinese, Japanese or Korean, and [Languages](#languages) has the full list.
+OpenRamble recognizes 25 European languages, one language at a time, including English, Russian, German, French, Spanish, Italian, Polish and Ukrainian. Hebrew is an optional second download on a Mac that has a Hebrew keyboard. It does not support Chinese, Japanese or Korean, and [Languages](#languages) has the full list.
 
 ### Which Macs does OpenRamble run on? Does it work on Intel?
 
@@ -288,6 +289,14 @@ Bulgarian, Croatian, Czech, Danish, Dutch, English, Estonian, Finnish, French, G
 
 There is no language setting, because the model detects the language by itself. The model writes one language at a time, so when a take mixes languages, many words of the other language are dropped. In the measured hour that alternates Russian and English, about a third of the words were missing. Chinese, Japanese, Korean and languages outside the list are not supported. OpenRamble has measured accuracy only in English and Russian. [Moondream's model card](https://huggingface.co/moondream/parakeet-ultra) reports accuracy for all 25 languages.
 
+### Hebrew
+
+Hebrew is an optional second model, because the main model does not hear Hebrew. If your Mac has a Hebrew keyboard, Settings → Setup and the first-run setup offer the Hebrew download, about 740 MB. A Mac without a Hebrew keyboard is never shown it. To see the offer, add the Hebrew keyboard in System Settings → Keyboard → Input Sources.
+
+There is still no language setting. A take is recognized in Hebrew while your keyboard is set to Hebrew, and with the main model on any other keyboard, so you change the dictation language the way you already change the typing language. Switching keyboards loads the other model in about a second, and the first time after a restart it can take a few seconds. A take or a recording keeps the model it started with: if you switch keyboards in the middle, the change applies when it ends.
+
+The Hebrew model is [Parakeet TDT 0.6B v3 Hebrew](https://huggingface.co/thewh1teagle/parakeet-tdt-0.6b-v3-he) by Yakov Kolani, the same family as the main model. It writes Hebrew only: English words said in a Hebrew take are recognized less well, so switch the keyboard for an English sentence. OpenRamble has not measured its accuracy. On ivrit.ai's test sets, the [file OpenRamble downloads](https://huggingface.co/vladkens/parakeet-tdt-0.6b-v3-he-gguf) is reported at 5.3% word errors on podcast speech and 8.4% on voice notes. Removing the filler words and the spoken commands work in English and Russian, not in Hebrew. The Windows and Linux version does not offer Hebrew yet.
+
 ### Interface language
 
 The interface is in English or Russian. It follows your Mac, so it is in Russian when Russian comes before English in your preferred languages and in English otherwise. You can change it in Settings → General → Interface language. The interface language does not change speech recognition.
@@ -323,6 +332,7 @@ Run `./scripts/check.sh` before you commit, because it runs every test and check
 - Speech recognition runs on [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) 0.4.1 by CJ Pais and the [Handy](https://handy.computer) team, with one fix of ours from [our fork](https://github.com/mikwiseman/transcribe.cpp), under the MIT License. It includes ggml, miniz and code translated from Silero VAD, all under the MIT License.
 - The speech model is [Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra) by Moondream, a version of NVIDIA's [Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) trained further. Both are licensed CC BY 4.0. OpenRamble uses handy-computer's [GGUF conversion](https://huggingface.co/handy-computer/parakeet-ultra-gguf), quantized to Q4_K_M for the Mac. Windows and Linux builds made from this version use Q8_0.
 - Macs that have not upgraded yet, and the desktop-v0.21.2 release for Windows and Linux, use NVIDIA's Parakeet TDT 0.6B v3 in handy-computer's [GGUF conversion](https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf), quantized to Q8_0.
+- The optional Hebrew model is [Parakeet TDT 0.6B v3 Hebrew](https://huggingface.co/thewh1teagle/parakeet-tdt-0.6b-v3-he) by Yakov Kolani, a version of NVIDIA's Parakeet TDT 0.6B v3 trained further on [ivrit.ai](https://www.ivrit.ai) audio, licensed CC BY 4.0. OpenRamble uses vladkens's [GGUF conversion](https://huggingface.co/vladkens/parakeet-tdt-0.6b-v3-he-gguf), quantized to Q8_0.
 - Updates come through [Sparkle](https://sparkle-project.org), under the MIT License.
 - The benchmarks use Google's [FLEURS](https://huggingface.co/datasets/google/fleurs) dataset, licensed CC BY 4.0.
 

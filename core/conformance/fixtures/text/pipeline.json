@@ -8163,5 +8163,147 @@
 
     ],
     "text" : "It works."
+  },
+  {
+    "afterDictionary" : "שלום, קוראים לי כרמית, היום אני רוצה לבדוק אם ההכתבה עובדת טוב בעברית.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "שלום, קוראים לי כרמית, היום אני רוצה לבדוק אם ההכתבה עובדת טוב בעברית.",
+    "name" : "hebrew sentence",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "שלום, קוראים לי כרמית, היום אני רוצה לבדוק אם ההכתבה עובדת טוב בעברית."
+  },
+  {
+    "afterDictionary" : "הפגישה נדחתה ליום שלישי בשעה עשר בבוקר. בבקשה תשלחו לי את המסמכים עד מחר.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "הפגישה נדחתה ליום שלישי בשעה עשר בבוקר. בבקשה תשלחו לי את המסמכים עד מחר.",
+    "name" : "hebrew two sentences",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "הפגישה נדחתה ליום שלישי בשעה עשר בבוקר. בבקשה תשלחו לי את המסמכים עד מחר."
+  },
+  {
+    "afterDictionary" : "הפגישה נדחתה ליום שלישי בשעה עשר בבוקר. בבקשה תשלחו לי את המסמכים עד מחר.",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "הפגישה נדחתה ליום שלישי בשעה עשר בבוקר. בבקשה תשלחו לי את המסמכים עד מחר.",
+    "mode" : "prose",
+    "name" : "hebrew two sentences prose",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "הפגישה נדחתה ליום שלישי בשעה עשר בבוקר. בבקשה תשלחו לי את המסמכים עד מחר."
+  },
+  {
+    "afterDictionary" : "אה, אני חושב שזה, אממ, רעיון טוב",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "אה, אני חושב שזה, אממ, רעיון טוב",
+    "mode" : "verbatim",
+    "name" : "hebrew verbatim",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "אה, אני חושב שזה, אממ, רעיון טוב"
+  },
+  {
+    "afterDictionary" : "מתי נפגשים מחר?",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "מתי נפגשים מחר?",
+    "name" : "hebrew question",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "מתי נפגשים מחר?"
+  },
+  {
+    "afterDictionary" : "שלום    עולם",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "  שלום    עולם  ",
+    "name" : "hebrew extra spaces",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "שלום עולם"
+  },
+  {
+    "afterDictionary" : "צה\"ל וארה\"ב הודיעו היום",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "צה\"ל וארה\"ב הודיעו היום",
+    "name" : "hebrew acronym with gershayim",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "צה\"ל וארה\"ב הודיעו היום"
+  },
+  {
+    "afterDictionary" : "ג'ורג' הגיע לצ'ילה",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "ג'ורג' הגיע לצ'ילה",
+    "name" : "hebrew name with geresh",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "ג'ורג' הגיע לצ'ילה"
+  },
+  {
+    "afterDictionary" : "שלחתי את הקובץ ב-Slack בשעה 10:30",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "שלחתי את הקובץ ב-Slack בשעה 10:30",
+    "name" : "hebrew with latin word and time",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "שלחתי את הקובץ ב-Slack בשעה 10:30"
+  },
+  {
+    "afterDictionary" : "תודה רבה",
+    "allowPressReturnCommand" : false,
+    "dictionary" : [
+
+    ],
+    "input" : "תודה רבה",
+    "name" : "hebrew without final stop",
+    "phoneticMatching" : true,
+    "spans" : [
+
+    ],
+    "text" : "תודה רבה"
   }
 ]

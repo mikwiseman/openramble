@@ -22,4 +22,12 @@ extension ModelManifest {
         }
         return try decode(from: LocalFile.read(url))
     }
+
+    /// The optional Hebrew model; see `HebrewModelRule` for who is offered it.
+    public static func bundledHebrew() throws -> ModelManifest {
+        guard let url = Bundle.module.url(forResource: "hebrew-model-manifest", withExtension: "json") else {
+            throw ModelManifestError.resourceMissing
+        }
+        return try decode(from: LocalFile.read(url))
+    }
 }

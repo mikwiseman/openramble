@@ -127,6 +127,16 @@ for the check.
 19. Force-quit during a recording. Confirm the next launch repairs the file,
     publishes it as recovered, plays it, and transcribes the untranscribed tail.
     Repeat with Command-Q and confirm the dialog and a sealed, playable file.
+20. Hebrew. On a Mac without a Hebrew keyboard, confirm Settings → Setup and
+    first-run setup show nothing about Hebrew. Add the Hebrew keyboard in System
+    Settings and confirm the Hebrew row appears without a relaunch. Download it,
+    cancel and resume once, and confirm dictation in another language keeps
+    working meanwhile. With the keyboard on Hebrew, dictate a Hebrew sentence
+    and confirm Hebrew text lands right to left; switch to an English keyboard
+    and confirm the next take is English. Switch keyboards during a take and
+    during a recording and confirm neither changes language halfway. Remove
+    Hebrew and confirm it asks first and that other dictation still works.
+    Remove the Hebrew keyboard afterwards.
 
 Do not attach recordings or dictated text to bug reports. Record only the app
 version, macOS version, hardware, step number, and observed behavior.

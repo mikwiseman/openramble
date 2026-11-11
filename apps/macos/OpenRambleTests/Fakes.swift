@@ -665,6 +665,11 @@ final class AppHarness {
     var copyFailure: (any Error)?
     /// How long a press over waiting words is still a tap.
     var waitingTapLimit: Duration = .milliseconds(120)
+    /// The Mac's keyboards. English only, as on most desks, so no suite sees
+    /// Hebrew unless it asks.
+    var keyboardLanguages = KeyboardLanguages(current: "en", enabled: ["en"])
+    /// Where a test announces a switch of keyboards.
+    let keyboardNotifications = NotificationCenter()
 
     func makeState() -> AppState {
         AppState(
@@ -761,9 +766,29 @@ final class AppHarness {
                     if let failure = self?.copyFailure { throw failure }
                     self?.copied.append(text)
                 },
-                waitingTapLimit: waitingTapLimit
+                waitingTapLimit: waitingTapLimit,
+                keyboardLanguages: { [weak self] in
+                    self?.keyboardLanguages ?? KeyboardLanguages(current: "en", enabled: ["en"])
+                },
+                keyboardNotifications: keyboardNotifications
             )
         )
+    }
+
+    /// The person switches keyboards, and the Mac says so.
+    func switchKeyboard(to language: String) {
+        keyboardLanguages.current = language
+        keyboardNotifications.post(name: KeyboardLanguages.changes[0], object: nil)
+    }
+
+    /// The optional Hebrew model, verified and on disk.
+    func installHebrewModelMarker() throws {
+        try installMarker(for: try ModelManifest.bundledHebrew())
+    }
+
+    /// Where the Hebrew model would be installed under this harness.
+    func hebrewModelDirectory() throws -> URL {
+        try ModelInstallLayout(manifest: try ModelManifest.bundledHebrew(), root: try AppPaths(root: root).models()).modelDirectory
     }
 
     /// Expand the test inventory and the label of the finished model.
@@ -875,8 +900,11 @@ final class BlockingModelDownloader: ModelDownloading, @unchecked Sendable {
     private var started = false
     private var released = false
     private var terminalError: ModelDownloadError = .cancelled
+    private var urls: [URL] = []
 
     var hasStarted: Bool { lock.withLock { started } }
+    /// Every address a download was asked from, in order.
+    var requestedURLs: [URL] { lock.withLock { urls } }
 
     func release(throwing error: ModelDownloadError = .cancelled) {
         lock.withLock {
@@ -890,7 +918,10 @@ final class BlockingModelDownloader: ModelDownloading, @unchecked Sendable {
         expectedBytes: Int64,
         onProgress: @escaping @Sendable (Int64) -> Void
     ) async throws -> URL {
-        lock.withLock { started = true }
+        lock.withLock {
+            started = true
+            urls.append(url)
+        }
 
         onProgress(expectedBytes / 2)
 

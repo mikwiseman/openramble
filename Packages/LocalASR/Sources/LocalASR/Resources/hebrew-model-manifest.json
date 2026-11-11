@@ -1,0 +1,15 @@
+{
+  "modelID": "parakeet-tdt-0.6b-v3-he-gguf",
+  "repository": "vladkens/parakeet-tdt-0.6b-v3-he-gguf",
+  "revision": "f8392f9c582f7e8276270f0c21625cd412653fcd",
+  "runtimeVersion": "transcribe.cpp 0.4.1",
+  "quantization": "Q8_0",
+  "license": "CC-BY-4.0",
+  "files": [
+    {
+      "path": "parakeet-tdt-0.6b-v3-he-Q8_0.gguf",
+      "byteCount": 740915360,
+      "sha256": "25fec5678d09a64676eb360d52908a6c78a8b8a5b80fc9c3396db408585cd1ea"
+    }
+  ]
+}
