@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.38.0</title>
-      <pubDate>Wed, 11 Nov 2026 14:26:21 +0300</pubDate>
-      <sparkle:version>83</sparkle:version>
-      <sparkle:shortVersionString>0.38.0</sparkle:shortVersionString>
+      <title>0.39.0</title>
+      <pubDate>Wed, 11 Nov 2026 18:16:58 +0300</pubDate>
+      <sparkle:version>84</sparkle:version>
+      <sparkle:shortVersionString>0.39.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.38.0&lt;/h2&gt;&lt;h2&gt;Dictation in Hebrew&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Hebrew is now an optional second download, about 740 MB. The main model does not hear Hebrew, so Hebrew has a model of its own.&lt;/li&gt;&lt;li&gt;It is offered only on a Mac that has a Hebrew keyboard, in Settings → Setup and in first-run setup. To see the offer, add the Hebrew keyboard in System Settings → Keyboard → Input Sources.&lt;/li&gt;&lt;li&gt;There is no language setting. A take is recognized in Hebrew while your keyboard is set to Hebrew, and as before on any other keyboard.&lt;/li&gt;&lt;li&gt;A take or a recording keeps the language it started with. If you switch keyboards in the middle, the change applies when it ends.&lt;/li&gt;&lt;li&gt;The Hebrew model writes Hebrew only, so switch the keyboard for an English sentence. Removing filler words and the spoken commands work in English and Russian, not in Hebrew.&lt;/li&gt;&lt;li&gt;The model is Parakeet TDT 0.6B v3 Hebrew by Yakov Kolani, trained on ivrit.ai audio. Like the main model it runs on your Mac.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Your voice and text still never leave your Mac.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.38.0/OpenRamble-0.38.0.dmg" length="14989667" type="application/octet-stream" sparkle:edSignature="AJtt8CF4N8eW9Dya2SQWGIaXRkpCegHtKzoZDmOLOFwpkU4D9oH8xUIkEF5MgqiqOhKtlO3Z1qt+JayIUGdaCQ==" />
+      <description>&lt;h2&gt;OpenRamble 0.39.0&lt;/h2&gt;&lt;h2&gt;Dictation pastes while typing is protected&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;A password field, or a terminal with Secure Keyboard Entry, protects typing. Some apps keep that protection on long after the password was typed, and until now OpenRamble refused to paste for as long as it lasted. It no longer refuses: the words are pasted as usual.&lt;/li&gt;&lt;li&gt;⌃⌘V now always pastes your newest dictation. It used to copy instead while typing was protected.&lt;/li&gt;&lt;li&gt;If a paste still goes unread while typing is protected, the words wait on the panel as before, a tap of the dictation key copies them, and your own ⌘V pastes.&lt;/li&gt;&lt;/ul&gt;&lt;h2&gt;Clearer error reports&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;When a paste does not land, the journal on your Mac now records which kind of failure it was, and how long the app in front took to read each paste. It records no words. The journal leaves your Mac only if you choose Save Error Report in Settings → About and send the file yourself.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Your voice and text still never leave your Mac.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.39.0/OpenRamble-0.39.0.dmg" length="14991464" type="application/octet-stream" sparkle:edSignature="SwgAVRNlc2SjwgbFGYytCM3LiMEfukSnsUteG47/t6TK8XV0CcnxTnzOhhuOjkFGMibRS/lec2/Eg4wTjj55Aw==" />
     </item>
   </channel>
 </rss>
