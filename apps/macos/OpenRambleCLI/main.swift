@@ -12,6 +12,7 @@ Usage: openramble AUDIO_FILE [--format txt|json|srt|vtt]
        openramble --check-model
 
 Uses the installed Parakeet model offline, even when the GUI is closed.
+With --hebrew it uses the optional Hebrew model from Settings → Setup.
 Results go to stdout or separate files in --output-dir; progress goes to stderr.
 Existing output files are never overwritten. One failed input does not stop others.
 Long jobs yield while OpenRamble is dictating. Ctrl-C stops the job safely.
@@ -19,6 +20,7 @@ Long jobs yield while OpenRamble is dictating. Ctrl-C stops the job safely.
 Options:
   --format FORMAT        txt (default), json, srt or vtt
   --output-dir DIRECTORY write separate transcripts here
+  --hebrew               the audio is in Hebrew: use the Hebrew model
   --model-dir DIRECTORY  use a prepared folder containing the GGUF model
   --check-model          check model availability without loading it
   --                     treat remaining arguments as file paths
@@ -39,6 +41,7 @@ struct Options: Sendable {
     var outputDirectory: String?
     var format: TranscriptFormat = .txt
     var checkModel = false
+    var hebrew = false
     var help = false
 
     init(_ arguments: [String]) throws {
@@ -56,6 +59,7 @@ struct Options: Sendable {
             case "--help", "-h": help = true
             case "--": positional = true
             case "--check-model": checkModel = true
+            case "--hebrew": hebrew = true
             case "--model-dir": modelDirectory = try value(arg)
             case "--output-dir": outputDirectory = try value(arg)
             case "--format":
@@ -76,7 +80,7 @@ struct Options: Sendable {
     }
 }
 
-func resolveEngineDirectory(explicit: String?) async throws -> URL {
+func resolveEngineDirectory(explicit: String?, hebrew: Bool) async throws -> URL {
     if let explicit {
         let url = URL(fileURLWithPath: explicit, isDirectory: true)
         let files = (try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
@@ -85,9 +89,19 @@ func resolveEngineDirectory(explicit: String?) async throws -> URL {
         }
         return url
     }
-    let manifest = try ModelManifest.bundled()
     let root = ProcessInfo.processInfo.environment["WAI_MODELS_ROOT"]
         .map { URL(fileURLWithPath: $0, isDirectory: true) }
+    if hebrew {
+        // The main model does not hear Hebrew, and the app chooses between
+        // the two by the keyboard. A file has no keyboard, so it is said here.
+        let manifest = try ModelManifest.bundledHebrew()
+        let layout = try ModelInstallLayout(manifest: manifest, root: root)
+        guard await ModelStore(manifest: manifest, layout: layout).inspectInstalledState().isReady else {
+            throw CLIError(code: 69, message: "Hebrew is not installed. Open OpenRamble and download it in Settings → Setup → More languages.")
+        }
+        return layout.engineDirectory
+    }
+    let manifest = try ModelManifest.bundled()
     let layout = try ModelInstallLayout(manifest: manifest, root: root)
     let store = ModelStore(manifest: manifest, layout: layout)
     let state = await store.inspectInstalledState()
@@ -119,7 +133,7 @@ struct Job: Sendable {
 @MainActor
 func run(_ options: Options) async throws -> Int32 {
     if options.help { print(usage); return 0 }
-    let directory = try await resolveEngineDirectory(explicit: options.modelDirectory)
+    let directory = try await resolveEngineDirectory(explicit: options.modelDirectory, hebrew: options.hebrew)
     if options.checkModel {
         diagnostic("Model is installed and available.")
         if options.files.isEmpty { return 0 }

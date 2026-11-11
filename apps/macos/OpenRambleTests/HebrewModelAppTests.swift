@@ -21,13 +21,17 @@ final class HebrewModelAppTests: XCTestCase {
 
     // MARK: Who is offered it
 
-    func testAMacWithoutAHebrewKeyboardIsNeverShownHebrew() async throws {
+    /// Settings shows Hebrew to everyone, because that is where a person who
+    /// wants it looks. First-run setup asks only a Mac with a Hebrew keyboard.
+    func testAMacWithoutAHebrewKeyboardFindsHebrewInSettingsAndIsNotAskedInSetup() async throws {
         try harness.installModelMarker()
         let state = harness.makeState()
 
         await state.refreshModelState()
 
-        XCTAssertFalse(state.offersHebrewModel)
+        XCTAssertTrue(state.isHebrewModelAvailable, "Settings has the row")
+        XCTAssertFalse(state.offersHebrewModelInSetup, "setup does not ask")
+        XCTAssertFalse(state.hasHebrewKeyboard)
         XCTAssertEqual(state.hebrewModelState, .notInstalled)
     }
 
@@ -38,7 +42,8 @@ final class HebrewModelAppTests: XCTestCase {
 
         await state.refreshModelState()
 
-        XCTAssertTrue(state.offersHebrewModel)
+        XCTAssertTrue(state.offersHebrewModelInSetup)
+        XCTAssertTrue(state.hasHebrewKeyboard)
         XCTAssertEqual(state.hebrewModelState, .notInstalled, "offered, not imposed")
         XCTAssertEqual(state.hebrewModelMegabytes, 740, "counted as the progress under the button counts")
         XCTAssertTrue(state.modelState.isReady, "the main model is not part of the offer")
@@ -48,15 +53,16 @@ final class HebrewModelAppTests: XCTestCase {
         try harness.installModelMarker()
         let state = harness.makeState()
         await state.refreshModelState()
-        XCTAssertFalse(state.offersHebrewModel)
+        XCTAssertFalse(state.offersHebrewModelInSetup)
 
         harness.keyboardLanguages.enabled = ["en", "he"]
         harness.keyboardNotifications.post(name: KeyboardLanguages.changes[1], object: nil)
-        for _ in 0..<500 where !state.offersHebrewModel {
+        for _ in 0..<500 where !state.offersHebrewModelInSetup {
             try await Task.sleep(for: .milliseconds(2))
         }
 
-        XCTAssertTrue(state.offersHebrewModel)
+        XCTAssertTrue(state.offersHebrewModelInSetup)
+        XCTAssertTrue(state.hasHebrewKeyboard, "and the card stops asking for a keyboard")
     }
 
     // MARK: Which model a take uses
@@ -172,7 +178,7 @@ final class HebrewModelAppTests: XCTestCase {
         }
         XCTAssertFalse(state.hebrewModelState.isReady)
         XCTAssertTrue(state.modelState.isReady)
-        XCTAssertTrue(state.offersHebrewModel, "the offer is still there to try again")
+        XCTAssertTrue(state.offersHebrewModelInSetup, "the offer is still there to try again")
     }
 
     func testRemovingHebrewRemovesOnlyHebrewAndGoesBackToTheMainModel() async throws {
@@ -189,32 +195,74 @@ final class HebrewModelAppTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: folder.path))
         XCTAssertTrue(state.modelState.isReady)
         try await waitForLoad(of: "parakeet-ultra", engine, state)
-        XCTAssertTrue(state.offersHebrewModel, "the keyboard is still there, so is the offer")
+        XCTAssertTrue(state.offersHebrewModelInSetup, "the keyboard is still there, so is the offer")
     }
 
     // MARK: What the card says
 
     func testTheCardNeverSaysDictationDependsOnHebrew() {
-        let offer = ModelStatus.hebrew(state: .notInstalled, place: .settings, downloadMegabytes: 740)
+        let offer = ModelStatus.hebrew(state: .notInstalled, place: .settings, downloadMegabytes: 740, hasKeyboard: false)
         XCTAssertEqual(offer.title, "Hebrew")
+        // The rule is said before the download, so nobody downloads 740 MB
+        // expecting Hebrew to be picked up by itself.
+        XCTAssertEqual(
+            offer.detail,
+            "Optional. After the download, switch your keyboard to Hebrew to dictate or record in Hebrew."
+        )
         XCTAssertEqual(offer.actions, [.install])
         XCTAssertEqual(offer.title(for: .install), "Download — 740 MB")
         XCTAssertTrue(offer.isAddition)
 
         let installed = ModelState.ready(directory: URL(fileURLWithPath: "/models/he", isDirectory: true))
-        let ready = ModelStatus.hebrew(state: installed, place: .settings, downloadMegabytes: 740)
+        let ready = ModelStatus.hebrew(state: installed, place: .settings, downloadMegabytes: 740, hasKeyboard: true)
         XCTAssertEqual(
-            ModelStatus.hebrew(state: installed, place: .onboarding, downloadMegabytes: 740).actions, [],
+            ModelStatus.hebrew(state: installed, place: .onboarding, downloadMegabytes: 740, hasKeyboard: true).actions, [],
             "removing a model is a Settings matter"
         )
-        XCTAssertEqual(ready.detail, "Used while your keyboard is set to Hebrew.")
+        XCTAssertEqual(ready.title, "Hebrew is ready")
+        XCTAssertEqual(ready.tone, .success)
+        XCTAssertEqual(ready.detail, "To dictate or record in Hebrew, switch your keyboard to Hebrew.")
         XCTAssertEqual(ready.actions, [.delete])
         XCTAssertEqual(ready.title(for: .delete), "Remove")
         XCTAssertFalse(ready.hint(for: .delete).contains("stops working"))
 
-        let failed = ModelStatus.hebrew(state: .failed(.download("offline")), place: .settings, downloadMegabytes: 740)
+        let failed = ModelStatus.hebrew(state: .failed(.download("offline")), place: .settings, downloadMegabytes: 740, hasKeyboard: true)
         XCTAssertEqual(failed.actions, [.retry])
         XCTAssertEqual(failed.detail, "Dictation in other languages is not affected.")
+    }
+
+    /// Downloaded on a Mac with no Hebrew keyboard, the model would never be
+    /// used. The card does not call that ready: it names the one step left
+    /// and opens the place where it is taken.
+    func testADownloadWithoutAHebrewKeyboardSaysHowToUseIt() {
+        let installed = ModelState.ready(directory: URL(fileURLWithPath: "/models/he", isDirectory: true))
+        let card = ModelStatus.hebrew(state: installed, place: .settings, downloadMegabytes: 740, hasKeyboard: false)
+
+        XCTAssertEqual(card.title, "Hebrew is downloaded")
+        XCTAssertEqual(card.tone, .neutral, "not a tick: nothing is in Hebrew yet")
+        XCTAssertEqual(card.detail, "To use it, add the Hebrew keyboard and switch to it.")
+        XCTAssertEqual(card.actions, [.keyboardSettings, .delete])
+        XCTAssertEqual(card.title(for: .keyboardSettings), "Keyboard Settings…")
+        XCTAssertEqual(
+            ModelStatus.hebrew(state: installed, place: .onboarding, downloadMegabytes: 740, hasKeyboard: false).actions,
+            [.keyboardSettings]
+        )
+    }
+
+    func testTheCardSpeaksRussianToo() {
+        let original = L10n.shared.language
+        defer { L10n.shared.language = original }
+        L10n.shared.language = .russian
+        let installed = ModelState.ready(directory: URL(fileURLWithPath: "/models/he", isDirectory: true))
+
+        XCTAssertEqual(
+            ModelStatus.hebrew(state: installed, place: .settings, downloadMegabytes: 740, hasKeyboard: true).detail,
+            "Чтобы диктовать или записывать на иврите, переключите раскладку на иврит."
+        )
+        XCTAssertEqual(
+            ModelStatus.hebrew(state: installed, place: .settings, downloadMegabytes: 740, hasKeyboard: false).title,
+            "Иврит загружен"
+        )
     }
 
     // MARK: Helpers

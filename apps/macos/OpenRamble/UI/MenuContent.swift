@@ -224,7 +224,7 @@ struct MenuContent: View {
                     switch action {
                     case .install, .retry, .repair: state.installModel()
                     case .cancel: state.cancelModelInstall()
-                    case .delete: break
+                    case .delete, .keyboardSettings: break
                     }
                 }
             }

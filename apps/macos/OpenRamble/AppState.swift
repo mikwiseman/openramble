@@ -509,9 +509,15 @@ public final class AppState: ObservableObject {
     /// What the disk holds of the optional Hebrew model. It is an addition:
     /// `modelState` still describes the model every take needs.
     @Published public private(set) var hebrewModelState: ModelState = .notInstalled
-    /// Whether this Mac is shown the Hebrew model at all. Only a Mac with a
-    /// Hebrew keyboard is; see `HebrewModelRule`.
-    @Published public private(set) var offersHebrewModel = false
+    /// Whether first-run setup shows the Hebrew model. Only a Mac with a
+    /// Hebrew keyboard is asked there; Settings shows it to everyone. See
+    /// `HebrewModelRule`.
+    @Published public private(set) var offersHebrewModelInSetup = false
+    /// Whether this Mac can switch to a Hebrew keyboard: the thing that turns
+    /// the Hebrew model on.
+    @Published public private(set) var hasHebrewKeyboard = false
+    /// Whether there is a Hebrew model to offer at all.
+    public var isHebrewModelAvailable: Bool { hebrewStore != nil }
     /// What the Hebrew model's button downloads.
     public private(set) var hebrewModelMegabytes = 0
     /// How much the installation button will download: the full volume or additional volume after the update.
@@ -4287,6 +4293,12 @@ public final class AppState: ObservableObject {
         accessibilityManager.openSettings()
     }
 
+    /// Where a keyboard is added: the Hebrew model is used while the
+    /// keyboard is set to Hebrew.
+    public func openKeyboardSettings() {
+        Permissions.openKeyboardSettings()
+    }
+
     public func revealApplicationForAccessibility() {
         accessibilityManager.revealApplication()
     }
@@ -4548,7 +4560,9 @@ public final class AppState: ObservableObject {
             }
             hebrewModelState = refreshed
         }
-        offersHebrewModel = hebrewRule.isOffered
+        let rule = hebrewRule
+        offersHebrewModelInSetup = rule.isOfferedInSetup
+        hasHebrewKeyboard = rule.hasKeyboard
     }
 
     /// Download the Hebrew model beside the main one. Dictation is untouched

@@ -207,18 +207,21 @@ struct OnboardingView: View {
                     cancel: state.cancelModelInstall,
                     delete: state.deleteModel
                 )
-                // Only on a Mac with a Hebrew keyboard; see `HebrewModelRule`.
-                if state.offersHebrewModel {
+                // Only on a Mac with a Hebrew keyboard; Settings shows it to
+                // everyone. See `HebrewModelRule`.
+                if state.offersHebrewModelInSetup {
                     Divider().padding(.vertical, 6)
                     ModelStatusView(
                         status: ModelStatus.hebrew(
                             state: state.hebrewModelState,
                             place: .onboarding,
-                            downloadMegabytes: state.hebrewModelMegabytes
+                            downloadMegabytes: state.hebrewModelMegabytes,
+                            hasKeyboard: state.hasHebrewKeyboard
                         ),
                         install: state.installHebrewModel,
                         cancel: state.cancelHebrewModelInstall,
-                        delete: state.deleteHebrewModel
+                        delete: state.deleteHebrewModel,
+                        openKeyboardSettings: state.openKeyboardSettings
                     )
                 }
             }

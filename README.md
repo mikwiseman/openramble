@@ -101,6 +101,7 @@ The `openramble` command-line tool comes inside the app. To install it, open Set
 openramble interview.m4a > transcript.txt
 openramble interview.m4a --format srt > subtitles.srt
 openramble *.m4a --format json --output-dir transcripts
+openramble lecture.m4a --hebrew > lecture.txt
 openramble --check-model
 ```
 
@@ -109,6 +110,7 @@ openramble --check-model
 - With `--output-dir`, it never overwrites a file, and only you can read what it writes.
 - Dictation in the app comes first, so the tool pauses while you dictate and then continues.
 - Its output is the model's text, without the app's dictionary or cleanup.
+- With `--hebrew`, it uses the optional Hebrew model for audio in Hebrew. Download that model first in Settings → Setup.
 
 Run `openramble --help` for every option.
 
@@ -229,7 +231,7 @@ OpenRamble uses Parakeet Ultra, a version of NVIDIA's Parakeet TDT 0.6B v3 that 
 
 ### Which languages does OpenRamble support?
 
-OpenRamble recognizes 25 European languages, one language at a time, including English, Russian, German, French, Spanish, Italian, Polish and Ukrainian. Hebrew is an optional second download on a Mac that has a Hebrew keyboard. It does not support Chinese, Japanese or Korean, and [Languages](#languages) has the full list.
+OpenRamble recognizes 25 European languages, one language at a time, including English, Russian, German, French, Spanish, Italian, Polish and Ukrainian. Hebrew is an optional second download in Settings → Setup. It does not support Chinese, Japanese or Korean, and [Languages](#languages) has the full list.
 
 ### Which Macs does OpenRamble run on? Does it work on Intel?
 
@@ -291,9 +293,9 @@ There is no language setting, because the model detects the language by itself. 
 
 ### Hebrew
 
-Hebrew is an optional second model, because the main model does not hear Hebrew. If your Mac has a Hebrew keyboard, Settings → Setup and the first-run setup offer the Hebrew download, about 740 MB. A Mac without a Hebrew keyboard is never shown it. To see the offer, add the Hebrew keyboard in System Settings → Keyboard → Input Sources.
+Hebrew is an optional second model, because the main model does not hear Hebrew. Download it in Settings → Setup → More languages, about 740 MB. First-run setup also offers it, but only on a Mac that has a Hebrew keyboard, so nobody else is asked about it while setting up.
 
-There is still no language setting. A take is recognized in Hebrew while your keyboard is set to Hebrew, and with the main model on any other keyboard, so you change the dictation language the way you already change the typing language. Switching keyboards loads the other model in about a second, and the first time after a restart it can take a few seconds. A take or a recording keeps the model it started with: if you switch keyboards in the middle, the change applies when it ends.
+There is still no language setting. A take is recognized in Hebrew while your keyboard is set to Hebrew, and with the main model on any other keyboard, so you change the dictation language the way you already change the typing language. If your Mac has no Hebrew keyboard, the Hebrew row says so after the download and opens Keyboard settings, where you add one under Input Sources. Switching keyboards loads the other model in about a second, and the first time after a restart it can take a few seconds. A take or a recording keeps the model it started with: if you switch keyboards in the middle, the change applies when it ends. A recording that is already made cannot be recognized again in the other language. For an audio file in Hebrew, use the command-line tool: `openramble lecture.m4a --hebrew`.
 
 The Hebrew model is [Parakeet TDT 0.6B v3 Hebrew](https://huggingface.co/thewh1teagle/parakeet-tdt-0.6b-v3-he) by Yakov Kolani, the same family as the main model. It writes Hebrew only: English words said in a Hebrew take are recognized less well, so switch the keyboard for an English sentence. OpenRamble has not measured its accuracy. On ivrit.ai's test sets, the [file OpenRamble downloads](https://huggingface.co/vladkens/parakeet-tdt-0.6b-v3-he-gguf) is reported at 5.3% word errors on podcast speech and 8.4% on voice notes. Removing the filler words and the spoken commands work in English and Russian, not in Hebrew. The Windows and Linux version does not offer Hebrew yet.
 

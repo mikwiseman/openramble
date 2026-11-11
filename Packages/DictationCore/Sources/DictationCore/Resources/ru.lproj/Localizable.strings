@@ -732,7 +732,6 @@
 "Shortcuts" = "Сочетания клавиш";
 "History" = "История";
 "Downloads about %@ MB. This is the only download the app needs." = "Будет скачано около %@ МБ. Это единственная загрузка, которая нужна приложению.";
-"Used while your keyboard is set to Hebrew." = "Работает, пока включена ивритская раскладка.";
 "Downloading Hebrew…" = "Загрузка иврита…";
 "Dictation keeps working while it downloads." = "Пока идёт загрузка, диктовка работает.";
 "Checking Hebrew…" = "Проверка иврита…";
@@ -742,7 +741,6 @@
 "Hebrew needs a repair" = "Иврит нужно загрузить заново";
 "Removing Hebrew…" = "Удаление иврита…";
 "Hebrew" = "Иврит";
-"Optional. Dictate in Hebrew while your keyboard is set to Hebrew." = "По желанию. Диктуйте на иврите, пока включена ивритская раскладка.";
 "Download — %@ MB" = "Загрузить — %@ МБ";
 "Download Again — %@ MB" = "Загрузить заново — %@ МБ";
 "Remove" = "Удалить";
@@ -755,3 +753,11 @@
 "Didn't paste while %@ protects typing." = "Не вставилось, пока %@ защищает ввод.";
 "Didn't paste while typing is protected." = "Не вставилось, пока ввод защищён.";
 "Paste last take puts your newest dictation into the app in front. Record starts and stops a recording from any app." = "«Вставить последнюю диктовку» помещает её в активное приложение. Комбинация записи начинает и останавливает запись из любого приложения.";
+"Keyboard Settings…" = "Настройки клавиатуры…";
+"Opens System Settings, where you can add the Hebrew keyboard." = "Открывает Системные настройки, где можно добавить ивритскую раскладку.";
+"To dictate or record in Hebrew, switch your keyboard to Hebrew." = "Чтобы диктовать или записывать на иврите, переключите раскладку на иврит.";
+"Hebrew is downloaded" = "Иврит загружен";
+"To use it, add the Hebrew keyboard and switch to it." = "Чтобы пользоваться, добавьте ивритскую раскладку и переключитесь на неё.";
+"Optional. After the download, switch your keyboard to Hebrew to dictate or record in Hebrew." = "По желанию. После загрузки переключите раскладку на иврит, чтобы диктовать или записывать на иврите.";
+"More languages" = "Другие языки";
+"The speech model hears 25 European languages and tells them apart by itself. Hebrew needs a model of its own." = "Основная модель понимает 25 европейских языков и сама их различает. Для иврита нужна отдельная модель.";

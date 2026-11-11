@@ -19,6 +19,9 @@ struct ModelStatus: Equatable {
         case repair
         case cancel
         case delete
+        /// Open the system's Keyboard settings: the Hebrew model is used
+        /// while the keyboard is set to Hebrew, and this Mac has none.
+        case keyboardSettings
 
         /// The button names the actual volume: full for a clean installation and
         /// only the remainder - when the hint is downloaded after the update.
@@ -29,6 +32,7 @@ struct ModelStatus: Equatable {
             case .repair: return L10n.tr("Redownload Model — %@ MB", String(describing: downloadMegabytes))
             case .cancel: return L10n.tr("Cancel Download")
             case .delete: return L10n.tr("Delete Model")
+            case .keyboardSettings: return L10n.tr("Keyboard Settings…")
             }
         }
 
@@ -40,6 +44,7 @@ struct ModelStatus: Equatable {
             case .repair: return L10n.tr("Downloads and verifies a fresh copy of the model. The damaged copy is not used.")
             case .cancel: return L10n.tr("Stops the download and deletes the partially downloaded files.")
             case .delete: return L10n.tr("Frees up disk space. Dictation stops working until the model is downloaded again.")
+            case .keyboardSettings: return L10n.tr("Opens System Settings, where you can add the Hebrew keyboard.")
             }
         }
     }
@@ -91,7 +96,7 @@ struct ModelStatus: Equatable {
         case .install: return L10n.tr("Download — %@ MB", String(describing: downloadMegabytes))
         case .repair: return L10n.tr("Download Again — %@ MB", String(describing: downloadMegabytes))
         case .delete: return L10n.tr("Remove")
-        case .retry, .cancel: return action.title(downloadMegabytes: downloadMegabytes)
+        case .retry, .cancel, .keyboardSettings: return action.title(downloadMegabytes: downloadMegabytes)
         }
     }
 
@@ -102,7 +107,7 @@ struct ModelStatus: Equatable {
             return L10n.tr("Downloads about %@ MB. Dictation keeps working meanwhile.", String(describing: downloadMegabytes))
         case .delete:
             return L10n.tr("Frees up disk space. Dictation in other languages is not affected.")
-        case .retry, .cancel:
+        case .retry, .cancel, .keyboardSettings:
             return action.hint(downloadMegabytes: downloadMegabytes)
         }
     }
@@ -162,11 +167,14 @@ struct ModelStatus: Equatable {
 
     /// The card for the optional Hebrew model.
     ///
-    /// Shown only on a Mac with a Hebrew keyboard. Whether dictation works is
-    /// the main card's business: Hebrew is an addition, and every state here
-    /// leaves the main model dictating.
-    static func hebrew(state: ModelState, place: Place, downloadMegabytes: Int) -> ModelStatus {
-        let rule = L10n.tr("Used while your keyboard is set to Hebrew.")
+    /// Whether dictation works is the main card's business: Hebrew is an
+    /// addition, and every state here leaves the main model dictating. What
+    /// the card has to get across is the one rule: Hebrew follows the
+    /// keyboard. So it says the rule before the download, and once the model
+    /// is on a Mac with no Hebrew keyboard it says how to add one, because
+    /// until then nothing would ever be in Hebrew.
+    static func hebrew(state: ModelState, place: Place, downloadMegabytes: Int, hasKeyboard: Bool) -> ModelStatus {
+        let rule = L10n.tr("To dictate or record in Hebrew, switch your keyboard to Hebrew.")
         var status: ModelStatus
         switch state {
         case let .downloading(received, total):
@@ -189,6 +197,18 @@ struct ModelStatus: Equatable {
                 actions: [],
                 tone: .neutral,
                 announcement: L10n.tr("Checking Hebrew…")
+            )
+        case .ready where !hasKeyboard:
+            // Downloaded, and nothing will use it yet: not a success to tick
+            // off, and not a failure either. The next step is one button.
+            status = ModelStatus(
+                title: L10n.tr("Hebrew is downloaded"),
+                detail: L10n.tr("To use it, add the Hebrew keyboard and switch to it."),
+                progress: nil,
+                progressLabel: nil,
+                actions: place == .settings ? [.keyboardSettings, .delete] : [.keyboardSettings],
+                tone: .neutral,
+                announcement: L10n.tr("Hebrew is downloaded")
             )
         case .ready:
             status = ModelStatus(
@@ -234,7 +254,7 @@ struct ModelStatus: Equatable {
         case .notInstalled:
             status = ModelStatus(
                 title: L10n.tr("Hebrew"),
-                detail: L10n.tr("Optional. Dictate in Hebrew while your keyboard is set to Hebrew."),
+                detail: L10n.tr("Optional. After the download, switch your keyboard to Hebrew to dictate or record in Hebrew."),
                 progress: nil,
                 progressLabel: nil,
                 actions: [.install],

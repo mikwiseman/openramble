@@ -732,7 +732,6 @@
 "Shortcuts" = "Shortcuts";
 "History" = "History";
 "Downloads about %@ MB. This is the only download the app needs." = "Downloads about %@ MB. This is the only download the app needs.";
-"Used while your keyboard is set to Hebrew." = "Used while your keyboard is set to Hebrew.";
 "Downloading Hebrew…" = "Downloading Hebrew…";
 "Dictation keeps working while it downloads." = "Dictation keeps working while it downloads.";
 "Checking Hebrew…" = "Checking Hebrew…";
@@ -742,7 +741,6 @@
 "Hebrew needs a repair" = "Hebrew needs a repair";
 "Removing Hebrew…" = "Removing Hebrew…";
 "Hebrew" = "Hebrew";
-"Optional. Dictate in Hebrew while your keyboard is set to Hebrew." = "Optional. Dictate in Hebrew while your keyboard is set to Hebrew.";
 "Download — %@ MB" = "Download — %@ MB";
 "Download Again — %@ MB" = "Download Again — %@ MB";
 "Remove" = "Remove";
@@ -755,3 +753,11 @@
 "Didn't paste while %@ protects typing." = "Didn't paste while %@ protects typing.";
 "Didn't paste while typing is protected." = "Didn't paste while typing is protected.";
 "Paste last take puts your newest dictation into the app in front. Record starts and stops a recording from any app." = "Paste last take puts your newest dictation into the app in front. Record starts and stops a recording from any app.";
+"Keyboard Settings…" = "Keyboard Settings…";
+"Opens System Settings, where you can add the Hebrew keyboard." = "Opens System Settings, where you can add the Hebrew keyboard.";
+"To dictate or record in Hebrew, switch your keyboard to Hebrew." = "To dictate or record in Hebrew, switch your keyboard to Hebrew.";
+"Hebrew is downloaded" = "Hebrew is downloaded";
+"To use it, add the Hebrew keyboard and switch to it." = "To use it, add the Hebrew keyboard and switch to it.";
+"Optional. After the download, switch your keyboard to Hebrew to dictate or record in Hebrew." = "Optional. After the download, switch your keyboard to Hebrew to dictate or record in Hebrew.";
+"More languages" = "More languages";
+"The speech model hears 25 European languages and tells them apart by itself. Hebrew needs a model of its own." = "The speech model hears 25 European languages and tells them apart by itself. Hebrew needs a model of its own.";

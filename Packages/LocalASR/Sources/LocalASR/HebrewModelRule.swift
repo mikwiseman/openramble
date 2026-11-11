@@ -8,13 +8,19 @@ import Foundation
 /// a take is recognized in the language of the keyboard, which the person
 /// already switches to type and which the menu bar already shows.
 ///
-/// The same fact decides who is asked. A Mac without a Hebrew keyboard could
-/// never use the model, so it is never offered there, and nobody else sees a
-/// row about a language they do not write.
+/// Settings offers the download to everyone, in one quiet row. It used to wait
+/// for a Hebrew keyboard, and a person who wanted Hebrew looked for it in
+/// Settings and found nothing. First-run setup still asks only where a Hebrew
+/// keyboard says the person writes Hebrew, so nobody else is asked about a
+/// language while setting up.
 public struct HebrewModelRule: Sendable, Equatable {
-    /// Show the download: this Mac has a Hebrew keyboard, or something of the
-    /// model is already on disk and must stay removable.
-    public let isOffered: Bool
+    /// First-run setup shows the download: this Mac has a Hebrew keyboard, or
+    /// something of the model is already on disk.
+    public let isOfferedInSetup: Bool
+    /// This Mac can switch to a Hebrew keyboard, which is what turns the
+    /// model on. Without one the model is downloaded and never used, so the
+    /// card says how to add it.
+    public let hasKeyboard: Bool
     /// The next take is recognized with the Hebrew model.
     public let recognizes: Bool
 
@@ -24,7 +30,8 @@ public struct HebrewModelRule: Sendable, Equatable {
     ///     can switch to.
     ///   - model: what the disk holds of the Hebrew model.
     public init(keyboardLanguage: String?, enabledKeyboardLanguages: [String], model: ModelState) {
-        isOffered = enabledKeyboardLanguages.contains(where: Self.isHebrew) || model != .notInstalled
+        hasKeyboard = enabledKeyboardLanguages.contains(where: Self.isHebrew)
+        isOfferedInSetup = hasKeyboard || model != .notInstalled
         recognizes = model.isReady && keyboardLanguage.map(Self.isHebrew) == true
     }
 

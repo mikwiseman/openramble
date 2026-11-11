@@ -128,11 +128,15 @@ for the check.
 19. Force-quit during a recording. Confirm the next launch repairs the file,
     publishes it as recovered, plays it, and transcribes the untranscribed tail.
     Repeat with Command-Q and confirm the dialog and a sealed, playable file.
-20. Hebrew. On a Mac without a Hebrew keyboard, confirm Settings → Setup and
-    first-run setup show nothing about Hebrew. Add the Hebrew keyboard in System
-    Settings and confirm the Hebrew row appears without a relaunch. Download it,
-    cancel and resume once, and confirm dictation in another language keeps
-    working meanwhile. With the keyboard on Hebrew, dictate a Hebrew sentence
+20. Hebrew. On a Mac without a Hebrew keyboard, confirm Settings → Setup shows
+    the Hebrew row under More languages and first-run setup shows nothing about
+    Hebrew. Download it, cancel and resume once, and confirm dictation in
+    another language keeps working meanwhile. Confirm the row then reads
+    "Hebrew is downloaded", says to add the Hebrew keyboard, and that Keyboard
+    Settings… opens the Keyboard pane of System Settings. Add the Hebrew
+    keyboard there and confirm the row changes to "Hebrew is ready" without a
+    relaunch. With the model installed, run `openramble <a Hebrew file>
+    --hebrew` and confirm Hebrew text. With the keyboard on Hebrew, dictate a Hebrew sentence
     and confirm Hebrew text lands right to left; switch to an English keyboard
     and confirm the next take is English. Switch keyboards during a take and
     during a recording and confirm neither changes language halfway. Remove
